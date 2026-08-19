@@ -19,11 +19,9 @@ if exist ".env.staging" (
 if /I "%~1"=="smoke" set LOAD_PROFILE=smoke
 if /I "%~1"=="full" set LOAD_PROFILE=full
 if /I "%~1"=="session" set LOAD_PROFILE=session
-if /I "%~1"=="rung" (
-  set LOAD_PROFILE=rung
-  if not "%~2"=="" set LOAD_VUS=%~2
-  if "%LOAD_VUS%"=="" set LOAD_VUS=50
-)
+if /I "%~1"=="rung" set LOAD_PROFILE=rung
+if /I "%~1"=="rung" if not "%~2"=="" set LOAD_VUS=%~2
+if /I "%LOAD_PROFILE%"=="rung" if "%LOAD_VUS%"=="" set LOAD_VUS=50
 if "%LOAD_PROFILE%"=="" set LOAD_PROFILE=session
 
 if "%STAGING_SUPABASE_URL%"=="" (
