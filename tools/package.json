@@ -1,0 +1,12 @@
+{
+  "name": "eduaba-report-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.9",
+    "bcryptjs": "^3.0.3",
+    "firebase-admin": "^14.2.0",
+    "pdfkit": "^0.17.1",
+    "pptxgenjs": "^4.0.1"
+  }
+}

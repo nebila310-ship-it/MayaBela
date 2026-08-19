@@ -1,0 +1,217 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
+import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/app_collections.dart';
+import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
+import 'package:mayabela/services/cloud/sync_cursor_store.dart';
+import 'package:mayabela/services/cloud_sync_progress_service.dart';
+import 'package:mayabela/services/persistence/cloud_app_store.dart';
+import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
+
+/// EDUABA mandatory background sync — every 5 seconds while authenticated.
+///
+/// Tick order (source of truth):
+/// 1) flush outbox mutations
+/// 2) pull delta by sync_cursor + role scope
+/// 3) apply to local store
+/// 4) emit reactive UI updates
+/// 5) advance sync_cursor
+///
+/// See docs/EDUABA_ERP_INSTRUCTIONS.md §5.
+abstract final class CloudSyncEngine {
+  static const Duration interval = Duration(seconds: 5);
+
+  static Timer? _timer;
+  static var _started = false;
+  static var _paused = false;
+  static var _tickRunning = false;
+  static var _consecutiveFailures = 0;
+  static DateTime? _backoffUntil;
+
+  static bool get isStarted => _started;
+
+  /// Call after login / session restore when cloud claims exist.
+  static void start() {
+    if (!CloudSyncFlags.enabled) return;
+    if (AuthService.currentUser == null) return;
+    if (!SupabaseBootstrap.isInitialized) return;
+    stop();
+    _paused = false;
+    _started = true;
+    _consecutiveFailures = 0;
+    _backoffUntil = null;
+    _timer = Timer.periodic(interval, (_) {
+      unawaited(tick(reason: 'periodic'));
+    });
+    unawaited(
+      Future<void>.delayed(const Duration(milliseconds: 600), () {
+        unawaited(tick(reason: 'start'));
+      }),
+    );
+    if (kDebugMode) {
+      debugPrint(
+        '[CloudSyncEngine] started role=${AuthService.currentUser?.roleKey}',
+      );
+    }
+  }
+
+  static void stop() {
+    _timer?.cancel();
+    _timer = null;
+    _started = false;
+    _paused = false;
+    _tickRunning = false;
+  }
+
+  static void pause() => _paused = true;
+
+  static void resume() {
+    if (!_started) return;
+    _paused = false;
+    unawaited(tick(reason: 'resume'));
+  }
+
+  static Future<void> tick({String reason = 'manual'}) async {
+    if (!_started || _paused || _tickRunning) return;
+    if (!CloudSyncFlags.enabled) return;
+    if (AuthService.currentUser == null) {
+      stop();
+      return;
+    }
+    if (CloudSyncProgressService.instance.isLoading) return;
+    if (_backoffUntil != null && DateTime.now().isBefore(_backoffUntil!)) {
+      return;
+    }
+    if (!SupabaseBootstrap.isInitialized) return;
+    if (!await SchoolAuthCloudService.hasSchoolClaims()) {
+      try {
+        await SupabaseBootstrap.client.auth.refreshSession();
+      } catch (_) {}
+      if (!await SchoolAuthCloudService.hasSchoolClaims()) return;
+    }
+
+    _tickRunning = true;
+    try {
+      await SyncCursorStore.instance.ensureLoaded();
+      await CloudOutboxService.instance.ensureLoaded();
+
+      // 1) Flush local mutations (write-behind).
+      await CloudAppStore.instance.flushOutboxForSyncEngine();
+
+      // 2–5) Delta pull, apply, notify, advance cursors.
+      final changed = await CloudAppStore.instance.pullRoleDeltaForSyncEngine(
+        collections: collectionsForCurrentRole(),
+      );
+      if (changed) {
+        SchoolContentSyncService.instance.markDataChanged();
+      }
+
+      _consecutiveFailures = 0;
+      _backoffUntil = null;
+      if (kDebugMode && reason != 'periodic') {
+        debugPrint('[CloudSyncEngine] tick ok ($reason) changed=$changed');
+      }
+    } catch (e) {
+      _consecutiveFailures++;
+      final seconds = (1 << _consecutiveFailures.clamp(0, 5)).clamp(5, 60);
+      _backoffUntil = DateTime.now().add(Duration(seconds: seconds));
+      if (kDebugMode) {
+        debugPrint(
+          '[CloudSyncEngine] tick failed ($reason): $e — backoff ${seconds}s',
+        );
+      }
+    } finally {
+      _tickRunning = false;
+    }
+  }
+
+  /// High-frequency collections (priority lane).
+  static const highPriority = <String>[
+    AppCollections.conversations,
+    AppCollections.appNotifications,
+    AppCollections.attendanceSessions,
+    AppCollections.gradeReports,
+    AppCollections.busLivePositions,
+    AppCollections.parentLinkRequests,
+    AppCollections.studentRegistry,
+    AppCollections.teacherRegistry,
+  ];
+
+  /// Standard lane.
+  static const standardPriority = <String>[
+    AppCollections.homework,
+    AppCollections.dailyActivities,
+    AppCollections.announcements,
+    AppCollections.learningMaterials,
+    AppCollections.calendarEvents,
+    AppCollections.galleryPosts,
+    AppCollections.classTimetables,
+    AppCollections.fees,
+    AppCollections.buses,
+    AppCollections.disciplineCases,
+    AppCollections.leaveRequests,
+    AppCollections.qaFindings,
+    AppCollections.inventoryItems,
+    AppCollections.classroomInventory,
+    AppCollections.purchaseRequests,
+    AppCollections.materialPurchaseRequests,
+  ];
+
+  static List<String> collectionsForCurrentRole() {
+    final role = AuthService.currentUser?.roleKey;
+    switch (role) {
+      case AuthService.roleAdmin:
+      case AuthService.roleTeacher:
+        return [...highPriority, ...standardPriority];
+      case AuthService.roleParent:
+        return [
+          AppCollections.parentLinkRequests,
+          AppCollections.studentRegistry,
+          AppCollections.gradeReports,
+          AppCollections.attendanceSessions,
+          AppCollections.homework,
+          AppCollections.announcements,
+          AppCollections.dailyActivities,
+          AppCollections.conversations,
+          AppCollections.appNotifications,
+          AppCollections.busLivePositions,
+          AppCollections.fees,
+          AppCollections.learningMaterials,
+          AppCollections.galleryPosts,
+          AppCollections.calendarEvents,
+          AppCollections.classTimetables,
+          AppCollections.disciplineCases,
+          AppCollections.leaveRequests,
+        ];
+      case AuthService.roleDriver:
+        return [
+          AppCollections.studentRegistry,
+          AppCollections.buses,
+          AppCollections.busLivePositions,
+          AppCollections.conversations,
+          AppCollections.appNotifications,
+        ];
+      case AuthService.roleStudent:
+        return [
+          AppCollections.gradeReports,
+          AppCollections.attendanceSessions,
+          AppCollections.homework,
+          AppCollections.learningMaterials,
+          AppCollections.announcements,
+          AppCollections.dailyActivities,
+          AppCollections.conversations,
+          AppCollections.appNotifications,
+          AppCollections.calendarEvents,
+          AppCollections.classTimetables,
+          AppCollections.galleryPosts,
+        ];
+      default:
+        return highPriority;
+    }
+  }
+}

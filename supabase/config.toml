@@ -1,0 +1,57 @@
+# A string used to distinguish different Supabase projects on the same host.
+project_id = "mayabela"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[functions.school-login]
+verify_jwt = false
+
+[functions.school-register-parent]
+verify_jwt = false
+
+[functions.school-upsert-account]
+verify_jwt = false
+
+[functions.school-upsert-registry]
+verify_jwt = false
+
+[functions.school-change-password]
+verify_jwt = true
+
+[functions.school-refresh-claims]
+verify_jwt = true
+
+[functions.maya-assistant-chat]
+verify_jwt = true
+
+# Called by a database trigger (pg_net); authenticated via x-push-secret header.
+[functions.send-push]
+verify_jwt = false
+
+[functions.platform-owner-pin]
+verify_jwt = false
+
+[functions.platform-list-schools]
+verify_jwt = false
+
+[functions.platform-create-school]
+verify_jwt = false
+
+[functions.platform-update-school]
+verify_jwt = false
+
+[functions.platform-upload-logo]
+verify_jwt = false

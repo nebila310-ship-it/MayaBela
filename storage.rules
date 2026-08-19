@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSchoolUser() {
+      return isSignedIn()
+        && request.auth.token.keys().hasAll(['role', 'schoolId', 'username'])
+        && request.auth.token.role in ['admin', 'teacher', 'parent', 'driver', 'student']
+        && request.auth.token.schoolId is string
+        && request.auth.token.schoolId.size() > 0;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function schoolId() {
+      return request.auth.token.schoolId;
+    }
+
+    function isAdmin() {
+      return isSchoolUser() && role() == 'admin';
+    }
+
+    function isStaff() {
+      return isSchoolUser() && role() in ['admin', 'teacher', 'driver'];
+    }
+
+    function pathSchoolOk(schoolIdPath) {
+      return isSchoolUser() && schoolIdPath == schoolId();
+    }
+
+    function validUpload() {
+      return request.resource != null
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf|audio/.*|video/.*|application/octet-stream|text/.*');
+    }
+
+    // Inventory / school files — school-scoped, staff write, school users read.
+    match /schools/{schoolIdPath}/inventory/{kind}/{entityId}/{fileName} {
+      allow read: if pathSchoolOk(schoolIdPath) && (isAdmin() || isStaff());
+      allow write: if pathSchoolOk(schoolIdPath)
+        && isAdmin()
+        && validUpload();
+    }
+
+    // Broader school media (announcements, learning materials, etc.)
+    match /schools/{schoolIdPath}/{allPaths=**} {
+      allow read: if pathSchoolOk(schoolIdPath) && isSchoolUser();
+      allow write: if pathSchoolOk(schoolIdPath)
+        && (isAdmin() || role() == 'teacher')
+        && validUpload();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

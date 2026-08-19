@@ -1,0 +1,6 @@
+tags:
+  sell_audit:
+    # Dedicated sell-readiness suite. Excluded from day-to-day health runs:
+    #   flutter test --exclude-tags sell_audit
+    # Run sell audit:
+    #   flutter test --tags sell_audit

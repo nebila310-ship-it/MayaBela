@@ -1,0 +1,172 @@
+import 'package:flutter/material.dart';
+
+import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/screens/admin_attendance_screens.dart';
+import 'package:mayabela/screens/admin_classes_screens.dart';
+import 'package:mayabela/screens/admin_enrollment_screens.dart';
+import 'package:mayabela/screens/admin_grade_overview_screen.dart';
+import 'package:mayabela/screens/grade_approval_queue_screen.dart';
+import 'package:mayabela/screens/maya_assistant_screen.dart';
+import 'package:mayabela/screens/messages_screen.dart';
+import 'package:mayabela/screens/settings_screen.dart';
+import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/web_erp/pages/inventory/web_inventory_shell_page.dart';
+import 'package:mayabela/web_erp/pages/staff_role_home_page.dart';
+import 'package:mayabela/web_erp/pages/web_admin_overview_page.dart';
+import 'package:mayabela/web_erp/pages/web_announcements_page.dart';
+import 'package:mayabela/web_erp/pages/web_audit_log_page.dart';
+import 'package:mayabela/web_erp/pages/web_buses_page.dart';
+import 'package:mayabela/web_erp/pages/web_calendar_page.dart';
+import 'package:mayabela/web_erp/pages/web_campus_management_page.dart';
+import 'package:mayabela/web_erp/pages/web_erp_placeholder_page.dart';
+import 'package:mayabela/web_erp/pages/web_finance_dashboard_page.dart';
+import 'package:mayabela/web_erp/pages/web_institution_page.dart';
+import 'package:mayabela/web_erp/pages/web_learning_materials_page.dart';
+import 'package:mayabela/web_erp/pages/web_library_page.dart';
+import 'package:mayabela/web_erp/pages/web_reports_page.dart';
+import 'package:mayabela/web_erp/pages/web_school_management_page.dart';
+import 'package:mayabela/web_erp/pages/staff_role_config_page.dart';
+import 'package:mayabela/web_erp/pages/web_students_table_page.dart';
+import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
+import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
+import 'package:mayabela/web_erp/pages/web_qa_page.dart';
+import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
+import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
+import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
+import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
+
+/// Maps ERP route ids to page widgets (web shell content area).
+class WebErpRouter {
+  static Widget pageFor(String routeId, {ValueChanged<String>? onNavigate}) {
+    // Safety net behind the sidebar filter: stale favorites, search results
+    // or manual navigation can still request modules the user cannot open.
+    const mutationRoutes = {'add_student', 'add_teacher', 'add_staff'};
+    if (!ModuleAccess.canView(routeId) ||
+        (mutationRoutes.contains(routeId) &&
+            !ModuleAccess.canManage(routeId))) {
+      final s = AppLocale.instance.strings;
+      return WebErpPlaceholderPage(
+        title: s.moduleAccessDeniedTitle,
+        description: s.moduleAccessDeniedBody,
+        icon: Icons.lock_outline,
+      );
+    }
+    switch (routeId) {
+      case 'dashboard':
+        if (AuthService.isAdministrationStaff) {
+          return StaffRoleHomePage(onNavigate: onNavigate);
+        }
+        return _safePage(
+          () => WebAdminOverviewPage(onNavigate: onNavigate),
+          title: 'Dashboard',
+        );
+      case 'students':
+        return WebStudentsTablePage(onNavigate: onNavigate);
+      case 'transfers':
+        return const WebTransfersPage();
+      case 'hr':
+      case 'employees':
+      case 'staff':
+        return WebHrHubPage(onNavigate: onNavigate);
+      case 'teachers':
+        return WebTeachersTablePage(
+          onNavigate: onNavigate,
+          directoryMode: WebTeachersDirectoryMode.administrationStaff,
+        );
+      case 'classroom_teachers':
+        return WebTeachersTablePage(
+          onNavigate: onNavigate,
+          directoryMode: WebTeachersDirectoryMode.classroomTeachers,
+        );
+      case 'parents':
+        return const ParentApprovalsScreen();
+      case 'student_affairs':
+        return const WebStudentAffairsPage();
+      case 'quality_assurance':
+        return const WebQaPage();
+      case 'finance':
+        return const WebFinanceDashboardPage();
+      case 'transport':
+        return WebTransportDashboardPage(onNavigate: onNavigate);
+      case 'attendance':
+        return const AdminAttendanceReportsScreen();
+      case 'examinations':
+      case 'grade_approvals':
+        return const GradeApprovalQueueScreen();
+      case 'grades':
+        return const AdminGradeOverviewScreen();
+      case 'academic':
+        return const AdminGradesScreen();
+      case 'learning_materials':
+        return const WebLearningMaterialsPage();
+      case 'announcements':
+        return const WebAnnouncementsPage();
+      case 'events':
+      case 'calendar':
+        return const WebCalendarPage();
+      case 'reports':
+        return const WebReportsPage();
+      case 'support':
+        return const MessagesScreen(canCompose: true);
+      case 'maya_assistant':
+        return MayaAssistantScreen(
+          roleKey: AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
+        );
+      case 'audit_log':
+        return const WebAuditLogPage();
+      case 'staff_roles':
+        return const StaffRoleConfigPage();
+      case 'system_health':
+        return const WebSystemHealthPage();
+      case 'settings':
+      case 'profile':
+        return const SettingsScreen();
+      case 'add_student':
+        return const AdminAddStudentScreen();
+      case 'add_staff':
+        return const AdminAddTeacherScreen(
+          kind: AdminPersonKind.administrationStaff,
+        );
+      case 'add_teacher':
+        return const AdminAddTeacherScreen(
+          kind: AdminPersonKind.classroomTeacher,
+        );
+      case 'institution':
+        return const WebInstitutionPage();
+      case 'school':
+        return const WebSchoolManagementPage();
+      case 'campus':
+        return const WebCampusManagementPage();
+      case 'library':
+        return const WebLibraryPage();
+      case 'inventory':
+        return const WebInventoryShellPage();
+      case 'transport_buses':
+        return const WebBusesPage();
+      default:
+        return WebErpPlaceholderPage(
+          title: routeId,
+          description: 'This module is not yet configured.',
+          icon: Icons.construction_outlined,
+        );
+    }
+  }
+
+  /// Prevents a single page layout/build crash from wiping the whole ERP shell.
+  static Widget _safePage(Widget Function() build, {required String title}) {
+    try {
+      return build();
+    } catch (e, st) {
+      assert(() {
+        debugPrint('[WebErpRouter] $title failed: $e\n$st');
+        return true;
+      }());
+      return WebErpPlaceholderPage(
+        title: title,
+        description: 'This page failed to load. Try another module from the sidebar.\n$e',
+        icon: Icons.error_outline,
+      );
+    }
+  }
+}

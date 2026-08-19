@@ -1,0 +1,16 @@
+﻿MayaBela support note for your school (TB-001 / Maya School)
+
+Web app: https://mayabela.pages.dev
+Phone/WhatsApp support: +251 911 646 444
+Email: nabilmaya6464@gmail.com
+Hours: Mon-Sat 9:00-18:00 EAT
+
+Quick start:
+1) Open the web app
+2) School ID + phone + temporary password
+3) On first login set a new password (min 10 chars) — no SMS/OTP needed for password change
+4) Parents link child with Student ID + date of birth, then wait for school approval
+
+Before contacting support: send School ID, your role, what you tried, and a screenshot. Hard-refresh with Ctrl+Shift+R if the page looks wrong.
+
+Full note: we can also share docs/SUPPORT_NOTE_FOR_SCHOOL.md as a file.

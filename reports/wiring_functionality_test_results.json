@@ -1,0 +1,81 @@
+{
+  "exit_code": 0,
+  "total": 18,
+  "passed": 18,
+  "failed": 0,
+  "cases": [
+    {
+      "name": "seed builds students, classes, and parent links",
+      "result": "success"
+    },
+    {
+      "name": "parent can reach child class teachers via resolver",
+      "result": "success"
+    },
+    {
+      "name": "role access rules enforce teacher and driver boundaries",
+      "result": "success"
+    },
+    {
+      "name": "Auth & credentials debug demo admin login succeeds locally",
+      "result": "success"
+    },
+    {
+      "name": "Auth & credentials wrong password rejected",
+      "result": "success"
+    },
+    {
+      "name": "Auth & credentials role mismatch rejected",
+      "result": "success"
+    },
+    {
+      "name": "Auth & credentials password policy minimum is 10",
+      "result": "success"
+    },
+    {
+      "name": "Auth & credentials password hash verify round-trip",
+      "result": "success"
+    },
+    {
+      "name": "Phone utilities normalizes Ethiopian local login key",
+      "result": "success"
+    },
+    {
+      "name": "Phone utilities builds E.164 for Ethiopia",
+      "result": "success"
+    },
+    {
+      "name": "School data / access seed builds students, classes, parent links",
+      "result": "success"
+    },
+    {
+      "name": "School data / access parent resolver reaches child and teachers",
+      "result": "success"
+    },
+    {
+      "name": "School data / access teacher class access boundaries",
+      "result": "success"
+    },
+    {
+      "name": "School data / access driver student access boundaries",
+      "result": "success"
+    },
+    {
+      "name": "Platform owner PIN PIN min length is 6",
+      "result": "success"
+    },
+    {
+      "name": "Platform owner PIN set and verify hashed PIN",
+      "result": "success"
+    },
+    {
+      "name": "Web ERP surface admin nav includes core modules",
+      "result": "success"
+    },
+    {
+      "name": "Web ERP surface router resolves key admin pages to widgets",
+      "result": "success"
+    }
+  ],
+  "generated_at": "2026-07-25T19:02:18.913Z"
+}

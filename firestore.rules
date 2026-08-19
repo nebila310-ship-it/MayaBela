@@ -1,0 +1,591 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // School users must authenticate via custom token (Cloud Function login).
+    // Anonymous sessions have no role claim and are denied.
+    function isSchoolUser() {
+      return isSignedIn()
+        && request.auth.token.keys().hasAll(['role', 'schoolId', 'username'])
+        && request.auth.token.role in ['admin', 'teacher', 'parent', 'driver', 'student']
+        && request.auth.token.schoolId is string
+        && request.auth.token.schoolId.size() > 0;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function schoolId() {
+      return request.auth.token.schoolId;
+    }
+
+    function username() {
+      return request.auth.token.username;
+    }
+
+    function isAdmin() {
+      return isSchoolUser() && role() == 'admin';
+    }
+
+    function isStaff() {
+      return isSchoolUser() && role() in ['admin', 'teacher', 'driver'];
+    }
+
+    function isDriver() {
+      return isSchoolUser() && role() == 'driver';
+    }
+
+    function linkedStudentIds() {
+      return request.auth.token.keys().hasAny(['linkedStudentIds'])
+        && request.auth.token.linkedStudentIds is list
+        ? request.auth.token.linkedStudentIds
+        : [];
+    }
+
+    function linkedClassNames() {
+      return request.auth.token.keys().hasAny(['linkedClassNames'])
+        && request.auth.token.linkedClassNames is list
+        ? request.auth.token.linkedClassNames
+        : [];
+    }
+
+    function linkedStudentNames() {
+      return request.auth.token.keys().hasAny(['linkedStudentNames'])
+        && request.auth.token.linkedStudentNames is list
+        ? request.auth.token.linkedStudentNames
+        : [];
+    }
+
+    function assignedClassNames() {
+      return request.auth.token.keys().hasAny(['assignedClassNames'])
+        && request.auth.token.assignedClassNames is list
+        ? request.auth.token.assignedClassNames
+        : [];
+    }
+
+    function teacherRegistryAssignedClasses() {
+      let tid = request.auth.token.linkedTeacherId;
+      return tid is string
+        && tid.size() > 0
+        && exists(/databases/$(database)/documents/teacher_registry/$(tid))
+        ? get(/databases/$(database)/documents/teacher_registry/$(tid))
+            .data.get('assignedClassNames', [])
+        : [];
+    }
+
+    function parentOwnsStudent(studentId) {
+      return role() == 'parent'
+        && studentId is string
+        && studentId in linkedStudentIds();
+    }
+
+    function parentOwnsStudentName(studentName) {
+      return role() == 'parent'
+        && studentName is string
+        && studentName in linkedStudentNames();
+    }
+
+    function parentOwnsClass(className) {
+      return role() == 'parent'
+        && className is string
+        && className in linkedClassNames();
+    }
+
+    function teacherOwnsClass(className) {
+      return role() == 'teacher'
+        && className is string
+        && className.size() > 0
+        && (
+          className in assignedClassNames()
+          || className in teacherRegistryAssignedClasses()
+        );
+    }
+
+    function teacherCanAccessStudent(studentId, className) {
+      return role() == 'teacher' && (
+        teacherOwnsClass(className)
+        || (
+          studentId is string
+          && studentId.size() > 0
+          && exists(/databases/$(database)/documents/student_registry/$(studentId))
+          && teacherOwnsClass(
+            get(/databases/$(database)/documents/student_registry/$(studentId))
+              .data.get('className', '')
+          )
+        )
+      );
+    }
+
+    function studentOwnsSelf(studentId) {
+      return role() == 'student'
+        && studentId is string
+        && studentId == request.auth.token.linkedStudentId;
+    }
+
+    function canReadStudentPii(studentId, className) {
+      return isAdmin()
+        || isDriver()
+        || studentOwnsSelf(studentId)
+        || parentOwnsStudent(studentId)
+        || teacherCanAccessStudent(studentId, className);
+    }
+
+    function canReadByClass(className) {
+      return isAdmin()
+        || teacherOwnsClass(className)
+        || parentOwnsClass(className);
+    }
+
+    function parentConversationVisible() {
+      return role() == 'parent'
+        && resource.data.keys().hasAny(['linkedStudentIds'])
+        && resource.data.linkedStudentIds is list
+        && resource.data.linkedStudentIds.hasAny(linkedStudentIds());
+    }
+
+    function parentParticipant() {
+      return role() == 'parent'
+        && resource.data.keys().hasAny(['parentParticipantUsernames'])
+        && resource.data.parentParticipantUsernames is list
+        && username() in resource.data.parentParticipantUsernames;
+    }
+
+    function docSchool(data) {
+      return data.keys().hasAny(['schoolId']) && data.schoolId is string
+        ? data.schoolId
+        : null;
+    }
+
+    function sameSchoolResource() {
+      return isSchoolUser() && docSchool(resource.data) == schoolId();
+    }
+
+    function sameSchoolRequest() {
+      return isSchoolUser() && docSchool(request.resource.data) == schoolId();
+    }
+
+    function sameSchoolWrite() {
+      return sameSchoolRequest()
+        && (!resource.exists || sameSchoolResource());
+    }
+
+    // Password hashes — Admin SDK only (no client access).
+    match /auth_secrets/{docId} {
+      allow read, write: if false;
+    }
+
+    // Login rate-limit counters — Admin SDK only.
+    match /auth_rate_limits/{docId} {
+      allow read, write: if false;
+    }
+
+    // Account profiles (never store password here).
+    match /app_auth_accounts/{docId} {
+      allow read: if isSchoolUser()
+        && resource.data.schoolId == schoolId()
+        && (
+          isAdmin()
+          || isDriver()
+          || docId == username()
+          || resource.data.username == username()
+          // Teachers may resolve peer staff accounts for messaging, not parents.
+          || (role() == 'teacher' && resource.data.roleKey in ['teacher', 'admin', 'driver'])
+        );
+      allow create, update: if isAdmin() && sameSchoolWrite()
+        && !request.resource.data.keys().hasAny(['password', 'passwordHash']);
+      allow delete: if isAdmin() && sameSchoolResource();
+    }
+
+    match /parent_link_requests/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || role() == 'teacher'
+          || resource.data.parentUsername == username()
+        );
+      allow write: if sameSchoolWrite()
+        && (isAdmin() || role() == 'teacher' || role() == 'parent');
+    }
+
+    match /student_registry/{docId} {
+      allow read: if sameSchoolResource()
+        && canReadStudentPii(
+          resource.data.studentId,
+          resource.data.get('className', '')
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+
+    match /teacher_registry/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+
+    match /driver_registry/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+
+    match /student_medical/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || parentOwnsStudent(resource.data.studentId)
+          || teacherCanAccessStudent(
+            resource.data.studentId,
+            resource.data.get('className', '')
+          )
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+
+    match /grade_reports/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || teacherOwnsClass(resource.data.get('className', ''))
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+          || (
+            parentOwnsStudentName(resource.data.get('studentName', ''))
+            && parentOwnsClass(resource.data.get('className', ''))
+          )
+          || studentOwnsSelf(resource.data.get('studentId', ''))
+        );
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+
+    match /grade_audit_log/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || teacherOwnsClass(resource.data.get('className', ''))
+        );
+      allow create: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+      allow update, delete: if isAdmin() && sameSchoolWrite();
+    }
+
+    match /homework/{docId} {
+      allow read: if sameSchoolResource() && canReadByClass(resource.data.get('className', ''));
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+
+    match /daily_activities/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+          || teacherOwnsClass(resource.data.get('className', ''))
+        );
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+
+    match /conversations/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || role() == 'teacher'
+          || role() == 'driver'
+          || parentConversationVisible()
+          || parentParticipant()
+        );
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || role() == 'teacher'
+          || role() == 'driver'
+          || role() == 'parent'
+        );
+    }
+
+    match /app_announcements/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if sameSchoolWrite() && (isAdmin() || role() == 'teacher');
+    }
+
+    match /attendance_sessions/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || teacherOwnsClass(resource.data.get('className', ''))
+          || parentOwnsClass(resource.data.get('className', ''))
+        );
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+
+    match /fees/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+          || parentOwnsStudentName(resource.data.get('studentName', ''))
+          || teacherOwnsClass(resource.data.get('className', ''))
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+
+    match /calendar_events/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if sameSchoolWrite() && (isAdmin() || role() == 'teacher');
+    }
+
+    match /class_timetables/{docId} {
+      allow read: if sameSchoolResource() && canReadByClass(resource.data.get('className', ''));
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+
+    match /gallery_posts/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || !resource.data.keys().hasAny(['className'])
+          || resource.data.className == ''
+          || canReadByClass(resource.data.className)
+        );
+      allow write: if sameSchoolWrite()
+        && (isAdmin() || role() == 'teacher');
+    }
+
+    match /learning_materials/{docId} {
+      allow read: if sameSchoolResource() && canReadByClass(resource.data.get('className', ''));
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+
+    match /qr_scans/{docId} {
+      allow read: if sameSchoolResource() && (isAdmin() || role() == 'teacher' || isDriver());
+      allow write: if sameSchoolWrite() && (isAdmin() || role() == 'teacher' || isDriver());
+    }
+
+    // Single-school get allowed without auth so login can validate a typed School ID.
+    match /school_registry/{docId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isAdmin() && docId == schoolId();
+      allow delete: if false;
+    }
+
+    match /platform_audit_log/{docId} {
+      allow read: if isAdmin() && sameSchoolResource();
+      allow create: if isAdmin() && sameSchoolWrite();
+      allow update, delete: if false;
+    }
+
+    match /fcm_tokens/{docId} {
+      allow read: if isSchoolUser()
+        && (docId == username() || isAdmin());
+      allow write: if isSchoolUser()
+        && docId == username()
+        && request.resource.data.schoolId == schoolId();
+    }
+
+    match /transport_scans/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || isDriver()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+        );
+      allow write: if sameSchoolWrite()
+        && (isAdmin() || isDriver());
+    }
+
+    match /transport_passenger_status/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || isDriver()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+          || parentOwnsStudent(docId)
+        );
+      allow write: if sameSchoolWrite()
+        && (isAdmin() || isDriver());
+    }
+
+    match /bus_live_positions/{docId} {
+      allow read: if sameSchoolResource()
+        && (isAdmin() || isDriver() || role() == 'parent' || role() == 'teacher');
+      allow write: if sameSchoolWrite()
+        && (isAdmin() || isDriver());
+    }
+
+    match /app_notifications/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if sameSchoolWrite() && isSchoolUser();
+    }
+
+    match /inventory_items/{docId} {
+      allow read: if sameSchoolResource() && (isAdmin() || isStaff());
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /stock_transactions/{docId} {
+      allow read: if sameSchoolResource() && isAdmin();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /student_issued_items/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || isDriver()
+          || role() == 'teacher'
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /classroom_inventory/{docId} {
+      allow read: if sameSchoolResource() && (isAdmin() || isStaff());
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /assets/{docId} {
+      allow read: if sameSchoolResource() && isAdmin();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /suppliers/{docId} {
+      allow read: if sameSchoolResource() && isAdmin();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /maintenance_reports/{docId} {
+      allow read: if sameSchoolResource() && isAdmin();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+
+    // Canonical school database
+    match /users/{docId} {
+      allow read: if sameSchoolResource() && (isAdmin() || isStaff());
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /classes/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || isDriver()
+          || teacherOwnsClass(resource.data.get('name', resource.data.get('className', '')))
+          || parentOwnsClass(resource.data.get('name', resource.data.get('className', '')))
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /students/{docId} {
+      allow read: if sameSchoolResource()
+        && canReadStudentPii(
+          resource.data.get('studentId', docId),
+          resource.data.get('className', '')
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /parents/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || role() == 'teacher'
+          || docId == username()
+          || resource.data.get('username', '') == username()
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /parent_student_links/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || role() == 'teacher'
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /teachers/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /teacher_assignments/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || (
+            role() == 'teacher'
+            && resource.data.get('teacherId', '') == request.auth.token.linkedTeacherId
+          )
+          || teacherOwnsClass(resource.data.get('className', ''))
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /drivers/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /routes/{docId} {
+      allow read: if sameSchoolResource() && (isAdmin() || isDriver() || role() == 'parent');
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /transport_assignments/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || isDriver()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+        );
+      allow write: if isAdmin() && sameSchoolWrite();
+    }
+    match /attendance/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+          || teacherOwnsClass(resource.data.get('className', ''))
+        );
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+    match /grades/{docId} {
+      allow read: if sameSchoolResource()
+        && (
+          isAdmin()
+          || parentOwnsStudent(resource.data.get('studentId', ''))
+          || teacherOwnsClass(resource.data.get('className', ''))
+          || studentOwnsSelf(resource.data.get('studentId', ''))
+        );
+      allow write: if sameSchoolWrite()
+        && (
+          isAdmin()
+          || teacherOwnsClass(request.resource.data.get('className', ''))
+        );
+    }
+    match /announcements/{docId} {
+      allow read: if sameSchoolResource() && isSchoolUser();
+      allow write: if sameSchoolWrite() && (isAdmin() || role() == 'teacher');
+    }
+  }
+}

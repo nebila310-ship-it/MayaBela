@@ -1,0 +1,7 @@
+# Cloudflare Pages — MayaBela Flutter web
+# Deploy: deploy-cloudflare-pages.cmd
+# Docs: https://developers.cloudflare.com/pages/
+
+name = "mayabela"
+compatibility_date = "2026-07-28"
+pages_build_output_dir = "build/web"

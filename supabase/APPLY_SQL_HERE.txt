@@ -1,0 +1,6 @@
+# Open this in Supabase SQL Editor if CLI login is not ready:
+# https://supabase.com/dashboard/project/hwkiihonthueadbhcvfi/sql/new
+#
+# Paste the full contents of:
+# supabase/migrations/20260725120000_app_documents.sql
+# then click Run.

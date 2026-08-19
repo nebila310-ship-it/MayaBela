@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "557368189708",
+    "project_id": "majo-e-school-bridge",
+    "storage_bucket": "majo-e-school-bridge.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557368189708:android:97b641152d51752b9a5f29",
+        "android_client_info": {
+          "package_name": "com.example.eduaba"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "557368189708-7ooaqv91vlor99fb3dfsa2vs2fe26guq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.eduaba",
+            "certificate_hash": "cad6d4be8624583cadfa4fde935202cafaf1de8d"
+          }
+        },
+        {
+          "client_id": "557368189708-aosad0a8k12gkbfoc64rf9kp8fvq8sq1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB89vQYWUuXXFcwDjJO1l_80mav6vJybfI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "557368189708-aosad0a8k12gkbfoc64rf9kp8fvq8sq1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557368189708:android:a36255ec36e39b6a9a5f29",
+        "android_client_info": {
+          "package_name": "com.mayabela.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "557368189708-aosad0a8k12gkbfoc64rf9kp8fvq8sq1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB89vQYWUuXXFcwDjJO1l_80mav6vJybfI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "557368189708-aosad0a8k12gkbfoc64rf9kp8fvq8sq1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,60 @@
+# Flutter tests on PR / push. Deploy workflow stays separate.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Unit tests
+        run: flutter test --reporter compact
+
+  # Live PostgREST negatives against dedicated staging (never production).
+  # Add repo secrets: STAGING_SUPABASE_URL, STAGING_ANON_KEY, STAGING_SERVICE_ROLE_KEY.
+  # Skips (exit 0) when those secrets are unset so existing CI stays green.
+  rls-isolation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: RLS isolation (parent / other school must fail)
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_ANON_KEY: ${{ secrets.STAGING_ANON_KEY }}
+          STAGING_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$STAGING_SUPABASE_URL" ] || [ -z "$STAGING_ANON_KEY" ] || [ -z "$STAGING_SERVICE_ROLE_KEY" ]; then
+            echo "Skipping RLS isolation — staging secrets not configured."
+            exit 0
+          fi
+          node tools/test_rls_isolation.mjs

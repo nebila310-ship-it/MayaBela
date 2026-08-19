@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Majo Bridge · Smart School Operating System</title>
+  <style>
+    :root {
+      --navy: #0b3d4a;
+      --teal: #0f766e;
+      --teal-soft: #ccfbf1;
+      --ink: #0f172a;
+      --muted: #475569;
+      --soft: #f8fafc;
+      --line: #e2e8f0;
+      --gold: #b45309;
+      --cream: #fffbeb;
+      --blue: #1d4ed8;
+      --blue-soft: #dbeafe;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: Calibri, "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: var(--ink);
+      overflow: hidden;
+    }
+    .deck { height: 100%; width: 100%; position: relative; }
+    .slide {
+      display: none;
+      height: 100%;
+      width: 100%;
+      padding: clamp(1.4rem, 3.2vw, 2.8rem) clamp(1.4rem, 3.5vw, 3rem);
+      overflow: auto;
+      animation: fade .25s ease;
+    }
+    .slide.active { display: flex; flex-direction: column; }
+    .slide.dark {
+      background: var(--navy);
+      color: #fff;
+    }
+    .slide.light {
+      background: linear-gradient(180deg, #fff 0%, var(--soft) 100%);
+      border-left: 10px solid var(--teal);
+    }
+    @keyframes fade {
+      from { opacity: .35; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+    .eyebrow {
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: clamp(1rem, 1.6vw, 1.25rem);
+      font-weight: 700;
+      color: var(--teal-soft);
+      margin-bottom: .75rem;
+    }
+    .slide.light .eyebrow { color: var(--teal); }
+    h1 {
+      font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+      line-height: 1.12;
+      margin-bottom: .55rem;
+      color: inherit;
+    }
+    .slide.light h1 { color: var(--navy); }
+    .sub {
+      color: var(--muted);
+      font-size: clamp(1.15rem, 2vw, 1.45rem);
+      margin-bottom: 1.35rem;
+      font-weight: 500;
+    }
+    .slide.dark .sub { color: var(--teal-soft); }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      flex: 1;
+      align-content: stretch;
+    }
+    .g2 { grid-template-columns: repeat(2, 1fr); }
+    .g3 { grid-template-columns: repeat(3, 1fr); }
+    .g4 { grid-template-columns: repeat(4, 1fr); }
+    .g5 { grid-template-columns: repeat(5, 1fr); }
+    @media (max-width: 900px) {
+      .g3, .g4, .g5 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .g2, .g3, .g4, .g5 { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      padding: 1.25rem 1.2rem;
+      min-height: 6.2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(15,23,42,.08);
+    }
+    .slide.dark .card {
+      background: rgba(255,255,255,.08);
+      border-color: rgba(255,255,255,.12);
+      color: #fff;
+    }
+    .card strong {
+      display: block;
+      color: var(--navy);
+      font-size: clamp(1.15rem, 2vw, 1.45rem);
+      margin-bottom: .4rem;
+      line-height: 1.2;
+    }
+    .slide.dark .card strong { color: var(--teal-soft); }
+    .card span, .card p {
+      color: var(--muted);
+      font-size: clamp(1rem, 1.6vw, 1.2rem);
+      line-height: 1.35;
+    }
+    .slide.dark .card span { color: rgba(255,255,255,.78); }
+    .pill {
+      background: var(--teal);
+      color: #fff;
+      border-radius: 18px;
+      padding: 1.35rem .7rem;
+      text-align: center;
+      font-weight: 700;
+      font-size: clamp(1.05rem, 2vw, 1.4rem);
+      min-height: 5.2rem;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 14px rgba(15,118,110,.28);
+    }
+    .pill.alt { background: var(--navy); }
+    .quote {
+      background: var(--cream);
+      border-radius: 18px;
+      padding: 1.25rem 1.4rem;
+      font-size: clamp(1.15rem, 2vw, 1.45rem);
+      font-weight: 600;
+      color: var(--navy);
+      margin: .5rem 0 1.2rem;
+      border: 2px solid #fde68a;
+    }
+    .handoff {
+      background: var(--blue-soft);
+      border-radius: 18px;
+      padding: 1.25rem 1.4rem;
+      margin-top: auto;
+      font-size: clamp(1.1rem, 1.8vw, 1.3rem);
+      border: 2px solid #93c5fd;
+    }
+    .handoff b { color: var(--blue); display: block; margin-bottom: .4rem; font-size: 1rem; letter-spacing: .08em; }
+    .cols {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1rem;
+      flex: 1;
+    }
+    @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }
+    .col {
+      background: var(--soft);
+      border-radius: 18px;
+      padding: 1.35rem 1.25rem;
+      border: 2px solid var(--line);
+      box-shadow: 0 4px 14px rgba(15,23,42,.06);
+    }
+    .col h3 {
+      color: var(--teal);
+      margin-bottom: .9rem;
+      font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+    }
+    .col li {
+      list-style: none;
+      margin: .7rem 0;
+      font-size: clamp(1.1rem, 1.8vw, 1.3rem);
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .col li::before { content: "▸ "; color: var(--teal); font-weight: 700; }
+    .rows { display: flex; flex-direction: column; gap: .75rem; flex: 1; }
+    .row {
+      display: grid;
+      grid-template-columns: minmax(220px, 32%) 1fr;
+      gap: 1.1rem;
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      padding: 1.15rem 1.35rem;
+      align-items: center;
+      min-height: 4.6rem;
+      box-shadow: 0 4px 14px rgba(15,23,42,.06);
+    }
+    @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+    .row b {
+      color: var(--navy);
+      font-size: clamp(1.2rem, 2vw, 1.5rem);
+    }
+    .row span {
+      color: var(--muted);
+      font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+    }
+    .formula {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+    .formula div {
+      background: var(--teal);
+      color: #fff;
+      border-radius: 18px;
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-weight: 700;
+      padding: 1.1rem;
+      font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+      box-shadow: 0 4px 14px rgba(15,118,110,.28);
+    }
+    .formula div:last-child { background: var(--gold); }
+    .phase {
+      display: grid;
+      grid-template-columns: minmax(140px, 18%) 1fr;
+      gap: 1rem;
+      background: var(--soft);
+      border-radius: 16px;
+      padding: 1.2rem 1.4rem;
+      margin: .55rem 0;
+      align-items: center;
+      min-height: 4.8rem;
+      border: 2px solid var(--line);
+      box-shadow: 0 4px 14px rgba(15,23,42,.06);
+    }
+    .phase b {
+      color: var(--teal);
+      font-size: clamp(1.25rem, 2.1vw, 1.55rem);
+    }
+    .phase span {
+      font-size: clamp(1.15rem, 2vw, 1.45rem);
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .footer-bar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .55rem 1rem;
+      background: rgba(15, 23, 42, .88);
+      color: #cbd5e1;
+      font-size: .85rem;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+    }
+    .nav {
+      display: flex;
+      gap: .45rem;
+      align-items: center;
+    }
+    button {
+      border: 0;
+      background: var(--teal);
+      color: #fff;
+      border-radius: 999px;
+      padding: .45rem .9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .4; cursor: default; }
+    button.ghost { background: transparent; border: 1px solid #64748b; }
+    .hint { opacity: .8; }
+    .hero-title { font-size: clamp(2.6rem, 5.5vw, 3.8rem); margin: .5rem 0 1.1rem; }
+    .contact { margin-top: 1.2rem; font-size: clamp(1.2rem, 2vw, 1.5rem); line-height: 1.65; color: #fff; font-weight: 500; }
+    .pad-bottom { padding-bottom: 3.8rem; }
+  </style>
+</head>
+<body>
+  <div class="deck pad-bottom" id="deck">
+
+    <section class="slide dark active">
+      <div class="eyebrow">Majo Bridge</div>
+      <h1 class="hero-title">Smart School<br/>Operating System</h1>
+      <p class="sub">One operating system for the whole school — academics, leadership, family &amp; transport</p>
+      <p class="contact">MaJo-Bridge Technology PLC · Executive briefing</p>
+    </section>
+
+    <section class="slide light">
+      <h1>The Challenge</h1>
+      <p class="sub">Why schools need a smarter operating system</p>
+      <div class="grid g4">
+        <div class="card"><strong>Paper-heavy work</strong><span>Admin still on paper</span></div>
+        <div class="card"><strong>Slow updates</strong><span>Parents wait for news</span></div>
+        <div class="card"><strong>Scattered data</strong><span>Many files, many truths</span></div>
+        <div class="card"><strong>Weak tracking</strong><span>Hard to see progress</span></div>
+        <div class="card"><strong>Transport gaps</strong><span>Bus safety unclear</span></div>
+        <div class="card"><strong>Siloed roles</strong><span>GM → HR not connected</span></div>
+        <div class="card"><strong>No memory hub</strong><span>Photos &amp; events lost</span></div>
+        <div class="card"><strong>Our question</strong><span>How do we connect it all?</span></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Our Solution</h1>
+      <p class="sub">Majo Bridge Smart School Operating System</p>
+      <p class="sub" style="margin-bottom:.6rem">Five connections in one platform</p>
+      <div class="grid g5" style="margin-bottom:1rem">
+        <div class="pill">School</div>
+        <div class="pill">Teachers</div>
+        <div class="pill">Students</div>
+        <div class="pill">Parents</div>
+        <div class="pill alt">Transport</div>
+      </div>
+      <p class="sub">Leadership inside the same system</p>
+      <div class="grid g4">
+        <div class="card"><strong>General Manager</strong></div>
+        <div class="card"><strong>Deputy Manager</strong></div>
+        <div class="card"><strong>Section Directors</strong></div>
+        <div class="card"><strong>Student Affairs</strong></div>
+        <div class="card"><strong>Quality Assurance</strong></div>
+        <div class="card"><strong>Finance</strong></div>
+        <div class="card"><strong>Human Resources</strong></div>
+        <div class="card"><strong>Procurement</strong></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Our Vision</h1>
+      <div class="quote">Turn traditional schools into smart, connected, data-driven institutions — run like a modern organization.</div>
+      <div class="grid g3">
+        <div class="card"><strong>Smart operations</strong></div>
+        <div class="card"><strong>Clear communication</strong></div>
+        <div class="card"><strong>Digital learning</strong></div>
+        <div class="card"><strong>Data-driven decisions</strong></div>
+        <div class="card"><strong>Stronger parent trust</strong></div>
+        <div class="card"><strong>Safer transport</strong></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Why Majo Bridge?</h1>
+      <p class="sub">What makes the operating system different</p>
+      <div class="grid g3">
+        <div class="card"><strong>One integrated OS</strong><span>Academics → stores → bus</span></div>
+        <div class="card"><strong>Web + mobile</strong><span>Staff, family, drivers</span></div>
+        <div class="card"><strong>Role-based control</strong><span>GM → HR permissions</span></div>
+        <div class="card"><strong>Approve before publish</strong><span>Grades only after OK</span></div>
+        <div class="card"><strong>EN · አማርኛ · Afaan Oromo</strong><span>Local-ready UX</span></div>
+        <div class="card"><strong>School data isolation</strong><span>Each school secured</span></div>
+      </div>
+      <div class="handoff">
+        <b>HANDOFF</b>
+        “Now our Deputy Manager will show how the system works — portals, leadership roles, and daily school services.”
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>How It Works</h1>
+      <p class="sub">Five user portals · one operating system</p>
+      <div class="rows">
+        <div class="row"><b>School Admin</b><span>Whole-school control · multi-campus</span></div>
+        <div class="row"><b>Teachers</b><span>Attendance · timetable · grades · homework</span></div>
+        <div class="row"><b>Students</b><span>Learn · submit · results · QR profile</span></div>
+        <div class="row"><b>Parents</b><span>Secure link · progress · fees · bus · daily report</span></div>
+        <div class="row"><b>Transport Handler</b><span>Routes · live bus · pickup / drop-off</span></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Leadership &amp; Operations Roles</h1>
+      <p class="sub">Every key office has the right access — not one shared password</p>
+      <div class="grid g4">
+        <div class="card"><strong>General Manager</strong><span>School-wide oversight</span></div>
+        <div class="card"><strong>Deputy Manager</strong><span>Daily executive control</span></div>
+        <div class="card"><strong>Section Directors</strong><span>Classes · teacher assign · grade approve</span></div>
+        <div class="card"><strong>Student Affairs</strong><span>Welfare · transfers · promotion</span></div>
+        <div class="card"><strong>Quality Assurance</strong><span>Standards · findings</span></div>
+        <div class="card"><strong>Finance</strong><span>Fees · money visibility</span></div>
+        <div class="card"><strong>Human Resources</strong><span>Staff · roles · access</span></div>
+        <div class="card"><strong>Procurement</strong><span>Purchasing · inventory</span></div>
+      </div>
+      <div class="quote" style="margin-top:1rem">
+        Quality gate: teachers enter grades → leadership approves → only then parents see results.
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Core School Services</h1>
+      <p class="sub">Management · teaching · family · transport</p>
+      <div class="cols">
+        <div class="col">
+          <h3>Manage</h3>
+          <ul>
+            <li>Registration · multi-campus</li>
+            <li>Attendance · timetable</li>
+            <li>Grade approve → publish</li>
+            <li>Transfers · promotion</li>
+            <li>Inventory · library · reports</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Teach &amp; Learn</h3>
+          <ul>
+            <li>Homework both sides</li>
+            <li>Assignments · quizzes</li>
+            <li>eBooks · materials sell</li>
+            <li>Learning materials</li>
+            <li>Maya Assistant (in-app)</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h3>Family &amp; Bus</h3>
+          <ul>
+            <li>Secure parent–child link</li>
+            <li>Daily activity report</li>
+            <li>Fees · announcements</li>
+            <li>Live bus tracking</li>
+            <li>EN / አማርኛ / Afaan Oromo</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>More Built Into the OS</h1>
+      <p class="sub">Community · learning · trust — still one system</p>
+      <div class="grid g4">
+        <div class="card"><strong>Photo / Video Gallery</strong><span>School memories</span></div>
+        <div class="card"><strong>Internal Messaging</strong><span>Built-in chat</span></div>
+        <div class="card"><strong>Announcements</strong><span>One clear channel</span></div>
+        <div class="card"><strong>Calendar &amp; Events</strong><span>School schedule</span></div>
+        <div class="card"><strong>Homework Upload</strong><span>Teacher ↔ Student</span></div>
+        <div class="card"><strong>eBook &amp; eLearning Sell</strong><span>Digital materials</span></div>
+        <div class="card"><strong>Daily Parent Report</strong><span>What happened today</span></div>
+        <div class="card"><strong>Student Profile + QR</strong><span>Fast ID &amp; access</span></div>
+        <div class="card"><strong>Secure Parent Link</strong><span>ID + DOB · approved</span></div>
+        <div class="card"><strong>Exports Excel/PDF/CSV</strong><span>Board-ready reports</span></div>
+        <div class="card"><strong>Audit &amp; Staff Roles</strong><span>Who can do what</span></div>
+        <div class="card"><strong>Cloud School Isolation</strong><span>Your data stays yours</span></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Benefits for Schools</h1>
+      <div class="grid g4">
+        <div class="card"><strong>Less paperwork</strong></div>
+        <div class="card"><strong>Save staff time</strong></div>
+        <div class="card"><strong>Clearer communication</strong></div>
+        <div class="card"><strong>Grade quality control</strong></div>
+        <div class="card"><strong>Engage parents</strong></div>
+        <div class="card"><strong>Safer transport</strong></div>
+        <div class="card"><strong>Multi-campus ready</strong></div>
+        <div class="card"><strong>Local languages</strong></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Partnership &amp; Intelligence</h1>
+      <p class="sub">Business value · intelligence already in the OS</p>
+      <div class="grid g4" style="margin-bottom:1rem">
+        <div class="card"><strong>Digital transformation</strong><span>Modern school brand</span></div>
+        <div class="card"><strong>Stronger competitiveness</strong><span>Win parent trust</span></div>
+        <div class="card"><strong>Long-term records</strong><span>Institutional memory</span></div>
+        <div class="card"><strong>Pilot → scale</strong><span>Start one campus / grade</span></div>
+      </div>
+      <div class="grid g4">
+        <div class="card"><strong>Maya Assistant</strong><span>Live in-app</span></div>
+        <div class="card"><strong>AI Tutor support</strong><span>Implemented</span></div>
+        <div class="card"><strong>AI for Staff / Parents</strong><span>Implemented</span></div>
+        <div class="card"><strong>AI Analytics</strong><span>Implemented</span></div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Why Partner With Majo Bridge?</h1>
+      <div class="quote">Education’s future is connected, digital, and intelligent. Majo Bridge lets schools start that transformation today.</div>
+      <div class="formula">
+        <div>Technology</div>
+        <div>Education</div>
+        <div>Partnership</div>
+        <div>Better Schools</div>
+      </div>
+    </section>
+
+    <section class="slide light">
+      <h1>Already Implemented</h1>
+      <p class="sub">Not a future promise — live in the platform today</p>
+      <div class="phase"><b>✓ Live</b><span>School OS &amp; leadership roles</span></div>
+      <div class="phase"><b>✓ Live</b><span>Parent, teacher &amp; transport services</span></div>
+      <div class="phase"><b>✓ Live</b><span>Digital learning &amp; eMaterials</span></div>
+      <div class="phase"><b>✓ Live</b><span>AI Assistant in-app (deeper AI continues)</span></div>
+      <div class="phase"><b>✓ Live</b><span>Ready for regional school rollout</span></div>
+    </section>
+
+    <section class="slide dark">
+      <div class="eyebrow">Majo Bridge Smart School Operating System</div>
+      <h1 class="hero-title">More than an app.<br/>A school operating system.</h1>
+      <p class="sub">
+        Schools · teachers · students · parents · transport<br/>
+        GM · Deputy · Section Directors · Student Affairs · QA · Finance · HR · Procurement
+      </p>
+      <p class="contact">
+        EN / አማርኛ / Afaan Oromo<br/>
+        Live demo: https://mayabela.pages.dev<br/>
+        +251 911 646 444 · majobridgetech@gmail.com
+      </p>
+      <p class="sub" style="margin-top:1.2rem">Smarter. More connected. More accessible. Let’s build it together.</p>
+    </section>
+  </div>
+
+  <div class="footer-bar">
+    <div class="hint">← → or buttons · F = fullscreen</div>
+    <div class="nav">
+      <button class="ghost" id="prev" type="button">Prev</button>
+      <span id="count">1 / 14</span>
+      <button id="next" type="button">Next</button>
+    </div>
+  </div>
+
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    let i = 0;
+    const count = document.getElementById('count');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+
+    function show(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+      count.textContent = (i + 1) + ' / ' + slides.length;
+      prev.disabled = i === 0;
+      next.disabled = i === slides.length - 1;
+      history.replaceState(null, '', '#' + (i + 1));
+    }
+
+    prev.onclick = () => show(i - 1);
+    next.onclick = () => show(i + 1);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        show(i + 1);
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        show(i - 1);
+      }
+      if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(slides.length - 1);
+    });
+
+    const start = parseInt((location.hash || '#1').slice(1), 10);
+    show(Number.isFinite(start) ? start - 1 : 0);
+  </script>
+</body>
+</html>

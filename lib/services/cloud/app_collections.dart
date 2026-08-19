@@ -1,0 +1,57 @@
+/// Firestore collection names for the eduaba app layer.
+abstract final class AppCollections {
+  // Registry & auth (CloudAppStore)
+  static const authAccounts = 'app_auth_accounts';
+  static const parentLinkRequests = 'parent_link_requests';
+  static const studentMedical = 'student_medical';
+  static const studentRegistry = 'student_registry';
+  static const teacherRegistry = 'teacher_registry';
+  static const driverRegistry = 'driver_registry';
+  static const employeeRegistry = 'employee_registry';
+
+  // Teacher / parent features
+  static const gradeReports = 'grade_reports';
+  static const homework = 'homework';
+  static const dailyActivities = 'daily_activities';
+  static const conversations = 'conversations';
+  static const announcements = 'app_announcements';
+  static const attendanceSessions = 'attendance_sessions';
+  static const fees = 'fees';
+  static const calendarEvents = 'calendar_events';
+  static const classTimetables = 'class_timetables';
+  static const galleryPosts = 'gallery_posts';
+  static const learningMaterials = 'learning_materials';
+  static const materialPurchaseRequests = 'material_purchase_requests';
+  static const gradeAuditLog = 'grade_audit_log';
+  static const qrScans = 'qr_scans';
+  static const schoolRegistry = 'school_registry';
+  static const platformAudit = 'platform_audit_log';
+  static const fcmTokens = 'fcm_tokens';
+  static const transportScans = 'transport_scans';
+  static const transportPassengerStatus = 'transport_passenger_status';
+  static const busLivePositions = 'bus_live_positions';
+  static const appNotifications = 'app_notifications';
+
+  // Procurement & store workflows (names match the SQL write-guard gates)
+  static const purchaseRequests = 'purchase_requests';
+  static const issueRequests = 'issue_requests';
+  static const transferRequests = 'transfer_requests';
+  static const buses = 'buses';
+  static const schoolAuditLog = 'school_audit_log';
+
+  // Student Affairs & welfare (EDUABA)
+  static const disciplineCases = 'discipline_cases';
+  static const leaveRequests = 'leave_requests';
+
+  // Quality Assurance (EDUABA §2)
+  static const qaFindings = 'qa_findings';
+
+  // School inventory
+  static const inventoryItems = 'inventory_items';
+  static const stockTransactions = 'stock_transactions';
+  static const studentIssuedItems = 'student_issued_items';
+  static const classroomInventory = 'classroom_inventory';
+  static const assets = 'assets';
+  static const suppliers = 'suppliers';
+  static const maintenanceReports = 'maintenance_reports';
+}

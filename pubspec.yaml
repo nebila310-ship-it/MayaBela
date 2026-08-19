@@ -1,0 +1,120 @@
+name: mayabela
+description: "MayaBela school management for parents, teachers, and staff."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.3+4
+
+environment:
+  sdk: ^3.12.2
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  google_maps_flutter: ^2.12.1
+  geolocator: ^13.0.2
+  mobile_scanner: ^7.0.1
+  qr_flutter: ^4.1.0
+  url_launcher: ^6.3.1
+  share_plus: ^10.1.4
+  # Vendored for AGP 9 built-in Kotlin (no kotlin-android plugin apply).
+  add_2_calendar:
+    path: packages/add_2_calendar
+  image_picker: ^1.1.2
+  image: ^4.5.4
+  shared_preferences: ^2.5.3
+  connectivity_plus: ^6.1.4
+  flutter_local_notifications: ^18.0.1
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  excel_plus: 2.2.0
+  file_picker: ^10.1.2
+  open_file: ^3.5.10
+  supabase_flutter: ^2.9.1
+  # Firebase is used ONLY for push notification delivery (FCM transport).
+  # All data and auth live in Supabase.
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.2.4
+  # Typed browser APIs for the web build (replaces deprecated dart:html).
+  web: ^1.1.0
+  record: ^6.0.0
+  audioplayers: ^6.8.1
+  crypto: ^3.0.6
+  fl_chart: ^0.70.2
+  pdf: ^3.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+    - assets/branding/maya_brand.png
+    - assets/branding/majo_login_watermark.png
+    - assets/branding/app_icon.png
+    - assets/sounds/scan_success.wav
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/app_icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/branding/app_icon.png
+  web:
+    generate: true
+    image_path: assets/branding/app_icon.png
+    background_color: "#FFFFFF"
+    theme_color: "#00695C"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/branding/app_icon.png
+  android: true
+  ios: true
+  android_12:
+    color: "#FFFFFF"
+    image: assets/branding/app_icon.png

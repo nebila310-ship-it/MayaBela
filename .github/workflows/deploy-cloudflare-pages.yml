@@ -1,0 +1,75 @@
+# Deploy Flutter web to Cloudflare Pages (manual or on push to main).
+# Secrets required in GitHub repo settings:
+#   CLOUDFLARE_API_TOKEN   — Pages Edit permission
+#   CLOUDFLARE_ACCOUNT_ID  — from Cloudflare dashboard URL / overview
+
+name: Deploy Cloudflare Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "lib/**"
+      - "web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "wrangler.toml"
+      - ".github/workflows/deploy-cloudflare-pages.yml"
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Unit tests
+        run: |
+          flutter pub get
+          flutter test --reporter compact
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build web
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          flutter pub get
+          flutter build web --release \
+            --dart-define=SUPABASE_CONFIGURED=true \
+            --dart-define=SUPABASE_URL="${SUPABASE_URL}" \
+            --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
+          cp -f web/_redirects build/web/_redirects
+          cp -f web/_headers build/web/_headers
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build/web --project-name=mayabela --commit-dirty=true

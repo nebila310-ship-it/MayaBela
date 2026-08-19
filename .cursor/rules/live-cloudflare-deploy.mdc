@@ -1,0 +1,18 @@
+---
+description: After UI/web changes, deploy to Cloudflare Pages so mayabela.pages.dev stays live for multi-browser testing
+alwaysApply: true
+---
+
+# Live web deploy after adjustments
+
+When the user asks for UI/feature adjustments and needs to test on another browser:
+
+1. Implement the change in the codebase.
+2. Before ending the turn, deploy to Cloudflare Pages so the live site updates:
+   - Run from project root:
+     `cmd /c "set MAYABELA_NOPAUSE=1&& deploy-cloudflare-pages.cmd"`
+   - Or equivalent: build web release, then `npx wrangler@4 pages deploy build/web --project-name=mayabela --commit-dirty=true`
+3. Tell the user the live URL: **https://mayabela.pages.dev**
+4. Remind them to hard-refresh (**Ctrl+Shift+R**) if they still see the old UI.
+
+Do this whenever web/UI/platform-console changes are made in the session unless the user explicitly says not to deploy (e.g. local-only debug).

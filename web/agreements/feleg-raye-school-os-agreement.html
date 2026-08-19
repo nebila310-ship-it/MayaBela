@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Software Supply &amp; Implementation Agreement — Feleg Raye School × MaJo-Bridge</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.45;
+    }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 18mm 16mm 16mm;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(20, 32, 51, 0.92);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar button {
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #fff;
+      color: var(--ink);
+    }
+    .toolbar a {
+      color: #fff;
+      align-self: center;
+      text-decoration: underline;
+    }
+    .brand {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 18px;
+      align-items: center;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+    .brand img {
+      width: 150px;
+      height: auto;
+      display: block;
+    }
+    .brand-meta h1 {
+      margin: 0 0 4px;
+      font-size: 15.5pt;
+      color: var(--blue);
+      letter-spacing: 0.2px;
+    }
+    .brand-meta .sub {
+      margin: 0;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 10pt;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .brand-meta .tiny {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 9pt;
+    }
+    .doc-title {
+      text-align: center;
+      margin: 18px 0 8px;
+    }
+    .doc-title h2 {
+      margin: 0;
+      font-size: 14pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--ink);
+    }
+    .doc-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 10pt;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0 18px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 11.5pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 12px 0 6px;
+      font-size: 10.5pt;
+      color: var(--ink);
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    .clause { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 10pt;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--wash);
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .price-box {
+      border: 2px solid var(--green);
+      background: linear-gradient(180deg, #f3fbf6, #fff);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 10px 0 14px;
+    }
+    .price-box .amount {
+      font-size: 16pt;
+      font-weight: 800;
+      color: var(--blue);
+      margin: 4px 0;
+    }
+    .highlight {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 120px;
+    }
+    .sig .who { font-weight: 700; margin-top: 36px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 22px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 8.5pt;
+      text-align: center;
+    }
+    .page-break { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet {
+        margin: 0;
+        box-shadow: none;
+        width: auto;
+        padding: 12mm;
+      }
+      a[href]::after { content: ""; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    <a href="https://mayabela.pages.dev">Live School OS demo</a>
+  </div>
+
+  <article class="sheet">
+    <header class="brand">
+      <img src="/agreements/assets/majo-bridge-logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+      <div class="brand-meta">
+        <h1>MaJo-Bridge Technology and Events PLC</h1>
+        <p class="sub">Smart School Operating System · ERP · Software · Web</p>
+        <p class="tiny">
+          General Manager: Nebil Ahmed · Tel: +251 911 646 444<br />
+          Email: majobridgetech@gmail.com · Web: https://mayabela.pages.dev
+        </p>
+      </div>
+    </header>
+
+    <div class="doc-title">
+      <h2>Software Supply, Customization &amp; Implementation Agreement</h2>
+      <p>
+        For the provision of <strong>Majo Bridge Smart School Operating System</strong>
+        to <strong>Feleg Raye School</strong>
+      </p>
+      <p>Agreement Ref: <strong>MB-FRS-SSOS-2026-001</strong> · Effective Date: _______________ 2026</p>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Service Provider (“Provider”)</strong>
+        MaJo-Bridge Technology and Events PLC<br />
+        Represented by: <strong>Nebil Ahmed</strong>, General Manager<br />
+        Mobile: +251 911 646 444
+      </div>
+      <div class="meta-card">
+        <strong>Client (“School”)</strong>
+        Feleg Raye School<br />
+        Represented by: _________________________________<br />
+        Title: _________________________________
+      </div>
+    </div>
+
+    <h3>1. Recitals &amp; Provider Capability</h3>
+    <p>
+      WHEREAS the School desires a modern, secure, role-based digital School Operating System
+      covering academics, operations, finance visibility, transport safety, parent engagement,
+      and institutional governance; and
+    </p>
+    <p>
+      WHEREAS MaJo-Bridge Technology and Events PLC has proven experience in
+      <strong>ERP systems</strong>, <strong>custom software development</strong>,
+      <strong>website development</strong>, and education-technology delivery, and is the
+      developer and implementer of the <strong>Majo Bridge Smart School Operating System</strong>
+      (also demonstrated at the live environment https://mayabela.pages.dev); and
+    </p>
+    <p>
+      WHEREAS the Parties wish to record a clear, enforceable scope of work, customization
+      commitment, commercial terms, acceptance standards, and ongoing support obligations;
+    </p>
+    <p>NOW, THEREFORE, the Parties agree as follows.</p>
+
+    <h3>2. Definitions</h3>
+    <ul>
+      <li><strong>“System”</strong> means the Majo Bridge Smart School Operating System, including web/app portals, role-based access control, cloud backend, and modules listed in this Agreement.</li>
+      <li><strong>“Customization”</strong> means configuration, branding, workflow adjustments, role/permission mapping, report formats, and feature adaptations for Feleg Raye School within the agreed package.</li>
+      <li><strong>“Go-Live”</strong> means the date the System is available for production use by School staff with core modules enabled and admin credentials handed over.</li>
+      <li><strong>“School Data”</strong> means all student, parent, staff, academic, financial, and operational records entered or generated for the School.</li>
+    </ul>
+
+    <h3>3. Contract Object &amp; Commercial Value</h3>
+    <div class="price-box">
+      <div>Total Contract Price (lump sum, fixed for the Scope in this Agreement)</div>
+      <div class="amount">ETB 2,500,000.00 (Two Million Five Hundred Thousand Birr)</div>
+      <div><strong>Inclusive of VAT</strong> and of the Standard Customization Package in Clause 7.</div>
+    </div>
+    <p>
+      The Price covers software licensing for Feleg Raye School (production use), implementation,
+      data setup support, training, the Standard Customization Package, and warranty/support
+      for the Initial Term in Clause 12, unless otherwise stated.
+    </p>
+
+    <h3>4. Scope of Supply — Portals (User Channels)</h3>
+    <p>The System is delivered as one operating system with five operational portals:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Portal</th>
+          <th>Primary Users</th>
+          <th>Core Functions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Administration / Leadership Console</strong></td>
+          <td>School Owner, GM, Deputy, Principal, Directors, Finance, HR, QA, etc.</td>
+          <td>Governance dashboards, enrollment, academics, fees, inventory, transport oversight, announcements, audit visibility, staff account management, RBAC.</td>
+        </tr>
+        <tr>
+          <td><strong>Teacher Portal</strong></td>
+          <td>Teachers / classroom staff</td>
+          <td>Attendance, timetable, grades/assessment, homework, learning materials, messaging, class operations.</td>
+        </tr>
+        <tr>
+          <td><strong>Student Portal</strong></td>
+          <td>Students</td>
+          <td>Learning access, homework submission, results view, profile/QR identity, school communications.</td>
+        </tr>
+        <tr>
+          <td><strong>Parent Portal</strong></td>
+          <td>Parents / guardians</td>
+          <td>Secure child link, academic progress, fee visibility, transport/bus updates, daily reports, announcements.</td>
+        </tr>
+        <tr>
+          <td><strong>Transport Handler Portal</strong></td>
+          <td>Drivers / transport operators</td>
+          <td>Route/bus assignment visibility, pickup/drop-off workflow, live operational status shared with school &amp; parents.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>5. Scope of Supply — Functional Modules</h3>
+    <p>Unless expressly excluded in a signed Change Order, the System includes:</p>
+    <table>
+      <thead>
+        <tr><th>Module</th><th>Functional Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>A. Identity &amp; Access (RBAC)</strong></td><td>Secure login, school-scoped accounts, role/permission matrix, staff role assignment, password policy / first-login change, audit-friendly access control.</td></tr>
+        <tr><td><strong>B. Student Lifecycle</strong></td><td>Student registry, enrollment, profiles, photos, medical notes (as configured), promotion workflows, transfers, parent linking, QR student profile.</td></tr>
+        <tr><td><strong>C. Academic Structure</strong></td><td>Classes/sections, subjects, teacher assignment (homeroom &amp; subject), timetables, academic year/term configuration.</td></tr>
+        <tr><td><strong>D. Teaching &amp; Learning</strong></td><td>Attendance, homework upload/submit, grades &amp; assessment recording, grade approval controls, learning materials / eMaterials, library/material access controls.</td></tr>
+        <tr><td><strong>E. Parent Engagement</strong></td><td>Secure parent–student linking (verified), progress visibility, announcements, messaging, daily parent reporting.</td></tr>
+        <tr><td><strong>F. Finance Visibility</strong></td><td>Fee structures, payment recording, finance reports/visibility for authorized roles, parent fee transparency (as configured).</td></tr>
+        <tr><td><strong>G. Transport Safety</strong></td><td>Bus &amp; driver registry, student–route assignment, transport admin controls, driver handler workflow, parent transport updates.</td></tr>
+        <tr><td><strong>H. HR &amp; Staff Directory</strong></td><td>Teacher/staff registry, administration staff creation with roles, staff accounts, directory sync for multi-device access.</td></tr>
+        <tr><td><strong>I. Procurement &amp; Stores</strong></td><td>Suppliers, purchase requests, stock receive/issue/adjust, inventory visibility, approval flows for purchase/issue requests.</td></tr>
+        <tr><td><strong>J. Quality Assurance &amp; Oversight</strong></td><td>QA findings management, departmental visibility, reports, audit log viewing for authorized leadership roles.</td></tr>
+        <tr><td><strong>K. Communications &amp; Support</strong></td><td>Announcements, parent messaging, in-app support access, Maya Assistant / AI-assisted staff-parent support features as deployed in the live platform.</td></tr>
+        <tr><td><strong>L. Multi-language &amp; Multi-campus readiness</strong></td><td>EN / አማርኛ / Afaan Oromo UI capability; architecture ready for campus expansion subject to configuration.</td></tr>
+        <tr><td><strong>M. Cloud Operations</strong></td><td>Cloud-hosted production environment, school data isolation by school ID, backup practices under Provider’s hosting stack, browser-accessible operation.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3>6. Roles, Authority &amp; Scope of Responsibility (RBAC)</h3>
+    <p>
+      The System implements leadership and operations roles. Permissions are configurable.
+      Default role map for Feleg Raye School (final mapping confirmed during implementation workshop):
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Authority / Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>School Owner / Full Access</strong></td><td>Ultimate school control; all permissions; owner-only grants.</td></tr>
+        <tr><td><strong>School Board</strong></td><td>Oversight visibility: students, staff, grades, finance reports, departments, reports, audit log.</td></tr>
+        <tr><td><strong>General Manager</strong></td><td>School-wide oversight; approvals (transfers, grades, purchase/issue); announcements; staff account management; cross-department visibility.</td></tr>
+        <tr><td><strong>Deputy General Manager</strong></td><td>GM-level operational coverage plus class management and teacher assignment support.</td></tr>
+        <tr><td><strong>Principal</strong></td><td>Academic leadership: classes, subjects, timetables, grade approvals, transfers, staff/student visibility, communications.</td></tr>
+        <tr><td><strong>Vice Principal</strong></td><td>Academic/ops coordination: approvals, learning materials, teacher assignment, classes, communications, inventory/transport visibility.</td></tr>
+        <tr><td><strong>Section Director</strong></td><td>Section academics: classes, subjects, teacher assignment, timetables, grades, student management, transfer requests, parent links, transport assignment.</td></tr>
+        <tr><td><strong>Student Affairs</strong></td><td>Student welfare operations: student management, parent links, transfers, parent messaging, announcements.</td></tr>
+        <tr><td><strong>Registrar</strong></td><td>Registry control: students, parent links, transfers, promotions, parent messaging.</td></tr>
+        <tr><td><strong>Quality Assurance</strong></td><td>Quality oversight: grades/departments visibility, QA findings, reports, audit log.</td></tr>
+        <tr><td><strong>Finance Manager</strong></td><td>Fees, payment recording, finance reports, purchase approval visibility, inventory/transport views as authorized.</td></tr>
+        <tr><td><strong>Human Resource</strong></td><td>Staff accounts/directory; may support transport staff/bus/driver administration as configured.</td></tr>
+        <tr><td><strong>Librarian</strong></td><td>Learning materials and material access management.</td></tr>
+        <tr><td><strong>Procurement Manager</strong></td><td>Suppliers, purchase requests, purchased item entry, inventory visibility, issue-request approvals.</td></tr>
+        <tr><td><strong>Store Keeper</strong></td><td>Receive/issue/adjust stock; create issue requests; inventory operations.</td></tr>
+        <tr><td><strong>Transport Head</strong></td><td>Buses, drivers, student transport assignment, transport visibility, parent messaging as authorized.</td></tr>
+        <tr><td><strong>Teacher</strong></td><td>Classroom operations via Teacher Portal (attendance, grades, homework, materials, timetable).</td></tr>
+        <tr><td><strong>Student / Parent / Transport Handler</strong></td><td>Portal-scoped access only to their own linked records and assigned operational duties.</td></tr>
+      </tbody>
+    </table>
+    <div class="highlight">
+      <strong>Strong control statement:</strong> No user may exceed their granted permissions.
+      Cross-school data access is prohibited. The School Owner / authorized Admin remains
+      accountable for approving staff role grants inside the School.
+    </div>
+
+    <h3>7. Strong Customization Package (Included)</h3>
+    <p>
+      Within the Contract Price, Provider includes a <strong>Strong Customization Package</strong>
+      designed so Feleg Raye School is not forced onto a rigid one-size-fits-all setup:
+    </p>
+    <ol>
+      <li><strong>School branding:</strong> school name, logo placement in System surfaces where supported, color accents where applicable.</li>
+      <li><strong>Organizational mapping:</strong> campus/section structure, academic levels, class/section naming conventions.</li>
+      <li><strong>Role &amp; workflow fit:</strong> mapping Feleg Raye titles to System roles; approval paths for grades, transfers, procurement/stores.</li>
+      <li><strong>Fee &amp; operations configuration:</strong> fee categories/terms as agreed; transport routes/buses setup support.</li>
+      <li><strong>Report &amp; form preferences:</strong> reasonable adaptation of key lists/exports and operational screens based on discovery workshop outputs.</li>
+      <li><strong>Included customization effort:</strong> up to <strong>120 (one hundred twenty) professional service hours</strong> for configuration, workflow adaptation, and Feleg-Raye-specific adjustments during implementation.</li>
+      <li><strong>Priority change handling:</strong> during implementation, School-requested changes inside Scope are scheduled in weekly sprints; Provider shall not unreasonably refuse feasible in-platform customizations covered by remaining hours.</li>
+    </ol>
+    <p>
+      Work beyond the included hours, or net-new modules not listed in Clauses 4–5, shall be
+      estimated via a written <strong>Change Order</strong> (scope, days, fee) and performed only after written approval by both Parties.
+    </p>
+
+    <h3>8. Implementation Plan &amp; Deliverables</h3>
+    <table>
+      <thead>
+        <tr><th>Phase</th><th>Deliverable</th><th>Target</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>1. Kickoff &amp; Discovery</strong></td><td>Workshop, role map, data checklist, customization backlog.</td><td>Within 7 days of first payment</td></tr>
+        <tr><td><strong>2. Provisioning</strong></td><td>School tenant/environment, Admin accounts, baseline configuration.</td><td>Within 14 days of kickoff</td></tr>
+        <tr><td><strong>3. Customization &amp; Data Setup</strong></td><td>Brand/role/fee/class setup; guided import/entry support for core registries.</td><td>Per agreed project plan</td></tr>
+        <tr><td><strong>4. Training</strong></td><td>Admin/leadership training + teacher/parent/transport orientation sessions (online and/or onsite as agreed).</td><td>Before Go-Live</td></tr>
+        <tr><td><strong>5. UAT &amp; Go-Live</strong></td><td>User Acceptance Testing checklist sign-off; production Go-Live.</td><td>Target Go-Live: _______________</td></tr>
+        <tr><td><strong>6. Hypercare</strong></td><td>Intensive support window after Go-Live for stabilization.</td><td>30 days post Go-Live</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Standard deliverables package:</strong></p>
+    <ul>
+      <li>Production System access for Feleg Raye School</li>
+      <li>Admin credentials &amp; role setup documentation</li>
+      <li>Training attendance record / short user guides</li>
+      <li>Signed UAT / Acceptance Certificate (Annex A)</li>
+      <li>Support contact channel: +251 911 646 444 / majobridgetech@gmail.com</li>
+    </ul>
+
+    <h3>9. School Responsibilities</h3>
+    <ul>
+      <li>Appoint a single Project Owner and module champions (Academic, Finance, Transport, HR).</li>
+      <li>Provide accurate master data (students, classes, staff, fees, buses) in agreed formats and timelines.</li>
+      <li>Ensure lawful processing of personal data and obtain any required parent/guardian consents.</li>
+      <li>Complete UAT within 10 business days of Provider’s readiness notice (delay may shift Go-Live).</li>
+      <li>Control Admin credentials; promptly revoke access for departed staff.</li>
+    </ul>
+
+    <h3>10. Payment Schedule</h3>
+    <table>
+      <thead>
+        <tr><th>Milestone</th><th>Amount (ETB, VAT inclusive)</th><th>Due</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1. Contract signing / project start</td><td><strong>1,000,000</strong> (40%)</td><td>Upon signing</td></tr>
+        <tr><td>2. Environment ready + core configuration demo</td><td><strong>750,000</strong> (30%)</td><td>Upon Provider demo acceptance</td></tr>
+        <tr><td>3. Go-Live</td><td><strong>500,000</strong> (20%)</td><td>Upon Go-Live</td></tr>
+        <tr><td>4. Final acceptance (UAT certificate)</td><td><strong>250,000</strong> (10%)</td><td>Upon signed Acceptance Certificate</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Late payment beyond 15 calendar days of due date may suspend non-critical customization
+      work after written notice. Title to perpetual usage rights for the licensed School instance
+      vests upon full payment; School Data remains School property at all times.
+    </p>
+
+    <h3>11. Service Levels, Warranty &amp; Support</h3>
+    <ul>
+      <li><strong>Warranty:</strong> 90 days from Go-Live for defect repair on included Scope (reproducible faults not caused by misuse, unauthorized modification, or third-party outages).</li>
+      <li><strong>Support (Initial Term):</strong> business-hours support (Mon–Sat, 9:00–18:00 EAT) via phone/email/in-app channel; critical outage response target within 8 business hours.</li>
+      <li><strong>Uptime target:</strong> commercially reasonable cloud availability; planned maintenance with advance notice where practical.</li>
+      <li><strong>Security:</strong> school-scoped access, authenticated sessions, least-privilege RBAC; Provider shall not use School Data for unrelated commercial purposes.</li>
+    </ul>
+
+    <h3>12. Term, License &amp; Intellectual Property</h3>
+    <ul>
+      <li><strong>Initial Term:</strong> twelve (12) months from Go-Live, including hosting and standard support under this Agreement.</li>
+      <li><strong>Renewal:</strong> annual hosting/support renewal to be agreed in writing before expiry (separate commercial schedule). Non-renewal does not delete School’s right to export School Data.</li>
+      <li><strong>License:</strong> non-exclusive, non-transferable right for Feleg Raye School to use the System for its own educational operations.</li>
+      <li><strong>IP:</strong> Platform software, frameworks, and generic modules remain exclusive intellectual property of MaJo-Bridge Technology and Events PLC. Custom configuration unique to the School does not transfer platform ownership.</li>
+      <li><strong>School Data:</strong> exclusively owned by the School; Provider processes it only to deliver services.</li>
+      <li><strong>Data return:</strong> upon written request at termination, Provider shall provide a reasonable export of core registries within 15 business days.</li>
+    </ul>
+
+    <h3>13. Confidentiality &amp; Data Protection</h3>
+    <p>
+      Each Party shall keep confidential the other Party’s non-public business and technical
+      information for three (3) years after termination. Provider shall apply appropriate
+      technical and organizational measures to protect personal data and shall notify the School
+      of any confirmed personal-data breach affecting School Data without undue delay.
+    </p>
+
+    <h3>14. Warranties of Capability (Provider)</h3>
+    <p>Provider represents that it:</p>
+    <ul>
+      <li>has experience delivering ERP and operational software for institutional use;</li>
+      <li>develops and maintains custom software and websites as part of its professional practice;</li>
+      <li>is capable of implementing and customizing the Smart School Operating System for Feleg Raye School as described herein;</li>
+      <li>shall assign competent personnel under the direction of the General Manager, Nebil Ahmed.</li>
+    </ul>
+
+    <h3>15. Limitation of Liability</h3>
+    <p>
+      Except for fraud, willful misconduct, or confidentiality/data breaches caused by Provider’s
+      proven negligence, Provider’s aggregate liability under this Agreement shall not exceed the
+      total Contract Price actually paid by the School. Neither Party is liable for indirect or
+      consequential damages (lost profits, reputational harm) to the extent permitted by Ethiopian law.
+    </p>
+
+    <h3>16. Termination</h3>
+    <ul>
+      <li>Either Party may terminate for material breach not cured within 30 days of written notice.</li>
+      <li>School may terminate for convenience after Go-Live with 30 days’ notice; fees for completed milestones remain payable; unused prepaid hosting may be discussed in good faith.</li>
+      <li>Upon termination, Provider disables School access after data export window, except where required for lawful dispute preservation.</li>
+    </ul>
+
+    <h3>17. Change Control &amp; Entire Agreement</h3>
+    <p>
+      Amendments and Change Orders are valid only if signed by authorized representatives of both
+      Parties. This Agreement (including Annexes) is the entire agreement on the subject matter and
+      supersedes prior oral discussions. If any clause is held unenforceable, the remainder continues in force.
+    </p>
+
+    <h3>18. Governing Law &amp; Dispute Resolution</h3>
+    <p>
+      This Agreement is governed by the laws of the Federal Democratic Republic of Ethiopia.
+      Parties shall first attempt amicable settlement within 15 business days; failing that,
+      disputes shall be submitted to the competent courts in Addis Ababa, unless the Parties agree in writing to arbitration.
+    </p>
+
+    <h3>19. Notices</h3>
+    <p>
+      Notices shall be in writing (letter or email) to:
+      Provider — Nebil Ahmed, +251 911 646 444, majobridgetech@gmail.com;
+      School — _________________________________ (email/phone to be inserted).
+    </p>
+
+    <h3>20. Acceptance</h3>
+    <p>
+      IN WITNESS WHEREOF, the Parties have executed this Agreement on the Effective Date first written above.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">Nebil Ahmed</div>
+        <div class="role">General Manager<br />MaJo-Bridge Technology and Events PLC<br />Tel: +251 911 646 444</div>
+        <p style="margin-top:18px">Signature: ______________________</p>
+        <p>Date: __________________________</p>
+        <p>Company stamp:</p>
+      </div>
+      <div class="sig">
+        <div class="who">Authorized Signatory</div>
+        <div class="role">For and on behalf of<br />Feleg Raye School</div>
+        <p style="margin-top:18px">Name: ___________________________</p>
+        <p>Title: ___________________________</p>
+        <p>Signature: ______________________</p>
+        <p>Date: __________________________</p>
+        <p>School stamp:</p>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+    <h3>Annex A — User Acceptance Certificate (template)</h3>
+    <p>School: Feleg Raye School &nbsp;&nbsp;|&nbsp;&nbsp; System: Majo Bridge Smart School Operating System</p>
+    <table>
+      <thead>
+        <tr><th>Check</th><th>Item</th><th>Pass (✓)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Admin login and school-scoped access working</td><td></td></tr>
+        <tr><td>2</td><td>Leadership roles created and permissions verified</td><td></td></tr>
+        <tr><td>3</td><td>Student / class / teacher core registries usable</td><td></td></tr>
+        <tr><td>4</td><td>Teacher portal core flows (attendance/grades/homework) verified</td><td></td></tr>
+        <tr><td>5</td><td>Parent secure link / progress visibility verified (sample)</td><td></td></tr>
+        <tr><td>6</td><td>Transport module configured for pilot routes/buses</td><td></td></tr>
+        <tr><td>7</td><td>Fee module configured per agreed structure</td><td></td></tr>
+        <tr><td>8</td><td>Training completed for key users</td><td></td></tr>
+        <tr><td>9</td><td>Branding / customization items from discovery completed or scheduled</td><td></td></tr>
+        <tr><td>10</td><td>Go-Live approved</td><td></td></tr>
+      </tbody>
+    </table>
+    <p>Comments: _______________________________________________________________________</p>
+    <p>School Representative: _____________________ &nbsp;&nbsp; Provider: Nebil Ahmed _____________________</p>
+    <p>Date: _____________________</p>
+
+    <h3>Annex B — Suggested Commercial Strengthening (agreed by signing)</h3>
+    <ul>
+      <li>Fixed price protects Feleg Raye School from open-ended development invoices for the listed Scope.</li>
+      <li>40/30/20/10 payment ties money to delivery milestones, not vague promises.</li>
+      <li>120 included customization hours create a measurable “strong customization” commitment.</li>
+      <li>UAT certificate prevents disputes about what “finished” means.</li>
+      <li>School Data ownership + export right protects the institution.</li>
+      <li>RBAC role schedule aligns legal scope with the real product Feleg Raye will operate.</li>
+    </ul>
+
+    <div class="footer-note">
+      MaJo-Bridge Technology and Events PLC · Smart School Operating System<br />
+      Agreement MB-FRS-SSOS-2026-001 · Confidential — intended for Feleg Raye School negotiation &amp; execution<br />
+      +251 911 646 444 · majobridgetech@gmail.com · https://mayabela.pages.dev
+    </div>
+  </article>
+</body>
+</html>

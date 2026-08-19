@@ -1,0 +1,10 @@
+# Pitch deck (static HTML) — must stay above the SPA catch-all.
+/pitch    /pitch/index.html   200
+/pitch/   /pitch/index.html   200
+
+# Commercial agreements (directory + index.html — avoids Cloudflare .html pretty-URL loops)
+/agreements/feleg-raye    /agreements/feleg-raye/index.html   200
+/agreements/feleg-raye/   /agreements/feleg-raye/index.html   200
+
+# Flutter web SPA: serve index.html for unknown paths (path URL strategy / deep links).
+/*    /index.html   200

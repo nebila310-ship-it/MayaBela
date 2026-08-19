@@ -1,0 +1,169 @@
+{
+  "school": "SMOKE30",
+  "at": "2026-07-30T11:57:14.713Z",
+  "pass": 32,
+  "fail": 0,
+  "results": [
+    {
+      "id": "seed.school_registry",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "seed.account.smoke_owner",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "id": "seed.account.smoke_hr",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "id": "seed.account.smoke_sd",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "id": "seed.account.smoke_sa",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "id": "seed.account.smoke_teacher",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "id": "seed.account.smoke_parent",
+      "ok": true,
+      "detail": "status=201"
+    },
+    {
+      "id": "login.owner",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "id": "login.hr",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "id": "login.sd",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "id": "login.sa",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "id": "login.teacher",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "id": "login.parent",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "id": "rbac.hr.manage_staff_accounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.hr.manage_buses_or_drivers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.hr.blocks_approve_grades",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.sd.approve_grades",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.sd.assign_teachers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.sd.manage_parent_links",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.sd.blocks_manage_staff_accounts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.sa.manage_parent_links",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "rbac.sa.manage_students",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "seed.announcements_exist",
+      "ok": true,
+      "detail": "count=2"
+    },
+    {
+      "id": "read.sd.announcements",
+      "ok": true,
+      "detail": "status=200 count=2"
+    },
+    {
+      "id": "order.announcements_newest_first",
+      "ok": true,
+      "detail": "top=smoke_a_new"
+    },
+    {
+      "id": "read.sd.parent_links",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "id": "read.sd.grades_pending",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "id": "read.sd.calendar",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "id": "write.hr.employee_registry",
+      "ok": true,
+      "detail": "status=201 null"
+    },
+    {
+      "id": "write.sd.approve_grade",
+      "ok": true,
+      "detail": "status=204 null"
+    },
+    {
+      "id": "write.sd.approve_parent_link",
+      "ok": true,
+      "detail": "status=204"
+    },
+    {
+      "id": "write.sd.assign_teacher_class",
+      "ok": true,
+      "detail": "status=204"
+    }
+  ],
+  "ui": null
+}
