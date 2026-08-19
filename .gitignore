@@ -85,3 +85,6 @@ tools/firestore_export/
 .wrangler/
 .dev.vars
 
+# Supabase CLI local link state
+supabase/.temp/
+
