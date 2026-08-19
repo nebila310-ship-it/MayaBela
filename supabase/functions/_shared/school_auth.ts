@@ -26,6 +26,7 @@ export const ALL_PERMISSIONS: string[] = [
   "assign_teachers",
   "manage_timetables",
   "view_all_grades",
+  "view_all_school_data",
   "approve_grades",
   "manage_learning_materials",
   "manage_material_access",
@@ -97,6 +98,7 @@ const LEADERSHIP = withBaseline([
   "view_inventory",
   "view_transport",
   "view_all_grades",
+  "view_all_school_data",
   "view_finance_reports",
   "view_all_departments",
   "approve_transfers",
@@ -117,6 +119,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_students",
     "view_staff",
     "view_all_grades",
+    "view_all_school_data",
     "view_finance_reports",
     "view_all_departments",
     "view_reports",
@@ -128,6 +131,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_students",
     "view_staff",
     "view_all_grades",
+    "view_all_school_data",
     "approve_grades",
     "approve_transfers",
     "manage_classes",
@@ -142,6 +146,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_students",
     "view_staff",
     "view_all_grades",
+    "view_all_school_data",
     "view_all_departments",
     "view_audit_log",
     "view_reports",
@@ -154,6 +159,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_inventory",
     "view_transport",
     "view_all_grades",
+    "view_all_school_data",
     "view_finance_reports",
     "view_all_departments",
     "approve_transfers",
@@ -174,6 +180,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "assign_teachers",
     "manage_timetables",
     "view_all_grades",
+    "view_all_school_data",
     "approve_grades",
     "create_transfers",
     "manage_students",
@@ -189,6 +196,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
   ]),
   student_affairs: withBaseline([
     "view_students",
+    "view_all_school_data",
     "manage_students",
     "manage_parent_links",
     "create_transfers",
@@ -197,6 +205,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
   ]),
   registrar: withBaseline([
     "view_students",
+    "view_all_school_data",
     "manage_students",
     "manage_parent_links",
     "create_transfers",
@@ -209,6 +218,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "record_payments",
     "view_finance_reports",
     "view_students",
+    "view_all_school_data",
     "approve_purchase_requests",
     "view_inventory",
     "view_transport",
@@ -223,6 +233,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_drivers",
     "assign_student_transport",
     "view_students",
+    "view_all_school_data",
     "access_support",
     "message_parents",
   ]),
@@ -250,6 +261,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "assign_student_transport",
     "view_transport",
     "view_students",
+    "view_all_school_data",
     "message_parents",
     "access_support",
   ]),
@@ -264,6 +276,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "assign_teachers",
     "manage_timetables",
     "view_all_grades",
+    "view_all_school_data",
     "approve_grades",
     "approve_transfers",
     "manage_learning_materials",
@@ -284,6 +297,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_drivers",
     "assign_student_transport",
     "view_students",
+    "view_all_school_data",
     "access_support",
     "message_parents",
   ]),
@@ -292,6 +306,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "record_payments",
     "view_finance_reports",
     "view_students",
+    "view_all_school_data",
     "approve_purchase_requests",
     "view_inventory",
     "view_transport",
@@ -553,6 +568,13 @@ export function profileFromAccount(
     linkedAdminId: (data.linkedAdminId as string) || null,
     linkedDriverId: (data.linkedDriverId as string) || null,
     linkedStudentId: (data.linkedStudentId as string) || null,
+    assignedClass: (data.assignedClass as string) || "",
+    assignedClassNames: Array.isArray(data.assignedClassNames)
+      ? (data.assignedClassNames as string[])
+      : [],
+    classAssignments: Array.isArray(data.classAssignments)
+      ? data.classAssignments
+      : [],
     mustChangePassword: !!data.mustChangePassword,
     staffRoles: normalizeStaffRoles(data.staffRoles),
     staffPermissions: Array.isArray(data.staffPermissions)
@@ -625,29 +647,15 @@ export async function assertNotRateLimited(
   sb: SupabaseClient,
   bucketKey: string,
 ): Promise<void> {
-  const now = Date.now();
-  const { data } = await sb
-    .from("auth_rate_limits")
-    .select("*")
-    .eq("bucket_key", bucketKey)
-    .maybeSingle();
-
-  let windowStart = data?.window_start ?? 0;
-  let count = data?.count ?? 0;
-  if (now - windowStart > LOGIN_RATE_WINDOW_MS) {
-    count = 0;
-    windowStart = now;
-  }
-  if (count >= LOGIN_RATE_LIMIT) {
-    throw new Error("rate_limited");
-  }
-  const { error } = await sb.from("auth_rate_limits").upsert({
-    bucket_key: bucketKey,
-    window_start: count === 0 ? now : windowStart || now,
-    count: count + 1,
-    updated_at: new Date().toISOString(),
+  const { data, error } = await sb.rpc("auth_rate_limit_hit", {
+    p_bucket_key: bucketKey,
+    p_limit: LOGIN_RATE_LIMIT,
+    p_window_ms: LOGIN_RATE_WINDOW_MS,
   });
   if (error) throw error;
+  if (data !== true) {
+    throw new Error("rate_limited");
+  }
 }
 
 export async function verifySecret(
@@ -1021,14 +1029,22 @@ export async function enrichAccessProfile(
   }
 
   if (roleKey === "teacher") {
-    const already = ((enriched.assignedClassNames as string[]) || []).length > 0;
+    const names = new Set<string>(
+      ((enriched.assignedClassNames as string[]) || []).map((n) => String(n).trim()),
+    );
+    for (const name of classNamesFromTeacherData(profile)) {
+      if (name) names.add(name);
+    }
     const teacherId = String(enriched.linkedTeacherId || "").trim().toUpperCase();
-    if (!already && teacherId) {
+    if (teacherId) {
       const tea = await getDoc(sb, "teacher_registry", teacherId, schoolId);
       if (tea && (!schoolId || !tea.schoolId || tea.schoolId === schoolId)) {
-        enriched.assignedClassNames = classNamesFromTeacherData(tea);
+        for (const name of classNamesFromTeacherData(tea)) {
+          if (name) names.add(name);
+        }
       }
     }
+    enriched.assignedClassNames = uniqueStrings([...names]);
   }
 
   if (roleKey === "student" && enriched.linkedStudentId) {

@@ -8,8 +8,11 @@
  * Optional:
  *   LOAD_SCHOOL_ID   (default LOAD-001)
  *   LOAD_PASSWORD    (shared staging password, min 10 chars)
- *   LOAD_PROFILE     session (default in tools/run_k6_staging.cmd: login once then read)
- *                    full (login every iteration) or smoke (~100 VUs, 1 minute)
+ *   LOAD_PROFILE     session (login once then read)
+ *                    full (login every iteration)
+ *                    smoke (~100 VUs, 1 minute)
+ *                    rung (login-once at LOAD_VUS, mix scaled from 500)
+ *   LOAD_VUS         peak VUs for rung (50 / 250 / 750 / 1000)
  *
  * Mix (500 VUs): 250 parent / 100 teacher / 100 student / 30 admin / 20 finance
  *
@@ -25,7 +28,9 @@ const schoolId = (__ENV.LOAD_SCHOOL_ID || "LOAD-001").toUpperCase();
 const password = __ENV.LOAD_PASSWORD || "LoadTest12!";
 const profile = String(__ENV.LOAD_PROFILE || "full").toLowerCase();
 const isSmoke = profile === "smoke";
-const isSession = profile === "session";
+const isRung = profile === "rung";
+const isSession = profile === "session" || isRung;
+const rungVus = Math.max(1, parseInt(__ENV.LOAD_VUS || "50", 10) || 50);
 let cachedJwt = "";
 
 if (!base || !anon) {
@@ -36,6 +41,12 @@ if (base.includes(PROD_REF)) {
 }
 
 function stages(full) {
+  if (isRung) {
+    return [
+      { duration: "20s", target: Math.max(1, Math.round(full * 0.5)) },
+      { duration: "70s", target: full },
+    ];
+  }
   if (isSmoke) {
     return [
       { duration: "20s", target: Math.max(1, Math.round(full * 0.1)) },
@@ -63,6 +74,11 @@ function stages(full) {
   ];
 }
 
+function mix(partOf500) {
+  if (!isRung) return partOf500;
+  return Math.max(partOf500 === 0 ? 0 : 1, Math.round((partOf500 / 500) * rungVus));
+}
+
 export const options = {
   summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
   scenarios: {
@@ -70,31 +86,31 @@ export const options = {
       executor: "ramping-vus",
       exec: "parentFlow",
       startVUs: 0,
-      stages: stages(250),
+      stages: stages(mix(250)),
     },
     teachers: {
       executor: "ramping-vus",
       exec: "teacherFlow",
       startVUs: 0,
-      stages: stages(100),
+      stages: stages(mix(100)),
     },
     students: {
       executor: "ramping-vus",
       exec: "studentFlow",
       startVUs: 0,
-      stages: stages(100),
+      stages: stages(mix(100)),
     },
     admins: {
       executor: "ramping-vus",
       exec: "adminFlow",
       startVUs: 0,
-      stages: stages(30),
+      stages: stages(mix(30)),
     },
     finance: {
       executor: "ramping-vus",
       exec: "financeFlow",
       startVUs: 0,
-      stages: stages(20),
+      stages: stages(mix(20)),
     },
   },
   thresholds: {

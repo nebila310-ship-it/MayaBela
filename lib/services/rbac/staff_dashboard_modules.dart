@@ -75,6 +75,11 @@ abstract final class StaffDashboardModules {
       },
     ),
     const StaffDashboardModule(
+      id: 'school_wide_data',
+      labelEn: 'See all school student data',
+      permissions: {SchoolPermissions.viewAllSchoolData},
+    ),
+    const StaffDashboardModule(
       id: 'transfers',
       labelEn: 'Transfers',
       permissions: {

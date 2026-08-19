@@ -194,6 +194,25 @@ void main() {
       AuthService.currentUser = makeUser(AuthService.roleTeacher, const []);
       expect(AuthService.currentPermissions, isEmpty);
       expect(AuthService.canAssignStaffRoles, isFalse);
+      expect(
+        AuthService.hasPermission(SchoolPermissions.viewAllSchoolData),
+        isFalse,
+      );
+    });
+
+    test('principal can see all school data; classroom roles cannot', () {
+      expect(
+        StaffRoles.lookup(StaffRoles.principal)!.permissions,
+        contains(SchoolPermissions.viewAllSchoolData),
+      );
+      expect(
+        StaffRoles.lookup(StaffRoles.staffs)!.permissions,
+        isNot(contains(SchoolPermissions.viewAllSchoolData)),
+      );
+      expect(
+        StaffRoles.lookup(StaffRoles.librarian)!.permissions,
+        isNot(contains(SchoolPermissions.viewAllSchoolData)),
+      );
     });
   });
 }

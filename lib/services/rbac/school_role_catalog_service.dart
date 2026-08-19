@@ -61,6 +61,7 @@ class SchoolRoleCatalogService {
             SchoolPermissions.manageDrivers,
             SchoolPermissions.assignStudentTransport,
             SchoolPermissions.viewStudents,
+            SchoolPermissions.viewAllSchoolData,
           },
         ) ||
         changed;
@@ -74,8 +75,39 @@ class SchoolRoleCatalogService {
             SchoolPermissions.assignStudentTransport,
             SchoolPermissions.manageParentLinks,
             SchoolPermissions.viewAllGrades,
+            SchoolPermissions.viewAllSchoolData,
             SchoolPermissions.approveGrades,
           },
+        ) ||
+        changed;
+    changed = _mergeOverrideExtras(
+          catalog,
+          StaffRoles.principal,
+          const {SchoolPermissions.viewAllSchoolData},
+        ) ||
+        changed;
+    changed = _mergeOverrideExtras(
+          catalog,
+          StaffRoles.studentAffairs,
+          const {SchoolPermissions.viewAllSchoolData},
+        ) ||
+        changed;
+    changed = _mergeOverrideExtras(
+          catalog,
+          StaffRoles.registrar,
+          const {SchoolPermissions.viewAllSchoolData},
+        ) ||
+        changed;
+    changed = _mergeOverrideExtras(
+          catalog,
+          StaffRoles.accountant,
+          const {SchoolPermissions.viewAllSchoolData},
+        ) ||
+        changed;
+    changed = _mergeOverrideExtras(
+          catalog,
+          StaffRoles.transportAdmin,
+          const {SchoolPermissions.viewAllSchoolData},
         ) ||
         changed;
     if (changed) unawaited(_persist(sid, catalog));

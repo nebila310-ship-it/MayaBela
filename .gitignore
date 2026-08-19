@@ -88,3 +88,6 @@ tools/firestore_export/
 # Supabase CLI local link state
 supabase/.temp/
 
+# Local logical dumps (never commit school data)
+/backups/
+

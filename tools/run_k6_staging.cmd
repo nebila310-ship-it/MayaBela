@@ -4,7 +4,7 @@ REM Usage:
 REM   tools\run_k6_staging.cmd
 REM   tools\run_k6_staging.cmd smoke
 REM   tools\run_k6_staging.cmd full
-REM   tools\run_k6_staging.cmd session
+REM   tools\run_k6_staging.cmd rung 50
 REM Requires .env.staging (STAGING_SUPABASE_URL + STAGING_ANON_KEY) or those vars set.
 
 setlocal EnableExtensions
@@ -19,6 +19,11 @@ if exist ".env.staging" (
 if /I "%~1"=="smoke" set LOAD_PROFILE=smoke
 if /I "%~1"=="full" set LOAD_PROFILE=full
 if /I "%~1"=="session" set LOAD_PROFILE=session
+if /I "%~1"=="rung" (
+  set LOAD_PROFILE=rung
+  if not "%~2"=="" set LOAD_VUS=%~2
+  if "%LOAD_VUS%"=="" set LOAD_VUS=50
+)
 if "%LOAD_PROFILE%"=="" set LOAD_PROFILE=session
 
 if "%STAGING_SUPABASE_URL%"=="" (
@@ -45,7 +50,7 @@ if errorlevel 1 (
   exit /b 2
 )
 
-echo Running k6 LOAD_PROFILE=%LOAD_PROFILE% against staging...
+echo Running k6 LOAD_PROFILE=%LOAD_PROFILE% LOAD_VUS=%LOAD_VUS% against staging...
 if not exist "load\k6" mkdir load\k6
 k6 run --summary-export "load\k6\last_summary.json" load\k6\school_erp.js
 exit /b %ERRORLEVEL%

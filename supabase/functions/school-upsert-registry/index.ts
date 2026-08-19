@@ -116,21 +116,11 @@ Deno.serve(async (req) => {
     }
 
     const isAdmin = callerRole === "admin";
-    const canStudents =
-      isAdmin ||
-      callerPerms.includes("manage_students") ||
-      callerPerms.includes("view_students") ||
-      callerRole === "teacher";
-    const canStaff =
-      isAdmin ||
-      callerPerms.includes("manage_staff_accounts") ||
-      callerPerms.includes("view_staff") ||
-      callerRole === "teacher";
-    const canDrivers =
-      isAdmin ||
-      callerPerms.includes("manage_drivers") ||
-      callerPerms.includes("view_transport") ||
-      callerRole === "teacher";
+    // Writes require manage_* — view_* and a bare classroom teacher JWT
+    // must not bypass RLS via this service-role upsert.
+    const canStudents = isAdmin || callerPerms.includes("manage_students");
+    const canStaff = isAdmin || callerPerms.includes("manage_staff_accounts");
+    const canDrivers = isAdmin || callerPerms.includes("manage_drivers");
 
     if (
       (collection === "student_registry" || collection === "student_medical") &&

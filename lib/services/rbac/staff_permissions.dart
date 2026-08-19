@@ -32,6 +32,10 @@ abstract final class SchoolPermissions {
   static const assignTeachers = 'assign_teachers';
   static const manageTimetables = 'manage_timetables';
   static const viewAllGrades = 'view_all_grades';
+  /// School-wide student PII (registry, grades, fees, medical). Classroom
+  /// teachers without this (or view_all_departments / full_access) are
+  /// limited to assigned-class rows by RLS.
+  static const viewAllSchoolData = 'view_all_school_data';
   static const approveGrades = 'approve_grades';
   static const manageLearningMaterials = 'manage_learning_materials';
   static const manageMaterialAccess = 'manage_material_access';
@@ -96,6 +100,7 @@ abstract final class SchoolPermissions {
     assignTeachers,
     manageTimetables,
     viewAllGrades,
+    viewAllSchoolData,
     approveGrades,
     manageLearningMaterials,
     manageMaterialAccess,
@@ -231,6 +236,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewStudents,
         SchoolPermissions.viewStaff,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.viewFinanceReports,
         SchoolPermissions.viewAllDepartments,
         SchoolPermissions.viewReports,
@@ -248,6 +254,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewInventory,
         SchoolPermissions.viewTransport,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.viewFinanceReports,
         SchoolPermissions.viewAllDepartments,
         SchoolPermissions.approveTransfers,
@@ -271,6 +278,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewInventory,
         SchoolPermissions.viewTransport,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.viewFinanceReports,
         SchoolPermissions.viewAllDepartments,
         SchoolPermissions.approveTransfers,
@@ -294,6 +302,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewStudents,
         SchoolPermissions.viewStaff,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.approveGrades,
         SchoolPermissions.approveTransfers,
         SchoolPermissions.manageClasses,
@@ -314,6 +323,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewStudents,
         SchoolPermissions.viewStaff,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.viewAllDepartments,
         SchoolPermissions.viewAuditLog,
         SchoolPermissions.viewReports,
@@ -332,6 +342,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewInventory,
         SchoolPermissions.viewTransport,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.viewFinanceReports,
         SchoolPermissions.viewAllDepartments,
         SchoolPermissions.approveTransfers,
@@ -359,6 +370,7 @@ abstract final class StaffRoles {
         SchoolPermissions.assignTeachers,
         SchoolPermissions.manageTimetables,
         SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.approveGrades,
         // EDUABA allocation: SD requests transfers, VP approves them.
         SchoolPermissions.createTransfers,
@@ -381,6 +393,7 @@ abstract final class StaffRoles {
       labelOm: 'Dhimma Barattootaa',
       permissions: _withBaseline({
         SchoolPermissions.viewStudents,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.manageStudents,
         SchoolPermissions.manageParentLinks,
         SchoolPermissions.createTransfers,
@@ -395,6 +408,7 @@ abstract final class StaffRoles {
       labelOm: 'Galmeessaa',
       permissions: _withBaseline({
         SchoolPermissions.viewStudents,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.manageStudents,
         SchoolPermissions.manageParentLinks,
         SchoolPermissions.createTransfers,
@@ -413,6 +427,7 @@ abstract final class StaffRoles {
         SchoolPermissions.recordPayments,
         SchoolPermissions.viewFinanceReports,
         SchoolPermissions.viewStudents,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.approvePurchaseRequests,
         SchoolPermissions.viewInventory,
         SchoolPermissions.viewTransport,
@@ -433,6 +448,7 @@ abstract final class StaffRoles {
         SchoolPermissions.manageDrivers,
         SchoolPermissions.assignStudentTransport,
         SchoolPermissions.viewStudents,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.accessSupport,
         SchoolPermissions.messageParents,
       }),
@@ -485,6 +501,7 @@ abstract final class StaffRoles {
         SchoolPermissions.assignStudentTransport,
         SchoolPermissions.viewTransport,
         SchoolPermissions.viewStudents,
+        SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.messageParents,
         SchoolPermissions.accessSupport,
       }),

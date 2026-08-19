@@ -55,3 +55,6 @@ verify_jwt = false
 
 [functions.platform-upload-logo]
 verify_jwt = false
+
+[functions.client-crash-report]
+verify_jwt = false

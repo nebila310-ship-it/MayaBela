@@ -57,6 +57,45 @@ class DocumentStore {
     return data;
   }
 
+  /// Fees and inventory use an integer [rowVersion] so two editors cannot
+  /// silently last-write-wins. The server increments on accept.
+  static const versionedCollections = {
+    'fees',
+    'inventory_items',
+    'classroom_inventory',
+  };
+
+  @visibleForTesting
+  static int clientRowVersion(Map<String, dynamic> data) {
+    final v = data['rowVersion'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse('$v') ?? 0;
+  }
+
+  static bool _isVersioned(String collection) =>
+      versionedCollections.contains(collection);
+
+  static bool _isGuardError(Object e) {
+    final s = '$e'.toLowerCase();
+    return s.contains('stale_write') || s.contains('write_denied');
+  }
+
+  static StateError _guardError(String collection, Object e) {
+    final s = '$e'.toLowerCase();
+    if (s.contains('stale_write')) {
+      return StateError(
+        'This $collection record was updated elsewhere. Reload and try again.',
+      );
+    }
+    return StateError('Not allowed to save this $collection record.');
+  }
+
+  void _stampRowVersion(String collection, Map<String, dynamic> payload) {
+    if (!_isVersioned(collection)) return;
+    payload['rowVersion'] = clientRowVersion(payload);
+  }
+
   Future<void> createOrUpdate({
     required String collection,
     required String docId,
@@ -75,6 +114,7 @@ class DocumentStore {
       }
     }
     payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+    _stampRowVersion(collection, payload);
 
     final schoolId = _schoolIdOf(payload);
     if (schoolId == null || schoolId.isEmpty) {
@@ -108,6 +148,9 @@ class DocumentStore {
       );
       await CloudOutboxService.instance.ack(collection, docId);
     } catch (e) {
+      if (_isGuardError(e)) {
+        throw _guardError(collection, e);
+      }
       await CloudOutboxService.instance.enqueue(
         collection: collection,
         docId: docId,
@@ -284,6 +327,9 @@ class DocumentStore {
         final scoped = _withSchoolScope(Map<String, dynamic>.from(item));
         scoped.remove('_docId');
         scoped['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+        if (_isVersioned(collection)) {
+          scoped['rowVersion'] = clientRowVersion(scoped);
+        }
         rows.add({
           'collection': collection,
           'doc_id': id,

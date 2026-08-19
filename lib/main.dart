@@ -35,6 +35,7 @@ import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/persistence/auth_persistence_service.dart';
 import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
 import 'package:mayabela/services/cloud_bootstrap_service.dart';
+import 'package:mayabela/services/crash_reporting.dart';
 import 'package:mayabela/services/persistence/cloud_connectivity_sync.dart';
 import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
 import 'package:mayabela/services/persistence/daily_activity_persistence_service.dart';
@@ -70,17 +71,22 @@ import 'package:mayabela/widgets/system_nav_safe_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  StartupProfiler.start('main.total');
-  await StartupProfiler.track(
-    'main.supabaseInitialize',
-    () => SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true),
-  );
-  CriticalBootstrapGate.bind(_bootstrapCriticalForLogin);
-  await CloudOutboxService.instance.ensureLoaded();
-  CloudConnectivityLifecycleObserver.instance.attach();
-  unawaited(CloudConnectivitySync.start());
-  StartupProfiler.end('main.total');
-  runApp(const MayaSchoolApp());
+  CrashReporting.install();
+  await runZonedGuarded(() async {
+    StartupProfiler.start('main.total');
+    await StartupProfiler.track(
+      'main.supabaseInitialize',
+      () => SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true),
+    );
+    CriticalBootstrapGate.bind(_bootstrapCriticalForLogin);
+    await CloudOutboxService.instance.ensureLoaded();
+    CloudConnectivityLifecycleObserver.instance.attach();
+    unawaited(CloudConnectivitySync.start());
+    StartupProfiler.end('main.total');
+    runApp(const MayaSchoolApp());
+  }, (error, stack) {
+    unawaited(CrashReporting.report(error, stack, fatal: true));
+  });
 }
 
 bool _backgroundBootstrapStarted = false;
@@ -330,10 +336,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
       await bootstrapCriticalForLogin().timeout(
         Duration(seconds: kIsWeb ? 8 : 15),
       );
-    } catch (e) {
+    } catch (e, stack) {
       if (kDebugMode) {
         debugPrint('[AppBootstrap] critical bootstrap failed: $e');
       }
+      unawaited(CrashReporting.report(e, stack, fatal: false));
     }
 
     try {
