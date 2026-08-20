@@ -11,8 +11,6 @@ on:
     branches:
       - main
       - master
-      # Host the Fenote Raey meeting slides on pages.dev before this PR merges.
-      - cursor/final-decision-presentation-0f33
     paths:
       - "lib/**"
       - "web/**"
@@ -45,6 +43,7 @@ jobs:
 
   deploy:
     needs: test
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
