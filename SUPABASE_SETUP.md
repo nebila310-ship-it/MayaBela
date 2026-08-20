@@ -36,6 +36,8 @@ npx supabase functions deploy school-upsert-account
 npx supabase functions deploy school-upsert-registry
 npx supabase functions deploy school-delete-account
 npx supabase functions deploy school-register-parent
+npx supabase functions deploy school-request-password-reset
+npx supabase functions deploy school-confirm-password-reset
 npx supabase functions deploy school-refresh-claims
 npx supabase functions deploy platform-owner-pin
 npx supabase functions deploy platform-list-schools
@@ -49,6 +51,23 @@ Optional secret for Maya AI:
 
 ```bash
 npx supabase secrets set MAYA_AI_API_KEY=your_gemini_key
+```
+
+Password reset email (set SMTP **or** Resend; do not email the new password):
+
+```bash
+npx supabase secrets set MAIL_FROM="MayaBela <noreply@yourdomain.com>"
+npx supabase secrets set SMTP_HOST=smtp.yourdomain.com
+npx supabase secrets set SMTP_PORT=587
+npx supabase secrets set SMTP_USER=your_smtp_user
+npx supabase secrets set SMTP_PASS=your_smtp_password
+```
+
+If you use Resend instead of SMTP:
+
+```bash
+npx supabase secrets set MAIL_FROM="MayaBela <noreply@yourdomain.com>"
+npx supabase secrets set RESEND_API_KEY=re_...
 ```
 
 ## 5. Migrate Firebase data (read-only on Firebase)

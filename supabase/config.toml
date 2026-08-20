@@ -25,6 +25,12 @@ verify_jwt = false
 [functions.school-upsert-account]
 verify_jwt = false
 
+[functions.school-request-password-reset]
+verify_jwt = false
+
+[functions.school-confirm-password-reset]
+verify_jwt = false
+
 [functions.school-upsert-registry]
 verify_jwt = false
 

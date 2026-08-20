@@ -195,7 +195,24 @@ class AppStrings implements AppStringsLike {
   String get forgotPasswordTitle => t('Reset Password', 'የይለፍ ቃል ዳግም አስጀምር');
   String get enterEmailOrPhone =>
       t('Registered phone number', 'የተመዘገበ ስልክ ቁጥር');
-  String get sendOtp => t('Send OTP', 'OTP ላክ');
+  String get sendOtp => t('Send reset code', 'የእንደገና ማስጀመሪያ ኮድ ላክ');
+  String get resetCodeSent => t(
+        'If that email is registered at this school, a reset code was sent. Check your inbox.',
+        'ኢሜይሉ በዚህ ትምህርት ቤት ከተመዘገበ፣ የእንደገና ማስጀመሪያ ኮድ ተልኳል። የኢሜይል ሳጥንዎን ይመልከቱ።',
+      );
+  String get mailNotConfigured => t(
+        'Email reset is not configured on the server yet. Contact MayaBela support.',
+        'የኢሜይል ዳግም ማስጀመር በሰርቨሩ ላይ አልተዘጋጀም። የMayaBela ድጋፍን ያግኙ።',
+      );
+  String get tooManyAttempts => t(
+        'Too many attempts. Try again later.',
+        'በጣም ብዙ ሙከራ። ቆይተው ይሞክሩ።',
+      );
+  String get resetNeedsCloud => t(
+        'Connect to the internet and try again.',
+        'ከኢንተርኔት ጋር ተገናኝተው እንደገና ይሞክሩ።',
+      );
+  String get enterResetCode => t('Reset code from email', 'ከኢሜይል የመጣው ኮድ');
   String get chooseOtpChannel => t('How should we send your OTP?', 'OTP እንዴት እንልክልዎ?');
   String get sendViaSms => t('SMS', 'SMS');
   String get sendViaWhatsApp => t('WhatsApp', 'WhatsApp');

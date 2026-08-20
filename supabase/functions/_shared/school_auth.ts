@@ -1138,6 +1138,30 @@ export async function findAccountDoc(
   return null;
 }
 
+export async function findAccountByEmail(
+  sb: SupabaseClient,
+  schoolId: string,
+  email: string,
+  roleKey?: string | null,
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const target = normalizeEmail(email);
+  const sid = String(schoolId || "").trim().toUpperCase();
+  if (!target || !sid) return null;
+
+  const inSchool = await queryDocs(
+    sb,
+    "app_auth_accounts",
+    [{ column: "schoolId", op: "eq", value: sid }],
+    500,
+  );
+  for (const doc of inSchool) {
+    if (normalizeEmail(doc.data.email) !== target) continue;
+    if (roleKey && doc.data.roleKey !== roleKey) continue;
+    return { id: doc.id, data: doc.data };
+  }
+  return null;
+}
+
 /** School-scoped account document id (avoids cross-school phone collisions). */
 export function accountDocId(schoolId: string, username: string): string {
   const sid = String(schoolId || "").trim().toUpperCase();
