@@ -2,21 +2,20 @@
 
 **MaJo Bridge Technologies and Events**
 
-GitHub cannot play these files. Clicking `index.html` or `leave-behind.html` in the repo shows source code. Open the **live** pages instead:
+Click the **PDF** links. GitHub shows HTML as source code, and https://mayabela.pages.dev sends unknown addresses to the school **login** page until Cloudflare deploy credentials are in GitHub.
 
-| Open this | Live URL |
-|-----------|----------|
-| **Projector slides** | **https://mayabela.pages.dev/fenote-raey-academy/** |
-| **Leave-behind (print)** | **https://mayabela.pages.dev/fenote-raey-academy/leave-behind/** |
-| Live school demo | https://mayabela.pages.dev |
+| Open this | Link |
+|-----------|------|
+| **Projector slides (18 pages)** | [fenote-raey-academy-slides.pdf](fenote-raey-academy-slides.pdf) |
+| **Leave-behind (print)** | [fenote-raey-academy-leave-behind.pdf](fenote-raey-academy-leave-behind.pdf) |
+| Live school demo (login is correct here) | https://mayabela.pages.dev |
 
-Hard-refresh if you still see an old page: **Ctrl+Shift+R**. On the slides: **F11** fullscreen, arrow keys or click to move.
+On the PDF slides: use the GitHub viewer or download and present fullscreen.
 
-| File in this folder | Use |
-|---------------------|-----|
+| Other files | Use |
+|-------------|-----|
 | [SPEAKER_NOTES.md](SPEAKER_NOTES.md) | What to say, timing, objections |
-| [index.html](index.html) | Same slides (only if you download and open in Chrome) |
-| [leave-behind.html](leave-behind.html) | Same handout (only if you download and print locally) |
+| [index.html](index.html) / [leave-behind.html](leave-behind.html) | Local Chrome copies (download the folder; do not open these on GitHub) |
 | [screens/](screens/) | Module visuals used in the deck |
 
 No commercial / price slide. Terms stay internal with Fenote Raey management.

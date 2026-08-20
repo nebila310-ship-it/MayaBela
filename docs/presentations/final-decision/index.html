@@ -106,8 +106,17 @@
     .muted { color: #94a3b8; font-size: 16px; }
     @media print {
       .footer, .progress { display: none; }
-      .slide { display: flex !important; height: auto; min-height: 100vh; page-break-after: always; }
+      html, body { height: auto; overflow: visible; background: #070b14; }
+      .deck { height: auto; overflow: visible; }
+      .slide {
+        display: flex !important;
+        height: 7.5in;
+        page-break-after: always;
+        break-after: page;
+      }
+      .slide:last-child { page-break-after: auto; break-after: auto; }
     }
+    @page { size: 13.333in 7.5in; margin: 0; }
   </style>
 </head>
 <body>
