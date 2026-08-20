@@ -18,7 +18,8 @@ import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_global_search_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_session_timeout.dart';
 
-/// Enterprise web admin shell — sidebar, top bar, routed content (web only).
+/// Enterprise admin/staff shell — sidebar, top bar, routed content.
+/// Phone/narrow widths use a drawer so APK and web share one module catalog.
 class WebErpAdminShell extends StatefulWidget {
   const WebErpAdminShell({super.key});
 
@@ -197,8 +198,10 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                   child: narrow
                       ? Scaffold(
                           key: _scaffoldKey,
-                          drawer: Drawer(child: sidebar),
-                          body: _pageBody(narrow: true),
+                          drawer: Drawer(
+                            child: SafeArea(child: sidebar),
+                          ),
+                          body: SafeArea(child: _pageBody(narrow: true)),
                         )
                       : Scaffold(
                           body: Row(
