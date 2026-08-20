@@ -34,12 +34,23 @@ void main() {
       }
     });
 
+    test('staff registration requires a valid email', () {
+      final err = AuthService.registerTeacherAccount(
+        fullName: 'No Email Teacher',
+        schoolId: 'TB-001',
+        phone: '0911999001',
+        linkedTeacherId: 'T-NO-EMAIL',
+      );
+      expect(err, 'invalid_email');
+    });
+
     test('new teacher account requires password change', () {
       final temp = AuthService.generateTempPassword();
       final err = AuthService.registerTeacherAccount(
         fullName: 'Polish Teacher',
         schoolId: 'TB-001',
         phone: '0911888777',
+        email: 'polish.teacher@school.et',
         linkedTeacherId: 'T-POLISH-1',
         password: temp,
       );

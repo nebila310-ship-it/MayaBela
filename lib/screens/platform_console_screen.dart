@@ -22,6 +22,7 @@ import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_platform_insight.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -2066,6 +2067,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
   final _academicYear = TextEditingController(text: '2025/2026');
   final _adminName = TextEditingController();
   final _adminPhone = TextEditingController();
+  final _adminEmail = TextEditingController();
   final _password = TextEditingController(text: AuthService.tempPassword);
   final _notes = TextEditingController();
   final _ratePerStudent = TextEditingController(text: '8');
@@ -2103,6 +2105,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
     _academicYear.dispose();
     _adminName.dispose();
     _adminPhone.dispose();
+    _adminEmail.dispose();
     _password.dispose();
     _notes.dispose();
     _ratePerStudent.dispose();
@@ -2148,6 +2151,10 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           _adminName.text.trim().isEmpty ||
           _adminPhone.text.trim().isEmpty) {
         setState(() => _message = 'Fill school name, admin name, and phone.');
+        return;
+      }
+      if (!EmailUtils.isValid(_adminEmail.text)) {
+        setState(() => _message = 'Enter a valid admin email address.');
         return;
       }
       if (_password.text.length < AuthService.minPasswordLength) {
@@ -2228,6 +2235,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         adminUsername: loginKey,
         adminFullName: _adminName.text.trim(),
         adminPhone: adminPhoneLocal,
+        adminEmail: EmailUtils.normalize(_adminEmail.text),
         password: password,
       );
       if (!cloud.ok && cloud.errorCode == 'school_exists') {
@@ -2251,6 +2259,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           adminUsername: loginKey,
           adminFullName: _adminName.text.trim(),
           adminPhone: adminPhoneLocal,
+          adminEmail: EmailUtils.normalize(_adminEmail.text),
           password: password,
         );
       }
@@ -2275,6 +2284,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         city: school.city ?? '',
         adminFullName: _adminName.text.trim(),
         adminPhone: _adminPhone.text.trim(),
+        adminEmail: EmailUtils.normalize(_adminEmail.text),
         password: password,
         schoolId: school.id,
       );
@@ -2540,6 +2550,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           ),
           const SizedBox(height: 8),
           _field('Admin full name', _adminName),
+          _field('Admin email', _adminEmail, keyboard: TextInputType.emailAddress),
           _field('Admin phone (login username)', _adminPhone, keyboard: TextInputType.phone),
           _passwordField(),
           _adminCredentialsPreview(),

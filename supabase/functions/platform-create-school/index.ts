@@ -7,6 +7,7 @@ import {
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
+  normalizeEmail,
   normalizeUsername,
   profileFromAccount,
   upsertDoc,
@@ -61,9 +62,13 @@ Deno.serve(async (req) => {
     const password = body?.password;
     const fullName = String(body?.adminFullName || "").trim();
     const phone = String(body?.adminPhone || "").trim();
+    const email = normalizeEmail(body?.adminEmail);
 
     if (!username) {
       return errorResponse("adminUsername is required.", 400, "invalid");
+    }
+    if (!email) {
+      return errorResponse("A valid admin email is required.", 400, "invalid_email");
     }
     if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
       return errorResponse(
@@ -92,7 +97,7 @@ Deno.serve(async (req) => {
       username,
       roleKey: "admin",
       schoolId,
-      email: body?.adminEmail || null,
+      email: email,
       phone: phone || null,
       fullName: fullName || null,
       linkedStudentIds: [],

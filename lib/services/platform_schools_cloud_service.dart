@@ -109,8 +109,7 @@ class PlatformSchoolsCloudService {
           'adminFullName': adminFullName.trim(),
           'adminPhone': adminPhone.trim(),
           'password': password,
-          if (adminEmail != null && adminEmail.trim().isNotEmpty)
-            'adminEmail': adminEmail.trim(),
+          'adminEmail': adminEmail?.trim(),
           'mustChangePassword': mustChangePassword,
         },
       );

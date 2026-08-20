@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
@@ -59,6 +60,13 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
     if (_name.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.enterName)),
+      );
+      return;
+    }
+
+    if (!EmailUtils.isValid(_email.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.emailRequired)),
       );
       return;
     }
@@ -156,9 +164,11 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              authError == 'invalid_phone'
-                  ? s.invalidPhone
-                  : s.phoneAlreadyRegistered,
+              switch (authError) {
+                'invalid_phone' => s.invalidPhone,
+                'invalid_email' => s.emailRequired,
+                _ => s.phoneAlreadyRegistered,
+              },
             ),
           ),
         );
@@ -298,7 +308,7 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: adminFieldDecoration(
-                    label: '${s.email} (${s.optionalLabel})',
+                    label: s.email,
                     icon: Icons.email_outlined,
                     accent: theme.primary,
                   ),

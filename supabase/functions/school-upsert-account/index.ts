@@ -11,6 +11,7 @@ import {
   enrichAccessProfile,
   getDoc,
   normalizeStaffRoles,
+  normalizeEmail,
   normalizeUsername,
   permissionsForRoles,
   profileFromAccount,
@@ -202,11 +203,23 @@ Deno.serve(async (req) => {
 
     const claimsVersion = rolesChanged ? oldClaimsVersion + 1 : oldClaimsVersion;
 
+    let email = existing?.email || null;
+    if (roleKey !== "student") {
+      const nextEmail = normalizeEmail(body.email) ??
+        normalizeEmail(existing?.email);
+      if (!nextEmail) {
+        return errorResponse("A valid email is required.", 400, "invalid_email");
+      }
+      email = nextEmail;
+    } else if (Object.prototype.hasOwnProperty.call(body, "email")) {
+      email = normalizeEmail(body.email);
+    }
+
     const profile = {
       username,
       roleKey,
       schoolId,
-      email: body.email || null,
+      email,
       phone: body.phone || null,
       fullName: body.fullName || null,
       linkedStudentIds: body.linkedStudentIds || existing?.linkedStudentIds ||

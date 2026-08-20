@@ -373,6 +373,12 @@ export function normalizeUsername(value: unknown): string {
   return String(value || "").trim().toLowerCase();
 }
 
+export function normalizeEmail(value: unknown): string | null {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
+}
+
 export function uniqueStrings(values: unknown, cap = ACCESS_CLAIM_CAP): string[] {
   const out: string[] = [];
   const seen = new Set<string>();

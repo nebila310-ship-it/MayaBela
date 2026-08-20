@@ -72,6 +72,11 @@ class AppStrings implements AppStringsLike {
   String get phoneLoginHelp => t('Use this number to log in and receive OTP codes.', 'ይህን ቁጥር ለመግቢያ እና OTP ይጠቀሙበታል።');
   String get emailOptional =>
       t('Email (optional)', 'ኢሜይል (አማራጭ)');
+  String get emailRequired => t(
+        'Enter a valid email address',
+        'ትክክለኛ ኢሜይል ያስገቡ',
+        'Imeelii sirrii galchi',
+      );
   String get invalidPhone => t('Enter a valid phone number (e.g. 0911234567)', 'ትክክለኛ Ethiopian ስልክ ቁጥር ያስገቡ (ለምሳሌ 0911234567)');
   String get phoneAlreadyRegistered => t('This phone number is already registered', 'ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል');
   String get phoneUsedByStaff => t(

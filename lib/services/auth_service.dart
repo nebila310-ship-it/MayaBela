@@ -24,6 +24,7 @@ import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/student_account_service.dart';
 import 'package:mayabela/services/student_portal_audit_service.dart';
 import 'package:mayabela/models/student_portal.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:flutter/foundation.dart';
 
@@ -75,6 +76,12 @@ class AuthService {
   /// Legacy shared temp — prefer [generateTempPassword] for new accounts.
   static const tempPassword = 'Welcome12!';
   static const minPasswordLength = 10;
+
+  static String? _requireEmail(String? email) {
+    return EmailUtils.isValid(email) ? null : 'invalid_email';
+  }
+
+  static String? _normalizedEmail(String? email) => EmailUtils.normalize(email);
   static const passwordRedactedMarker = '__REDACTED__';
 
   /// Release-safe fallback when a registry record has no password.
@@ -972,6 +979,8 @@ class AuthService {
     String? adminEmail,
   }) {
     if (!PhoneUtils.isValidLoginPhone(adminPhone)) return 'invalid_phone';
+    final emailError = _requireEmail(adminEmail);
+    if (emailError != null) return emailError;
     final key = PhoneUtils.loginKey(adminPhone);
     if (_accountExists(key)) return 'exists';
 
@@ -979,7 +988,7 @@ class AuthService {
       username: key,
       password: password,
       roleKey: roleAdmin,
-      email: adminEmail?.trim().isEmpty ?? true ? null : adminEmail!.trim(),
+      email: _normalizedEmail(adminEmail),
       phone: PhoneUtils.normalizeLocal(adminPhone),
       schoolId: schoolId,
       fullName: adminFullName.trim(),
@@ -1076,6 +1085,8 @@ class AuthService {
     String password = tempPassword,
   }) {
     if (!PhoneUtils.isValidLoginPhone(phone)) return 'invalid_phone';
+    final emailError = _requireEmail(email);
+    if (emailError != null) return emailError;
     final key = PhoneUtils.loginKey(phone);
     if (_accountExists(key)) return 'exists';
 
@@ -1083,7 +1094,7 @@ class AuthService {
       username: key,
       password: password,
       roleKey: roleDriver,
-      email: email?.trim().isEmpty ?? true ? null : email!.trim(),
+      email: _normalizedEmail(email),
       phone: PhoneUtils.normalizeLocal(phone),
       schoolId: schoolId,
       fullName: fullName.trim(),
@@ -1103,6 +1114,8 @@ class AuthService {
     String password = tempPassword,
   }) {
     if (!PhoneUtils.isValidLoginPhone(phone)) return 'invalid_phone';
+    final emailError = _requireEmail(email);
+    if (emailError != null) return emailError;
     final key = PhoneUtils.loginKey(phone);
     if (_accountExists(key)) return 'exists';
 
@@ -1110,7 +1123,7 @@ class AuthService {
       username: key,
       password: password,
       roleKey: roleTeacher,
-      email: email?.trim().isEmpty ?? true ? null : email!.trim(),
+      email: _normalizedEmail(email),
       phone: PhoneUtils.normalizeLocal(phone),
       schoolId: schoolId,
       fullName: fullName.trim(),
@@ -1195,6 +1208,8 @@ class AuthService {
     if (children.isEmpty) return 'no_children';
     if (schoolAccessError(schoolId) != null) return 'school_blocked';
     if (!PhoneUtils.isValidLoginPhone(phone)) return 'invalid_phone';
+    final emailError = _requireEmail(email);
+    if (emailError != null) return emailError;
     final key = PhoneUtils.loginKey(phone);
     final phoneError = _preparePhoneForParentRegistration(key, children);
     if (phoneError != null) return phoneError;
@@ -1218,7 +1233,7 @@ class AuthService {
       username: key,
       password: password,
       roleKey: roleParent,
-      email: email?.trim().isEmpty ?? true ? null : email!.trim(),
+      email: _normalizedEmail(email),
       phone: PhoneUtils.normalizeLocal(phone),
       schoolId: schoolId.trim(),
       fullName: fullName.trim(),
@@ -1323,12 +1338,14 @@ class AuthService {
     if (_users.containsKey(username.toLowerCase())) {
       return 'exists';
     }
+    final emailError = _requireEmail(email);
+    if (emailError != null) return emailError;
 
     _users[username.toLowerCase()] = RegisteredUser(
       username: username.toLowerCase(),
       password: password,
       roleKey: roleKey,
-      email: email.trim(),
+      email: _normalizedEmail(email),
       phone: phone.trim(),
       schoolId: schoolId.trim(),
       fullName: fullName.trim(),
