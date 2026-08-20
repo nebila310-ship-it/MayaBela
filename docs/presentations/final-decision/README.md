@@ -2,21 +2,16 @@
 
 **MaJo Bridge Technologies and Events**
 
-Open these **Markdown** pages. GitHub shows them as a document with pictures. Do not open the `.html` files here — GitHub tries to show them as code and can fail with “Unable to render code block.”
+These links open in the **browser** (fullscreen slides, not GitHub’s file viewer):
 
-| Open this | Link |
-|-----------|------|
-| **Slides** | [SLIDES.md](SLIDES.md) |
-| **Leave-behind** | [LEAVE_BEHIND.md](LEAVE_BEHIND.md) |
+| Open this | Browser URL |
+|-----------|-------------|
+| **Slides** | **https://nebila310-ship-it.github.io/MayaBela/** |
+| **Leave-behind** | **https://nebila310-ship-it.github.io/MayaBela/leave-behind.html** |
 | Live school demo | https://mayabela.pages.dev |
 
-If you need a projector PDF: click **Download** on [fenote-raey-academy-slides.pdf](fenote-raey-academy-slides.pdf), then open the file on your computer. Same for [fenote-raey-academy-leave-behind.pdf](fenote-raey-academy-leave-behind.pdf).
+On the slides: **F11**, then arrow keys or click.
 
-| Other files | Use |
-|-------------|-----|
-| [SPEAKER_NOTES.md](SPEAKER_NOTES.md) | What to say, timing, objections |
-| [screens/](screens/) | Module visuals used in the deck |
-
-No commercial / price slide. Terms stay internal with Fenote Raey management.
+If the github.io link 404s, wait a minute for GitHub Pages, then hard-refresh (**Ctrl+Shift+R**).
 
 Support: +251 911 646 444 · nabilmaya6464@gmail.com

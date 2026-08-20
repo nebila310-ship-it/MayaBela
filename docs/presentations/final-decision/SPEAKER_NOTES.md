@@ -3,9 +3,9 @@
 **Presented by:** MaJo Bridge Technologies and Events  
 **Audience:** school directors, administration staff, parent representatives, other leadership bodies  
 **Length:** 20–26 minutes + live demo + questions  
-**Open slides:** [SLIDES.md](SLIDES.md)  
-**Leave-behind:** [LEAVE_BEHIND.md](LEAVE_BEHIND.md)  
-If GitHub says “Unable to render code block,” you clicked an `.html` file. Use the Markdown links above.
+**Open slides (browser):** https://nebila310-ship-it.github.io/MayaBela/ → **F11**  
+**Leave-behind (browser):** https://nebila310-ship-it.github.io/MayaBela/leave-behind.html → **Ctrl+P**  
+**Keys:** Right / Space next · Left previous · click right half of screen = next
 
 Fenote Raey owners have already directed execution. This room is the **operational yes**. Show each body *their* modules, then ask them to recommend.
 
