@@ -17,6 +17,7 @@ import 'package:mayabela/theme/login_role_theme.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/screens/enrollment_screens.dart';
 import 'package:mayabela/screens/platform_console_screen.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -54,25 +55,17 @@ class _LoginScreenState extends State<LoginScreen> {
   DateTime? _lastLogoTap;
   final FocusNode _schoolIdFocus = FocusNode();
 
-  /// Strict phone-only roles (digits field with +251 prefix).
-  /// Teacher / staff / admin use "Phone or username" free text instead —
-  /// the old digits-only field silently dropped usernames and broke login.
-  bool get _usesPhoneLogin {
-    final apiRole = AuthService.apiRoleKeyForLogin(selectedRole);
-    return apiRole == AuthService.roleParent ||
-        apiRole == AuthService.roleDriver;
-  }
-
+  /// Login identifier: email, Ethiopian phone, or username / student id.
   String _loginIdentifierValue() {
     final raw = username.text.trim();
-    if (_usesPhoneLogin) {
-      final local = EthiopianPhoneField.localFromInput(raw);
-      if (local.isNotEmpty) return PhoneUtils.loginKey(local);
-      return PhoneUtils.loginKey(raw);
+    final email = EmailUtils.normalize(raw);
+    if (email != null) return email;
+    final local = EthiopianPhoneField.localFromInput(raw);
+    if (local.isNotEmpty) {
+      return PhoneUtils.loginKey(local);
     }
-    // Phone or username: normalize Ethiopian mobiles, keep usernames as-is.
-    final local = PhoneUtils.normalizeLocal(raw);
-    if (local != null) return local;
+    final phone = PhoneUtils.normalizeLocal(raw);
+    if (phone != null) return phone;
     return raw;
   }
 
@@ -278,9 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
 
-    final savedIdentifier = _usesPhoneLogin
-        ? _loginIdentifierValue()
-        : username.text.trim();
+    final savedIdentifier = _loginIdentifierValue();
 
     AppLockService.instance.handleLoginSuccess();
 
@@ -813,42 +804,21 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 20),
         _buildSchoolIdField(),
         const SizedBox(height: 12),
-        if (_usesPhoneLogin)
-          Theme(
-            data: kIsWeb
-                ? Theme.of(context).copyWith(
-                    textTheme: Theme.of(context)
-                        .textTheme
-                        .apply(bodyColor: Colors.white),
-                    colorScheme: Theme.of(context).colorScheme.copyWith(
-                          primary: WebLoginCard.accentOrange,
-                        ),
-                  )
-                : Theme.of(context),
-            child: EthiopianPhoneField(
-              controller: username,
-              decoration: _fieldDecoration(
-                label: s.loginIdentifierLabel(selectedRole),
-                hint: s.phoneLoginHint,
-                prefixIcon: kIsWeb
-                    ? const Icon(Icons.person_outline, color: Colors.white54)
-                    : null,
-              ),
-            ),
-          )
-        else
-          DomBackedTextField(
-            controller: username,
-            keyboardType: TextInputType.text,
-            style: kIsWeb ? _webFieldTextStyle : null,
-            autofillHint: 'username',
-            decoration: _fieldDecoration(
-              label: s.loginIdentifierLabel(selectedRole),
-              prefixIcon: kIsWeb
-                  ? const Icon(Icons.person_outline, color: Colors.white54)
-                  : null,
-            ),
+        DomBackedTextField(
+          controller: username,
+          keyboardType: TextInputType.emailAddress,
+          style: kIsWeb ? _webFieldTextStyle : null,
+          autofillHint: 'username',
+          decoration: _fieldDecoration(
+            label: s.loginIdentifierLabel(selectedRole),
+            hint: selectedRole == AuthService.roleStudent
+                ? null
+                : s.emailPhone,
+            prefixIcon: kIsWeb
+                ? const Icon(Icons.person_outline, color: Colors.white54)
+                : null,
           ),
+        ),
         const SizedBox(height: 12),
         DomBackedTextField(
           controller: password,

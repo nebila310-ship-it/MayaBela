@@ -55,10 +55,14 @@ void main() {
         password: temp,
       );
       expect(err, isNull);
+      expect(
+        AuthService.findUser('polish.teacher@school.et')?.fullName,
+        'Polish Teacher',
+      );
 
       final loginErr = AuthService.validateLogin(
         roleKey: AuthService.roleTeacher,
-        username: '0911888777',
+        username: 'polish.teacher@school.et',
         password: temp,
       );
       expect(loginErr, isNull);

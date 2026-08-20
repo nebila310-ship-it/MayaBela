@@ -771,7 +771,10 @@ class AuthService {
     }
 
     var cloudUsername = username.trim();
-    if (roleKey == roleParent ||
+    final email = EmailUtils.normalize(cloudUsername);
+    if (email != null) {
+      cloudUsername = email;
+    } else if (roleKey == roleParent ||
         roleKey == roleDriver ||
         roleKey == roleTeacher ||
         roleKey == roleAdmin) {
@@ -842,7 +845,10 @@ class AuthService {
     }
 
     var identifier = username.trim();
-    if (roleKey == roleParent ||
+    final email = EmailUtils.normalize(identifier);
+    if (email != null) {
+      identifier = email;
+    } else if (roleKey == roleParent ||
         roleKey == roleDriver ||
         roleKey == roleTeacher ||
         roleKey == roleAdmin) {

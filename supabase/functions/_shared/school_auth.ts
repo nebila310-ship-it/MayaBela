@@ -1091,6 +1091,9 @@ export async function findAccountDoc(
       if (uname === key && roleOk(doc.data)) {
         return { id: doc.id, data: doc.data };
       }
+      if (normalizeEmail(doc.data.email) === key && roleOk(doc.data)) {
+        return { id: doc.id, data: doc.data };
+      }
       if (
         roleKey === "student" &&
         String(doc.data.linkedStudentId || "").toUpperCase() ===
@@ -1122,6 +1125,9 @@ export async function findAccountDoc(
     const data = doc.data;
     const uname = normalizeUsername(data.username || doc.id);
     if (uname === key && roleOk(data)) {
+      return { id: doc.id, data };
+    }
+    if (normalizeEmail(data.email) === key && roleOk(data)) {
       return { id: doc.id, data };
     }
   }

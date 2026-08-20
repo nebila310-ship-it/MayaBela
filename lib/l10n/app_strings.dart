@@ -85,12 +85,11 @@ class AppStrings implements AppStringsLike {
         'Lakkoofsi bilbilaa kun akkaawuntii hojjettootaa irratti fayyadama. Lakkoofsa quunnamtii warraa barataa irraa fayyadamaa yookiin mana barumsaa qunnamaa.',
       );
   String loginIdentifierLabel(String roleKey) {
-    if (roleKey == 'parent' || roleKey == 'driver') return phoneNumber;
+    if (roleKey == 'parent' || roleKey == 'driver') return emailPhone;
     if (roleKey == 'student') {
       return t('Username or Student ID', 'የተጠቃሚ ስም ወይም የተማሪ መለያ');
     }
-    // teacher, staff, admin — phone login
-    return phoneOrUsername;
+    return t('Email, phone, or username', 'ኢሜይል / ስልክ / ተጠቃሚ ስም');
   }
   String get password => t('Password', 'የይለፍ ቃል');
   String get rememberMe => t('Remember me', 'አስታውሰኝ');
