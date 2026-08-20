@@ -1,4 +1,4 @@
-# Fenote Raey School — final decision meeting
+# Fenote Raey Academy — final decision meeting
 
 **Presented by:** MaJo Bridge Technologies and Events  
 **Audience:** school directors, administration staff, parent representatives, other leadership bodies  

@@ -1,4 +1,4 @@
-# Fenote Raey School — final decision meeting pack
+# Fenote Raey Academy — final decision meeting pack
 
 **MaJo Bridge Technologies and Events**
 
