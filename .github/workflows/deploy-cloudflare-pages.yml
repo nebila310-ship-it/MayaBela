@@ -70,6 +70,15 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
           cp -f web/_redirects build/web/_redirects
           cp -f web/_headers build/web/_headers
+          # Re-copy static HTML packs after Flutter templating so they stay
+          # independent of the SPA (otherwise unknown paths open the login page).
+          rm -rf build/web/fenote-raey-academy build/web/pitch
+          cp -a web/fenote-raey-academy build/web/fenote-raey-academy
+          cp -a web/pitch build/web/pitch
+          test -f build/web/fenote-raey-academy/index.html
+          test -f build/web/fenote-raey-academy/leave-behind/index.html
+          test -f build/web/fenote-raey-academy/screens/cover.png
+          grep -q '/fenote-raey-academy/' build/web/_redirects
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

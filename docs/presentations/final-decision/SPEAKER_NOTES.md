@@ -4,7 +4,7 @@
 **Audience:** school directors, administration staff, parent representatives, other leadership bodies  
 **Length:** 20–26 minutes + live demo + questions  
 **Open slides:** https://mayabela.pages.dev/fenote-raey-academy/ → **F11**  
-**Leave-behind:** https://mayabela.pages.dev/fenote-raey-academy/leave-behind.html → **Ctrl+P**  
+**Leave-behind:** https://mayabela.pages.dev/fenote-raey-academy/leave-behind/ → **Ctrl+P**  
 **Keys:** Right / Space next · Left previous · click right half of screen = next  
 Do not open the `.html` files on GitHub — that shows source code, not the projector.
 
@@ -70,4 +70,4 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Named pilot campus/grade and start week.
 - Support number written down: **+251 911 646 444**.
 
-Print the live leave-behind (Ctrl+P) for parent reps and department heads: https://mayabela.pages.dev/fenote-raey-academy/leave-behind.html
+Print the live leave-behind (Ctrl+P) for parent reps and department heads: https://mayabela.pages.dev/fenote-raey-academy/leave-behind/

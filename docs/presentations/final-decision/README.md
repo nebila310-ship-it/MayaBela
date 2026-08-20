@@ -7,7 +7,7 @@ GitHub cannot play these files. Clicking `index.html` or `leave-behind.html` in 
 | Open this | Live URL |
 |-----------|----------|
 | **Projector slides** | **https://mayabela.pages.dev/fenote-raey-academy/** |
-| **Leave-behind (print)** | **https://mayabela.pages.dev/fenote-raey-academy/leave-behind.html** |
+| **Leave-behind (print)** | **https://mayabela.pages.dev/fenote-raey-academy/leave-behind/** |
 | Live school demo | https://mayabela.pages.dev |
 
 Hard-refresh if you still see an old page: **Ctrl+Shift+R**. On the slides: **F11** fullscreen, arrow keys or click to move.

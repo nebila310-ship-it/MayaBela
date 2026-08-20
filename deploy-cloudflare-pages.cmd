@@ -38,8 +38,10 @@ if not exist "build\web\index.html" (
 )
 
 REM Ensure SPA + security files are present (also copied from web/ by Flutter).
-if not exist "build\web\_redirects" copy /Y "web\_redirects" "build\web\_redirects" >nul
-if not exist "build\web\_headers" copy /Y "web\_headers" "build\web\_headers" >nul
+copy /Y "web\_redirects" "build\web\_redirects" >nul
+copy /Y "web\_headers" "build\web\_headers" >nul
+rmdir /S /Q "build\web\fenote-raey-academy" 2>nul
+xcopy /E /I /Y "web\fenote-raey-academy" "build\web\fenote-raey-academy" >nul
 
 echo.
 echo === 2/3 Cloudflare auth ===
