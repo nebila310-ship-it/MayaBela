@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MayaBela — Final decision meeting</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --sidebar: #1e1b2e;
+      --purple: #4527a0;
+      --gold: #ffb020;
+      --teal: #0f766e;
+      --paper: #f8f6ff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: rgba(255,255,255,.14);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%;
+      background: #070b14;
+      color: #fff;
+      font-family: "Segoe UI", "Noto Sans Ethiopic", "Nyala", Arial, sans-serif;
+    }
+    .deck { height: 100%; overflow: hidden; }
+    .slide {
+      display: none;
+      height: 100%;
+      padding: 48px 64px 72px;
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(69,39,160,.45), transparent 55%),
+        linear-gradient(160deg, #12101c 0%, #0b1020 55%, #0a1a22 100%);
+    }
+    .slide.on { display: flex; flex-direction: column; }
+    .slide.cover {
+      padding: 0;
+      background: #0b0a12;
+    }
+    .cover img.bg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; opacity: .42;
+    }
+    .cover .veil {
+      position: relative; z-index: 1; height: 100%;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 64px;
+      background: linear-gradient(180deg, rgba(8,6,16,.2) 20%, rgba(8,6,16,.92) 78%);
+    }
+    h1 { font-size: 52px; line-height: 1.05; margin: 0 0 12px; letter-spacing: -0.03em; }
+    h2 { font-size: 34px; margin: 0 0 18px; letter-spacing: -0.02em; }
+    h3 { font-size: 20px; margin: 0 0 8px; color: var(--gold); font-weight: 700; }
+    p, li { font-size: 20px; line-height: 1.4; color: #e2e8f0; }
+    .kicker {
+      color: var(--gold); font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; font-size: 13px; margin-bottom: 10px;
+    }
+    .am { color: #cbd5e1; font-size: 18px; }
+    .row { display: grid; gap: 22px; flex: 1; min-height: 0; }
+    .row.two { grid-template-columns: 1.05fr .95fr; }
+    .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .row.phone { grid-template-columns: 1.2fr .7fr; align-items: center; }
+    .shot {
+      width: 100%; height: 100%; object-fit: cover;
+      border-radius: 16px; border: 1px solid var(--line);
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    .phone-shot {
+      max-height: 78vh; width: auto; max-width: 100%;
+      object-fit: contain; border-radius: 28px;
+      justify-self: center;
+    }
+    .card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 14px;
+    }
+    .card strong { color: #fff; }
+    ul { margin: 8px 0 0; padding-left: 20px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 16px;
+    }
+    th, td {
+      text-align: left; padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { color: var(--gold); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+    .footer {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 28px; font-size: 13px; color: #94a3b8;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+      z-index: 5;
+    }
+    .progress { height: 3px; background: rgba(255,255,255,.12); position: fixed; top: 0; left: 0; right: 0; z-index: 6; }
+    .bar { height: 100%; background: var(--gold); width: 0; }
+    .ask {
+      font-size: 28px; font-weight: 800; color: #fff; margin: 8px 0 16px;
+    }
+    .cta {
+      display: inline-block; background: var(--gold); color: #162236;
+      font-weight: 800; padding: 12px 18px; border-radius: 10px; font-size: 18px;
+    }
+    .muted { color: #94a3b8; font-size: 16px; }
+    @media print {
+      .footer, .progress { display: none; }
+      .slide { display: flex !important; height: auto; min-height: 100vh; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="deck" id="deck">
+
+    <section class="slide cover on">
+      <img class="bg" src="screens/cover.png" alt="" />
+      <div class="veil">
+        <div class="kicker">Final decision meeting</div>
+        <h1>MayaBela</h1>
+        <p style="font-size:26px;max-width:820px;color:#fff;">
+          One school system for directors, administration, teachers, parents, students, and transport.
+        </p>
+        <p class="am">አንድ ትምህርት ቤት · እያንዳንዱ ሚና · አንድ እውነተኛ መረጃ</p>
+        <p class="muted" style="margin-top:24px;">School directors · Administration staff · Parent representatives · Leadership bodies</p>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Why this room</div>
+      <h2>Owners directed us to proceed.<br>This meeting is the operational yes.</h2>
+      <div class="row two">
+        <div>
+          <p>School owners have already seen MayaBela and asked that it be executed. Today we show every body in this room <strong>what they will use</strong>, <strong>what they will control</strong>, and <strong>how parents stay informed without gossip or delay</strong>.</p>
+          <p class="am">ባለቤቶቹ አቅጣጫ ሰጥተዋል። ዛሬ የዳይሬክተሮች፣ የአስተዳደር እና የወላጅ ተወካዮች ውሳኔ ነው።</p>
+        </div>
+        <div class="card">
+          <h3>What we need from you</h3>
+          <ul>
+            <li>Directors: confirm this is how you want to govern the school</li>
+            <li>Administration: confirm the daily work is covered</li>
+            <li>Parent representatives: confirm families will be safer and better informed</li>
+            <li>Other bodies: raise gaps now, not after go-live</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">The problem</div>
+      <h2>Excel, paper, and WhatsApp are not a school system.</h2>
+      <div class="row three">
+        <div class="card"><h3>Directors</h3><p>You hear problems late. There is no single dashboard for attendance, fees, discipline, and quality.</p></div>
+        <div class="card"><h3>Administration</h3><p>Rosters, fees, staff, store, and buses live in different files. One error becomes many arguments.</p></div>
+        <div class="card"><h3>Parents</h3><p>They wait for a call, a meeting, or a rumor. Grades appear before leadership has approved them.</p></div>
+      </div>
+      <p style="margin-top:22px;"><strong>MayaBela line:</strong> most tools help the registrar type faster. This one helps the school sleep — because one record is true for everyone.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Who uses it</div>
+      <h2>Every role in this meeting has a home.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/diagram-roles.png" alt="Who uses MayaBela" />
+        <div>
+          <p>Same School ID. Different doors. Nobody sees another school. Staff only see the modules their duty requires.</p>
+          <ul>
+            <li><strong>Directors / Principal / VP</strong> — oversight, approvals, reports</li>
+            <li><strong>Registrar, finance, HR, store</strong> — daily administration</li>
+            <li><strong>Teachers</strong> — class, attendance, grades, homework</li>
+            <li><strong>Parents &amp; students</strong> — the child, not the whole office</li>
+            <li><strong>Drivers</strong> — route, scan, live location</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Access</div>
+      <h2>One login. School ID + phone or email.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-login.png" alt="MayaBela login" />
+        <div>
+          <p>Web for the office. Phone for teachers, parents, and drivers. First login forces a new password. Temporary passwords are shown once — then destroyed.</p>
+          <ul>
+            <li>Languages in the product: English, Amharic, Afaan Oromo</li>
+            <li>Forgot password by school ID + email (password is never sent in the message)</li>
+            <li>Live web: <strong>https://mayabela.pages.dev</strong></li>
+          </ul>
+          <p class="am">የትምህርት ቤት መታወቂያ + ስልክ ወይም ኢሜይል። የመጀመሪያ መግቢያ ላይ የይለፍ ቃል ይቀየራል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For school directors</div>
+      <h2>Command of the school in one screen.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-dashboard.png" alt="Owner dashboard" />
+        <div>
+          <p>This is what leadership opens every morning:</p>
+          <ul>
+            <li>Who is present / absent today</li>
+            <li>Outstanding fees and collections</li>
+            <li>Pending grade and parent-link approvals</li>
+            <li>Buses that are live</li>
+            <li>Reports you can export (Excel, CSV, PDF)</li>
+          </ul>
+          <p>Institution, school profile, campuses, quality-assurance findings, and audit log sit behind this — not in a side spreadsheet.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For administration — registrar</div>
+      <h2>Students are a register, not a chat list.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-students.png" alt="Students module" />
+        <div>
+          <ul>
+            <li>Enroll with a short student ID (STU-####)</li>
+            <li>Date of birth is required so parents can link safely</li>
+            <li>Transfers and promotion are a workflow, not a deleted row</li>
+            <li>Parent requests wait for registrar / section director approval</li>
+            <li>Student affairs: discipline cases and leave requests</li>
+          </ul>
+          <p class="muted">Wrong DOB → no link. Approved link → parent sees only their child.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Trust — the sentence to remember</div>
+      <h2>Teacher enters. Leadership approves. Then the parent sees.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-grades.png" alt="Grade approvals" />
+        <div>
+          <p>This is the difference between a portal and a school.</p>
+          <ul>
+            <li>Draft grades stay inside the school</li>
+            <li>Section Director / designated approvers publish</li>
+            <li>Parents never receive an unapproved mark</li>
+            <li>Attendance is saved by the teacher and visible in admin reports the same day</li>
+          </ul>
+          <p class="am">መምህር ያስገባል → አመራር ያጸድቃል → ከዚያ ወላጅ ያያል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For classroom teachers</div>
+      <h2>The class is the job. The system stays out of the way.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-teacher.png" alt="Teacher dashboard" />
+        <div>
+          <ul>
+            <li>My classes, attendance (P / A / L), homework</li>
+            <li>Enter subject grades and submit for approval</li>
+            <li>Timetable, learning materials, announcements</li>
+            <li>Messages within the school’s allowed channels</li>
+            <li>Homeroom teachers can manage that class timetable</li>
+          </ul>
+          <p>Teachers do not get the finance office, the whole staff directory, or another campus’s children.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For parent representatives</div>
+      <h2>The parent sees the child — not the school’s internal politics.</h2>
+      <div class="row phone">
+        <div>
+          <ul>
+            <li>Link with Student ID + date of birth, then wait for school approval</li>
+            <li>Attendance, approved grades, homework, materials</li>
+            <li>Fee balance and announcements</li>
+            <li>Bus tracking when the driver is sharing location</li>
+            <li>Messages to the people the school allows — not an open group</li>
+          </ul>
+          <p class="am">ወላጅ የሚያየው ልጁን ብቻ ነው። ያልጸደቀ ውጤት አይታይም። የባስ አካባቢ ሹፌሩ ሲያጋራ ብቻ ነው።</p>
+        </div>
+        <img class="phone-shot" src="screens/screen-parent.png" alt="Parent app" />
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Transport</div>
+      <h2>The bus is part of the school, not a private WhatsApp.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-transport.png" alt="Transport module" />
+        <div>
+          <ul>
+            <li>HR / transport admin: buses, drivers, routes, riders</li>
+            <li>Driver app: route, passenger list, QR onboard / discharge, live map</li>
+            <li>Parent sees a live position only while sharing is on and fresh</li>
+            <li>Stale location is not shown as “live”</li>
+          </ul>
+          <p>This is the module parent representatives usually ask about first. It is built in — not a separate tracking company.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Finance</div>
+      <h2>Collections you can defend in a board meeting.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-finance.png" alt="Finance module" />
+        <div>
+          <ul>
+            <li>Fee structures and payments in ETB</li>
+            <li>Outstanding vs collected, by day and month</li>
+            <li>Parent fee view for linked children</li>
+            <li>Reports for leadership — not a private cashier notebook</li>
+          </ul>
+          <p class="muted">Finance staff manage. Directors oversee. Parents see their own balance.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Store &amp; procurement</div>
+      <h2>Books, chalk, and purchases leave a trail.</h2>
+      <div class="row two">
+        <img class="shot" src="screens/screen-inventory.png" alt="Inventory module" />
+        <div>
+          <ul>
+            <li>Stock on hand</li>
+            <li>Purchase requests → approval → receive</li>
+            <li>Issue requests from departments → store keeper</li>
+            <li>Procurement, store, and accountant see the same numbers</li>
+          </ul>
+          <p>This is where leakage usually hides in a paper school. MayaBela makes it a workflow.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Full catalog</div>
+      <h2>What the school is buying — module by module</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Modules</th><th>Who it serves</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Organization</td><td>Institution, School profile, Campuses</td><td>Owners, directors</td></tr>
+          <tr><td>Academics</td><td>Classes, examinations &amp; grade approval, attendance, classroom teachers, timetable</td><td>Principal, VP, section director, teachers</td></tr>
+          <tr><td>Student services</td><td>Students, parent-link approvals, transfers, student affairs</td><td>Registrar, student affairs</td></tr>
+          <tr><td>Finance branch</td><td>Fees &amp; payments, inventory / procurement / store</td><td>Accountant, procurement, store</td></tr>
+          <tr><td>HR &amp; transport</td><td>HR hub, administration staff, buses, drivers, live GPS</td><td>HR, transport admin, drivers</td></tr>
+          <tr><td>Learning &amp; comms</td><td>Library, e-books, announcements, events, calendar, messages</td><td>Everyone with a duty</td></tr>
+          <tr><td>Quality &amp; insight</td><td>QA findings, reports, Maya Assistant</td><td>QA, directors</td></tr>
+          <tr><td>System</td><td>Role permissions, audit log, system health, settings</td><td>Owner / platform</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">How a week looks</div>
+      <h2>Not a theory. A working week.</h2>
+      <table>
+        <thead><tr><th>Day</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Office logs in. Rosters and staff passwords work. Structure (grades / sections) is in the system.</td></tr>
+          <tr><td>2</td><td>Teachers take attendance and enter subject grades.</td></tr>
+          <tr><td>3</td><td>Section director approves grades. Linked parents see published results only.</td></tr>
+          <tr><td>4</td><td>Parents link children (ID + DOB). Registrar approves. Fees and bus appear for that child.</td></tr>
+          <tr><td>5</td><td>Leadership prints a PDF report. Store / procurement smoke-test if you use it.</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:16px;">Pilot recommendation: 30–60 days, one campus or one grade band, then a board decision to expand.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Safety</div>
+      <h2>The school’s data stays the school’s data.</h2>
+      <div class="row three">
+        <div class="card"><h3>School isolation</h3><p>Another school on MayaBela cannot open your students, fees, or messages.</p></div>
+        <div class="card"><h3>Duty-based access</h3><p>A librarian does not get finance. A teacher does not get the whole payroll. VP can oversee without silently editing everything.</p></div>
+        <div class="card"><h3>Audit</h3><p>Sensitive admin actions can be reviewed. Temporary passwords are unique and must be changed.</p></div>
+      </div>
+      <p style="margin-top:20px;">MayaBela is a school product. It is not a government system. It helps the school align with Digital Ethiopia by running digitally, with a record you can stand on.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Commercial — as presented to owners</div>
+      <h2>Simple price. Staff and parents are not extra seats.</h2>
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>Per student</th><th>VAT 15%</th><th>Total / student</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Essential</td><td>200 ETB</td><td>30</td><td><strong>230 ETB</strong></td></tr>
+          <tr><td>Standard (recommended)</td><td>300 ETB</td><td>45</td><td><strong>345 ETB</strong></td></tr>
+          <tr><td>Campus+</td><td>400 ETB</td><td>60</td><td><strong>460 ETB</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:16px;">Teachers, parents, and drivers are not billed per seat. Example at Standard: 300 students × 300 = <strong>90,000</strong> + VAT <strong>13,500</strong> = <strong>103,500 ETB</strong>.</p>
+      <p class="muted">Confirm the exact figure already agreed with owners before this meeting; do not reopen price unless they ask.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">The ask</div>
+      <p class="ask">Recommend MayaBela for this school’s operating system.</p>
+      <div class="row three">
+        <div class="card"><h3>Directors</h3><p>Endorse the grade-approval rule, reports, and oversight dashboard.</p></div>
+        <div class="card"><h3>Administration</h3><p>Endorse students, fees, HR, store, and transport as the daily books.</p></div>
+        <div class="card"><h3>Parent representatives</h3><p>Endorse child-only access, approved grades, and live bus when the school runs transport.</p></div>
+      </div>
+      <p style="margin-top:22px;">Next step after this room: 30–60 day pilot on one campus/grade, support Mon–Sat 09:00–18:00 EAT, then expand.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Try it in the room</div>
+      <h2>Live system — not a brochure.</h2>
+      <p class="ask"><span class="cta">https://mayabela.pages.dev</span></p>
+      <p>Hard-refresh if you saw an older page: <strong>Ctrl+Shift+R</strong></p>
+      <p>Support: <strong>+251 911 646 444</strong> · nabilmaya6464@gmail.com</p>
+      <p class="am">ሙከራው በቀጥታ ይከፈታል። ጥያቄ ካለዎ አሁን ይጠይቁ።</p>
+      <p class="muted">Open this deck: docs/presentations/final-decision/index.html · F11 for fullscreen · arrow keys to move</p>
+    </section>
+
+  </div>
+  <div class="footer">
+    <span>MayaBela · Final decision meeting</span>
+    <span id="pos">1 / 1</span>
+    <span>+251 911 646 444</span>
+  </div>
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    let i = 0;
+    const pos = document.getElementById('pos');
+    const bar = document.getElementById('bar');
+    function show(n) {
+      i = (n + slides.length) % slides.length;
+      slides.forEach((s, k) => s.classList.toggle('on', k === i));
+      pos.textContent = (i + 1) + ' / ' + slides.length;
+      bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowRight','PageDown',' ','Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+      if (['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(slides.length - 1);
+    });
+    document.getElementById('deck').addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      show(i + (e.clientX > innerWidth / 2 ? 1 : -1));
+    });
+    show(0);
+  </script>
+</body>
+</html>
