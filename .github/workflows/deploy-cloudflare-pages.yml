@@ -8,7 +8,11 @@ name: Deploy Cloudflare Pages
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches:
+      - main
+      - master
+      # Host the Fenote Raey meeting slides on pages.dev before this PR merges.
+      - cursor/final-decision-presentation-0f33
     paths:
       - "lib/**"
       - "web/**"
