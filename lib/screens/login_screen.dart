@@ -79,13 +79,11 @@ class _LoginScreenState extends State<LoginScreen> {
   AppStrings get s => AppLocale.instance.strings;
   LoginRoleTheme get _theme => LoginRoleTheme.forRole(selectedRole);
 
-  bool get _schoolBrandLogoVisible {
+  bool get _schoolBrandVisible {
     final id = schoolId.text.trim();
     if (id.isEmpty) return false;
-    final record = SchoolRegistryService.instance.lookup(id);
-    if (record == null) return false;
-    return (record.logoPath?.isNotEmpty == true) ||
-        (record.logoUrl?.isNotEmpty == true);
+    if (SchoolRegistryService.instance.lookup(id) != null) return true;
+    return LoginPrefsService.instance.brandForSchool(id) != null;
   }
 
   @override
@@ -93,6 +91,10 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     AppLocale.instance.addListener(_onLocaleChanged);
     _schoolIdFocus.addListener(_onSchoolIdFocusChanged);
+    final lastId = LoginPrefsService.instance.lastSchoolId;
+    if (lastId != null && lastId.isNotEmpty) {
+      schoolId.text = lastId;
+    }
     if (kIsWeb) {
       _prefsLoaded = true;
       unawaited(_restoreSavedLogin());
@@ -305,6 +307,18 @@ class _LoginScreenState extends State<LoginScreen> {
       await LoginPrefsService.instance
           .saveLastSchoolId(schoolId.text)
           .timeout(const Duration(seconds: 3));
+      final record = SchoolRegistryService.instance.lookup(schoolId.text);
+      if (record != null) {
+        await LoginPrefsService.instance
+            .rememberSchoolBrand(
+              schoolId: record.id,
+              name: record.name,
+              logoUrl: record.logoUrl,
+              logoPath: record.logoPath,
+              logoStyle: record.logoStyle,
+            )
+            .timeout(const Duration(seconds: 3));
+      }
       await LoginPrefsService.instance
           .saveLogin(
             remember: rememberMe,
@@ -1229,7 +1243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 118,
                     ),
                     const SizedBox(height: 8),
-                    if (!_schoolBrandLogoVisible)
+                    if (!_schoolBrandVisible)
                       Text(
                         s.tagline,
                         textAlign: TextAlign.center,
@@ -1240,7 +1254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           letterSpacing: 0.2,
                         ),
                       ),
-                    if (!_schoolBrandLogoVisible)
+                    if (!_schoolBrandVisible)
                       const SizedBox(height: 20)
                     else
                       const SizedBox(height: 12),

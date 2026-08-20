@@ -65,6 +65,7 @@ import 'package:mayabela/setup/dashboard_setup.dart';
 
 import 'package:mayabela/theme/app_theme.dart';
 import 'package:mayabela/widgets/app_lock_gate.dart';
+import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/system_nav_safe_scope.dart';
 
 
@@ -74,6 +75,10 @@ Future<void> main() async {
   CrashReporting.install();
   await runZonedGuarded(() async {
     StartupProfiler.start('main.total');
+    await StartupProfiler.track(
+      'main.loginPrefs',
+      LoginPrefsService.instance.load,
+    );
     await StartupProfiler.track(
       'main.supabaseInitialize',
       () => SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true),
@@ -317,7 +322,9 @@ class AppBootstrap extends StatefulWidget {
 class _AppBootstrapState extends State<AppBootstrap> {
   late Widget _home = kIsWeb
       ? const LoginScreen()
-      : const Scaffold(body: Center(child: CircularProgressIndicator()));
+      : LaunchSchoolSplash(
+          brand: LoginPrefsService.instance.rememberedBrand,
+        );
 
   @override
   void initState() {
