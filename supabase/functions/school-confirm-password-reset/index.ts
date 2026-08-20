@@ -95,7 +95,8 @@ Deno.serve(async (req) => {
       return errorResponse("Invalid or expired reset code.", 400, "invalid_code");
     }
 
-    const found = await findAccountByEmail(sb, schoolId, email, roleKey);
+    const scopedRole = roleKey || String(reset.roleKey || "").trim() || null;
+    const found = await findAccountByEmail(sb, schoolId, email, scopedRole);
     const username = normalizeUsername(
       found?.data.username || reset.username,
     );

@@ -6,6 +6,8 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/screens/admin_enrollment_screens.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/text_input_formatters.dart';
@@ -185,6 +187,49 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
       driver = DriverRegistryService.instance.lookupById(driver.driverId)!;
 
       AuthService.syncDriverAuthProfile(driver);
+
+      final account = AuthService.findUser(loginKey);
+      if (account != null) {
+        var cloud = await SchoolAuthCloudService.instance.upsertAccount(
+          user: account,
+          password: tempPassword,
+        );
+        if (!cloud.ok &&
+            (cloud.errorCode == 'denied' ||
+                (cloud.errorMessage ?? '').toLowerCase().contains('session') ||
+                (cloud.errorMessage ?? '').toLowerCase().contains('jwt') ||
+                (cloud.errorMessage ?? '').toLowerCase().contains('sign in'))) {
+          if (!mounted) return;
+          if (await ensureCloudSessionForStaffWrite(context)) {
+            cloud = await SchoolAuthCloudService.instance.upsertAccount(
+              user: account,
+              password: tempPassword,
+            );
+          }
+        }
+        if (!cloud.ok) {
+          DriverRegistryService.instance.removeDriver(createdDriverId);
+          await AuthService.revokeRegisteredAccount(loginKey);
+          if (!mounted) return;
+          final detail = cloud.errorMessage?.trim();
+          final code = cloud.errorCode ?? 'error';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                detail != null && detail.isNotEmpty
+                    ? detail
+                    : code == 'denied'
+                        ? 'Cloud rejected this create. Confirm your Admin password when prompted, then try again.'
+                        : 'Cloud account could not be created ($code). Try again.',
+              ),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 8),
+            ),
+          );
+          return;
+        }
+      }
+
       await DriverPersistenceService.instance.saveRegistryFromService();
     } catch (_) {
       DriverRegistryService.instance.removeDriver(createdDriverId);

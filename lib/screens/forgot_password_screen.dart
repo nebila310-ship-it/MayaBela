@@ -10,10 +10,12 @@ class ForgotPasswordScreen extends StatefulWidget {
     super.key,
     this.initialSchoolId,
     this.initialEmail,
+    this.roleKey,
   });
 
   final String? initialSchoolId;
   final String? initialEmail;
+  final String? roleKey;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -80,6 +82,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final result = await SchoolAuthCloudService.instance.requestPasswordReset(
       schoolId: _schoolId.text,
       email: _email.text,
+      roleKey: widget.roleKey,
     );
     if (!mounted) return;
     if (!result.ok) {
@@ -121,6 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       email: _email.text,
       code: _otp.text,
       newPassword: _newPassword.text,
+      roleKey: widget.roleKey,
     );
     if (!mounted) return;
     setState(() => _busy = false);

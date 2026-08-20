@@ -817,6 +817,7 @@ class AuthService {
           roleKey: roleKey,
           username: username,
           password: password,
+          schoolId: schoolId,
         );
         if (localError == null) return null;
         return 'cloud_required';
@@ -832,6 +833,7 @@ class AuthService {
       roleKey: roleKey,
       username: username,
       password: password,
+      schoolId: schoolId,
     );
   }
 
@@ -839,6 +841,7 @@ class AuthService {
     required String roleKey,
     required String username,
     required String password,
+    String? schoolId,
   }) {
     if (username.trim().isEmpty || password.isEmpty) {
       return 'empty';
@@ -856,7 +859,11 @@ class AuthService {
       if (phone != null) identifier = phone;
     }
 
-    final user = _findUser(identifier, roleKey: roleKey);
+    final user = _findUser(
+      identifier,
+      roleKey: roleKey,
+      schoolId: schoolId,
+    );
     if (user == null || !_passwordMatches(user, password)) {
       if (roleKey == roleStudent) {
         unawaited(
@@ -923,32 +930,52 @@ class AuthService {
 
   static RegisteredUser? findUser(String identifier) => _findUser(identifier);
 
-  static RegisteredUser? _findUser(String identifier, {String? roleKey}) {
+  static RegisteredUser? _findUser(
+    String identifier, {
+    String? roleKey,
+    String? schoolId,
+  }) {
     final trimmed = identifier.trim();
     final lower = trimmed.toLowerCase();
     if (lower == 'transport') {
       return _users['transport'] ?? _users['driver'];
     }
 
+    final sid = schoolId?.trim().toUpperCase();
+    bool schoolOk(RegisteredUser user) {
+      if (sid == null || sid.isEmpty) return true;
+      return (user.schoolId ?? '').trim().toUpperCase() == sid;
+    }
+
     if (roleKey == roleStudent || trimmed.toUpperCase().startsWith('STU-')) {
       final studentId = trimmed.toUpperCase();
       for (final user in _users.values) {
         if (user.roleKey == roleStudent &&
-            user.linkedStudentId?.toUpperCase() == studentId) {
+            user.linkedStudentId?.toUpperCase() == studentId &&
+            schoolOk(user)) {
           return user;
         }
       }
     }
 
+    RegisteredUser? roleMatch;
+    RegisteredUser? anyMatch;
     for (final user in _users.values) {
-      if (user.username.toLowerCase() == lower) return user;
+      if (!schoolOk(user)) continue;
       final email = user.email;
-      if (email != null && email.isNotEmpty && email.toLowerCase() == lower) {
-        return user;
+      final matches = user.username.toLowerCase() == lower ||
+          (email != null &&
+              email.isNotEmpty &&
+              email.toLowerCase() == lower) ||
+          PhoneUtils.matches(user.phone, trimmed);
+      if (!matches) continue;
+      if (roleKey != null && user.roleKey == roleKey) {
+        roleMatch ??= user;
+      } else {
+        anyMatch ??= user;
       }
-      if (PhoneUtils.matches(user.phone, trimmed)) return user;
     }
-    return null;
+    return roleMatch ?? anyMatch;
   }
 
   static bool _accountExists(String identifier) => _findUser(identifier) != null;

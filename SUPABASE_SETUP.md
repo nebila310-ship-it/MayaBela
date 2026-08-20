@@ -61,6 +61,8 @@ npx supabase secrets set SMTP_HOST=smtp.yourdomain.com
 npx supabase secrets set SMTP_PORT=587
 npx supabase secrets set SMTP_USER=your_smtp_user
 npx supabase secrets set SMTP_PASS=your_smtp_password
+# Optional. true = implicit TLS (port 465). Leave unset for STARTTLS on 587.
+# npx supabase secrets set SMTP_SECURE=false
 ```
 
 If you use Resend instead of SMTP:

@@ -69,6 +69,17 @@ class _LoginScreenState extends State<LoginScreen> {
     return raw;
   }
 
+  Widget _forgotPasswordScreen() {
+    if (selectedRole == AuthService.roleStudent) {
+      return const StudentForgotPasswordScreen();
+    }
+    return ForgotPasswordScreen(
+      initialSchoolId: schoolId.text,
+      initialEmail: EmailUtils.normalize(username.text),
+      roleKey: AuthService.apiRoleKeyForLogin(selectedRole),
+    );
+  }
+
   AppStrings get s => AppLocale.instance.strings;
   LoginRoleTheme get _theme => LoginRoleTheme.forRole(selectedRole);
 
@@ -1070,12 +1081,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => selectedRole ==
-                                    AuthService.roleStudent
-                                ? const StudentForgotPasswordScreen()
-                                : ForgotPasswordScreen(
-                                    initialSchoolId: schoolId.text,
-                                  ),
+                            builder: (_) => _forgotPasswordScreen(),
                           ),
                         );
                       },
@@ -1322,11 +1328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => selectedRole == AuthService.roleStudent
-                                ? const StudentForgotPasswordScreen()
-                                : ForgotPasswordScreen(
-                                    initialSchoolId: schoolId.text,
-                                  ),
+                            builder: (_) => _forgotPasswordScreen(),
                           ),
                         );
                       },

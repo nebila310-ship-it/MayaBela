@@ -79,6 +79,77 @@ void main() {
       );
     });
 
+    test('driver registration requires a valid email', () {
+      final err = AuthService.registerDriverAccount(
+        fullName: 'No Email Driver',
+        schoolId: 'TB-001',
+        phone: '0911999002',
+        linkedDriverId: 'D-NO-EMAIL',
+      );
+      expect(err, 'invalid_email');
+    });
+
+    test('email login is scoped to the typed school id', () {
+      final tempA = AuthService.generateTempPassword();
+      final tempB = AuthService.generateTempPassword();
+      expect(
+        AuthService.registerTeacherAccount(
+          fullName: 'Alpha Teacher',
+          schoolId: 'TB-AAA',
+          phone: '0911888101',
+          email: 'shared.login@school.et',
+          linkedTeacherId: 'T-AAA-1',
+          password: tempA,
+        ),
+        isNull,
+      );
+      expect(
+        AuthService.registerTeacherAccount(
+          fullName: 'Beta Teacher',
+          schoolId: 'TB-BBB',
+          phone: '0911888102',
+          email: 'shared.login@school.et',
+          linkedTeacherId: 'T-BBB-1',
+          password: tempB,
+        ),
+        isNull,
+      );
+
+      expect(
+        AuthService.validateLogin(
+          roleKey: AuthService.roleTeacher,
+          username: 'shared.login@school.et',
+          password: tempA,
+          schoolId: 'TB-AAA',
+        ),
+        isNull,
+      );
+      expect(AuthService.currentUser?.fullName, 'Alpha Teacher');
+      AuthService.clearSession();
+
+      expect(
+        AuthService.validateLogin(
+          roleKey: AuthService.roleTeacher,
+          username: 'shared.login@school.et',
+          password: tempB,
+          schoolId: 'TB-BBB',
+        ),
+        isNull,
+      );
+      expect(AuthService.currentUser?.fullName, 'Beta Teacher');
+      AuthService.clearSession();
+
+      expect(
+        AuthService.validateLogin(
+          roleKey: AuthService.roleTeacher,
+          username: 'shared.login@school.et',
+          password: tempA,
+          schoolId: 'TB-BBB',
+        ),
+        'invalid',
+      );
+    });
+
     testWidgets('ChangePasswordScreen changes password without OTP input',
         (tester) async {
       AuthService.currentUser = RegisteredUser(

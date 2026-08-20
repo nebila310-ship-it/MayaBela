@@ -8,10 +8,24 @@ function mailFrom(): string {
   return (Deno.env.get("MAIL_FROM") || Deno.env.get("SMTP_FROM") || "").trim();
 }
 
-export async function sendPlainEmail(payload: MailPayload): Promise<void> {
+/** Throws `mail_not_configured` when SMTP/Resend is not ready. */
+export function assertMailConfigured(): void {
   const from = mailFrom();
   if (!from) throw new Error("mail_not_configured");
+  const smtpHost = (Deno.env.get("SMTP_HOST") || "").trim();
+  if (smtpHost) {
+    const username = (Deno.env.get("SMTP_USER") || "").trim();
+    const password = Deno.env.get("SMTP_PASS") || "";
+    if (!username || !password) throw new Error("mail_not_configured");
+    return;
+  }
+  const resendKey = (Deno.env.get("RESEND_API_KEY") || "").trim();
+  if (!resendKey) throw new Error("mail_not_configured");
+}
 
+export async function sendPlainEmail(payload: MailPayload): Promise<void> {
+  assertMailConfigured();
+  const from = mailFrom();
   const smtpHost = (Deno.env.get("SMTP_HOST") || "").trim();
   if (smtpHost) {
     await sendViaSmtp(from, payload);
@@ -64,11 +78,17 @@ async function sendViaSmtp(from: string, payload: MailPayload): Promise<void> {
     throw new Error("mail_not_configured");
   }
 
+  const resolvedPort = Number.isFinite(port) ? port : 587;
+  const secureEnv = (Deno.env.get("SMTP_SECURE") || "").trim().toLowerCase();
+  // Port 465 is implicit TLS. Port 587 is STARTTLS (tls: false in denomailer).
+  const tls = secureEnv === "true" ||
+    (secureEnv !== "false" && resolvedPort === 465);
+
   const client = new SMTPClient({
     connection: {
       hostname: host,
-      port: Number.isFinite(port) ? port : 587,
-      tls: Deno.env.get("SMTP_SECURE") === "true",
+      port: resolvedPort,
+      tls,
       auth: { username, password },
     },
   });

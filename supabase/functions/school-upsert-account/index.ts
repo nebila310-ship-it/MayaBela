@@ -205,12 +205,31 @@ Deno.serve(async (req) => {
 
     let email = existing?.email || null;
     if (roleKey !== "student") {
-      const nextEmail = normalizeEmail(body.email) ??
-        normalizeEmail(existing?.email);
-      if (!nextEmail) {
-        return errorResponse("A valid email is required.", 400, "invalid_email");
+      const incoming = Object.prototype.hasOwnProperty.call(body, "email")
+        ? normalizeEmail(body.email)
+        : undefined;
+      if (!existing) {
+        if (!incoming) {
+          return errorResponse(
+            "A valid email is required.",
+            400,
+            "invalid_email",
+          );
+        }
+        email = incoming;
+      } else if (incoming) {
+        email = incoming;
+      } else if (
+        Object.prototype.hasOwnProperty.call(body, "email") &&
+        body.email != null &&
+        String(body.email).trim() !== ""
+      ) {
+        return errorResponse(
+          "A valid email is required.",
+          400,
+          "invalid_email",
+        );
       }
-      email = nextEmail;
     } else if (Object.prototype.hasOwnProperty.call(body, "email")) {
       email = normalizeEmail(body.email);
     }
