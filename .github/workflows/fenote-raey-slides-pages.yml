@@ -18,7 +18,6 @@ permissions:
   contents: write
   pages: write
   id-token: write
-  administration: write
 
 concurrency:
   group: fenote-raey-pages
@@ -39,11 +38,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -X POST "repos/${{ github.repository }}/pages" \
-            -f build_type=workflow \
-            -f https_enforced=true || true
+          gh api -X POST "repos/${{ github.repository }}/pages" -f build_type=workflow || true
+          gh api -X PUT "repos/${{ github.repository }}/pages" -f build_type=workflow || true
 
       - name: Configure Pages
+        continue-on-error: true
         uses: actions/configure-pages@v5
         with:
           enablement: true
