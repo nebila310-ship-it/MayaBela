@@ -1,4 +1,6 @@
-# Final decision meeting pack
+# Fenote Raey School — final decision meeting pack
+
+**MaJo Bridge Technologies and Events**
 
 Open **[index.html](index.html)** in Chrome and press **F11**.
 
@@ -8,6 +10,8 @@ Open **[index.html](index.html)** in Chrome and press **F11**.
 | [SPEAKER_NOTES.md](SPEAKER_NOTES.md) | What to say, timing, objections |
 | [leave-behind.html](leave-behind.html) | Print for parent reps and heads (Ctrl+P) |
 | [screens/](screens/) | Module visuals used in the deck |
+
+No commercial / price slide. Terms stay internal with Fenote Raey management.
 
 Live demo after the slides: **https://mayabela.pages.dev** (hard-refresh: Ctrl+Shift+R).
 
