@@ -69,4 +69,4 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Named pilot campus/grade and start week.
 - Support number written down: **+251 911 646 444**.
 
-Print [LEAVE_BEHIND.md](LEAVE_BEHIND.md) (or download [fenote-raey-academy-leave-behind.pdf](fenote-raey-academy-leave-behind.pdf)) for parent reps and department heads.
+Print https://nebila310-ship-it.github.io/MayaBela/leave-behind.html (Ctrl+P) for parent reps and department heads.
