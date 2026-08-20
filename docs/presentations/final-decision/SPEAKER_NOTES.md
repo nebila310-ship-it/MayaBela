@@ -3,8 +3,8 @@
 **Presented by:** MaJo Bridge Technologies and Events  
 **Audience:** school directors, administration staff, parent representatives, other leadership bodies  
 **Length:** 20–26 minutes + live demo + questions  
-**Open slides (browser):** https://nebila310-ship-it.github.io/MayaBela/ → **F11**  
-**Leave-behind (browser):** https://nebila310-ship-it.github.io/MayaBela/leave-behind.html → **Ctrl+P**  
+**Open slides (browser):** https://litter.catbox.moe/gfa8zm.html → **F11**  
+**Leave-behind (browser):** https://litter.catbox.moe/rzzt6u.html → **Ctrl+P**  
 **Keys:** Right / Space next · Left previous · click right half of screen = next
 
 Fenote Raey owners have already directed execution. This room is the **operational yes**. Show each body *their* modules, then ask them to recommend.
@@ -69,4 +69,4 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Named pilot campus/grade and start week.
 - Support number written down: **+251 911 646 444**.
 
-Print https://nebila310-ship-it.github.io/MayaBela/leave-behind.html (Ctrl+P) for parent reps and department heads.
+Print https://litter.catbox.moe/rzzt6u.html (Ctrl+P) for parent reps and department heads.

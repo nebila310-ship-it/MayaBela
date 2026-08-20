@@ -62,4 +62,12 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
+
+      - name: Pages enablement hint
+        if: steps.deployment.outcome == 'failure'
+        run: |
+          echo "GitHub Pages is not enabled on this repo yet."
+          echo "Turn it on at https://github.com/${{ github.repository }}/settings/pages"
+          echo "Source: GitHub Actions. Then re-run this workflow."
