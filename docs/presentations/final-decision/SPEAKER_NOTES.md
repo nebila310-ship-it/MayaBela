@@ -3,8 +3,9 @@
 **Presented by:** MaJo Bridge Technologies and Events  
 **Audience:** all roles — directors, student affairs, QA, teachers, administration, parent representatives, drivers  
 **Length:** 28–34 minutes + live demo + questions  
-**Open slides (browser):** https://litter.catbox.moe/x1aoxu.html → **F11**  
-**Leave-behind (browser):** https://litter.catbox.moe/17nhu5.html → **Ctrl+P**  
+**Open slides:** pull this branch and open `docs/presentations/final-decision/index.html` → **F11**  
+**Or download:** https://gofile.io/d/69cgqWGz (`slides.html`)  
+**Leave-behind:** https://gofile.io/d/erPGzTEw → **Ctrl+P**  
 **Keys:** Right / Space next · Left previous · click right half of screen = next
 
 Fenote Raey owners have already directed execution. This room is the **operational yes**. Show each body *their* modules, then ask them to recommend.
@@ -52,6 +53,7 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 
 - **“We already have SMS / Excel.”** Those digitize a file. This system is governance: approve → publish, live bus, store trail, one login for every role.
 - **“Is this only the office ERP?”** No. Show the four-dashboard slide: teacher, parent, student, driver. Each login is a different home.
+- **“Where is student affairs / QA / gallery?”** They are first-class modules. Walk the sidebar on the cover, then those dedicated slides.
 - **“Parents will see everything.”** They see their child after the school approves the link. They never see unapproved grades.
 - **“Teachers will be policed.”** Teachers keep the classroom tools. Leadership keeps publish rights. That protects the teacher as much as the parent.
 - **“Is this a government system?”** No. MaJo Bridge Technologies and Events. It helps Fenote Raey run digitally. Do not claim MoE endorsement.
@@ -82,4 +84,4 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Named pilot campus/grade and start week.
 - Support number written down: **+251 911 646 444**.
 
-Print https://litter.catbox.moe/17nhu5.html (Ctrl+P) for parent reps and department heads.
+Print https://gofile.io/d/erPGzTEw (or `leave-behind.html` in this folder) with Ctrl+P for parent reps and department heads.
