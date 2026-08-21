@@ -3,7 +3,8 @@ import {
   MIN_PASSWORD_LENGTH,
   accountDocId,
   adminClient,
-  assertNotRateLimited,
+  assertPlatformAuthedRateLimit,
+  assertPlatformOwnerCallAllowed,
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
@@ -25,11 +26,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("cf-connecting-ip") ||
-      "unknown";
-    await assertNotRateLimited(sb, `platform_update_school_${ip}`);
+    await assertPlatformOwnerCallAllowed(sb, req);
     await assertOwnerPin(sb, body?.ownerPin);
+    await assertPlatformAuthedRateLimit(sb, req, "platform_update_school");
 
     const schoolRaw = body?.school;
     if (!schoolRaw || typeof schoolRaw !== "object") {

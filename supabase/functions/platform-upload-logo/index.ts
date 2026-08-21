@@ -1,7 +1,8 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
 import {
   adminClient,
-  assertNotRateLimited,
+  assertPlatformAuthedRateLimit,
+  assertPlatformOwnerCallAllowed,
   getDoc,
 } from "../_shared/school_auth.ts";
 import { assertOwnerPin } from "../_shared/platform_pin.ts";
@@ -17,11 +18,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("cf-connecting-ip") ||
-      "unknown";
-    await assertNotRateLimited(sb, `platform_logo_${ip}`);
+    await assertPlatformOwnerCallAllowed(sb, req);
     await assertOwnerPin(sb, body?.ownerPin);
+    await assertPlatformAuthedRateLimit(sb, req, "platform_logo");
 
     const schoolId = String(body?.schoolId || "").trim().toUpperCase();
     if (!schoolId || schoolId.length < 2) {

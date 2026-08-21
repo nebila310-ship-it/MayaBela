@@ -66,7 +66,10 @@ class SchoolAdminCredentialsService {
         }
       }
       if (dirty) {
-        await SchoolRegistryService.instance.updateSchool(school);
+        await SchoolRegistryService.instance.updateSchool(
+          school,
+          syncCloud: false,
+        );
         updated++;
       }
     }

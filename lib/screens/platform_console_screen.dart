@@ -878,6 +878,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
   Uint8List? _logoBytes;
   String _snapshot = '';
   bool _editing = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -994,7 +995,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
 
   Future<void> _saveChanges() async {
     final school = _school;
-    if (school == null || !_editing) return;
+    if (school == null || !_editing || _saving) return;
     if (_name.text.trim().isEmpty) {
       _toast('School name is required', isError: true);
       return;
@@ -1063,17 +1064,27 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       gradeLevels: grades,
     );
 
-    final cloud = await SchoolRegistryService.instance.updateSchool(
-      toSave,
-      preferPlatformCloud: true,
-      adminPassword: tempPwd.isNotEmpty ? tempPwd : null,
-    );
+    setState(() => _saving = true);
+    late final PlatformSchoolCloudResult cloud;
+    try {
+      cloud = await SchoolRegistryService.instance.updateSchool(
+        toSave,
+        preferPlatformCloud: true,
+        adminPassword: tempPwd.isNotEmpty ? tempPwd : null,
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
     if (!cloud.ok) {
+      final rateLimited = cloud.errorCode == 'rate_limited' ||
+          (cloud.errorMessage?.toLowerCase().contains('too many') ?? false);
       _toast(
-        cloud.errorMessage?.trim().isNotEmpty == true
-            ? cloud.errorMessage!
-            : 'Saved on this device only — cloud update failed '
-                '(${cloud.errorCode ?? 'error'}). Check internet / owner PIN.',
+        rateLimited
+            ? 'The owner console hit a save limit. Wait a minute and save once — do not keep tapping.'
+            : cloud.errorMessage?.trim().isNotEmpty == true
+                ? cloud.errorMessage!
+                : 'Saved on this device only — cloud update failed '
+                    '(${cloud.errorCode ?? 'error'}). Check internet / owner PIN.',
         isError: true,
       );
       return;
@@ -1729,9 +1740,15 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _saveChanges,
-              icon: const Icon(Icons.save),
-              label: const Text('Save profile'),
+              onPressed: _saving ? null : _saveChanges,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(_saving ? 'Saving…' : 'Save profile'),
             ),
           ),
         ],

@@ -5,6 +5,11 @@ export const MIN_PASSWORD_LENGTH = 10;
 export const BCRYPT_ROUNDS = 12;
 export const LOGIN_RATE_LIMIT = 8;
 export const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+/** Owner-console calls after a valid PIN (list/create/update/logo). */
+export const PLATFORM_AUTHED_RATE_LIMIT = 120;
+export const PLATFORM_AUTHED_RATE_WINDOW_MS = 15 * 60 * 1000;
+/** PIN checks on owner endpoints, before verify. */
+export const PLATFORM_PIN_CHECK_LIMIT = 60;
 export const ACCESS_CLAIM_CAP = 30;
 
 // ---------------------------------------------------------------------------
@@ -649,19 +654,56 @@ export function syntheticEmail(username: string, schoolId: string): string {
   return `${u}@${s}.mayabela.local`;
 }
 
+export function clientIp(req: Request): string {
+  return (
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
 export async function assertNotRateLimited(
   sb: SupabaseClient,
   bucketKey: string,
+  limit: number = LOGIN_RATE_LIMIT,
+  windowMs: number = LOGIN_RATE_WINDOW_MS,
 ): Promise<void> {
   const { data, error } = await sb.rpc("auth_rate_limit_hit", {
     p_bucket_key: bucketKey,
-    p_limit: LOGIN_RATE_LIMIT,
-    p_window_ms: LOGIN_RATE_WINDOW_MS,
+    p_limit: limit,
+    p_window_ms: windowMs,
   });
   if (error) throw error;
   if (data !== true) {
     throw new Error("rate_limited");
   }
+}
+
+export async function assertPlatformOwnerCallAllowed(
+  sb: SupabaseClient,
+  req: Request,
+): Promise<void> {
+  const ip = clientIp(req);
+  await assertNotRateLimited(
+    sb,
+    `platform_pin_check_${ip}`,
+    PLATFORM_PIN_CHECK_LIMIT,
+    PLATFORM_AUTHED_RATE_WINDOW_MS,
+  );
+}
+
+export async function assertPlatformAuthedRateLimit(
+  sb: SupabaseClient,
+  req: Request,
+  operation: string,
+): Promise<void> {
+  await assertNotRateLimited(
+    sb,
+    `${operation}_${clientIp(req)}`,
+    PLATFORM_AUTHED_RATE_LIMIT,
+    PLATFORM_AUTHED_RATE_WINDOW_MS,
+  );
 }
 
 export async function verifySecret(
