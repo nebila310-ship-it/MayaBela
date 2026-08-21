@@ -19,15 +19,16 @@ Print this page from your browser if you need paper copies.
 | Directors / Principal / VP | Dashboard, reports, grade approvals, campuses | Leadership sees the school every morning in one place |
 | Quality assurance | Findings, improvement plans, overdue follow-up | QA records. The duty owner closes. Directors see overdue items |
 | Student affairs / registrar | Students, alumni, discipline, leave, parent-link, transfers | Parents link with Student ID + date of birth; school approves |
-| Classroom teachers | Assigned classes, attendance, homework posting, grades, timetable | You enter; leadership publishes. Parents see posted homework |
+| Classroom teachers | Teacher dashboard: My Classes, Attendance, Homework, Grades, Timetable, Gallery, Messages, Student Affairs | You enter; leadership publishes. Parents see posted homework |
+| Students | Student dashboard: Profile, Grades, Homeworks and Assignments, e-Book, Attendance, Timetable, Announcements, Calendar, Messages | You see your own school work — never a draft mark |
+| Parents | Parent dashboard: My Children, Attendance, Homework, Grades, Fees, Bus Tracking, Messages, Behaviour & Leave | You see your child only — never an unapproved mark |
+| Drivers | Transport dashboard: My Route, Live Map, Passenger List, Scan QR, Pick-up / Drop-off | Parents see “live” only while you are sharing |
 | All staff who communicate | Announcements, gallery, calendar, internal messages | The school speaks in one place — not four WhatsApp groups |
 | Finance / store / HR | Fees, inventory, payroll, leave, staff documents, library, clinic, canteen | Money, stock, and staff files leave a trail |
-| Parents | Child attendance, approved grades, homework, gallery, calendar, fees, bus, messages | You see your child only — never an unapproved mark |
-| Drivers | Route, passengers, QR, live location | Parents see “live” only while you are sharing |
 
 **The sentence:** Teacher enters → leadership approves → then the parent sees.
 
-**Modules in the room today:** student affairs, quality assurance, classroom management, alumni records, gallery, announcements, calendar, internal messaging, homework and assignments, plus fees, store, HR, and transport.
+**Modules in the room today:** office ERP plus the teacher, parent, student, and transport dashboards — student affairs, QA, classroom, alumni, gallery, announcements, calendar, messages, homework, fees, store, HR.
 
 **Pilot:** 30–60 days, one campus or grade band, then expand.
 

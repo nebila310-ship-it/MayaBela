@@ -55,8 +55,20 @@ Same School ID. Different doors. Nobody sees another school. Staff only see the 
 - **Student affairs / registrar** — students, alumni, discipline, leave
 - **Classroom teachers** — class, attendance, homework, grades
 - **Quality assurance** — findings, plans, follow-up
-- **Parents & students** — child only: grades, gallery, messages, bus
-- **Finance / store / drivers** — fees, stock trail, live bus
+- **Parents** — parent dashboard: child only — grades, homework, gallery, messages, bus
+- **Students** — student dashboard: profile, homework, timetable, approved grades
+- **Drivers** — transport dashboard: route, passengers, QR, live map
+- **Finance / store** — fees and stock trail in the office ERP
+
+---
+
+## 3b. Every dashboard
+
+Four homes. One school ID. Not only the office ERP.
+
+![Teacher, parent, student, and driver dashboards](screens/dash-four.png)
+
+Each login opens a different home screen with that role’s modules. Same School ID. Not one shared office menu.
 
 ---
 
@@ -156,17 +168,16 @@ This is the difference between a portal and a school.
 
 ## 10. For classroom teachers
 
-The class is the job. The system stays out of the way.
+This is the teacher dashboard — every classroom module on one home.
 
-![Teacher dashboard](screens/screen-teacher.png)
+![Teacher dashboard](screens/dash-teacher.png)
 
-- My classes, attendance (P / A / L), homework
-- Enter subject grades and submit for approval
-- Timetable, learning materials, announcements
-- Messages within the school’s allowed channels
-- Homeroom teachers can manage that class timetable
+- **My classroom:** My Classes, Attendance, Parent Approvals, Student Affairs
+- **Teaching tools:** Homework, Grade Reports, Timetable, e-Book, Gallery, QR
+- **Communication:** Messages, Announcements, Calendar, Maya Assistant
+- Teachers do not get finance, payroll, or another campus’s children
 
-Teachers do not get the finance office, the whole staff directory, or another campus’s children.
+የመምህር ዳሽቦርድ — ክፍሉ የሚያስፈልገው ሁሉ እዚህ ነው።
 
 ---
 
@@ -200,24 +211,52 @@ Post the work. Parents see it. Teachers mark it done.
 
 ---
 
-## 13. For parent representatives
+## 13. For students
 
-The parent sees the child — not the school’s internal politics.
+This is the student dashboard — their school, not the office.
 
-![Parent app](screens/screen-parent.png)
+![Student dashboard](screens/dash-student.png)
 
-- Link with Student ID + date of birth, then wait for school approval
-- Attendance, approved grades, homework, materials
-- School gallery and announcements for their child
-- Fee balance and calendar events they are allowed to see
-- Bus tracking when the driver is sharing location
-- Internal messages to the people the school allows
+- **My school:** Profile, Grade Reports, Homeworks and Assignments, e-Book, Attendance, Timetable
+- **Updates:** Announcements, Calendar, Messages, Maya Assistant
+- They see published grades only — never a draft mark
+- Same homework the teacher posted. Same calendar the school published
 
-ወላጅ የሚያየው ልጁን ብቻ ነው። ያልጸደቀ ውጤት አይታይም። የባስ አካባቢ ሹፌሩ ሲያጋራ ብቻ ነው።
+የተማሪ ዳሽቦርድ — የራሱ ትምህርት ቤት፣ የቢሮው መዝገብ አይደለም።
 
 ---
 
-## 14. Transport
+## 14. For parent representatives
+
+This is the parent dashboard — the child, not the school’s internal politics.
+
+![Parent dashboard](screens/dash-parent.png)
+
+- **My children:** linked child, Attendance, Homework, e-Book, Grade Reports, Timetable
+- **School updates:** Messages, Announcements, Calendar
+- **Services:** Behaviour & Leave, Fees & Payments, Bus Tracking
+- Link with Student ID + date of birth, then the school approves
+
+ወላጅ የሚያየው ልጁን ብቻ ነው። ያልጸደቀ ውጤት አይታይም።
+
+---
+
+## 15. Transport — driver dashboard
+
+This is the transport dashboard — every module the driver uses on the road.
+
+![Driver transport dashboard](screens/dash-driver.png)
+
+- **On the road:** My Route, Live Map, Passenger List, Report Issue
+- **Student check-in:** Scan QR, Pick-up / Drop-off, QR Entry/Exit
+- **Communication:** Messages, Announcements, Calendar
+- Parents see “live” only while this driver is sharing location
+
+የሹፌር ዳሽቦርድ — መስመር፣ ተሳፋሪ፣ QR እና ቀጥታ ካርታ።
+
+---
+
+## 16. Transport — office ERP
 
 The bus is part of the school, not a private WhatsApp.
 

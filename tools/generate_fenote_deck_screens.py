@@ -537,6 +537,308 @@ def qa():
     save(img, "screen-qa.png")
 
 
+def _blend(c, t, a):
+    return tuple(int(c[i] * (1 - a) + t[i] * a) for i in range(3))
+
+
+def _tile_icon(d, cx, cy, kind, fill=WHITE):
+    if kind in ("classes", "profile"):
+        d.rounded_rectangle((cx - 14, cy - 10, cx + 14, cy + 12), 3, outline=fill, width=2)
+        d.line((cx - 8, cy - 4, cx + 8, cy - 4), fill=fill, width=2)
+    elif kind == "attendance":
+        d.ellipse((cx - 12, cy - 12, cx + 12, cy + 12), outline=fill, width=2)
+        d.line((cx - 6, cy, cx - 1, cy + 6), fill=fill, width=3)
+        d.line((cx - 1, cy + 6, cx + 8, cy - 6), fill=fill, width=3)
+    elif kind in ("messages",):
+        d.rounded_rectangle((cx - 14, cy - 10, cx + 14, cy + 6), 6, outline=fill, width=2)
+        d.polygon([(cx - 6, cy + 6), (cx - 2, cy + 14), (cx + 2, cy + 6)], outline=fill)
+    elif kind in ("announcements",):
+        d.polygon([(cx - 4, cy - 12), (cx + 12, cy - 4), (cx + 12, cy + 4), (cx - 4, cy + 12)], fill=fill)
+        d.rectangle((cx - 12, cy - 4, cx - 4, cy + 4), fill=fill)
+    elif kind in ("homework", "grades"):
+        d.rounded_rectangle((cx - 11, cy - 14, cx + 11, cy + 14), 3, outline=fill, width=2)
+        d.line((cx - 6, cy - 6, cx + 6, cy - 6), fill=fill, width=2)
+        d.line((cx - 6, cy, cx + 6, cy), fill=fill, width=2)
+    elif kind in ("learning_materials", "gallery"):
+        d.polygon([(cx - 12, cy + 10), (cx - 4, cy - 4), (cx + 4, cy + 4), (cx + 12, cy - 10)], outline=fill, width=2)
+    elif kind == "qr":
+        d.rectangle((cx - 12, cy - 12, cx + 12, cy + 12), outline=fill, width=2)
+        d.rectangle((cx - 7, cy - 7, cx - 2, cy - 2), fill=fill)
+        d.rectangle((cx + 2, cy - 7, cx + 7, cy - 2), fill=fill)
+        d.rectangle((cx - 7, cy + 2, cx - 2, cy + 7), fill=fill)
+    elif kind in ("calendar", "timetable"):
+        d.rounded_rectangle((cx - 12, cy - 10, cx + 12, cy + 12), 3, outline=fill, width=2)
+        d.rectangle((cx - 12, cy - 10, cx + 12, cy - 2), fill=fill)
+    elif kind in ("children", "passengers"):
+        d.ellipse((cx - 14, cy - 4, cx - 2, cy + 10), outline=fill, width=2)
+        d.ellipse((cx + 2, cy - 4, cx + 14, cy + 10), outline=fill, width=2)
+        d.ellipse((cx - 6, cy - 14, cx + 6, cy - 2), outline=fill, width=2)
+    elif kind in ("fees",):
+        d.ellipse((cx - 12, cy - 12, cx + 12, cy + 12), outline=fill, width=2)
+        text(d, (cx - 5, cy - 8), "B", 14, True, fill)
+    elif kind in ("bus", "route", "map"):
+        d.rounded_rectangle((cx - 16, cy - 6, cx + 16, cy + 8), 4, fill=fill)
+        d.ellipse((cx - 10, cy + 4, cx - 2, cy + 12), fill=PURPLE_DK)
+        d.ellipse((cx + 2, cy + 4, cx + 10, cy + 12), fill=PURPLE_DK)
+    elif kind in ("scan", "pickup"):
+        d.arc((cx - 12, cy - 12, cx + 12, cy + 12), 200, 340, fill=fill, width=3)
+        d.line((cx, cy - 8, cx, cy + 8), fill=fill, width=3)
+    elif kind in ("maya_assistant",):
+        d.polygon([(cx, cy - 12), (cx + 12, cy), (cx, cy + 12), (cx - 12, cy)], outline=fill, width=2)
+    elif kind in ("settings",):
+        d.ellipse((cx - 8, cy - 8, cx + 8, cy + 8), outline=fill, width=3)
+    elif kind in ("student_affairs", "issue"):
+        d.polygon([(cx, cy - 14), (cx + 12, cy + 10), (cx - 12, cy + 10)], outline=fill, width=2)
+    else:
+        d.ellipse((cx - 10, cy - 10, cx + 10, cy + 10), outline=fill, width=2)
+
+
+def role_portal(
+    filename: str,
+    portal: str,
+    person: str,
+    subtitle: str,
+    gradient,
+    chips,
+    sections,
+):
+    """Tablet-width role dashboard so every module tile is visible."""
+    img = Image.new("RGB", (W, H), (241, 245, 249))
+    d = ImageDraw.Draw(img)
+    g0, g1, g2 = gradient
+    for x in range(W):
+        t = x / max(W - 1, 1)
+        if t < 0.5:
+            c = _blend(g0, g1, t * 2)
+        else:
+            c = _blend(g1, g2, (t - 0.5) * 2)
+        d.line((x, 0, x, 72), fill=c)
+    text(d, (24, 14), "MaJo Bridge", 14, True, WHITE)
+    text(d, (24, 38), portal, 22, True, WHITE)
+    text(d, (W - 360, 18), "Fenote Raey Academy", 14, True, WHITE)
+    text(d, (W - 360, 40), "Phone & tablet home", 13, False, (255, 255, 255))
+    rounded(d, (24, 92, W - 24, 198), WHITE, 16)
+    d.ellipse((44, 112, 116, 184), fill=_blend(g0, WHITE, 0.75))
+    text(d, (64, 132), person.split()[0][0], 28, True, g0)
+    text(d, (140, 112), f"Welcome back, {person}", 20, True, INK)
+    text(d, (140, 142), subtitle, 14, False, MUTED)
+    cx = 140
+    for chip in chips:
+        tw = 18 + len(chip) * 8
+        rounded(d, (cx, 166, cx + tw, 188), _blend(g0, WHITE, 0.85), 10)
+        text(d, (cx + 10, 168), chip, 12, True, g0)
+        cx += tw + 10
+    y = 220
+    for section, tiles in sections:
+        text(d, (28, y), section.upper(), 12, True, MUTED)
+        y += 28
+        cols = 4
+        tw, th, gap = 372, 92, 14
+        for i, (label, color, kind) in enumerate(tiles):
+            col = i % cols
+            row = i // cols
+            x = 24 + col * (tw + gap)
+            yy = y + row * (th + 10)
+            c1 = color
+            c2 = _blend(color, WHITE, 0.35)
+            rounded(d, (x, yy, x + tw, yy + th), c1, 16)
+            rounded(d, (x + 14, yy + 22, x + 58, yy + 70), _blend(c1, (0, 0, 0), 0.18), 12)
+            _tile_icon(d, x + 36, yy + 46, kind, WHITE)
+            if len(label) > 20:
+                parts = label.split()
+                mid = (len(parts) + 1) // 2
+                text(d, (x + 72, yy + 24), " ".join(parts[:mid]), 15, True, WHITE)
+                text(d, (x + 72, yy + 48), " ".join(parts[mid:]), 15, True, WHITE)
+            else:
+                text(d, (x + 72, yy + 34), label, 16, True, WHITE)
+        rows = (len(tiles) + cols - 1) // cols
+        y += rows * (th + 10) + 16
+    save(img, filename)
+
+
+def teacher_dashboard_home():
+    role_portal(
+        "dash-teacher.png",
+        "Fenote Raey Academy Classroom",
+        "Ato Samuel",
+        "Teacher  ·  Homeroom 8A  ·  Mathematics",
+        ((2, 132, 199), (14, 165, 233), (125, 211, 252)),
+        ["3 classes", "101 students", "Homeroom 8A"],
+        [
+            (
+                "My classroom",
+                [
+                    ("My Classes", (25, 118, 210), "classes"),
+                    ("Attendance", (46, 125, 50), "attendance"),
+                    ("Parent Approvals", (239, 108, 0), "profile"),
+                    ("Student Affairs", (142, 36, 170), "student_affairs"),
+                ],
+            ),
+            (
+                "Teaching tools",
+                [
+                    ("Homework", (0, 151, 167), "homework"),
+                    ("Grade Reports", (230, 81, 0), "grades"),
+                    ("Timetable", (121, 85, 72), "timetable"),
+                    ("e-Book and Material", (69, 39, 160), "learning_materials"),
+                    ("Gallery", (156, 39, 176), "gallery"),
+                    ("QR Entry/Exit", (33, 33, 33), "qr"),
+                ],
+            ),
+            (
+                "Communication  ·  Assistant  ·  Account",
+                [
+                    ("Messages", (239, 108, 0), "messages"),
+                    ("Announcements", (198, 40, 40), "announcements"),
+                    ("Calendar", (0, 121, 107), "calendar"),
+                    ("Maya Assistant", (15, 118, 110), "maya_assistant"),
+                    ("Settings", (97, 97, 97), "settings"),
+                ],
+            ),
+        ],
+    )
+
+
+def parent_dashboard_home():
+    role_portal(
+        "dash-parent.png",
+        "Fenote Raey Academy Parent Portal",
+        "W/ro Aster Bekele",
+        "Parent  ·  1 linked child  ·  Hana Bekele · 8A",
+        ((0, 105, 92), (0, 137, 123), (38, 166, 154)),
+        ["1 child", "Hana · 8A", "Fees ETB 2,400"],
+        [
+            (
+                "My children",
+                [
+                    ("My Children", (0, 121, 107), "children"),
+                    ("Attendance", (46, 125, 50), "attendance"),
+                    ("Homework", (0, 151, 167), "homework"),
+                    ("e-Book and Material", (69, 39, 160), "learning_materials"),
+                    ("Grade Reports", (230, 81, 0), "grades"),
+                    ("Timetable", (121, 85, 72), "timetable"),
+                ],
+            ),
+            (
+                "School updates",
+                [
+                    ("Messages", (239, 108, 0), "messages"),
+                    ("Announcements", (198, 40, 40), "announcements"),
+                    ("Calendar", (156, 39, 176), "calendar"),
+                    ("Maya Assistant", (15, 118, 110), "maya_assistant"),
+                ],
+            ),
+            (
+                "Services",
+                [
+                    ("Behaviour & Leave", (142, 36, 170), "student_affairs"),
+                    ("Fees & Payments", (57, 73, 171), "fees"),
+                    ("Bus Tracking", (25, 118, 210), "bus"),
+                    ("Settings", (97, 97, 97), "settings"),
+                ],
+            ),
+        ],
+    )
+
+
+def student_dashboard_home():
+    role_portal(
+        "dash-student.png",
+        "Fenote Raey Academy Student Portal",
+        "Hana Bekele",
+        "Student  ·  Grade 8A  ·  Fenote Raey Academy",
+        ((21, 101, 192), (25, 118, 210), (66, 165, 245)),
+        ["3 homework", "2 grades", "4 updates"],
+        [
+            (
+                "My school",
+                [
+                    ("My Profile", (84, 110, 122), "profile"),
+                    ("Grade Reports", (230, 81, 0), "grades"),
+                    ("Homeworks and Assignments", (0, 151, 167), "homework"),
+                    ("e-Book and Material", (69, 39, 160), "learning_materials"),
+                    ("Attendance", (46, 125, 50), "attendance"),
+                    ("Timetable", (63, 81, 181), "timetable"),
+                ],
+            ),
+            (
+                "Updates",
+                [
+                    ("Announcements", (198, 40, 40), "announcements"),
+                    ("Calendar", (156, 39, 176), "calendar"),
+                    ("Messages", (239, 108, 0), "messages"),
+                    ("Maya Assistant", (15, 118, 110), "maya_assistant"),
+                    ("Settings", (84, 110, 122), "settings"),
+                ],
+            ),
+        ],
+    )
+
+
+def driver_dashboard_home():
+    role_portal(
+        "dash-driver.png",
+        "Fenote Raey Academy Transport Portal",
+        "Ato Getu",
+        "Driver  ·  Bus 01  ·  Bole → Academy  ·  plate ET-3-AA-2041",
+        ((230, 81, 0), (245, 124, 0), (255, 183, 77)),
+        ["28 riders", "Bus 01", "Live sharing"],
+        [
+            (
+                "On the road",
+                [
+                    ("My Route", (239, 108, 0), "route"),
+                    ("Live Map", (0, 121, 107), "map"),
+                    ("Passenger List", (25, 118, 210), "passengers"),
+                    ("Report Issue", (198, 40, 40), "issue"),
+                ],
+            ),
+            (
+                "Student check-in",
+                [
+                    ("Scan QR", (33, 33, 33), "scan"),
+                    ("Pick-up / Drop-off", (46, 125, 50), "pickup"),
+                    ("QR Entry/Exit", (84, 110, 122), "qr"),
+                    ("Calendar", (156, 39, 176), "calendar"),
+                ],
+            ),
+            (
+                "Communication",
+                [
+                    ("Messages", (63, 81, 181), "messages"),
+                    ("Announcements", (198, 40, 40), "announcements"),
+                    ("Maya Assistant", (15, 118, 110), "maya_assistant"),
+                    ("Settings", (97, 97, 97), "settings"),
+                ],
+            ),
+        ],
+    )
+
+
+def four_dashboards():
+    teacher_dashboard_home()
+    parent_dashboard_home()
+    student_dashboard_home()
+    driver_dashboard_home()
+    files = [
+        ("Teacher", "dash-teacher.png"),
+        ("Parent", "dash-parent.png"),
+        ("Student", "dash-student.png"),
+        ("Driver / transport", "dash-driver.png"),
+    ]
+    canvas = Image.new("RGB", (W, H), (15, 23, 42))
+    d = ImageDraw.Draw(canvas)
+    text(d, (36, 18), "MaJo Bridge Technologies and Events", 14, True, GOLD)
+    text(d, (36, 44), "Four dashboards — not only the office ERP", 28, True, WHITE)
+    positions = [(28, 96), (820, 96), (28, 498), (820, 498)]
+    for (label, name), (x, y) in zip(files, positions):
+        src = Image.open(OUT / name).convert("RGB")
+        src.thumbnail((752, 370))
+        canvas.paste(src, (x, y + 28))
+        text(d, (x, y), label, 16, True, GOLD)
+    save(canvas, "dash-four.png")
+
+
 def login():
     img = Image.new("RGB", (W, H), PURPLE_DK)
     d = ImageDraw.Draw(img)
@@ -596,6 +898,7 @@ def main() -> None:
     calendar()
     messages()
     qa()
+    four_dashboards()
     login()
     roles()
 
