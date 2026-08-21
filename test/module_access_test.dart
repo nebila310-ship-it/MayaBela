@@ -265,6 +265,10 @@ void main() {
       expect(ModuleAccess.normalize('add_staff'), 'teachers');
       expect(ModuleAccess.normalize('grade_approvals'), 'examinations');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
+      expect(ModuleAccess.normalize('timetable'), 'academic');
+      expect(ModuleAccess.normalize('grade_workflow_settings'), 'examinations');
+      expect(ModuleAccess.normalize('student_portal_settings'), 'school');
+      expect(ModuleAccess.normalize('student_password_resets'), 'students');
     });
   });
 }

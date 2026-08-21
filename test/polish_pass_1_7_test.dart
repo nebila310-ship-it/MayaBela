@@ -34,20 +34,35 @@ void main() {
       }
     });
 
+    test('staff registration requires a valid email', () {
+      final err = AuthService.registerTeacherAccount(
+        fullName: 'No Email Teacher',
+        schoolId: 'TB-001',
+        phone: '0911999001',
+        linkedTeacherId: 'T-NO-EMAIL',
+      );
+      expect(err, 'invalid_email');
+    });
+
     test('new teacher account requires password change', () {
       final temp = AuthService.generateTempPassword();
       final err = AuthService.registerTeacherAccount(
         fullName: 'Polish Teacher',
         schoolId: 'TB-001',
         phone: '0911888777',
+        email: 'polish.teacher@school.et',
         linkedTeacherId: 'T-POLISH-1',
         password: temp,
       );
       expect(err, isNull);
+      expect(
+        AuthService.findUser('polish.teacher@school.et')?.fullName,
+        'Polish Teacher',
+      );
 
       final loginErr = AuthService.validateLogin(
         roleKey: AuthService.roleTeacher,
-        username: '0911888777',
+        username: 'polish.teacher@school.et',
         password: temp,
       );
       expect(loginErr, isNull);
@@ -61,6 +76,77 @@ void main() {
           AuthService.currentUser!.password,
         ),
         isTrue,
+      );
+    });
+
+    test('driver registration requires a valid email', () {
+      final err = AuthService.registerDriverAccount(
+        fullName: 'No Email Driver',
+        schoolId: 'TB-001',
+        phone: '0911999002',
+        linkedDriverId: 'D-NO-EMAIL',
+      );
+      expect(err, 'invalid_email');
+    });
+
+    test('email login is scoped to the typed school id', () {
+      final tempA = AuthService.generateTempPassword();
+      final tempB = AuthService.generateTempPassword();
+      expect(
+        AuthService.registerTeacherAccount(
+          fullName: 'Alpha Teacher',
+          schoolId: 'TB-AAA',
+          phone: '0911888101',
+          email: 'shared.login@school.et',
+          linkedTeacherId: 'T-AAA-1',
+          password: tempA,
+        ),
+        isNull,
+      );
+      expect(
+        AuthService.registerTeacherAccount(
+          fullName: 'Beta Teacher',
+          schoolId: 'TB-BBB',
+          phone: '0911888102',
+          email: 'shared.login@school.et',
+          linkedTeacherId: 'T-BBB-1',
+          password: tempB,
+        ),
+        isNull,
+      );
+
+      expect(
+        AuthService.validateLogin(
+          roleKey: AuthService.roleTeacher,
+          username: 'shared.login@school.et',
+          password: tempA,
+          schoolId: 'TB-AAA',
+        ),
+        isNull,
+      );
+      expect(AuthService.currentUser?.fullName, 'Alpha Teacher');
+      AuthService.clearSession();
+
+      expect(
+        AuthService.validateLogin(
+          roleKey: AuthService.roleTeacher,
+          username: 'shared.login@school.et',
+          password: tempB,
+          schoolId: 'TB-BBB',
+        ),
+        isNull,
+      );
+      expect(AuthService.currentUser?.fullName, 'Beta Teacher');
+      AuthService.clearSession();
+
+      expect(
+        AuthService.validateLogin(
+          roleKey: AuthService.roleTeacher,
+          username: 'shared.login@school.et',
+          password: tempA,
+          schoolId: 'TB-BBB',
+        ),
+        'invalid',
       );
     });
 

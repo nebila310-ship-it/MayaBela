@@ -7,6 +7,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/widgets/parent_child_registration_card.dart';
 import 'package:mayabela/widgets/registration_terms_dialog.dart';
@@ -221,9 +222,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validateForm() {
     if (fullName.text.trim().isEmpty) return s.enterName;
     if (schoolId.text.trim().isEmpty) return s.enterSchoolId;
-    if (email.text.trim().isEmpty && phone.text.trim().isEmpty) {
-      return s.enterEmailOrPhoneSignup;
+    if (!EmailUtils.isValid(email.text)) return s.emailRequired;
+    if (selectedRole == AuthService.roleParent &&
+        !PhoneUtils.isValidLoginPhone(phone.text)) {
+      return s.invalidPhone;
     }
+    if (phone.text.trim().isEmpty) return s.invalidPhone;
     if (password.text.length < AuthService.minPasswordLength) {
       return s.passwordTooShort;
     }
@@ -414,6 +418,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'exists' => s.phoneAlreadyRegistered,
           'phone_used_by_staff' => s.phoneUsedByStaff,
           'invalid_phone' => s.invalidPhone,
+          'invalid_email' => s.emailRequired,
           'already_linked' => s.alreadyLinkedStudent,
           'student_mismatch' => s.studentVerifyFailed,
           'school_blocked' => s.schoolAccessInactive,

@@ -3,7 +3,6 @@ import {
   MIN_PASSWORD_LENGTH,
   accountDocId,
   adminClient,
-  assertNotRateLimited,
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
@@ -12,7 +11,7 @@ import {
   upsertDoc,
   upsertSecret,
 } from "../_shared/school_auth.ts";
-import { assertOwnerPin } from "../_shared/platform_pin.ts";
+import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
 
 /**
  * Platform-owner school profile update.
@@ -25,11 +24,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("cf-connecting-ip") ||
-      "unknown";
-    await assertNotRateLimited(sb, `platform_update_school_${ip}`);
-    await assertOwnerPin(sb, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin);
 
     const schoolRaw = body?.school;
     if (!schoolRaw || typeof schoolRaw !== "object") {
@@ -105,6 +100,7 @@ Deno.serve(async (req) => {
         username,
         roleKey: "admin",
         schoolId,
+        email: account.email || merged.adminEmail || null,
         phone: account.phone || merged.adminContactPhone || null,
         fullName: account.fullName || merged.adminFullName || null,
         updatedAt: now,
@@ -112,7 +108,18 @@ Deno.serve(async (req) => {
       await upsertSecret(sb, username, password, schoolId);
       await upsertDoc(sb, "app_auth_accounts", docId, profile, schoolId);
       const accessProfile = await enrichAccessProfile(sb, profile);
-      await ensureAuthUser(sb, username, password, accessProfile);
+      try {
+        await ensureAuthUser(sb, username, password, accessProfile, {
+          forceRotate: true,
+        });
+      } catch (authErr) {
+        const msg = String((authErr as Error)?.message || authErr);
+        if (!/already (been )?registered|email_exists/i.test(msg)) {
+          throw authErr;
+        }
+        // School password is already stored. Login can use it even if Auth
+        // already has this email.
+      }
 
       // Never persist plaintext admin passwords on school_registry.
       delete merged.adminInitialPassword;

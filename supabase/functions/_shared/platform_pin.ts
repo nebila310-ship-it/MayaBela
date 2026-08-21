@@ -3,7 +3,16 @@
  * Client PasswordHashService format: sha256:<salt>:<hexDigest>
  * where digest = SHA-256(utf8(`${salt}::${plain}`)).
  */
-import { adminClient, getDoc, PLATFORM_SCHOOL_ID, upsertDoc } from "./school_auth.ts";
+import {
+  adminClient,
+  assertNotRateLimited,
+  clientIp,
+  getDoc,
+  LOGIN_RATE_LIMIT,
+  LOGIN_RATE_WINDOW_MS,
+  PLATFORM_SCHOOL_ID,
+  upsertDoc,
+} from "./school_auth.ts";
 
 type AdminClient = ReturnType<typeof adminClient>;
 
@@ -70,6 +79,31 @@ export async function assertOwnerPin(
   const ok = await verifyOwnerPinHash(String(ownerPin || ""), existing);
   if (!ok) {
     throw new Error("owner_pin_invalid");
+  }
+}
+
+/**
+ * Valid owner PIN authorizes the call. Failed PIN guesses stay rate-limited.
+ * Successful saves/list/create must not share the school-login 8/15min cap.
+ */
+export async function authorizePlatformOwner(
+  sb: AdminClient,
+  req: Request,
+  ownerPin: unknown,
+): Promise<void> {
+  try {
+    await assertOwnerPin(sb, ownerPin);
+  } catch (e) {
+    const msg = String((e as Error)?.message || e);
+    if (msg.includes("owner_pin")) {
+      await assertNotRateLimited(
+        sb,
+        `platform_pin_fail_${clientIp(req)}`,
+        LOGIN_RATE_LIMIT,
+        LOGIN_RATE_WINDOW_MS,
+      );
+    }
+    throw e;
   }
 }
 

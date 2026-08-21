@@ -17,6 +17,7 @@ import 'package:mayabela/theme/login_role_theme.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/screens/enrollment_screens.dart';
 import 'package:mayabela/screens/platform_console_screen.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -54,38 +55,39 @@ class _LoginScreenState extends State<LoginScreen> {
   DateTime? _lastLogoTap;
   final FocusNode _schoolIdFocus = FocusNode();
 
-  /// Strict phone-only roles (digits field with +251 prefix).
-  /// Teacher / staff / admin use "Phone or username" free text instead —
-  /// the old digits-only field silently dropped usernames and broke login.
-  bool get _usesPhoneLogin {
-    final apiRole = AuthService.apiRoleKeyForLogin(selectedRole);
-    return apiRole == AuthService.roleParent ||
-        apiRole == AuthService.roleDriver;
-  }
-
+  /// Login identifier: email, Ethiopian phone, or username / student id.
   String _loginIdentifierValue() {
     final raw = username.text.trim();
-    if (_usesPhoneLogin) {
-      final local = EthiopianPhoneField.localFromInput(raw);
-      if (local.isNotEmpty) return PhoneUtils.loginKey(local);
-      return PhoneUtils.loginKey(raw);
+    final email = EmailUtils.normalize(raw);
+    if (email != null) return email;
+    final local = EthiopianPhoneField.localFromInput(raw);
+    if (local.isNotEmpty) {
+      return PhoneUtils.loginKey(local);
     }
-    // Phone or username: normalize Ethiopian mobiles, keep usernames as-is.
-    final local = PhoneUtils.normalizeLocal(raw);
-    if (local != null) return local;
+    final phone = PhoneUtils.normalizeLocal(raw);
+    if (phone != null) return phone;
     return raw;
+  }
+
+  Widget _forgotPasswordScreen() {
+    if (selectedRole == AuthService.roleStudent) {
+      return const StudentForgotPasswordScreen();
+    }
+    return ForgotPasswordScreen(
+      initialSchoolId: schoolId.text,
+      initialEmail: EmailUtils.normalize(username.text),
+      roleKey: AuthService.apiRoleKeyForLogin(selectedRole),
+    );
   }
 
   AppStrings get s => AppLocale.instance.strings;
   LoginRoleTheme get _theme => LoginRoleTheme.forRole(selectedRole);
 
-  bool get _schoolBrandLogoVisible {
+  bool get _schoolBrandVisible {
     final id = schoolId.text.trim();
     if (id.isEmpty) return false;
-    final record = SchoolRegistryService.instance.lookup(id);
-    if (record == null) return false;
-    return (record.logoPath?.isNotEmpty == true) ||
-        (record.logoUrl?.isNotEmpty == true);
+    if (SchoolRegistryService.instance.lookup(id) != null) return true;
+    return LoginPrefsService.instance.brandForSchool(id) != null;
   }
 
   @override
@@ -93,6 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     AppLocale.instance.addListener(_onLocaleChanged);
     _schoolIdFocus.addListener(_onSchoolIdFocusChanged);
+    final lastId = LoginPrefsService.instance.lastSchoolId;
+    if (lastId != null && lastId.isNotEmpty) {
+      schoolId.text = lastId;
+    }
     if (kIsWeb) {
       _prefsLoaded = true;
       unawaited(_restoreSavedLogin());
@@ -276,9 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
 
-    final savedIdentifier = _usesPhoneLogin
-        ? _loginIdentifierValue()
-        : username.text.trim();
+    final savedIdentifier = _loginIdentifierValue();
 
     AppLockService.instance.handleLoginSuccess();
 
@@ -305,6 +309,18 @@ class _LoginScreenState extends State<LoginScreen> {
       await LoginPrefsService.instance
           .saveLastSchoolId(schoolId.text)
           .timeout(const Duration(seconds: 3));
+      final record = SchoolRegistryService.instance.lookup(schoolId.text);
+      if (record != null) {
+        await LoginPrefsService.instance
+            .rememberSchoolBrand(
+              schoolId: record.id,
+              name: record.name,
+              logoUrl: record.logoUrl,
+              logoPath: record.logoPath,
+              logoStyle: record.logoStyle,
+            )
+            .timeout(const Duration(seconds: 3));
+      }
       await LoginPrefsService.instance
           .saveLogin(
             remember: rememberMe,
@@ -799,42 +815,21 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 20),
         _buildSchoolIdField(),
         const SizedBox(height: 12),
-        if (_usesPhoneLogin)
-          Theme(
-            data: kIsWeb
-                ? Theme.of(context).copyWith(
-                    textTheme: Theme.of(context)
-                        .textTheme
-                        .apply(bodyColor: Colors.white),
-                    colorScheme: Theme.of(context).colorScheme.copyWith(
-                          primary: WebLoginCard.accentOrange,
-                        ),
-                  )
-                : Theme.of(context),
-            child: EthiopianPhoneField(
-              controller: username,
-              decoration: _fieldDecoration(
-                label: s.loginIdentifierLabel(selectedRole),
-                hint: s.phoneLoginHint,
-                prefixIcon: kIsWeb
-                    ? const Icon(Icons.person_outline, color: Colors.white54)
-                    : null,
-              ),
-            ),
-          )
-        else
-          DomBackedTextField(
-            controller: username,
-            keyboardType: TextInputType.text,
-            style: kIsWeb ? _webFieldTextStyle : null,
-            autofillHint: 'username',
-            decoration: _fieldDecoration(
-              label: s.loginIdentifierLabel(selectedRole),
-              prefixIcon: kIsWeb
-                  ? const Icon(Icons.person_outline, color: Colors.white54)
-                  : null,
-            ),
+        DomBackedTextField(
+          controller: username,
+          keyboardType: TextInputType.emailAddress,
+          style: kIsWeb ? _webFieldTextStyle : null,
+          autofillHint: 'username',
+          decoration: _fieldDecoration(
+            label: s.loginIdentifierLabel(selectedRole),
+            hint: selectedRole == AuthService.roleStudent
+                ? null
+                : s.emailPhone,
+            prefixIcon: kIsWeb
+                ? const Icon(Icons.person_outline, color: Colors.white54)
+                : null,
           ),
+        ),
         const SizedBox(height: 12),
         DomBackedTextField(
           controller: password,
@@ -1086,10 +1081,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => selectedRole ==
-                                    AuthService.roleStudent
-                                ? const StudentForgotPasswordScreen()
-                                : const ForgotPasswordScreen(),
+                            builder: (_) => _forgotPasswordScreen(),
                           ),
                         );
                       },
@@ -1229,7 +1221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 118,
                     ),
                     const SizedBox(height: 8),
-                    if (!_schoolBrandLogoVisible)
+                    if (!_schoolBrandVisible)
                       Text(
                         s.tagline,
                         textAlign: TextAlign.center,
@@ -1240,7 +1232,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           letterSpacing: 0.2,
                         ),
                       ),
-                    if (!_schoolBrandLogoVisible)
+                    if (!_schoolBrandVisible)
                       const SizedBox(height: 20)
                     else
                       const SizedBox(height: 12),
@@ -1336,9 +1328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => selectedRole == AuthService.roleStudent
-                                ? const StudentForgotPasswordScreen()
-                                : const ForgotPasswordScreen(),
+                            builder: (_) => _forgotPasswordScreen(),
                           ),
                         );
                       },

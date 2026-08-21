@@ -10,6 +10,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    LoginPrefsService.instance.debugReset();
     await AppLocale.instance.load();
     await SchoolRegistryService.instance.load();
     await LoginPrefsService.instance.load();

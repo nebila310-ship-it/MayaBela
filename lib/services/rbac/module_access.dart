@@ -258,6 +258,10 @@ abstract final class ModuleAccess {
     'grade_approvals': 'examinations',
     'transport_buses': 'transport',
     'add_student': 'students',
+    'timetable': 'academic',
+    'grade_workflow_settings': 'examinations',
+    'student_portal_settings': 'school',
+    'student_password_resets': 'students',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

@@ -22,6 +22,7 @@ import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_platform_insight.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -877,6 +878,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
   Uint8List? _logoBytes;
   String _snapshot = '';
   bool _editing = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -939,9 +941,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
               .toString();
       _minimumMonthly.text =
           (record.minimumMonthlyEtb ?? SchoolEnrollmentMetrics.defaultMinimumMonthlyEtb).toString();
-      _adminTempPassword.text = record.adminInitialPassword ??
-          SchoolAdminCredentialsService.instance.passwordForSchool(record) ??
-          '';
+      final shownPwd = SchoolAdminCredentialsService.instance.passwordForSchool(record);
+      _adminTempPassword.text = shownPwd ?? '';
       _selectedGrades
         ..clear()
         ..addAll(record.gradeLevels);
@@ -994,7 +995,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
 
   Future<void> _saveChanges() async {
     final school = _school;
-    if (school == null || !_editing) return;
+    if (school == null || !_editing || _saving) return;
     if (_name.text.trim().isEmpty) {
       _toast('School name is required', isError: true);
       return;
@@ -1021,6 +1022,21 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     }
 
     final tempPwd = _adminTempPassword.text.trim();
+    if (tempPwd == AuthService.passwordRedactedMarker ||
+        tempPwd.toLowerCase() == 'redacted') {
+      _toast(
+        '“Redacted” is not the password. Type a new temp password (at least ${AuthService.minPasswordLength} characters), save, then log in with that.',
+        isError: true,
+      );
+      return;
+    }
+    if (tempPwd.isNotEmpty && tempPwd.length < AuthService.minPasswordLength) {
+      _toast(
+        'Password must be at least ${AuthService.minPasswordLength} characters.',
+        isError: true,
+      );
+      return;
+    }
     if (tempPwd.isNotEmpty) {
       AuthService.updateAdminPasswordForSchool(school.id, tempPwd);
     }
@@ -1048,17 +1064,28 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       gradeLevels: grades,
     );
 
-    final cloud = await SchoolRegistryService.instance.updateSchool(
-      toSave,
-      preferPlatformCloud: true,
-      adminPassword: tempPwd.isNotEmpty ? tempPwd : null,
-    );
+    setState(() => _saving = true);
+    late final PlatformSchoolCloudResult cloud;
+    try {
+      cloud = await SchoolRegistryService.instance.updateSchool(
+        toSave,
+        preferPlatformCloud: true,
+        adminPassword: tempPwd.isNotEmpty ? tempPwd : null,
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
     if (!cloud.ok) {
+      final raw = (cloud.errorMessage ?? '').toLowerCase();
+      final rateLimited = cloud.errorCode == 'rate_limited' ||
+          raw.contains('too many');
       _toast(
-        cloud.errorMessage?.trim().isNotEmpty == true
-            ? cloud.errorMessage!
-            : 'Saved on this device only — cloud update failed '
-                '(${cloud.errorCode ?? 'error'}). Check internet / owner PIN.',
+        rateLimited
+            ? 'The owner console hit a save limit. Wait a minute and save once — do not keep tapping.'
+            : cloud.errorMessage?.trim().isNotEmpty == true
+                ? cloud.errorMessage!
+                : 'Saved on this device only — cloud update failed '
+                    '(${cloud.errorCode ?? 'error'}). Check internet / owner PIN.',
         isError: true,
       );
       return;
@@ -1066,7 +1093,11 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     _school = toSave;
     _snapshot = _formSnapshot();
     setState(() => _editing = false);
-    _toast('Profile saved to cloud');
+    _toast(
+      tempPwd.isNotEmpty
+          ? 'Saved. Log in as Admin with School ID, phone or email, and the password you just set.'
+          : 'Profile saved to cloud',
+    );
   }
 
   Future<void> _setStatus(SchoolLifecycleStatus status) async {
@@ -1702,7 +1733,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
                 _editField(
                   'Admin temp password',
                   _adminTempPassword,
-                  hint: 'Saved for owner reference & admin login',
+                  hint: 'Leave blank to keep. Type a new 10+ character password to reset login.',
                 ),
                 _editField('Support notes', _notes, maxLines: 4),
               ],
@@ -1714,9 +1745,15 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _saveChanges,
-              icon: const Icon(Icons.save),
-              label: const Text('Save profile'),
+              onPressed: _saving ? null : _saveChanges,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(_saving ? 'Saving…' : 'Save profile'),
             ),
           ),
         ],
@@ -2066,6 +2103,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
   final _academicYear = TextEditingController(text: '2025/2026');
   final _adminName = TextEditingController();
   final _adminPhone = TextEditingController();
+  final _adminEmail = TextEditingController();
   final _password = TextEditingController(text: AuthService.tempPassword);
   final _notes = TextEditingController();
   final _ratePerStudent = TextEditingController(text: '8');
@@ -2103,6 +2141,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
     _academicYear.dispose();
     _adminName.dispose();
     _adminPhone.dispose();
+    _adminEmail.dispose();
     _password.dispose();
     _notes.dispose();
     _ratePerStudent.dispose();
@@ -2148,6 +2187,10 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           _adminName.text.trim().isEmpty ||
           _adminPhone.text.trim().isEmpty) {
         setState(() => _message = 'Fill school name, admin name, and phone.');
+        return;
+      }
+      if (!EmailUtils.isValid(_adminEmail.text)) {
+        setState(() => _message = 'Enter a valid admin email address.');
         return;
       }
       if (_password.text.length < AuthService.minPasswordLength) {
@@ -2228,6 +2271,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         adminUsername: loginKey,
         adminFullName: _adminName.text.trim(),
         adminPhone: adminPhoneLocal,
+        adminEmail: EmailUtils.normalize(_adminEmail.text),
         password: password,
       );
       if (!cloud.ok && cloud.errorCode == 'school_exists') {
@@ -2251,6 +2295,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           adminUsername: loginKey,
           adminFullName: _adminName.text.trim(),
           adminPhone: adminPhoneLocal,
+          adminEmail: EmailUtils.normalize(_adminEmail.text),
           password: password,
         );
       }
@@ -2275,6 +2320,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         city: school.city ?? '',
         adminFullName: _adminName.text.trim(),
         adminPhone: _adminPhone.text.trim(),
+        adminEmail: EmailUtils.normalize(_adminEmail.text),
         password: password,
         schoolId: school.id,
       );
@@ -2540,6 +2586,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           ),
           const SizedBox(height: 8),
           _field('Admin full name', _adminName),
+          _field('Admin email', _adminEmail, keyboard: TextInputType.emailAddress),
           _field('Admin phone (login username)', _adminPhone, keyboard: TextInputType.phone),
           _passwordField(),
           _adminCredentialsPreview(),
@@ -2603,7 +2650,8 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         decoration: InputDecoration(
           labelText: 'Admin temp password',
           labelStyle: const TextStyle(color: Colors.white54),
-          helperText: 'Shown on school profile after creation',
+          helperText:
+              'Copy this now. After save it is hidden — “redacted” is not the password.',
           helperStyle: const TextStyle(color: Colors.white38, fontSize: 11),
           filled: true,
           fillColor: const Color(0xFF1E293B),

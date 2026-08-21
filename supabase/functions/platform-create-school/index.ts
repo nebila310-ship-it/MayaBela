@@ -3,16 +3,16 @@ import {
   MIN_PASSWORD_LENGTH,
   accountDocId,
   adminClient,
-  assertNotRateLimited,
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
+  normalizeEmail,
   normalizeUsername,
   profileFromAccount,
   upsertDoc,
   upsertSecret,
 } from "../_shared/school_auth.ts";
-import { assertOwnerPin } from "../_shared/platform_pin.ts";
+import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
 
 /**
  * Platform-owner school onboarding.
@@ -26,11 +26,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("cf-connecting-ip") ||
-      "unknown";
-    await assertNotRateLimited(sb, `platform_create_school_${ip}`);
-    await assertOwnerPin(sb, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin);
 
     const schoolRaw = body?.school;
     if (!schoolRaw || typeof schoolRaw !== "object") {
@@ -61,9 +57,13 @@ Deno.serve(async (req) => {
     const password = body?.password;
     const fullName = String(body?.adminFullName || "").trim();
     const phone = String(body?.adminPhone || "").trim();
+    const email = normalizeEmail(body?.adminEmail);
 
     if (!username) {
       return errorResponse("adminUsername is required.", 400, "invalid");
+    }
+    if (!email) {
+      return errorResponse("A valid admin email is required.", 400, "invalid_email");
     }
     if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
       return errorResponse(
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       username,
       roleKey: "admin",
       schoolId,
-      email: body?.adminEmail || null,
+      email: email,
       phone: phone || null,
       fullName: fullName || null,
       linkedStudentIds: [],
@@ -138,11 +138,12 @@ Deno.serve(async (req) => {
     try {
       await ensureAuthUser(sb, username, password, accessProfile);
     } catch (authErr) {
-      return errorResponse(
-        `Auth user failed: ${String((authErr as Error)?.message || authErr)}`,
-        500,
-        "invalid",
-      );
+      const msg = String((authErr as Error)?.message || authErr);
+      if (!/already (been )?registered|email_exists/i.test(msg)) {
+        return errorResponse(`Auth user failed: ${msg}`, 500, "invalid");
+      }
+      // School + password are already stored. Login can use them even if
+      // Auth already has this synthetic email.
     }
 
     return jsonResponse({

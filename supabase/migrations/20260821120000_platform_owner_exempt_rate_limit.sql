@@ -1,0 +1,60 @@
+-- Owner-console saves were sharing the school-login cap (8 / 15 minutes).
+-- Opening the platform listed/backfilled every school and immediately re-locked
+-- Save. Owner PIN already authenticates those calls.
+--
+-- Login / password-reset / crash-report buckets are unchanged.
+
+create or replace function public.auth_rate_limit_hit(
+  p_bucket_key text,
+  p_limit integer,
+  p_window_ms bigint
+) returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  rec public.auth_rate_limits%rowtype;
+  now_ms bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
+begin
+  if p_bucket_key is null or length(trim(p_bucket_key)) = 0 then
+    return false;
+  end if;
+
+  -- Platform owner console: PIN-gated. Never use the login 8/15min cap.
+  if p_bucket_key like 'platform_%' then
+    return true;
+  end if;
+
+  if p_limit is null or p_limit < 1 then
+    return false;
+  end if;
+  if p_window_ms is null or p_window_ms < 1 then
+    return false;
+  end if;
+
+  insert into public.auth_rate_limits as r (
+    bucket_key, window_start, count, updated_at
+  )
+  values (p_bucket_key, now_ms, 1, clock_timestamp())
+  on conflict (bucket_key) do update
+    set window_start = case
+          when now_ms - r.window_start > p_window_ms then now_ms
+          else r.window_start
+        end,
+        count = case
+          when now_ms - r.window_start > p_window_ms then 1
+          else r.count + 1
+        end,
+        updated_at = clock_timestamp()
+  returning * into rec;
+
+  return rec.count <= p_limit;
+end;
+$$;
+
+revoke all on function public.auth_rate_limit_hit(text, integer, bigint) from public, anon, authenticated;
+grant execute on function public.auth_rate_limit_hit(text, integer, bigint) to service_role;
+
+delete from public.auth_rate_limits
+where bucket_key like 'platform_%';

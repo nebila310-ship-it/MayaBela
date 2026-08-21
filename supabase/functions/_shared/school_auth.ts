@@ -5,6 +5,11 @@ export const MIN_PASSWORD_LENGTH = 10;
 export const BCRYPT_ROUNDS = 12;
 export const LOGIN_RATE_LIMIT = 8;
 export const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+/** Owner-console calls after a valid PIN (list/create/update/logo). */
+export const PLATFORM_AUTHED_RATE_LIMIT = 120;
+export const PLATFORM_AUTHED_RATE_WINDOW_MS = 15 * 60 * 1000;
+/** PIN checks on owner endpoints, before verify. */
+export const PLATFORM_PIN_CHECK_LIMIT = 60;
 export const ACCESS_CLAIM_CAP = 30;
 
 // ---------------------------------------------------------------------------
@@ -373,6 +378,12 @@ export function normalizeUsername(value: unknown): string {
   return String(value || "").trim().toLowerCase();
 }
 
+export function normalizeEmail(value: unknown): string | null {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
+}
+
 export function uniqueStrings(values: unknown, cap = ACCESS_CLAIM_CAP): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -643,19 +654,56 @@ export function syntheticEmail(username: string, schoolId: string): string {
   return `${u}@${s}.mayabela.local`;
 }
 
+export function clientIp(req: Request): string {
+  return (
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
 export async function assertNotRateLimited(
   sb: SupabaseClient,
   bucketKey: string,
+  limit: number = LOGIN_RATE_LIMIT,
+  windowMs: number = LOGIN_RATE_WINDOW_MS,
 ): Promise<void> {
   const { data, error } = await sb.rpc("auth_rate_limit_hit", {
     p_bucket_key: bucketKey,
-    p_limit: LOGIN_RATE_LIMIT,
-    p_window_ms: LOGIN_RATE_WINDOW_MS,
+    p_limit: limit,
+    p_window_ms: windowMs,
   });
   if (error) throw error;
   if (data !== true) {
     throw new Error("rate_limited");
   }
+}
+
+export async function assertPlatformOwnerCallAllowed(
+  sb: SupabaseClient,
+  req: Request,
+): Promise<void> {
+  const ip = clientIp(req);
+  await assertNotRateLimited(
+    sb,
+    `platform_pin_check_${ip}`,
+    PLATFORM_PIN_CHECK_LIMIT,
+    PLATFORM_AUTHED_RATE_WINDOW_MS,
+  );
+}
+
+export async function assertPlatformAuthedRateLimit(
+  sb: SupabaseClient,
+  req: Request,
+  operation: string,
+): Promise<void> {
+  await assertNotRateLimited(
+    sb,
+    `${operation}_${clientIp(req)}`,
+    PLATFORM_AUTHED_RATE_LIMIT,
+    PLATFORM_AUTHED_RATE_WINDOW_MS,
+  );
 }
 
 export async function verifySecret(
@@ -857,6 +905,13 @@ export async function ensureAuthUser(
     const found = await findAuthUserByEmail(sb, email);
     if (found) authUserId = found.id;
   }
+  if (!authUserId) {
+    const extra = String(profile.email || "").trim().toLowerCase();
+    if (extra && extra !== email) {
+      const byReal = await findAuthUserByEmail(sb, extra);
+      if (byReal) authUserId = byReal.id;
+    }
+  }
 
   if (!sessionPassword || options.forceRotate) {
     sessionPassword = generateSessionPassword();
@@ -904,8 +959,17 @@ export async function ensureAuthUser(
       user_metadata: userMeta,
     });
     if (error) {
+      const already = /already (been )?registered|email_exists|already exists/i
+        .test(error.message || "");
       const raced = await findAuthUserByEmail(sb, email);
-      if (!raced) throw error;
+      if (!raced) {
+        if (already) {
+          throw new Error(
+            "This admin email is already on the account. Try logging in with the password you just saved.",
+          );
+        }
+        throw error;
+      }
       authUserId = raced.id;
       const { error: updErr } = await sb.auth.admin.updateUserById(authUserId, {
         password: sessionPassword,
@@ -932,24 +996,54 @@ export async function ensureAuthUser(
 }
 
 async function findAuthUserByEmail(
-  _sb: SupabaseClient,
+  sb: SupabaseClient,
   email: string,
 ): Promise<{ id: string } | null> {
   const target = email.trim().toLowerCase();
+  if (!target) return null;
+
+  try {
+    const { data, error } = await sb.rpc("auth_user_id_for_email", {
+      p_email: target,
+    });
+    if (!error && data) return { id: String(data) };
+  } catch {
+    /* RPC may not be applied yet — fall through to Admin API. */
+  }
+
   const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!url || !key) return null;
-  const res = await fetch(
-    `${url}/auth/v1/admin/users?email=${encodeURIComponent(target)}&page=1&per_page=10`,
-    { headers: { Authorization: `Bearer ${key}`, apikey: key } },
-  );
-  if (!res.ok) return null;
-  const body = await res.json();
-  const users = Array.isArray(body?.users) ? body.users : [];
-  const hit = users.find((u: { email?: string; id?: string }) =>
-    (u.email || "").toLowerCase() === target
-  );
-  return hit?.id ? { id: String(hit.id) } : null;
+  if (url && key) {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?email=${encodeURIComponent(target)}&page=1&per_page=50`,
+      { headers: { Authorization: `Bearer ${key}`, apikey: key } },
+    );
+    if (res.ok) {
+      const body = await res.json();
+      const users = Array.isArray(body?.users)
+        ? body.users
+        : Array.isArray(body)
+        ? body
+        : [];
+      const hit = users.find((u: { email?: string; id?: string }) =>
+        (u.email || "").toLowerCase() === target
+      );
+      if (hit?.id) return { id: String(hit.id) };
+    }
+  }
+
+  for (let page = 1; page <= 25; page++) {
+    const { data, error } = await sb.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error) break;
+    const users = data?.users || [];
+    const hit = users.find((u) => (u.email || "").toLowerCase() === target);
+    if (hit?.id) return { id: hit.id };
+    if (users.length < 200) break;
+  }
+  return null;
 }
 
 export function classNamesFromTeacherData(data: Record<string, unknown> | null): string[] {
@@ -1085,6 +1179,9 @@ export async function findAccountDoc(
       if (uname === key && roleOk(doc.data)) {
         return { id: doc.id, data: doc.data };
       }
+      if (normalizeEmail(doc.data.email) === key && roleOk(doc.data)) {
+        return { id: doc.id, data: doc.data };
+      }
       if (
         roleKey === "student" &&
         String(doc.data.linkedStudentId || "").toUpperCase() ===
@@ -1118,6 +1215,9 @@ export async function findAccountDoc(
     if (uname === key && roleOk(data)) {
       return { id: doc.id, data };
     }
+    if (normalizeEmail(data.email) === key && roleOk(data)) {
+      return { id: doc.id, data };
+    }
   }
 
   if (roleKey === "student") {
@@ -1129,6 +1229,30 @@ export async function findAccountDoc(
     }
   }
 
+  return null;
+}
+
+export async function findAccountByEmail(
+  sb: SupabaseClient,
+  schoolId: string,
+  email: string,
+  roleKey?: string | null,
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const target = normalizeEmail(email);
+  const sid = String(schoolId || "").trim().toUpperCase();
+  if (!target || !sid) return null;
+
+  const inSchool = await queryDocs(
+    sb,
+    "app_auth_accounts",
+    [{ column: "schoolId", op: "eq", value: sid }],
+    500,
+  );
+  for (const doc of inSchool) {
+    if (normalizeEmail(doc.data.email) !== target) continue;
+    if (roleKey && doc.data.roleKey !== roleKey) continue;
+    return { id: doc.id, data: doc.data };
+  }
   return null;
 }
 
