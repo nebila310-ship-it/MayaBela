@@ -24,11 +24,12 @@ Print this page from your browser if you need paper copies.
 | Parents | Parent dashboard: My Children, Attendance, Homework, Grades, Fees, Bus Tracking, Messages, Behaviour & Leave | You see your child only — never an unapproved mark |
 | Drivers | Transport dashboard: My Route, Live Map, Passenger List, Scan QR, Pick-up / Drop-off | Parents see “live” only while you are sharing |
 | All staff who communicate | Announcements, gallery, calendar, internal messages | The school speaks in one place — not four WhatsApp groups |
-| Finance / store / HR | Fees, inventory, payroll, leave, staff documents, library, clinic, canteen | Money, stock, and staff files leave a trail |
+| Finance / store / HR | Fees, inventory (items, PRs, issues, assets), payroll with Ethiopian tax + pension | Money, stock, and pay slips leave a trail |
+| Directors / IT | Settings (language), cloud + school-held JSON backup | Daily files in the cloud; also keep a copy on a school PC or school server |
 
 **The sentence:** Teacher enters → leadership approves → then the parent sees.
 
-**Modules in the room today:** office ERP plus the teacher, parent, student, and transport dashboards — student affairs, QA, classroom, alumni, gallery, announcements, calendar, messages, homework, fees, store, HR.
+**Modules in the room today:** office ERP plus the teacher, parent, student, and transport dashboards — student affairs, QA, classroom, alumni, gallery, announcements, calendar, messages, homework, fees, inventory, HR payroll (Ethiopian tax), settings, backups.
 
 **Pilot:** 30–60 days, one campus or grade band, then expand.
 
@@ -43,6 +44,9 @@ Commercial terms are discussed separately with Fenote Raey management.
 - መምህር ውጤት ያስገባል → አመራር ያጸድቃል → ከዚያ ወላጅ ያያል።
 - የተማሪ ጉዳይ፣ የአለምኒ መዝገብ፣ የክፍል አስተዳደር፣ የቤት ሥራ፣ ማስታወቂያ፣ ጋለሪ፣ የቀን መቁጠሪያ እና ውስጣዊ መልእክት በስርዓት ናቸው።
 - ወላጅ ልጅን የሚያገናኘው በተማሪ መታወቂያ እና በትክክለኛ የልደት ቀን ነው። ትምህርት ቤቱ እስኪያጸድቅ ድረስ አይከፈትም።
+- ተማሪ የሚገባው ትምህርት ቤቱ ከሚወስነው ክፍል ጀምሮ ነው።
+- የደመወዝ ስሌት የኢትዮጵያ የገቢ ግብርና የጡረታ ፈንድ ያካትታል።
+- ፋይሎች በክላውድ ይኖራሉ። የትምህርት ቤት ኮምፒዩተር ወይም ሰርቨር ላይ የJSON ቅጂም ይያዝ — ሁለቱም ይመከራሉ።
 - የባስ አካባቢ ሹፌሩ ሲያጋራ ብቻ “በቀጥታ” ይታያል።
 
 ሙከራ: https://mayabela.pages.dev · ድጋፍ: +251 911 646 444

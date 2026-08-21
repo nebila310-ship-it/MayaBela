@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/services/school_backup_service.dart';
 import 'package:mayabela/services/school_report_export_service.dart';
 import 'package:mayabela/web_erp/pages/inventory/web_inventory_shell_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
@@ -67,6 +68,33 @@ class _WebReportsPageState extends State<WebReportsPage> {
     ),
   ];
 
+  Future<void> _exportSchoolBackup() async {
+    if (_busyKey != null) return;
+    setState(() => _busyKey = 'backup');
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await SchoolBackupService.instance.shareSchoolJsonBackup();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'School backup JSON ready — keep a cloud copy and a school-held copy.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Backup failed: $e'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyKey = null);
+    }
+  }
+
   Future<void> _export(_ReportTile report, String format) async {
     final key = '${report.title}:$format';
     if (_busyKey != null) return;
@@ -119,6 +147,37 @@ class _WebReportsPageState extends State<WebReportsPage> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: WebErpTheme.cardDecoration(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'School backup',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Daily files live in the cloud. Also download a JSON copy for '
+                  'a school computer or school server. Recommended: both.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: _busyKey == 'backup' ? null : _exportSchoolBackup,
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: Text(
+                    _busyKey == 'backup'
+                        ? 'Preparing…'
+                        : 'Download school backup (JSON)',
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
           Expanded(

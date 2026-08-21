@@ -184,33 +184,60 @@ def students():
 
 
 def affairs():
-    img, d = shell("affairs", "Student affairs & discipline", "Investigation → hearing → outcome. Leave requests from parents.")
+    img, d = shell("affairs", "Student affairs desk", "Behaviour cases and parent leave — a desk, not a rumour.")
+    cards = [
+        ("Open cases", "6", "2 hearings this week"),
+        ("Investigation", "3", "Homeroom + affairs"),
+        ("Leave pending", "4", "Parents waiting"),
+        ("Closed this month", "11", "Outcome on file"),
+    ]
+    for i, c in enumerate(cards):
+        kpi(d, SB + 24 + i * 322, 110, 308, *c)
     table(
         d,
         SB + 24,
-        120,
+        226,
         W - SB - 48,
         ["Case", "Student", "Type", "Stage", "Owner"],
         [
-            ["SA-118", "Yonas Tadesse · 8A", "Behaviour", "Hearing", "Student affairs"],
+            ["SA-118", "Yonas Tadesse · 8A", "Behaviour", "Hearing Thu 10:00", "Student affairs"],
             ["SA-119", "Lidya Mekonnen · 9B", "Attendance", "Investigation", "Homeroom"],
             ["SA-120", "Abel Tesfaye · 10A", "Incident", "Outcome recorded", "VP"],
+            ["SA-121", "Sara Worku · 6C", "Behaviour", "Parent meeting set", "Student affairs"],
         ],
-        [140, 320, 200, 240, 220],
+        [140, 300, 180, 260, 240],
     )
     table(
         d,
         SB + 24,
-        380,
+        500,
         W - SB - 48,
         ["Leave", "Student", "Dates", "Parent", "Status"],
         [
-            ["LV-44", "Hana Bekele · 8A", "22–24 Aug", "Aster Bekele", "Pending"],
+            ["LV-44", "Hana Bekele · 8A", "22–24 Aug", "Aster Bekele", "Pending — affairs"],
             ["LV-45", "Marta Alemu · 11B", "25 Aug", "Girma Alemu", "Approved"],
+            ["LV-46", "Yonas Tadesse · 8A", "28 Aug (clinic)", "Tadesse Kebede", "Pending — VP"],
         ],
-        [140, 320, 200, 240, 220],
+        [140, 300, 220, 240, 220],
     )
     save(img, "screen-affairs.png")
+
+    img, d = shell("affairs", "Discipline pipeline", "Investigation → hearing → outcome. Each case has an owner.")
+    stages = [
+        ("1. Report", "Teacher or duty staff logs the incident. Time, place, students."),
+        ("2. Investigate", "Homeroom and student affairs collect statements. Case stays inside the school."),
+        ("3. Hearing", "Scheduled. Parent is informed through the school channel — not a rumour."),
+        ("4. Outcome", "Warning, counselling, or further action. Written. Visible to the people who must know."),
+    ]
+    for i, (title, body) in enumerate(stages):
+        y = 120 + i * 170
+        rounded(d, (SB + 24, y, W - 24, y + 150), WHITE, 14)
+        d.rounded_rectangle((SB + 24, y, W - 24, y + 150), radius=14, outline=LINE, width=1)
+        rounded(d, (SB + 44, y + 40, SB + 88, y + 84), PURPLE, 10)
+        text(d, (SB + 58, y + 50), str(i + 1), 22, True, WHITE)
+        text(d, (SB + 110, y + 36), title, 22, True, PURPLE)
+        text(d, (SB + 110, y + 80), body, 16, False, MUTED)
+    save(img, "screen-affairs-flow.png")
 
 
 def alumni():
@@ -402,22 +429,100 @@ def finance():
 
 
 def inventory():
-    img, d = shell("inventory", "Inventory, procurement & store", "Books, chalk, and purchases leave a trail.")
+    img, d = shell("inventory", "Inventory command — store, procurement, assets", "One trail from purchase request to classroom issue.")
+    cards = [
+        ("Stock value", "ETB 2.41m", "Main store + science lab"),
+        ("Open PRs", "7", "3 awaiting director"),
+        ("Issue requests", "12", "4 ready to pick"),
+        ("Assets in repair", "5", "2 overdue maintenance"),
+    ]
+    for i, c in enumerate(cards):
+        kpi(d, SB + 24 + i * 322, 110, 308, *c)
+    table(
+        d,
+        SB + 24,
+        226,
+        W - SB - 48,
+        ["Module", "Today", "Owner"],
+        [
+            ["Purchase requests", "PR-88 chalk / PR-91 lab glass", "Procurement → director"],
+            ["Issue requests", "8A textbooks · Grade 3 exercise books", "Store keeper"],
+            ["Stock in / out", "Received PO-19 · issued 40 markers", "Store + accountant"],
+            ["Student issued", "36 Grade 8 maths books on loan", "Homeroom 8A"],
+            ["Classroom / assets", "Smart board 8A · printer library", "ICT + store"],
+            ["Suppliers / maintenance", "Addis Book House · 2 repairs open", "Procurement"],
+        ],
+        [260, 520, 330],
+    )
+    text(
+        d,
+        (SB + 24, 560),
+        "Procurement, store, and accountant see the same numbers. Leakage cannot hide in a WhatsApp photo of a receipt.",
+        15,
+    )
+    save(img, "screen-inventory.png")
+
+    img, d = shell("inventory", "Items, stock in/out, student issued", "Every book, marker, and lab coat has a quantity and a trail.")
     table(
         d,
         SB + 24,
         120,
         W - SB - 48,
-        ["Item", "On hand", "Request", "Stage"],
+        ["SKU", "Item", "On hand", "Reorder", "Location"],
         [
-            ["Grade 8 maths textbooks", "120", "Issue to 8A", "Store keeper"],
-            ["Chalk / markers", "40 boxes", "Purchase", "Awaiting approval"],
-            ["Lab coats", "18", "Receive PO-19", "Accountant match"],
+            ["BK-8M", "Grade 8 maths textbook", "120", "40", "Main store"],
+            ["ST-CH", "Chalk / whiteboard markers", "40 boxes", "12", "Main store"],
+            ["LB-CO", "Lab coats (M)", "18", "10", "Science store"],
+            ["CL-8A", "Smart board 8A", "1 asset", "—", "Classroom 8A"],
+            ["ST-EX", "Exercise books (48pp)", "860", "200", "Main store"],
         ],
-        [360, 180, 260, 280],
+        [140, 360, 200, 160, 240],
     )
-    text(d, (SB + 24, 360), "Purchase request → approval → receive. Issue request → store. Same numbers for procurement, store, and accountant.", 15)
-    save(img, "screen-inventory.png")
+    table(
+        d,
+        SB + 24,
+        430,
+        W - SB - 48,
+        ["When", "Type", "Item", "Qty", "To / from"],
+        [
+            ["Today 08:12", "Stock in", "PO-19 lab coats", "+24", "Addis Uniforms"],
+            ["Today 09:40", "Issue", "Grade 8 maths textbook", "−36", "Class 8A · Ato Samuel"],
+            ["Yesterday", "Student issued", "Exercise books", "−34", "Hana Bekele · 8A (loan)"],
+            ["18 Aug", "Stock out", "Markers", "−8 boxes", "Examinations office"],
+        ],
+        [180, 180, 320, 140, 300],
+    )
+    save(img, "screen-inventory-stock.png")
+
+    img, d = shell("inventory", "Purchase & issue requests", "Ask → approve → receive or issue. Not a verbal “bring more chalk.”")
+    table(
+        d,
+        SB + 24,
+        120,
+        W - SB - 48,
+        ["PR", "Requested by", "Item", "Amount", "Stage"],
+        [
+            ["PR-88", "Store keeper", "Chalk / markers (20 boxes)", "ETB 4,800", "Director approval"],
+            ["PR-91", "Science HOD", "Lab glass set", "ETB 18,400", "Procurement quote"],
+            ["PR-79", "Library", "Grade 6 readers (40)", "ETB 12,000", "Received · matched"],
+        ],
+        [120, 200, 360, 200, 240],
+    )
+    table(
+        d,
+        SB + 24,
+        380,
+        W - SB - 48,
+        ["IR", "From", "Need", "Qty", "Store action"],
+        [
+            ["IR-204", "8A homeroom", "Maths textbooks", "36", "Ready to pick"],
+            ["IR-205", "Examinations", "Answer booklets", "400", "Awaiting stock in"],
+            ["IR-198", "KG section", "Crayons", "12 packs", "Issued yesterday"],
+        ],
+        [120, 200, 300, 160, 340],
+    )
+    text(d, (SB + 24, 620), "Same trail for procurement, store keeper, and accountant. Reports export Excel / CSV / PDF.", 15)
+    save(img, "screen-inventory-pr.png")
 
 
 def announce():
@@ -519,22 +624,60 @@ def messages():
 
 
 def qa():
-    img, d = shell("qa", "Quality assurance", "Findings, severity, owner, due date, improvement plan.")
+    img, d = shell("qa", "Quality assurance desk", "Findings, severity, owner, due date — next to the school, not in a drawer.")
+    cards = [
+        ("Open findings", "9", "3 overdue follow-up"),
+        ("In progress", "5", "Plans with owners"),
+        ("Closed 30 days", "14", "Evidence attached"),
+        ("Due this week", "4", "Directors see these"),
+    ]
+    for i, c in enumerate(cards):
+        kpi(d, SB + 24 + i * 322, 110, 308, *c)
     table(
         d,
         SB + 24,
-        120,
+        226,
         W - SB - 48,
         ["Finding", "Area", "Severity", "Owner", "Status"],
         [
             ["Grade 8 marking sample incomplete", "Academic", "Medium", "Examinations", "Open"],
             ["Leave requests sitting 5 days", "Student affairs", "Low", "Registrar", "Plan in place"],
             ["Store issue slips unsigned", "Operations", "High", "Procurement", "Due 22 Aug"],
+            ["Bus boarding list vs GPS mismatch", "Transport", "Medium", "Transport head", "In progress"],
+            ["Homework files missing for 6A", "Teaching", "Low", "Section director", "Closed"],
         ],
-        [420, 200, 160, 200, 180],
+        [420, 200, 150, 220, 180],
     )
-    text(d, (SB + 24, 380), "QA records the finding. The duty owner executes the plan. Directors see overdue items on the dashboard.", 15)
+    text(d, (SB + 24, 530), "QA records the finding. The duty owner executes the plan. Directors see overdue items on the morning dashboard.", 15)
     save(img, "screen-qa.png")
+
+    img, d = shell("qa", "Improvement plans", "Every finding gets an owner, a target date, and a close-out.")
+    table(
+        d,
+        SB + 24,
+        120,
+        W - SB - 48,
+        ["Plan", "Finding", "Owner", "Target", "Evidence"],
+        [
+            ["IP-31", "Grade 8 marking sample", "Examinations", "22 Aug", "Sample pack attached"],
+            ["IP-32", "Unsigned store slips", "Procurement", "21 Aug", "New issue form in use"],
+            ["IP-33", "Leave backlog", "Student affairs", "25 Aug", "Daily pending list"],
+            ["IP-34", "Bus list vs GPS", "Transport head", "28 Aug", "Driver briefing logged"],
+        ],
+        [140, 320, 220, 160, 280],
+    )
+    rounded(d, (SB + 24, 400, W - 24, 840), WHITE, 14)
+    text(d, (SB + 44, 424), "Close-out — IP-31 Grade 8 marking sample", 18, True, PURPLE)
+    lines = [
+        "Area: academic standards / assessment integrity",
+        "What QA saw: 8A English drafts published before the makeup tests were in.",
+        "Plan: freeze publish until the two makeup marks are entered. Re-sample Friday.",
+        "Owner: Examinations  ·  Follow-up: Section director  ·  Directors see overdue in red.",
+        "Parent never receives an unapproved mark while this plan is open.",
+    ]
+    for i, line in enumerate(lines):
+        text(d, (SB + 44, 480 + i * 48), "•  " + line, 16)
+    save(img, "screen-qa-plan.png")
 
 
 def _blend(c, t, a):
@@ -880,6 +1023,182 @@ def roles():
     save(img, "diagram-roles.png")
 
 
+def payroll():
+    img, d = shell("hr", "HR payroll — Ethiopian tax & pension", "Built-in calculator for every Fenote Raey employee. Proc. 1395/2025.")
+    cards = [
+        ("Employees on payroll", "64", "Teachers, staff, drivers"),
+        ("Net this month", "ETB 1.12m", "After PAYE + 7% pension"),
+        ("PAYE withheld", "ETB 186,400", "Income tax"),
+        ("Employer pension 11%", "ETB 98,200", "School cost"),
+    ]
+    for i, c in enumerate(cards):
+        kpi(d, SB + 24 + i * 322, 110, 308, *c)
+    table(
+        d,
+        SB + 24,
+        226,
+        900,
+        ["Name", "Role", "Basic", "PAYE", "Net"],
+        [
+            ["Ato Samuel", "Teacher 8A", "12,000", "1,998", "9,162"],
+            ["W/ro Tigist", "Homeroom 6A", "11,500", "1,848", "8,847"],
+            ["Ato Getu", "Driver Bus 01", "8,000", "1,010", "6,430"],
+            ["Abebe Kebede", "Guard", "4,500", "258", "3,927"],
+        ],
+        [220, 180, 150, 150, 160],
+    )
+    rounded(d, (SB + 950, 226, W - 24, 840), WHITE, 14)
+    d.rounded_rectangle((SB + 950, 226, W - 24, 840), radius=14, outline=LINE, width=1)
+    text(d, (SB + 970, 246), "What-if calculator", 18, True, PURPLE)
+    text(d, (SB + 970, 280), "Proc. No. 1395/2025", 13, False, MUTED)
+    rows = [
+        ("Basic salary", "ETB 12,000"),
+        ("Employee pension 7%", "ETB 840"),
+        ("Taxable income", "ETB 11,160"),
+        ("Income tax 30%", "ETB 1,998"),
+        ("Net pay", "ETB 9,162"),
+        ("Employer pension 11%", "ETB 1,320"),
+        ("Employer cost", "ETB 13,320"),
+    ]
+    for i, (k, v) in enumerate(rows):
+        y = 320 + i * 62
+        text(d, (SB + 970, y), k, 14, False, MUTED)
+        text(d, (SB + 970, y + 22), v, 20, True, INK if i != 4 else TEAL)
+    save(img, "screen-payroll.png")
+
+
+def settings_language():
+    img, d = shell("school", "Settings — language & appearance", "English, Amharic, Afaan Oromo. Each person chooses.")
+    rounded(d, (SB + 24, 120, SB + 780, 840), WHITE, 16)
+    text(d, (SB + 48, 148), "Change language", 20, True, PURPLE)
+    text(d, (SB + 48, 184), "Your preference. It does not change another user’s language.", 14, False, MUTED)
+    langs = [("English", True), ("አማርኛ", False), ("Afaan Oromoo", False)]
+    x = SB + 48
+    for label, on in langs:
+        w = 210
+        rounded(d, (x, 230, x + w, 286), PURPLE if on else (245, 243, 255), 12)
+        text(d, (x + 24, 246), label, 16, True, WHITE if on else INK)
+        x += 230
+    text(d, (SB + 48, 330), "Appearance", 20, True, PURPLE)
+    rounded(d, (SB + 48, 370, SB + 740, 450), (245, 243, 255), 12)
+    text(d, (SB + 72, 396), "Dark mode     Off — light school screens by default", 16)
+    text(d, (SB + 48, 490), "Dashboard tile order", 20, True, PURPLE)
+    text(d, (SB + 48, 530), "Drag tiles so the home screen matches this duty.", 14, False, MUTED)
+    for i, name in enumerate(["My Classes", "Attendance", "Homework", "Grade Reports", "Messages"]):
+        y = 570 + i * 48
+        rounded(d, (SB + 48, y, SB + 740, y + 40), (245, 243, 255), 8)
+        text(d, (SB + 72, y + 10), f"{i + 1}.  {name}", 15)
+    rounded(d, (SB + 808, 120, W - 24, 840), WHITE, 16)
+    text(d, (SB + 832, 148), "School files & backup", 20, True, PURPLE)
+    text(d, (SB + 832, 190), "Daily work lives in the cloud.", 15)
+    text(d, (SB + 832, 230), "Also keep a JSON copy on a", 15)
+    text(d, (SB + 832, 258), "school computer or school server.", 15)
+    rounded(d, (SB + 832, 320, W - 48, 390), PURPLE, 10)
+    text(d, (SB + 860, 340), "Download school backup (JSON)", 14, True, WHITE)
+    text(d, (SB + 832, 430), "Recommended: set up both ways.", 16, True, TEAL)
+    text(d, (SB + 832, 470), "Cloud = live. School copy = the school still holds its book.", 14, False, MUTED)
+    save(img, "screen-settings.png")
+
+
+def backup():
+    img, d = shell("school", "Where school files live", "Cloud for daily work. School-held copy so you are not locked to one place.")
+    rounded(d, (SB + 24, 120, SB + 650, 840), WHITE, 16)
+    text(d, (SB + 48, 150), "1. Cloud — the live home", 22, True, PURPLE)
+    lines = [
+        "Students, grades, fees, store, buses, messages",
+        "live in the MaJo Bridge cloud (Supabase).",
+        "That is what teachers and parents open every day.",
+        "School isolation: another school cannot open Fenote Raey.",
+        "",
+        "2. School computer / school server — the held copy",
+        "Download JSON backup from Settings, School profile,",
+        "or Reports. Keep it on a school PC or, if Fenote Raey",
+        "runs a server, on that server too.",
+        "Do this weekly, and after payroll, exams, or big enrollment.",
+        "",
+        "Recommended: both. Cloud for daily life.",
+        "School-held backup so the book is also yours.",
+        "A full on-site ERP server is optional extra work —",
+        "not required to start — but a school copy is.",
+    ]
+    for i, line in enumerate(lines):
+        text(d, (SB + 48, 210 + i * 36), line, 16, False, INK)
+    rounded(d, (SB + 678, 120, W - 24, 840), WHITE, 16)
+    text(d, (SB + 702, 150), "Backup methodology", 20, True, PURPLE)
+    table(
+        d,
+        SB + 702,
+        200,
+        620,
+        ["When", "What"],
+        [
+            ["Daily", "Cloud is the live system"],
+            ["Weekly", "JSON school backup to school PC"],
+            ["Payroll / exams", "Extra JSON that day"],
+            ["Reports", "Excel / CSV / PDF as needed"],
+            ["Platform", "Owner can export school registry"],
+        ],
+        [200, 400],
+    )
+    text(d, (SB + 702, 520), "Passwords are not packed in the school JSON.", 14, False, MUTED)
+    text(d, (SB + 702, 560), "Gold rule: one live cloud + one school-held copy.", 16, True, TEAL)
+    save(img, "screen-backup.png")
+
+
+def student_portal():
+    img, d = shell("students", "Student login — the school sets the grade", "Not a fixed Grade 7. Fenote Raey chooses Grade 1–12.")
+    rounded(d, (SB + 24, 120, SB + 820, 840), WHITE, 16)
+    text(d, (SB + 48, 150), "Student portal settings", 22, True, PURPLE)
+    text(d, (SB + 48, 194), "Enable student portal     On", 16)
+    text(d, (SB + 48, 240), "Minimum grade that may log in", 16, True, INK)
+    text(d, (SB + 48, 276), "Currently Grade 7 and above — change this anytime.", 14, False, MUTED)
+    x = SB + 48
+    for g in range(1, 13):
+        on = g == 7
+        rounded(d, (x, 320, x + 56, 368), PURPLE if on else (245, 243, 255), 8)
+        text(d, (x + 16, 332), str(g), 16, True, WHITE if on else INK)
+        x += 62
+    toggles = [
+        ("Allow homework upload", True),
+        ("Allow report card download", True),
+        ("Allow student messaging", False),
+        ("Show class rank", False),
+    ]
+    for i, (label, on) in enumerate(toggles):
+        y = 420 + i * 70
+        text(d, (SB + 48, y), label, 16)
+        text(d, (SB + 620, y), "On" if on else "Off", 16, True, TEAL if on else MUTED)
+    rounded(d, (SB + 848, 120, W - 24, 840), WHITE, 16)
+    text(d, (SB + 872, 150), "What this means", 20, True, PURPLE)
+    bullets = [
+        "Directors set the lowest grade that gets a student login.",
+        "A KG school can open Grade 1. A high school can wait until Grade 9.",
+        "Below that grade, the parent app is the channel.",
+        "Students still only see published grades — never a draft.",
+        "Same School ID. Student dashboard, not the office ERP.",
+    ]
+    y = 210
+    for b in bullets:
+        text(d, (SB + 872, y), "•", 16, True, GOLD)
+        # wrap-ish: split long lines
+        words = b.split()
+        line = ""
+        lines = []
+        for w in words:
+            trial = (line + " " + w).strip()
+            if len(trial) > 32:
+                lines.append(line)
+                line = w
+            else:
+                line = trial
+        if line:
+            lines.append(line)
+        for j, ln in enumerate(lines):
+            text(d, (SB + 896, y + j * 28), ln, 15)
+        y += 28 * len(lines) + 18
+    save(img, "screen-student-portal.png")
+
+
 def main() -> None:
     dashboard()
     students()
@@ -893,11 +1212,15 @@ def main() -> None:
     transport()
     finance()
     inventory()
+    payroll()
     announce()
     gallery()
     calendar()
     messages()
     qa()
+    settings_language()
+    backup()
+    student_portal()
     four_dashboards()
     login()
     roles()

@@ -1,8 +1,8 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
+import 'package:mayabela/services/ethiopian_employment_tax.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 
@@ -21,6 +21,8 @@ class AdminDriverRecord {
     this.isActive = true,
     this.loginUsername,
     this.initialPassword,
+    this.basicSalaryEtb = 0,
+    this.taxableAllowancesEtb = 0,
   });
 
   final String driverId;
@@ -37,6 +39,8 @@ class AdminDriverRecord {
   final bool isActive;
   final String? loginUsername;
   final String? initialPassword;
+  final double basicSalaryEtb;
+  final double taxableAllowancesEtb;
 
   AdminDriverRecord copyWith({
     String? fullName,
@@ -50,6 +54,8 @@ class AdminDriverRecord {
     bool? isActive,
     String? loginUsername,
     String? initialPassword,
+    double? basicSalaryEtb,
+    double? taxableAllowancesEtb,
   }) {
     return AdminDriverRecord(
       driverId: driverId,
@@ -65,6 +71,9 @@ class AdminDriverRecord {
       isActive: isActive ?? this.isActive,
       loginUsername: loginUsername ?? this.loginUsername,
       initialPassword: initialPassword ?? this.initialPassword,
+      basicSalaryEtb: basicSalaryEtb ?? this.basicSalaryEtb,
+      taxableAllowancesEtb:
+          taxableAllowancesEtb ?? this.taxableAllowancesEtb,
     );
   }
 
@@ -82,6 +91,8 @@ class AdminDriverRecord {
         'isActive': isActive,
         if (loginUsername != null) 'loginUsername': loginUsername,
         if (initialPassword != null) 'initialPassword': initialPassword,
+        'basicSalaryEtb': basicSalaryEtb,
+        'taxableAllowancesEtb': taxableAllowancesEtb,
       };
 
   factory AdminDriverRecord.fromMap(Map<String, dynamic> map) {
@@ -102,6 +113,9 @@ class AdminDriverRecord {
       isActive: map['isActive'] as bool? ?? true,
       loginUsername: map['loginUsername'] as String?,
       initialPassword: map['initialPassword'] as String?,
+      basicSalaryEtb: EthiopianEmploymentTax.parseEtb(map['basicSalaryEtb']),
+      taxableAllowancesEtb:
+          EthiopianEmploymentTax.parseEtb(map['taxableAllowancesEtb']),
     );
   }
 }

@@ -11,6 +11,8 @@ import 'package:mayabela/widgets/notification_preference_settings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/phone_launch_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/school_backup_service.dart';
 import 'package:mayabela/services/school_support_contact_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/services/device_calendar_export_service.dart';
@@ -348,6 +350,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.translate_rounded,
                     child: const AnimatedLanguageSelector(),
                   ),
+                  if (ModuleAccess.canHireStaff) ...[
+                    const SizedBox(height: 16),
+                    SettingsSectionCard(
+                      title: 'School files & backup',
+                      subtitle:
+                          'Daily work lives in the cloud. Recommended: also keep a JSON copy on a school computer or school server.',
+                      icon: Icons.cloud_sync_outlined,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Cloud (MaJo Bridge) is the live home. A school-held '
+                            'copy protects Fenote Raey if the internet or a vendor path fails. Set up both.',
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              try {
+                                await SchoolBackupService.instance
+                                    .shareSchoolJsonBackup();
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Backup JSON ready. Save it on a school computer or server too.',
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text('Backup failed: $e')),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.cloud_download_outlined),
+                            label: const Text('Download school backup (JSON)'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: s.settingsAppearance,

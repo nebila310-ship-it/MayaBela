@@ -2,7 +2,7 @@
 
 **Presented by:** MaJo Bridge Technologies and Events  
 **Audience:** all roles — directors, student affairs, QA, teachers, administration, parent representatives, drivers  
-**Length:** 28–34 minutes + live demo + questions  
+**Length:** 32–40 minutes + live demo + questions  
 **Open slides:** pull this branch and open `docs/presentations/final-decision/index.html` → **F11**  
 **Or download:** https://gofile.io/d/69cgqWGz (`slides.html`)  
 **Leave-behind:** https://gofile.io/d/erPGzTEw → **Ctrl+P**  
@@ -22,15 +22,15 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 
 | Min | Slide | What you say |
 |-----|--------|----------------|
-| 0–1 | Cover | Thank every role. Introduce MaJo Bridge. “The picture on the right is the *office* dashboard. Teachers, parents, students, and drivers each have their own.” |
-| 1–3 | Why this room | Decision: endorse the operating system. Raise gaps now. |
-| 3–5 | Problem | Excel / paper / WhatsApp = late news, unapproved grades, no one book of record. |
-| 5–7 | Who uses it | Point at the people in the room. |
-| 7–8 | **Every dashboard** | Four pictures: teacher, parent, student, driver. “This is not only ERP.” |
-| 8–9 | Login | Web for office, phone for teachers/parents/students/drivers. First login changes password. |
-| 9–11 | Directors | Morning dashboard: attendance, affairs cases, homework due, fees, gallery, calendar, messages. |
-| 11–12 | Registrar | IDs, DOB, parent-link approval, transfers. |
-| 12–13 | **Student affairs** | Discipline is a case file. Leave requests wait for school approval. |
+| 0–1 | Cover | Thank every role. Introduce MaJo Bridge. Office ERP on the right; four dashboards come next. |
+| 1–3 | Problem | Excel / paper / WhatsApp = late news, unapproved grades, no one book of record. |
+| 3–5 | Who uses it | Point at the people in the room. |
+| 5–6 | **Every dashboard** | Four pictures: teacher, parent, student, driver. “This is not only ERP.” |
+| 6–7 | Login | Web for office, phone for teachers/parents/students/drivers. First login changes password. |
+| 7–8 | **Student login grade** | “The school sets the lowest grade that may log in. Not a fixed Grade 7.” |
+| 8–10 | Directors | Morning dashboard: attendance, affairs cases, homework due, fees, gallery, calendar, messages. |
+| 10–11 | Registrar | IDs, DOB, parent-link approval, transfers. |
+| 11–13 | **Student affairs** | Desk + pipeline: investigation → hearing → outcome. Leave waits for school approval. |
 | 13–14 | **Alumni** | Graduates stay in the book. |
 | 14–16 | **Grades (anchor)** | “Teacher enters. Leadership approves. Then the parent sees.” Repeat in Amharic. |
 | 16–17 | **Teacher dashboard** | Walk the tiles: classes, attendance, homework, grades, gallery, messages. |
@@ -39,13 +39,17 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 | 19–20 | **Student dashboard** | Profile, homework, timetable, approved grades only. |
 | 20–22 | **Parent dashboard** | Walk the tiles: children, homework, fees, bus, messages. |
 | 22–23 | **Driver dashboard** | Route, passengers, QR, live map. Then office transport if asked. |
-| 23–24 | Finance / store | Fast: fee collections; store has a trail. |
-| 24–25 | School life | Announcements, gallery, calendar, messages. |
-| 25–26 | Quality assurance | Findings and plans. |
-| 26–28 | Catalog + week | Nobody thinks a module is “coming later.” |
-| 28–29 | Safety | Isolation. Duty-based access. Not a government system. |
-| 29–31 | The ask | Three endorsements. Then 30–60 day pilot. |
-| 31+ | Live URL | Open pages.dev. Show teacher or parent login if you have one. No price. |
+| 23–24 | Finance | Fee collections in ETB. |
+| 24–25 | **HR payroll** | Built-in Ethiopian PAYE + 7%/11% pension for every employee. |
+| 25–27 | **Inventory** | Command desk, stock trail, purchase and issue requests. |
+| 27–28 | School life | Announcements, gallery, calendar, messages. |
+| 28–30 | **Quality assurance** | Findings, then the improvement-plan slide. |
+| 30–31 | **Settings / language** | English, Amharic, Afaan Oromo. Tile order. Backup button. |
+| 31–32 | **Where files live** | “Recommended: both. Cloud for daily work. JSON on a school PC or school server.” |
+| 32–34 | Catalog + week | Nobody thinks a module is “coming later.” |
+| 34–35 | Safety | Isolation. Duty-based access. Hybrid files. Not a government system. |
+| 35–37 | The ask | Three endorsements. Then 30–60 day pilot. |
+| 37+ | Live URL | Open pages.dev. Show teacher or parent login if you have one. No price. |
 
 ---
 
@@ -57,7 +61,9 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 - **“Parents will see everything.”** They see their child after the school approves the link. They never see unapproved grades.
 - **“Teachers will be policed.”** Teachers keep the classroom tools. Leadership keeps publish rights. That protects the teacher as much as the parent.
 - **“Is this a government system?”** No. MaJo Bridge Technologies and Events. It helps Fenote Raey run digitally. Do not claim MoE endorsement.
-- **“Our own server.”** Note the request; cloud pilot first. On-prem is a separate conversation after go-live.
+- **“Our own server.”** Recommend **both**: cloud for daily work, and a weekly JSON copy on a school computer or school server. A full on-site ERP is optional extra work. Do not skip the school-held copy.
+- **“Students from which grade?”** The school sets it. Show Student portal settings. It is not locked at Grade 7.
+- **“Payroll / tax?”** HR → Payroll. Built-in Ethiopian PAYE (Proc. 1395/2025) plus 7% / 11% pension for every employee.
 - **“How much does it cost?”** “That stays with Fenote Raey management. This meeting is the system, the modules, and your roles.”
 
 ---
@@ -69,8 +75,11 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 3. Teacher dashboard tiles (or stay on dash-teacher.png).
 4. Parent dashboard tiles, then student dashboard if a student rep is in the room.
 5. Grade approval queue — point at Approve.
-6. Driver transport dashboard: route, QR, live map.
-7. Office transport / finance only if asked.
+6. Student portal settings — “the school sets the grade.”
+7. HR Payroll — Ethiopian tax calculator.
+8. Inventory purchase/issue if store is in the room.
+9. Settings language + download school backup JSON.
+10. Driver transport dashboard: route, QR, live map.
 
 If the network fails, stay on the HTML screenshots. They are enough to vote.
 

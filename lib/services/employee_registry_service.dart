@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/services/ethiopian_employment_tax.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
 
 /// Record-only school employee (no app login). Managed by Human Resource.
@@ -16,6 +17,8 @@ class EmployeeRecord {
     this.notes,
     this.campus = 'Main Campus',
     this.isActive = true,
+    this.basicSalaryEtb = 0,
+    this.taxableAllowancesEtb = 0,
   });
 
   final String employeeId;
@@ -27,6 +30,8 @@ class EmployeeRecord {
   final String? notes;
   final String campus;
   final bool isActive;
+  final double basicSalaryEtb;
+  final double taxableAllowancesEtb;
 
   EmployeeRecord copyWith({
     String? fullName,
@@ -36,6 +41,8 @@ class EmployeeRecord {
     String? notes,
     String? campus,
     bool? isActive,
+    double? basicSalaryEtb,
+    double? taxableAllowancesEtb,
     bool clearPhone = false,
     bool clearDepartment = false,
     bool clearNotes = false,
@@ -50,6 +57,9 @@ class EmployeeRecord {
       notes: clearNotes ? null : (notes ?? this.notes),
       campus: campus ?? this.campus,
       isActive: isActive ?? this.isActive,
+      basicSalaryEtb: basicSalaryEtb ?? this.basicSalaryEtb,
+      taxableAllowancesEtb:
+          taxableAllowancesEtb ?? this.taxableAllowancesEtb,
     );
   }
 
@@ -63,6 +73,8 @@ class EmployeeRecord {
         if (notes != null) 'notes': notes,
         'campus': campus,
         'isActive': isActive,
+        'basicSalaryEtb': basicSalaryEtb,
+        'taxableAllowancesEtb': taxableAllowancesEtb,
       };
 
   factory EmployeeRecord.fromMap(Map<String, dynamic> map) {
@@ -78,6 +90,9 @@ class EmployeeRecord {
           ? (map['campus'] as String).trim()
           : 'Main Campus',
       isActive: map['isActive'] as bool? ?? true,
+      basicSalaryEtb: EthiopianEmploymentTax.parseEtb(map['basicSalaryEtb']),
+      taxableAllowancesEtb:
+          EthiopianEmploymentTax.parseEtb(map['taxableAllowancesEtb']),
     );
   }
 }
@@ -127,6 +142,8 @@ class EmployeeRegistryService extends ChangeNotifier {
     String? department,
     String? notes,
     String? campus,
+    double basicSalaryEtb = 0,
+    double taxableAllowancesEtb = 0,
   }) {
     final record = EmployeeRecord(
       employeeId: 'EMP-${_allocateEmployeeIdNumber()}',
@@ -140,6 +157,8 @@ class EmployeeRegistryService extends ChangeNotifier {
       campus: campus == null || campus.trim().isEmpty
           ? 'Main Campus'
           : campus.trim(),
+      basicSalaryEtb: basicSalaryEtb,
+      taxableAllowancesEtb: taxableAllowancesEtb,
     );
     _employees.add(record);
     notifyListeners();

@@ -8,30 +8,13 @@ Directors · Student affairs · Quality assurance · Teachers · Administration 
 
 One school system. Every role in this room.
 
-Student affairs, quality assurance, classroom management, alumni records, gallery, announcements, calendar, internal messages, homework — and the rest of the school books.
+Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the teacher, parent, student, and transport dashboards, settings, language, and school-held backups.
 
 የፍኖተ ራእይ አካዳሚ · እያንዳንዱ ሚና የሚጠቀመው ሞጁል ዛሬ ይታያል።
 
 ---
 
-## 1. Why this room
-
-Owners directed us to proceed. This meeting is the operational yes.
-
-Fenote Raey Academy owners have already seen this system and asked that it be executed. Today we show every body in this room **what they will use**, **what they will control**, and **how parents stay informed without gossip or delay**.
-
-ባለቤቶቹ አቅጣጫ ሰጥተዋል። ዛሬ የዳይሬክተሮች፣ የአስተዳደር እና የወላጅ ተወካዮች ውሳኔ ነው።
-
-**What we need from you**
-
-- Directors: confirm this is how you want to govern the school
-- Administration: confirm the daily work is covered
-- Parent representatives: confirm families will be safer and better informed
-- Other bodies: raise gaps now, not after go-live
-
----
-
-## 2. The problem
+## 1. The problem
 
 Excel, paper, and WhatsApp are not a school system.
 
@@ -43,7 +26,7 @@ Excel, paper, and WhatsApp are not a school system.
 
 ---
 
-## 3. Who uses it
+## 2. Who uses it
 
 Every role in this meeting has a home.
 
@@ -62,7 +45,7 @@ Same School ID. Different doors. Nobody sees another school. Staff only see the 
 
 ---
 
-## 3b. Every dashboard
+## 3. Every dashboard
 
 Four homes. One school ID. Not only the office ERP.
 
@@ -88,7 +71,24 @@ Web for the office. Phone for teachers, parents, and drivers. First login forces
 
 ---
 
-## 5. For school directors
+## 5. Student login
+
+Students log in from the grade the school sets — not a fixed Grade 7.
+
+![Student portal settings](screens/screen-student-portal.png)
+
+Fenote Raey chooses the lowest grade that gets a student app (Grade 1–12). Change it when the school is ready.
+
+- Below that grade, the **parent app** is the channel
+- Students still see **published grades only**
+- Homework upload, report download, messaging, class rank are separate switches
+- Same School ID. Student dashboard — not the office ERP
+
+ተማሪ የሚገባው ትምህርት ቤቱ ከሚወስነው ክፍል ጀምሮ ነው።
+
+---
+
+## 6. For school directors
 
 Command of the school in one screen.
 
@@ -106,7 +106,7 @@ The sidebar is the school: student affairs, alumni, classroom, QA, announcements
 
 ---
 
-## 6. For administration — registrar
+## 7. For administration — registrar
 
 Students are a register, not a chat list.
 
@@ -121,7 +121,7 @@ Wrong DOB → no link. Approved link → parent sees only their child.
 
 ---
 
-## 7. For student affairs
+## 8. For student affairs
 
 Discipline and leave are a desk, not a rumour.
 
@@ -129,14 +129,30 @@ Discipline and leave are a desk, not a rumour.
 
 - Behaviour and incident cases: investigation → hearing → outcome
 - Each case has an owner (homeroom, student affairs, VP)
-- Parent leave requests wait for school approval
+- Parent leave requests wait for school approval — not a phone call that vanishes
 - Teachers and parents see only what their duty allows
+- Open cases show on the director dashboard the same morning
 
 የተማሪ ጉዳይና የዲሲፕሊን መዝገብ በስርዓት ይቀመጣል።
 
 ---
 
-## 8. Alumni records
+## 9. Student affairs — the pipeline
+
+A case file has a beginning, a hearing, and a written end.
+
+![Discipline pipeline](screens/screen-affairs-flow.png)
+
+- **Report** — teacher or duty staff logs time, place, students
+- **Investigate** — statements stay inside the school
+- **Hearing** — parent is informed through the school channel
+- **Outcome** — warning, counselling, or further action, on file
+
+This is why student affairs is in the room today. Gossip is not a record.
+
+---
+
+## 10. Alumni records
 
 Graduates stay in the school book.
 
@@ -149,7 +165,7 @@ Graduates stay in the school book.
 
 ---
 
-## 9. Trust — the sentence to remember
+## 11. Trust — the sentence to remember
 
 **Teacher enters. Leadership approves. Then the parent sees.**
 
@@ -166,7 +182,7 @@ This is the difference between a portal and a school.
 
 ---
 
-## 10. For classroom teachers
+## 12. For classroom teachers
 
 This is the teacher dashboard — every classroom module on one home.
 
@@ -181,7 +197,7 @@ This is the teacher dashboard — every classroom module on one home.
 
 ---
 
-## 11. Classroom management
+## 13. Classroom management
 
 Who teaches which class is not a hallway rumor.
 
@@ -196,7 +212,7 @@ Who teaches which class is not a hallway rumor.
 
 ---
 
-## 12. Homework and assignments
+## 14. Homework and assignments
 
 Post the work. Parents see it. Teachers mark it done.
 
@@ -211,7 +227,7 @@ Post the work. Parents see it. Teachers mark it done.
 
 ---
 
-## 13. For students
+## 15. For students
 
 This is the student dashboard — their school, not the office.
 
@@ -226,7 +242,7 @@ This is the student dashboard — their school, not the office.
 
 ---
 
-## 14. For parent representatives
+## 16. For parent representatives
 
 This is the parent dashboard — the child, not the school’s internal politics.
 
@@ -241,7 +257,7 @@ This is the parent dashboard — the child, not the school’s internal politics
 
 ---
 
-## 15. Transport — driver dashboard
+## 17. Transport — driver dashboard
 
 This is the transport dashboard — every module the driver uses on the road.
 
@@ -256,7 +272,7 @@ This is the transport dashboard — every module the driver uses on the road.
 
 ---
 
-## 16. Transport — office ERP
+## 18. Transport — office ERP
 
 The bus is part of the school, not a private WhatsApp.
 
@@ -271,7 +287,7 @@ This is the module parent representatives usually ask about first. It is built i
 
 ---
 
-## 15. Finance
+## 19. Finance
 
 Collections you can defend in a board meeting.
 
@@ -286,22 +302,65 @@ Finance staff manage. Directors oversee. Parents see their own balance.
 
 ---
 
-## 16. Store and procurement
+## 20. HR — payroll
 
-Books, chalk, and purchases leave a trail.
+Ethiopian employment tax and pension, built in — for every employee.
 
-![Inventory module](screens/screen-inventory.png)
+![HR payroll](screens/screen-payroll.png)
 
-- Stock on hand
-- Purchase requests → approval → receive
-- Issue requests from departments → store keeper
-- Procurement, store, and accountant see the same numbers
+Teachers, other staff, and drivers sit on one payroll. The calculator uses **Proc. No. 1395/2025** monthly PAYE plus private-sector pension.
+
+- Employee pension **7%** of basic salary (withheld before income tax)
+- Employer pension **11%** of basic salary
+- Income tax bands 0% → 35% with the legal quick deductions
+- Net pay, PAYE withheld, and employer cost in ETB
+- What-if calculator: type a salary and see the slip before you save
+
+Rates can change. HR should confirm against current law. Teachers do not see another person’s pay.
+
+---
+
+## 21. Store and inventory
+
+The store is a command desk: items, PRs, issues, assets, suppliers.
+
+![Inventory command](screens/screen-inventory.png)
+
+- Dashboard: stock value, open purchase requests, issue requests, assets in repair
+- Purchase requests → director / procurement → receive
+- Issue requests from a class or office → store keeper
+- Items, stock in/out, student issued, classroom, assets, suppliers, maintenance, reports
 
 This is where leakage usually hides in a paper school. MaJo Bridge makes it a workflow.
 
 ---
 
-## 17. School life — announcements, gallery, calendar, messages
+## 22. Inventory — stock trail
+
+Every textbook and marker has a quantity and a movement.
+
+![Stock trail](screens/screen-inventory-stock.png)
+
+- On-hand vs reorder level, by store location
+- Stock in from a supplier / PO
+- Stock out to an office
+- Student issued (loaned books) against a name and class
+
+---
+
+## 23. Inventory — purchase and issue
+
+Ask. Approve. Receive or issue. Same numbers for three desks.
+
+![Purchase and issue requests](screens/screen-inventory-pr.png)
+
+- Procurement, store keeper, and accountant share one trail
+- No verbal “bring more chalk” without a request
+- Reports export Excel / CSV / PDF
+
+---
+
+## 24. School life — announcements, gallery, calendar, messages
 
 The school speaks in one place. Not four WhatsApp groups.
 
@@ -322,40 +381,85 @@ The school speaks in one place. Not four WhatsApp groups.
 
 ---
 
-## 18. Quality assurance
+## 25. Quality assurance
 
 Findings and improvement plans live next to the school, not in a drawer.
 
 ![Quality assurance](screens/screen-qa.png)
 
-- Log a finding: classroom, library, transport, finance…
-- Status: open → in progress → closed
-- Improvement plans with owner and target date
-- Leadership and QA staff see the same book
+- Log a finding: classroom, library, transport, finance, student affairs…
+- Status: open → in progress → closed, with severity
+- Improvement plans with owner, target date, and evidence
+- Leadership sees overdue follow-ups on the morning dashboard
+- QA records. The duty owner executes. Directors do not hunt a paper file.
 
 የጥራት ማረጋገጫ ግኝትና የማሻሻያ እቅድ በስርዓት።
 
 ---
 
-## 19. Full catalog — 40+ modules
+## 26. Quality assurance — plans
+
+A finding is not finished until the plan has evidence.
+
+![QA improvement plan](screens/screen-qa-plan.png)
+
+- Example: freeze grade publish until makeup marks are in
+- Owner: Examinations. Follow-up: Section director
+- Parents never receive an unapproved mark while that plan is open
+- Transport, store, and student-affairs findings use the same book
+
+---
+
+## 27. Settings and language
+
+Each person chooses English, Amharic, or Afaan Oromo.
+
+![Settings](screens/screen-settings.png)
+
+- Language preference is personal — it does not force the whole school
+- Dark mode and dashboard tile order (drag to match this duty)
+- From Settings, directors can also download a **school JSON backup**
+
+ቋንቋ፣ መልክ እና የመጠባበቂያ ቅጂ ከቅንብር ይከፈታል።
+
+---
+
+## 28. Where files live
+
+Cloud for daily work. School-held copy so you are not locked in.
+
+![Backup methodology](screens/screen-backup.png)
+
+**Recommended: set up both ways.**
+
+- **Cloud** — live students, grades, fees, store, buses, messages (MaJo Bridge / Supabase)
+- **School computer or school server** — weekly JSON backup from Settings, School profile, or Reports
+- Extra snapshot after payroll, exams, or a large enrollment
+- A full on-site ERP server is optional extra work. A school-held copy is not optional.
+
+Passwords are not packed in the school JSON. Platform owners can also export the school registry.
+
+---
+
+## 29. Full catalog — 40+ modules
 
 What the school is buying — module by module
 
 | Area | Modules | Who it serves |
 |------|---------|---------------|
 | Organization | Institution, school profile, campuses | Owners, directors |
-| Student services | Students, parent-link, transfers, student affairs, alumni / graduated records | Registrar, student affairs |
+| Student services | Students, parent-link, transfers, student affairs, alumni, student login from the grade the school sets | Registrar, student affairs |
 | Classroom | Classes, classroom teachers, timetable, attendance, exams, homework and assignments | Principal, VP, teachers |
 | Communication | Announcements, events and gallery, school calendar, internal messages | Every duty that must speak |
-| Quality | QA findings and plans, reports, Maya Assistant | QA, directors |
-| Staff modules | HR, payroll, leave, staff documents, library, canteen, clinic | HR, librarian, nurse, canteen |
-| Finance and store | Fees, invoices, receipts, expenses, inventory / procurement | Accountant, store, procurement |
+| Quality | QA findings, improvement plans, reports, Maya Assistant | QA, directors |
+| Staff modules | HR, payroll (Ethiopian PAYE + pension), leave, staff documents, library, canteen, clinic | HR, librarian, nurse, canteen |
+| Finance and store | Fees, invoices, receipts, expenses, inventory / procurement / assets | Accountant, store, procurement |
 | Transport | Routes, GPS, boarding | Transport admin, drivers, parents |
-| System | Users and roles, audit log, branding, backups | Owner / platform |
+| System | Users and roles, settings and language, audit log, branding, cloud + school-held backups | Owner / platform |
 
 ---
 
-## 20. How a week looks
+## 30. How a week looks
 
 Not a theory. A working week.
 
@@ -365,37 +469,37 @@ Not a theory. A working week.
 | 2 | Teachers take attendance, post homework, and enter subject grades. |
 | 3 | Section director approves grades. Student affairs logs any case. QA opens a finding if needed. |
 | 4 | Parents link children (ID + DOB). They see homework, gallery, calendar, and messages for that child. |
-| 5 | Leadership prints a PDF. Store / HR / transport smoke-test if you use them. |
+| 5 | Leadership prints a PDF. Store / HR payroll / transport smoke-test if you use them. Download a school JSON backup to a school PC. |
 
 Pilot recommendation: 30–60 days, one campus or one grade band, then a board decision to expand.
 
 ---
 
-## 21. Safety
+## 31. Safety
 
 The school’s data stays the school’s data.
 
-| School isolation | Duty-based access | Audit |
-|------------------|-------------------|-------|
-| Another school cannot open Fenote Raey students, fees, or messages. | A librarian does not get finance. A teacher does not get the whole payroll. VP can oversee without silently editing everything. | Sensitive admin actions can be reviewed. Temporary passwords are unique and must be changed. |
+| School isolation | Duty-based access | Cloud + school copy |
+|------------------|-------------------|---------------------|
+| Another school cannot open Fenote Raey students, fees, or messages. | A librarian does not get finance. A teacher does not get the whole payroll. VP can oversee without silently editing everything. | Live files in the cloud. Weekly JSON on a school computer or school server. Recommended: both. |
 
 This is a school operating system from MaJo Bridge Technologies and Events. It is not a government product. It helps Fenote Raey run digitally, with a record the school can stand on.
 
 ---
 
-## 22. The ask
+## 32. The ask
 
 **Recommend this system for Fenote Raey Academy.**
 
 | Directors / QA | Student affairs / admin | Teachers / parents |
 |----------------|-------------------------|--------------------|
-| Endorse the dashboard, grade-approval rule, and quality findings. | Endorse students, alumni, discipline, fees, HR, store, and transport as the daily books. | Endorse classroom tools, homework posting, child-only access, gallery, calendar, and messages. |
+| Endorse the dashboard, grade-approval rule, and quality findings. | Endorse students, alumni, discipline, fees, inventory, HR payroll, backups, and transport as the daily books. | Endorse classroom tools, homework posting, child-only access, gallery, calendar, and messages. |
 
 Next step after this room: 30–60 day pilot on one campus/grade, support Mon–Sat 09:00–18:00 EAT, then expand.
 
 ---
 
-## 23. Try it in the room
+## 33. Try it in the room
 
 Live system — not a brochure.
 

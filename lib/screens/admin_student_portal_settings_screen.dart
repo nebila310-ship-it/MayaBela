@@ -93,13 +93,19 @@ class _AdminStudentPortalSettingsScreenState
         children: [
           SwitchListTile(
             title: const Text('Enable Student Portal'),
-            subtitle: const Text('Allow Grade 7+ students to log in'),
+            subtitle: Text(
+              'The school chooses who may log in. Currently Grade $_minimumGrade '
+              'and above.',
+            ),
             value: _enabled,
             onChanged: (value) => setState(() => _enabled = value),
           ),
           ListTile(
-            title: const Text('Minimum grade level'),
-            subtitle: Text('Grade $_minimumGrade and above'),
+            title: const Text('Minimum grade that may log in'),
+            subtitle: Text(
+              'Grade $_minimumGrade and above — not a fixed Grade 7. '
+              'Fenote Raey sets this from Grade 1 through 12.',
+            ),
             trailing: SizedBox(
               width: 120,
               child: DropdownButtonFormField<int>(
