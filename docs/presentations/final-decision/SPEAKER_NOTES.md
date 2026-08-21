@@ -4,8 +4,8 @@
 **Audience:** all roles — directors, student affairs, QA, teachers, administration, parent representatives, drivers  
 **Length:** 32–40 minutes + live demo + questions  
 **Open slides:** pull this branch and open `docs/presentations/final-decision/index.html` → **F11**  
-**Or download (latest deck):** https://gofile.io/d/zA8X2UEn (`fenote-raey-slides.html`)  
-**Leave-behind:** https://gofile.io/d/erPGzTEw → **Ctrl+P**  
+**Or download (latest deck):** https://gofile.io/d/webXbMA4 (`fenote-raey-slides.html`)  
+**Leave-behind:** https://gofile.io/d/uNPtoBZS → **Ctrl+P**  
 **Keys:** Right / Space next · Left previous · click right half of screen = next
 
 Fenote Raey owners have already directed execution. This room is the **operational yes**. Show each body *their* modules, then ask them to recommend.
@@ -93,4 +93,4 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Named pilot campus/grade and start week.
 - Support number written down: **+251 911 646 444**.
 
-Print https://gofile.io/d/erPGzTEw (or `leave-behind.html` in this folder) with Ctrl+P for parent reps and department heads.
+Print https://gofile.io/d/uNPtoBZS (or `leave-behind.html` in this folder) with Ctrl+P for parent reps and department heads.
