@@ -1,10 +1,10 @@
-# Run this in the Supabase SQL Editor (paste everything below, then Run):
-# https://supabase.com/dashboard/project/hwkiihonthueadbhcvfi/sql/new
-#
-# 1) Unblocks owner-console Save from the school-login rate cap.
-# 2) Links existing Auth users onto school secrets so Save stops saying
-#    "A user with this email address has already been registered".
-# Login / password-reset buckets are unchanged.
+-- Paste ALL of this into the Supabase SQL Editor, then click Run:
+-- https://supabase.com/dashboard/project/hwkiihonthueadbhcvfi/sql/new
+--
+-- 1) Unblocks owner-console Save from the school-login rate cap.
+-- 2) Links existing Auth users onto school secrets so Save stops saying
+--    "A user with this email address has already been registered".
+-- Login / password-reset buckets are unchanged.
 
 create or replace function public.auth_rate_limit_hit(
   p_bucket_key text,
