@@ -1002,6 +1002,15 @@ async function findAuthUserByEmail(
   const target = email.trim().toLowerCase();
   if (!target) return null;
 
+  try {
+    const { data, error } = await sb.rpc("auth_user_id_for_email", {
+      p_email: target,
+    });
+    if (!error && data) return { id: String(data) };
+  } catch {
+    /* RPC may not be applied yet — fall through to Admin API. */
+  }
+
   const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   if (url && key) {

@@ -138,11 +138,12 @@ Deno.serve(async (req) => {
     try {
       await ensureAuthUser(sb, username, password, accessProfile);
     } catch (authErr) {
-      return errorResponse(
-        `Auth user failed: ${String((authErr as Error)?.message || authErr)}`,
-        500,
-        "invalid",
-      );
+      const msg = String((authErr as Error)?.message || authErr);
+      if (!/already (been )?registered|email_exists/i.test(msg)) {
+        return errorResponse(`Auth user failed: ${msg}`, 500, "invalid");
+      }
+      // School + password are already stored. Login can use them even if
+      // Auth already has this synthetic email.
     }
 
     return jsonResponse({

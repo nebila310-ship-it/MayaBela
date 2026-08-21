@@ -1076,8 +1076,9 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       if (mounted) setState(() => _saving = false);
     }
     if (!cloud.ok) {
+      final raw = (cloud.errorMessage ?? '').toLowerCase();
       final rateLimited = cloud.errorCode == 'rate_limited' ||
-          (cloud.errorMessage?.toLowerCase().contains('too many') ?? false);
+          raw.contains('too many');
       _toast(
         rateLimited
             ? 'The owner console hit a save limit. Wait a minute and save once — do not keep tapping.'
@@ -1092,7 +1093,11 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     _school = toSave;
     _snapshot = _formSnapshot();
     setState(() => _editing = false);
-    _toast('Profile saved to cloud');
+    _toast(
+      tempPwd.isNotEmpty
+          ? 'Saved. Log in as Admin with School ID, phone or email, and the password you just set.'
+          : 'Profile saved to cloud',
+    );
   }
 
   Future<void> _setStatus(SchoolLifecycleStatus status) async {

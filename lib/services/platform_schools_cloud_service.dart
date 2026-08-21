@@ -20,6 +20,18 @@ class PlatformSchoolCloudResult {
   final String? schoolId;
   final String? errorCode;
   final String? errorMessage;
+
+  /// GoTrue createUser collision. School registry + password are already stored.
+  static bool isAuthEmailAlreadyRegistered(String? message) {
+    final raw = (message ?? '').toLowerCase();
+    if (raw.isEmpty) return false;
+    if (raw.contains('email_exists')) return true;
+    final already = raw.contains('already');
+    if (!already) return false;
+    return raw.contains('registered') ||
+        raw.contains('email') ||
+        raw.contains('user');
+  }
 }
 
 /// Back-compat alias used by create-school callers.
@@ -127,10 +139,17 @@ class PlatformSchoolsCloudService {
         );
       }
       if (data['error'] != null || data['ok'] != true) {
+        final message = data['error']?.toString() ?? 'Cloud create failed.';
+        if (PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(message)) {
+          return PlatformSchoolCloudResult(
+            ok: true,
+            schoolId: school.id.trim().toUpperCase(),
+          );
+        }
         return PlatformSchoolCloudResult(
           ok: false,
           errorCode: (data['code'] as String?) ?? 'invalid',
-          errorMessage: data['error']?.toString() ?? 'Cloud create failed.',
+          errorMessage: message,
         );
       }
       final id = (data['schoolId'] as String?)?.trim().toUpperCase();
@@ -139,7 +158,16 @@ class PlatformSchoolsCloudService {
         schoolId: id ?? school.id.trim().toUpperCase(),
       );
     } on FunctionException catch (e) {
-      return _parseFunctionError(e, fallback: 'Cloud create failed');
+      final parsed = _parseFunctionError(e, fallback: 'Cloud create failed');
+      if (PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(
+        parsed.errorMessage,
+      )) {
+        return PlatformSchoolCloudResult(
+          ok: true,
+          schoolId: school.id.trim().toUpperCase(),
+        );
+      }
+      return parsed;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PlatformSchoolsCloudService.createSchoolInCloud failed: $e');
@@ -197,10 +225,17 @@ class PlatformSchoolsCloudService {
         );
       }
       if (data['error'] != null || data['ok'] != true) {
+        final message = data['error']?.toString() ?? 'Cloud update failed.';
+        if (PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(message)) {
+          return PlatformSchoolCloudResult(
+            ok: true,
+            schoolId: school.id.trim().toUpperCase(),
+          );
+        }
         return PlatformSchoolCloudResult(
           ok: false,
           errorCode: (data['code'] as String?) ?? 'invalid',
-          errorMessage: data['error']?.toString() ?? 'Cloud update failed.',
+          errorMessage: message,
         );
       }
       return PlatformSchoolCloudResult(
@@ -208,7 +243,17 @@ class PlatformSchoolsCloudService {
         schoolId: school.id.trim().toUpperCase(),
       );
     } on FunctionException catch (e) {
-      return _parseFunctionError(e, fallback: 'Cloud update failed');
+      final parsed = _parseFunctionError(e, fallback: 'Cloud update failed');
+      if (PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(
+        parsed.errorMessage,
+      )) {
+        // platform-update-school writes the school + password before Auth.
+        return PlatformSchoolCloudResult(
+          ok: true,
+          schoolId: school.id.trim().toUpperCase(),
+        );
+      }
+      return parsed;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PlatformSchoolsCloudService.updateSchoolInCloud failed: $e');
