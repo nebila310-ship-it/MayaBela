@@ -2,6 +2,8 @@
 
 **Use this paper in the room.** Open the slides, press **F11**, then say the words under each slide. Do not read every bullet on the screen. Point at the picture, then say the line.
 
+**PDF of these words:** https://gofile.io/d/ltwMaJAg (`fenote-raey-talk-script.pdf`)
+
 **Do not talk price.** If someone asks: “Pricing stays with Fenote Raey management. Today is the system and your roles.”
 
 **The one sentence to repeat:** Teacher enters. Leadership approves. Then the parent sees.  
