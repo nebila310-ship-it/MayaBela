@@ -1,6 +1,6 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
-import { adminClient, assertPlatformAuthedRateLimit, assertPlatformOwnerCallAllowed } from "../_shared/school_auth.ts";
-import { assertOwnerPin } from "../_shared/platform_pin.ts";
+import { adminClient } from "../_shared/school_auth.ts";
+import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
 
 /**
  * Returns school_registry documents for the platform console.
@@ -13,9 +13,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sb = adminClient();
-    await assertPlatformOwnerCallAllowed(sb, req);
-    await assertOwnerPin(sb, body?.ownerPin);
-    await assertPlatformAuthedRateLimit(sb, req, "platform_list_schools");
+    await authorizePlatformOwner(sb, req, body?.ownerPin);
 
     const { data, error } = await sb
       .from("app_documents")

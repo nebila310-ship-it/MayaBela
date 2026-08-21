@@ -1,11 +1,9 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
 import {
   adminClient,
-  assertPlatformAuthedRateLimit,
-  assertPlatformOwnerCallAllowed,
   getDoc,
 } from "../_shared/school_auth.ts";
-import { assertOwnerPin } from "../_shared/platform_pin.ts";
+import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
 
 /**
  * Platform-owner logo upload. Uses the service role so logos can be stored
@@ -18,9 +16,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    await assertPlatformOwnerCallAllowed(sb, req);
-    await assertOwnerPin(sb, body?.ownerPin);
-    await assertPlatformAuthedRateLimit(sb, req, "platform_logo");
+    await authorizePlatformOwner(sb, req, body?.ownerPin);
 
     const schoolId = String(body?.schoolId || "").trim().toUpperCase();
     if (!schoolId || schoolId.length < 2) {

@@ -33,6 +33,11 @@ class PlatformSchoolsCloudService {
   Future<String?> _ownerPinOrNull() async {
     await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
     if (!SupabaseBootstrap.isInitialized) return null;
+    final existing = PlatformOwnerService.instance.sessionOwnerPin?.trim();
+    if (existing != null &&
+        existing.length >= PlatformOwnerService.minPinLength) {
+      return existing;
+    }
     await PlatformOwnerService.instance.syncPinWithCloud();
     final pin = PlatformOwnerService.instance.sessionOwnerPin?.trim();
     if (pin == null || pin.length < PlatformOwnerService.minPinLength) {

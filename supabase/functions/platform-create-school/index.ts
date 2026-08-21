@@ -3,8 +3,6 @@ import {
   MIN_PASSWORD_LENGTH,
   accountDocId,
   adminClient,
-  assertPlatformAuthedRateLimit,
-  assertPlatformOwnerCallAllowed,
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
@@ -14,7 +12,7 @@ import {
   upsertDoc,
   upsertSecret,
 } from "../_shared/school_auth.ts";
-import { assertOwnerPin } from "../_shared/platform_pin.ts";
+import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
 
 /**
  * Platform-owner school onboarding.
@@ -28,9 +26,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    await assertPlatformOwnerCallAllowed(sb, req);
-    await assertOwnerPin(sb, body?.ownerPin);
-    await assertPlatformAuthedRateLimit(sb, req, "platform_create_school");
+    await authorizePlatformOwner(sb, req, body?.ownerPin);
 
     const schoolRaw = body?.school;
     if (!schoolRaw || typeof schoolRaw !== "object") {
