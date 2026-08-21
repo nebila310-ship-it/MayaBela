@@ -373,6 +373,12 @@ export function normalizeUsername(value: unknown): string {
   return String(value || "").trim().toLowerCase();
 }
 
+export function normalizeEmail(value: unknown): string | null {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
+}
+
 export function uniqueStrings(values: unknown, cap = ACCESS_CLAIM_CAP): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -1085,6 +1091,9 @@ export async function findAccountDoc(
       if (uname === key && roleOk(doc.data)) {
         return { id: doc.id, data: doc.data };
       }
+      if (normalizeEmail(doc.data.email) === key && roleOk(doc.data)) {
+        return { id: doc.id, data: doc.data };
+      }
       if (
         roleKey === "student" &&
         String(doc.data.linkedStudentId || "").toUpperCase() ===
@@ -1118,6 +1127,9 @@ export async function findAccountDoc(
     if (uname === key && roleOk(data)) {
       return { id: doc.id, data };
     }
+    if (normalizeEmail(data.email) === key && roleOk(data)) {
+      return { id: doc.id, data };
+    }
   }
 
   if (roleKey === "student") {
@@ -1129,6 +1141,30 @@ export async function findAccountDoc(
     }
   }
 
+  return null;
+}
+
+export async function findAccountByEmail(
+  sb: SupabaseClient,
+  schoolId: string,
+  email: string,
+  roleKey?: string | null,
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const target = normalizeEmail(email);
+  const sid = String(schoolId || "").trim().toUpperCase();
+  if (!target || !sid) return null;
+
+  const inSchool = await queryDocs(
+    sb,
+    "app_auth_accounts",
+    [{ column: "schoolId", op: "eq", value: sid }],
+    500,
+  );
+  for (const doc of inSchool) {
+    if (normalizeEmail(doc.data.email) !== target) continue;
+    if (roleKey && doc.data.roleKey !== roleKey) continue;
+    return { id: doc.id, data: doc.data };
+  }
   return null;
 }
 

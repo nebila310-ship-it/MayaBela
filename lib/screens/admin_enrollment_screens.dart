@@ -25,6 +25,7 @@ import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
@@ -564,6 +565,13 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       return;
     }
 
+    if (!EmailUtils.isValid(_email.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.emailRequired)),
+      );
+      return;
+    }
+
     if (!PhoneUtils.isValidLoginPhone(_phone.text.trim())) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.invalidPhone)),
@@ -667,9 +675,11 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              authError == 'invalid_phone'
-                  ? s.invalidPhone
-                  : s.phoneAlreadyRegistered,
+              switch (authError) {
+                'invalid_phone' => s.invalidPhone,
+                'invalid_email' => s.emailRequired,
+                _ => s.phoneAlreadyRegistered,
+              },
             ),
           ),
         );
@@ -933,7 +943,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: adminFieldDecoration(
-                    label: s.emailOptional,
+                    label: s.email,
                     icon: Icons.email_outlined,
                     accent: theme.primary,
                   ),

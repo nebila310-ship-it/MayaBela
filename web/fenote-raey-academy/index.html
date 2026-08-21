@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <base href="/fenote-raey-academy/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fenote Raey Academy — MaJo Bridge Technologies and Events</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --sidebar: #1e1b2e;
+      --purple: #4527a0;
+      --gold: #ffb020;
+      --teal: #0f766e;
+      --paper: #f8f6ff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: rgba(255,255,255,.14);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%;
+      background: #070b14;
+      color: #fff;
+      font-family: "Segoe UI", "Noto Sans Ethiopic", "Nyala", Arial, sans-serif;
+    }
+    .deck { height: 100%; overflow: hidden; }
+    .slide {
+      display: none;
+      height: 100%;
+      padding: 48px 64px 72px;
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(69,39,160,.45), transparent 55%),
+        linear-gradient(160deg, #12101c 0%, #0b1020 55%, #0a1a22 100%);
+    }
+    .slide.on { display: flex; flex-direction: column; }
+    .slide.cover { padding: 48px 56px 72px; }
+    .cover-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.38fr);
+      gap: 32px;
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+    }
+    .cover-copy { display: flex; flex-direction: column; justify-content: center; }
+    .cover-visual {
+      display: flex; flex-direction: column; min-height: 0; min-width: 0;
+    }
+    .cover-shot {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      max-height: none;
+      object-fit: contain;
+      object-position: left top;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #1e1b2e;
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    .cover-caption {
+      margin: 10px 0 0;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    h1 { font-size: 44px; line-height: 1.08; margin: 0 0 12px; letter-spacing: -0.03em; }
+    h2 { font-size: 34px; margin: 0 0 18px; letter-spacing: -0.02em; }
+    h3 { font-size: 20px; margin: 0 0 8px; color: var(--gold); font-weight: 700; }
+    p, li { font-size: 20px; line-height: 1.4; color: #e2e8f0; }
+    .kicker {
+      color: var(--gold); font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; font-size: 13px; margin-bottom: 10px;
+    }
+    .am { color: #cbd5e1; font-size: 18px; }
+    .row { display: grid; gap: 22px; flex: 1; min-height: 0; }
+    .row.two { grid-template-columns: 1.05fr .95fr; }
+    .row.shot-first { grid-template-columns: minmax(0, 1.42fr) minmax(240px, 0.58fr); }
+    .row.comms { grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr); }
+    .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .row.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+    .row.phone { grid-template-columns: 1.05fr .95fr; align-items: center; }
+    .shot {
+      width: 100%; height: 100%; min-height: 0;
+      object-fit: contain; object-position: left top;
+      background: #0b1020;
+      border-radius: 16px; border: 1px solid var(--line);
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 10px;
+      min-height: 0;
+    }
+    .mini-shot {
+      width: 100%; height: 100%; min-height: 0;
+      object-fit: contain; object-position: left top;
+      background: #0b1020; border-radius: 12px; border: 1px solid var(--line);
+    }
+    .phone-shot {
+      max-height: 78vh; width: auto; max-width: 100%;
+      object-fit: contain; border-radius: 28px;
+      justify-self: center;
+    }
+    .card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 14px;
+    }
+    .card strong { color: #fff; }
+    ul { margin: 8px 0 0; padding-left: 20px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 15px;
+    }
+    th, td {
+      text-align: left; padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { color: var(--gold); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+    .footer {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 28px; font-size: 13px; color: #94a3b8;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+      z-index: 5;
+    }
+    .progress { height: 3px; background: rgba(255,255,255,.12); position: fixed; top: 0; left: 0; right: 0; z-index: 6; }
+    .bar { height: 100%; background: var(--gold); width: 0; }
+    .ask {
+      font-size: 28px; font-weight: 800; color: #fff; margin: 8px 0 16px;
+    }
+    .cta {
+      display: inline-block; background: var(--gold); color: #162236;
+      font-weight: 800; padding: 12px 18px; border-radius: 10px; font-size: 18px;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 18px; }
+    .thanks {
+      margin-top: 22px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .muted { color: #94a3b8; font-size: 16px; }
+    @media print {
+      .footer, .progress { display: none; }
+      html, body { height: auto; overflow: visible; background: #070b14; }
+      .deck { height: auto; overflow: visible; }
+      .slide {
+        display: flex !important;
+        height: 7.5in;
+        page-break-after: always;
+        break-after: page;
+      }
+      .slide:last-child { page-break-after: auto; break-after: auto; }
+    }
+    @page { size: 13.333in 7.5in; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="deck" id="deck">
+
+    <section class="slide cover on">
+      <div class="cover-grid">
+        <div class="cover-copy">
+          <div class="kicker">Fenote Raey Academy · Final decision meeting</div>
+          <h1>One school system.<br>Every role in this room.</h1>
+          <p style="font-size:20px;max-width:420px;color:#fff;">
+            Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the <strong>teacher, parent, student, and transport dashboards</strong>, settings, language, and school-held backups.
+          </p>
+          <p class="am">የፍኖተ ራእይ አካዳሚ · እያንዳንዱ ሚና የሚጠቀመው ሞጁል ዛሬ ይታያል።</p>
+          <p class="muted" style="margin-top:20px;">Presented by <strong style="color:#fff;">MaJo Bridge Technologies and Events</strong></p>
+          <p class="muted">Directors · Teachers · Students · Parents · Drivers · Student affairs · QA · Admin</p>
+        </div>
+        <div class="cover-visual">
+          <img class="cover-shot" src="screens/cover.png" alt="Fenote Raey Academy command dashboard" />
+          <p class="cover-caption">Office ERP on the right. Teachers, parents, students, and drivers each have their own dashboard — coming in this deck.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">The problem</div>
+      <h2>Excel, paper, and WhatsApp are not a school system.</h2>
+      <div class="row three">
+        <div class="card"><h3>Directors</h3><p>You hear problems late. There is no single dashboard for attendance, fees, discipline, and quality.</p></div>
+        <div class="card"><h3>Administration</h3><p>Rosters, fees, staff, store, and buses live in different files. One error becomes many arguments.</p></div>
+        <div class="card"><h3>Parents</h3><p>They wait for a call, a meeting, or a rumor. Grades appear before leadership has approved them.</p></div>
+      </div>
+      <p style="margin-top:22px;"><strong>The line:</strong> most tools help the registrar type faster. This one helps Fenote Raey sleep — because one record is true for everyone.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Who uses it</div>
+      <h2>Every role in this meeting has a home.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/diagram-roles.png" alt="Who uses the Fenote Raey Academy system" />
+        <div>
+          <p>Same School ID. Different doors. Nobody sees another school. Staff only see the modules their duty requires.</p>
+          <ul>
+            <li><strong>Directors / Principal / VP</strong> — dashboard, approvals, QA, reports</li>
+            <li><strong>Student affairs / registrar</strong> — students, alumni, discipline, leave</li>
+            <li><strong>Classroom teachers</strong> — class, attendance, homework, grades</li>
+            <li><strong>Quality assurance</strong> — findings, plans, follow-up</li>
+            <li><strong>Parents</strong> — parent dashboard: child only — grades, homework, gallery, messages, bus</li>
+            <li><strong>Students</strong> — student dashboard: profile, homework, timetable, approved grades</li>
+            <li><strong>Drivers</strong> — transport dashboard: route, passengers, QR, live map</li>
+            <li><strong>Finance / store</strong> — fees and stock trail in the office ERP</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Every dashboard</div>
+      <h2>Four homes. One school ID. Not only the office ERP.</h2>
+      <img class="shot" src="screens/dash-four.png" alt="Teacher, parent, student, and driver dashboards" style="flex:1;min-height:0;" />
+      <p class="muted">Each login opens a different home screen with that role’s modules. Same School ID. Not one shared office menu.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Access</div>
+      <h2>One login. School ID + phone or email.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-login.png" alt="MaJo Bridge login" />
+        <div>
+          <p>Web for the office. Phone for teachers, parents, and drivers. First login forces a new password. Temporary passwords are shown once — then destroyed.</p>
+          <ul>
+            <li>Languages in the product: English, Amharic, Afaan Oromo</li>
+            <li>Forgot password by school ID + email (password is never sent in the message)</li>
+            <li>Live web: <strong>https://mayabela.pages.dev</strong></li>
+          </ul>
+          <p class="am">የትምህርት ቤት መታወቂያ + ስልክ ወይም ኢሜይል። የመጀመሪያ መግቢያ ላይ የይለፍ ቃል ይቀየራል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Student login</div>
+      <h2>Students log in from the grade the school sets — not a fixed Grade 7.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-student-portal.png" alt="Student portal minimum grade" />
+        <div>
+          <p>Fenote Raey chooses the lowest grade that gets a student app. Grade 1 through 12. Change it when the school is ready.</p>
+          <ul>
+            <li>Below that grade, the <strong>parent app</strong> is the channel</li>
+            <li>Students still see <strong>published grades only</strong></li>
+            <li>Homework upload, report download, messaging, class rank are separate switches</li>
+            <li>Same School ID. Student dashboard — not the office ERP</li>
+          </ul>
+          <p class="am">ተማሪ የሚገባው ትምህርት ቤቱ ከሚወስነው ክፍል ጀምሮ ነው።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For school directors</div>
+      <h2>Command of the school in one screen.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-dashboard.png" alt="Owner dashboard" />
+        <div>
+          <p>This is what leadership opens every morning:</p>
+          <ul>
+            <li>Who is present / absent today</li>
+            <li>Open student-affairs cases and homework due</li>
+            <li>Outstanding fees, live buses, QA follow-ups</li>
+            <li>Gallery, calendar, and unread messages</li>
+            <li>Reports you can export (Excel, CSV, PDF)</li>
+          </ul>
+          <p>The sidebar is the school: student affairs, alumni, classroom, QA, announcements, calendar, messages — not three leftover tiles.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For administration — registrar</div>
+      <h2>Students are a register, not a chat list.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-students.png" alt="Students module" />
+        <div>
+          <ul>
+            <li>Enroll with a short student ID (STU-####)</li>
+            <li>Date of birth is required so parents can link safely</li>
+            <li>Transfers and promotion are a workflow, not a deleted row</li>
+            <li>Parent requests wait for registrar / section director approval</li>
+          </ul>
+          <p class="muted">Wrong DOB → no link. Approved link → parent sees only their child.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For student affairs</div>
+      <h2>Discipline and leave are a desk, not a rumour.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-affairs.png" alt="Student affairs and discipline" />
+        <div>
+          <ul>
+            <li>Behaviour and incident cases: investigation → hearing → outcome</li>
+            <li>Each case has an owner (homeroom, student affairs, VP)</li>
+            <li>Parent leave requests wait for school approval — not a phone call that vanishes</li>
+            <li>Teachers and parents see only what their duty allows</li>
+            <li>Open cases show on the director dashboard the same morning</li>
+          </ul>
+          <p class="am">የተማሪ ጉዳይና የዲሲፕሊን መዝገብ በስርዓት ይቀመጣል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Student affairs — the pipeline</div>
+      <h2>A case file has a beginning, a hearing, and a written end.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-affairs-flow.png" alt="Discipline pipeline" />
+        <div>
+          <ul>
+            <li><strong>Report</strong> — teacher or duty staff logs time, place, students</li>
+            <li><strong>Investigate</strong> — statements stay inside the school</li>
+            <li><strong>Hearing</strong> — parent is informed through the school channel</li>
+            <li><strong>Outcome</strong> — warning, counselling, or further action, on file</li>
+          </ul>
+          <p>This is why student affairs is in the room today. Gossip is not a record.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Alumni records</div>
+      <h2>Graduates stay in the school book.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-alumni.png" alt="Alumni and graduated records" />
+        <div>
+          <ul>
+            <li>Final-year promotion can mark a class as graduated</li>
+            <li>Transcript / certificate history is not a deleted Excel row</li>
+            <li>Directors, registrar, and QA can still open the record</li>
+            <li>Alumni are not mixed back into today’s attendance list</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Trust — the sentence to remember</div>
+      <h2>Teacher enters. Leadership approves. Then the parent sees.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-grades.png" alt="Grade approvals" />
+        <div>
+          <p>This is the difference between a portal and a school.</p>
+          <ul>
+            <li>Draft grades stay inside the school</li>
+            <li>Section Director / designated approvers publish</li>
+            <li>Parents never receive an unapproved mark</li>
+            <li>Attendance is saved by the teacher and visible in admin reports the same day</li>
+          </ul>
+          <p class="am">መምህር ያስገባል → አመራር ያጸድቃል → ከዚያ ወላጅ ያያል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For classroom teachers</div>
+      <h2>This is the teacher dashboard — every classroom module on one home.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/dash-teacher.png" alt="Teacher dashboard and modules" />
+        <div>
+          <ul>
+            <li><strong>My classroom:</strong> My Classes, Attendance, Parent Approvals, Student Affairs</li>
+            <li><strong>Teaching tools:</strong> Homework, Grade Reports, Timetable, e-Book, Gallery, QR</li>
+            <li><strong>Communication:</strong> Messages, Announcements, Calendar, Maya Assistant</li>
+            <li>Teachers do not get finance, payroll, or another campus’s children</li>
+          </ul>
+          <p class="am">የመምህር ዳሽቦርድ — ክፍሉ የሚያስፈልገው ሁሉ እዚህ ነው።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Classroom management</div>
+      <h2>Who teaches which class is not a hallway rumor.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-classroom.png" alt="Classroom teachers assignment" />
+        <div>
+          <ul>
+            <li>Grades → sections → homeroom teacher → timetable</li>
+            <li>Directors see the roster of classroom teachers in one list</li>
+            <li>Academic year is visible so last year’s assignment is not mixed in</li>
+            <li>Teachers then only see the classes they actually own</li>
+          </ul>
+          <p class="am">የክፍል መምህር ማደራጀት በስርዓት ይታያል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Homework &amp; assignments</div>
+      <h2>Post the work. Parents see it. Teachers mark it done.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-homework.png" alt="Homework posting" />
+        <div>
+          <ul>
+            <li>Teacher posts title, due date, class, and file</li>
+            <li>Parent portal shows the same homework for their child</li>
+            <li>Status: assigned → submitted / completed</li>
+            <li>No “please WhatsApp the worksheet” for the whole class</li>
+          </ul>
+          <p class="am">የቤት ሥራ በመተግበሪያ ይለጠፋል። ወላጅ ያያል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For students</div>
+      <h2>This is the student dashboard — their school, not the office.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/dash-student.png" alt="Student dashboard and modules" />
+        <div>
+          <ul>
+            <li><strong>My school:</strong> Profile, Grade Reports, Homeworks and Assignments, e-Book, Attendance, Timetable</li>
+            <li><strong>Updates:</strong> Announcements, Calendar, Messages, Maya Assistant</li>
+            <li>They see published grades only — never a draft mark</li>
+            <li>Same homework the teacher posted. Same calendar the school published</li>
+          </ul>
+          <p class="am">የተማሪ ዳሽቦርድ — የራሱ ትምህርት ቤት፣ የቢሮው መዝገብ አይደለም።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">For parent representatives</div>
+      <h2>This is the parent dashboard — the child, not the school’s internal politics.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/dash-parent.png" alt="Parent dashboard and modules" />
+        <div>
+          <ul>
+            <li><strong>My children:</strong> linked child, Attendance, Homework, e-Book, Grade Reports, Timetable</li>
+            <li><strong>School updates:</strong> Messages, Announcements, Calendar</li>
+            <li><strong>Services:</strong> Behaviour &amp; Leave, Fees &amp; Payments, Bus Tracking</li>
+            <li>Link with Student ID + date of birth, then the school approves</li>
+          </ul>
+          <p class="am">ወላጅ የሚያየው ልጁን ብቻ ነው። ያልጸደቀ ውጤት አይታይም።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Transport — driver dashboard</div>
+      <h2>This is the transport dashboard — every module the driver uses on the road.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/dash-driver.png" alt="Driver transport dashboard and modules" />
+        <div>
+          <ul>
+            <li><strong>On the road:</strong> My Route, Live Map, Passenger List, Report Issue</li>
+            <li><strong>Student check-in:</strong> Scan QR, Pick-up / Drop-off, QR Entry/Exit</li>
+            <li><strong>Communication:</strong> Messages, Announcements, Calendar</li>
+            <li>Parents see “live” only while this driver is sharing location</li>
+          </ul>
+          <p class="am">የሹፌር ዳሽቦርድ — መስመር፣ ተሳፋሪ፣ QR እና ቀጥታ ካርታ።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Transport — office ERP</div>
+      <h2>The bus is part of the school, not a private WhatsApp.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-transport.png" alt="Transport module" />
+        <div>
+          <ul>
+            <li>HR / transport admin: buses, drivers, routes, riders</li>
+            <li>Driver app: route, passenger list, QR onboard / discharge, live map</li>
+            <li>Parent sees a live position only while sharing is on and fresh</li>
+            <li>Stale location is not shown as “live”</li>
+          </ul>
+          <p>This is the module parent representatives usually ask about first. It is built in — not a separate tracking company.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Finance</div>
+      <h2>Collections you can defend in a board meeting.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-finance.png" alt="Finance module" />
+        <div>
+          <ul>
+            <li>Fee structures and payments in ETB</li>
+            <li>Outstanding vs collected, by day and month</li>
+            <li>Parent fee view for linked children</li>
+            <li>Reports for leadership — not a private cashier notebook</li>
+          </ul>
+          <p class="muted">Finance staff manage. Directors oversee. Parents see their own balance.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">HR — payroll</div>
+      <h2>Ethiopian employment tax and pension, built in — for every employee.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-payroll.png" alt="HR payroll Ethiopian tax calculator" />
+        <div>
+          <p>Teachers, other staff, and drivers sit on one payroll. The calculator uses <strong>Proc. No. 1395/2025</strong> monthly PAYE plus private-sector pension.</p>
+          <ul>
+            <li>Employee pension <strong>7%</strong> of basic salary (withheld before income tax)</li>
+            <li>Employer pension <strong>11%</strong> of basic salary</li>
+            <li>Income tax bands 0% → 35% with the legal quick deductions</li>
+            <li>Net pay, PAYE withheld, and employer cost in ETB</li>
+            <li>What-if calculator: type a salary and see the slip before you save</li>
+          </ul>
+          <p class="muted">Rates can change. HR should confirm against current law. Teachers do not see another person’s pay.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Store &amp; inventory</div>
+      <h2>The store is a command desk: items, PRs, issues, assets, suppliers.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-inventory.png" alt="Inventory command" />
+        <div>
+          <ul>
+            <li>Dashboard: stock value, open purchase requests, issue requests, assets in repair</li>
+            <li>Purchase requests → director / procurement → receive</li>
+            <li>Issue requests from a class or office → store keeper</li>
+            <li>Items, stock in/out, student issued, classroom, assets, suppliers, maintenance, reports</li>
+          </ul>
+          <p>This is where leakage usually hides in a paper school. MaJo Bridge makes it a workflow.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Inventory — stock trail</div>
+      <h2>Every textbook and marker has a quantity and a movement.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-inventory-stock.png" alt="Inventory items and stock movements" />
+        <div>
+          <ul>
+            <li>On-hand vs reorder level, by store location</li>
+            <li>Stock in from a supplier / PO</li>
+            <li>Stock out to an office</li>
+            <li>Student issued (loaned books) against a name and class</li>
+          </ul>
+          <p class="am">መጽሐፍ፣ ሰሌዳ እና የላብ ኮት በመዝገብ ይታያል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Inventory — purchase &amp; issue</div>
+      <h2>Ask. Approve. Receive or issue. Same numbers for three desks.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-inventory-pr.png" alt="Purchase and issue requests" />
+        <div>
+          <ul>
+            <li>Procurement, store keeper, and accountant share one trail</li>
+            <li>No verbal “bring more chalk” without a request</li>
+            <li>Reports export Excel / CSV / PDF</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">School life — announcements, gallery, calendar, messages</div>
+      <h2>The school speaks in one place. Not four WhatsApp groups.</h2>
+      <div class="row comms">
+        <div class="mini-grid">
+          <img class="mini-shot" src="screens/screen-announce.png" alt="Announcements" />
+          <img class="mini-shot" src="screens/screen-gallery.png" alt="Gallery" />
+          <img class="mini-shot" src="screens/screen-calendar.png" alt="Calendar" />
+          <img class="mini-shot" src="screens/screen-messages.png" alt="Internal messages" />
+        </div>
+        <div>
+          <ul>
+            <li><strong>Announcements</strong> — directors post; staff and parents see by role</li>
+            <li><strong>Gallery</strong> — school photos and events, not lost on a phone</li>
+            <li><strong>Calendar</strong> — exams, holidays, meetings, sports day</li>
+            <li><strong>Internal messages</strong> — teacher ↔ parent / staff, logged in the school</li>
+          </ul>
+          <p class="am">ማስታወቂያ፣ ጋለሪ፣ የቀን መቁጠሪያ እና መልእክት በአንድ ቦታ።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Quality assurance</div>
+      <h2>Findings and improvement plans live next to the school, not in a drawer.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-qa.png" alt="Quality assurance" />
+        <div>
+          <ul>
+            <li>Log a finding: classroom, library, transport, finance, student affairs…</li>
+            <li>Status: open → in progress → closed, with severity</li>
+            <li>Improvement plans with owner, target date, and evidence</li>
+            <li>Leadership sees overdue follow-ups on the morning dashboard</li>
+            <li>QA records. The duty owner executes. Directors do not hunt a paper file.</li>
+          </ul>
+          <p class="am">የጥራት ማረጋገጫ ግኝትና የማሻሻያ እቅድ በስርዓት።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Quality assurance — plans</div>
+      <h2>A finding is not finished until the plan has evidence.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-qa-plan.png" alt="QA improvement plan" />
+        <div>
+          <ul>
+            <li>Example: freeze grade publish until makeup marks are in</li>
+            <li>Owner: Examinations. Follow-up: Section director</li>
+            <li>Parents never receive an unapproved mark while that plan is open</li>
+            <li>Transport, store, and student-affairs findings use the same book</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Settings &amp; language</div>
+      <h2>Each person chooses English, Amharic, or Afaan Oromo.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-settings.png" alt="Settings language and backup" />
+        <div>
+          <ul>
+            <li>Language preference is personal — it does not force the whole school</li>
+            <li>Dark mode and dashboard tile order (drag to match this duty)</li>
+            <li>From Settings, directors can also download a <strong>school JSON backup</strong></li>
+          </ul>
+          <p class="am">ቋንቋ፣ መልክ እና የመጠባበቂያ ቅጂ ከቅንብር ይከፈታል።</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Where files live</div>
+      <h2>Cloud for daily work. School-held copy so you are not locked in.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-backup.png" alt="Cloud and school-held backup" />
+        <div>
+          <p><strong>Recommended: set up both ways.</strong></p>
+          <ul>
+            <li><strong>Cloud</strong> — live students, grades, fees, store, buses, messages (MaJo Bridge / Supabase)</li>
+            <li><strong>School computer or school server</strong> — weekly JSON backup from Settings, School profile, or Reports</li>
+            <li>Extra snapshot after payroll, exams, or a large enrollment</li>
+            <li>A full on-site ERP server is optional extra work. A school-held copy is not optional.</li>
+          </ul>
+          <p class="muted">Passwords are not packed in the school JSON. Platform owners can also export the school registry.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Full catalog — 40+ modules</div>
+      <h2>What the school is buying — module by module</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Modules</th><th>Who it serves</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Role dashboards</td><td>Teacher home, parent home, student home, driver / transport home</td><td>Teachers, parents, students, drivers</td></tr>
+            <tr><td>Organization</td><td>Institution, school profile, campuses</td><td>Owners, directors</td></tr>
+            <tr><td>Student services</td><td>Students, parent-link, transfers, student affairs, alumni, student login from the grade the school sets</td><td>Registrar, student affairs</td></tr>
+            <tr><td>Classroom</td><td>Classes, classroom teachers, timetable, attendance, exams, homework &amp; assignments</td><td>Principal, VP, teachers</td></tr>
+            <tr><td>Communication</td><td>Announcements, events &amp; gallery, school calendar, internal messages</td><td>Every duty that must speak</td></tr>
+            <tr><td>Quality</td><td>QA findings, improvement plans, reports, Maya Assistant</td><td>QA, directors</td></tr>
+            <tr><td>Staff modules</td><td>HR, payroll (Ethiopian PAYE + pension), leave, staff documents, library, canteen, clinic</td><td>HR, librarian, nurse, canteen</td></tr>
+            <tr><td>Finance &amp; store</td><td>Fees, invoices, receipts, expenses, inventory / procurement / assets</td><td>Accountant, store, procurement</td></tr>
+            <tr><td>Transport</td><td>Routes, GPS, boarding</td><td>Transport admin, drivers, parents</td></tr>
+            <tr><td>System</td><td>Users &amp; roles, settings &amp; language, audit log, branding, cloud + school-held backups</td><td>Owner / platform</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">How a week looks</div>
+      <h2>Not a theory. A working week.</h2>
+      <table>
+        <thead><tr><th>Day</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Office logs in. Rosters, classroom teachers, and staff passwords work.</td></tr>
+          <tr><td>2</td><td>Teachers take attendance, post homework, and enter subject grades.</td></tr>
+          <tr><td>3</td><td>Section director approves grades. Student affairs logs any case. QA opens a finding if needed.</td></tr>
+          <tr><td>4</td><td>Parents link children (ID + DOB). They see homework, gallery, calendar, and messages for that child.</td></tr>
+          <tr><td>5</td><td>Leadership prints a PDF. Store / HR payroll / transport smoke-test if you use them. Download a school JSON backup to a school PC.</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:16px;">Pilot recommendation: 30–60 days, one campus or one grade band, then a board decision to expand.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Safety</div>
+      <h2>The school’s data stays the school’s data.</h2>
+      <div class="row three">
+        <div class="card"><h3>School isolation</h3><p>Another school cannot open Fenote Raey students, fees, or messages.</p></div>
+        <div class="card"><h3>Duty-based access</h3><p>A librarian does not get finance. A teacher does not get the whole payroll. VP can oversee without silently editing everything.</p></div>
+        <div class="card"><h3>Cloud + school copy</h3><p>Live files in the cloud. Weekly JSON on a school computer or school server. Recommended: both.</p></div>
+      </div>
+      <p style="margin-top:20px;">This is a school operating system from MaJo Bridge Technologies and Events. It is not a government product. It helps Fenote Raey run digitally, with a record the school can stand on.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">The ask</div>
+      <p class="ask">Recommend this system for Fenote Raey Academy.</p>
+      <div class="row three">
+        <div class="card"><h3>Directors / QA</h3><p>Endorse the dashboard, grade-approval rule, and quality findings.</p></div>
+        <div class="card"><h3>Student affairs / admin</h3><p>Endorse students, alumni, discipline, fees, inventory, HR payroll, backups, and transport as the daily books.</p></div>
+        <div class="card"><h3>Teachers / parents</h3><p>Endorse classroom tools, homework posting, child-only access, gallery, calendar, and messages.</p></div>
+      </div>
+      <p style="margin-top:22px;">Next step after this room: 30–60 day pilot on one campus/grade, support Mon–Sat 09:00–18:00 EAT, then expand.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Closing</div>
+      <h2>Thank you, Fenote Raey Academy.</h2>
+      <p class="ask">Live system — not a brochure.</p>
+      <div class="cta-row">
+        <span class="cta">https://mayabela.pages.dev</span>
+        <span class="cta">majobridgetech@gmail.com</span>
+      </div>
+      <p>Support phone: <strong>+251 911 646 444</strong> · Mon–Sat 09:00–18:00 EAT</p>
+      <p>Hard-refresh if you saw an older page: <strong>Ctrl+Shift+R</strong></p>
+      <p class="thanks">Thank you for your time today. MaJo Bridge Technologies and Events is ready to walk this with Fenote Raey.</p>
+      <p class="am">አመሰግናለን። ሙከራው በቀጥታ ይከፈታል። ጥያቄ ካለዎ አሁን ይጠይቁ።</p>
+      <p class="muted">F11 for fullscreen · arrow keys or click to move</p>
+    </section>
+
+  </div>
+  <div class="footer">
+    <span>Fenote Raey Academy · MaJo Bridge Technologies and Events</span>
+    <span id="pos">1 / 1</span>
+    <span><a href="flyer.html" style="color:#ffb020;">Flyer</a> · <a href="leave-behind.html" style="color:#ffb020;">Leave-behind</a> · +251 911 646 444 · majobridgetech@gmail.com</span>
+  </div>
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    let i = 0;
+    const pos = document.getElementById('pos');
+    const bar = document.getElementById('bar');
+    function show(n) {
+      i = (n + slides.length) % slides.length;
+      slides.forEach((s, k) => s.classList.toggle('on', k === i));
+      pos.textContent = (i + 1) + ' / ' + slides.length;
+      bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowRight','PageDown',' ','Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+      if (['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(slides.length - 1);
+    });
+    document.getElementById('deck').addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      show(i + (e.clientX > innerWidth / 2 ? 1 : -1));
+    });
+    show(0);
+  </script>
+</body>
+</html>

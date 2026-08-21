@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <base href="/fenote-raey-academy/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fenote Raey Academy — meeting flyer</title>
+  <style>
+    :root { --purple:#4527a0; --gold:#b45309; --ink:#0f172a; --muted:#475569; --paper:#f8f6ff; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "Noto Sans Ethiopic", Nyala, Arial, sans-serif;
+      background: #fff;
+    }
+    .page {
+      max-width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 14mm 14mm 12mm;
+    }
+    .no-print { margin: 12px 16px; font-size: 14px; }
+    header {
+      background: var(--purple);
+      color: #fff;
+      padding: 18px 20px 16px;
+      border-radius: 12px;
+    }
+    .kicker {
+      color: #ffb020;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: 11px;
+      margin: 0 0 6px;
+    }
+    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -.02em; }
+    header p { margin: 0; color: #e9e4ff; font-size: 14px; }
+    .lead {
+      margin: 14px 0 12px;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 14px; }
+    h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: #0f766e;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    ol, ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+    li { margin: 0 0 5px; }
+    .box {
+      background: var(--paper);
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .sentence {
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+    .sentence strong { color: var(--gold); font-size: 16px; }
+    .am { font-size: 13px; line-height: 1.5; color: #1e293b; }
+    footer {
+      margin-top: 12px;
+      background: #0f172a;
+      color: #fff;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 13px;
+    }
+    footer strong { color: #ffb020; }
+    .fine { margin-top: 8px; color: var(--muted); font-size: 11px; }
+    @media print {
+      .no-print { display: none; }
+      .page { max-width: none; min-height: auto; padding: 0; }
+      body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+    @page { size: A4; margin: 10mm; }
+  </style>
+</head>
+<body>
+  <p class="no-print">Print this one-page flyer with <strong>Ctrl+P</strong> · <a href="index.html">Slides</a> · <a href="leave-behind.html">Detailed leave-behind</a></p>
+  <div class="page">
+    <header>
+      <p class="kicker">Fenote Raey Academy · Final decision meeting</p>
+      <h1>What we present today</h1>
+      <p>One school. Every role. One source of truth.<br>
+      Presented by <strong>MaJo Bridge Technologies and Events</strong></p>
+    </header>
+
+    <p class="lead">This meeting shows the school system Fenote Raey would run: office ERP plus the <strong>teacher, parent, student, and driver dashboards</strong>. No price discussion in this room. After the slides we open the live system.</p>
+
+    <div class="grid">
+      <div>
+        <h2>Today’s walk — what you will see</h2>
+        <ol>
+          <li><strong>The problem</strong> — Excel, paper, and WhatsApp are not a school system.</li>
+          <li><strong>Who logs in</strong> — directors, student affairs, QA, teachers, students, parents, drivers. Same School ID, different homes.</li>
+          <li><strong>Student login</strong> — from the grade <em>this school</em> sets, not a fixed Grade 7.</li>
+          <li><strong>Directors &amp; registrar</strong> — morning dashboard, student IDs, parent-link approval.</li>
+          <li><strong>Student affairs &amp; alumni</strong> — discipline pipeline, leave, graduates stay in the book.</li>
+          <li><strong>The rule</strong> — teacher enters → leadership approves → then the parent sees.</li>
+          <li><strong>Classroom</strong> — teacher home, homework posting, student home, parent home.</li>
+          <li><strong>Transport, fees, payroll, store</strong> — live bus, ETB collections, Ethiopian tax + pension, stock trail.</li>
+          <li><strong>School life &amp; QA</strong> — announcements, gallery, calendar, messages, findings, improvement plans.</li>
+          <li><strong>Language &amp; files</strong> — English / Amharic / Afaan Oromo. Cloud for daily work, plus a JSON copy on a school PC or school server.</li>
+          <li><strong>The ask</strong> — recommend a 30–60 day pilot on one campus or grade band.</li>
+        </ol>
+      </div>
+      <div>
+        <div class="box">
+          <h2>Who this paper is for</h2>
+          <ul>
+            <li>Directors / Principal / VP</li>
+            <li>Student affairs / registrar</li>
+            <li>Quality assurance</li>
+            <li>Teachers</li>
+            <li>Parent representatives</li>
+            <li>Drivers / transport</li>
+            <li>Finance / store / HR</li>
+          </ul>
+        </div>
+        <div class="sentence">
+          <strong>Remember this sentence</strong><br>
+          Teacher enters. Leadership approves. Then the parent sees.<br>
+          <span class="am">መምህር ያስገባል → አመራር ያጸድቃል → ከዚያ ወላጅ ያያል።</span>
+        </div>
+        <div class="box">
+          <h2>After this room</h2>
+          <ul>
+            <li>30–60 day pilot, one campus or grade</li>
+            <li>Support Mon–Sat 09:00–18:00 EAT</li>
+            <li>Commercial terms stay with Fenote Raey management</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:14px;">አማርኛ — አጭር ማጠቃለያ</h2>
+    <p class="am">ዛሬ የ<strong>ፍኖተ ራእይ አካዳሚ</strong> የትምህርት ቤት ስርዓት እናሳያለን። አቅራቢው <strong>MaJo Bridge Technologies and Events</strong> ነው። የቢሮ መዝገብ ብቻ አይደለም — የመምህር፣ የወላጅ፣ የተማሪ እና የሹፌር ዳሽቦርድም አለ። የተማሪ መግቢያ ትምህርት ቤቱ ከሚወስነው ክፍል ጀምሮ ነው። ውጤት ያልጸደቀ ለወላጅ አይታይም። የደመወዝ ስሌት የኢትዮጵያ ግብርና ጡረታ ያካትታል። ፋይሎች በክላውድ እና በትምህርት ቤት ኮምፒዩተር/ሰርቨር ላይ ይያዛሉ። ጥያቄ፡ ለ30–60 ቀን ሙከራ እንምከር። ዋጋ በዚህ ክፍል አይነገርም።</p>
+
+    <footer>
+      <div>Live system<br><strong>https://mayabela.pages.dev</strong></div>
+      <div>Support<br><strong>+251 911 646 444</strong><br>majobridgetech@gmail.com</div>
+    </footer>
+    <p class="fine">MaJo Bridge Technologies and Events · Not a government product · Keep this page after the meeting.</p>
+  </div>
+</body>
+</html>

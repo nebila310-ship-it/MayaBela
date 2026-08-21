@@ -1,10 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/services/ethiopian_holiday_catalog.dart';
 import 'package:mayabela/services/school_data_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   group('EthiopianHolidayCatalog', () {
     test('loads fixed national holidays for a year', () {
@@ -32,7 +37,7 @@ void main() {
   group('School calendar sync', () {
     test('ensureEthiopianHolidaysSynced upserts multi-year holidays', () {
       final data = SchoolDataService.instance;
-      data.ensureEthiopianHolidaysSynced(force: true);
+      data.ensureEthiopianHolidaysSynced(force: true, persist: false);
       final year = DateTime.now().year;
       final events = data.getCalendarEvents()
           .where((e) => e.isEthiopianHoliday)

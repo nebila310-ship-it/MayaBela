@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/school_backup_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
 /// School profile / academic year / contact — replaces the old placeholder.
 class WebSchoolManagementPage extends StatefulWidget {
@@ -234,6 +236,70 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
                 ],
               ),
             ),
+          const SizedBox(height: 16),
+          const WebErpRelatedToolsCard(
+            title: 'Student portal',
+            tools: [
+              WebErpRelatedTool(
+                routeId: 'student_portal_settings',
+                label: 'Student portal settings',
+                icon: Icons.tune,
+                subtitle: 'From the grade the school sets, plus portal permissions',
+              ),
+              WebErpRelatedTool(
+                routeId: 'student_password_resets',
+                label: 'Student password requests',
+                icon: Icons.lock_reset,
+                subtitle: 'Approve student reset requests',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: WebErpTheme.cardDecoration(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Files & backup', style: WebErpTheme.sectionTitle(context)),
+                const SizedBox(height: 6),
+                Text(
+                  'Daily school files live in the MaJo Bridge cloud. '
+                  'Recommended: also keep a school-held JSON copy on a school '
+                  'computer or school server so Fenote Raey is not locked to one place.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await SchoolBackupService.instance.shareSchoolJsonBackup();
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'School backup JSON is ready. Save one copy locally '
+                            'and keep daily work in the cloud.',
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Backup failed: $e')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: const Text('Download school backup (JSON)'),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

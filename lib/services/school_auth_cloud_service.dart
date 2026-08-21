@@ -188,6 +188,9 @@ class SchoolAuthCloudService {
     }
     final details = '${e.details}'.toLowerCase();
     if (details.contains('rate')) return 'rate_limited';
+    if (details.contains('mail_not_configured') || details.contains('mail_send')) {
+      return 'mail_not_configured';
+    }
     if (details.contains('school_blocked')) return 'school_inactive';
     if (details.contains('admin authentication') ||
         details.contains('admin sign-in')) {
@@ -352,6 +355,78 @@ class SchoolAuthCloudService {
       return SchoolAuthCloudResult(
         ok: false,
         errorCode: _mapFunctionsError(e),
+      );
+    } catch (_) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+    }
+  }
+
+  Future<SchoolAuthCloudResult> requestPasswordReset({
+    required String schoolId,
+    required String email,
+    String? roleKey,
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    try {
+      await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      final data = await _invoke('school-request-password-reset', {
+        'schoolId': schoolId.trim().toUpperCase(),
+        'email': email.trim(),
+        if (roleKey != null && roleKey.trim().isNotEmpty) 'roleKey': roleKey,
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'invalid',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return const SchoolAuthCloudResult(ok: true);
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
+      );
+    } catch (_) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+    }
+  }
+
+  Future<SchoolAuthCloudResult> confirmPasswordReset({
+    required String schoolId,
+    required String email,
+    required String code,
+    required String newPassword,
+    String? roleKey,
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    try {
+      await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      final data = await _invoke('school-confirm-password-reset', {
+        'schoolId': schoolId.trim().toUpperCase(),
+        'email': email.trim(),
+        'code': code.trim(),
+        'newPassword': newPassword,
+        if (roleKey != null && roleKey.trim().isNotEmpty) 'roleKey': roleKey,
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'invalid',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return const SchoolAuthCloudResult(ok: true);
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
       );
     } catch (_) {
       return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');

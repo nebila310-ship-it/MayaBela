@@ -4,6 +4,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/parent_child_registration_card.dart';
@@ -131,6 +132,10 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
       _setMessage(s.enterSchoolId, isSuccess: false);
       return;
     }
+    if (!EmailUtils.isValid(_email.text)) {
+      _setMessage(s.emailRequired, isSuccess: false);
+      return;
+    }
     if (_phone.text.trim().isEmpty) {
       _setMessage(s.invalidPhone, isSuccess: false);
       return;
@@ -195,6 +200,7 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
           'exists' => s.phoneAlreadyRegistered,
           'phone_used_by_staff' => s.phoneUsedByStaff,
           'invalid_phone' => s.invalidPhone,
+          'invalid_email' => s.emailRequired,
           'already_linked' => s.alreadyLinkedStudent,
           'student_mismatch' => s.studentVerifyFailed,
           'school_blocked' => s.schoolAccessInactive,

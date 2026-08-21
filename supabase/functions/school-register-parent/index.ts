@@ -6,6 +6,7 @@ import {
   assertNotRateLimited,
   ensureAuthUser,
   getDoc,
+  normalizeEmail,
   normalizeUsername,
   profileFromAccount,
   upsertSecret,
@@ -22,10 +23,13 @@ Deno.serve(async (req) => {
     const schoolId = String(body?.schoolId || "").trim().toUpperCase();
     const phone = body?.phone || null;
     const fullName = body?.fullName || null;
-    const email = body?.email || null;
+    const email = normalizeEmail(body?.email);
 
     if (!username || !schoolId) {
       return errorResponse("username/phone and schoolId are required.", 400);
+    }
+    if (!email) {
+      return errorResponse("A valid email is required.", 400, "invalid_email");
     }
     if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
       return errorResponse(

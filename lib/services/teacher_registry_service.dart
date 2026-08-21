@@ -1,6 +1,7 @@
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/ethiopian_employment_tax.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
 
@@ -26,6 +27,8 @@ class AdminTeacherRecord {
     this.initialPassword,
     this.classAssignments = const [],
     this.staffRoles = const [],
+    this.basicSalaryEtb = 0,
+    this.taxableAllowancesEtb = 0,
   }) : subjects = subjects != null
             ? List<String>.from(subjects)
             : (subject != null && subject.trim().isNotEmpty
@@ -52,6 +55,8 @@ class AdminTeacherRecord {
   /// RBAC staff role keys (StaffRoles.*) mirrored from the auth account for
   /// display in staff lists. The auth account is the source of truth.
   final List<String> staffRoles;
+  final double basicSalaryEtb;
+  final double taxableAllowancesEtb;
 
   String get subject => subjects.isEmpty ? '' : subjects.join(', ');
 
@@ -88,6 +93,8 @@ class AdminTeacherRecord {
         'classAssignments':
             classAssignments.map((assignment) => assignment.toMap()).toList(),
         if (staffRoles.isNotEmpty) 'staffRoles': staffRoles,
+        'basicSalaryEtb': basicSalaryEtb,
+        'taxableAllowancesEtb': taxableAllowancesEtb,
       };
 
   factory AdminTeacherRecord.fromMap(Map<String, dynamic> map) {
@@ -140,6 +147,9 @@ class AdminTeacherRecord {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      basicSalaryEtb: EthiopianEmploymentTax.parseEtb(map['basicSalaryEtb']),
+      taxableAllowancesEtb:
+          EthiopianEmploymentTax.parseEtb(map['taxableAllowancesEtb']),
     );
   }
 
@@ -159,6 +169,8 @@ class AdminTeacherRecord {
     bool? isActive,
     String? campus,
     List<String>? staffRoles,
+    double? basicSalaryEtb,
+    double? taxableAllowancesEtb,
   }) {
     return AdminTeacherRecord(
       teacherId: teacherId,
@@ -179,6 +191,9 @@ class AdminTeacherRecord {
       initialPassword: initialPassword ?? this.initialPassword,
       classAssignments: classAssignments ?? this.classAssignments,
       staffRoles: staffRoles ?? List<String>.from(this.staffRoles),
+      basicSalaryEtb: basicSalaryEtb ?? this.basicSalaryEtb,
+      taxableAllowancesEtb:
+          taxableAllowancesEtb ?? this.taxableAllowancesEtb,
     );
   }
 }
@@ -587,6 +602,8 @@ class TeacherRegistryService {
     List<TeacherClassAssignment> classAssignments = const [],
     String? campus,
     List<String> staffRoles = const [],
+    double basicSalaryEtb = 0,
+    double taxableAllowancesEtb = 0,
   }) {
     final record = AdminTeacherRecord(
       teacherId: _allocateTeacherId(staffRoles: staffRoles),
@@ -608,6 +625,8 @@ class TeacherRegistryService {
           ? 'Main Campus'
           : campus.trim(),
       staffRoles: staffRoles,
+      basicSalaryEtb: basicSalaryEtb,
+      taxableAllowancesEtb: taxableAllowancesEtb,
     );
     _teachers.add(record);
     return record;

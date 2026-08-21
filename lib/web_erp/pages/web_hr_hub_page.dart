@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/employee_registry_service.dart';
+import 'package:mayabela/services/ethiopian_employment_tax.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
+import 'package:mayabela/web_erp/pages/web_hr_payroll_tab.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
@@ -26,7 +28,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -52,7 +54,8 @@ class _WebHrHubPageState extends State<WebHrHubPage>
               const SizedBox(height: 4),
               Text(
                 'Create classroom teachers, keep non-login staff records, '
-                'and manage transport. ERP admin accounts stay with the owner.',
+                'run payroll with Ethiopian tax and pension, and manage transport. '
+                'ERP admin accounts stay with the owner.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -65,6 +68,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                 tabs: const [
                   Tab(text: 'Teachers'),
                   Tab(text: 'Other staff'),
+                  Tab(text: 'Payroll'),
                   Tab(text: 'Transport'),
                 ],
               ),
@@ -81,6 +85,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                 directoryMode: WebTeachersDirectoryMode.classroomTeachers,
               ),
               _EmployeesTab(onNavigate: widget.onNavigate),
+              const WebHrPayrollTab(),
               WebTransportDashboardPage(onNavigate: widget.onNavigate),
             ],
           ),
@@ -112,6 +117,16 @@ class _EmployeesTabState extends State<_EmployeesTab> {
     final phone = TextEditingController(text: existing?.phone ?? '');
     final department = TextEditingController(text: existing?.department ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final salary = TextEditingController(
+      text: existing == null || existing.basicSalaryEtb == 0
+          ? ''
+          : existing.basicSalaryEtb.toStringAsFixed(2),
+    );
+    final allowances = TextEditingController(
+      text: existing == null || existing.taxableAllowancesEtb == 0
+          ? ''
+          : existing.taxableAllowancesEtb.toStringAsFixed(2),
+    );
     final campuses =
         SchoolRegistryService.instance.campusesForSchool(schoolId);
     var campus = existing?.campus ??
@@ -195,6 +210,28 @@ class _EmployeesTabState extends State<_EmployeesTab> {
                         ),
                         maxLines: 2,
                       ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: salary,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Basic salary ETB / month (optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: allowances,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Taxable allowances ETB (optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
@@ -238,8 +275,13 @@ class _EmployeesTabState extends State<_EmployeesTab> {
       phone.dispose();
       department.dispose();
       notes.dispose();
+      salary.dispose();
+      allowances.dispose();
       return;
     }
+
+    final basicSalary = EthiopianEmploymentTax.parseEtb(salary.text);
+    final taxableAllowances = EthiopianEmploymentTax.parseEtb(allowances.text);
 
     if (existing == null) {
       EmployeeRegistryService.instance.addEmployee(
@@ -250,6 +292,8 @@ class _EmployeesTabState extends State<_EmployeesTab> {
         department: department.text,
         notes: notes.text,
         campus: campus,
+        basicSalaryEtb: basicSalary,
+        taxableAllowancesEtb: taxableAllowances,
       );
     } else {
       EmployeeRegistryService.instance.updateEmployee(
@@ -261,6 +305,8 @@ class _EmployeesTabState extends State<_EmployeesTab> {
               department.text.trim().isEmpty ? null : department.text.trim(),
           notes: notes.text.trim().isEmpty ? null : notes.text.trim(),
           campus: campus,
+          basicSalaryEtb: basicSalary,
+          taxableAllowancesEtb: taxableAllowances,
           clearPhone: phone.text.trim().isEmpty,
           clearDepartment: department.text.trim().isEmpty,
           clearNotes: notes.text.trim().isEmpty,
@@ -273,6 +319,8 @@ class _EmployeesTabState extends State<_EmployeesTab> {
     phone.dispose();
     department.dispose();
     notes.dispose();
+    salary.dispose();
+    allowances.dispose();
     if (mounted) setState(() {});
   }
 
