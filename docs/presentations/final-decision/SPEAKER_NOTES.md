@@ -4,7 +4,7 @@
 **Audience:** all roles — directors, student affairs, QA, teachers, administration, parent representatives, drivers  
 **Length:** 32–40 minutes + live demo + questions  
 **Open slides:** pull this branch and open `docs/presentations/final-decision/index.html` → **F11**  
-**Or download:** https://gofile.io/d/69cgqWGz (`slides.html`)  
+**Or download (latest deck):** https://gofile.io/d/zA8X2UEn (`fenote-raey-slides.html`)  
 **Leave-behind:** https://gofile.io/d/erPGzTEw → **Ctrl+P**  
 **Keys:** Right / Space next · Left previous · click right half of screen = next
 
