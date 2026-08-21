@@ -91,6 +91,7 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Student affairs / administration: we will run students, alumni, discipline, fees, and store in this system during the pilot.
 - Teachers / parent representatives: homework is posted here; families use Student ID + date of birth; the school must approve the link.
 - Named pilot campus/grade and start week.
-- Support number written down: **+251 911 646 444**.
+- Support written down on the last slide: **+251 911 646 444** · **majobridgetech@gmail.com**.
+- Close on the same last slide: thank Fenote Raey Academy; do not add a separate thank-you page.
 
 Print https://gofile.io/d/uNPtoBZS (or `leave-behind.html` in this folder) with Ctrl+P for parent reps and department heads.

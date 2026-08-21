@@ -499,16 +499,18 @@ Next step after this room: 30–60 day pilot on one campus/grade, support Mon–
 
 ---
 
-## 33. Try it in the room
+## 33. Closing — thank you
+
+**Thank you, Fenote Raey Academy.**
 
 Live system — not a brochure.
 
-**https://mayabela.pages.dev**
+**https://mayabela.pages.dev** · **majobridgetech@gmail.com**
+
+Support phone: **+251 911 646 444** · Mon–Sat 09:00–18:00 EAT
 
 Hard-refresh if you saw an older page: Ctrl+Shift+R
 
-Support: **+251 911 646 444** · majobridgetech@gmail.com
+Thank you for your time today. MaJo Bridge Technologies and Events is ready to walk this with Fenote Raey.
 
-ሙከራው በቀጥታ ይከፈታል። ጥያቄ ካለዎ አሁን ይጠይቁ።
-
-Print handout: [LEAVE_BEHIND.md](LEAVE_BEHIND.md)
+አመሰግናለን። ሙከራው በቀጥታ ይከፈታል። ጥያቄ ካለዎ አሁን ይጠይቁ።
