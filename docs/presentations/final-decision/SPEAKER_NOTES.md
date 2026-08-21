@@ -4,8 +4,10 @@
 **Audience:** all roles — directors, student affairs, QA, teachers, administration, parent representatives, drivers  
 **Length:** 32–40 minutes + live demo + questions  
 **Open slides:** pull this branch and open `docs/presentations/final-decision/index.html` → **F11**  
-**Or download (latest deck):** https://gofile.io/d/GE8GR6kN (`fenote-raey-slides.html`)  
-**Leave-behind:** https://gofile.io/d/uNPtoBZS → **Ctrl+P**  
+**Words you talk (read this):** [TALK_SCRIPT.md](TALK_SCRIPT.md)  
+**Or download (latest deck):** https://gofile.io/d/WSHJ1BXR (`fenote-raey-slides.html`)  
+**Flyer for the table:** https://gofile.io/d/2AVho22W → **Ctrl+P**  
+**Leave-behind (roles):** https://gofile.io/d/g2tRoWzl → **Ctrl+P**  
 **Keys:** Right / Space next · Left previous · click right half of screen = next
 
 Fenote Raey owners have already directed execution. This room is the **operational yes**. Show each body *their* modules, then ask them to recommend.
@@ -94,4 +96,4 @@ If the network fails, stay on the HTML screenshots. They are enough to vote.
 - Support written down on the last slide: **+251 911 646 444** · **majobridgetech@gmail.com**.
 - Close on the same last slide: thank Fenote Raey Academy; do not add a separate thank-you page.
 
-Print https://gofile.io/d/uNPtoBZS (or `leave-behind.html` in this folder) with Ctrl+P for parent reps and department heads.
+Print `flyer.html` (one page) for every seat: https://gofile.io/d/2AVho22W. Print the role table: https://gofile.io/d/g2tRoWzl.

@@ -49,4 +49,4 @@ Commercial terms are discussed separately with Fenote Raey management.
 - ፋይሎች በክላውድ ይኖራሉ። የትምህርት ቤት ኮምፒዩተር ወይም ሰርቨር ላይ የJSON ቅጂም ይያዝ — ሁለቱም ይመከራሉ።
 - የባስ አካባቢ ሹፌሩ ሲያጋራ ብቻ “በቀጥታ” ይታያል።
 
-ሙከራ: https://mayabela.pages.dev · ድጋፍ: +251 911 646 444
+ሙከራ: https://mayabela.pages.dev · ድጋፍ: +251 911 646 444 · majobridgetech@gmail.com
