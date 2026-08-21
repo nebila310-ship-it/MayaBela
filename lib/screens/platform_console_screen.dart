@@ -940,9 +940,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
               .toString();
       _minimumMonthly.text =
           (record.minimumMonthlyEtb ?? SchoolEnrollmentMetrics.defaultMinimumMonthlyEtb).toString();
-      _adminTempPassword.text = record.adminInitialPassword ??
-          SchoolAdminCredentialsService.instance.passwordForSchool(record) ??
-          '';
+      final shownPwd = SchoolAdminCredentialsService.instance.passwordForSchool(record);
+      _adminTempPassword.text = shownPwd ?? '';
       _selectedGrades
         ..clear()
         ..addAll(record.gradeLevels);
@@ -1022,6 +1021,21 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     }
 
     final tempPwd = _adminTempPassword.text.trim();
+    if (tempPwd == AuthService.passwordRedactedMarker ||
+        tempPwd.toLowerCase() == 'redacted') {
+      _toast(
+        '“Redacted” is not the password. Type a new temp password (at least ${AuthService.minPasswordLength} characters), save, then log in with that.',
+        isError: true,
+      );
+      return;
+    }
+    if (tempPwd.isNotEmpty && tempPwd.length < AuthService.minPasswordLength) {
+      _toast(
+        'Password must be at least ${AuthService.minPasswordLength} characters.',
+        isError: true,
+      );
+      return;
+    }
     if (tempPwd.isNotEmpty) {
       AuthService.updateAdminPasswordForSchool(school.id, tempPwd);
     }
@@ -1703,7 +1717,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
                 _editField(
                   'Admin temp password',
                   _adminTempPassword,
-                  hint: 'Saved for owner reference & admin login',
+                  hint: 'Leave blank to keep. Type a new 10+ character password to reset login.',
                 ),
                 _editField('Support notes', _notes, maxLines: 4),
               ],
@@ -2614,7 +2628,8 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         decoration: InputDecoration(
           labelText: 'Admin temp password',
           labelStyle: const TextStyle(color: Colors.white54),
-          helperText: 'Shown on school profile after creation',
+          helperText:
+              'Copy this now. After save it is hidden — “redacted” is not the password.',
           helperStyle: const TextStyle(color: Colors.white38, fontSize: 11),
           filled: true,
           fillColor: const Color(0xFF1E293B),
