@@ -6,8 +6,8 @@ GitHub file links stay inside GitHub. Use these **browser** links:
 
 | Open this | Browser URL |
 |-----------|-------------|
-| **Slides** | **https://litter.catbox.moe/gfa8zm.html** |
-| **Leave-behind** | **https://litter.catbox.moe/rzzt6u.html** |
+| **Slides** | **https://litter.catbox.moe/x1aoxu.html** |
+| **Leave-behind** | **https://litter.catbox.moe/17nhu5.html** |
 | Live school demo | https://mayabela.pages.dev |
 
 On the slides: **F11**, then arrow keys or click.

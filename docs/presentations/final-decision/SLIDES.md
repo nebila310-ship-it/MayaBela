@@ -2,13 +2,15 @@
 
 Presented by **MaJo Bridge Technologies and Events**
 
-Directors · Administration · Parent representatives · Leadership bodies
+Directors · Student affairs · Quality assurance · Teachers · Administration · Parents · Drivers
 
-![Fenote Raey Academy](screens/cover.png)
+![Fenote Raey Academy command dashboard](screens/cover.png)
 
-የፍኖተ ራእይ አካዳሚ · አንድ ትምህርት ቤት · እያንዳንዱ ሚና · አንድ እውነተኛ መረጃ
+One school system. Every role in this room.
 
-One school system for directors, administration, teachers, parents, students, and transport.
+Student affairs, quality assurance, classroom management, alumni records, gallery, announcements, calendar, internal messages, homework — and the rest of the school books.
+
+የፍኖተ ራእይ አካዳሚ · እያንዳንዱ ሚና የሚጠቀመው ሞጁል ዛሬ ይታያል።
 
 ---
 
@@ -49,11 +51,12 @@ Every role in this meeting has a home.
 
 Same School ID. Different doors. Nobody sees another school. Staff only see the modules their duty requires.
 
-- **Directors / Principal / VP** — oversight, approvals, reports
-- **Registrar, finance, HR, store** — daily administration
-- **Teachers** — class, attendance, grades, homework
-- **Parents and students** — the child, not the whole office
-- **Drivers** — route, scan, live location
+- **Directors / Principal / VP** — dashboard, approvals, QA, reports
+- **Student affairs / registrar** — students, alumni, discipline, leave
+- **Classroom teachers** — class, attendance, homework, grades
+- **Quality assurance** — findings, plans, follow-up
+- **Parents & students** — child only: grades, gallery, messages, bus
+- **Finance / store / drivers** — fees, stock trail, live bus
 
 ---
 
@@ -82,12 +85,12 @@ Command of the school in one screen.
 This is what leadership opens every morning:
 
 - Who is present / absent today
-- Outstanding fees and collections
-- Pending grade and parent-link approvals
-- Buses that are live
+- Open student-affairs cases and homework due
+- Outstanding fees, live buses, QA follow-ups
+- Gallery, calendar, and unread messages
 - Reports you can export (Excel, CSV, PDF)
 
-Institution, school profile, campuses, quality-assurance findings, and audit log sit behind this — not in a side spreadsheet.
+The sidebar is the school: student affairs, alumni, classroom, QA, announcements, calendar, messages — not three leftover tiles.
 
 ---
 
@@ -101,13 +104,40 @@ Students are a register, not a chat list.
 - Date of birth is required so parents can link safely
 - Transfers and promotion are a workflow, not a deleted row
 - Parent requests wait for registrar / section director approval
-- Student affairs: discipline cases and leave requests
 
 Wrong DOB → no link. Approved link → parent sees only their child.
 
 ---
 
-## 7. Trust — the sentence to remember
+## 7. For student affairs
+
+Discipline and leave are a desk, not a rumour.
+
+![Student affairs](screens/screen-affairs.png)
+
+- Behaviour and incident cases: investigation → hearing → outcome
+- Each case has an owner (homeroom, student affairs, VP)
+- Parent leave requests wait for school approval
+- Teachers and parents see only what their duty allows
+
+የተማሪ ጉዳይና የዲሲፕሊን መዝገብ በስርዓት ይቀመጣል።
+
+---
+
+## 8. Alumni records
+
+Graduates stay in the school book.
+
+![Alumni records](screens/screen-alumni.png)
+
+- Final-year promotion can mark a class as graduated
+- Transcript / certificate history is not a deleted Excel row
+- Directors, registrar, and QA can still open the record
+- Alumni are not mixed back into today’s attendance list
+
+---
+
+## 9. Trust — the sentence to remember
 
 **Teacher enters. Leadership approves. Then the parent sees.**
 
@@ -124,7 +154,7 @@ This is the difference between a portal and a school.
 
 ---
 
-## 8. For classroom teachers
+## 10. For classroom teachers
 
 The class is the job. The system stays out of the way.
 
@@ -140,7 +170,37 @@ Teachers do not get the finance office, the whole staff directory, or another ca
 
 ---
 
-## 9. For parent representatives
+## 11. Classroom management
+
+Who teaches which class is not a hallway rumor.
+
+![Classroom management](screens/screen-classroom.png)
+
+- Grades → sections → homeroom teacher → timetable
+- Directors see the roster of classroom teachers in one list
+- Academic year is visible so last year’s assignment is not mixed in
+- Teachers then only see the classes they actually own
+
+የክፍል መምህር ማደራጀት በስርዓት ይታያል።
+
+---
+
+## 12. Homework and assignments
+
+Post the work. Parents see it. Teachers mark it done.
+
+![Homework posting](screens/screen-homework.png)
+
+- Teacher posts title, due date, class, and file
+- Parent portal shows the same homework for their child
+- Status: assigned → submitted / completed
+- No “please WhatsApp the worksheet” for the whole class
+
+የቤት ሥራ በመተግበሪያ ይለጠፋል። ወላጅ ያያል።
+
+---
+
+## 13. For parent representatives
 
 The parent sees the child — not the school’s internal politics.
 
@@ -148,15 +208,16 @@ The parent sees the child — not the school’s internal politics.
 
 - Link with Student ID + date of birth, then wait for school approval
 - Attendance, approved grades, homework, materials
-- Fee balance and announcements
+- School gallery and announcements for their child
+- Fee balance and calendar events they are allowed to see
 - Bus tracking when the driver is sharing location
-- Messages to the people the school allows — not an open group
+- Internal messages to the people the school allows
 
 ወላጅ የሚያየው ልጁን ብቻ ነው። ያልጸደቀ ውጤት አይታይም። የባስ አካባቢ ሹፌሩ ሲያጋራ ብቻ ነው።
 
 ---
 
-## 10. Transport
+## 14. Transport
 
 The bus is part of the school, not a private WhatsApp.
 
@@ -171,7 +232,7 @@ This is the module parent representatives usually ask about first. It is built i
 
 ---
 
-## 11. Finance
+## 15. Finance
 
 Collections you can defend in a board meeting.
 
@@ -186,7 +247,7 @@ Finance staff manage. Directors oversee. Parents see their own balance.
 
 ---
 
-## 12. Store and procurement
+## 16. Store and procurement
 
 Books, chalk, and purchases leave a trail.
 
@@ -201,40 +262,77 @@ This is where leakage usually hides in a paper school. MaJo Bridge makes it a wo
 
 ---
 
-## 13. Full catalog
+## 17. School life — announcements, gallery, calendar, messages
+
+The school speaks in one place. Not four WhatsApp groups.
+
+![Announcements](screens/screen-announce.png)
+
+![Gallery](screens/screen-gallery.png)
+
+![Calendar](screens/screen-calendar.png)
+
+![Internal messages](screens/screen-messages.png)
+
+- **Announcements** — directors post; staff and parents see by role
+- **Gallery** — school photos and events, not lost on a phone
+- **Calendar** — exams, holidays, meetings, sports day
+- **Internal messages** — teacher ↔ parent / staff, logged in the school
+
+ማስታወቂያ፣ ጋለሪ፣ የቀን መቁጠሪያ እና መልእክት በአንድ ቦታ።
+
+---
+
+## 18. Quality assurance
+
+Findings and improvement plans live next to the school, not in a drawer.
+
+![Quality assurance](screens/screen-qa.png)
+
+- Log a finding: classroom, library, transport, finance…
+- Status: open → in progress → closed
+- Improvement plans with owner and target date
+- Leadership and QA staff see the same book
+
+የጥራት ማረጋገጫ ግኝትና የማሻሻያ እቅድ በስርዓት።
+
+---
+
+## 19. Full catalog — 40+ modules
 
 What the school is buying — module by module
 
 | Area | Modules | Who it serves |
 |------|---------|---------------|
-| Organization | Institution, School profile, Campuses | Owners, directors |
-| Academics | Classes, examinations and grade approval, attendance, classroom teachers, timetable | Principal, VP, section director, teachers |
-| Student services | Students, parent-link approvals, transfers, student affairs | Registrar, student affairs |
-| Finance branch | Fees and payments, inventory / procurement / store | Accountant, procurement, store |
-| HR and transport | HR hub, administration staff, buses, drivers, live GPS | HR, transport admin, drivers |
-| Learning and comms | Library, e-books, announcements, events, calendar, messages | Everyone with a duty |
-| Quality and insight | QA findings, reports, Maya Assistant | QA, directors |
-| System | Role permissions, audit log, system health, settings | Owner / platform |
+| Organization | Institution, school profile, campuses | Owners, directors |
+| Student services | Students, parent-link, transfers, student affairs, alumni / graduated records | Registrar, student affairs |
+| Classroom | Classes, classroom teachers, timetable, attendance, exams, homework and assignments | Principal, VP, teachers |
+| Communication | Announcements, events and gallery, school calendar, internal messages | Every duty that must speak |
+| Quality | QA findings and plans, reports, Maya Assistant | QA, directors |
+| Staff modules | HR, payroll, leave, staff documents, library, canteen, clinic | HR, librarian, nurse, canteen |
+| Finance and store | Fees, invoices, receipts, expenses, inventory / procurement | Accountant, store, procurement |
+| Transport | Routes, GPS, boarding | Transport admin, drivers, parents |
+| System | Users and roles, audit log, branding, backups | Owner / platform |
 
 ---
 
-## 14. How a week looks
+## 20. How a week looks
 
 Not a theory. A working week.
 
 | Day | What happens |
 |-----|----------------|
-| 1 | Office logs in. Rosters and staff passwords work. Structure (grades / sections) is in the system. |
-| 2 | Teachers take attendance and enter subject grades. |
-| 3 | Section director approves grades. Linked parents see published results only. |
-| 4 | Parents link children (ID + DOB). Registrar approves. Fees and bus appear for that child. |
-| 5 | Leadership prints a PDF report. Store / procurement smoke-test if you use it. |
+| 1 | Office logs in. Rosters, classroom teachers, and staff passwords work. |
+| 2 | Teachers take attendance, post homework, and enter subject grades. |
+| 3 | Section director approves grades. Student affairs logs any case. QA opens a finding if needed. |
+| 4 | Parents link children (ID + DOB). They see homework, gallery, calendar, and messages for that child. |
+| 5 | Leadership prints a PDF. Store / HR / transport smoke-test if you use them. |
 
 Pilot recommendation: 30–60 days, one campus or one grade band, then a board decision to expand.
 
 ---
 
-## 15. Safety
+## 21. Safety
 
 The school’s data stays the school’s data.
 
@@ -246,19 +344,19 @@ This is a school operating system from MaJo Bridge Technologies and Events. It i
 
 ---
 
-## 16. The ask
+## 22. The ask
 
 **Recommend this system for Fenote Raey Academy.**
 
-| Directors | Administration | Parent representatives |
-|-----------|----------------|------------------------|
-| Endorse the grade-approval rule, reports, and oversight dashboard. | Endorse students, fees, HR, store, and transport as the daily books. | Endorse child-only access, approved grades, and live bus when the school runs transport. |
+| Directors / QA | Student affairs / admin | Teachers / parents |
+|----------------|-------------------------|--------------------|
+| Endorse the dashboard, grade-approval rule, and quality findings. | Endorse students, alumni, discipline, fees, HR, store, and transport as the daily books. | Endorse classroom tools, homework posting, child-only access, gallery, calendar, and messages. |
 
 Next step after this room: 30–60 day pilot on one campus/grade, support Mon–Sat 09:00–18:00 EAT, then expand.
 
 ---
 
-## 17. Try it in the room
+## 23. Try it in the room
 
 Live system — not a brochure.
 
