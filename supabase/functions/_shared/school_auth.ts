@@ -905,6 +905,13 @@ export async function ensureAuthUser(
     const found = await findAuthUserByEmail(sb, email);
     if (found) authUserId = found.id;
   }
+  if (!authUserId) {
+    const extra = String(profile.email || "").trim().toLowerCase();
+    if (extra && extra !== email) {
+      const byReal = await findAuthUserByEmail(sb, extra);
+      if (byReal) authUserId = byReal.id;
+    }
+  }
 
   if (!sessionPassword || options.forceRotate) {
     sessionPassword = generateSessionPassword();
@@ -952,8 +959,17 @@ export async function ensureAuthUser(
       user_metadata: userMeta,
     });
     if (error) {
+      const already = /already (been )?registered|email_exists|already exists/i
+        .test(error.message || "");
       const raced = await findAuthUserByEmail(sb, email);
-      if (!raced) throw error;
+      if (!raced) {
+        if (already) {
+          throw new Error(
+            "This admin email is already on the account. Try logging in with the password you just saved.",
+          );
+        }
+        throw error;
+      }
       authUserId = raced.id;
       const { error: updErr } = await sb.auth.admin.updateUserById(authUserId, {
         password: sessionPassword,
@@ -980,24 +996,45 @@ export async function ensureAuthUser(
 }
 
 async function findAuthUserByEmail(
-  _sb: SupabaseClient,
+  sb: SupabaseClient,
   email: string,
 ): Promise<{ id: string } | null> {
   const target = email.trim().toLowerCase();
+  if (!target) return null;
+
   const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!url || !key) return null;
-  const res = await fetch(
-    `${url}/auth/v1/admin/users?email=${encodeURIComponent(target)}&page=1&per_page=10`,
-    { headers: { Authorization: `Bearer ${key}`, apikey: key } },
-  );
-  if (!res.ok) return null;
-  const body = await res.json();
-  const users = Array.isArray(body?.users) ? body.users : [];
-  const hit = users.find((u: { email?: string; id?: string }) =>
-    (u.email || "").toLowerCase() === target
-  );
-  return hit?.id ? { id: String(hit.id) } : null;
+  if (url && key) {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?email=${encodeURIComponent(target)}&page=1&per_page=50`,
+      { headers: { Authorization: `Bearer ${key}`, apikey: key } },
+    );
+    if (res.ok) {
+      const body = await res.json();
+      const users = Array.isArray(body?.users)
+        ? body.users
+        : Array.isArray(body)
+        ? body
+        : [];
+      const hit = users.find((u: { email?: string; id?: string }) =>
+        (u.email || "").toLowerCase() === target
+      );
+      if (hit?.id) return { id: String(hit.id) };
+    }
+  }
+
+  for (let page = 1; page <= 25; page++) {
+    const { data, error } = await sb.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error) break;
+    const users = data?.users || [];
+    const hit = users.find((u) => (u.email || "").toLowerCase() === target);
+    if (hit?.id) return { id: hit.id };
+    if (users.length < 200) break;
+  }
+  return null;
 }
 
 export function classNamesFromTeacherData(data: Record<string, unknown> | null): string[] {

@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
         username,
         roleKey: "admin",
         schoolId,
+        email: account.email || merged.adminEmail || null,
         phone: account.phone || merged.adminContactPhone || null,
         fullName: account.fullName || merged.adminFullName || null,
         updatedAt: now,
@@ -107,7 +108,18 @@ Deno.serve(async (req) => {
       await upsertSecret(sb, username, password, schoolId);
       await upsertDoc(sb, "app_auth_accounts", docId, profile, schoolId);
       const accessProfile = await enrichAccessProfile(sb, profile);
-      await ensureAuthUser(sb, username, password, accessProfile);
+      try {
+        await ensureAuthUser(sb, username, password, accessProfile, {
+          forceRotate: true,
+        });
+      } catch (authErr) {
+        const msg = String((authErr as Error)?.message || authErr);
+        if (!/already (been )?registered|email_exists/i.test(msg)) {
+          throw authErr;
+        }
+        // School password is already stored. Login can use it even if Auth
+        // already has this email.
+      }
 
       // Never persist plaintext admin passwords on school_registry.
       delete merged.adminInitialPassword;
