@@ -13,4 +13,4 @@ GitHub file links stay inside GitHub. Open the slides as a real web page:
 
 The download files already contain the screenshots. Hard-refresh (**Ctrl+Shift+R**) if an older tab is still open.
 
-Support: +251 911 646 444 · nabilmaya6464@gmail.com
+Support: +251 911 646 444 · majobridgetech@gmail.com

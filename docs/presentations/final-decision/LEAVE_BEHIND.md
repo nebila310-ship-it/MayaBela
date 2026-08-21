@@ -5,7 +5,7 @@
 One school. Every role. One source of truth.
 
 Live demo: https://mayabela.pages.dev  
-Support: +251 911 646 444 · nabilmaya6464@gmail.com  
+Support: +251 911 646 444 · majobridgetech@gmail.com  
 Hours: Mon–Sat 09:00–18:00 East Africa Time
 
 Print this page from your browser if you need paper copies.

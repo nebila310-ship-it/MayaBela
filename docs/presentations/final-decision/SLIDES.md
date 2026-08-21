@@ -507,7 +507,7 @@ Live system — not a brochure.
 
 Hard-refresh if you saw an older page: Ctrl+Shift+R
 
-Support: **+251 911 646 444** · nabilmaya6464@gmail.com
+Support: **+251 911 646 444** · majobridgetech@gmail.com
 
 ሙከራው በቀጥታ ይከፈታል። ጥያቄ ካለዎ አሁን ይጠይቁ።
 
