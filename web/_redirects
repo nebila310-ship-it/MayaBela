@@ -2,6 +2,14 @@
 /pitch    /pitch/index.html   200
 /pitch/   /pitch/index.html   200
 
+# Fenote Raey meeting deck (static HTML)
+/fenote-raey-academy    /fenote-raey-academy/index.html   200
+/fenote-raey-academy/   /fenote-raey-academy/index.html   200
+/fenote-raey-academy/flyer    /fenote-raey-academy/flyer/index.html   200
+/fenote-raey-academy/flyer/   /fenote-raey-academy/flyer/index.html   200
+/fenote-raey-academy/leave-behind    /fenote-raey-academy/leave-behind/index.html   200
+/fenote-raey-academy/leave-behind/   /fenote-raey-academy/leave-behind/index.html   200
+
 # Commercial agreements (directory + index.html — avoids Cloudflare .html pretty-URL loops)
 /agreements/feleg-raye    /agreements/feleg-raye/index.html   200
 /agreements/feleg-raye/   /agreements/feleg-raye/index.html   200
