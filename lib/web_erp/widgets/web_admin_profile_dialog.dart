@@ -14,6 +14,8 @@ import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/admin_staff_ui.dart';
 import 'package:mayabela/widgets/admin_student_edit_dialog.dart';
+import 'package:mayabela/widgets/admin_student_qr_actions.dart';
+import 'package:mayabela/widgets/student_qr_card.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 
@@ -125,7 +127,7 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 760),
         child: student == null
             ? Padding(
                 padding: const EdgeInsets.all(24),
@@ -222,6 +224,19 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                           value: student.transportEnabled ? 'Yes' : 'No',
                           color: const Color(0xFF455A64),
                         ),
+                        const SizedBox(height: 12),
+                        StudentQrCard(
+                          profile: qrProfileForStudent(student),
+                          size: 160,
+                        ),
+                        Text(
+                          s.studentQrUsageHint,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            height: 1.35,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -232,6 +247,12 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
+                          FilledButton.icon(
+                            onPressed: () =>
+                                showAdminStudentQrSheet(context, student: student),
+                            icon: const Icon(Icons.qr_code_2),
+                            label: Text(s.generateStudentQr),
+                          ),
                           FilledButton.icon(
                             onPressed: () => _edit(student),
                             icon: const Icon(Icons.edit_outlined),

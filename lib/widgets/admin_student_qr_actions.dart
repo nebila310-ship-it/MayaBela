@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
@@ -38,11 +39,60 @@ StudentQrProfile qrProfileForStudentId({
   return profile;
 }
 
-void _showStudentQrBottomSheet(
+Widget studentQrViewerBody(
+  BuildContext context,
+  StudentQrProfile profile, {
+  double size = 200,
+}) {
+  final s = AppLocale.instance.strings;
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        s.generateStudentQr,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        s.studentQrUsageHint,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.grey.shade700, height: 1.35),
+      ),
+      const SizedBox(height: 12),
+      StudentQrCard(profile: profile, size: size),
+      const SizedBox(height: 8),
+    ],
+  );
+}
+
+void _showStudentQrViewer(
   BuildContext context,
   StudentQrProfile profile,
 ) {
-  final s = AppLocale.instance.strings;
+  final body = studentQrViewerBody(context, profile);
+  if (kIsWeb) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(child: body),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.instance.strings.done),
+          ),
+        ],
+      ),
+    );
+    return;
+  }
+
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -51,27 +101,7 @@ void _showStudentQrBottomSheet(
     builder: (ctx) => SafeArea(
       child: Padding(
         padding: listPagePadding(ctx),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              s.generateStudentQr,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              s.studentQrUsageHint,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade700, height: 1.35),
-            ),
-            const SizedBox(height: 12),
-            StudentQrCard(profile: profile, size: 200),
-            const SizedBox(height: 8),
-          ],
-        ),
+        child: body,
       ),
     ),
   );
@@ -89,14 +119,81 @@ void showStudentIdentificationQrSheet(
     studentName: studentName,
     className: className,
   );
-  _showStudentQrBottomSheet(context, profile);
+  _showStudentQrViewer(context, profile);
 }
 
 void showAdminStudentQrSheet(
   BuildContext context, {
   required AdminStudentRecord student,
 }) {
-  _showStudentQrBottomSheet(context, qrProfileForStudent(student));
+  _showStudentQrViewer(context, qrProfileForStudent(student));
+}
+
+/// Printable grid of student QR cards for bus check-in/out and class attendance.
+Future<void> showStudentQrPrintPreview(
+  BuildContext context, {
+  required List<AdminStudentRecord> students,
+}) {
+  final s = AppLocale.instance.strings;
+  final profiles = students.map(qrProfileForStudent).toList(growable: false);
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960, maxHeight: 720),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      s.studentQrCodes,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Text(
+                '${s.studentQrUsageHint} Press Ctrl+P to print this page.',
+                style: TextStyle(color: Colors.grey.shade700, height: 1.35),
+              ),
+            ),
+            Expanded(
+              child: profiles.isEmpty
+                  ? const Center(child: Text('No students to print.'))
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          for (final profile in profiles)
+                            SizedBox(
+                              width: 260,
+                              child: StudentQrCard(profile: profile, size: 160),
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 Future<String?> showAdminScanStudentQrDialog(BuildContext context) async {

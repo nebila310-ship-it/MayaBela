@@ -32,7 +32,9 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
+import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/send_student_parent_invites.dart';
+import 'package:mayabela/widgets/student_qr_card.dart';
 import 'package:mayabela/widgets/send_teacher_credentials.dart';
 import 'package:mayabela/widgets/staff_role_picker_table.dart';
 import 'package:mayabela/widgets/transport_driver_field.dart';
@@ -1416,6 +1418,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
     }
 
     if (!mounted) return;
+    final qrProfile = qrProfileForStudent(student);
     await showAdminSuccessDialog(
       context: context,
       title: s.studentEnrolled,
@@ -1423,6 +1426,8 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       accent: AdminFormTheme.student.primary,
       icon: Icons.check_circle_outline,
       items: summaryItems,
+      extra: StudentQrCard(profile: qrProfile, size: 160),
+      footnote: s.studentQrUsageHint,
       actions: [
         if (portalStudent.loginUsername != null)
           AdminDialogAction(
@@ -1433,6 +1438,13 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
               await StudentCredentialsService.instance.share(portalStudent);
             },
           ),
+        AdminDialogAction(
+          label: s.generateStudentQr,
+          icon: Icons.qr_code_2,
+          onPressed: () {
+            showAdminStudentQrSheet(context, student: student);
+          },
+        ),
         AdminDialogAction(
           label: s.sendInviteToContacts,
           icon: Icons.mail_outline,

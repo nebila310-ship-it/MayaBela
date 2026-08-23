@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
+import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 
 class WebStudentsTablePage extends StatefulWidget {
   const WebStudentsTablePage({super.key, this.onNavigate});
@@ -77,10 +79,12 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text('Students', style: WebErpTheme.sectionTitle(context)),
-              const Spacer(),
               if (_canManage)
                 FilledButton.icon(
                   onPressed: _openAdd,
@@ -137,14 +141,30 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 ),
               ],
               const SizedBox(width: 8),
+              FilledButton.tonalIcon(
+                onPressed: students.isEmpty
+                    ? null
+                    : () => showStudentQrPrintPreview(
+                          context,
+                          students: students,
+                        ),
+                icon: const Icon(Icons.qr_code_2),
+                label: Text(AppLocale.instance.strings.studentQrCodes),
+              ),
+              const SizedBox(width: 8),
               IconButton(
                 tooltip: 'Export Excel',
                 onPressed: () {},
                 icon: const Icon(Icons.table_view_outlined),
               ),
               IconButton(
-                tooltip: 'Print',
-                onPressed: () {},
+                tooltip: 'Print QR cards',
+                onPressed: students.isEmpty
+                    ? null
+                    : () => showStudentQrPrintPreview(
+                          context,
+                          students: students,
+                        ),
                 icon: const Icon(Icons.print_outlined),
               ),
             ],
@@ -249,16 +269,31 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                                   Text(s.isActive ? 'Active' : 'Inactive'),
                                 ),
                                 DataCell(
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.visibility_outlined,
-                                    ),
-                                    onPressed: () =>
-                                        showWebStudentProfileDialog(
-                                      context,
-                                      studentId: s.studentId,
-                                      onUpdated: () => setState(() {}),
-                                    ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: AppLocale
+                                            .instance.strings.generateStudentQr,
+                                        icon: const Icon(Icons.qr_code_2),
+                                        onPressed: () =>
+                                            showAdminStudentQrSheet(
+                                          context,
+                                          student: s,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.visibility_outlined,
+                                        ),
+                                        onPressed: () =>
+                                            showWebStudentProfileDialog(
+                                          context,
+                                          studentId: s.studentId,
+                                          onUpdated: () => setState(() {}),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
