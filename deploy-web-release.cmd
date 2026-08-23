@@ -22,7 +22,7 @@ echo Building web release for:
 echo   SUPABASE_URL=%SUPABASE_URL%
 echo.
 
-flutter build web --release ^
+flutter build web --release --pwa-strategy=none ^
   --dart-define=SUPABASE_CONFIGURED=true ^
   --dart-define=SUPABASE_URL=%SUPABASE_URL% ^
   --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY%

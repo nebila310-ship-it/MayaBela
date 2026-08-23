@@ -406,6 +406,7 @@ class _PlatformConsoleScreenState extends State<PlatformConsoleScreen> {
               ),
             ),
           ),
+          _schoolErpBusBanner(),
           _expiryAlertBanner(),
           const SizedBox(height: 8),
           SingleChildScrollView(
@@ -442,6 +443,33 @@ class _PlatformConsoleScreenState extends State<PlatformConsoleScreen> {
                       );
                     },
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _schoolErpBusBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14532D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.lightGreenAccent.withValues(alpha: 0.45)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.directions_bus, color: Colors.lightGreenAccent),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Register Driver and Live GPS are not in this Owner console.\n'
+              'Sign out, choose Admin, then enter School ID + admin phone + password. '
+              'SCHOOL BUS is at the top of the left menu.',
+              style: TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+            ),
           ),
         ],
       ),
@@ -1404,6 +1432,23 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     );
   }
 
+  Widget _adminErpHintCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14532D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.lightGreenAccent.withValues(alpha: 0.4)),
+      ),
+      child: const Text(
+        'Use these Admin login details on the SIGN IN page (role: Admin) '
+        'to open the school ERP. Register Driver and Live GPS are in that ERP, '
+        'not in this Owner console.',
+        style: TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+      ),
+    );
+  }
+
   Widget _sectionTitle(String title, {String? subtitle}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1451,6 +1496,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
         SchoolOnboardingChecklistCard(school: school),
         const SizedBox(height: 16),
         _sectionTitle('Admin access'),
+        _adminErpHintCard(),
+        const SizedBox(height: 10),
         _infoCard(_joinedProfileRows([
           if (adminName != null && adminName.isNotEmpty)
             _profileRow('Admin name', adminName),

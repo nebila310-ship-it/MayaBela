@@ -796,6 +796,20 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ],
           ),
+        if (selectedRole == AuthService.roleAdmin) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF14532D),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'After Admin sign-in: SCHOOL BUS is at the top of the left menu — Register Driver and Live GPS. This is not in the Owner PIN console.',
+              style: TextStyle(color: Colors.white, fontSize: 12, height: 1.35),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         _buildSchoolIdField(),
         const SizedBox(height: 12),
@@ -1102,7 +1116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'v1.0.3',
+                      'v1.0.4-bus',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.35),
                         fontSize: 11,

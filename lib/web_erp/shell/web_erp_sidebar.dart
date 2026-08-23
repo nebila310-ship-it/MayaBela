@@ -99,7 +99,7 @@ class WebErpSidebar extends StatelessWidget {
                 ],
                 if (ModuleAccess.canView('add_driver') ||
                     ModuleAccess.canView('transport_live_gps')) ...[
-                  if (!collapsed) _sectionLabel('School bus'),
+                  if (!collapsed) _sectionLabel('School bus', highlight: true),
                   if (ModuleAccess.canView('add_driver'))
                     _NavTile(
                       item: webErpNavItemById('add_driver') ??
@@ -164,15 +164,15 @@ class WebErpSidebar extends StatelessWidget {
     return out;
   }
 
-  Widget _sectionLabel(String text) {
+  Widget _sectionLabel(String text, {bool highlight = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white38,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
+        style: TextStyle(
+          color: highlight ? const Color(0xFF86EFAC) : Colors.white38,
+          fontSize: highlight ? 12 : 10,
+          fontWeight: FontWeight.w800,
           letterSpacing: 1.1,
         ),
       ),

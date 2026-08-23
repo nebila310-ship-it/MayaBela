@@ -59,7 +59,7 @@ if errorlevel 1 (
 
 echo.
 echo === 3/3 Deploy to Pages project "%PROJECT_NAME%" ===
-call npx --yes wrangler@4 pages deploy build/web --project-name=%PROJECT_NAME% --commit-dirty=true
+call npx --yes wrangler@4 pages deploy build/web --project-name=%PROJECT_NAME% --branch=main --commit-dirty=true
 if errorlevel 1 (
   echo.
   echo Deploy failed.
