@@ -791,10 +791,19 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       'maya_assistant',
       'announcements',
     };
-    final items = webErpNavItemsForCurrentUser()
+    final preferred = ['add_driver', 'transport_live_gps', 'transport', 'hr'];
+    final visible = webErpNavItemsForCurrentUser()
         .where((i) => !i.isLogout && !skip.contains(i.id))
-        .take(8)
         .toList();
+    visible.sort((a, b) {
+      final ai = preferred.indexOf(a.id);
+      final bi = preferred.indexOf(b.id);
+      if (ai >= 0 && bi >= 0) return ai.compareTo(bi);
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return 0;
+    });
+    final items = visible.take(8).toList();
     if (items.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

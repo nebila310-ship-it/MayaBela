@@ -59,6 +59,26 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                     ),
               ),
               const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (ModuleAccess.canView('add_driver'))
+                    FilledButton.icon(
+                      onPressed: () => widget.onNavigate?.call('add_driver'),
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: const Text('Register Driver'),
+                    ),
+                  if (ModuleAccess.canView('transport_live_gps'))
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          widget.onNavigate?.call('transport_live_gps'),
+                      icon: const Icon(Icons.gps_fixed),
+                      label: const Text('Live GPS'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
               TabBar(
                 controller: _tabs,
                 isScrollable: true,

@@ -228,6 +228,10 @@ class WebAdminOverviewPage extends StatelessWidget {
         ('Collect Fees', Icons.payments, 'finance'),
       if (ModuleAccess.canManage('announcements'))
         ('Announcement', Icons.campaign, 'announcements'),
+      if (ModuleAccess.canView('add_driver'))
+        ('Register Driver', Icons.person_add_alt_1, 'add_driver'),
+      if (ModuleAccess.canView('transport_live_gps'))
+        ('Live GPS', Icons.gps_fixed, 'transport_live_gps'),
     ];
 
     if (actions.isEmpty) return const SizedBox.shrink();

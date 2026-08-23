@@ -97,18 +97,71 @@ class WebErpSidebar extends StatelessWidget {
                       ),
                   const SizedBox(height: 8),
                 ],
-                for (final item in items) _NavTile(
-                  item: item,
-                  collapsed: collapsed,
-                  selected: selectedId == item.id,
-                  onTap: () => onSelect(item.id),
-                ),
+                if (ModuleAccess.canView('add_driver') ||
+                    ModuleAccess.canView('transport_live_gps')) ...[
+                  if (!collapsed) _sectionLabel('School bus'),
+                  if (ModuleAccess.canView('add_driver'))
+                    _NavTile(
+                      item: webErpNavItemById('add_driver') ??
+                          const WebErpNavItem(
+                            id: 'add_driver',
+                            label: 'Register Driver',
+                            icon: Icons.person_add_alt_1_outlined,
+                          ),
+                      collapsed: collapsed,
+                      selected: selectedId == 'add_driver',
+                      onTap: () => onSelect('add_driver'),
+                    ),
+                  if (ModuleAccess.canView('transport_live_gps'))
+                    _NavTile(
+                      item: webErpNavItemById('transport_live_gps') ??
+                          const WebErpNavItem(
+                            id: 'transport_live_gps',
+                            label: 'Live GPS',
+                            icon: Icons.gps_fixed,
+                          ),
+                      collapsed: collapsed,
+                      selected: selectedId == 'transport_live_gps',
+                      onTap: () => onSelect('transport_live_gps'),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+                ..._sectionedTiles(items, selectedId, collapsed, onSelect),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _sectionedTiles(
+    List<WebErpNavItem> items,
+    String selectedId,
+    bool collapsed,
+    ValueChanged<String> onSelect,
+  ) {
+    final out = <Widget>[];
+    String? lastSection;
+    for (final item in items) {
+      final section = item.section;
+      if (!collapsed &&
+          section != null &&
+          section.isNotEmpty &&
+          section != lastSection) {
+        out.add(_sectionLabel(section));
+        lastSection = section;
+      }
+      out.add(
+        _NavTile(
+          item: item,
+          collapsed: collapsed,
+          selected: selectedId == item.id,
+          onTap: () => onSelect(item.id),
+        ),
+      );
+    }
+    return out;
   }
 
   Widget _sectionLabel(String text) {
