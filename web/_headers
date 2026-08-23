@@ -17,3 +17,9 @@
 
 /main.dart.js
   Cache-Control: no-cache, no-store, must-revalidate
+
+/fenote-raey-academy/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/fenote-raey-academy/screens/*
+  Cache-Control: no-cache, must-revalidate

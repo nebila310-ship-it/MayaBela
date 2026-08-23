@@ -70,6 +70,7 @@ jobs:
             DEFINES+=(--dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}")
           fi
           flutter build web --release --pwa-strategy=none "${DEFINES[@]}"
+          python3 web/fenote-raey-academy/build_download.py --out build/web/fenote-raey-academy
           cp -f web/_redirects build/web/_redirects
           cp -f web/_headers build/web/_headers
 

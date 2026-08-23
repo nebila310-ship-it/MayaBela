@@ -37,6 +37,13 @@ if not exist "build\web\index.html" (
   exit /b 1
 )
 
+python web\fenote-raey-academy\build_download.py --out build\web\fenote-raey-academy
+if errorlevel 1 (
+  echo ERROR: Could not build Fenote slide download pack.
+  if not defined MAYABELA_NOPAUSE pause
+  exit /b 1
+)
+
 REM Ensure SPA + security files are present (also copied from web/ by Flutter).
 if not exist "build\web\_redirects" copy /Y "web\_redirects" "build\web\_redirects" >nul
 if not exist "build\web\_headers" copy /Y "web\_headers" "build\web\_headers" >nul
