@@ -9,7 +9,6 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
-import 'package:mayabela/widgets/staff_role_labels.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 
 /// Unified directory for administration staff or classroom teachers.
