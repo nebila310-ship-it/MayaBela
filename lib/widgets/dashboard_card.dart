@@ -31,23 +31,36 @@ class DashboardCard extends StatelessWidget {
               height: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  colors: [
-                    color.withValues(alpha: 0.8),
-                    color.withValues(alpha: 0.4),
-                  ],
+                color: const Color(0xFFFBF6ED).withValues(alpha: 0.94),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.28),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF5D4037).withValues(alpha: 0.10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, color: Colors.white, size: 40),
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(icon, color: color, size: 30),
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF3E3428),
                       fontWeight: FontWeight.bold,
                     ),
                   ),

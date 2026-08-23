@@ -15,8 +15,10 @@ import 'package:mayabela/web_erp/shell/web_erp_navigation_scope.dart';
 import 'package:mayabela/web_erp/shell/web_erp_sidebar.dart';
 import 'package:mayabela/web_erp/shell/web_erp_top_bar.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/widgets/web_global_search_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_session_timeout.dart';
+import 'package:mayabela/widgets/admin_educational_background.dart';
 
 /// Shared school ERP shell — sidebar, top bar, routed content.
 /// Used on web and on the Admin/Staff APK so both show the same modules.
@@ -198,14 +200,34 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                   child: narrow
                       ? Scaffold(
                           key: _scaffoldKey,
+                          backgroundColor: WebErpTheme.paperBackdrop,
                           drawer: Drawer(child: sidebar),
-                          body: _pageBody(narrow: true),
+                          body: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              const AdminEducationalBackground(
+                                accentColor: WebErpTheme.primary,
+                              ),
+                              _pageBody(narrow: true),
+                            ],
+                          ),
                         )
                       : Scaffold(
+                          backgroundColor: WebErpTheme.paperBackdrop,
                           body: Row(
                             children: [
                               sidebar,
-                              Expanded(child: _pageBody(narrow: false)),
+                              Expanded(
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    const AdminEducationalBackground(
+                                      accentColor: WebErpTheme.primary,
+                                    ),
+                                    _pageBody(narrow: false),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),

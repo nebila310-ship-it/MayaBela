@@ -68,10 +68,10 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
     return Container(
       height: WebErpTheme.topBarHeight,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: WebErpTheme.paper.withValues(alpha: 0.88),
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+            color: WebErpTheme.paperEdge.withValues(alpha: 0.7),
           ),
         ),
       ),
