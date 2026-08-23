@@ -60,12 +60,48 @@ const List<WebErpNavItem> _allNavItems = [
       icon: Icons.school_outlined,
       section: 'Academics',
     ),
+    WebErpNavItem(
+      id: 'add_teacher',
+      label: 'Add Teacher',
+      icon: Icons.person_add_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
+      id: 'timetable',
+      label: 'Timetable',
+      icon: Icons.calendar_view_week_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
+      id: 'grade_workflow_settings',
+      label: 'Grade Workflow',
+      icon: Icons.rule_outlined,
+      section: 'Academics',
+    ),
 
     // Student services — Students, Registrar duties, Student Affairs.
     WebErpNavItem(
       id: 'students',
       label: 'Students',
       icon: Icons.groups_outlined,
+      section: 'Student Services',
+    ),
+    WebErpNavItem(
+      id: 'add_student',
+      label: 'Add Student',
+      icon: Icons.person_add_alt_1_outlined,
+      section: 'Student Services',
+    ),
+    WebErpNavItem(
+      id: 'student_portal_settings',
+      label: 'Student Portal Settings',
+      icon: Icons.school_outlined,
+      section: 'Student Services',
+    ),
+    WebErpNavItem(
+      id: 'student_password_resets',
+      label: 'Student Password Resets',
+      icon: Icons.lock_reset_outlined,
       section: 'Student Services',
     ),
     WebErpNavItem(
@@ -113,6 +149,12 @@ const List<WebErpNavItem> _allNavItems = [
     WebErpNavItem(
       id: 'teachers',
       label: 'Administration Staff Directory',
+      icon: Icons.badge_outlined,
+      section: 'HR Branch',
+    ),
+    WebErpNavItem(
+      id: 'add_staff',
+      label: 'Add Administration Staff',
       icon: Icons.badge_outlined,
       section: 'HR Branch',
     ),

@@ -1,8 +1,8 @@
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 
-/// Per-module access rule used by the web ERP sidebar/router and the mobile
-/// staff dashboard. Module ids match the web ERP route ids.
+/// Per-module access rule used by the shared ERP sidebar/router (web and APK).
+/// Module ids match the ERP route ids.
 class ModuleRule {
   const ModuleRule({
     this.view = const [],
@@ -260,6 +260,10 @@ abstract final class ModuleAccess {
     'transport_live_gps': 'transport',
     'add_driver': 'transport',
     'add_student': 'students',
+    'timetable': 'academic',
+    'student_portal_settings': 'school',
+    'student_password_resets': 'students',
+    'grade_workflow_settings': 'examinations',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

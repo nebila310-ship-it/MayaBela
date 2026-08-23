@@ -18,7 +18,8 @@ import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_global_search_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_session_timeout.dart';
 
-/// Enterprise web admin shell — sidebar, top bar, routed content (web only).
+/// Shared school ERP shell — sidebar, top bar, routed content.
+/// Used on web and on the Admin/Staff APK so both show the same modules.
 class WebErpAdminShell extends StatefulWidget {
   const WebErpAdminShell({super.key});
 

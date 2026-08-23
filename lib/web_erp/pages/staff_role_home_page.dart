@@ -648,9 +648,13 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
             children: [
               const Icon(Icons.campaign_outlined, color: Colors.orange),
               const SizedBox(width: 8),
-              Text('Latest announcements',
-                  style: WebErpTheme.sectionTitle(context)),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  'Latest announcements',
+                  style: WebErpTheme.sectionTitle(context),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               TextButton(
                 onPressed: () => _open('announcements'),
                 child: const Text('View all'),
