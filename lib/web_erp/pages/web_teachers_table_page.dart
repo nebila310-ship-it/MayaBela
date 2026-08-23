@@ -6,6 +6,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/widgets/staff_role_labels.dart';
@@ -33,10 +34,23 @@ class WebTeachersTablePage extends StatefulWidget {
 }
 
 class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
+  final _search = TextEditingController();
   String _query = '';
   String? _campusFilter;
-  final int _rowsPerPage = 15;
   int _page = 0;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _runSearch() {
+    setState(() {
+      _query = _search.text.trim();
+      _page = 0;
+    });
+  }
 
   bool get _isStaffDir =>
       widget.directoryMode == WebTeachersDirectoryMode.administrationStaff;
@@ -85,14 +99,15 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
     }).toList();
 
     if (_query.isNotEmpty) {
-      final q = _query.toLowerCase();
       teachers = teachers
           .where(
-            (t) =>
-                t.fullName.toLowerCase().contains(q) ||
-                (t.employeeId ?? t.teacherId).toLowerCase().contains(q) ||
-                (t.phone ?? '').toLowerCase().contains(q) ||
-                (t.loginUsername ?? '').toLowerCase().contains(q),
+            (t) => PaginatedDirectory.matchesText(_query, [
+              t.fullName,
+              t.employeeId ?? t.teacherId,
+              t.teacherId,
+              t.phone,
+              t.loginUsername,
+            ]),
           )
           .toList();
     }
@@ -100,11 +115,8 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
       teachers = teachers.where((t) => t.campus == _campusFilter).toList();
     }
 
-    final pageCount = (teachers.length / _rowsPerPage).ceil().clamp(1, 9999);
-    final slice = teachers
-        .skip(_page * _rowsPerPage)
-        .take(_rowsPerPage)
-        .toList(growable: false);
+    final pageCount = PaginatedDirectory.pageCount(teachers.length);
+    final slice = PaginatedDirectory.pageOf(teachers, _page);
     final canAdd = ModuleAccess.canHireStaff;
     final s = AppLocale.instance.strings;
     final narrow = WebViewport.isNarrow(context);
@@ -155,96 +167,63 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                 ),
           ),
           const SizedBox(height: 12),
-          if (narrow) ...[
-            TextField(
-              decoration: const InputDecoration(
-                hintText: 'Search name, ID, or phone…',
-                prefixIcon: Icon(Icons.search),
-                isDense: true,
-                border: OutlineInputBorder(),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: narrow ? double.infinity : 320,
+                child: TextField(
+                  controller: _search,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _runSearch(),
+                  decoration: const InputDecoration(
+                    hintText: 'Search by name or staff ID…',
+                    prefixIcon: Icon(Icons.search),
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
               ),
-              onChanged: (v) => setState(() {
-                _query = v;
-                _page = 0;
-              }),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (multiCampus)
-                  Expanded(
-                    child: DropdownButtonFormField<String?>(
-                      initialValue: _campusFilter,
-                      decoration: const InputDecoration(
-                        labelText: 'Campus',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('All campuses'),
-                        ),
-                        for (final c in campuses)
-                          DropdownMenuItem(value: c, child: Text(c)),
-                      ],
-                      onChanged: (v) => setState(() {
-                        _campusFilter = v;
-                        _page = 0;
-                      }),
+              FilledButton.icon(
+                onPressed: _runSearch,
+                icon: const Icon(Icons.search),
+                label: const Text('Search'),
+              ),
+              if (_query.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    _search.clear();
+                    _runSearch();
+                  },
+                  child: const Text('Clear'),
+                ),
+              if (multiCampus)
+                DropdownButton<String?>(
+                  value: _campusFilter,
+                  hint: const Text('Campus'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('All campuses'),
                     ),
-                  ),
-                if (multiCampus) const SizedBox(width: 8),
-                Text(
-                  '${teachers.length} registered',
-                  style: Theme.of(context).textTheme.bodySmall,
+                    for (final c in campuses)
+                      DropdownMenuItem(value: c, child: Text(c)),
+                  ],
+                  onChanged: (v) => setState(() {
+                    _campusFilter = v;
+                    _page = 0;
+                  }),
                 ),
-              ],
-            ),
-          ] else
-            Row(
-              children: [
-                SizedBox(
-                  width: 280,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search name, ID, or phone…',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (v) => setState(() {
-                      _query = v;
-                      _page = 0;
-                    }),
-                  ),
-                ),
-                if (multiCampus) ...[
-                  const SizedBox(width: 12),
-                  DropdownButton<String?>(
-                    value: _campusFilter,
-                    hint: const Text('Campus'),
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('All campuses'),
-                      ),
-                      for (final c in campuses)
-                        DropdownMenuItem(value: c, child: Text(c)),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _campusFilter = v;
-                      _page = 0;
-                    }),
-                  ),
-                ],
-                const Spacer(),
-                Text(
-                  '${teachers.length} registered',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
+              Text(
+                teachers.isEmpty
+                    ? '0 registered'
+                    : '${teachers.length} registered · 10 per page',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: Container(
@@ -260,13 +239,19 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                             color: Colors.grey.shade400,
                           ),
                           const SizedBox(height: 12),
-                          const Text('No administration staff registered yet.'),
+                          Text(
+                            _query.isNotEmpty
+                                ? 'No ${_isStaffDir ? 'staff' : 'teachers'} match this search.'
+                                : (_isStaffDir
+                                    ? 'No administration staff registered yet.'
+                                    : 'No classroom teachers registered yet.'),
+                          ),
                           if (canAdd) ...[
                             const SizedBox(height: 16),
                             FilledButton.icon(
                               onPressed: _openAdd,
                               icon: const Icon(Icons.person_add_alt_1_outlined),
-                              label: const Text('Add Administration Staff'),
+                              label: Text(_addLabel),
                             ),
                           ],
                         ],
@@ -274,6 +259,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                     )
                   : narrow
                       ? ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           itemCount: slice.length,
                           separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (context, index) {
@@ -324,9 +310,13 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                             );
                           },
                         )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
+                      : Scrollbar(
+                          thumbVisibility: true,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: DataTable(
                             columns: [
                               const DataColumn(label: Text('Photo')),
                               const DataColumn(label: Text('Staff ID')),
@@ -435,6 +425,8 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                                   ],
                                 ),
                             ],
+                          ),
+                            ),
                           ),
                         ),
             ),

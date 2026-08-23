@@ -6,6 +6,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 
@@ -19,11 +20,24 @@ class WebStudentsTablePage extends StatefulWidget {
 }
 
 class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
+  final _search = TextEditingController();
   String _query = '';
   String? _gradeFilter;
   String? _campusFilter;
-  final int _rowsPerPage = 15;
   int _page = 0;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _runSearch() {
+    setState(() {
+      _query = _search.text.trim();
+      _page = 0;
+    });
+  }
 
   bool get _canManage => ModuleAccess.canManage('students');
 
@@ -51,12 +65,12 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
     students = students.where((s) => s.isActive).toList();
 
     if (_query.isNotEmpty) {
-      final q = _query.toLowerCase();
       students = students
           .where(
-            (s) =>
-                s.fullName.toLowerCase().contains(q) ||
-                s.studentId.toLowerCase().contains(q),
+            (s) => PaginatedDirectory.matchesText(_query, [
+              s.fullName,
+              s.studentId,
+            ]),
           )
           .toList();
     }
@@ -68,11 +82,8 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
     }
 
     final grades = students.map((s) => s.grade).toSet().toList()..sort();
-    final pageCount = (students.length / _rowsPerPage).ceil();
-    final slice = students
-        .skip(_page * _rowsPerPage)
-        .take(_rowsPerPage)
-        .toList(growable: false);
+    final pageCount = PaginatedDirectory.pageCount(students.length);
+    final slice = PaginatedDirectory.pageOf(students, _page);
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -93,19 +104,23 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 ),
               const SizedBox(width: 12),
               SizedBox(
-                width: 240,
+                width: 260,
                 child: TextField(
+                  controller: _search,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _runSearch(),
                   decoration: const InputDecoration(
-                    hintText: 'Search students…',
+                    hintText: 'Search by name or student ID…',
                     prefixIcon: Icon(Icons.search),
                     isDense: true,
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (v) => setState(() {
-                    _query = v;
-                    _page = 0;
-                  }),
                 ),
+              ),
+              FilledButton.icon(
+                onPressed: _runSearch,
+                icon: const Icon(Icons.search),
+                label: const Text('Search'),
               ),
               const SizedBox(width: 12),
               DropdownButton<String?>(
