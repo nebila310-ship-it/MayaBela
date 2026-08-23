@@ -41,7 +41,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -49,36 +49,6 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                 'Human Resource',
                 style: WebErpTheme.sectionTitle(context),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Create classroom teachers, keep non-login staff records, '
-                'and register drivers linked to a bus and students. '
-                'ERP admin accounts stay with the owner.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (ModuleAccess.canView('add_driver'))
-                    FilledButton.icon(
-                      onPressed: () => widget.onNavigate?.call('add_driver'),
-                      icon: const Icon(Icons.person_add_alt_1_outlined),
-                      label: const Text('Register Driver'),
-                    ),
-                  if (ModuleAccess.canView('transport_live_gps'))
-                    OutlinedButton.icon(
-                      onPressed: () =>
-                          widget.onNavigate?.call('transport_live_gps'),
-                      icon: const Icon(Icons.gps_fixed),
-                      label: const Text('Live GPS'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
               TabBar(
                 controller: _tabs,
                 isScrollable: true,
@@ -100,6 +70,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
               WebTeachersTablePage(
                 onNavigate: widget.onNavigate,
                 directoryMode: WebTeachersDirectoryMode.classroomTeachers,
+                embedded: true,
               ),
               _EmployeesTab(onNavigate: widget.onNavigate),
               WebTransportDashboardPage(onNavigate: widget.onNavigate),

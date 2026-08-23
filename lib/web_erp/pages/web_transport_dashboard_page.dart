@@ -64,65 +64,80 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
           );
         }
 
+        void openLiveGps() {
+          if (widget.onNavigate != null) {
+            widget.onNavigate!('transport_live_gps');
+            return;
+          }
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const MobileErpHost(
+                title: 'Live GPS',
+                child: WebTransportLiveGpsPage(),
+              ),
+            ),
+          );
+        }
+
+        void openRegisterDriver() {
+          if (widget.onNavigate != null) {
+            widget.onNavigate!('add_driver');
+            return;
+          }
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const MobileErpHost(
+                title: 'Register driver',
+                child: WebHrRegisterDriverPage(),
+              ),
+            ),
+          );
+        }
+
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 280,
-                    child: Text(
-                      'Transport Dashboard',
-                      style: WebErpTheme.sectionTitle(context),
+              Text(
+                'Transport',
+                style: WebErpTheme.sectionTitle(context),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Register drivers, watch live GPS, and manage school buses.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _actionTile(
+                    context,
+                    key: const ValueKey('hr-register-driver'),
+                    icon: Icons.person_add_alt_1_outlined,
+                    title: 'Register Driver',
+                    subtitle: 'Link a driver to a bus and students',
+                    filled: true,
+                    onTap: openRegisterDriver,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: openBuses,
-                    icon: const Icon(Icons.airport_shuttle_outlined),
-                    label: const Text('Manage Buses'),
+                  _actionTile(
+                    context,
+                    key: const ValueKey('hr-live-gps'),
+                    icon: Icons.gps_fixed,
+                    title: 'Live GPS',
+                    subtitle: 'Track buses on the map',
+                    onTap: openLiveGps,
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      if (widget.onNavigate != null) {
-                        widget.onNavigate!('transport_live_gps');
-                        return;
-                      }
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MobileErpHost(
-                            title: 'Live GPS',
-                            child: WebTransportLiveGpsPage(),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.gps_fixed),
-                    label: const Text('Live GPS'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: () {
-                      if (widget.onNavigate != null) {
-                        widget.onNavigate!('add_driver');
-                        return;
-                      }
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MobileErpHost(
-                            title: 'Register driver',
-                            child: WebHrRegisterDriverPage(),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.person_add_alt_1_outlined),
-                    label: const Text('Register Driver'),
+                  _actionTile(
+                    context,
+                    icon: Icons.airport_shuttle_outlined,
+                    title: 'Manage Buses',
+                    subtitle: 'Plates, routes, and riders',
+                    onTap: openBuses,
                   ),
                 ],
               ),
@@ -204,6 +219,59 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
     );
   }
 
+  Widget _actionTile(
+    BuildContext context, {
+    Key? key,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool filled = false,
+  }) {
+    final fg = filled ? Colors.white : WebErpTheme.paperInk;
+    return Material(
+      key: key,
+      color: filled ? WebErpTheme.primary : WebErpTheme.paper.withValues(alpha: 0.94),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 240,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: filled
+                ? null
+                : Border.all(color: WebErpTheme.paperEdge.withValues(alpha: 0.75)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: filled ? Colors.white : WebErpTheme.primary),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: fg,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: filled ? Colors.white.withValues(alpha: 0.9) : Colors.brown.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _stat(
     BuildContext context,
     String label,
@@ -211,19 +279,25 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
     IconData icon,
   ) {
     return Container(
-      width: 180,
+      width: 200,
       padding: const EdgeInsets.all(16),
       decoration: WebErpTheme.cardDecoration(context),
       child: Row(
         children: [
           Icon(icon, color: WebErpTheme.primary),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

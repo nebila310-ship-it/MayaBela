@@ -23,10 +23,17 @@ class WebTeachersTablePage extends StatefulWidget {
     super.key,
     this.onNavigate,
     this.directoryMode = WebTeachersDirectoryMode.administrationStaff,
+    this.embedded = false,
   });
 
   final ValueChanged<String>? onNavigate;
   final WebTeachersDirectoryMode directoryMode;
+
+  /// When true (HR Teachers tab), drop the large title so the list fills the page.
+  final bool embedded;
+
+  /// Wide enough that Status and Actions stay readable instead of clipping to "Stat".
+  static const double directoryMinTableWidth = 1180;
 
   @override
   State<WebTeachersTablePage> createState() => _WebTeachersTablePageState();
@@ -121,56 +128,59 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
     final narrow = WebViewport.isNarrow(context);
 
     return Padding(
-      padding: EdgeInsets.all(narrow ? 12 : 20),
+      padding: EdgeInsets.fromLTRB(
+        widget.embedded ? 8 : (narrow ? 12 : 16),
+        widget.embedded ? 8 : 12,
+        widget.embedded ? 8 : (narrow ? 12 : 16),
+        8,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (narrow) ...[
-            Text(
-              _title,
-              style: WebErpTheme.sectionTitle(context),
-            ),
-            if (canAdd) ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _openAdd,
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: Text(_addLabel),
-                ),
-              ),
-            ],
-          ] else
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _title,
-                    style: WebErpTheme.sectionTitle(context),
-                  ),
-                ),
-                if (canAdd)
-                  FilledButton.icon(
+          if (!widget.embedded) ...[
+            if (narrow) ...[
+              Text(_title, style: WebErpTheme.sectionTitle(context)),
+              if (canAdd) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
                     onPressed: _openAdd,
                     icon: const Icon(Icons.person_add_alt_1_outlined),
                     label: Text(_addLabel),
                   ),
-              ],
-            ),
-          const SizedBox(height: 6),
-          Text(
-            _subtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-          ),
-          const SizedBox(height: 12),
+              ],
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_title, style: WebErpTheme.sectionTitle(context)),
+                  ),
+                  if (canAdd)
+                    FilledButton.icon(
+                      onPressed: _openAdd,
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: Text(_addLabel),
+                    ),
+                ],
+              ),
+            const SizedBox(height: 6),
+            Text(
+              _subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Wrap(
             spacing: 8,
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              if (widget.embedded)
+                Text(_title, style: WebErpTheme.sectionTitle(context)),
               SizedBox(
                 width: narrow ? double.infinity : 320,
                 child: TextField(
@@ -178,7 +188,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                   textInputAction: TextInputAction.search,
                   onSubmitted: (_) => _runSearch(),
                   decoration: const InputDecoration(
-                    hintText: 'Search by name or staff ID…',
+                    hintText: 'Search name, ID, or phone...',
                     prefixIcon: Icon(Icons.search),
                     isDense: true,
                     border: OutlineInputBorder(),
@@ -221,217 +231,115 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                     : '${teachers.length} registered · 10 per page',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+              if (widget.embedded && canAdd)
+                FilledButton.icon(
+                  onPressed: _openAdd,
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: Text(_addLabel),
+                ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Expanded(
-            child: Container(
-              decoration: WebErpTheme.cardDecoration(context),
-              child: teachers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.badge_outlined,
-                            size: 48,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _query.isNotEmpty
-                                ? 'No ${_isStaffDir ? 'staff' : 'teachers'} match this search.'
-                                : (_isStaffDir
-                                    ? 'No administration staff registered yet.'
-                                    : 'No classroom teachers registered yet.'),
-                          ),
-                          if (canAdd) ...[
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: _openAdd,
-                              icon: const Icon(Icons.person_add_alt_1_outlined),
-                              label: Text(_addLabel),
+            child: SizedBox(
+              width: double.infinity,
+              child: Container(
+                width: double.infinity,
+                clipBehavior: Clip.hardEdge,
+                decoration: WebErpTheme.cardDecoration(context),
+                child: teachers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.badge_outlined,
+                              size: 48,
+                              color: Colors.grey.shade400,
                             ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _query.isNotEmpty
+                                  ? 'No ${_isStaffDir ? 'staff' : 'teachers'} match this search.'
+                                  : (_isStaffDir
+                                      ? 'No administration staff registered yet.'
+                                      : 'No classroom teachers registered yet.'),
+                            ),
+                            if (canAdd) ...[
+                              const SizedBox(height: 16),
+                              FilledButton.icon(
+                                onPressed: _openAdd,
+                                icon: const Icon(Icons.person_add_alt_1_outlined),
+                                label: Text(_addLabel),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    )
-                  : narrow
-                      ? ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          itemCount: slice.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final t = slice[index];
-                            final roleText = _roleOrAssignmentText(t, s);
-                            return ListTile(
-                              leading: CircleAvatar(
-                                child: Text(
-                                  t.fullName.isEmpty
-                                      ? '?'
-                                      : t.fullName[0].toUpperCase(),
-                                ),
-                              ),
-                              title: Text(
-                                t.fullName,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              subtitle: Text(
-                                [
-                                  t.employeeId ?? t.teacherId,
-                                  t.phone ?? t.loginUsername ?? '—',
-                                  if (multiCampus) t.campus,
-                                  roleText,
-                                  t.isActive ? 'Active' : 'Inactive',
-                                ].join(' · '),
-                              ),
-                              isThreeLine: true,
-                              onTap: () => showWebTeacherProfileDialog(
-                                context,
-                                teacherId: t.teacherId,
-                                onUpdated: () => setState(() {}),
-                              ),
-                              trailing: AuthService.canAssignStaffRoles
-                                  ? IconButton(
-                                      tooltip: s.staffRolesTitle,
-                                      icon: const Icon(
-                                        Icons.admin_panel_settings_outlined,
-                                      ),
-                                      onPressed: () => showStaffRolesDialog(
-                                        context: context,
-                                        teacher: t,
-                                        onSaved: () {
-                                          if (mounted) setState(() {});
-                                        },
-                                      ),
-                                    )
-                                  : const Icon(Icons.chevron_right),
-                            );
-                          },
-                        )
-                      : Scrollbar(
-                          thumbVisibility: true,
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: DataTable(
-                            columns: [
-                              const DataColumn(label: Text('Photo')),
-                              const DataColumn(label: Text('Staff ID')),
-                              const DataColumn(label: Text('Name')),
-                              const DataColumn(label: Text('Phone')),
-                              if (multiCampus)
-                                const DataColumn(label: Text('Campus')),
-                              DataColumn(
-                                label: Text(_isStaffDir ? 'Role' : 'Assignment'),
-                              ),
-                              const DataColumn(label: Text('Status')),
-                              const DataColumn(label: Text('Actions')),
-                            ],
-                            rows: [
-                              for (final t in slice)
-                                DataRow(
-                                  onSelectChanged: (_) =>
-                                      showWebTeacherProfileDialog(
-                                    context,
-                                    teacherId: t.teacherId,
-                                    onUpdated: () => setState(() {}),
-                                  ),
-                                  cells: [
-                                    DataCell(
-                                      CircleAvatar(
-                                        child: Text(
-                                          t.fullName.isEmpty
-                                              ? '?'
-                                              : t.fullName[0].toUpperCase(),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(Text(t.employeeId ?? t.teacherId)),
-                                    DataCell(
-                                      InkWell(
-                                        onTap: () => showWebTeacherProfileDialog(
-                                          context,
-                                          teacherId: t.teacherId,
-                                          onUpdated: () => setState(() {}),
-                                        ),
-                                        child: Text(
-                                          t.fullName,
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(t.phone ?? t.loginUsername ?? '—'),
-                                    ),
-                                    if (multiCampus) DataCell(Text(t.campus)),
-                                    DataCell(
-                                      Text(
-                                        _roleOrAssignmentText(t, s),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          color: _isUnassigned(t)
-                                              ? Colors.orange.shade800
-                                              : null,
-                                        ),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Text(t.isActive ? 'Active' : 'Inactive'),
-                                    ),
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            tooltip: 'View profile',
-                                            icon: const Icon(
-                                              Icons.visibility_outlined,
-                                            ),
-                                            onPressed: () =>
-                                                showWebTeacherProfileDialog(
-                                              context,
-                                              teacherId: t.teacherId,
-                                              onUpdated: () => setState(() {}),
-                                            ),
-                                          ),
-                                          if (AuthService.canAssignStaffRoles)
-                                            TextButton.icon(
-                                              onPressed: () =>
-                                                  showStaffRolesDialog(
-                                                context: context,
-                                                teacher: t,
-                                                onSaved: () {
-                                                  if (mounted) setState(() {});
-                                                },
-                                              ),
-                                              icon: const Icon(
-                                                Icons
-                                                    .admin_panel_settings_outlined,
-                                                size: 18,
-                                              ),
-                                              label: Text(s.staffRolesTitle),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                            ),
-                          ),
                         ),
+                      )
+                    : narrow
+                        ? ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            itemCount: slice.length,
+                            separatorBuilder: (_, _) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final t = slice[index];
+                              final roleText = _roleOrAssignmentText(t, s);
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  child: Text(
+                                    t.fullName.isEmpty
+                                        ? '?'
+                                        : t.fullName[0].toUpperCase(),
+                                  ),
+                                ),
+                                title: Text(
+                                  t.fullName,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                subtitle: Text(
+                                  [
+                                    t.employeeId ?? t.teacherId,
+                                    t.phone ?? t.loginUsername ?? '—',
+                                    if (multiCampus) t.campus,
+                                    roleText,
+                                    t.isActive ? 'Active' : 'Inactive',
+                                  ].join(' · '),
+                                ),
+                                isThreeLine: true,
+                                onTap: () => showWebTeacherProfileDialog(
+                                  context,
+                                  teacherId: t.teacherId,
+                                  onUpdated: () => setState(() {}),
+                                ),
+                                trailing: AuthService.canAssignStaffRoles
+                                    ? IconButton(
+                                        tooltip: s.staffRolesTitle,
+                                        icon: const Icon(
+                                          Icons.admin_panel_settings_outlined,
+                                        ),
+                                        onPressed: () => showStaffRolesDialog(
+                                          context: context,
+                                          teacher: t,
+                                          onSaved: () {
+                                            if (mounted) setState(() {});
+                                          },
+                                        ),
+                                      )
+                                    : const Icon(Icons.chevron_right),
+                              );
+                            },
+                          )
+                        : _wideTeacherTable(
+                            context: context,
+                            slice: slice,
+                            multiCampus: multiCampus,
+                            strings: s,
+                          ),
+              ),
             ),
           ),
           if (teachers.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -453,6 +361,156 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _wideTeacherTable({
+    required BuildContext context,
+    required List<AdminTeacherRecord> slice,
+    required bool multiCampus,
+    required AppStrings strings,
+  }) {
+    const statusWidth = 96.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableWidth = constraints.maxWidth <
+                WebTeachersTablePage.directoryMinTableWidth
+            ? WebTeachersTablePage.directoryMinTableWidth
+            : constraints.maxWidth;
+        return Scrollbar(
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              height: constraints.maxHeight,
+              child: SingleChildScrollView(
+                child: DataTable(
+                  showCheckboxColumn: false,
+                  headingRowHeight: 48,
+                  dataRowMinHeight: 52,
+                  dataRowMaxHeight: 64,
+                  horizontalMargin: 16,
+                  columnSpacing: 20,
+                  columns: [
+                    const DataColumn(label: Text('Photo')),
+                    const DataColumn(label: Text('Staff ID')),
+                    const DataColumn(label: Text('Name')),
+                    const DataColumn(label: Text('Phone')),
+                    if (multiCampus)
+                      const DataColumn(label: Text('Campus')),
+                    DataColumn(
+                      label: Text(_isStaffDir ? 'Role' : 'Assignment'),
+                    ),
+                    const DataColumn(
+                      label: SizedBox(
+                        width: statusWidth,
+                        child: Text('Status'),
+                      ),
+                    ),
+                    const DataColumn(
+                      label: SizedBox(
+                        width: 120,
+                        child: Text('Actions'),
+                      ),
+                    ),
+                  ],
+                  rows: [
+                    for (final t in slice)
+                      DataRow(
+                        cells: [
+                          DataCell(
+                            CircleAvatar(
+                              child: Text(
+                                t.fullName.isEmpty
+                                    ? '?'
+                                    : t.fullName[0].toUpperCase(),
+                              ),
+                            ),
+                          ),
+                          DataCell(Text(t.employeeId ?? t.teacherId)),
+                          DataCell(
+                            InkWell(
+                              onTap: () => showWebTeacherProfileDialog(
+                                context,
+                                teacherId: t.teacherId,
+                                onUpdated: () => setState(() {}),
+                              ),
+                              child: Text(
+                                t.fullName,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Text(t.phone ?? t.loginUsername ?? '—'),
+                          ),
+                          if (multiCampus) DataCell(Text(t.campus)),
+                          DataCell(
+                            Text(
+                              _roleOrAssignmentText(t, strings),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: _isUnassigned(t)
+                                    ? Colors.orange.shade800
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: statusWidth,
+                              child: Text(
+                                t.isActive ? 'Active' : 'Inactive',
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 120,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'View profile',
+                                    icon: const Icon(Icons.visibility_outlined),
+                                    onPressed: () =>
+                                        showWebTeacherProfileDialog(
+                                      context,
+                                      teacherId: t.teacherId,
+                                      onUpdated: () => setState(() {}),
+                                    ),
+                                  ),
+                                  if (AuthService.canAssignStaffRoles)
+                                    IconButton(
+                                      tooltip: strings.staffRolesTitle,
+                                      icon: const Icon(
+                                        Icons.admin_panel_settings_outlined,
+                                      ),
+                                      onPressed: () => showStaffRolesDialog(
+                                        context: context,
+                                        teacher: t,
+                                        onSaved: () {
+                                          if (mounted) setState(() {});
+                                        },
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
