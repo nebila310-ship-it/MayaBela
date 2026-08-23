@@ -93,5 +93,6 @@ supabase/.temp/
 
 # Generated Fenote download pack (built by web/fenote-raey-academy/build_download.py)
 /web/fenote-raey-academy/fenote-raey-slides.html
+/web/fenote-raey-academy/Fenote-Raey-Academy-slides.htm
 /web/fenote-raey-academy/fenote-raey-slides.zip
 

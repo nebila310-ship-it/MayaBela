@@ -51,7 +51,8 @@ def build(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     inlined = offline_html(source, inline_images=True)
-    inlined_path = out_dir / "fenote-raey-slides.html"
+    # Use .htm so Cloudflare Pages pretty URLs do not 308 /foo.html → /foo.
+    inlined_path = out_dir / "Fenote-Raey-Academy-slides.htm"
     inlined_path.write_text(inlined, encoding="utf-8")
 
     relative = offline_html(source, inline_images=False)

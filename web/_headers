@@ -24,12 +24,8 @@
 /fenote-raey-academy/screens/*
   Cache-Control: no-cache, must-revalidate
 
-/fenote-raey-academy/fenote-raey-slides.html
-  Content-Disposition: attachment; filename="Fenote-Raey-Academy-slides.html"
-  Cache-Control: no-cache, must-revalidate
-
-/fenote-raey-academy/fenote-raey-slides
-  Content-Disposition: attachment; filename="Fenote-Raey-Academy-slides.html"
+/fenote-raey-academy/Fenote-Raey-Academy-slides.htm
+  Content-Disposition: attachment; filename="Fenote-Raey-Academy-slides.htm"
   Cache-Control: no-cache, must-revalidate
 
 /fenote-raey-academy/fenote-raey-slides.zip
