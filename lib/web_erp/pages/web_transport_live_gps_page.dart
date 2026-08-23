@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:mayabela/maps/free_map_links.dart';
 import 'package:mayabela/models/transport_passenger.dart';
 import 'package:mayabela/screens/transport_live_map_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -10,11 +12,11 @@ import 'package:mayabela/services/bus_live_location_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/widgets/free_street_map.dart';
 import 'package:mayabela/widgets/mobile_erp_host.dart';
 
 /// Web ERP live bus GPS. Positions come from the driver phone via
-/// `bus_live_positions`. Google Maps on web needs a key; coordinates and
-/// “Open in Maps” still work without one.
+/// `bus_live_positions`. The in-page map uses free OSM/Carto/Esri tiles.
 class WebTransportLiveGpsPage extends StatefulWidget {
   const WebTransportLiveGpsPage({super.key, this.onNavigate});
 
@@ -44,8 +46,7 @@ class _WebTransportLiveGpsPageState extends State<WebTransportLiveGpsPage> {
     super.dispose();
   }
 
-  Future<void> _openExternalMap(BusLivePosition pos) async {
-    final uri = Uri.parse(pos.mapsUrl);
+  Future<void> _openExternalMap(Uri uri) async {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -112,9 +113,8 @@ class _WebTransportLiveGpsPageState extends State<WebTransportLiveGpsPage> {
                         const SizedBox(height: 4),
                         Text(
                           'A moving pin appears only while a driver is signed in '
-                          'on a phone with location on. This page also shows the '
-                          'last coordinates so you can open the map even without '
-                          'a Google Maps key.',
+                          'on a phone with location on. The map uses OpenStreetMap, '
+                          'CARTO, and Esri — no Google Maps key required.',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Theme.of(context)
@@ -196,6 +196,27 @@ class _WebTransportLiveGpsPageState extends State<WebTransportLiveGpsPage> {
                               position: selectedPos,
                               hasDriver: selected.driverId.isNotEmpty,
                             ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 360,
+                              width: double.infinity,
+                              child: FreeStreetMap(
+                                center: selectedPos == null
+                                    ? null
+                                    : LatLng(
+                                        selectedPos.latitude,
+                                        selectedPos.longitude,
+                                      ),
+                                liveBus: selectedPos == null
+                                    ? null
+                                    : LatLng(
+                                        selectedPos.latitude,
+                                        selectedPos.longitude,
+                                      ),
+                                busLabel: selected.busNumber,
+                                expanded: true,
+                              ),
+                            ),
                             if (selectedPos != null) ...[
                               const SizedBox(height: 12),
                               SelectableText(
@@ -212,16 +233,40 @@ class _WebTransportLiveGpsPageState extends State<WebTransportLiveGpsPage> {
                                 runSpacing: 8,
                                 children: [
                                   FilledButton.icon(
-                                    onPressed: () =>
-                                        _openExternalMap(selectedPos),
+                                    onPressed: () => _openExternalMap(
+                                      FreeMapLinks.openStreetMap(
+                                        latitude: selectedPos.latitude,
+                                        longitude: selectedPos.longitude,
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.public),
+                                    label: const Text('OpenStreetMap'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _openExternalMap(
+                                      FreeMapLinks.googleMaps(
+                                        latitude: selectedPos.latitude,
+                                        longitude: selectedPos.longitude,
+                                      ),
+                                    ),
                                     icon: const Icon(Icons.map_outlined),
-                                    label: const Text('Open in Google Maps'),
+                                    label: const Text('Google Maps'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _openExternalMap(
+                                      FreeMapLinks.appleMaps(
+                                        latitude: selectedPos.latitude,
+                                        longitude: selectedPos.longitude,
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.phone_iphone),
+                                    label: const Text('Apple Maps'),
                                   ),
                                   OutlinedButton.icon(
                                     onPressed: () =>
                                         _openInAppMap(selected.driverId),
                                     icon: const Icon(Icons.fullscreen),
-                                    label: const Text('In-app map'),
+                                    label: const Text('Full map'),
                                   ),
                                 ],
                               ),

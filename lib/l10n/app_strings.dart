@@ -2536,7 +2536,7 @@ class AppStrings implements AppStringsLike {
 
   // —— Bus Tracking ——
   String get myRoute => t('My Route', 'መስመሬ');
-  String get googleMap => t('Google Map', 'Google ካርታ');
+  String get googleMap => t('Live map', 'ቀጥታ ካርታ');
   String get trackBusFor =>
       t('Track bus for', 'አውቶቡስን ለ');
   String driverLabel(String name) =>

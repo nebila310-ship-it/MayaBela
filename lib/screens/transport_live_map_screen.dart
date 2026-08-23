@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/bus_route.dart';
@@ -12,9 +13,10 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/widgets/bus_map_widget.dart';
+import 'package:mayabela/widgets/free_street_map.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
-/// Full-screen Google Map showing a bus live GPS position from the driver's phone.
+/// Full-screen free street map showing a bus live GPS position from the driver's phone.
 class TransportLiveMapScreen extends StatefulWidget {
   const TransportLiveMapScreen({
     super.key,
@@ -38,7 +40,7 @@ class _TransportLiveMapScreenState extends State<TransportLiveMapScreen> {
   final _transport = TransportService.instance;
   final _data = SchoolDataService.instance;
   Timer? _refreshTimer;
-  GoogleMapController? _mapController;
+  MapController? _mapController;
   LatLng? _lastCameraTarget;
   String? _selectedChild;
   bool _sharingStarted = false;
@@ -75,7 +77,6 @@ class _TransportLiveMapScreenState extends State<TransportLiveMapScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -122,7 +123,7 @@ class _TransportLiveMapScreenState extends State<TransportLiveMapScreen> {
       if (latDiff < 0.00005 && lngDiff < 0.00005) return;
     }
     _lastCameraTarget = target;
-    _mapController!.animateCamera(CameraUpdate.newLatLng(target));
+    _mapController!.move(target, _mapController!.camera.zoom);
   }
 
   @override
@@ -189,10 +190,10 @@ class _TransportLiveMapScreenState extends State<TransportLiveMapScreen> {
               _statusBanner(s, isLive, isSharing, livePos),
               if (driver != null) _busInfoStrip(driver, s),
               Expanded(
-                child: route != null
-                    ? Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                        child: BusMapWidget(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: route != null
+                      ? BusMapWidget(
                           route: route,
                           liveBusLatLng: liveLatLng,
                           expanded: true,
@@ -202,24 +203,20 @@ class _TransportLiveMapScreenState extends State<TransportLiveMapScreen> {
                               _maybeMoveCamera(liveLatLng);
                             }
                           },
-                          onLivePosition: liveLatLng != null
-                              ? _maybeMoveCamera
-                              : null,
+                        )
+                      : FreeStreetMap(
+                          center: liveLatLng,
+                          liveBus: liveLatLng,
+                          busLabel: driver?.busNumber ?? 'Bus',
+                          expanded: true,
+                          onMapReady: (controller) {
+                            _mapController = controller;
+                            if (liveLatLng != null) {
+                              _maybeMoveCamera(liveLatLng);
+                            }
+                          },
                         ),
-                      )
-                    : Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            driver == null
-                                ? (widget.childName != null
-                                    ? s.parentBusLinkPrompt
-                                    : s.transportNoAssignedBus)
-                                : s.busRouteMapUnavailable,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                ),
               ),
             ],
           ),

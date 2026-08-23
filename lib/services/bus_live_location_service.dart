@@ -30,7 +30,7 @@ class BusLivePosition {
   int get minutesAgo => DateTime.now().difference(timestamp).inMinutes;
 
   String get mapsUrl =>
-      'https://www.google.com/maps?q=$latitude,$longitude';
+      'https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude#map=16/$latitude/$longitude';
 }
 
 enum BusGpsFreshness { live, stale, waiting }
