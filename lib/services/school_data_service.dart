@@ -881,7 +881,15 @@ class SchoolDataService {
   }
 
   void _persistSchoolContent() {
-    SchoolContentPersistenceService.instance.saveFromService();
+    // Best-effort: SharedPreferences / cloud push must not fail the caller
+    // (calendar seed, UI, or a later unit test after this future completes).
+    unawaited(_saveSchoolContentBestEffort());
+  }
+
+  Future<void> _saveSchoolContentBestEffort() async {
+    try {
+      await SchoolContentPersistenceService.instance.saveFromService();
+    } catch (_) {}
   }
 
   List<Conversation> getConversationsForRole(String? roleKey) {

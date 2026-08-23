@@ -37,7 +37,7 @@ jobs:
       - name: Unit tests
         run: |
           flutter pub get
-          flutter test --reporter compact
+          flutter test --reporter expanded
 
   deploy:
     needs: test
