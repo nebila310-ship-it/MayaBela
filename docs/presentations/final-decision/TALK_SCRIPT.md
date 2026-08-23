@@ -218,7 +218,23 @@ Parent representatives usually ask this first. It is built in. It is not a separ
 
 ---
 
-## 19. Finance
+## 19. Student QR identity
+
+Pause on the three photographs.
+
+Left: bus pick-up and drop-off. The driver scans the printed student QR to board and discharge. Parents get the check-in. No paper list at the door.
+
+Center: class attendance. The teacher scans present, late, or absent. One student, one card — the same card as the bus.
+
+Right: management. Scan at the desk and the student file opens. When a parent or visitor arrives, you do not hunt a name in a long list.
+
+Every registered student gets this QR in the office. It is identity, not a login password.
+
+Amharic: **አንድ የተማሪ QR — ለአውቶቡስ መውጣት/መውረጃ፣ የክፍል መገኘት እና ፈጣን የፕሮፋይል መዳረሻ ይጠቀሙ።**
+
+---
+
+## 20. Finance
 
 Collections you can defend in a board meeting.
 
@@ -226,7 +242,7 @@ Fee structures and payments in birr. Outstanding versus collected, by day and mo
 
 ---
 
-## 20. HR — payroll
+## 21. HR — payroll
 
 Payroll is built for Ethiopia — for every employee. Teachers, other staff, and drivers sit on one payroll.
 
@@ -236,7 +252,7 @@ Rates can change. HR should confirm against current law. Teachers do not see ano
 
 ---
 
-## 21. Store and inventory
+## 22. Store and inventory
 
 The store is a command desk: items, purchase requests, issues, assets, suppliers.
 
@@ -244,7 +260,7 @@ This is where leakage usually hides in a paper school. Open purchase requests, i
 
 ---
 
-## 22. Inventory — stock trail
+## 23. Inventory — stock trail
 
 Every textbook and marker has a quantity and a movement.
 
@@ -252,7 +268,7 @@ On-hand versus reorder level. Stock in from a supplier. Stock out to an office. 
 
 ---
 
-## 23. Inventory — purchase and issue
+## 24. Inventory — purchase and issue
 
 Ask. Approve. Receive or issue. Same numbers for procurement, store keeper, and accountant.
 
@@ -260,7 +276,7 @@ No verbal “bring more chalk” without a request. Reports export Excel, CSV, o
 
 ---
 
-## 24. School life
+## 25. School life
 
 The school speaks in **one place**. Not four WhatsApp groups.
 
@@ -270,7 +286,7 @@ Amharic: **ማስታወቂያ፣ ጋለሪ፣ የቀን መቁጠሪያ እና �
 
 ---
 
-## 25. Quality assurance
+## 26. Quality assurance
 
 QA, this is your book. Findings live next to the school, not in a drawer.
 
@@ -282,7 +298,7 @@ Amharic: **የጥራት ማረጋገጫ ግኝትና የማሻሻያ እቅድ �
 
 ---
 
-## 26. Quality assurance — plans
+## 27. Quality assurance — plans
 
 A finding is not finished until the plan has evidence.
 
@@ -290,7 +306,7 @@ Example: freeze grade publish until makeup marks are in. Owner: Examinations. Fo
 
 ---
 
-## 27. Settings and language
+## 28. Settings and language
 
 Each person chooses English, Amharic, or Afaan Oromo. It does not force the whole school.
 
@@ -298,7 +314,7 @@ Dark mode. Tile order — drag the home screen to match your duty. From Settings
 
 ---
 
-## 28. Where files live
+## 29. Where files live
 
 People will ask: cloud or our own computer?
 
@@ -310,7 +326,7 @@ A full on-site ERP server is optional extra work. A school-held copy is **not** 
 
 ---
 
-## 29. Full catalog
+## 30. Full catalog
 
 This is what the school is getting — module by module. Organization, student services, classroom, communication, quality, HR and payroll, finance and store, transport, settings and backups.
 
@@ -318,7 +334,7 @@ Nothing on this table is “coming later” for the meeting today. If a module m
 
 ---
 
-## 30. How a week looks
+## 31. How a week looks
 
 Not a theory. A working week.
 
@@ -332,7 +348,7 @@ Pilot: **30 to 60 days**, one campus or one grade band, then a board decision to
 
 ---
 
-## 31. Safety
+## 32. Safety
 
 The school’s data stays the school’s data.
 
@@ -342,7 +358,7 @@ This is a school operating system from **MaJo Bridge Technologies and Events**. 
 
 ---
 
-## 32. The ask
+## 33. The ask
 
 I will be direct.
 
@@ -356,7 +372,7 @@ Next step after this room: a 30 to 60 day pilot on one campus or grade. Support 
 
 ---
 
-## 33. Closing — thank you
+## 34. Closing — thank you
 
 **Thank you, Fenote Raey Academy.**
 

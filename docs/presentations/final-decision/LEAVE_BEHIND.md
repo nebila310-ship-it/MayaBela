@@ -23,6 +23,7 @@ Print this page from your browser if you need paper copies.
 | Students | Student dashboard: Profile, Grades, Homeworks and Assignments, e-Book, Attendance, Timetable, Announcements, Calendar, Messages | You see your own school work — never a draft mark |
 | Parents | Parent dashboard: My Children, Attendance, Homework, Grades, Fees, Bus Tracking, Messages, Behaviour & Leave | You see your child only — never an unapproved mark |
 | Drivers | Transport dashboard: My Route, Live Map, Passenger List, Scan QR, Pick-up / Drop-off | Parents see “live” only while you are sharing |
+| Registrar / gate / class | Printed student QR on every registered student | Same card: bus board/discharge, class attendance, scan-to-open the student profile |
 | All staff who communicate | Announcements, gallery, calendar, internal messages | The school speaks in one place — not four WhatsApp groups |
 | Finance / store / HR | Fees, inventory (items, PRs, issues, assets), payroll with Ethiopian tax + pension | Money, stock, and pay slips leave a trail |
 | Directors / IT | Settings (language), cloud + school-held JSON backup | Daily files in the cloud; also keep a copy on a school PC or school server |

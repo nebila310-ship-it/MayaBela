@@ -8,7 +8,7 @@ Directors · Student affairs · Quality assurance · Teachers · Administration 
 
 One school system. Every role in this room.
 
-Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the teacher, parent, student, and transport dashboards, settings, language, and school-held backups.
+Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the teacher, parent, student, and transport dashboards, student QR (bus, class, profile), settings, language, and school-held backups.
 
 የፍኖተ ራእይ አካዳሚ · እያንዳንዱ ሚና የሚጠቀመው ሞጁል ዛሬ ይታያል።
 
@@ -287,7 +287,27 @@ This is the module parent representatives usually ask about first. It is built i
 
 ---
 
-## 19. Finance
+---
+
+## 19. Student QR identity
+
+One printed QR. Bus, class, and the student file.
+
+![Bus pick-up and drop-off QR scan](screens/photo-qr-bus.png)
+
+![Class attendance QR scan](screens/photo-qr-attendance.png)
+
+![Management opens the student profile by scan](screens/photo-qr-profile.png)
+
+- **Bus pick-up and drop-off** — the driver scans the card to board and discharge. Parents get the check-in.
+- **Class attendance** — the teacher scans present, late, or absent. Same code as the bus.
+- **Management** — scan at the desk and that student’s profile opens. No hunting through a list when a parent or visitor arrives.
+
+Every registered student gets this card in the office ERP. It is not the portal password.
+
+ለአውቶቡስ መውጣት/መውረጃ፣ የክፍል መገኘት እና ፈጣን የፕሮፋይል መዳረሻ ይጠቀሙ።
+
+## 20. Finance
 
 Collections you can defend in a board meeting.
 
@@ -302,7 +322,7 @@ Finance staff manage. Directors oversee. Parents see their own balance.
 
 ---
 
-## 20. HR — payroll
+## 21. HR — payroll
 
 Ethiopian employment tax and pension, built in — for every employee.
 
@@ -320,7 +340,7 @@ Rates can change. HR should confirm against current law. Teachers do not see ano
 
 ---
 
-## 21. Store and inventory
+## 22. Store and inventory
 
 The store is a command desk: items, PRs, issues, assets, suppliers.
 
@@ -335,7 +355,7 @@ This is where leakage usually hides in a paper school. MaJo Bridge makes it a wo
 
 ---
 
-## 22. Inventory — stock trail
+## 23. Inventory — stock trail
 
 Every textbook and marker has a quantity and a movement.
 
@@ -348,7 +368,7 @@ Every textbook and marker has a quantity and a movement.
 
 ---
 
-## 23. Inventory — purchase and issue
+## 24. Inventory — purchase and issue
 
 Ask. Approve. Receive or issue. Same numbers for three desks.
 
@@ -360,7 +380,7 @@ Ask. Approve. Receive or issue. Same numbers for three desks.
 
 ---
 
-## 24. School life — announcements, gallery, calendar, messages
+## 25. School life — announcements, gallery, calendar, messages
 
 The school speaks in one place. Not four WhatsApp groups.
 
@@ -381,7 +401,7 @@ The school speaks in one place. Not four WhatsApp groups.
 
 ---
 
-## 25. Quality assurance
+## 26. Quality assurance
 
 Findings and improvement plans live next to the school, not in a drawer.
 
@@ -397,7 +417,7 @@ Findings and improvement plans live next to the school, not in a drawer.
 
 ---
 
-## 26. Quality assurance — plans
+## 27. Quality assurance — plans
 
 A finding is not finished until the plan has evidence.
 
@@ -410,7 +430,7 @@ A finding is not finished until the plan has evidence.
 
 ---
 
-## 27. Settings and language
+## 28. Settings and language
 
 Each person chooses English, Amharic, or Afaan Oromo.
 
@@ -424,7 +444,7 @@ Each person chooses English, Amharic, or Afaan Oromo.
 
 ---
 
-## 28. Where files live
+## 29. Where files live
 
 Cloud for daily work. School-held copy so you are not locked in.
 
@@ -441,7 +461,7 @@ Passwords are not packed in the school JSON. Platform owners can also export the
 
 ---
 
-## 29. Full catalog — 40+ modules
+## 30. Full catalog — 40+ modules
 
 What the school is buying — module by module
 
@@ -449,17 +469,17 @@ What the school is buying — module by module
 |------|---------|---------------|
 | Organization | Institution, school profile, campuses | Owners, directors |
 | Student services | Students, parent-link, transfers, student affairs, alumni, student login from the grade the school sets | Registrar, student affairs |
-| Classroom | Classes, classroom teachers, timetable, attendance, exams, homework and assignments | Principal, VP, teachers |
+| Classroom | Classes, classroom teachers, timetable, QR attendance, exams, homework and assignments | Principal, VP, teachers |
 | Communication | Announcements, events and gallery, school calendar, internal messages | Every duty that must speak |
 | Quality | QA findings, improvement plans, reports, Maya Assistant | QA, directors |
 | Staff modules | HR, payroll (Ethiopian PAYE + pension), leave, staff documents, library, canteen, clinic | HR, librarian, nurse, canteen |
 | Finance and store | Fees, invoices, receipts, expenses, inventory / procurement / assets | Accountant, store, procurement |
-| Transport | Routes, GPS, boarding | Transport admin, drivers, parents |
+| Transport | Routes, GPS, QR pick-up / drop-off | Transport admin, drivers, parents |
 | System | Users and roles, settings and language, audit log, branding, cloud + school-held backups | Owner / platform |
 
 ---
 
-## 30. How a week looks
+## 31. How a week looks
 
 Not a theory. A working week.
 
@@ -475,7 +495,7 @@ Pilot recommendation: 30–60 days, one campus or one grade band, then a board d
 
 ---
 
-## 31. Safety
+## 32. Safety
 
 The school’s data stays the school’s data.
 
@@ -487,7 +507,7 @@ This is a school operating system from MaJo Bridge Technologies and Events. It i
 
 ---
 
-## 32. The ask
+## 33. The ask
 
 **Recommend this system for Fenote Raey Academy.**
 
@@ -499,7 +519,7 @@ Next step after this room: 30–60 day pilot on one campus/grade, support Mon–
 
 ---
 
-## 33. Closing — thank you
+## 34. Closing — thank you
 
 **Thank you, Fenote Raey Academy.**
 

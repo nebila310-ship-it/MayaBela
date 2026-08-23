@@ -42,7 +42,8 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 | 19–20 | **Student dashboard** | Profile, homework, timetable, approved grades only. |
 | 20–22 | **Parent dashboard** | Walk the tiles: children, homework, fees, bus, messages. |
 | 22–23 | **Driver dashboard** | Route, passengers, QR, live map. Then office transport if asked. |
-| 23–24 | Finance | Fee collections in ETB. |
+| 23–25 | **Student QR identity** | Three photos: bus pick-up/drop-off, class attendance, management scan-to-profile. “One card. Not a password.” |
+| 25–26 | Finance | Fee collections in ETB. |
 | 24–25 | **HR payroll** | Built-in Ethiopian PAYE + 7%/11% pension for every employee. |
 | 25–27 | **Inventory** | Command desk, stock trail, purchase and issue requests. |
 | 27–28 | School life | Announcements, gallery, calendar, messages. |
@@ -83,6 +84,7 @@ The **cover** is split: title on the left, office ERP on the right. Then show **
 8. Inventory purchase/issue if store is in the room.
 9. Settings language + download school backup JSON.
 10. Driver transport dashboard: route, QR, live map.
+10b. Student QR photos: bus pick-up/drop-off, class attendance, scan-to-open profile.
 
 If the network fails, stay on the HTML screenshots. They are enough to vote.
 

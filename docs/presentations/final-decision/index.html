@@ -77,6 +77,15 @@
     .row.shot-first { grid-template-columns: minmax(0, 1.42fr) minmax(240px, 0.58fr); }
     .row.comms { grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr); }
     .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .row.photos { grid-template-columns: 1fr 1fr 1fr; align-items: start; }
+    .photo-shot {
+      width: 100%; height: 240px;
+      object-fit: cover; object-position: center;
+      border-radius: 14px; border: 1px solid var(--line);
+      box-shadow: 0 16px 40px rgba(0,0,0,.32);
+    }
+    .photo-cap { margin: 10px 0 0; font-size: 16px; font-weight: 800; color: #fff; }
+    .photo-sub { margin: 4px 0 0; color: #94a3b8; font-size: 14px; line-height: 1.35; }
     .row.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
     .row.phone { grid-template-columns: 1.05fr .95fr; align-items: center; }
     .shot {
@@ -169,7 +178,7 @@
           <div class="kicker">Fenote Raey Academy · Final decision meeting</div>
           <h1>One school system.<br>Every role in this room.</h1>
           <p style="font-size:20px;max-width:420px;color:#fff;">
-            Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the <strong>teacher, parent, student, and transport dashboards</strong>, settings, language, and school-held backups.
+            Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the <strong>teacher, parent, student, and transport dashboards</strong>, student QR for bus, class, and profile, settings, language, and school-held backups.
           </p>
           <p class="am">የፍኖተ ራእይ አካዳሚ · እያንዳንዱ ሚና የሚጠቀመው ሞጁል ዛሬ ይታያል።</p>
           <p class="muted" style="margin-top:20px;">Presented by <strong style="color:#fff;">MaJo Bridge Technologies and Events</strong></p>
@@ -481,6 +490,29 @@
     </section>
 
     <section class="slide">
+      <div class="kicker">Student QR identity</div>
+      <h2>One printed QR. Bus, class, and the student file.</h2>
+      <div class="row photos">
+        <div>
+          <img class="photo-shot" src="screens/photo-qr-bus.png" alt="Driver scans a student QR at the school bus for pick-up and drop-off" />
+          <p class="photo-cap">Bus pick-up and drop-off</p>
+          <p class="photo-sub">The driver scans the card to board and discharge. Parents get the check-in. No paper list at the door.</p>
+        </div>
+        <div>
+          <img class="photo-shot" src="screens/photo-qr-attendance.png" alt="Teacher scans a student QR for class attendance" />
+          <p class="photo-cap">Class attendance</p>
+          <p class="photo-sub">The teacher scans present, late, or absent. The same code as the bus. One student, one card.</p>
+        </div>
+        <div>
+          <img class="photo-shot" src="screens/photo-qr-profile.png" alt="School management scans a student QR to open the student profile" />
+          <p class="photo-cap">Management — open the profile</p>
+          <p class="photo-sub">Scan at the desk and the student file opens. No hunting through a list when a parent or visitor arrives.</p>
+        </div>
+      </div>
+      <p class="am">አንድ የተማሪ QR — ለአውቶቡስ መውጣት/መውረጃ፣ የክፍል መገኘት እና ፈጣን የፕሮፋይል መዳረሻ ይጠቀሙ።</p>
+    </section>
+
+    <section class="slide">
       <div class="kicker">Finance</div>
       <h2>Collections you can defend in a board meeting.</h2>
       <div class="row shot-first">
@@ -666,12 +698,12 @@
             <tr><td>Role dashboards</td><td>Teacher home, parent home, student home, driver / transport home</td><td>Teachers, parents, students, drivers</td></tr>
             <tr><td>Organization</td><td>Institution, school profile, campuses</td><td>Owners, directors</td></tr>
             <tr><td>Student services</td><td>Students, parent-link, transfers, student affairs, alumni, student login from the grade the school sets</td><td>Registrar, student affairs</td></tr>
-            <tr><td>Classroom</td><td>Classes, classroom teachers, timetable, attendance, exams, homework &amp; assignments</td><td>Principal, VP, teachers</td></tr>
+            <tr><td>Classroom</td><td>Classes, classroom teachers, timetable, QR attendance, exams, homework &amp; assignments</td><td>Principal, VP, teachers</td></tr>
             <tr><td>Communication</td><td>Announcements, events &amp; gallery, school calendar, internal messages</td><td>Every duty that must speak</td></tr>
             <tr><td>Quality</td><td>QA findings, improvement plans, reports, Maya Assistant</td><td>QA, directors</td></tr>
             <tr><td>Staff modules</td><td>HR, payroll (Ethiopian PAYE + pension), leave, staff documents, library, canteen, clinic</td><td>HR, librarian, nurse, canteen</td></tr>
             <tr><td>Finance &amp; store</td><td>Fees, invoices, receipts, expenses, inventory / procurement / assets</td><td>Accountant, store, procurement</td></tr>
-            <tr><td>Transport</td><td>Routes, GPS, boarding</td><td>Transport admin, drivers, parents</td></tr>
+            <tr><td>Transport</td><td>Routes, GPS, QR pick-up / drop-off</td><td>Transport admin, drivers, parents</td></tr>
             <tr><td>System</td><td>Users &amp; roles, settings &amp; language, audit log, branding, cloud + school-held backups</td><td>Owner / platform</td></tr>
         </tbody>
       </table>
