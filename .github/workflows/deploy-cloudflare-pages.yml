@@ -1,4 +1,4 @@
-# Deploy Flutter web to Cloudflare Pages (manual or on push to main).
+# Deploy Flutter web to Cloudflare Pages (manual or on push to main/master).
 # Secrets required in GitHub repo settings:
 #   CLOUDFLARE_API_TOKEN   — Pages Edit permission
 #   CLOUDFLARE_ACCOUNT_ID  — from Cloudflare dashboard URL / overview
