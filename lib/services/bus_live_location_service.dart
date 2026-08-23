@@ -26,7 +26,14 @@ class BusLivePosition {
   static const _freshWindow = Duration(minutes: 2);
 
   bool get isFresh => DateTime.now().difference(timestamp) < _freshWindow;
+
+  int get minutesAgo => DateTime.now().difference(timestamp).inMinutes;
+
+  String get mapsUrl =>
+      'https://www.google.com/maps?q=$latitude,$longitude';
 }
+
+enum BusGpsFreshness { live, stale, waiting }
 
 /// GPS hub — publishes driver location to Firestore for cross-device parent tracking.
 class BusLiveLocationService extends ChangeNotifier {  BusLiveLocationService._();
@@ -44,6 +51,18 @@ class BusLiveLocationService extends ChangeNotifier {  BusLiveLocationService._(
   BusLivePosition? positionFor(String driverId) {
     final id = driverId.trim().toUpperCase();
     return _positions[id];
+  }
+
+  BusGpsFreshness freshnessFor(String driverId) {
+    final pos = positionFor(driverId);
+    if (pos == null) return BusGpsFreshness.waiting;
+    return pos.isFresh ? BusGpsFreshness.live : BusGpsFreshness.stale;
+  }
+
+  @visibleForTesting
+  void clearPositions() {
+    _positions.clear();
+    notifyListeners();
   }
 
   void applyCloudPosition(BusLivePosition position) {

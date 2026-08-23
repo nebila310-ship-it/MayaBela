@@ -265,6 +265,8 @@ void main() {
       expect(ModuleAccess.normalize('add_staff'), 'teachers');
       expect(ModuleAccess.normalize('grade_approvals'), 'examinations');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
+      expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
+      expect(ModuleAccess.normalize('add_driver'), 'transport');
     });
   });
 }

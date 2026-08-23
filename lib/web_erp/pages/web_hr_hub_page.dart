@@ -52,7 +52,8 @@ class _WebHrHubPageState extends State<WebHrHubPage>
               const SizedBox(height: 4),
               Text(
                 'Create classroom teachers, keep non-login staff records, '
-                'and manage transport. ERP admin accounts stay with the owner.',
+                'and register drivers linked to a bus and students. '
+                'ERP admin accounts stay with the owner.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

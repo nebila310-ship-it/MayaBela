@@ -34,14 +34,21 @@ import 'package:mayabela/web_erp/pages/web_qa_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
+import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
+import 'package:mayabela/web_erp/pages/web_transport_live_gps_page.dart';
 
 /// Maps ERP route ids to page widgets (web shell content area).
 class WebErpRouter {
   static Widget pageFor(String routeId, {ValueChanged<String>? onNavigate}) {
     // Safety net behind the sidebar filter: stale favorites, search results
     // or manual navigation can still request modules the user cannot open.
-    const mutationRoutes = {'add_student', 'add_teacher', 'add_staff'};
+    const mutationRoutes = {
+      'add_student',
+      'add_teacher',
+      'add_staff',
+      'add_driver',
+    };
     if (!ModuleAccess.canView(routeId) ||
         (mutationRoutes.contains(routeId) &&
             !ModuleAccess.canManage(routeId))) {
@@ -144,6 +151,10 @@ class WebErpRouter {
         return const WebInventoryShellPage();
       case 'transport_buses':
         return const WebBusesPage();
+      case 'transport_live_gps':
+        return WebTransportLiveGpsPage(onNavigate: onNavigate);
+      case 'add_driver':
+        return WebHrRegisterDriverPage(onNavigate: onNavigate);
       default:
         return WebErpPlaceholderPage(
           title: routeId,

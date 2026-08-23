@@ -257,6 +257,8 @@ abstract final class ModuleAccess {
     'grades': 'examinations',
     'grade_approvals': 'examinations',
     'transport_buses': 'transport',
+    'transport_live_gps': 'transport',
+    'add_driver': 'transport',
     'add_student': 'students',
   };
 

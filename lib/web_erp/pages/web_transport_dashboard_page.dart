@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/bus_live_location_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/web_erp/pages/web_buses_page.dart';
+import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
+import 'package:mayabela/web_erp/pages/web_transport_live_gps_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/widgets/mobile_erp_host.dart';
 
@@ -32,6 +35,7 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
       listenable: Listenable.merge([
         BusRegistryService.instance,
         TransportService.instance,
+        BusLiveLocationService.instance,
       ]),
       builder: (context, _) {
         final schoolId = AuthService.activeSchoolId;
@@ -65,9 +69,13 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
+                  SizedBox(
+                    width: 280,
                     child: Text(
                       'Transport Dashboard',
                       style: WebErpTheme.sectionTitle(context),
@@ -77,6 +85,44 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                     onPressed: openBuses,
                     icon: const Icon(Icons.airport_shuttle_outlined),
                     label: const Text('Manage Buses'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      if (widget.onNavigate != null) {
+                        widget.onNavigate!('transport_live_gps');
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MobileErpHost(
+                            title: 'Live GPS',
+                            child: WebTransportLiveGpsPage(),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.gps_fixed),
+                    label: const Text('Live GPS'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () {
+                      if (widget.onNavigate != null) {
+                        widget.onNavigate!('add_driver');
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MobileErpHost(
+                            title: 'Register driver',
+                            child: WebHrRegisterDriverPage(),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.person_add_alt_1_outlined),
+                    label: const Text('Register Driver'),
                   ),
                 ],
               ),
@@ -112,6 +158,7 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                           DataColumn(label: Text('Plate')),
                           DataColumn(label: Text('Route')),
                           DataColumn(label: Text('Driver')),
+                          DataColumn(label: Text('GPS')),
                           DataColumn(label: Text('Riders')),
                           DataColumn(label: Text('Onboard')),
                         ],
@@ -125,6 +172,24 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                                 DataCell(Text(
                                     b.routeName.isEmpty ? '—' : b.routeName)),
                                 DataCell(Text(b.driverName)),
+                                DataCell(
+                                  Text(
+                                    b.driverId.isEmpty
+                                        ? 'No driver'
+                                        : switch (BusLiveLocationService
+                                            .instance
+                                            .freshnessFor(b.driverId)) {
+                                            BusGpsFreshness.live => 'Live',
+                                            BusGpsFreshness.stale => 'Stale',
+                                            BusGpsFreshness.waiting =>
+                                              'Waiting',
+                                          },
+                                  ),
+                                  onTap: widget.onNavigate == null
+                                      ? null
+                                      : () => widget
+                                          .onNavigate!('transport_live_gps'),
+                                ),
                                 DataCell(Text('${b.passengerCount}')),
                                 DataCell(Text('${b.onboardCount}')),
                               ],

@@ -129,6 +129,18 @@ const List<WebErpNavItem> _allNavItems = [
       icon: Icons.airport_shuttle_outlined,
       section: 'HR Branch',
     ),
+    WebErpNavItem(
+      id: 'transport_live_gps',
+      label: 'Live GPS',
+      icon: Icons.gps_fixed,
+      section: 'HR Branch',
+    ),
+    WebErpNavItem(
+      id: 'add_driver',
+      label: 'Register Driver',
+      icon: Icons.person_add_alt_1_outlined,
+      section: 'HR Branch',
+    ),
 
     // Learning resources wired to students & parents.
     WebErpNavItem(
