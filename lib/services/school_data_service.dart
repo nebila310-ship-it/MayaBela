@@ -5729,9 +5729,13 @@ class SchoolDataService {
     ),
   ];
 
-  List<CalendarEvent> getCalendarEvents() => List.unmodifiable(_calendarEvents);
+  List<CalendarEvent> getCalendarEvents() {
+    ensureEthiopianHolidaysSynced();
+    return List.unmodifiable(_calendarEvents);
+  }
 
   List<CalendarEvent> getEventsForDay(DateTime day) {
+    ensureEthiopianHolidaysSynced();
     return _calendarEvents.where((event) {
       return event.date.year == day.year &&
           event.date.month == day.month &&
@@ -6073,6 +6077,7 @@ class SchoolDataService {
   }
 
   List<CalendarEvent> getVisibleCalendarEvents({bool includeEthiopian = true}) {
+    ensureEthiopianHolidaysSynced();
     if (includeEthiopian) return List.unmodifiable(_calendarEvents);
     return _calendarEvents.where((event) => !event.isEthiopianHoliday).toList();
   }
@@ -6119,6 +6124,7 @@ class SchoolDataService {
   }
 
   List<CalendarEvent> getUpcomingEvents({int days = 30}) {
+    ensureEthiopianHolidaysSynced();
     final now = DateTime.now();
     final end = now.add(Duration(days: days));
     return _calendarEvents

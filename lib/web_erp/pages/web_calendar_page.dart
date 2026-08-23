@@ -54,6 +54,44 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
     });
   }
 
+  Widget _upcomingHolidayBanner(AppStrings s) {
+    final upcoming = _data
+        .getUpcomingEvents(days: 45)
+        .where((e) => e.isEthiopianHoliday)
+        .take(3)
+        .toList();
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final next = upcoming.first;
+          setState(() {
+            _focusedMonth = DateTime(next.date.year, next.date.month);
+            _selectedDay =
+                DateTime(next.date.year, next.date.month, next.date.day);
+          });
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.purple.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.purple.shade100),
+          ),
+          child: Text(
+            '${s.upcomingEthiopianHolidays}: ${upcoming.map((e) => '${e.title} (${e.date.day}/${e.date.month})').join(' · ')}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+
   List<DateTime> _daysInMonthGrid() {
     final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
     final lastDay = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
@@ -181,6 +219,10 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
                 ],
               ),
               const SizedBox(height: 12),
+              if (UserPreferencesService.instance.showEthiopianHolidays)
+                _upcomingHolidayBanner(s),
+              if (UserPreferencesService.instance.showEthiopianHolidays)
+                const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
                   child: Row(

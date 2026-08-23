@@ -11,13 +11,30 @@ void main() {
   group('EthiopianHolidayCatalog', () {
     test('loads fixed national holidays for a year', () {
       final holidays = EthiopianHolidayCatalog.forYear(2026);
-      expect(holidays.length, greaterThanOrEqualTo(8));
+      expect(holidays.length, greaterThanOrEqualTo(12));
       expect(holidays.every((e) => e.isEthiopianHoliday), isTrue);
       expect(holidays.any((e) => e.id == 'eth-2026-genna'), isTrue);
       expect(
         holidays.firstWhere((e) => e.id == 'eth-2026-genna').date,
         DateTime(2026, 1, 7),
       );
+    });
+
+    test('includes Mawlid and Orthodox Easter for 2026', () {
+      final holidays = EthiopianHolidayCatalog.forYear(2026);
+      expect(
+        holidays.firstWhere((e) => e.id == 'eth-2026-mawlid').date,
+        DateTime(2026, 8, 26),
+      );
+      expect(
+        holidays.firstWhere((e) => e.id == 'eth-2026-fasika').date,
+        DateTime(2026, 4, 12),
+      );
+      expect(
+        holidays.firstWhere((e) => e.id == 'eth-2026-good-friday').date,
+        DateTime(2026, 4, 10),
+      );
+      expect(EthiopianHolidayCatalog.orthodoxEaster(2026), DateTime(2026, 4, 12));
     });
 
     test('Enkutatash shifts before a Gregorian leap year', () {
@@ -40,6 +57,7 @@ void main() {
           .where((e) => e.isEthiopianHoliday)
           .toList();
       expect(events.any((e) => e.id == 'eth-$year-genna'), isTrue);
+      expect(events.any((e) => e.id.contains('mawlid')), isTrue);
       expect(events.any((e) => e.id == 'eth-${year + 1}-enkutatash'), isTrue);
       expect(events.where((e) => RegExp(r'^eth-\d+$').hasMatch(e.id)), isEmpty);
     });

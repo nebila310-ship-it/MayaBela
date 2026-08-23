@@ -1,10 +1,11 @@
 import 'package:mayabela/models/calendar_event.dart';
 
-/// Authoritative Gregorian dates for Ethiopian national / school holidays.
+/// Gregorian dates for Ethiopian national / school holidays.
 ///
 /// Fixed civil holidays use the same Gregorian day every year. Enkutatash and
 /// Meskel shift by one day in the Gregorian year preceding a leap year.
-/// Movable Islamic feasts are omitted (school can schedule those manually).
+/// Orthodox Easter is computed (Julian Easter + 13 days in 1900–2099).
+/// Islamic feasts use published civil dates and may move ±1 day on moon sighting.
 class EthiopianHolidayCatalog {
   EthiopianHolidayCatalog._();
 
@@ -16,10 +17,33 @@ class EthiopianHolidayCatalog {
   static bool _ethiopianLeapShift(int gregorianYear) =>
       _gregorianLeapYear(gregorianYear + 1);
 
+  /// Civil dates for Mawlid / Eid (tentative; announced on moon sighting).
+  static const _islamicByYear = <int, (int fitrM, int fitrD, int adhaM, int adhaD, int mawlidM, int mawlidD)>{
+    2025: (3, 31, 6, 7, 9, 5),
+    2026: (3, 20, 5, 27, 8, 26),
+    2027: (3, 10, 5, 17, 8, 15),
+    2028: (2, 27, 5, 6, 8, 4),
+  };
+
+  /// Orthodox / Ethiopian Fasika (Gregorian).
+  static DateTime orthodoxEaster(int year) {
+    final a = year % 4;
+    final b = year % 7;
+    final c = year % 19;
+    final d = (19 * c + 15) % 30;
+    final e = (2 * a + 4 * b - d + 34) % 7;
+    final month = (d + e + 114) ~/ 31;
+    final day = ((d + e + 114) % 31) + 1;
+    return DateTime(year, month, day).add(const Duration(days: 13));
+  }
+
   static List<CalendarEvent> forYear(int year) {
     final shift = _ethiopianLeapShift(year);
     final enkutatashDay = shift ? 12 : 11;
     final meskelDay = shift ? 28 : 27;
+    final fasika = orthodoxEaster(year);
+    final goodFriday = fasika.subtract(const Duration(days: 2));
+    final islamic = _islamicByYear[year];
 
     return [
       _holiday(
@@ -46,6 +70,32 @@ class EthiopianHolidayCatalog {
         month: 3,
         day: 2,
       ),
+      if (islamic != null)
+        _holiday(
+          year: year,
+          slug: 'eid-fitr',
+          title: 'Eid al-Fitr',
+          description:
+              'End of Ramadan — school closed. Date may shift ±1 day on moon sighting.',
+          month: islamic.$1,
+          day: islamic.$2,
+        ),
+      _holiday(
+        year: year,
+        slug: 'good-friday',
+        title: 'Ethiopian Good Friday (Siklet)',
+        description: 'Orthodox Good Friday — school closed.',
+        month: goodFriday.month,
+        day: goodFriday.day,
+      ),
+      _holiday(
+        year: year,
+        slug: 'fasika',
+        title: 'Fasika (Ethiopian Easter)',
+        description: 'Orthodox Easter — school closed.',
+        month: fasika.month,
+        day: fasika.day,
+      ),
       _holiday(
         year: year,
         slug: 'labour',
@@ -62,6 +112,16 @@ class EthiopianHolidayCatalog {
         month: 5,
         day: 5,
       ),
+      if (islamic != null)
+        _holiday(
+          year: year,
+          slug: 'eid-adha',
+          title: 'Eid al-Adha (Arefa)',
+          description:
+              'Feast of Sacrifice — school closed. Date may shift ±1 day on moon sighting.',
+          month: islamic.$3,
+          day: islamic.$4,
+        ),
       _holiday(
         year: year,
         slug: 'derg',
@@ -70,6 +130,16 @@ class EthiopianHolidayCatalog {
         month: 5,
         day: 28,
       ),
+      if (islamic != null)
+        _holiday(
+          year: year,
+          slug: 'mawlid',
+          title: "Mawlid (Prophet's Birthday)",
+          description:
+              'National public holiday — school closed. Date may shift ±1 day on moon sighting.',
+          month: islamic.$5,
+          day: islamic.$6,
+        ),
       _holiday(
         year: year,
         slug: 'enkutatash',

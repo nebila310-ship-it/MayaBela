@@ -18,7 +18,8 @@ class WebAdminOverviewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = WebAdminStatsService.instance.load();
-    final events = SchoolDataService.instance.getCalendarEvents().take(5);
+    final events =
+        SchoolDataService.instance.getUpcomingEvents(days: 45).take(5);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
