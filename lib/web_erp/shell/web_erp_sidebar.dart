@@ -5,6 +5,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 import 'package:mayabela/web_erp/models/web_erp_nav_item.dart';
 import 'package:mayabela/web_erp/services/web_erp_prefs_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
 class WebErpSidebar extends StatelessWidget {
@@ -35,11 +36,22 @@ class WebErpSidebar extends StatelessWidget {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       width: width,
-      color: WebErpTheme.sidebarBg,
+      decoration: const BoxDecoration(
+        color: WebErpTheme.sidebarBg,
+        border: Border(right: BorderSide(color: ClassroomPalette.line)),
+      ),
       child: Column(
         children: [
-          SizedBox(
+          Container(
             height: WebErpTheme.topBarHeight,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  ClassroomPalette.teal,
+                  Color.lerp(ClassroomPalette.teal, ClassroomPalette.blue, 0.45)!,
+                ],
+              ),
+            ),
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 16),
               child: Row(
@@ -72,14 +84,13 @@ class WebErpSidebar extends StatelessWidget {
                           : collapsed
                               ? Icons.chevron_right
                               : Icons.chevron_left,
-                      color: Colors.white70,
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, color: Colors.white12),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -170,7 +181,7 @@ class WebErpSidebar extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          color: highlight ? const Color(0xFF86EFAC) : Colors.white38,
+          color: highlight ? ClassroomPalette.green : ClassroomPalette.muted,
           fontSize: highlight ? 12 : 10,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.1,
@@ -199,7 +210,7 @@ class _NavTile extends StatelessWidget {
       return _tile(
         icon: item.icon,
         label: item.label,
-        color: Colors.redAccent.shade100,
+        color: ClassroomPalette.red,
         badge: 0,
       );
     }
@@ -221,8 +232,11 @@ class _NavTile extends StatelessWidget {
     int badge = 0,
     Color? color,
   }) {
-    final fg = color ?? (selected ? Colors.white : Colors.white70);
+    final accent = ClassroomPalette.forKey(item.id);
+    final fg = color ??
+        (selected ? WebErpTheme.primary : ClassroomPalette.ink);
     final bg = selected ? WebErpTheme.sidebarActive : Colors.transparent;
+    final iconColor = color ?? (selected ? WebErpTheme.primary : accent);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -243,7 +257,7 @@ class _NavTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: fg, size: 22),
+                Icon(icon, color: iconColor, size: 22),
                 if (!collapsed) ...[
                   const SizedBox(width: 12),
                   Expanded(

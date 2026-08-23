@@ -20,6 +20,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/staff_role_labels.dart';
@@ -406,7 +407,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       out.add(_StatCard(
         moduleId: 'learning_materials',
         icon: Icons.auto_stories_outlined,
-        color: const Color(0xFF4527A0),
+        color: ClassroomPalette.purple,
         value: '$materials',
         label: 'e-Books & materials',
       ));
@@ -794,8 +795,13 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14532D),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            ClassroomPalette.green,
+            Color.lerp(ClassroomPalette.green, ClassroomPalette.teal, 0.4)!,
+          ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

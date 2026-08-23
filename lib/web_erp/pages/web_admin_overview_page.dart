@@ -5,6 +5,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/services/web_admin_stats_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/widgets/web_chart_widgets.dart';
 import 'package:mayabela/web_erp/widgets/web_stat_card.dart';
@@ -24,19 +25,7 @@ class WebAdminOverviewPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Welcome, ${AuthService.displayNameForRole(AuthService.roleAdmin)}',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "Today's summary — attendance, fees, transport, and pending approvals.",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
+          _classroomWelcome(context),
           const SizedBox(height: 16),
           _schoolBusBanner(context),
           const SizedBox(height: 20),
@@ -255,6 +244,67 @@ class WebAdminOverviewPage extends StatelessWidget {
     );
   }
 
+  Widget _classroomWelcome(BuildContext context) {
+    final name = AuthService.displayNameForRole(AuthService.roleAdmin);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            ClassroomPalette.teal,
+            ClassroomPalette.blue,
+            ClassroomPalette.purple,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: ClassroomPalette.teal.withValues(alpha: 0.28),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -8,
+            top: -18,
+            child: Icon(
+              Icons.school,
+              size: 88,
+              color: Colors.white.withValues(alpha: 0.14),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome, $name',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 24,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Today's summary — attendance, fees, transport, and pending approvals.",
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _schoolBusBanner(BuildContext context) {
     final canDriver = ModuleAccess.canView('add_driver');
     final canGps = ModuleAccess.canView('transport_live_gps');
@@ -264,8 +314,22 @@ class WebAdminOverviewPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF14532D),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            ClassroomPalette.green,
+            Color.lerp(ClassroomPalette.green, ClassroomPalette.teal, 0.45)!,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: ClassroomPalette.green.withValues(alpha: 0.28),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

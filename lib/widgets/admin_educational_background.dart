@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
-/// Soft school-themed backdrop for the admin dashboard (background only).
+import 'package:mayabela/theme/classroom_palette.dart';
+
+/// Soft Classroom stream backdrop — light gray with colorful class orbs.
 class AdminEducationalBackground extends StatelessWidget {
   const AdminEducationalBackground({
     super.key,
-    this.accentColor = const Color(0xFF4527A0),
+    this.accentColor = ClassroomPalette.teal,
   });
 
   final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
-    final watermark = Color.lerp(accentColor, const Color(0xFF37474F), 0.35)!
-        .withValues(alpha: 0.075);
+    final watermark = ClassroomPalette.ink.withValues(alpha: 0.045);
 
     return Stack(
       fit: StackFit.expand,
@@ -21,13 +22,14 @@ class AdminEducationalBackground extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFFF0E6D8),
-                Color(0xFFDCE8F4),
-                Color(0xFFCFDBEA),
+                Color(0xFFF8F9FA),
+                Color(0xFFE8F0FE),
+                Color(0xFFE6F4EA),
+                Color(0xFFFEF7E0),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              stops: [0.0, 0.55, 1.0],
+              stops: [0.0, 0.38, 0.72, 1.0],
             ),
           ),
         ),
@@ -35,43 +37,53 @@ class AdminEducationalBackground extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                accentColor.withValues(alpha: 0.04),
+                accentColor.withValues(alpha: 0.06),
                 Colors.transparent,
-                const Color(0xFF37474F).withValues(alpha: 0.03),
+                ClassroomPalette.pink.withValues(alpha: 0.04),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
-        CustomPaint(
-          painter: _NotebookLinesPainter(
-            lineColor: accentColor.withValues(alpha: 0.085),
-            marginColor: const Color(0xFFE57373).withValues(alpha: 0.22),
+        Positioned(
+          top: -40,
+          right: -10,
+          child: _SoftOrb(
+            color: ClassroomPalette.blue.withValues(alpha: 0.22),
+            size: 200,
           ),
         ),
         Positioned(
-          top: -30,
-          right: -20,
+          top: 120,
+          left: -50,
           child: _SoftOrb(
-            color: const Color(0xFF42A5F5).withValues(alpha: 0.18),
-            size: 180,
+            color: ClassroomPalette.teal.withValues(alpha: 0.18),
+            size: 170,
           ),
         ),
         Positioned(
-          bottom: 80,
-          left: -40,
+          bottom: 90,
+          right: -30,
           child: _SoftOrb(
-            color: const Color(0xFFFF9800).withValues(alpha: 0.14),
+            color: ClassroomPalette.orange.withValues(alpha: 0.16),
             size: 160,
           ),
         ),
         Positioned(
-          bottom: -20,
-          right: 30,
+          bottom: -30,
+          left: 40,
           child: _SoftOrb(
-            color: accentColor.withValues(alpha: 0.14),
-            size: 120,
+            color: ClassroomPalette.purple.withValues(alpha: 0.14),
+            size: 140,
+          ),
+        ),
+        Positioned(
+          top: 280,
+          right: 80,
+          child: _SoftOrb(
+            color: ClassroomPalette.pink.withValues(alpha: 0.10),
+            size: 110,
           ),
         ),
         _WatermarkIcon(
@@ -96,7 +108,7 @@ class AdminEducationalBackground extends StatelessWidget {
           right: 40,
         ),
         _WatermarkIcon(
-          icon: Icons.calculate_outlined,
+          icon: Icons.palette_outlined,
           color: watermark,
           size: 56,
           bottom: 60,
@@ -106,10 +118,8 @@ class AdminEducationalBackground extends StatelessWidget {
           icon: Icons.auto_stories_outlined,
           color: watermark,
           size: 48,
-          bottom: 24,
-          right: null,
-          left: null,
           centerHorizontally: true,
+          bottom: 24,
         ),
       ],
     );
@@ -170,41 +180,4 @@ class _SoftOrb extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Faint notebook ruled lines — classroom paper feel.
-class _NotebookLinesPainter extends CustomPainter {
-  _NotebookLinesPainter({
-    required this.lineColor,
-    required this.marginColor,
-  });
-
-  final Color lineColor;
-  final Color marginColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const lineSpacing = 32.0;
-    const topOffset = 48.0;
-    const marginX = 56.0;
-
-    final linePaint = Paint()..color = lineColor;
-    for (var y = topOffset; y < size.height; y += lineSpacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
-    }
-
-    final marginPaint = Paint()
-      ..color = marginColor
-      ..strokeWidth = 1.5;
-    canvas.drawLine(
-      Offset(marginX, 0),
-      Offset(marginX, size.height),
-      marginPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _NotebookLinesPainter oldDelegate) =>
-      oldDelegate.lineColor != lineColor ||
-      oldDelegate.marginColor != marginColor;
 }

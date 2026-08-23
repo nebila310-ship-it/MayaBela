@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mayabela/screens/admin_dashboard.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/shell/web_erp_shell.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
 import 'package:mayabela/widgets/dashboard_card.dart';
 
 void main() {
-  testWidgets('ERP cards use the cream paper color', (tester) async {
+  testWidgets('ERP cards use the Classroom white surface', (tester) async {
     late BoxDecoration deco;
     await tester.pumpWidget(
       MaterialApp(
@@ -20,10 +21,13 @@ void main() {
         ),
       ),
     );
-    expect(deco.color, WebErpTheme.paper.withValues(alpha: 0.94));
+    expect(deco.color, WebErpTheme.paper);
+    expect(WebErpTheme.paper, ClassroomPalette.card);
+    expect(WebErpTheme.primary, ClassroomPalette.teal);
   });
 
-  testWidgets('Admin ERP shell sits on the notebook background', (tester) async {
+  testWidgets('Admin ERP shell sits on the Classroom stream background',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -37,7 +41,9 @@ void main() {
     expect(find.byType(AdminEducationalBackground), findsOneWidget);
   });
 
-  testWidgets('dashboard tiles use paper, not a solid color wash', (tester) async {
+  testWidgets('dashboard tiles use a colorful Classroom class banner',
+      (tester) async {
+    const accent = Color(0xFF1565C0);
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -47,20 +53,23 @@ void main() {
             child: DashboardCard(
               icon: Icons.school,
               title: 'Students',
-              color: Color(0xFF1565C0),
+              color: accent,
             ),
           ),
         ),
       ),
     );
-    final box = tester.widget<Container>(
-      find.descendant(
-        of: find.byType(DashboardCard),
-        matching: find.byType(Container),
-      ).first,
-    );
-    final deco = box.decoration! as BoxDecoration;
-    expect(deco.color, const Color(0xFFFBF6ED).withValues(alpha: 0.94));
     expect(find.text('Students'), findsOneWidget);
+    expect(find.byIcon(Icons.school), findsOneWidget);
+    final boxes = tester.widgetList<DecoratedBox>(find.byType(DecoratedBox));
+    expect(
+      boxes.any((box) {
+        final deco = box.decoration;
+        return deco is BoxDecoration &&
+            deco.gradient is LinearGradient &&
+            (deco.gradient as LinearGradient).colors.first == accent;
+      }),
+      isTrue,
+    );
   });
 }

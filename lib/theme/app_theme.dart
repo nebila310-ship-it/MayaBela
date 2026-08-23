@@ -6,13 +6,13 @@ class AppTheme {
 
   static ThemeData get light {
     final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF4338CA),
+      seedColor: const Color(0xFF00897B),
       brightness: Brightness.light,
     );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
       cardColor: Colors.white,
       iconTheme: const IconThemeData(),
       appBarTheme: AppBarTheme(

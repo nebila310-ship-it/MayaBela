@@ -280,7 +280,9 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                 subtitle,
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: filled ? Colors.white.withValues(alpha: 0.9) : Colors.brown.shade600,
+                  color: filled
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : const Color(0xFF5F6368),
                 ),
               ),
             ],

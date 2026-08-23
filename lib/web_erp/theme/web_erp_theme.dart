@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// ERP shell accent and layout tokens.
-/// Cards and page chrome use the same paper/notebook colors as the phone APK.
-abstract final class WebErpTheme {
-  static const Color primary = Color(0xFF4527A0);
-  static const Color primaryLight = Color(0xFF7E57C2);
-  static const Color sidebarBg = Color(0xFF1E1B2E);
-  static const Color sidebarHover = Color(0xFF2D2942);
-  static const Color sidebarActive = Color(0xFF4527A0);
+import 'package:mayabela/theme/classroom_palette.dart';
 
-  /// Cream notebook page — matches [AdminEducationalBackground].
-  static const Color paper = Color(0xFFFBF6ED);
-  static const Color paperEdge = Color(0xFFD9C7A8);
-  static const Color paperInk = Color(0xFF3E3428);
-  static const Color paperBackdrop = Color(0xFFCFDBEA);
+/// ERP shell tokens — Google Classroom stream: white cards, colorful accents.
+abstract final class WebErpTheme {
+  static const Color primary = ClassroomPalette.teal;
+  static const Color primaryLight = ClassroomPalette.cyan;
+  static const Color sidebarBg = Color(0xFFFFFFFF);
+  static const Color sidebarHover = Color(0xFFF1F3F4);
+  static const Color sidebarActive = Color(0xFFE6F4EA);
+
+  /// White class-card surface (kept as `paper` so existing pages pick it up).
+  static const Color paper = ClassroomPalette.card;
+  static const Color paperEdge = ClassroomPalette.line;
+  static const Color paperInk = ClassroomPalette.ink;
+  static const Color paperBackdrop = ClassroomPalette.stream;
 
   static const double sidebarExpanded = 260;
   static const double sidebarCollapsed = 72;
@@ -21,16 +22,29 @@ abstract final class WebErpTheme {
 
   static BoxDecoration cardDecoration(BuildContext context) {
     return BoxDecoration(
-      color: paper.withValues(alpha: 0.94),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: paperEdge.withValues(alpha: 0.75)),
+      color: paper,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: paperEdge),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF5D4037).withValues(alpha: 0.10),
-          blurRadius: 14,
-          offset: const Offset(0, 5),
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
         ),
       ],
+    );
+  }
+
+  static BoxDecoration classBanner(Color color) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          color,
+          Color.lerp(color, Colors.black, 0.18)!,
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
     );
   }
 
