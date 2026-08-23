@@ -47,25 +47,34 @@ class WebAdminOverviewPage extends StatelessWidget {
               final wide = c.maxWidth > 1100;
               final left = Column(
                 children: [
-                  WebLineChartPanel(
-                    title: 'Attendance Trends (%)',
-                    values: stats.attendanceTrend,
-                    ySuffix: '%',
-                    color: Colors.green.shade600,
+                  _tappablePanel(
+                    routeId: 'attendance',
+                    child: WebLineChartPanel(
+                      title: 'Attendance Trends (%)',
+                      values: stats.attendanceTrend,
+                      ySuffix: '%',
+                      color: Colors.green.shade600,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  WebLineChartPanel(
-                    title: 'Revenue Graph',
-                    values: stats.revenueTrend,
-                    color: Colors.orange.shade700,
+                  _tappablePanel(
+                    routeId: 'finance',
+                    child: WebLineChartPanel(
+                      title: 'Revenue Graph',
+                      values: stats.revenueTrend,
+                      color: Colors.orange.shade700,
+                    ),
                   ),
                 ],
               );
               final right = Column(
                 children: [
-                  WebBarChartPanel(
-                    title: 'Students by Grade',
-                    data: stats.gradeBreakdown,
+                  _tappablePanel(
+                    routeId: 'students',
+                    child: WebBarChartPanel(
+                      title: 'Students by Grade',
+                      data: stats.gradeBreakdown,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   _quickActions(context),
@@ -124,6 +133,25 @@ class WebAdminOverviewPage extends StatelessWidget {
     );
   }
 
+  VoidCallback? _go(String routeId) {
+    if (onNavigate == null) return null;
+    if (!ModuleAccess.canView(routeId)) return null;
+    return () => onNavigate!(routeId);
+  }
+
+  Widget _tappablePanel({required String routeId, required Widget child}) {
+    final tap = _go(routeId);
+    if (tap == null) return child;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: tap,
+        borderRadius: BorderRadius.circular(16),
+        child: child,
+      ),
+    );
+  }
+
   Widget _statGrid(WebAdminStats stats) {
     return LayoutBuilder(
       builder: (context, c) {
@@ -140,63 +168,74 @@ class WebAdminOverviewPage extends StatelessWidget {
             value: '${stats.totalStudents}',
             icon: Icons.groups_outlined,
             color: Colors.blue,
+            onTap: _go('students'),
           ),
           WebStatCard(
             label: 'Present Today',
             value: '${stats.studentsPresentToday}',
             icon: Icons.check_circle_outline,
             color: Colors.green,
+            onTap: _go('attendance'),
           ),
           WebStatCard(
             label: 'Absent',
             value: '${stats.studentsAbsent}',
             icon: Icons.person_off_outlined,
             color: Colors.red,
+            onTap: _go('attendance'),
           ),
           WebStatCard(
             label: 'Teachers',
             value: '${stats.totalTeachers}',
             icon: Icons.school_outlined,
             color: Colors.indigo,
+            onTap: _go('hr'),
           ),
           WebStatCard(
             label: 'Buses Active',
             value: '${stats.busesActive}',
             icon: Icons.directions_bus_outlined,
+            onTap: _go('transport'),
           ),
           WebStatCard(
             label: 'Outstanding Fees',
             value: '${stats.outstandingFees.toStringAsFixed(0)} ETB',
             icon: Icons.account_balance_wallet_outlined,
             color: Colors.orange,
+            onTap: _go('finance'),
           ),
           WebStatCard(
             label: 'Revenue (Month)',
             value: '${stats.revenueThisMonth.toStringAsFixed(0)} ETB',
             icon: Icons.payments_outlined,
             color: Colors.teal,
+            onTap: _go('finance'),
           ),
           WebStatCard(
             label: 'Pending Approvals',
             value: '${stats.pendingApprovals}',
             icon: Icons.pending_actions_outlined,
             color: Colors.deepPurple,
+            onTap: _go('examinations') ?? _go('parents'),
           ),
           WebStatCard(
             label: 'Unread Announcements',
             value: '${stats.unreadAnnouncements}',
             icon: Icons.campaign_outlined,
+            onTap: _go('announcements'),
           ),
           WebStatCard(
             label: 'Birthdays Today',
             value: '${stats.birthdaysToday}',
             icon: Icons.cake_outlined,
             color: Colors.pink,
+            onTap: _go('students'),
           ),
           WebStatCard(
             label: 'Recent Admissions',
             value: '${stats.recentAdmissions}',
             icon: Icons.person_add_alt_1_outlined,
+            onTap: _go('students'),
           ),
         ];
 
@@ -334,29 +373,81 @@ class WebAdminOverviewPage extends StatelessWidget {
           children: [
             Text("Today's Summary", style: WebErpTheme.sectionTitle(context)),
             const SizedBox(height: 12),
-            _summaryRow(context, 'Attendance rate',
-                '${stats.studentsPresentToday} present'),
-            _summaryRow(context, 'Fee collection',
-                '${stats.revenueToday.toStringAsFixed(0)} ETB today'),
             _summaryRow(
-                context, 'Transport', '${stats.busesActive} buses active'),
-            _summaryRow(context, 'Approvals',
-                '${stats.pendingApprovals} pending'),
-            _summaryRow(context, 'Exams', '${stats.upcomingExams} upcoming'),
+              context,
+              'Attendance rate',
+              '${stats.studentsPresentToday} present',
+              routeId: 'attendance',
+            ),
+            _summaryRow(
+              context,
+              'Fee collection',
+              '${stats.revenueToday.toStringAsFixed(0)} ETB today',
+              routeId: 'finance',
+            ),
+            _summaryRow(
+              context,
+              'Transport',
+              '${stats.busesActive} buses active',
+              routeId: 'transport',
+            ),
+            _summaryRow(
+              context,
+              'Approvals',
+              '${stats.pendingApprovals} pending',
+              routeId: 'examinations',
+            ),
+            _summaryRow(
+              context,
+              'Exams',
+              '${stats.upcomingExams} upcoming',
+              routeId: 'examinations',
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _summaryRow(BuildContext context, String label, String value) {
-    return Padding(
+  Widget _summaryRow(
+    BuildContext context,
+    String label,
+    String value, {
+    String? routeId,
+  }) {
+    final tap = routeId == null ? null : _go(routeId);
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(child: Text(label)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (tap != null) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
+          ],
         ],
+      ),
+    );
+    if (tap == null) return row;
+    return InkWell(onTap: tap, child: row);
+  }
+
+  Widget _linkedTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String routeId,
+  }) {
+    final tap = _go(routeId);
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: tap == null ? null : const Icon(Icons.chevron_right),
+        onTap: tap,
       ),
     );
   }
@@ -370,20 +461,23 @@ class WebAdminOverviewPage extends StatelessWidget {
         children: [
           Text('Recent Activities', style: WebErpTheme.sectionTitle(context)),
           const SizedBox(height: 12),
-          const ListTile(
-            leading: Icon(Icons.person_add),
-            title: Text('New student enrollment'),
-            subtitle: Text('Review admissions in Students module'),
+          _linkedTile(
+            icon: Icons.person_add,
+            title: 'New student enrollment',
+            subtitle: 'Review admissions in Students module',
+            routeId: 'students',
           ),
-          const ListTile(
-            leading: Icon(Icons.payment),
-            title: Text('Fee payment received'),
-            subtitle: Text('Check Finance dashboard'),
+          _linkedTile(
+            icon: Icons.payment,
+            title: 'Fee payment received',
+            subtitle: 'Check Finance dashboard',
+            routeId: 'finance',
           ),
-          const ListTile(
-            leading: Icon(Icons.directions_bus),
-            title: Text('Transport check-in'),
-            subtitle: Text('Driver completed morning route'),
+          _linkedTile(
+            icon: Icons.directions_bus,
+            title: 'Transport check-in',
+            subtitle: 'Driver completed morning route',
+            routeId: 'transport',
           ),
         ],
       ),
@@ -398,16 +492,23 @@ class WebAdminOverviewPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Upcoming Events', style: WebErpTheme.sectionTitle(context)),
+            InkWell(
+              onTap: _go('calendar'),
+              child: Text(
+                'Upcoming Events',
+                style: WebErpTheme.sectionTitle(context),
+              ),
+            ),
             const SizedBox(height: 12),
             if (events.isEmpty)
               const Text('No upcoming events')
             else
               for (final e in events)
-                ListTile(
-                  leading: const Icon(Icons.event),
-                  title: Text(e.title),
-                  subtitle: Text('${e.date.day}/${e.date.month}/${e.date.year}'),
+                _linkedTile(
+                  icon: Icons.event,
+                  title: e.title,
+                  subtitle: '${e.date.day}/${e.date.month}/${e.date.year}',
+                  routeId: 'calendar',
                 ),
           ],
         ),

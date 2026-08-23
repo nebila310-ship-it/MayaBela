@@ -146,15 +146,33 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                 spacing: 16,
                 runSpacing: 16,
                 children: [
-                  _stat(context, 'Active Buses', '${buses.length}',
-                      Icons.directions_bus),
-                  _stat(context, 'Routes', '$routes', Icons.route),
-                  _stat(context, 'Drivers', '${drivers.length}', Icons.person),
+                  _stat(
+                    context,
+                    'Active Buses',
+                    '${buses.length}',
+                    Icons.directions_bus,
+                    onTap: openBuses,
+                  ),
+                  _stat(
+                    context,
+                    'Routes',
+                    '$routes',
+                    Icons.route,
+                    onTap: openBuses,
+                  ),
+                  _stat(
+                    context,
+                    'Drivers',
+                    '${drivers.length}',
+                    Icons.person,
+                    onTap: openRegisterDriver,
+                  ),
                   _stat(
                     context,
                     'Onboard Now',
                     '${buses.fold<int>(0, (s, b) => s + b.onboardCount)}',
                     Icons.airline_seat_recline_normal,
+                    onTap: openLiveGps,
                   ),
                 ],
               ),
@@ -276,9 +294,10 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
     BuildContext context,
     String label,
     String value,
-    IconData icon,
-  ) {
-    return Container(
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    final card = Container(
       width: 200,
       padding: const EdgeInsets.all(16),
       decoration: WebErpTheme.cardDecoration(context),
@@ -299,7 +318,18 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
               ],
             ),
           ),
+          if (onTap != null)
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
         ],
+      ),
+    );
+    if (onTap == null) return card;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: card,
       ),
     );
   }
