@@ -634,7 +634,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       initialPassword: tempPassword,
       classAssignments: const [],
       campus: _selectedCampus,
-      // Role initials drive the short id prefix (QA-1001, HR-1001, …).
+      // Role initials drive the short 4-digit id (QA-0001, HR-0001, …).
       staffRoles: _isStaff ? _selectedRoles.toList() : const [],
     );
     final createdTeacherId = teacher.teacherId;

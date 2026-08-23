@@ -26,6 +26,7 @@ import 'package:mayabela/models/transport_passenger.dart';
 import 'package:mayabela/services/bus_live_location_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/transport_service.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 import 'package:mayabela/services/cloud/school_account_ids.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
@@ -1590,8 +1591,7 @@ class CloudAppStore {
       try {
         final student = AdminStudentRecord.fromMap(map);
         students.add(student);
-        final numeric =
-            int.tryParse(student.studentId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(student.studentId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1618,8 +1618,7 @@ class CloudAppStore {
       try {
         final teacher = AdminTeacherRecord.fromMap(map);
         teachers.add(teacher);
-        final numeric =
-            int.tryParse(teacher.teacherId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(teacher.teacherId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1647,8 +1646,7 @@ class CloudAppStore {
       try {
         final driver = AdminDriverRecord.fromMap(map);
         drivers.add(driver);
-        final numeric =
-            int.tryParse(driver.driverId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(driver.driverId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1676,8 +1674,7 @@ class CloudAppStore {
       try {
         final employee = EmployeeRecord.fromMap(map);
         employees.add(employee);
-        final numeric =
-            int.tryParse(employee.employeeId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(employee.employeeId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }

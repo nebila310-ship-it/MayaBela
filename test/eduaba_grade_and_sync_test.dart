@@ -35,8 +35,8 @@ void main() {
       className: 'Grade 7A',
       dateOfBirth: DateTime(2012, 2, 2),
     );
-    expect(first.studentId, matches(RegExp(r'^STU-\d{4,6}$')));
-    expect(second.studentId, matches(RegExp(r'^STU-\d{4,6}$')));
+    expect(first.studentId, matches(RegExp(r'^STU-\d{4}$')));
+    expect(second.studentId, matches(RegExp(r'^STU-\d{4}$')));
     final n1 = int.parse(first.studentId.substring(4));
     final n2 = int.parse(second.studentId.substring(4));
     expect(n2, n1 + 1);
@@ -70,9 +70,9 @@ void main() {
     final hr = add('hr1', const [StaffRoles.humanResource]);
     final teacher = add('tch1', const []);
 
-    expect(qa1.teacherId, 'QA-1001');
-    expect(qa2.teacherId, 'QA-1002');
-    expect(hr.teacherId, 'HR-1001');
+    expect(qa1.teacherId, 'QA-0001');
+    expect(qa2.teacherId, 'QA-0002');
+    expect(hr.teacherId, 'HR-0001');
     expect(qa1.staffRoles, contains(StaffRoles.qualityAssurance));
     // Demo teachers occupy TCH-1001..1004, so classroom staff continue there.
     expect(teacher.teacherId, matches(RegExp(r'^TCH-\d{4}$')));

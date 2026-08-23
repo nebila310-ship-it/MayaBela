@@ -3070,9 +3070,9 @@ class AppStrings implements AppStringsLike {
         'ID kana maatii waliin qoodaa yeroo hordoffii autobusii waliin wal qunnamtisan.',
       );
   String get schoolTransportIdAutoHint => t(
-        'A unique School Transport ID (e.g. DRV-1004) is created automatically when you save.',
+        'A unique School Transport ID (e.g. DRV-0001) is created automatically when you save.',
         'ልዩ የትምህርት ቤት ትራንስፖርት መለያ (ለምሳ. DRV-1004) በሚቀምጡበት ጊዜ በራስ-ሰር ይፈጠራል።',
-        'ID geejjiba mana barumsaa addaa (fkn. DRV-1004) yeroo kuusitan ofiin uumama.',
+        'ID geejjiba mana barumsaa addaa (fkn. DRV-0001) yeroo kuusitan ofiin uumama.',
       );
   String get schoolTransportIdStudentHint => t(
         'e.g. DRV-1001',

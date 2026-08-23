@@ -8,6 +8,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_audit_log_service.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 
 /// First-class bus registry (Phase E). Drivers and students link via busId.
 class BusRegistryService extends ChangeNotifier {
@@ -72,11 +73,12 @@ class BusRegistryService extends ChangeNotifier {
         } else {
           _buses.add(bus);
         }
-        final n = int.tryParse(bus.busId.replaceAll(RegExp(r'\D'), '')) ?? 0;
+        final n = ShortRegistryId.parseNumber(bus.busId, prefix: 'BUS') ?? 0;
         if (n >= _nextId) _nextId = n + 1;
       }
     }
-    if (nextId != null && nextId > _nextId) _nextId = nextId;
+    final clamped = ShortRegistryId.clampCounter(nextId, fallback: _nextId);
+    if (clamped > _nextId) _nextId = clamped;
     _seeded = _buses.isNotEmpty;
     notifyListeners();
   }
@@ -96,7 +98,7 @@ class BusRegistryService extends ChangeNotifier {
           assignedDriverId: d.driverId,
         ),
       );
-      final n = int.tryParse(d.busId.replaceAll(RegExp(r'\D'), '')) ?? 0;
+      final n = ShortRegistryId.parseNumber(d.busId, prefix: 'BUS') ?? 0;
       if (n >= _nextId) _nextId = n + 1;
     }
     _seeded = true;
@@ -126,8 +128,15 @@ class BusRegistryService extends ChangeNotifier {
     final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
     if (sid.isEmpty) return null;
 
+    final busId = ShortRegistryId.allocate(
+      prefix: 'BUS',
+      existingIds: _buses.map((b) => b.busId),
+      isTaken: (id) => lookupAnyById(id) != null,
+      persistedNext: _nextId,
+    );
+    _nextId = (ShortRegistryId.parseNumber(busId) ?? 0) + 1;
     final bus = BusRecord(
-      busId: 'BUS-${_nextId++}',
+      busId: busId,
       busNumber: number,
       schoolId: sid,
       plateNumber: plateNumber.trim().toUpperCase(),
@@ -280,7 +289,7 @@ class BusRegistryService extends ChangeNotifier {
       assignedDriverId: driver.driverId,
     );
     _buses.insert(0, bus);
-    final n = int.tryParse(bus.busId.replaceAll(RegExp(r'\D'), '')) ?? 0;
+    final n = ShortRegistryId.parseNumber(bus.busId, prefix: 'BUS') ?? 0;
     if (n >= _nextId) _nextId = n + 1;
     await _persist();
     return bus;

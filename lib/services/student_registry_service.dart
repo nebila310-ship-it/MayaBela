@@ -6,6 +6,7 @@ import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 
 class AdminStudentRecord {
   AdminStudentRecord({
@@ -535,32 +536,19 @@ class StudentRegistryService {
 
   int get nextStudentIdCounter => _nextId;
 
-  /// Matches short human-friendly ids (STU-1001); legacy long timestamp ids
-  /// stay valid but are ignored when computing the next number.
-  static final RegExp _shortIdPattern = RegExp(r'^STU-(\d{1,6})$');
-
-  /// Short sequential id (STU-1001, STU-1002, …).
+  /// Short sequential id (`STU-0001` … `STU-9999`).
   ///
-  /// The old device-local counter collided across browsers because every
-  /// fresh install restarted at the same seed. Now the next number is
-  /// derived from the highest short id in the registry itself — which is
-  /// cloud-merged on login and every 5s — plus a local free-slot check, so
-  /// devices converge on the same sequence instead of racing a counter.
+  /// The next number is the highest existing 4-digit STU id in the
+  /// cloud-merged registry + 1. Timestamp leftovers are ignored.
   String _allocateStudentId() {
-    var highest = 1000;
-    for (final s in _students) {
-      final match = _shortIdPattern.firstMatch(s.studentId.trim().toUpperCase());
-      if (match == null) continue;
-      final n = int.tryParse(match.group(1) ?? '');
-      if (n != null && n > highest) highest = n;
-    }
-    if (_nextId > highest) highest = _nextId;
-    var candidate = highest + 1;
-    while (lookupAnyById('STU-$candidate') != null) {
-      candidate++;
-    }
-    _nextId = candidate;
-    return 'STU-$candidate';
+    final id = ShortRegistryId.allocate(
+      prefix: 'STU',
+      existingIds: _students.map((s) => s.studentId),
+      isTaken: (id) => lookupAnyById(id) != null,
+      persistedNext: _nextId,
+    );
+    _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
+    return id;
   }
 
   /// Merge saved students over in-memory seed (new students, edits, deactivations).
@@ -583,8 +571,9 @@ class StudentRegistryService {
         }
       }
     }
-    if (nextId != null && nextId > _nextId) {
-      _nextId = nextId;
+    final clamped = ShortRegistryId.clampCounter(nextId, fallback: _nextId);
+    if (clamped > _nextId) {
+      _nextId = clamped;
     }
   }
 

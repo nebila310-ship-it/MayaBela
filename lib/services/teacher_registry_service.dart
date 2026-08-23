@@ -5,6 +5,7 @@ import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
 
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 
 class AdminTeacherRecord {
   AdminTeacherRecord({
@@ -190,7 +191,21 @@ class TeacherRegistryService {
   int _nextId = 1005;
   int _nextSlotId = 1004;
 
-  String generateTeachingSlotId() => 'STA-${_nextSlotId++}';
+  String generateTeachingSlotId() {
+    final existing = [
+      for (final t in _teachers)
+        for (final a in t.classAssignments)
+          for (final slot in a.teachingSlots) slot.slotId,
+    ];
+    final id = ShortRegistryId.allocate(
+      prefix: 'STA',
+      existingIds: existing,
+      isTaken: existing.contains,
+      persistedNext: _nextSlotId,
+    );
+    _nextSlotId = (ShortRegistryId.parseNumber(id) ?? _nextSlotId) + 1;
+    return id;
+  }
 
   /// Builds teaching slots with stable subject ids for a class row.
   List<SubjectTeachingSlot> buildTeachingSlots(
@@ -618,32 +633,19 @@ class TeacherRegistryService {
 
   int get nextTeacherIdCounter => _nextId;
 
-  /// Short role-based ids: TCH-1005 (classroom teachers) or QA-1001 /
-  /// HR-1001 / VP-1001 … (administration staff, prefix = role initials).
-  static final RegExp _shortIdPattern = RegExp(r'^([A-Z]{1,4})-(\d{1,6})$');
-
-  /// The next number derives from the highest short id with the same prefix
-  /// in the registry itself — which is cloud-merged on login and every 5s —
-  /// plus a free-slot check, so devices converge on one sequence instead of
-  /// racing a local counter (old TCH-<timestamp> ids stay valid, ignored).
+  /// Role-based ids: `TCH-0001` (classroom) or `QA-0001` / `HR-0001` …
+  /// (administration staff). Always four digits.
   String _allocateTeacherId({List<String> staffRoles = const []}) {
-    _nextId++;
     final prefix = staffRoles.isEmpty
         ? 'TCH'
         : StaffRoles.idPrefixFor(staffRoles.first);
-    var highest = 1000;
-    for (final t in _teachers) {
-      final match =
-          _shortIdPattern.firstMatch(t.teacherId.trim().toUpperCase());
-      if (match == null || match.group(1) != prefix) continue;
-      final n = int.tryParse(match.group(2) ?? '');
-      if (n != null && n > highest) highest = n;
-    }
-    var candidate = highest + 1;
-    while (lookupAnyById('$prefix-$candidate') != null) {
-      candidate++;
-    }
-    return '$prefix-$candidate';
+    final id = ShortRegistryId.allocate(
+      prefix: prefix,
+      existingIds: _teachers.map((t) => t.teacherId),
+      isTaken: (id) => lookupAnyById(id) != null,
+    );
+    _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
+    return id;
   }
 
   void applyPersistedTeachers(
@@ -659,8 +661,9 @@ class TeacherRegistryService {
         _teachers.add(teacher);
       }
     }
-    if (nextId != null && nextId > _nextId) {
-      _nextId = nextId;
+    final clamped = ShortRegistryId.clampCounter(nextId, fallback: _nextId);
+    if (clamped > _nextId) {
+      _nextId = clamped;
     }
   }
 }
