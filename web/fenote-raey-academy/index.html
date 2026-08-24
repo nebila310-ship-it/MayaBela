@@ -164,6 +164,71 @@
       color: #fff;
     }
     .muted { color: #94a3b8; font-size: 16px; }
+    .gps-stage {
+      position: relative;
+      min-height: 280px;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #c8e0c4;
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    .gps-stage svg { display: block; width: 100%; height: 100%; }
+    .gps-live {
+      position: absolute; top: 14px; left: 14px; z-index: 4;
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(15,23,42,.88); color: #fff;
+      font-size: 13px; font-weight: 800; letter-spacing: .08em;
+      padding: 8px 12px; border-radius: 999px;
+    }
+    .gps-live i {
+      width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+      box-shadow: 0 0 0 0 rgba(34,197,94,.7);
+      animation: gpsBlink 1.4s ease-out infinite;
+    }
+    .gps-chip {
+      position: absolute; z-index: 4;
+      background: #fff; color: #0f172a;
+      border-radius: 12px; padding: 10px 12px;
+      box-shadow: 0 10px 28px rgba(15,23,42,.28);
+      font-size: 13px; line-height: 1.3; max-width: 210px;
+    }
+    .gps-chip strong { display: block; font-size: 14px; margin-bottom: 2px; }
+    .gps-chip.parents { left: 14px; bottom: 14px; }
+    .gps-chip.admin { right: 14px; top: 14px; }
+    .gps-chip.driver {
+      right: 14px; bottom: 14px;
+      background: #fff7ed; border: 1px solid #fdba74;
+    }
+    .gps-pin {
+      position: absolute; left: 54%; top: 46%;
+      transform: translate(-50%, -100%); z-index: 5; text-align: center;
+    }
+    .gps-pin .pulse {
+      position: absolute; left: 50%; top: 78%;
+      width: 28px; height: 28px; margin: -14px 0 0 -14px;
+      border-radius: 50%; background: rgba(234,88,12,.35);
+      animation: gpsPulse 1.8s ease-out infinite;
+    }
+    .gps-pin .marker {
+      position: relative; z-index: 1;
+      width: 42px; height: 56px; margin: 0 auto;
+      filter: drop-shadow(0 8px 10px rgba(15,23,42,.35));
+    }
+    .gps-pin .label {
+      margin-top: 4px; background: #0f172a; color: #fff;
+      font-size: 12px; font-weight: 800; letter-spacing: .04em;
+      padding: 4px 8px; border-radius: 8px; white-space: nowrap;
+    }
+    @keyframes gpsPulse {
+      from { transform: scale(.45); opacity: .8; }
+      to { transform: scale(2.6); opacity: 0; }
+    }
+    @keyframes gpsBlink {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+      70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    }
     @media print {
       .footer, .progress { display: none; }
       html, body { height: auto; overflow: visible; background: #070b14; }
@@ -500,6 +565,58 @@
             <li>Stale location is not shown as “live”</li>
           </ul>
           <p>This is the module parent representatives usually ask about first. It is built in — not a separate tracking company.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Transport — live GPS</div>
+      <h2>Parents and administration see the bus pin. The driver reports the issue.</h2>
+      <div class="row shot-first">
+        <div class="gps-stage" role="img" aria-label="Live map with a school bus pin for parents and administration">
+          <svg viewBox="0 0 640 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="640" height="400" fill="#c5dfc2"/>
+            <rect x="40" y="30" width="180" height="110" rx="8" fill="#b7d4b4"/>
+            <rect x="390" y="220" width="210" height="140" rx="8" fill="#b7d4b4"/>
+            <rect x="0" y="168" width="640" height="38" fill="#e8e4d9"/>
+            <rect x="248" y="0" width="42" height="400" fill="#e8e4d9"/>
+            <rect x="0" y="286" width="640" height="28" fill="#e8e4d9"/>
+            <rect x="430" y="0" width="28" height="400" fill="#e8e4d9"/>
+            <rect x="0" y="184" width="640" height="6" fill="#c4b89a"/>
+            <rect x="266" y="0" width="6" height="400" fill="#c4b89a"/>
+            <path d="M0 182 h640 M0 298 h640 M267 0 v400 M444 0 v400" stroke="#fff" stroke-width="2" stroke-dasharray="10 12" opacity=".7"/>
+            <rect x="92" y="58" width="70" height="48" rx="4" fill="#f1efe6" stroke="#94a3b8"/>
+            <rect x="108" y="42" width="38" height="18" rx="2" fill="#4527a0"/>
+            <text x="127" y="55" text-anchor="middle" fill="#fff" font-size="9" font-family="Segoe UI, sans-serif" font-weight="700">SCHOOL</text>
+            <circle cx="120" cy="320" r="7" fill="#0f766e"/>
+            <circle cx="520" cy="90" r="7" fill="#0f766e"/>
+            <circle cx="340" cy="70" r="6" fill="#64748b"/>
+          </svg>
+          <div class="gps-live"><i></i> LIVE GPS</div>
+          <div class="gps-chip admin"><strong>Administration</strong> Same pin on Live GPS — every bus on the road.</div>
+          <div class="gps-pin">
+            <span class="pulse"></span>
+            <svg class="marker" viewBox="0 0 42 56" aria-hidden="true">
+              <path d="M21 54s19-17.5 19-32A19 19 0 1 0 2 22c0 14.5 19 32 19 32z" fill="#ea580c"/>
+              <circle cx="21" cy="21" r="11" fill="#fff"/>
+              <rect x="13" y="17" width="16" height="9" rx="2" fill="#0f172a"/>
+              <circle cx="16.5" cy="27" r="2.2" fill="#0f172a"/>
+              <circle cx="25.5" cy="27" r="2.2" fill="#0f172a"/>
+              <rect x="27" y="19" width="4" height="5" rx="1" fill="#38bdf8"/>
+            </svg>
+            <div class="label">Bus 12 · on route</div>
+          </div>
+          <div class="gps-chip parents"><strong>Parents</strong> Map pin of their child’s bus in Bus Tracking.</div>
+          <div class="gps-chip driver"><strong>Driver · Report Issue</strong> Vehicle, traffic, or delay — office sees it without WhatsApp.</div>
+        </div>
+        <div>
+          <ul>
+            <li><strong>Parents:</strong> Bus Tracking shows a live map pin of the bus — only while the driver is sharing</li>
+            <li><strong>Administration:</strong> the same pin on Live GPS for every school bus on the road</li>
+            <li><strong>Driver:</strong> Report Issue from the cab (vehicle, traffic, delay) — the office is notified immediately</li>
+            <li>Stale location is not shown as “live”</li>
+          </ul>
+          <p class="am">ወላጅ እና አስተዳደር አውቶቡሱን በካርታ ፒን ያያሉ። ሹፌር ጉዳይ ሪፖርት ያደርጋል።</p>
         </div>
       </div>
     </section>
