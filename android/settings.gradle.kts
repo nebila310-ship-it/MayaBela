@@ -19,8 +19,12 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "9.0.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.3.20" apply false
+    // Flutter 3.47's gradle plugin still crashes on AGP 9 (afterEvaluate / new DSL).
+    // AGP 8.12.0 + Gradle 8.14.3 + KGP 2.2.20 is the combo Flutter Android triage
+    // confirmed for this error: https://github.com/flutter/flutter/issues/180899
+    id("com.android.application") version "8.12.0" apply false
+    id("com.android.library") version "8.12.0" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
     // For FCM push notifications only (reads google-services.json).
     id("com.google.gms.google-services") version "4.4.2" apply false
 }

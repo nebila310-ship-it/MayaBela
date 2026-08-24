@@ -34,9 +34,10 @@ if defined SUPABASE_URL if defined SUPABASE_ANON_KEY (
 
 echo.
 echo === flutter build apk --release ===
-echo NOTE: If this fails on Flutter 3.44 + AGP 9 (afterEvaluate),
-echo       pilot the school on https://mayabela.pages.dev instead.
-echo       See docs\SELL_PACKAGE.md section 4.
+echo Android is pinned to AGP 8.12 / Gradle 8.14.3 (see android\settings.gradle.kts).
+echo Do not pass empty SUPABASE dart-defines — that wipes compiled login defaults.
+echo If assembleRelease fails, use web: https://mayabela.pages.dev
+echo See docs\SELL_PACKAGE.md section 4.
 echo.
 REM Prefer real user Gradle cache (Cursor may inject a sandbox GRADLE_USER_HOME).
 if not defined GRADLE_USER_HOME set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"
