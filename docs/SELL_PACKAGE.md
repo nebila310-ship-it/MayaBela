@@ -128,7 +128,7 @@ Pilot end date: _______________
 
 ## 4. Pilot APK & store
 
-### Pilot delivery (use web now)
+### Pilot delivery
 
 **Primary pilot channel: web ERP** — https://mayabela.pages.dev  
 No install. Hard-refresh after deploys: **Ctrl+Shift+R**.
@@ -142,15 +142,14 @@ App id: `com.mayabela.app` · version from `pubspec.yaml` (currently **1.0.3+4**
 cmd /c "set MAYABELA_NOPAUSE=1&& build-pilot-apk.cmd"
 ```
 
-**Status (Aug 2026):** release APK build is **blocked** on Flutter **3.44.2** + AGP **9**  
-(`flutter-gradle-plugin` → `afterEvaluate` after project already evaluated).  
-`add_2_calendar` is pinned to **3.0.1** (3.1.1 also breaks AGP 9 script compilation).
+**Status (Aug 2026):** release APK **builds** on Flutter **3.47** when Android stays on AGP **8.12.0** + Gradle **8.14.3** + Kotlin **2.2.20**.  
+Do **not** bump those to AGP 9 / Gradle 9 until Flutter’s gradle plugin stops crashing on `afterEvaluate` / the new DSL. `add_2_calendar` is still vendored at **3.0.1**.
 
-Until that toolchain issue is fixed (Flutter upgrade or AGP workaround):
+Verified locally: `flutter build apk --release --target-platform android-arm64` → `com.mayabela.app` **1.0.3+4**.
 
-1. Run the school pilot on **web**  
-2. Optionally give teachers/parents the web URL as a home-screen shortcut  
-3. Re-run `build-pilot-apk.cmd` after a Flutter stable that supports AGP 9 cleanly
+1. Share `app-release.apk` for sideload (arm64 phones)  
+2. Keep web ERP as the no-install fallback: **https://mayabela.pages.dev**  
+3. Do not pass empty `SUPABASE_URL` / `SUPABASE_ANON_KEY` dart-defines (that wipes compiled login defaults)
 
 ### Web (always available)
 
@@ -240,7 +239,7 @@ To: Maya School (School ID: TB-001)
 Re: MayaBela school management — Pilot
 
 Access: Web ERP (https://mayabela.pages.dev)
-        Android APK when toolchain build is unblocked (see §4)
+        Android sideload APK via build-pilot-apk.cmd (see §4)
 
 Billing: 8 ETB / active student / month
          Minimum 500 ETB / month
@@ -271,7 +270,7 @@ Standalone copy: [`FIRST_CUSTOMER_QUOTE.md`](FIRST_CUSTOMER_QUOTE.md)
 ## 7. Internal checklist before sending a quote
 
 - [x] `SELL_DRY_RUN.md` started on production (login + TB-001; finish role walk with your owner login)
-- [ ] Pilot APK built from current `pubspec` version (blocked — web pilot OK)
+- [x] Pilot APK toolchain unblocked (`build-pilot-apk.cmd` / AGP 8.12 pin)
 - [ ] School record: rate, min, seats, expiry set in Platform Console
 - [ ] Admin temp password generated (unique) and ready to hand over once
 - [ ] Support note (§5) shared with school admin — draft ready (`PILOT_WHATSAPP_MESSAGE.txt`)
