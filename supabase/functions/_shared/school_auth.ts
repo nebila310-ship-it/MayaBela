@@ -515,10 +515,11 @@ export async function deleteAccountAndSecrets(
   username: string,
   schoolId: string,
 ): Promise<{ deletedAccountIds: string[]; deletedSecretIds: string[] }> {
-  const key = normalizeUsername(username);
+  const key = ethiopianLoginKey(username) || normalizeUsername(username);
   const sid = String(schoolId || "").trim().toUpperCase();
   const accountIds = new Set<string>([
     key,
+    normalizeUsername(username),
     ...(sid ? [accountDocId(sid, key)] : []),
   ]);
   const secretIds = new Set<string>(accountIds);
@@ -529,7 +530,7 @@ export async function deleteAccountAndSecrets(
     if (!existing) continue;
     const phone = String(existing.phone || "").trim();
     if (phone) {
-      const phoneKey = normalizeUsername(phone);
+      const phoneKey = ethiopianLoginKey(phone) || normalizeUsername(phone);
       accountIds.add(phoneKey);
       secretIds.add(phoneKey);
       if (sid) {
@@ -749,7 +750,7 @@ export async function upsertSecret(
 ): Promise<void> {
   const passwordHash = await bcryptHash(plainPassword);
   const sid = String(schoolId || "").trim().toUpperCase();
-  const key = normalizeUsername(username);
+  const key = ethiopianLoginKey(username) || normalizeUsername(username);
   const docId = sid ? accountDocId(sid, key) : key;
   const existing = await loadSecret(sb, key, sid, docId);
   await upsertDoc(sb, "auth_secrets", docId, {
@@ -768,16 +769,29 @@ export async function loadSecret(
   accountDocIdHint?: string | null,
 ): Promise<Record<string, unknown> | null> {
   const key = normalizeUsername(username);
+  const phoneKey = ethiopianLoginKey(username);
+  const keys = [...new Set([key, phoneKey].filter((k) => !!k))];
   const sid = String(schoolId || "").trim().toUpperCase();
   if (accountDocIdHint) {
     const byHint = await getDoc(sb, "auth_secrets", accountDocIdHint, sid || null);
     if (byHint) return byHint;
   }
   if (sid) {
-    const composite = await getDoc(sb, "auth_secrets", accountDocId(sid, key), sid);
-    if (composite) return composite;
+    for (const lookup of keys) {
+      const composite = await getDoc(
+        sb,
+        "auth_secrets",
+        accountDocId(sid, lookup),
+        sid,
+      );
+      if (composite) return composite;
+    }
   }
-  return await getDoc(sb, "auth_secrets", key);
+  for (const lookup of keys) {
+    const legacy = await getDoc(sb, "auth_secrets", lookup);
+    if (legacy) return legacy;
+  }
+  return null;
 }
 
 function generateSessionPassword(): string {
@@ -1102,7 +1116,9 @@ export async function findAccountDoc(
   roleKey: string,
   schoolId?: string | null,
 ): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  const key = normalizeUsername(identifier);
+  const rawKey = normalizeUsername(identifier);
+  const phoneKey = ethiopianLoginKey(identifier);
+  const keys = [...new Set([phoneKey, rawKey].filter((k) => !!k))];
   const sid = String(schoolId || "").trim().toUpperCase();
 
   const roleOk = (data: Record<string, unknown>) =>
@@ -1110,10 +1126,12 @@ export async function findAccountDoc(
 
   // Prefer school-scoped account ids: SCHOOLID__username
   if (sid) {
-    const compositeId = accountDocId(sid, key);
-    const composite = await getDoc(sb, "app_auth_accounts", compositeId, sid);
-    if (composite && roleOk(composite)) {
-      return { id: compositeId, data: composite };
+    for (const key of keys) {
+      const compositeId = accountDocId(sid, key);
+      const composite = await getDoc(sb, "app_auth_accounts", compositeId, sid);
+      if (composite && roleOk(composite)) {
+        return { id: compositeId, data: composite };
+      }
     }
 
     const inSchool = await queryDocs(
@@ -1123,8 +1141,7 @@ export async function findAccountDoc(
       500,
     );
     for (const doc of inSchool) {
-      const uname = normalizeUsername(doc.data.username || doc.id);
-      if (uname === key && roleOk(doc.data)) {
+      if (usernamesMatch(doc.data.username || doc.id, identifier) && roleOk(doc.data)) {
         return { id: doc.id, data: doc.data };
       }
       if (
@@ -1137,27 +1154,30 @@ export async function findAccountDoc(
     }
 
     // Legacy global phone doc — only if it belongs to this school.
-    const legacy = await getDoc(sb, "app_auth_accounts", key, sid);
-    if (
-      legacy &&
-      roleOk(legacy) &&
-      String(legacy.schoolId || "").trim().toUpperCase() === sid
-    ) {
-      return { id: key, data: legacy };
+    for (const key of keys) {
+      const legacy = await getDoc(sb, "app_auth_accounts", key, sid);
+      if (
+        legacy &&
+        roleOk(legacy) &&
+        String(legacy.schoolId || "").trim().toUpperCase() === sid
+      ) {
+        return { id: key, data: legacy };
+      }
     }
     return null;
   }
 
-  const direct = await getDoc(sb, "app_auth_accounts", key);
-  if (direct && roleOk(direct)) {
-    return { id: key, data: direct };
+  for (const key of keys) {
+    const direct = await getDoc(sb, "app_auth_accounts", key);
+    if (direct && roleOk(direct)) {
+      return { id: key, data: direct };
+    }
   }
 
   const snap = await queryDocs(sb, "app_auth_accounts", [], 500);
   for (const doc of snap) {
     const data = doc.data;
-    const uname = normalizeUsername(data.username || doc.id);
-    if (uname === key && roleOk(data)) {
+    if (usernamesMatch(data.username || doc.id, identifier) && roleOk(data)) {
       return { id: doc.id, data };
     }
   }
@@ -1177,6 +1197,6 @@ export async function findAccountDoc(
 /** School-scoped account document id (avoids cross-school phone collisions). */
 export function accountDocId(schoolId: string, username: string): string {
   const sid = String(schoolId || "").trim().toUpperCase();
-  const key = normalizeUsername(username);
+  const key = ethiopianLoginKey(username) || normalizeUsername(username);
   return `${sid}__${key}`;
 }

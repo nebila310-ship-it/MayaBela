@@ -9,6 +9,7 @@ import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/material_access_service.dart';
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/persistence/auth_persistence_service.dart';
+import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
@@ -1172,7 +1173,7 @@ class AuthService {
     unawaited(_persistUser(user));
   }
 
-  static String? registerParent({
+  static Future<String?> registerParent({
     required String fullName,
     required String schoolId,
     required String phone,
@@ -1198,14 +1199,14 @@ class AuthService {
     );
   }
 
-  static String? registerParentAccount({
+  static Future<String?> registerParentAccount({
     required String fullName,
     required String schoolId,
     required String phone,
     required String password,
     String? email,
     required List<ParentChildRegistration> children,
-  }) {
+  }) async {
     if (children.isEmpty) return 'no_children';
     if (schoolAccessError(schoolId) != null) return 'school_blocked';
     if (!PhoneUtils.isValidLoginPhone(phone)) return 'invalid_phone';
@@ -1213,6 +1214,7 @@ class AuthService {
     final phoneError = _preparePhoneForParentRegistration(key, children);
     if (phoneError != null) return phoneError;
 
+    final createdLinkIds = <String>[];
     for (final child in children) {
       final linkError = EnrollmentService.instance.verifyAndCreateParentLink(
         schoolId: schoolId,
@@ -1224,8 +1226,19 @@ class AuthService {
         hasMedicalCondition: child.hasMedicalCondition,
         medicalConditionDetails: child.medicalConditionDetails,
         otherMedicalInfo: child.otherMedicalInfo,
+        persist: false,
       );
-      if (linkError != null) return linkError;
+      if (linkError != null) {
+        EnrollmentService.instance.removeLinksByIds(createdLinkIds);
+        return linkError;
+      }
+      createdLinkIds.add(
+        EnrollmentService.cloudLinkId(
+          schoolId: schoolId,
+          parentUsername: key,
+          studentId: child.studentId,
+        ),
+      );
     }
 
     final user = RegisteredUser(
@@ -1239,18 +1252,65 @@ class AuthService {
       linkedStudentIds: const [],
     );
     _users[key] = user;
-    unawaited(() async {
-      final cloud = await SchoolAuthCloudService.instance.registerParent(
-        user: user,
-        password: password,
-        children: children,
+    // Local only until school-register-parent succeeds. Cloud push without a
+    // parent JWT is denied by RLS and left other phones with "invalid" login.
+    await AuthPersistenceService.instance.saveAll();
+    final published = await _publishNewParentToCloud(
+      user: user,
+      password: password,
+      children: children,
+    );
+    if (published != null) {
+      _removeUserAccount(user);
+      EnrollmentService.instance.removeLinksByIds(createdLinkIds);
+      await AuthPersistenceService.instance.saveAll();
+      await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
+        pushCloud: false,
       );
-      if (cloud.ok) {
-        user.password = passwordRedactedMarker;
-      }
-      await _persistUser(user);
-    }());
+      return published;
+    }
     return null;
+  }
+
+  /// Creates the cloud login and pending child-link so other phones can see it.
+  static Future<String?> _publishNewParentToCloud({
+    required RegisteredUser user,
+    required String password,
+    required List<ParentChildRegistration> children,
+  }) async {
+    final registered = await SchoolAuthCloudService.instance.registerParent(
+      user: user,
+      password: password,
+      children: children,
+    );
+    final createdNow = registered.ok;
+    if (!registered.ok && registered.errorCode != 'exists') {
+      return registered.errorCode ?? 'cloud_required';
+    }
+
+    final login = await SchoolAuthCloudService.instance.login(
+      roleKey: roleParent,
+      username: user.username,
+      password: password,
+      schoolId: user.schoolId,
+    );
+    if (login.ok) {
+      try {
+        if (createdNow) {
+          user.password = passwordRedactedMarker;
+          await AuthPersistenceService.instance.saveAll();
+        }
+        await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
+          pushCloud: true,
+        );
+      } finally {
+        clearSession();
+      }
+      return null;
+    }
+    // Account may already exist in the cloud (retry, or password mismatch).
+    // Do not show "account created" — the other phone would then get invalid.
+    return registered.errorCode ?? (createdNow ? 'cloud_required' : 'exists');
   }
 
   static const _demoLoginUsernames = {

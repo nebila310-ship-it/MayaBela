@@ -3311,6 +3311,25 @@ class AppStrings implements AppStringsLike {
   String get alreadyLinkedStudent => t('You already have a link request for this student', 'ከዚህ ተማሪ ጋር ቀድሞ ተገናኝተዋል');
   String get registrationFailed =>
       t('Registration failed', 'መዝገብ አልተሳካም');
+  String get parentCloudRegisterFailed => t(
+        'Could not save this parent account to the school cloud. Check internet and School ID, then try again.',
+        'ይህን የወላጅ መለያ ወደ ትምህርት ቤቱ ክላውድ ማስቀመጥ አልተቻለም። ኢንተርኔት እና School ID ያረጋግጡ፣ ከዚያ እንደገና ይሞክሩ።',
+        'Herrega kana gara duumessa mana barumsaa kuusuu hin dandeenye. Interneetii fi ID mana barumsaa mirkaneessi, irra deebi\'ii yaali.',
+      );
+  String parentRegisterError(String code) {
+    return switch (code) {
+      'exists' => phoneAlreadyRegistered,
+      'phone_used_by_staff' => phoneUsedByStaff,
+      'invalid_phone' => invalidPhone,
+      'already_linked' => alreadyLinkedStudent,
+      'student_mismatch' => studentVerifyFailed,
+      'school_blocked' => schoolAccessInactive,
+      'no_children' => addAtLeastOneChild,
+      'password_too_short' => passwordTooShort,
+      'cloud_required' || 'invalid' => parentCloudRegisterFailed,
+      _ => parentCloudRegisterFailed,
+    };
+  }
   String get invalidDateFormat => t('Use date format DD/MM/YYYY', 'ቀን DD/MM/YYYY በሚሆን መልክ ያስገቡ');
   String get staffSignupClosed => t(
         'Administration staff are created by your school admin — not through public signup.',

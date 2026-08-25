@@ -7,6 +7,7 @@ import {
   assertSchoolAccessible,
   ensureAuthUser,
   enrichAccessProfile,
+  ethiopianLoginKey,
   findAccountDoc,
   loadSecret,
   normalizeUsername,
@@ -62,7 +63,9 @@ Deno.serve(async (req) => {
       return errorResponse("Invalid credentials.", 401, "invalid");
     }
 
-    const username = normalizeUsername(found.data.username || found.id);
+    const storedUsername = String(found.data.username || "").trim();
+    const username = ethiopianLoginKey(storedUsername) ||
+      normalizeUsername(storedUsername || found.id);
     const profile = profileFromAccount(username, found.data);
     const profileSchoolId = String(profile.schoolId || "").trim().toUpperCase();
 

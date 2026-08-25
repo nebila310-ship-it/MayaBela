@@ -321,6 +321,26 @@ class ParentApprovalsScreen extends StatefulWidget {
 }
 
 class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_refreshFromCloud());
+    });
+  }
+
+  Future<void> _refreshFromCloud() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await SessionCloudSync.awaitRoleCloudSync();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _busy = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -339,6 +359,20 @@ class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
             backgroundColor: Colors.indigo,
             title: Text(s.parentApprovals),
             actions: [
+              IconButton(
+                tooltip: s.tryAgain,
+                onPressed: _busy ? null : _refreshFromCloud,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+              ),
               if (pendingCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -358,7 +392,9 @@ class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
                 ),
             ],
           ),
-          body: queue.isEmpty
+          body: _busy && queue.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : queue.isEmpty
               ? Center(child: Text(s.noApprovalRequests))
               : ListView.separated(
                   padding: listPagePadding(context),

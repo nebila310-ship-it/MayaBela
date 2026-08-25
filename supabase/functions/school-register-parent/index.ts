@@ -126,6 +126,7 @@ Deno.serve(async (req) => {
           hasMedicalCondition: !!child?.hasMedicalCondition,
           medicalConditionDetails: child?.medicalConditionDetails || null,
           otherMedicalInfo: child?.otherMedicalInfo || null,
+          className: String(student.className || "").trim() || null,
         },
         updated_at: new Date().toISOString(),
       }, { onConflict: "collection,school_id,doc_id" });

@@ -30,6 +30,7 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
 
   String _message = '';
   bool _messageIsSuccess = false;
+  bool _busy = false;
 
   AppStrings get s => AppLocale.instance.strings;
   final _studentRegistry = StudentRegistryService.instance;
@@ -166,10 +167,11 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
       return;
     }
 
-    _completeRegistration();
+    await _completeRegistration();
   }
 
-  void _completeRegistration() {
+  Future<void> _completeRegistration() async {
+    if (_busy) return;
     final children = <ParentChildRegistration>[];
     for (final child in _children) {
       final dob = _parseDob(child.dobController.text);
@@ -180,7 +182,8 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
       children.add(parentRegistrationFromEntry(child, dateOfBirth: dob));
     }
 
-    final error = AuthService.registerParentAccount(
+    setState(() => _busy = true);
+    final error = await AuthService.registerParentAccount(
       fullName: _fullName.text.trim(),
       schoolId: _schoolId.text.trim(),
       phone: _phone.text.trim(),
@@ -188,21 +191,11 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
       email: _email.text.trim(),
       children: children,
     );
+    if (!mounted) return;
+    setState(() => _busy = false);
 
     if (error != null) {
-      _setMessage(
-        switch (error) {
-          'exists' => s.phoneAlreadyRegistered,
-          'phone_used_by_staff' => s.phoneUsedByStaff,
-          'invalid_phone' => s.invalidPhone,
-          'already_linked' => s.alreadyLinkedStudent,
-          'student_mismatch' => s.studentVerifyFailed,
-          'school_blocked' => s.schoolAccessInactive,
-          'no_children' => s.addAtLeastOneChild,
-          _ => s.registrationFailed,
-        },
-        isSuccess: false,
-      );
+      _setMessage(s.parentRegisterError(error), isSuccess: false);
       return;
     }
 
@@ -434,13 +427,22 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
           ],
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _register,
+            onPressed: _busy ? null : _register,
             style: FilledButton.styleFrom(
               backgroundColor: _accent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            icon: const Icon(Icons.how_to_reg_rounded),
+            icon: _busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.how_to_reg_rounded),
             label: Text(s.createAccount),
           ),
           const SizedBox(height: 16),
