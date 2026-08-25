@@ -846,5 +846,19 @@ void main() {
       await SchoolDataService.instance.persistConversationToCloud('missing-id'),
       isFalse,
     );
+    expect(
+      SchoolDataService.conversationPersistErrorText(
+        StateError(
+          'Cannot save conversations/x without schoolId — sign in',
+        ),
+      ),
+      contains('school id is missing'),
+    );
+    expect(
+      SchoolDataService.conversationPersistErrorText(
+        StateError('Not allowed to save this conversations record.'),
+      ),
+      contains('blocked the write'),
+    );
   });
 }

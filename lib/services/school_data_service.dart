@@ -909,6 +909,8 @@ class SchoolDataService {
     return '${message.time.millisecondsSinceEpoch}|${message.senderRole}|$username|$staff|${message.text}';
   }
 
+  String? lastConversationPersistError;
+
   void _persistConversation(String conversationId) {
     final conversation = getConversation(conversationId);
     if (conversation == null) return;
@@ -922,21 +924,29 @@ class SchoolDataService {
 
   Future<bool> persistConversationToCloud(String conversationId) async {
     AuthService.alignTeacherSessionWithRegistry();
-    await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
-    var conversation = getConversation(conversationId);
-    if (conversation == null) return false;
+    lastConversationPersistError = null;
+    final open = getConversation(conversationId);
+    if (open == null) {
+      lastConversationPersistError = 'missing thread';
+      return false;
+    }
+    _stampDirectParentThread(open);
+    final conversation = _linkedParentTeacherThreadToPersist(open);
     _stampDirectParentThread(conversation);
-    conversation = _linkedParentTeacherThreadToPersist(conversation);
-    _stampDirectParentThread(conversation);
-    final schoolId = SchoolAuthCloudService.resolvedSchoolId();
+    // Write with the current JWT first. Refreshing before Send can drop
+    // school claims while parent messages are still visible.
+    final schoolId = SchoolAuthCloudService.jwtSchoolId() ??
+        SchoolAuthCloudService.resolvedSchoolId();
+    Future<void> write() => MessagePersistenceService.instance.saveConversation(
+          conversation,
+          requireCloud: true,
+          schoolId: schoolId,
+        );
     try {
-      await MessagePersistenceService.instance.saveConversation(
-        conversation,
-        requireCloud: true,
-        schoolId: schoolId,
-      );
+      await write();
       return true;
     } catch (e) {
+      lastConversationPersistError = conversationPersistErrorText(e);
       if (kDebugMode) {
         debugPrint('persistConversationToCloud: $e');
       }
@@ -944,13 +954,11 @@ class SchoolDataService {
         await SchoolAuthCloudService.instance.ensureValidSchoolJwt(
           forceRefresh: true,
         );
-        await MessagePersistenceService.instance.saveConversation(
-          conversation,
-          requireCloud: true,
-          schoolId: schoolId,
-        );
+        await write();
+        lastConversationPersistError = null;
         return true;
       } catch (e2) {
+        lastConversationPersistError = conversationPersistErrorText(e2);
         if (kDebugMode) {
           debugPrint('persistConversationToCloud retry: $e2');
         }
@@ -963,6 +971,26 @@ class SchoolDataService {
         return false;
       }
     }
+  }
+
+  @visibleForTesting
+  static String conversationPersistErrorText(Object e) {
+    final s = '$e'.toLowerCase();
+    if (s.contains('without schoolid') || s.contains('school id')) {
+      return 'Could not save the message: school id is missing. Sign out and sign in again.';
+    }
+    if (s.contains('write_denied') || s.contains('not allowed')) {
+      return 'Could not save the message: the school cloud blocked the write. Sign out and sign in again.';
+    }
+    if (s.contains('jwt') ||
+        s.contains('session expired') ||
+        s.contains('sign in')) {
+      return 'Could not save the message: stay signed in and send again.';
+    }
+    if (s.contains('timeout')) {
+      return 'Could not save the message: the school cloud timed out. Send again.';
+    }
+    return 'Could not save the message to the school cloud. Stay signed in and send again.';
   }
 
   void _persistSchoolContent() {

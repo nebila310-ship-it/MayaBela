@@ -170,7 +170,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          classCheck ? s.messageParentNotInClasses : s.messageSendFailed,
+          classCheck
+              ? s.messageParentNotInClasses
+              : (_data.lastConversationPersistError ?? s.messageSendFailed),
         ),
         backgroundColor: const Color(0xFFB91C1C),
       ),
@@ -1172,7 +1174,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final s = AppLocale.instance.strings;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(s.messageSendFailed),
+        content: Text(
+          _data.lastConversationPersistError ?? s.messageSendFailed,
+        ),
         backgroundColor: const Color(0xFFB91C1C),
       ),
     );
