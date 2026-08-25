@@ -94,10 +94,9 @@ abstract final class CloudSyncEngine {
     }
     if (!SupabaseBootstrap.isInitialized) return;
     if (!await SchoolAuthCloudService.hasSchoolClaims()) {
-      try {
-        await SupabaseBootstrap.client.auth.refreshSession();
-      } catch (_) {}
-      if (!await SchoolAuthCloudService.hasSchoolClaims()) return;
+      if (!await SchoolAuthCloudService.instance.ensureValidSchoolJwt()) {
+        return;
+      }
     }
 
     _tickRunning = true;

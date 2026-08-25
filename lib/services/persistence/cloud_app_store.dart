@@ -1465,7 +1465,12 @@ class CloudAppStore {
     String? schoolId,
     bool requireCloud = false,
   }) async {
-    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ??
+            SchoolAuthCloudService.resolvedSchoolId() ??
+            AuthService.activeSchoolId ??
+            '')
+        .trim()
+        .toUpperCase();
     var merged = conversation;
     try {
       final existing = await _crud.readDoc(
