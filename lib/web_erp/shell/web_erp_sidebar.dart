@@ -33,9 +33,10 @@ class WebErpSidebar extends StatelessWidget {
     final favorites = WebErpPrefsService.instance.favorites;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
       width: width,
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         color: WebErpTheme.sidebarBg,
         border: Border(right: BorderSide(color: ClassroomPalette.line)),
@@ -257,7 +258,23 @@ class _NavTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: iconColor, size: 22),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutBack,
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? iconColor
+                        : iconColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: selected ? Colors.white : iconColor,
+                    size: 20,
+                  ),
+                ),
                 if (!collapsed) ...[
                   const SizedBox(width: 12),
                   Expanded(

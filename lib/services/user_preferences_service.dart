@@ -15,9 +15,11 @@ class UserPreferencesService extends ChangeNotifier {
   static const _autoNotifKey = 'user_pref_auto_open_notifications';
   static const _hapticKey = 'user_pref_haptic_feedback';
   static const _darkModeKey = 'user_pref_dark_mode';
+  static const _sidebarCollapsedKey = 'user_pref_classroom_sidebar_collapsed';
 
   final Map<String, List<String>> _cardOrder = {};
   bool compactDashboard = false;
+  bool classroomSidebarCollapsed = false;
   bool showEthiopianHolidays = true;
   bool syncEventsToDeviceCalendar = true;
   bool notificationSounds = true;
@@ -39,6 +41,7 @@ class UserPreferencesService extends ChangeNotifier {
     autoOpenNotifications = prefs.getBool(_autoNotifKey) ?? false;
     hapticFeedback = prefs.getBool(_hapticKey) ?? true;
     darkMode = prefs.getBool(_darkModeKey) ?? false;
+    classroomSidebarCollapsed = prefs.getBool(_sidebarCollapsedKey) ?? false;
 
     final raw = prefs.getString(_cardOrderKey);
     if (raw != null && raw.isNotEmpty) {
@@ -66,6 +69,7 @@ class UserPreferencesService extends ChangeNotifier {
     await prefs.setBool(_autoNotifKey, autoOpenNotifications);
     await prefs.setBool(_hapticKey, hapticFeedback);
     await prefs.setBool(_darkModeKey, darkMode);
+    await prefs.setBool(_sidebarCollapsedKey, classroomSidebarCollapsed);
     await prefs.setString(_cardOrderKey, jsonEncode(_cardOrder));
   }
 
@@ -129,6 +133,12 @@ class UserPreferencesService extends ChangeNotifier {
 
   void setDarkMode(bool value) {
     darkMode = value;
+    notifyListeners();
+    _persist();
+  }
+
+  void setClassroomSidebarCollapsed(bool value) {
+    classroomSidebarCollapsed = value;
     notifyListeners();
     _persist();
   }
