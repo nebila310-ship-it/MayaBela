@@ -916,8 +916,10 @@ class SchoolDataService {
 
   Future<bool> persistConversationToCloud(String conversationId) async {
     AuthService.alignTeacherSessionWithRegistry();
-    final conversation = getConversation(conversationId);
+    var conversation = getConversation(conversationId);
     if (conversation == null) return false;
+    _stampDirectParentThread(conversation);
+    conversation = _linkedParentTeacherThreadToPersist(conversation);
     _stampDirectParentThread(conversation);
     try {
       await MessagePersistenceService.instance.saveConversation(
@@ -929,10 +931,21 @@ class SchoolDataService {
       if (kDebugMode) {
         debugPrint('persistConversationToCloud: $e');
       }
-      unawaited(
-        MessagePersistenceService.instance.saveConversation(conversation),
-      );
-      return false;
+      try {
+        await MessagePersistenceService.instance.saveConversation(
+          conversation,
+          requireCloud: true,
+        );
+        return true;
+      } catch (e2) {
+        if (kDebugMode) {
+          debugPrint('persistConversationToCloud retry: $e2');
+        }
+        unawaited(
+          MessagePersistenceService.instance.saveConversation(conversation),
+        );
+        return false;
+      }
     }
   }
 
@@ -951,6 +964,7 @@ class SchoolDataService {
   List<Conversation> getConversationsForRole(String? roleKey) {
     return _conversations
         .where((c) => MessagingAccessService.canView(c, roleKey))
+        .where((c) => !_isWeakerDuplicateParentTeacherThread(c))
         .toList(growable: false);
   }
 
@@ -1816,29 +1830,34 @@ class SchoolDataService {
       return;
     }
     _stampDirectParentThread(conversation);
+    final persistTarget = _linkedParentTeacherThreadToPersist(conversation);
     final senderMeta = _messageSenderMeta(
       senderRole,
       relationshipStudentId: conversation.linkedStudentIds.isNotEmpty
           ? conversation.linkedStudentIds.first
-          : null,
+          : persistTarget.linkedStudentIds.isNotEmpty
+              ? persistTarget.linkedStudentIds.first
+              : null,
     );
     final preview = _messagePreviewBody(trimmed, attachments);
     final senderName =
         senderMeta.senderDisplayName ?? AuthService.displayNameForRole(senderRole);
 
-    conversation.messages.add(
-      ChatMessage(
-        text: trimmed,
-        senderRole: senderRole,
-        time: DateTime.now(),
-        senderStaffId: senderMeta.senderStaffId,
-        senderDisplayName: senderMeta.senderDisplayName,
-        senderUsername: senderMeta.senderUsername,
-        senderRelationshipLabel: senderMeta.senderRelationshipLabel,
-        attachments: List.unmodifiable(attachments),
-        replyTo: replyTo,
-      ),
+    final message = ChatMessage(
+      text: trimmed,
+      senderRole: senderRole,
+      time: DateTime.now(),
+      senderStaffId: senderMeta.senderStaffId,
+      senderDisplayName: senderMeta.senderDisplayName,
+      senderUsername: senderMeta.senderUsername,
+      senderRelationshipLabel: senderMeta.senderRelationshipLabel,
+      attachments: List.unmodifiable(attachments),
+      replyTo: replyTo,
     );
+    conversation.messages.add(message);
+    if (persistTarget.id != conversation.id) {
+      _copyMessageIfMissing(persistTarget, message);
+    }
 
     if (conversation.isGroup) {
       _notifyGroupParticipants(
@@ -1848,7 +1867,7 @@ class SchoolDataService {
         title: 'New message from $senderName',
         body: preview,
       );
-      _persistConversation(conversationId);
+      _persistConversation(persistTarget.id);
       return;
     }
 
@@ -1868,7 +1887,7 @@ class SchoolDataService {
       recipientUsernames: targeting.recipientUsernames,
       targetStudentId: targeting.targetStudentId,
     );
-    _persistConversation(conversationId);
+    _persistConversation(persistTarget.id);
   }
 
   void _copyMessageIfMissing(Conversation? target, ChatMessage message) {
@@ -2364,18 +2383,75 @@ class SchoolDataService {
       }
     }
     candidates.sort((a, b) {
+      final aHasParent = a.messages.any(
+            (m) => m.senderRole == AuthService.roleParent,
+          )
+          ? 0
+          : 1;
+      final bHasParent = b.messages.any(
+            (m) => m.senderRole == AuthService.roleParent,
+          )
+          ? 0
+          : 1;
+      if (aHasParent != bHasParent) {
+        return aHasParent.compareTo(bHasParent);
+      }
       if (b.messages.length != a.messages.length) {
         return b.messages.length.compareTo(a.messages.length);
       }
       final aTime = a.messages.isEmpty
           ? DateTime.fromMillisecondsSinceEpoch(0)
-          : a.messages.last.time;
+          : a.messages.first.time;
       final bTime = b.messages.isEmpty
           ? DateTime.fromMillisecondsSinceEpoch(0)
-          : b.messages.last.time;
-      return bTime.compareTo(aTime);
+          : b.messages.first.time;
+      return aTime.compareTo(bTime);
     });
     return candidates;
+  }
+
+  Conversation _linkedParentTeacherThreadToPersist(Conversation open) {
+    if (open.isGroup || open.isBroadcast || open.isStaffOnlyDirectThread) {
+      return open;
+    }
+    final staffId = open.staffParticipantId?.trim();
+    if (staffId == null || staffId.isEmpty) return open;
+    final matches = _findParentTeacherThreads(
+      staffParticipantId: staffId,
+      studentIds: _conversationStudentIds(open),
+      parentUsernames: open.parentParticipantUsernames,
+    );
+    if (matches.isEmpty) return open;
+    final best = matches.first;
+    if (best.id == open.id) return open;
+    for (final message in open.messages) {
+      _copyMessageIfMissing(best, message);
+    }
+    _mergeConversationParticipants(
+      best,
+      studentIds: open.linkedStudentIds,
+      parentUsernames: open.parentParticipantUsernames,
+      staffParticipantId: staffId,
+      staffSubjectName: open.staffSubjectName,
+    );
+    return best;
+  }
+
+  bool _isWeakerDuplicateParentTeacherThread(Conversation conversation) {
+    if (conversation.isGroup ||
+        conversation.isBroadcast ||
+        conversation.isStaffOnlyDirectThread) {
+      return false;
+    }
+    final staffId = conversation.staffParticipantId?.trim();
+    if (staffId == null || staffId.isEmpty) return false;
+    final matches = _findParentTeacherThreads(
+      staffParticipantId: staffId,
+      studentIds: _conversationStudentIds(conversation),
+      parentUsernames: conversation.parentParticipantUsernames,
+    );
+    if (matches.length < 2) return false;
+    return matches.first.id != conversation.id;
   }
 
   String openOrCreateConversation({
