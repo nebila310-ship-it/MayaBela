@@ -16,6 +16,8 @@ import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
+import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
@@ -99,6 +101,8 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         InventoryService.instance,
         DashboardBadgeService.instance,
         EnrollmentService.instance,
+        SchoolContentSyncService.instance,
+        ConversationRealtimeSync.instance,
       ]),
       builder: (context, _) {
         final stats = _buildStats();

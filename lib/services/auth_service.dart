@@ -529,7 +529,6 @@ class AuthService {
       currentUser = null;
       sessionSchoolId = null;
       sessionListenable.value++;
-      unawaited(SessionPrefsService.instance.clearActiveSession());
       return false;
     }
 

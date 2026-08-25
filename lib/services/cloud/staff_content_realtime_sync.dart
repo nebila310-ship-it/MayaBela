@@ -48,6 +48,7 @@ abstract final class StaffContentRealtimeSync {
       AppCollections.dailyActivities,
       AppCollections.attendanceSessions,
       AppCollections.conversations,
+      AppCollections.parentLinkRequests,
       AppCollections.fees,
       AppCollections.galleryPosts,
     ];
