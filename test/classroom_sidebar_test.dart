@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mayabela/screens/student_dashboard.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/widgets/adaptive_dashboard_shell.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
+import 'package:mayabela/widgets/role_dashboard_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -189,5 +191,123 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
     expect(find.text('Home'), findsWidgets);
+  });
+
+  testWidgets('student desktop dashboard uses the same collapsible sidebar', (
+    tester,
+  ) async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'student.maya',
+      password: 'x',
+      roleKey: AuthService.roleStudent,
+      schoolId: 'TB-001',
+      fullName: 'Maya',
+    );
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(1280, 800)),
+          child: AdaptiveDashboardShell(
+            title: 'malo Student Portal',
+            welcomeMessage: 'Welcome',
+            gradientColors: const [
+              Color(0xFF1565C0),
+              Color(0xFF1976D2),
+              Color(0xFF42A5F5),
+            ],
+            roleKey: AuthService.roleStudent,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
+    expect(find.byKey(const Key('classroom-top-menu')), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('classroom-sidebar-toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(UserPreferencesService.instance.classroomSidebarCollapsed, isTrue);
+    expect(
+      tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
+      lessThan(110),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('student phone dashboard opens the same slide-out menu', (
+    tester,
+  ) async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'student.maya',
+      password: 'x',
+      roleKey: AuthService.roleStudent,
+      schoolId: 'TB-001',
+      fullName: 'Maya',
+    );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(size: Size(390, 844)),
+          child: AdaptiveDashboardShell(
+            title: 'malo Student Portal',
+            welcomeMessage: 'Welcome',
+            gradientColors: [
+              Color(0xFF1565C0),
+              Color(0xFF1976D2),
+              Color(0xFF42A5F5),
+            ],
+            roleKey: AuthService.roleStudent,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('classroom-open-menu')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('classroom-open-menu')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
+  });
+
+  testWidgets('StudentDashboard screen uses the collapsible rail', (tester) async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'student.maya',
+      password: 'x',
+      roleKey: AuthService.roleStudent,
+      schoolId: 'TB-001',
+      fullName: 'Maya',
+    );
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(size: Size(1280, 800)),
+          child: StudentDashboard(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(RoleDashboardShell), findsOneWidget);
+    expect(find.byType(AdaptiveDashboardShell), findsOneWidget);
+    expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
+    expect(find.byKey(const Key('classroom-top-menu')), findsOneWidget);
   });
 }

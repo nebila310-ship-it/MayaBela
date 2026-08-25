@@ -30,6 +30,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         final sync = StudentPortalSyncService.instance;
 
         return Stack(
+          fit: StackFit.expand,
           children: [
             RoleDashboardShell(
               roleKey: AuthService.roleStudent,
