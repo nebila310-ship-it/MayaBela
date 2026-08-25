@@ -1,11 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/models/cloud/conversation_document.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
@@ -44,6 +46,7 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     AuthService.currentUser = null;
+    AuthService.sessionSchoolId = null;
 
     StudentRegistryService.instance.applyPersistedStudents([
       AdminStudentRecord(
@@ -816,6 +819,32 @@ void main() {
           .where((c) => c.linkedStudentIds.contains(localStudentId))
           .map((c) => c.id),
       [originalId],
+    );
+  });
+
+  test('cloud persist stamps school id and keeps the linked parent thread',
+      () async {
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    final ids = SchoolDataService.instance.sendAdminDirectMessage(
+      body: body,
+      parentName: parentName,
+    );
+    final conversation =
+        SchoolDataService.instance.getConversation(ids.single)!;
+    final doc = ConversationDocument.fromConversation(
+      conversation,
+      schoolId: SchoolAuthCloudService.resolvedSchoolId(),
+    );
+    expect(doc.schoolId, schoolId);
+    expect(doc.parentParticipantUsernames, contains(parentUsername));
+    expect(doc.linkedStudentIds, contains(studentId));
+    expect(
+      await SchoolDataService.instance.persistConversationToCloud('missing-id'),
+      isFalse,
     );
   });
 }

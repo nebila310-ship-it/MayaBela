@@ -28,24 +28,31 @@ class DocumentStore {
   }
 
   Map<String, dynamic> _withSchoolScope(Map<String, dynamic> data) {
-    final existing = data['schoolId'];
+    final existing = data['schoolId'] ?? data['school_id'];
     if (existing is String && existing.trim().isNotEmpty) {
       data['schoolId'] = existing.trim().toUpperCase();
       return data;
     }
-    final sid = AuthService.activeSchoolId?.trim();
+    final sid = _resolvedSchoolId();
     if (sid == null || sid.isEmpty) return data;
-    return {...data, 'schoolId': sid.toUpperCase()};
+    return {...data, 'schoolId': sid};
   }
 
   /// Column value for RLS. Must match `jwt_school_id()` (uppercased).
   String? _schoolIdOf(Map<String, dynamic> data) {
-    final v = data['schoolId'];
+    final v = data['schoolId'] ?? data['school_id'];
     if (v is String && v.trim().isNotEmpty) return v.trim().toUpperCase();
+    return _resolvedSchoolId();
+  }
+
+  String? _resolvedSchoolId() {
     final active = AuthService.activeSchoolId?.trim();
     if (active != null && active.isNotEmpty) return active.toUpperCase();
-    final jwt = _db?.auth.currentUser?.appMetadata['schoolId'];
-    if (jwt is String && jwt.trim().isNotEmpty) return jwt.trim().toUpperCase();
+    final fromUser = AuthService.currentUser?.schoolId?.trim();
+    if (fromUser != null && fromUser.isNotEmpty) return fromUser.toUpperCase();
+    final meta = _db?.auth.currentUser?.appMetadata;
+    final fromMeta = '${meta?['schoolId'] ?? meta?['school_id'] ?? ''}'.trim();
+    if (fromMeta.isNotEmpty) return fromMeta.toUpperCase();
     return null;
   }
 

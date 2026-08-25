@@ -105,6 +105,53 @@ void main() {
     expect(claims['username'], '0911223344');
   });
 
+  test('school claims accept school_id and reject GoTrue role', () {
+    expect(
+      SchoolAuthCloudService.schoolClaimsArePresent({
+        'role': 'teacher',
+        'school_id': 'TB-001',
+      }),
+      isTrue,
+    );
+    expect(
+      SchoolAuthCloudService.schoolClaimsArePresent({
+        'role': 'authenticated',
+        'schoolId': 'TB-001',
+      }),
+      isFalse,
+    );
+    expect(SchoolAuthCloudService.schoolClaimsArePresent(const {}), isFalse);
+  });
+
+  test('access tokens with more than 90s remaining are treated as fresh', () {
+    const now = 1_700_000_000;
+    expect(
+      SchoolAuthCloudService.accessTokenIsFresh(
+        now + 120,
+        now: DateTime.fromMillisecondsSinceEpoch(now * 1000),
+      ),
+      isTrue,
+    );
+    expect(
+      SchoolAuthCloudService.accessTokenIsFresh(
+        now + 30,
+        now: DateTime.fromMillisecondsSinceEpoch(now * 1000),
+      ),
+      isFalse,
+    );
+  });
+
+  test('resolved school id uses the signed-in teacher school', () {
+    AuthService.sessionSchoolId = null;
+    AuthService.currentUser = RegisteredUser(
+      username: username,
+      password: 'secret',
+      roleKey: AuthService.roleTeacher,
+      schoolId: schoolId,
+    );
+    expect(SchoolAuthCloudService.resolvedSchoolId(), schoolId);
+  });
+
   test('malformed access tokens do not throw', () {
     expect(
       SchoolAuthCloudService.schoolClaimsFromAccessToken('not-a-jwt'),

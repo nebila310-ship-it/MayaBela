@@ -32,6 +32,8 @@ class SchoolAuthCloudService {
   SchoolAuthCloudService._();
   static final instance = SchoolAuthCloudService._();
 
+  static Future<bool>? _ensureJwtInFlight;
+
   bool get isAvailable => SupabaseBootstrap.isInitialized;
 
   static Future<bool> hasSchoolClaims() async {
@@ -39,20 +41,57 @@ class SchoolAuthCloudService {
     final session = SupabaseBootstrap.client.auth.currentSession;
     if (session == null || session.accessToken.trim().isEmpty) return false;
     final meta = session.user.appMetadata;
-    if (_metaHasSchoolClaims(meta)) return true;
+    if (schoolClaimsArePresent(meta)) return true;
     // Some restore paths leave appMetadata empty while the JWT still carries
     // role/schoolId — read the access-token payload as a fallback.
-    return _metaHasSchoolClaims(_claimsFromAccessToken(session.accessToken));
+    return schoolClaimsArePresent(_claimsFromAccessToken(session.accessToken));
   }
 
-  static bool _metaHasSchoolClaims(Map<String, dynamic>? meta) {
+  /// School id for RLS upserts: session, login profile, then JWT claims.
+  static String? resolvedSchoolId() {
+    final fromAuth = AuthService.activeSchoolId?.trim();
+    if (fromAuth != null && fromAuth.isNotEmpty) {
+      return fromAuth.toUpperCase();
+    }
+    final fromUser = AuthService.currentUser?.schoolId?.trim();
+    if (fromUser != null && fromUser.isNotEmpty) {
+      return fromUser.toUpperCase();
+    }
+    if (!SupabaseBootstrap.isInitialized) return null;
+    try {
+      final session = SupabaseBootstrap.client.auth.currentSession;
+      if (session == null) return null;
+      final meta = session.user.appMetadata;
+      final fromMeta = '${meta['schoolId'] ?? meta['school_id'] ?? ''}'.trim();
+      if (fromMeta.isNotEmpty) return fromMeta.toUpperCase();
+      final fromJwt = _claimsFromAccessToken(session.accessToken);
+      final tokenSchool =
+          '${fromJwt['schoolId'] ?? fromJwt['school_id'] ?? ''}'.trim();
+      if (tokenSchool.isNotEmpty) return tokenSchool.toUpperCase();
+    } catch (_) {}
+    return null;
+  }
+
+  @visibleForTesting
+  static bool schoolClaimsArePresent(Map<String, dynamic>? meta) {
     if (meta == null || meta.isEmpty) return false;
-    final role = meta['role'];
-    final schoolId = meta['schoolId'];
-    return role is String &&
-        role.isNotEmpty &&
-        schoolId is String &&
-        schoolId.isNotEmpty;
+    final role = '${meta['role'] ?? ''}'.trim().toLowerCase();
+    if (role.isEmpty || role == 'authenticated' || role == 'anon') {
+      return false;
+    }
+    final schoolId = '${meta['schoolId'] ?? meta['school_id'] ?? ''}'.trim();
+    return schoolId.isNotEmpty;
+  }
+
+  @visibleForTesting
+  static bool accessTokenIsFresh(
+    int? expiresAtUnixSeconds, {
+    DateTime? now,
+    Duration minTtl = const Duration(seconds: 90),
+  }) {
+    if (expiresAtUnixSeconds == null) return true;
+    final nowSec = (now ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000;
+    return expiresAtUnixSeconds - nowSec >= minTtl.inSeconds;
   }
 
   static Map<String, dynamic> schoolClaimsFromAccessToken(String accessToken) =>
@@ -80,26 +119,63 @@ class SchoolAuthCloudService {
     }
   }
 
-  /// Refresh JWT and confirm school role claims before edge writes.
-  Future<bool> ensureValidSchoolJwt() async {
+  /// Confirm school role claims before cloud writes.
+  ///
+  /// Do not refresh a still-valid token: [refreshSession] on every Send can
+  /// drop app_metadata claims (or sign the user out on a raced refresh) while
+  /// the teacher can still read parent messages. Only refresh when the access
+  /// token is expired or about to expire.
+  Future<bool> ensureValidSchoolJwt({bool forceRefresh = false}) async {
     if (!isAvailable) return false;
+    final inFlight = _ensureJwtInFlight;
+    if (inFlight != null) return inFlight;
+    final run = _ensureValidSchoolJwtUnlocked(forceRefresh: forceRefresh);
+    _ensureJwtInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (identical(_ensureJwtInFlight, run)) {
+        _ensureJwtInFlight = null;
+      }
+    }
+  }
+
+  Future<bool> _ensureValidSchoolJwtUnlocked({
+    required bool forceRefresh,
+  }) async {
     try {
       await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
 
-      // Proactively refresh so edge functions never see an expired access token.
-      if (SupabaseBootstrap.client.auth.currentSession != null) {
+      if (!forceRefresh && await _currentSessionIsUsable()) return true;
+
+      final session = SupabaseBootstrap.client.auth.currentSession;
+      final tokenExpiring = session != null &&
+          !accessTokenIsFresh(session.expiresAt);
+      if (session != null && tokenExpiring) {
         try {
-          await SupabaseBootstrap.client.auth.refreshSession();
-        } catch (_) {}
+          await SupabaseBootstrap.client.auth
+              .refreshSession()
+              .timeout(const Duration(seconds: 8));
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+              'SchoolAuthCloudService.refreshSession skipped: $e',
+            );
+          }
+          // Keep the existing token if it still carries school claims.
+          if (await hasSchoolClaims()) return true;
+        }
+        if (await hasSchoolClaims()) return true;
       }
 
-      if (await hasSchoolClaims()) return true;
+      if (!forceRefresh && await hasSchoolClaims()) return true;
 
       // Session exists but school claims missing/stale — re-stamp metadata and
       // pull a fresh JWT (school-refresh-claims now returns new tokens).
       if (SupabaseBootstrap.client.auth.currentSession != null) {
         final refreshed = await refreshAccessClaims(
           username: AuthService.currentUser?.username,
+          schoolId: resolvedSchoolId(),
         );
         if (refreshed.ok && await hasSchoolClaims()) return true;
       }
@@ -111,7 +187,14 @@ class SchoolAuthCloudService {
         debugPrint('SchoolAuthCloudService.ensureValidSchoolJwt: $e');
       }
     }
-    return false;
+    return await hasSchoolClaims();
+  }
+
+  Future<bool> _currentSessionIsUsable() async {
+    if (!await hasSchoolClaims()) return false;
+    final session = SupabaseBootstrap.client.auth.currentSession;
+    if (session == null) return false;
+    return accessTokenIsFresh(session.expiresAt);
   }
 
   Future<bool> _trySilentReLogin() async {
@@ -775,14 +858,19 @@ class SchoolAuthCloudService {
     }
   }
 
-  Future<SchoolAuthCloudResult> refreshAccessClaims({String? username}) async {
+  Future<SchoolAuthCloudResult> refreshAccessClaims({
+    String? username,
+    String? schoolId,
+  }) async {
     if (!isAvailable) {
       return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
     }
     try {
+      final sid = (schoolId ?? resolvedSchoolId() ?? '').trim().toUpperCase();
       final data = await _invoke('school-refresh-claims', {
         if (username != null && username.trim().isNotEmpty)
           'username': username.trim(),
+        if (sid.isNotEmpty) 'schoolId': sid,
       });
       if (data == null || data['error'] != null) {
         return SchoolAuthCloudResult(

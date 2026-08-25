@@ -912,7 +912,12 @@ class SchoolDataService {
   void _persistConversation(String conversationId) {
     final conversation = getConversation(conversationId);
     if (conversation == null) return;
-    unawaited(MessagePersistenceService.instance.saveConversation(conversation));
+    // Local only. ChatScreen / compose immediately persist to the school
+    // cloud; a second unawaited cloud push races JWT refresh and can drop
+    // a working teacher session (parent messages still visible, Send fails).
+    unawaited(
+      MessagePersistenceService.instance.saveFromService(pushCloud: false),
+    );
   }
 
   Future<bool> persistConversationToCloud(String conversationId) async {
@@ -923,10 +928,12 @@ class SchoolDataService {
     _stampDirectParentThread(conversation);
     conversation = _linkedParentTeacherThreadToPersist(conversation);
     _stampDirectParentThread(conversation);
+    final schoolId = SchoolAuthCloudService.resolvedSchoolId();
     try {
       await MessagePersistenceService.instance.saveConversation(
         conversation,
         requireCloud: true,
+        schoolId: schoolId,
       );
       return true;
     } catch (e) {
@@ -934,10 +941,13 @@ class SchoolDataService {
         debugPrint('persistConversationToCloud: $e');
       }
       try {
-        await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
+        await SchoolAuthCloudService.instance.ensureValidSchoolJwt(
+          forceRefresh: true,
+        );
         await MessagePersistenceService.instance.saveConversation(
           conversation,
           requireCloud: true,
+          schoolId: schoolId,
         );
         return true;
       } catch (e2) {
@@ -945,7 +955,10 @@ class SchoolDataService {
           debugPrint('persistConversationToCloud retry: $e2');
         }
         unawaited(
-          MessagePersistenceService.instance.saveConversation(conversation),
+          MessagePersistenceService.instance.saveConversation(
+            conversation,
+            schoolId: schoolId,
+          ),
         );
         return false;
       }
