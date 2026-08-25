@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/database/id_utils.dart';
 import 'package:mayabela/database/models/database_models.dart';
@@ -912,6 +914,27 @@ class SchoolDataService {
     unawaited(MessagePersistenceService.instance.saveConversation(conversation));
   }
 
+  Future<bool> persistConversationToCloud(String conversationId) async {
+    AuthService.alignTeacherSessionWithRegistry();
+    final conversation = getConversation(conversationId);
+    if (conversation == null) return false;
+    try {
+      await MessagePersistenceService.instance.saveConversation(
+        conversation,
+        requireCloud: true,
+      );
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('persistConversationToCloud: $e');
+      }
+      unawaited(
+        MessagePersistenceService.instance.saveConversation(conversation),
+      );
+      return false;
+    }
+  }
+
   void _persistSchoolContent() {
     // Best-effort: SharedPreferences / cloud push must not fail the caller
     // (calendar seed, UI, or a later unit test after this future completes).
@@ -1780,6 +1803,7 @@ class SchoolDataService {
 
     final senderRole =
         AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
+    AuthService.alignTeacherSessionWithRegistry();
     if (!MessagingAccessService.canView(conversation, senderRole)) {
       return;
     }

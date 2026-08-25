@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
 
@@ -134,8 +136,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
       subject: draft.subject,
       attachments: draft.attachments,
     );
+    var ok = sent.isNotEmpty;
+    if (ok) {
+      ok = await _data.persistConversationToCloud(sent.single);
+    }
     _refresh();
-    _showSendResult(sent.isNotEmpty);
+    _showSendResult(ok);
   }
 
   Future<void> _parentCompose() async {
@@ -1141,6 +1147,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _pendingAttachments.clear();
     _replyTarget = null;
     setState(() {});
+    unawaited(_pushSentMessage());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -1151,6 +1158,18 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
+  }
+
+  Future<void> _pushSentMessage() async {
+    final ok = await _data.persistConversationToCloud(widget.conversationId);
+    if (ok || !mounted) return;
+    final s = AppLocale.instance.strings;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(s.messageSendFailed),
+        backgroundColor: const Color(0xFFB91C1C),
+      ),
+    );
   }
 
   Future<void> _confirmDeleteMessage(int index) async {

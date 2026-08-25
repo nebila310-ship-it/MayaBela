@@ -143,9 +143,7 @@ class ChatMessage {
     }
 
     if (senderStaffId != null && viewerStaffId != null) {
-
-      return senderStaffId!.trim() == viewerStaffId.trim();
-
+      return StaffMemberOption.idsEqual(senderStaffId, viewerStaffId);
     }
 
     return true;
@@ -372,34 +370,32 @@ class Conversation {
     }
 
     if (_hasParentParticipant()) {
-      if (viewerStaffId != null &&
-          staffParticipantId != null &&
-          staffParticipantId!.trim() == viewerStaffId.trim()) {
+      if (StaffMemberOption.idsEqual(viewerStaffId, staffParticipantId)) {
         return true;
       }
       final threadStaff = staffParticipantId?.trim();
       if (viewerStaffId != null &&
           (threadStaff == null || threadStaff.isEmpty) &&
-          messages.any((m) => m.senderStaffId?.trim() == viewerStaffId.trim())) {
+          messages.any(
+            (m) => StaffMemberOption.idsEqual(m.senderStaffId, viewerStaffId),
+          )) {
         return true;
       }
       return sentByViewer();
     }
 
-    if (viewerStaffId != null &&
-        staffParticipantId != null &&
-        staffParticipantId!.trim() == viewerStaffId.trim()) {
+    if (StaffMemberOption.idsEqual(viewerStaffId, staffParticipantId)) {
+      return true;
+    }
+
+    if (StaffMemberOption.idsEqual(viewerStaffId, counterpartyStaffId)) {
       return true;
     }
 
     if (viewerStaffId != null &&
-        counterpartyStaffId != null &&
-        counterpartyStaffId!.trim() == viewerStaffId.trim()) {
-      return true;
-    }
-
-    if (viewerStaffId != null &&
-        messages.any((m) => m.senderStaffId?.trim() == viewerStaffId.trim())) {
+        messages.any(
+          (m) => StaffMemberOption.idsEqual(m.senderStaffId, viewerStaffId),
+        )) {
       return true;
     }
 
@@ -749,6 +745,18 @@ class StaffMemberOption {
   static String driverKey(String driverId) => 'driver:${driverId.trim()}';
 
   static String adminKey(String adminId) => 'admin:${adminId.trim()}';
+
+  static bool idsEqual(String? left, String? right) {
+    final a = left?.trim().toLowerCase() ?? '';
+    final b = right?.trim().toLowerCase() ?? '';
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+    String raw(String id) {
+      final i = id.indexOf(':');
+      return i >= 0 ? id.substring(i + 1) : id;
+    }
+    return raw(a) == raw(b);
+  }
 
 
 
