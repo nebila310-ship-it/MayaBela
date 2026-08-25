@@ -122,6 +122,7 @@ abstract final class SessionCloudSync {
     if (!CloudSyncFlags.enabled) return;
     final user = AuthService.currentUser;
     if (user == null || !SupabaseBootstrap.isInitialized) return;
+    if (AuthService.isPublicDemoStudentSession) return;
 
     await StartupProfiler.track('session.pullCloud', () async {
       switch (user.roleKey) {
@@ -240,6 +241,13 @@ abstract final class SessionCloudSync {
   }
 
   static Future<void> onStudentSessionStarted({bool trackProgress = false}) async {
+    if (AuthService.isPublicDemoStudentSession) {
+      StudentPortalSyncService.instance.beginSync();
+      await applyStudentSessionLocally(skipDatabaseSync: true);
+      StudentPortalSyncService.instance.completeSync();
+      SchoolContentSyncService.instance.markDataChanged();
+      return;
+    }
     StudentPortalSyncService.instance.beginSync();
     try {
       if (trackProgress) {

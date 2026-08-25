@@ -705,6 +705,51 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _fillStudentDemo() {
+    setState(() {
+      selectedRole = AuthService.roleStudent;
+      schoolId.text = AuthService.demoStudentSchoolId;
+      username.text = AuthService.demoStudentUsername;
+      password.text = AuthService.demoStudentPassword;
+      _schoolIdEditing = false;
+    });
+  }
+
+  Widget _buildStudentDemoBanner() {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                s.studentDemoHint,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              key: const Key('login-student-demo'),
+              onPressed: _fillStudentDemo,
+              child: Text(
+                s.useStudentDemo,
+                style: const TextStyle(
+                  color: Color(0xFFFFB74D),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBackgroundDecor(LoginRoleTheme theme) {
     return Stack(
       children: [
@@ -807,6 +852,10 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         const SizedBox(height: 20),
         _buildSchoolIdField(),
+        if (selectedRole == AuthService.roleStudent) ...[
+          const SizedBox(height: 10),
+          _buildStudentDemoBanner(),
+        ],
         const SizedBox(height: 12),
         if (_usesPhoneLogin)
           Theme(

@@ -252,6 +252,12 @@ class SchoolRegistryService {
     _loaded = true;
   }
 
+  /// Local sandbox school for the public student demo login. Never pushed.
+  void ensureLocalDemoSchool() {
+    if (lookup('TB-001') != null) return;
+    _seedDemoSchool();
+  }
+
   /// Used by platform console after a cloud list pull.
   void removeDemoIfNotInCloud({required Set<String> cloudIds}) {
     final upper = cloudIds.map((e) => e.toUpperCase()).toSet();
