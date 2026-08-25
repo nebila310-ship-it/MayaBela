@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/web_erp/shell/web_erp_shell.dart';
 import 'package:mayabela/web_erp/shell/web_erp_top_bar.dart';
+import 'package:mayabela/web_erp/utils/ios_web_input.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 import 'package:mayabela/widgets/system_nav_safe_scope.dart';
@@ -37,6 +38,14 @@ void main() {
       ),
     );
   }
+
+  test('iOS web inputs stay at least 16px so Safari does not zoom', () {
+    expect(IosWebInput.minFontSize, 16);
+    expect(IosWebInput.fontSize(null), 16);
+    expect(IosWebInput.fontSize(14), 16);
+    expect(IosWebInput.fontSize(16), 16);
+    expect(IosWebInput.fontSize(18), 18);
+  });
 
   testWidgets('phone page padding is 12px', (tester) async {
     late EdgeInsets pad;

@@ -51,6 +51,7 @@ class EthiopianPhoneField extends StatelessWidget {
         FilteringTextInputFormatter.allow(RegExp(r'[\d+\s\-]')),
         LengthLimitingTextInputFormatter(14),
       ],
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       decoration: base.copyWith(
         labelText: label ?? base.labelText,
         hintText: hintText ?? base.hintText ?? '911234567',

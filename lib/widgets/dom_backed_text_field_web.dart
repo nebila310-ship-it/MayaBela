@@ -2,6 +2,7 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mayabela/web_erp/utils/ios_web_input.dart';
 import 'package:web/web.dart' as web;
 
 Widget buildDomBackedTextField({
@@ -129,7 +130,7 @@ class _DomBackedTextFieldState extends State<_DomBackedTextField> {
 
   String _cssFor(TextStyle? style) {
     final color = style?.color ?? Colors.white;
-    final size = style?.fontSize ?? 14;
+    final size = IosWebInput.fontSize(style?.fontSize);
     final weight = switch (style?.fontWeight ?? FontWeight.w500) {
       FontWeight.w100 => 100,
       FontWeight.w200 => 200,
@@ -161,6 +162,8 @@ class _DomBackedTextFieldState extends State<_DomBackedTextField> {
       margin: 0;
       box-sizing: border-box;
       font-family: inherit;
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
     ''';
   }
 
@@ -253,7 +256,7 @@ class _DomBackedTextFieldState extends State<_DomBackedTextField> {
         isEmpty: widget.controller.text.isEmpty,
         decoration: effective,
         child: SizedBox(
-          height: 24,
+          height: 28,
           child: HtmlElementView(viewType: _viewType),
         ),
       ),
