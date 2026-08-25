@@ -17,7 +17,9 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="MayaBela — school management for parents, teachers, and staff.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- maximum-scale=1 stops iOS from leaving the Flutter canvas zoomed-in
+       (hit targets then miss logout and other buttons; pinch cannot recover). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -55,6 +57,8 @@
       width: 100%;
       max-width: 100%;
       overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
     }
 
     body {
@@ -68,6 +72,18 @@
           background-size: 100% 100%;
       padding-left: env(safe-area-inset-left, 0px);
       padding-right: env(safe-area-inset-right, 0px);
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+
+    /* iOS Safari zooms the page when a focused input is under 16px.
+       Flutter then swallows pinch, so logout and other buttons cannot be tapped. */
+    input, textarea, select,
+    input.flt-text-editing,
+    textarea.flt-text-editing,
+    .flt-text-editing {
+      font-size: 16px !important;
+      touch-action: manipulation;
     }
 
     .center {
@@ -142,6 +158,56 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script>
+    (function () {
+      var meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) return;
+      var locked =
+        'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover';
+      var relaxed =
+        'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, viewport-fit=cover';
+      function currentScale() {
+        return window.visualViewport ? window.visualViewport.scale : 1;
+      }
+      function restoreScale() {
+        if (currentScale() <= 1.01) {
+          meta.setAttribute('content', locked);
+          return;
+        }
+        // iOS only unsticks an existing zoom if maximum-scale is toggled.
+        meta.setAttribute('content', locked);
+        setTimeout(function () {
+          meta.setAttribute('content', relaxed);
+          setTimeout(function () {
+            meta.setAttribute('content', locked);
+          }, 50);
+        }, 50);
+        try { window.scrollTo(0, 0); } catch (e) {}
+      }
+      function isFormField(el) {
+        if (!el || !el.tagName) return false;
+        var tag = String(el.tagName).toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select';
+      }
+      document.addEventListener('focusin', function (e) {
+        if (isFormField(e.target)) meta.setAttribute('content', locked);
+      }, true);
+      document.addEventListener('focusout', restoreScale, true);
+      document.addEventListener('touchstart', function (e) {
+        if (currentScale() <= 1.01) return;
+        if (isFormField(e.target)) return;
+        restoreScale();
+      }, { passive: true });
+      window.addEventListener('orientationchange', restoreScale);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function () {
+          if (currentScale() <= 1.01) return;
+          if (isFormField(document.activeElement)) return;
+          restoreScale();
+        });
+      }
+    })();
+  </script>
+  <script>
     // Drop stale Flutter service workers so new ERP screens load after deploys.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) {
@@ -154,7 +220,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=parent-thread-20260825f" async=""></script>
+    <script src="flutter_bootstrap.js?v=iphone-safari-zoom-20260825" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {

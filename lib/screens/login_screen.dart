@@ -476,7 +476,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  static const _webFieldTextStyle = TextStyle(color: Colors.white);
+  static const _webFieldTextStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 16,
+  );
 
   Widget _buildWebRoleTile(String roleKey) {
     final selected = selectedRole == roleKey;
@@ -758,7 +761,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
-              fontSize: 14,
+              fontSize: 16,
             ),
             iconEnabledColor: Colors.white70,
             decoration: _fieldDecoration(
