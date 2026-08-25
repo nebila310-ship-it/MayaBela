@@ -234,6 +234,7 @@ void main() {
       expect(ids.contains('teachers'), isTrue);
       expect(ids.contains('finance'), isTrue);
       expect(ids.contains('transport'), isTrue);
+      expect(ids.contains('cctv'), isTrue);
       expect(ids.contains('inventory'), isTrue);
       expect(ids.contains('settings'), isTrue);
     });
@@ -245,6 +246,7 @@ void main() {
         'teachers',
         'finance',
         'transport',
+        'cctv',
         'inventory',
         'settings',
         'audit_log',

@@ -69,6 +69,11 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.manageCampuses],
       manage: [SchoolPermissions.manageCampuses],
     ),
+    'cctv': ModuleRule(
+      view: [SchoolPermissions.manageSchoolSettings],
+      manage: [SchoolPermissions.manageSchoolSettings],
+      departmental: false,
+    ),
 
     // Academics
     'academic': ModuleRule(
@@ -401,6 +406,15 @@ abstract final class ModuleAccess {
         StaffRoles.vicePresident,
         StaffRoles.humanResource,
         StaffRoles.transportAdmin,
+      },
+    ),
+    'cctv': ModuleRoleAllocation(
+      visibleTo: {
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.generalManager,
+        StaffRoles.principal,
       },
     ),
     'attendance': ModuleRoleAllocation(

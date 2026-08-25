@@ -40,6 +40,7 @@ import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
+import 'package:mayabela/web_erp/pages/web_cctv_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_live_gps_page.dart';
 
 /// Maps ERP route ids to page widgets (web shell content area).
@@ -149,6 +150,8 @@ class WebErpRouter {
         return const WebSchoolManagementPage();
       case 'campus':
         return const WebCampusManagementPage();
+      case 'cctv':
+        return const WebCctvPage();
       case 'library':
         return const WebLibraryPage();
       case 'inventory':
