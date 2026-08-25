@@ -32,6 +32,18 @@ void main() {
       AuthService.clearSession();
     });
 
+    test('debug demo student login succeeds locally', () {
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleStudent,
+        username: 'student',
+        password: AuthService.demoPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.roleKey, AuthService.roleStudent);
+      expect(AuthService.currentUser?.linkedStudentId, 'STU-1001');
+      AuthService.clearSession();
+    });
+
     test('wrong password rejected', () {
       final error = AuthService.validateLogin(
         roleKey: AuthService.roleTeacher,

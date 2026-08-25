@@ -200,6 +200,15 @@ class AuthService {
         schoolId: 'TB-001',
         linkedDriverId: 'DRV-1001',
       ),
+      'student': RegisteredUser(
+        username: 'student',
+        password: demoPassword,
+        roleKey: roleStudent,
+        email: 'student@mayaschool.et',
+        fullName: 'Sara Bekele',
+        schoolId: 'TB-001',
+        linkedStudentId: 'STU-1001',
+      ),
     },
   };
 
@@ -257,6 +266,18 @@ class AuthService {
           linkedDriverId: demoDriver.linkedDriverId,
         );
       }
+
+      final sara = StudentRegistryService.instance.lookupAnyById('STU-1001');
+      if (sara != null &&
+          !StudentAccountService.instance.hasPortalAccount(sara)) {
+        StudentRegistryService.instance.updateStudent(
+          sara.copyWith(
+            loginUsername: 'student',
+            portalAccountStatus: StudentAccountStatus.active,
+            firstLoginCompleted: true,
+          ),
+        );
+      }
     }
   }
 
@@ -266,6 +287,7 @@ class AuthService {
     'admin',
     'driver',
     'transport',
+    'student',
   };
 
   /// Rebuilds phone logins from staff registries, saves locally, and pushes to Firestore.

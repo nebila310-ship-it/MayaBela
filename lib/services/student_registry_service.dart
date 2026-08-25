@@ -352,6 +352,9 @@ class StudentRegistryService {
       homeroomTeacherId: 'TCH-1001',
       transportEnabled: true,
       transportId: 'BUS-1001',
+      loginUsername: 'student',
+      portalAccountStatus: StudentAccountStatus.active,
+      firstLoginCompleted: true,
     ),
     AdminStudentRecord(
       studentId: 'STU-1002',
