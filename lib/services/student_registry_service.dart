@@ -352,6 +352,9 @@ class StudentRegistryService {
       homeroomTeacherId: 'TCH-1001',
       transportEnabled: true,
       transportId: 'BUS-1001',
+      loginUsername: 'student',
+      portalAccountStatus: StudentAccountStatus.active,
+      firstLoginCompleted: true,
     ),
     AdminStudentRecord(
       studentId: 'STU-1002',
@@ -497,6 +500,47 @@ class StudentRegistryService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Sara Bekele portal row for the public student demo. In-memory only.
+  void ensureLocalDemoStudent() {
+    const id = 'STU-1001';
+    final existing = lookupAnyById(id);
+    if (existing != null) {
+      final idx = _students.indexWhere((s) => s.studentId == id);
+      if (idx < 0) return;
+      _students[idx] = existing.copyWith(
+        loginUsername: existing.loginUsername ?? 'demo.student',
+        portalAccountStatus: StudentAccountStatus.active,
+        firstLoginCompleted: true,
+        isActive: true,
+        lifecycleStatus: StudentLifecycleStatus.active,
+      );
+      return;
+    }
+    _students.insert(
+      0,
+      AdminStudentRecord(
+        studentId: id,
+        fullName: 'Sara Bekele',
+        grade: 'Grade 4',
+        className: 'Grade 4A',
+        schoolId: 'TB-001',
+        dateOfBirth: DateTime(2016, 3, 15),
+        gender: 'Female',
+        emergencyContact: '0911000002',
+        fatherName: 'Bekele Tadesse',
+        fatherPhone: '0911000002',
+        motherName: 'Almaz Bekele',
+        motherPhone: '0911000099',
+        homeroomTeacherId: 'TCH-1001',
+        transportEnabled: true,
+        transportId: 'BUS-1001',
+        loginUsername: 'demo.student',
+        portalAccountStatus: StudentAccountStatus.active,
+        firstLoginCompleted: true,
+      ),
+    );
   }
 
   void replaceStudent(AdminStudentRecord updated) => updateStudent(updated);

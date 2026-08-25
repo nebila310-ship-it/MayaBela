@@ -75,6 +75,10 @@ class AuthService {
   static const demoPassword = '1234';
   /// Legacy shared temp — prefer [generateTempPassword] for new accounts.
   static const tempPassword = 'Welcome12!';
+  /// Public sandbox student login (local seed only, never pushed to cloud).
+  static const demoStudentUsername = 'demo.student';
+  static const demoStudentSchoolId = 'TB-001';
+  static const demoStudentPassword = tempPassword;
   static const minPasswordLength = 10;
   static const passwordRedactedMarker = '__REDACTED__';
 
@@ -160,6 +164,15 @@ class AuthService {
   }
 
   static final Map<String, RegisteredUser> _users = {
+    demoStudentUsername: RegisteredUser(
+      username: demoStudentUsername,
+      password: demoStudentPassword,
+      roleKey: roleStudent,
+      email: 'demo.student@mayaschool.et',
+      fullName: 'Sara Bekele',
+      schoolId: demoStudentSchoolId,
+      linkedStudentId: 'STU-1001',
+    ),
     if (kDebugMode) ...{
       'teacher': RegisteredUser(
         username: 'teacher',
@@ -199,6 +212,15 @@ class AuthService {
         fullName: 'Alemayehu T.',
         schoolId: 'TB-001',
         linkedDriverId: 'DRV-1001',
+      ),
+      'student': RegisteredUser(
+        username: 'student',
+        password: demoPassword,
+        roleKey: roleStudent,
+        email: 'student@mayaschool.et',
+        fullName: 'Sara Bekele',
+        schoolId: 'TB-001',
+        linkedStudentId: 'STU-1001',
       ),
     },
   };
@@ -257,6 +279,18 @@ class AuthService {
           linkedDriverId: demoDriver.linkedDriverId,
         );
       }
+
+      final sara = StudentRegistryService.instance.lookupAnyById('STU-1001');
+      if (sara != null &&
+          !StudentAccountService.instance.hasPortalAccount(sara)) {
+        StudentRegistryService.instance.updateStudent(
+          sara.copyWith(
+            loginUsername: 'student',
+            portalAccountStatus: StudentAccountStatus.active,
+            firstLoginCompleted: true,
+          ),
+        );
+      }
     }
   }
 
@@ -266,6 +300,8 @@ class AuthService {
     'admin',
     'driver',
     'transport',
+    'student',
+    demoStudentUsername,
   };
 
   /// Rebuilds phone logins from staff registries, saves locally, and pushes to Firestore.
@@ -519,9 +555,37 @@ class AuthService {
     };
   }
 
+  static bool isPublicDemoStudentLogin({
+    required String roleKey,
+    required String username,
+    required String password,
+    String? schoolId,
+  }) {
+    return roleKey == roleStudent &&
+        username.trim().toLowerCase() == demoStudentUsername &&
+        password == demoStudentPassword &&
+        (schoolId ?? '').trim().toUpperCase() == demoStudentSchoolId;
+  }
+
+  static bool get isPublicDemoStudentSession {
+    final user = currentUser;
+    if (user == null || user.roleKey != roleStudent) return false;
+    return user.username.toLowerCase() == demoStudentUsername &&
+        (user.schoolId ?? '').toUpperCase() == demoStudentSchoolId;
+  }
+
+  static void preparePublicDemoStudentSession() {
+    SchoolRegistryService.instance.ensureLocalDemoSchool();
+    StudentRegistryService.instance.ensureLocalDemoStudent();
+  }
+
   static bool restoreSession(String username, {String? schoolId}) {
     final user = _findUser(username);
     if (user == null) return false;
+
+    if (user.username.toLowerCase() == demoStudentUsername) {
+      preparePublicDemoStudentSession();
+    }
 
     setSession(user);
     applySchoolContext(schoolId ?? user.schoolId ?? '');
@@ -775,6 +839,24 @@ class AuthService {
   }) async {
     if (username.trim().isEmpty || password.isEmpty) {
       return 'empty';
+    }
+
+    if (isPublicDemoStudentLogin(
+      roleKey: roleKey,
+      username: username,
+      password: password,
+      schoolId: schoolId,
+    )) {
+      preparePublicDemoStudentSession();
+      final localError = validateLogin(
+        roleKey: roleKey,
+        username: username,
+        password: password,
+      );
+      if (localError == null) {
+        await SessionPrefsService.instance.saveActiveSession();
+      }
+      return localError;
     }
 
     var cloudUsername = username.trim();

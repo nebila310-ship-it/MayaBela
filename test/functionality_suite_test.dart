@@ -32,6 +32,44 @@ void main() {
       AuthService.clearSession();
     });
 
+    test('debug demo student login succeeds locally', () {
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleStudent,
+        username: 'student',
+        password: AuthService.demoPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.roleKey, AuthService.roleStudent);
+      expect(AuthService.currentUser?.linkedStudentId, 'STU-1001');
+      AuthService.clearSession();
+    });
+
+    test('public demo student login succeeds without cloud', () {
+      expect(
+        AuthService.isPublicDemoStudentLogin(
+          roleKey: AuthService.roleStudent,
+          username: AuthService.demoStudentUsername,
+          password: AuthService.demoStudentPassword,
+          schoolId: AuthService.demoStudentSchoolId,
+        ),
+        isTrue,
+      );
+      AuthService.preparePublicDemoStudentSession();
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleStudent,
+        username: AuthService.demoStudentUsername,
+        password: AuthService.demoStudentPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.username, AuthService.demoStudentUsername);
+      expect(AuthService.isPublicDemoStudentSession, isTrue);
+      expect(
+        AuthService.schoolAccessError(AuthService.demoStudentSchoolId),
+        isNull,
+      );
+      AuthService.clearSession();
+    });
+
     test('wrong password rejected', () {
       final error = AuthService.validateLogin(
         roleKey: AuthService.roleTeacher,
