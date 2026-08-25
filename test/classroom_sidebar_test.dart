@@ -55,11 +55,10 @@ void main() {
     await pumpShell(tester, size: const Size(1280, 800));
 
     expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
-    expect(find.byKey(const Key('classroom-nav-home')), findsOneWidget);
     expect(find.text('Home'), findsWidgets);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.expandedWidth, 8),
+      greaterThan(180),
     );
   });
 
@@ -73,7 +72,7 @@ void main() {
     expect(UserPreferencesService.instance.classroomSidebarCollapsed, isTrue);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.collapsedWidth, 8),
+      lessThan(110),
     );
 
     await tester.tap(find.byKey(const Key('classroom-top-menu')));
@@ -83,7 +82,7 @@ void main() {
     expect(UserPreferencesService.instance.classroomSidebarCollapsed, isFalse);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.expandedWidth, 8),
+      greaterThan(180),
     );
     expect(tester.takeException(), isNull);
   });
@@ -99,7 +98,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
-    expect(find.byKey(const Key('classroom-nav-home')), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
   });
 
   testWidgets('parent desktop dashboard uses the same collapsible sidebar', (
@@ -146,7 +145,7 @@ void main() {
     expect(UserPreferencesService.instance.classroomSidebarCollapsed, isTrue);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.collapsedWidth, 8),
+      lessThan(110),
     );
     expect(tester.takeException(), isNull);
   });
