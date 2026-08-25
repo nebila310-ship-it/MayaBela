@@ -401,6 +401,8 @@ class WebAdminOverviewPage extends StatelessWidget {
         ('Register Driver', Icons.person_add_alt_1, 'add_driver'),
       if (ModuleAccess.canView('transport_live_gps'))
         ('Live GPS', Icons.gps_fixed, 'transport_live_gps'),
+      if (ModuleAccess.canView('cctv'))
+        ('CCTV', Icons.videocam_outlined, 'cctv'),
     ];
 
     if (actions.isEmpty) return const SizedBox.shrink();

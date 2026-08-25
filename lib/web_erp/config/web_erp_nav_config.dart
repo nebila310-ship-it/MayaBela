@@ -32,6 +32,12 @@ const List<WebErpNavItem> _allNavItems = [
       icon: Icons.location_city_outlined,
       section: 'Organization',
     ),
+    WebErpNavItem(
+      id: 'cctv',
+      label: 'CCTV',
+      icon: Icons.videocam_outlined,
+      section: 'Organization',
+    ),
 
     // Principal branch — academic leadership (VP, Section Director).
     WebErpNavItem(

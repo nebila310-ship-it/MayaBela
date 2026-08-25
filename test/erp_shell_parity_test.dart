@@ -76,6 +76,7 @@ void main() {
       'quality_assurance',
       'classroom_teachers',
       'staff_roles',
+      'cctv',
     ]) {
       expect(ids.contains(id), isTrue, reason: 'missing shared module $id');
     }
