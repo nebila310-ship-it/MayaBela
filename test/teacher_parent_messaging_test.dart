@@ -121,6 +121,10 @@ void main() {
     expect(conversation.parentParticipantUsernames, contains(parentUsername));
     expect(conversation.messages.last.text, body);
     expect(conversation.messages.last.senderUsername, 'teacher.msg');
+    expect(conversation.id.toUpperCase(), contains(teacherId));
+    expect(conversation.id.toUpperCase(), contains(studentId));
+    expect(conversation.id.toLowerCase(), contains('-stu-'));
+    expect(conversation.id.toLowerCase(), isNot(contains('user-0911')));
   });
 
   test('parent whose login name is a phone still sees the teacher message', () {
@@ -457,6 +461,117 @@ void main() {
           .map((m) => m.text),
       containsAll(['Please confirm pickup time', 'We will be there at 4']),
     );
+  });
+
+  test('legacy user-phone thread migrates onto the teacher+student id', () {
+    const legacyId = 'direct-TEACHER:$teacherId-user-$parentUsername';
+    signIn(
+      username: parentUsername,
+      roleKey: AuthService.roleParent,
+      fullName: parentUsername,
+      linkedStudentIds: const [studentId],
+    );
+    SchoolDataService.instance.applyPersistedConversations([
+      Conversation(
+        id: legacyId,
+        name: parentName,
+        role: 'Parent',
+        parentParticipantName: parentName,
+        parentParticipantUsernames: const [parentUsername],
+        staffParticipantId: StaffMemberOption.teacherKey(teacherId),
+        linkedStudentIds: const [studentId],
+        messages: [
+          ChatMessage(
+            text: 'Old parent note',
+            time: DateTime(2024, 6, 1),
+            senderRole: AuthService.roleParent,
+            senderUsername: parentUsername,
+          ),
+        ],
+      ),
+    ]);
+
+    final parentIds = SchoolDataService.instance.sendParentDirectMessage(
+      body: 'Follow up on the old thread',
+      staffId: StaffMemberOption.teacherKey(teacherId),
+      studentId: studentId,
+    );
+    expect(parentIds.single.toUpperCase(), contains(teacherId));
+    expect(parentIds.single.toUpperCase(), contains(studentId));
+    expect(parentIds.single, isNot(legacyId));
+    expect(
+      SchoolDataService.instance
+          .getConversation(parentIds.single)!
+          .messages
+          .map((m) => m.text),
+      containsAll(['Old parent note', 'Follow up on the old thread']),
+    );
+
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    final teacherIds = SchoolDataService.instance.sendAdminDirectMessage(
+      body: 'Teacher sees the migrated thread',
+      parentName: parentName,
+    );
+    expect(teacherIds.single, parentIds.single);
+  });
+
+  test('two children with the same teacher get two conversation ids', () {
+    const siblingId = 'STU-8802';
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: studentId,
+        fullName: 'Kidus Assefa',
+        grade: 'Grade 8',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2014, 4, 4),
+        fatherName: parentName,
+      ),
+      AdminStudentRecord(
+        studentId: siblingId,
+        fullName: 'Hana Assefa',
+        grade: 'Grade 8',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2016, 4, 4),
+        fatherName: parentName,
+      ),
+    ]);
+
+    signIn(
+      username: parentUsername,
+      roleKey: AuthService.roleParent,
+      fullName: parentUsername,
+      linkedStudentIds: const [studentId, siblingId],
+    );
+    final first = SchoolDataService.instance.sendParentDirectMessage(
+      body: 'About Kidus',
+      staffId: StaffMemberOption.teacherKey(teacherId),
+      studentId: studentId,
+    );
+    final second = SchoolDataService.instance.sendParentDirectMessage(
+      body: 'About Hana',
+      staffId: StaffMemberOption.teacherKey(teacherId),
+      studentId: siblingId,
+    );
+    expect(first.single, isNot(second.single));
+    expect(first.single.toUpperCase(), contains(studentId));
+    expect(second.single.toUpperCase(), contains(siblingId));
+  });
+
+  test('staff-to-staff conversation ids stay on the staff pair scheme', () {
+    final id = SchoolDataService.instance.openOrCreateConversation(
+      contactName: 'School Admin',
+      role: 'Admin',
+      staffParticipantId: StaffMemberOption.teacherKey(teacherId),
+      counterpartyStaffId: StaffMemberOption.adminKey('ADM-1001'),
+    );
+    expect(id.toLowerCase(), startsWith('direct-staff-'));
+    expect(id.toLowerCase(), isNot(contains('-stu-')));
   });
 
   test('teacher reply stays outgoing when staff id casing differs', () {

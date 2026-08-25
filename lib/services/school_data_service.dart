@@ -916,8 +916,11 @@ class SchoolDataService {
 
   Future<bool> persistConversationToCloud(String conversationId) async {
     AuthService.alignTeacherSessionWithRegistry();
-    final conversation = getConversation(conversationId);
+    var conversation = getConversation(conversationId);
     if (conversation == null) return false;
+    _stampDirectParentThread(conversation);
+    final cloudId = _ensureCanonicalParentTeacherThread(conversation);
+    conversation = getConversation(cloudId) ?? conversation;
     try {
       await MessagePersistenceService.instance.saveConversation(
         conversation,
@@ -950,6 +953,7 @@ class SchoolDataService {
   List<Conversation> getConversationsForRole(String? roleKey) {
     return _conversations
         .where((c) => MessagingAccessService.canView(c, roleKey))
+        .where((c) => !_isSupersededParentTeacherThread(c))
         .toList(growable: false);
   }
 
@@ -1339,6 +1343,7 @@ class SchoolDataService {
     String? subject,
     String? parentName,
     String? staffId,
+    String? studentId,
     List<AnnouncementAttachment> attachments = const [],
   }) {
     final trimmedBody = body.trim();
@@ -1350,6 +1355,7 @@ class SchoolDataService {
     final hasStaff = trimmedStaff != null && trimmedStaff.isNotEmpty;
     if (hasParent == hasStaff) return [];
 
+    AuthService.alignTeacherSessionWithRegistry();
     final senderRole = AuthService.currentUser?.roleKey ?? AuthService.roleAdmin;
     if (senderRole == AuthService.roleTeacher) {
       if (hasParent &&
@@ -1372,6 +1378,10 @@ class SchoolDataService {
         schoolId: AuthService.activeSchoolId,
       );
       final senderStaffId = StaffMemberOption.viewerCompositeStaffId(senderRole);
+      final lookupStudentIds = _normalizeStudentIds([
+        if (studentId != null) studentId,
+        ...?recipient?.studentIds,
+      ]);
       conversationId = openOrCreateConversation(
         contactName: trimmedParent,
         role: 'Parent',
@@ -1381,13 +1391,13 @@ class SchoolDataService {
             ? null
             : MessagingAccessService.staffSubjectLabelFor(
                 staffParticipantId: senderStaffId,
-                linkedStudentIds: recipient?.studentIds ?? const [],
+                linkedStudentIds: lookupStudentIds,
               ),
-        linkedStudentIds: recipient?.studentIds,
+        linkedStudentIds: lookupStudentIds,
         parentParticipantUsernames: [
           ...MessagingAccessService.usernamesOf(recipient),
           ...MessagingAccessService.parentLoginKeysForStudentIds(
-            recipient?.studentIds ?? const [],
+            lookupStudentIds,
             parentName: trimmedParent,
           ),
         ],
@@ -1478,8 +1488,15 @@ class SchoolDataService {
     }
 
     _stampDirectParentThread(conversation);
-    _persistConversation(conversationId);
-    return [conversationId];
+    final cloudId = _ensureCanonicalParentTeacherThread(conversation);
+    if (cloudId != conversation.id && conversation.messages.isNotEmpty) {
+      _copyMessageIfMissing(
+        getConversation(cloudId),
+        conversation.messages.last,
+      );
+    }
+    _persistConversation(cloudId);
+    return [cloudId];
   }
 
   String _messagePreviewBody(
@@ -1794,7 +1811,7 @@ class SchoolDataService {
     List<AnnouncementAttachment> attachments = const [],
     MessageReplyQuote? replyTo,
   }) {
-    final conversation = getConversation(conversationId);
+    var conversation = getConversation(conversationId);
     final trimmed = text.trim();
     if (conversation == null ||
         (trimmed.isEmpty && attachments.isEmpty)) {
@@ -1808,6 +1825,8 @@ class SchoolDataService {
       return;
     }
     _stampDirectParentThread(conversation);
+    final canonicalId = _ensureCanonicalParentTeacherThread(conversation);
+    conversation = getConversation(conversationId) ?? conversation;
     final senderMeta = _messageSenderMeta(
       senderRole,
       relationshipStudentId: conversation.linkedStudentIds.isNotEmpty
@@ -1818,19 +1837,21 @@ class SchoolDataService {
     final senderName =
         senderMeta.senderDisplayName ?? AuthService.displayNameForRole(senderRole);
 
-    conversation.messages.add(
-      ChatMessage(
-        text: trimmed,
-        senderRole: senderRole,
-        time: DateTime.now(),
-        senderStaffId: senderMeta.senderStaffId,
-        senderDisplayName: senderMeta.senderDisplayName,
-        senderUsername: senderMeta.senderUsername,
-        senderRelationshipLabel: senderMeta.senderRelationshipLabel,
-        attachments: List.unmodifiable(attachments),
-        replyTo: replyTo,
-      ),
+    final message = ChatMessage(
+      text: trimmed,
+      senderRole: senderRole,
+      time: DateTime.now(),
+      senderStaffId: senderMeta.senderStaffId,
+      senderDisplayName: senderMeta.senderDisplayName,
+      senderUsername: senderMeta.senderUsername,
+      senderRelationshipLabel: senderMeta.senderRelationshipLabel,
+      attachments: List.unmodifiable(attachments),
+      replyTo: replyTo,
     );
+    conversation.messages.add(message);
+    if (canonicalId != conversation.id) {
+      _copyMessageIfMissing(getConversation(canonicalId), message);
+    }
 
     if (conversation.isGroup) {
       _notifyGroupParticipants(
@@ -1840,7 +1861,7 @@ class SchoolDataService {
         title: 'New message from $senderName',
         body: preview,
       );
-      _persistConversation(conversationId);
+      _persistConversation(canonicalId);
       return;
     }
 
@@ -1860,40 +1881,77 @@ class SchoolDataService {
       recipientUsernames: targeting.recipientUsernames,
       targetStudentId: targeting.targetStudentId,
     );
-    _persistConversation(conversationId);
+    _persistConversation(canonicalId);
+  }
+
+  void _copyMessageIfMissing(Conversation? target, ChatMessage message) {
+    if (target == null) return;
+    final key = _messageMergeKey(message);
+    if (target.messages.any((existing) => _messageMergeKey(existing) == key)) {
+      return;
+    }
+    target.messages.add(message);
   }
 
   void _stampDirectParentThread(Conversation conversation) {
     if (conversation.isGroup || conversation.isBroadcast) return;
+    if (conversation.isStaffOnlyDirectThread) return;
+
+    final role = AuthService.currentUser?.roleKey;
+    if ((conversation.staffParticipantId == null ||
+            conversation.staffParticipantId!.trim().isEmpty) &&
+        (role == AuthService.roleTeacher ||
+            role == AuthService.roleAdmin ||
+            role == AuthService.roleDriver)) {
+      final viewer = StaffMemberOption.viewerCompositeStaffId(role);
+      if (viewer != null && viewer.trim().isNotEmpty) {
+        conversation.staffParticipantId = viewer;
+      }
+    }
+
+    final threadStudents = _conversationStudentIds(conversation);
+    if (threadStudents.isEmpty) {
+      final parentName = conversation.parentParticipantName?.trim();
+      if (parentName != null && parentName.isNotEmpty) {
+        final recipient = MessagingAccessService.findParentRecipient(
+          parentName,
+          schoolId: AuthService.activeSchoolId,
+        );
+        if (recipient != null && recipient.studentIds.isNotEmpty) {
+          threadStudents.add(recipient.studentIds.first.trim().toUpperCase());
+        }
+      }
+    }
+
     final parentName = conversation.parentParticipantName?.trim();
+    final usernames = <String>[
+      ...conversation.parentParticipantUsernames,
+    ];
+    if (role == AuthService.roleParent) {
+      final username = AuthService.currentUser?.username.trim();
+      if (username != null && username.isNotEmpty) {
+        usernames.add(username);
+      }
+    }
     if (parentName != null && parentName.isNotEmpty) {
       final recipient = MessagingAccessService.findParentRecipient(
         parentName,
         schoolId: AuthService.activeSchoolId,
       );
-      if (recipient != null) {
-        _mergeConversationParticipants(
-          conversation,
-          studentIds: recipient.studentIds,
-          parentUsernames: [
-            ...MessagingAccessService.usernamesOf(recipient),
-            ...MessagingAccessService.parentLoginKeysForStudentIds(
-              recipient.studentIds,
-              parentName: parentName,
-            ),
-          ],
-        );
-      }
+      usernames.addAll(MessagingAccessService.usernamesOf(recipient));
     }
-    if (conversation.linkedStudentIds.isNotEmpty) {
-      _mergeConversationParticipants(
-        conversation,
-        parentUsernames: MessagingAccessService.parentLoginKeysForStudentIds(
-          conversation.linkedStudentIds,
-          parentName: conversation.parentParticipantName,
-        ),
-      );
-    }
+    usernames.addAll(
+      MessagingAccessService.parentLoginKeysForStudentIds(
+        threadStudents,
+        parentName: parentName,
+      ),
+    );
+
+    _mergeConversationParticipants(
+      conversation,
+      studentIds: threadStudents,
+      parentUsernames: usernames,
+    );
   }
 
   ({
@@ -2170,19 +2228,26 @@ class SchoolDataService {
       return 'direct-staff-${pair[0]}-${pair[1]}';
     }
 
+    final primaryStudent = _primaryStudentId(studentIds);
+    if (hasStaff && primaryStudent != null) {
+      return _canonicalDirectParentTeacherConversationId(
+        staffParticipantId: staffId,
+        studentId: primaryStudent,
+      );
+    }
+
+    // Last-resort fallback when a parent/teacher thread has no student id yet.
     if (hasStaff) {
-      final parentKey = _directThreadParentKey(
+      final parentKey = _fallbackParentThreadKey(
         parentUsernames: parentUsernames,
-        studentIds: studentIds,
         parentParticipantName: parentParticipantName,
         contactName: contactName,
       );
       return 'direct-$staffId-$parentKey';
     }
 
-    final parentKey = _directThreadParentKey(
+    final parentKey = _fallbackParentThreadKey(
       parentUsernames: parentUsernames,
-      studentIds: studentIds,
       parentParticipantName: parentParticipantName,
       contactName: contactName,
     );
@@ -2193,145 +2258,208 @@ class SchoolDataService {
     return 'direct-$roleSlug-$parentKey';
   }
 
-  String _directThreadParentKey({
+  String _canonicalDirectParentTeacherConversationId({
+    required String staffParticipantId,
+    required String studentId,
+  }) {
+    return 'direct-${staffParticipantId.trim().toUpperCase()}'
+        '-stu-${studentId.trim().toUpperCase()}';
+  }
+
+  String? _studentIdFromParentTeacherConversationId(String id) {
+    final upper = id.trim().toUpperCase();
+    if (!upper.startsWith('DIRECT-') || upper.startsWith('DIRECT-STAFF-')) {
+      return null;
+    }
+    const marker = '-STU-';
+    final index = upper.lastIndexOf(marker);
+    if (index < 0) return null;
+    final student = upper.substring(index + marker.length).trim();
+    return student.isEmpty ? null : student;
+  }
+
+  List<String> _normalizeStudentIds(Iterable<String> raw) {
+    final seen = <String>{};
+    final ids = <String>[];
+    for (final value in raw) {
+      final id = value.trim().toUpperCase();
+      if (id.isEmpty || !seen.add(id)) continue;
+      ids.add(id);
+    }
+    return ids;
+  }
+
+  String? _primaryStudentId(Iterable<String> studentIds) {
+    final ids = _normalizeStudentIds(studentIds);
+    return ids.isEmpty ? null : ids.first;
+  }
+
+  List<String> _conversationStudentIds(Conversation conversation) {
+    final fromId = _studentIdFromParentTeacherConversationId(conversation.id);
+    return _normalizeStudentIds([
+      ...conversation.linkedStudentIds,
+      if (fromId != null) fromId,
+    ]);
+  }
+
+  String _fallbackParentThreadKey({
     required List<String> parentUsernames,
-    required List<String> studentIds,
     String? parentParticipantName,
     required String contactName,
   }) {
-    // One stable key only — joining every phone/username split parent and
-    // teacher onto different cloud documents so neither saw the other.
-    final canonical = _canonicalParentUsername(
-      parentUsernames,
-      parentParticipantName: parentParticipantName,
-    );
-    if (canonical != null) {
-      return 'user-$canonical';
+    final named = parentParticipantName?.trim();
+    if (named != null && named.isNotEmpty) {
+      return 'name-${named.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
     }
-    if (studentIds.isNotEmpty) {
-      final sorted = studentIds.map((id) => id.toUpperCase()).toList()..sort();
-      return 'stu-${sorted.first}';
-    }
-    final parent = parentParticipantName?.trim();
-    if (parent != null && parent.isNotEmpty) {
-      return 'name-${parent.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
+    if (parentUsernames.isNotEmpty) {
+      return 'user-${parentUsernames.first.trim().toLowerCase()}';
     }
     return 'name-${contactName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
   }
 
-  String? _canonicalParentUsername(
-    List<String> parentUsernames, {
-    String? parentParticipantName,
-  }) {
-    final phones = <String>[];
-    final others = <String>[];
-    for (final raw in parentUsernames) {
-      final phone = PhoneUtils.normalizeLocal(raw);
-      if (phone != null) {
-        phones.add(phone);
-      } else {
-        final trimmed = raw.trim().toLowerCase();
-        if (trimmed.isNotEmpty) others.add(trimmed);
-      }
-    }
-    final named = parentParticipantName?.trim() ?? '';
-    if (named.isNotEmpty) {
-      for (final phone in phones) {
-        if (PhoneUtils.matches(phone, named)) return phone;
-      }
-      final namedLower = named.toLowerCase();
-      for (final other in others) {
-        if (other == namedLower) return other;
-      }
-    }
-    if (phones.isNotEmpty) {
-      phones.sort();
-      return phones.first;
-    }
-    if (others.isNotEmpty) {
-      others.sort();
-      return others.first;
-    }
-    return null;
-  }
-
   bool _sameStaffParticipant(String? left, String? right) {
-    final a = left?.trim().toLowerCase() ?? '';
-    final b = right?.trim().toLowerCase() ?? '';
-    return a.isNotEmpty && a == b;
+    return StaffMemberOption.idsEqual(left, right);
   }
 
-  bool _directThreadMatchesParent(
-    Conversation conversation, {
-    String? parentParticipantName,
-    required List<String> parentUsernames,
-    required List<String> studentIds,
-  }) {
-    if (conversation.isStaffOnlyDirectThread) return false;
-
-    final existingUsers = conversation.parentParticipantUsernames
+  bool _parentUsernamesOverlap(
+    Iterable<String> left,
+    Iterable<String> right,
+  ) {
+    final existing = left
         .map((u) => u.trim().toLowerCase())
         .where((u) => u.isNotEmpty)
-        .toSet();
-    final incomingUsers = parentUsernames
+        .toList();
+    final incoming = right
         .map((u) => u.trim().toLowerCase())
         .where((u) => u.isNotEmpty)
-        .toSet();
-
-    bool usernamesOverlap() {
-      if (incomingUsers.isEmpty || existingUsers.isEmpty) return false;
-      for (final incoming in incomingUsers) {
-        for (final existing in existingUsers) {
-          if (incoming == existing || PhoneUtils.matches(incoming, existing)) {
-            return true;
-          }
-        }
+        .toList();
+    if (existing.isEmpty || incoming.isEmpty) return false;
+    for (final a in incoming) {
+      for (final b in existing) {
+        if (a == b || PhoneUtils.matches(a, b)) return true;
       }
+    }
+    return false;
+  }
+
+  bool _isSupersededParentTeacherThread(Conversation conversation) {
+    if (conversation.isGroup ||
+        conversation.isBroadcast ||
+        conversation.isStaffOnlyDirectThread) {
       return false;
     }
+    final staffId = conversation.staffParticipantId?.trim();
+    final studentId = _primaryStudentId(_conversationStudentIds(conversation));
+    if (staffId == null || staffId.isEmpty || studentId == null) return false;
+    final canonical = _canonicalDirectParentTeacherConversationId(
+      staffParticipantId: staffId,
+      studentId: studentId,
+    );
+    if (conversation.id == canonical) return false;
+    return getConversation(canonical) != null;
+  }
 
-    if (usernamesOverlap()) return true;
-
-    final current = AuthService.currentUser?.username.trim().toLowerCase();
-    if (current != null &&
-        current.isNotEmpty &&
-        (existingUsers.contains(current) ||
-            existingUsers.any((u) => PhoneUtils.matches(u, current)))) {
-      return true;
+  List<Conversation> _findParentTeacherThreads({
+    required String staffParticipantId,
+    required List<String> studentIds,
+    List<String> parentUsernames = const [],
+  }) {
+    final wantedStudents = _normalizeStudentIds(studentIds).toSet();
+    final candidates = <Conversation>[];
+    for (final conversation in _conversations) {
+      if (conversation.isGroup ||
+          conversation.isBroadcast ||
+          conversation.isStaffOnlyDirectThread) {
+        continue;
+      }
+      if (!_sameStaffParticipant(
+        conversation.staffParticipantId,
+        staffParticipantId,
+      )) {
+        continue;
+      }
+      final existingStudents = _conversationStudentIds(conversation).toSet();
+      final studentHit = wantedStudents.isNotEmpty &&
+          existingStudents.any(wantedStudents.contains);
+      if (studentHit) {
+        candidates.add(conversation);
+        continue;
+      }
+      if (existingStudents.isEmpty &&
+          _parentUsernamesOverlap(
+            conversation.parentParticipantUsernames,
+            parentUsernames,
+          )) {
+        candidates.add(conversation);
+      }
     }
+    candidates.sort((a, b) {
+      final aCanonical =
+          _studentIdFromParentTeacherConversationId(a.id) != null ? 0 : 1;
+      final bCanonical =
+          _studentIdFromParentTeacherConversationId(b.id) != null ? 0 : 1;
+      if (aCanonical != bCanonical) return aCanonical.compareTo(bCanonical);
+      if (b.messages.length != a.messages.length) {
+        return b.messages.length.compareTo(a.messages.length);
+      }
+      final aTime = a.messages.isEmpty
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : a.messages.last.time;
+      final bTime = b.messages.isEmpty
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : b.messages.last.time;
+      return bTime.compareTo(aTime);
+    });
+    return candidates;
+  }
 
-    final existingStudents = conversation.linkedStudentIds
-        .map((id) => id.trim().toUpperCase())
-        .where((id) => id.isNotEmpty)
-        .toSet();
-    final incomingStudents = studentIds
-        .map((id) => id.trim().toUpperCase())
-        .where((id) => id.isNotEmpty)
-        .toSet();
-    final studentOverlap =
-        incomingStudents.isNotEmpty &&
-        existingStudents.isNotEmpty &&
-        incomingStudents.any(existingStudents.contains);
-
-    final parent = parentParticipantName?.trim().toLowerCase() ?? '';
-    final existingName =
-        conversation.parentParticipantName?.trim().toLowerCase() ?? '';
-    final nameMatch = parent.isNotEmpty &&
-        existingName.isNotEmpty &&
-        (parent == existingName ||
-            PhoneUtils.matches(parent, existingName) ||
-            existingUsers.contains(parent) ||
-            incomingUsers.contains(existingName));
-
-    if (nameMatch) return true;
-
-    // Same child, and we don't already know this is a different parent.
-    if (studentOverlap &&
-        (incomingUsers.isEmpty || existingUsers.isEmpty || usernamesOverlap())) {
-      return true;
+  String _ensureCanonicalParentTeacherThread(Conversation source) {
+    if (source.isGroup || source.isBroadcast || source.isStaffOnlyDirectThread) {
+      return source.id;
     }
+    _stampDirectParentThread(source);
+    final staffId = source.staffParticipantId?.trim();
+    final studentId = _primaryStudentId(_conversationStudentIds(source));
+    if (staffId == null || staffId.isEmpty || studentId == null) {
+      return source.id;
+    }
+    final canonicalId = _canonicalDirectParentTeacherConversationId(
+      staffParticipantId: staffId,
+      studentId: studentId,
+    );
+    if (source.id == canonicalId) return canonicalId;
 
-    return false;
+    var canonical = getConversation(canonicalId);
+    if (canonical == null) {
+      canonical = Conversation(
+        id: canonicalId,
+        name: source.name,
+        role: source.role,
+        messages: List<ChatMessage>.from(source.messages),
+        unread: source.unread,
+        parentParticipantName: source.parentParticipantName,
+        staffParticipantId: staffId,
+        counterpartyStaffId: source.counterpartyStaffId,
+        staffSubjectName: source.staffSubjectName,
+        linkedStudentIds: [studentId],
+        parentParticipantUsernames:
+            List<String>.from(source.parentParticipantUsernames),
+      );
+      _conversations.insert(0, canonical);
+    } else {
+      for (final message in source.messages) {
+        _copyMessageIfMissing(canonical, message);
+      }
+      canonical.messages.sort((a, b) => a.time.compareTo(b.time));
+    }
+    _mergeConversationParticipants(
+      canonical,
+      studentIds: [studentId],
+      parentUsernames: source.parentParticipantUsernames,
+      staffParticipantId: staffId,
+      staffSubjectName: source.staffSubjectName,
+    );
+    return canonicalId;
   }
 
   String openOrCreateConversation({
@@ -2348,11 +2476,7 @@ class SchoolDataService {
     final staffId = staffParticipantId?.trim();
     final peerStaffId = counterpartyStaffId?.trim();
     final hasStaffThread = staffId != null && staffId.isNotEmpty;
-    final studentIds = linkedStudentIds
-            ?.map((id) => id.trim().toUpperCase())
-            .where((id) => id.isNotEmpty)
-            .toList() ??
-        const <String>[];
+    final studentIds = _normalizeStudentIds(linkedStudentIds ?? const []);
     final parentUsernames = parentParticipantUsernames
             ?.map((u) => u.trim().toLowerCase())
             .where((u) => u.isNotEmpty)
@@ -2365,43 +2489,32 @@ class SchoolDataService {
         studentIds.isEmpty &&
         parentUsernames.isEmpty;
 
+    if (hasStaffThread && !isStaffToStaff) {
+      return _openOrCreateParentTeacherConversation(
+        contactName: contactName,
+        role: role,
+        staffId: staffId,
+        parentParticipantName: parentParticipantName,
+        staffSubjectName: staffSubjectName,
+        studentIds: studentIds,
+        parentUsernames: parentUsernames,
+      );
+    }
+
     for (final conversation in _conversations) {
       if (conversation.isGroup || conversation.isBroadcast) continue;
 
-      if (hasStaffThread) {
-        if (isStaffToStaff) {
-          if (!_staffPeerPairMatches(conversation, staffId, peerStaffId)) {
-            continue;
-          }
-        } else if (!_sameStaffParticipant(conversation.staffParticipantId, staffId)) {
-          continue;
-        } else if (peerStaffId != null &&
-            conversation.counterpartyStaffId?.trim().isNotEmpty == true &&
-            !_sameStaffParticipant(
-              conversation.counterpartyStaffId,
-              peerStaffId,
-            )) {
-          continue;
-        }
-        if (!_directThreadMatchesParent(
-          conversation,
-          parentParticipantName: parentParticipantName,
-          parentUsernames: parentUsernames,
-          studentIds: studentIds,
-        )) {
+      if (isStaffToStaff) {
+        if (!_staffPeerPairMatches(conversation, staffId, peerStaffId)) {
           continue;
         }
         _mergeConversationParticipants(
           conversation,
-          studentIds: studentIds,
-          parentUsernames: parentUsernames,
           staffParticipantId: staffId,
           counterpartyStaffId: peerStaffId,
           staffSubjectName: staffSubjectName,
         );
-        if (isStaffToStaff) {
-          _canonicalizeStaffToStaffThread(conversation);
-        }
+        _canonicalizeStaffToStaffThread(conversation);
         return conversation.id;
       }
 
@@ -2469,6 +2582,100 @@ class SchoolDataService {
       ),
     );
     return id;
+  }
+
+  String _openOrCreateParentTeacherConversation({
+    required String contactName,
+    required String role,
+    required String staffId,
+    String? parentParticipantName,
+    String? staffSubjectName,
+    required List<String> studentIds,
+    required List<String> parentUsernames,
+  }) {
+    var lookupStudents = List<String>.from(studentIds);
+    if (lookupStudents.isEmpty &&
+        parentParticipantName != null &&
+        parentParticipantName.trim().isNotEmpty) {
+      final recipient = MessagingAccessService.findParentRecipient(
+        parentParticipantName,
+        schoolId: AuthService.activeSchoolId,
+      );
+      lookupStudents = _normalizeStudentIds(recipient?.studentIds ?? const []);
+    }
+
+    final matches = _findParentTeacherThreads(
+      staffParticipantId: staffId,
+      studentIds: lookupStudents,
+      parentUsernames: parentUsernames,
+    );
+    final match = matches.isEmpty ? null : matches.first;
+
+    final overlapping = match == null
+        ? const <String>[]
+        : _conversationStudentIds(match)
+            .where((id) => lookupStudents.contains(id))
+            .toList();
+    final threadStudent = _primaryStudentId(overlapping) ??
+        (match == null ? null : _primaryStudentId(_conversationStudentIds(match))) ??
+        _primaryStudentId(lookupStudents);
+
+    void stamp(Conversation conversation) {
+      _mergeConversationParticipants(
+        conversation,
+        studentIds: threadStudent == null ? const [] : [threadStudent],
+        parentUsernames: parentUsernames,
+        staffParticipantId: staffId,
+        staffSubjectName: staffSubjectName,
+      );
+      if (threadStudent != null) {
+        conversation.linkedStudentIds
+          ..clear()
+          ..add(threadStudent);
+      }
+    }
+
+    if (match != null) {
+      stamp(match);
+      final canonicalId = _ensureCanonicalParentTeacherThread(match);
+      final canonical = getConversation(canonicalId);
+      if (canonical != null) {
+        for (final other in matches) {
+          for (final message in other.messages) {
+            _copyMessageIfMissing(canonical, message);
+          }
+        }
+        stamp(canonical);
+      }
+      return canonicalId;
+    }
+
+    final id = _deterministicDirectConversationId(
+      contactName: contactName,
+      staffParticipantId: staffId,
+      studentIds: threadStudent == null ? const [] : [threadStudent],
+      parentUsernames: parentUsernames,
+      parentParticipantName: parentParticipantName,
+    );
+    final existingById = _conversations.indexWhere((c) => c.id == id);
+    if (existingById >= 0) {
+      stamp(_conversations[existingById]);
+      return _ensureCanonicalParentTeacherThread(_conversations[existingById]);
+    }
+
+    final created = Conversation(
+      id: id,
+      name: contactName,
+      role: role,
+      messages: [],
+      parentParticipantName: parentParticipantName?.trim(),
+      staffParticipantId: staffId,
+      staffSubjectName: staffSubjectName?.trim(),
+      linkedStudentIds: threadStudent == null ? const [] : [threadStudent],
+      parentParticipantUsernames: List.from(parentUsernames),
+    );
+    _conversations.insert(0, created);
+    return created.id;
   }
 
   void _mergeConversationParticipants(
@@ -4649,9 +4856,11 @@ class SchoolDataService {
 
     final parentName = AuthService.currentUser?.fullName ?? 'Parent';
     final username = AuthService.currentUser?.username;
-    final studentIds = studentId != null
-        ? [studentId.trim().toUpperCase()]
-        : AuthService.activeLinkedStudentIds();
+    final studentIds = _normalizeStudentIds(
+      studentId != null
+          ? [studentId]
+          : AuthService.activeLinkedStudentIds(),
+    );
     final conversationId = openOrCreateConversation(
       contactName: member.displayName,
       role: member.conversationRole,
@@ -4662,8 +4871,13 @@ class SchoolDataService {
       ),
       parentParticipantName: parentName,
       linkedStudentIds: studentIds,
-      parentParticipantUsernames:
-          username != null ? [username.toLowerCase()] : const [],
+      parentParticipantUsernames: [
+        if (username != null && username.trim().isNotEmpty) username.toLowerCase(),
+        ...MessagingAccessService.parentLoginKeysForStudentIds(
+          studentIds,
+          parentName: parentName,
+        ),
+      ],
     );
 
     return _postAdminMessage(
