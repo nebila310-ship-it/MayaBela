@@ -463,7 +463,7 @@ void main() {
     );
   });
 
-  test('legacy user-phone thread migrates onto the teacher+student id', () {
+  test('legacy user-phone thread is reused for the same teacher and student', () {
     const legacyId = 'direct-TEACHER:$teacherId-user-$parentUsername';
     signIn(
       username: parentUsername,
@@ -496,9 +496,7 @@ void main() {
       staffId: StaffMemberOption.teacherKey(teacherId),
       studentId: studentId,
     );
-    expect(parentIds.single.toUpperCase(), contains(teacherId));
-    expect(parentIds.single.toUpperCase(), contains(studentId));
-    expect(parentIds.single, isNot(legacyId));
+    expect(parentIds, isNotEmpty);
     expect(
       SchoolDataService.instance
           .getConversation(parentIds.single)!
@@ -513,7 +511,7 @@ void main() {
       linkedTeacherId: teacherId,
     );
     final teacherIds = SchoolDataService.instance.sendAdminDirectMessage(
-      body: 'Teacher sees the migrated thread',
+      body: 'Teacher sees the existing thread',
       parentName: parentName,
     );
     expect(teacherIds.single, parentIds.single);
@@ -561,6 +559,94 @@ void main() {
     expect(first.single, isNot(second.single));
     expect(first.single.toUpperCase(), contains(studentId));
     expect(second.single.toUpperCase(), contains(siblingId));
+  });
+
+  test('reply in an existing two-child thread keeps that conversation id', () {
+    const siblingId = 'STU-9902';
+    const localTeacherId = 'TCH-9901';
+    const localStudentId = 'STU-9901';
+    const localParent = 'Nabil Ahmed';
+    const localParentPhone = '0911990001';
+    const existingId = 'direct-nabil-family';
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: localStudentId,
+        fullName: 'Maya Nabil',
+        grade: 'Grade 8',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2014, 4, 4),
+        fatherName: localParent,
+        fatherPhone: localParentPhone,
+      ),
+      AdminStudentRecord(
+        studentId: siblingId,
+        fullName: 'Brok Nabil',
+        grade: 'Grade 8',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2016, 4, 4),
+        fatherName: localParent,
+        fatherPhone: localParentPhone,
+      ),
+    ]);
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: localTeacherId,
+        fullName: 'Teacher Nabil',
+        assignedClass: className,
+        schoolId: schoolId,
+        subject: 'Mathematics',
+        loginUsername: 'teacher.nabil',
+        classAssignments: const [
+          TeacherClassAssignment(
+            className: className,
+            role: TeacherStaffRole.homeroomTeacher,
+          ),
+        ],
+      ),
+    ]);
+
+    signIn(
+      username: 'teacher.nabil',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: localTeacherId,
+    );
+    SchoolDataService.instance.applyPersistedConversations([
+      Conversation(
+        id: existingId,
+        name: localParent,
+        role: 'Parent',
+        parentParticipantName: localParent,
+        parentParticipantUsernames: const [localParentPhone],
+        staffParticipantId: StaffMemberOption.teacherKey(localTeacherId),
+        linkedStudentIds: const [localStudentId, siblingId],
+        messages: [
+          ChatMessage(
+            text: 'what shall we do next',
+            time: DateTime(2024, 7, 1),
+            senderRole: AuthService.roleParent,
+            senderUsername: localParentPhone,
+          ),
+        ],
+      ),
+    ]);
+
+    SchoolDataService.instance.sendMessage(existingId, 'just do maya homework');
+    final conversation = SchoolDataService.instance.getConversation(existingId)!;
+    expect(conversation.id, existingId);
+    expect(
+      conversation.linkedStudentIds,
+      containsAll([localStudentId, siblingId]),
+    );
+    expect(conversation.messages.last.text, 'just do maya homework');
+    expect(
+      SchoolDataService.instance.sendAdminDirectMessage(
+        body: 'hi',
+        parentName: localParent,
+      ).single,
+      existingId,
+    );
   });
 
   test('staff-to-staff conversation ids stay on the staff pair scheme', () {

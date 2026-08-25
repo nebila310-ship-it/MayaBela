@@ -1077,9 +1077,14 @@ class AppStrings implements AppStringsLike {
   String get schoolAdministration =>
       t('School administration', 'የትምህርት ቤት አስተዳደር');
   String get messageSendFailed => t(
-        'Could not send message. Check that this parent is in your classes.',
-        'መልዕክት መላክ አልተቻለም። ይህ ወላጅ በክፍልዎ ውስጥ መሆኑን ያረጋግጡ።',
-        'Ergaa erguu hin dandeenye. Maatiin kun kutaa keessan keessa akka jiru mirkaneessaa.',
+        'Could not send the message. Check your connection and try again.',
+        'መልዕክት መላክ አልተቻለም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።',
+        'Ergaa erguu hin dandeenye. Quunnamtii keessan mirkaneessaa, irra deebi\'aa yaalaa.',
+      );
+  String get messageParentNotInClasses => t(
+        'Could not start a new chat. Check that this parent is in your classes.',
+        'አዲስ ውይይት መጀመር አልተቻለም። ይህ ወላጅ በክፍልዎ ውስጥ መሆኑን ያረጋግጡ።',
+        'Haasaa haaraa jalqabuu hin dandeenye. Maatiin kun kutaa keessan keessa akka jiru mirkaneessaa.',
       );
   String get parentFeesComingSoonSubtitle => t(
         'Online fee payments for parents',
