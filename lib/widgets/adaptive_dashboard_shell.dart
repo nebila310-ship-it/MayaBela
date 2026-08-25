@@ -5,7 +5,6 @@ import 'package:mayabela/screens/notifications_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
-import 'package:mayabela/services/dashboard_navigation_store.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
@@ -14,11 +13,13 @@ import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/utils/adaptive_breakpoints.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
+import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
 import 'package:mayabela/widgets/dashboard_scaffold.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
-/// Desktop/tablet shell: sidebar navigation + top bar. Mobile uses [DashboardScaffold] unchanged.
+/// Desktop/tablet shell: collapsible classroom sidebar + top bar.
+/// Phone widths use [DashboardScaffold] with a slide-out menu.
 class AdaptiveDashboardShell extends StatelessWidget {
   const AdaptiveDashboardShell({
     super.key,
@@ -231,55 +232,42 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
         final s = AppLocale.instance.strings;
         final themeColor = widget.gradientColors.first;
         final unread = NotificationService.instance.unreadCount();
-        final entries = DashboardRegistry.visibleEntriesFor(widget.roleKey);
         final compact = UserPreferencesService.instance.compactDashboard;
         final crossAxis = AdaptiveBreakpoints.dashboardCrossAxisCount(
           context,
           compact: compact,
         );
-
-        final destinations = <NavigationRailDestination>[
-          const NavigationRailDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: Text('Home'),
-          ),
-          ...entries.map(
-            (entry) => NavigationRailDestination(
-              icon: Icon(entry.icon),
-              selectedIcon: Icon(entry.icon),
-              label: Text(s.dashboardTitle(entry.id, roleKey: widget.roleKey)),
-            ),
-          ),
-        ];
-
-        final isWideRail =
-            MediaQuery.sizeOf(context).width >= AdaptiveBreakpoints.wideDesktopMin;
+        final destinations = classroomNavDestinations(
+          roleKey: widget.roleKey,
+          s: s,
+        );
+        final collapsed =
+            UserPreferencesService.instance.classroomSidebarCollapsed;
 
         return Scaffold(
           backgroundColor: const Color(0xFFCFDBEA),
           body: Row(
             children: [
-              NavigationRail(
-                extended: isWideRail,
-                minExtendedWidth: 200,
-                selectedIndex: _selectedIndex,
-                labelType: isWideRail
-                    ? NavigationRailLabelType.none
-                    : NavigationRailLabelType.all,
-                backgroundColor: Colors.white.withValues(alpha: 0.96),
-                indicatorColor: themeColor.withValues(alpha: 0.15),
-                onDestinationSelected: (index) {
-                  setState(() => _selectedIndex = index);
-                  if (index == 0) return;
-                  final entry = entries[index - 1];
-                  final action = DashboardNavigationStore.instance
-                      .actionFor(widget.roleKey, entry.id);
-                  action?.call();
-                },
+              ClassroomSidebar(
+                title: widget.title,
+                accent: themeColor,
                 destinations: destinations,
+                selectedIndex: _selectedIndex.clamp(0, destinations.length - 1),
+                collapsed: collapsed,
+                onToggle: () {
+                  UserPreferencesService.instance
+                      .setClassroomSidebarCollapsed(!collapsed);
+                },
+                onSelect: (index) {
+                  setState(() => _selectedIndex = index);
+                  selectClassroomDestination(
+                    index: index,
+                    roleKey: widget.roleKey,
+                    destinations: destinations,
+                    onIndex: (i) => _selectedIndex = i,
+                  );
+                },
               ),
-              const VerticalDivider(width: 1),
               Expanded(
                 child: Column(
                   children: [
@@ -290,9 +278,27 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                         child: SizedBox(
                           height: 64,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Row(
                               children: [
+                                IconButton(
+                                  key: const Key('classroom-top-menu'),
+                                  tooltip: collapsed
+                                      ? s.expandClassroomSidebar
+                                      : s.collapseClassroomSidebar,
+                                  onPressed: () {
+                                    UserPreferencesService.instance
+                                        .setClassroomSidebarCollapsed(
+                                      !collapsed,
+                                    );
+                                  },
+                                  icon: Icon(
+                                    collapsed
+                                        ? Icons.menu_open_rounded
+                                        : Icons.menu_rounded,
+                                    color: Colors.white,
+                                  ),
+                                ),
                                 Expanded(
                                   child: Text(
                                     widget.title,

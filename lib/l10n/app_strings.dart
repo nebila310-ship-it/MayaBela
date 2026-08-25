@@ -413,6 +413,11 @@ class AppStrings implements AppStringsLike {
 
   String teacherPortalTitle(String school) =>
       t('$school Classroom', '$school ክፍል');
+  String get classroomHome => t('Home', 'መነሻ');
+  String get openClassroomMenu => t('Open menu', 'ምናሌ ክፈት');
+  String get closeClassroomMenu => t('Close menu', 'ምናሌ ዝጋ');
+  String get expandClassroomSidebar => t('Open sidebar', 'የጎን ምናሌ ክፈት');
+  String get collapseClassroomSidebar => t('Close sidebar', 'የጎን ምናሌ ዝጋ');
   String staffPortalTitle(String school) => t(
         '$school Staff Portal',
         '$school · ሰራተኛ',

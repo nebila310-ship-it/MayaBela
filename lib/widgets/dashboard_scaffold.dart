@@ -11,10 +11,11 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
+import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
-class DashboardScaffold extends StatelessWidget {
+class DashboardScaffold extends StatefulWidget {
   const DashboardScaffold({
     super.key,
     required this.title,
@@ -47,6 +48,9 @@ class DashboardScaffold extends StatelessWidget {
   final Widget? header;
   final bool hideWelcomeBanner;
   final bool hideBrandingBanner;
+
+  @override
+  State<DashboardScaffold> createState() => _DashboardScaffoldState();
 
   void _openAccountMenu(BuildContext context) {
     showDashboardAccountMenu(
@@ -211,6 +215,11 @@ class DashboardScaffold extends StatelessWidget {
     );
   }
 
+}
+
+class _DashboardScaffoldState extends State<DashboardScaffold> {
+  int _selectedIndex = 0;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -228,18 +237,51 @@ class DashboardScaffold extends StatelessWidget {
         final compact = UserPreferencesService.instance.compactDashboard;
         final width = MediaQuery.sizeOf(context).width;
         final crossAxis = compact && width >= 520 ? 3 : 2;
-        final themeColor = gradientColors.first;
-        final sectionList = sections;
-        final cardList = cards;
+        final themeColor = widget.gradientColors.first;
+        final sectionList = widget.sections;
+        final cardList = widget.cards;
+        final destinations = classroomNavDestinations(
+          roleKey: widget.roleKey,
+          s: s,
+        );
 
         return Scaffold(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? Theme.of(context).colorScheme.surface
               : const Color(0xFFCFDBEA),
+          drawer: ClassroomSidebar(
+            title: widget.title,
+            accent: themeColor,
+            destinations: destinations,
+            selectedIndex: _selectedIndex.clamp(0, destinations.length - 1),
+            collapsed: false,
+            inDrawer: true,
+            onToggle: () => Navigator.of(context).maybePop(),
+            onSelect: (index) {
+              setState(() => _selectedIndex = index);
+              selectClassroomDestination(
+                index: index,
+                roleKey: widget.roleKey,
+                destinations: destinations,
+                onIndex: (i) => _selectedIndex = i,
+              );
+              Navigator.of(context).maybePop();
+            },
+          ),
           appBar: AppBar(
             backgroundColor: themeColor,
             foregroundColor: Colors.white,
-            title: Text(title),
+            leading: Builder(
+              builder: (context) {
+                return IconButton(
+                  key: const Key('classroom-open-menu'),
+                  tooltip: s.openClassroomMenu,
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  icon: const Icon(Icons.menu_rounded),
+                );
+              },
+            ),
+            title: Text(widget.title),
             actions: [
               IconButton(
                 onPressed: () {
@@ -257,7 +299,7 @@ class DashboardScaffold extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => _openAccountMenu(context),
+                onPressed: () => widget._openAccountMenu(context),
                 tooltip: s.profile,
                 icon: CircleAvatar(
                   radius: 16,
@@ -279,7 +321,7 @@ class DashboardScaffold extends StatelessWidget {
                 padding: listPagePadding(context),
                 child: Column(
                   children: [
-                    if (!hideBrandingBanner &&
+                    if (!widget.hideBrandingBanner &&
                         AuthService.activeSchoolId != null &&
                         SchoolRegistryService.instance
                                 .lookup(AuthService.activeSchoolId) !=
@@ -307,16 +349,16 @@ class DashboardScaffold extends StatelessWidget {
                           compact: true,
                         ),
                       ),
-                    if (!hideWelcomeBanner) _buildWelcomeBanner(s),
-                    if (header != null) ...[
+                    if (!widget.hideWelcomeBanner) widget._buildWelcomeBanner(s),
+                    if (widget.header != null) ...[
                       const SizedBox(height: 16),
-                      header!,
+                      widget.header!,
                     ],
                     const SizedBox(height: 20),
                     if (sectionList != null && sectionList.isNotEmpty)
-                      _buildSectionedCards(sectionList, crossAxis, compact)
+                      widget._buildSectionedCards(sectionList, crossAxis, compact)
                     else
-                      _buildCardGrid(cardList, crossAxis, compact),
+                      widget._buildCardGrid(cardList, crossAxis, compact),
                   ],
                 ),
               ),
