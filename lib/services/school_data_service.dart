@@ -36,6 +36,7 @@ import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
 class SchoolDataService {
   SchoolDataService._() {
@@ -2174,20 +2175,139 @@ class SchoolDataService {
     String? parentParticipantName,
     required String contactName,
   }) {
-    if (parentUsernames.isNotEmpty) {
-      final sorted = parentUsernames.map((u) => u.toLowerCase()).toList()
-        ..sort();
-      return 'user-${sorted.join('_')}';
+    // One stable key only — joining every phone/username split parent and
+    // teacher onto different cloud documents so neither saw the other.
+    final canonical = _canonicalParentUsername(
+      parentUsernames,
+      parentParticipantName: parentParticipantName,
+    );
+    if (canonical != null) {
+      return 'user-$canonical';
     }
     if (studentIds.isNotEmpty) {
       final sorted = studentIds.map((id) => id.toUpperCase()).toList()..sort();
-      return 'stu-${sorted.join('_')}';
+      return 'stu-${sorted.first}';
     }
     final parent = parentParticipantName?.trim();
     if (parent != null && parent.isNotEmpty) {
       return 'name-${parent.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
     }
     return 'name-${contactName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
+  }
+
+  String? _canonicalParentUsername(
+    List<String> parentUsernames, {
+    String? parentParticipantName,
+  }) {
+    final phones = <String>[];
+    final others = <String>[];
+    for (final raw in parentUsernames) {
+      final phone = PhoneUtils.normalizeLocal(raw);
+      if (phone != null) {
+        phones.add(phone);
+      } else {
+        final trimmed = raw.trim().toLowerCase();
+        if (trimmed.isNotEmpty) others.add(trimmed);
+      }
+    }
+    final named = parentParticipantName?.trim() ?? '';
+    if (named.isNotEmpty) {
+      for (final phone in phones) {
+        if (PhoneUtils.matches(phone, named)) return phone;
+      }
+      final namedLower = named.toLowerCase();
+      for (final other in others) {
+        if (other == namedLower) return other;
+      }
+    }
+    if (phones.isNotEmpty) {
+      phones.sort();
+      return phones.first;
+    }
+    if (others.isNotEmpty) {
+      others.sort();
+      return others.first;
+    }
+    return null;
+  }
+
+  bool _sameStaffParticipant(String? left, String? right) {
+    final a = left?.trim().toLowerCase() ?? '';
+    final b = right?.trim().toLowerCase() ?? '';
+    return a.isNotEmpty && a == b;
+  }
+
+  bool _directThreadMatchesParent(
+    Conversation conversation, {
+    String? parentParticipantName,
+    required List<String> parentUsernames,
+    required List<String> studentIds,
+  }) {
+    if (conversation.isStaffOnlyDirectThread) return false;
+
+    final existingUsers = conversation.parentParticipantUsernames
+        .map((u) => u.trim().toLowerCase())
+        .where((u) => u.isNotEmpty)
+        .toSet();
+    final incomingUsers = parentUsernames
+        .map((u) => u.trim().toLowerCase())
+        .where((u) => u.isNotEmpty)
+        .toSet();
+
+    bool usernamesOverlap() {
+      if (incomingUsers.isEmpty || existingUsers.isEmpty) return false;
+      for (final incoming in incomingUsers) {
+        for (final existing in existingUsers) {
+          if (incoming == existing || PhoneUtils.matches(incoming, existing)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    if (usernamesOverlap()) return true;
+
+    final current = AuthService.currentUser?.username.trim().toLowerCase();
+    if (current != null &&
+        current.isNotEmpty &&
+        (existingUsers.contains(current) ||
+            existingUsers.any((u) => PhoneUtils.matches(u, current)))) {
+      return true;
+    }
+
+    final existingStudents = conversation.linkedStudentIds
+        .map((id) => id.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final incomingStudents = studentIds
+        .map((id) => id.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final studentOverlap =
+        incomingStudents.isNotEmpty &&
+        existingStudents.isNotEmpty &&
+        incomingStudents.any(existingStudents.contains);
+
+    final parent = parentParticipantName?.trim().toLowerCase() ?? '';
+    final existingName =
+        conversation.parentParticipantName?.trim().toLowerCase() ?? '';
+    final nameMatch = parent.isNotEmpty &&
+        existingName.isNotEmpty &&
+        (parent == existingName ||
+            PhoneUtils.matches(parent, existingName) ||
+            existingUsers.contains(parent) ||
+            incomingUsers.contains(existingName));
+
+    if (nameMatch) return true;
+
+    // Same child, and we don't already know this is a different parent.
+    if (studentOverlap &&
+        (incomingUsers.isEmpty || existingUsers.isEmpty || usernamesOverlap())) {
+      return true;
+    }
+
+    return false;
   }
 
   String openOrCreateConversation({
@@ -2229,11 +2349,14 @@ class SchoolDataService {
           if (!_staffPeerPairMatches(conversation, staffId, peerStaffId)) {
             continue;
           }
-        } else if (conversation.staffParticipantId?.trim() != staffId) {
+        } else if (!_sameStaffParticipant(conversation.staffParticipantId, staffId)) {
           continue;
         } else if (peerStaffId != null &&
             conversation.counterpartyStaffId?.trim().isNotEmpty == true &&
-            conversation.counterpartyStaffId!.trim() != peerStaffId) {
+            !_sameStaffParticipant(
+              conversation.counterpartyStaffId,
+              peerStaffId,
+            )) {
           continue;
         }
         if (!_directThreadMatchesParent(
@@ -2322,38 +2445,6 @@ class SchoolDataService {
       ),
     );
     return id;
-  }
-
-  bool _directThreadMatchesParent(
-    Conversation conversation, {
-    String? parentParticipantName,
-    required List<String> parentUsernames,
-    required List<String> studentIds,
-  }) {
-    final parent = parentParticipantName?.trim();
-    final usernameMatch = parentUsernames.isEmpty ||
-        parentUsernames.any(
-          conversation.parentParticipantUsernames
-              .map((u) => u.toLowerCase())
-              .contains,
-        ) ||
-        (AuthService.currentUser?.username != null &&
-            conversation.parentParticipantUsernames.any(
-              (u) =>
-                  u.toLowerCase() ==
-                  AuthService.currentUser!.username.toLowerCase(),
-            ));
-    final studentMatch = studentIds.isEmpty ||
-        studentIds.any(conversation.linkedStudentIds.contains);
-    if (parent == null || parent.isEmpty) {
-      return usernameMatch || studentMatch;
-    }
-    if (conversation.parentParticipantName == null ||
-        conversation.parentParticipantName!.trim().toLowerCase() !=
-            parent.toLowerCase()) {
-      return false;
-    }
-    return usernameMatch || studentMatch || conversation.messages.isNotEmpty;
   }
 
   void _mergeConversationParticipants(
