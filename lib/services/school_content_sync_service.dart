@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Notifies dashboards and content screens when cloud homework, grades,
-/// learning materials, timetables, or workflow data changes.
+/// learning materials, timetables, messages, or workflow data changes.
 class SchoolContentSyncService extends ChangeNotifier {
   SchoolContentSyncService._();
   static final instance = SchoolContentSyncService._();

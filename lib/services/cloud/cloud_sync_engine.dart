@@ -83,7 +83,12 @@ abstract final class CloudSyncEngine {
       stop();
       return;
     }
-    if (CloudSyncProgressService.instance.isLoading) return;
+    if (CloudSyncProgressService.instance.isLoading) {
+      if (!CloudSyncProgressService.instance.isLoadingStale) return;
+      CloudSyncProgressService.instance.completePartial(
+        message: 'Ready',
+      );
+    }
     if (_backoffUntil != null && DateTime.now().isBefore(_backoffUntil!)) {
       return;
     }

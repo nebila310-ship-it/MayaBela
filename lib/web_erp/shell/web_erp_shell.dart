@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
+import 'package:mayabela/services/dashboard_badge_service.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
@@ -156,6 +159,9 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
         WebErpPrefsService.instance,
         SchoolContentSyncService.instance,
         StaffRegistryNotifier.instance,
+        NotificationService.instance,
+        DashboardBadgeService.instance,
+        ConversationRealtimeSync.instance,
       ]),
       builder: (context, _) {
         final narrow = WebViewport.isNarrow(context);

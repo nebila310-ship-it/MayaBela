@@ -55,6 +55,10 @@ class SchoolAuthCloudService {
         schoolId.isNotEmpty;
   }
 
+  @visibleForTesting
+  static Map<String, dynamic> schoolClaimsFromAccessToken(String accessToken) =>
+      _claimsFromAccessToken(accessToken);
+
   static Map<String, dynamic> _claimsFromAccessToken(String accessToken) {
     try {
       final parts = accessToken.split('.');
@@ -702,7 +706,21 @@ class SchoolAuthCloudService {
     if (user == null) return false;
 
     try {
-      final claims = user.appMetadata;
+      Map<String, dynamic> claims = Map<String, dynamic>.from(user.appMetadata);
+      final session = SupabaseBootstrap.client.auth.currentSession;
+      if (session != null &&
+          (claims['role'] == null ||
+              claims['schoolId'] == null ||
+              claims['username'] == null)) {
+        final fromJwt = _claimsFromAccessToken(session.accessToken);
+        fromJwt.forEach((key, value) {
+          if (value == null) return;
+          final existing = claims[key];
+          if (existing == null || '$existing'.trim().isEmpty) {
+            claims[key] = value;
+          }
+        });
+      }
       final role = claims['role'] as String?;
       final schoolId = claims['schoolId'] as String?;
       final username = claims['username'] as String?;
@@ -740,6 +758,15 @@ class SchoolAuthCloudService {
         assignedClassNames: _stringList(claims['assignedClassNames']),
         linkedStudentIds: claimLinkedIds,
       );
+      if (SchoolRegistryService.instance.lookup(schoolId) == null) {
+        _hydrateSchoolFromLogin({
+          'id': schoolId,
+          'name': (claims['schoolName'] as String?)?.trim().isNotEmpty == true
+              ? claims['schoolName']
+              : schoolId,
+          'status': 'active',
+        }, schoolId);
+      }
       return AuthService.restoreSession(username, schoolId: schoolId);
     } catch (e) {
       if (kDebugMode) {

@@ -350,7 +350,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
         'bootstrap.sessionRestore',
         () => SessionPrefsService.instance
             .restoreActiveSession()
-            .timeout(const Duration(seconds: 2)),
+            .timeout(Duration(seconds: kIsWeb ? 12 : 8)),
       );
       if (restored) {
         AppLockService.instance.ensureSessionMonitoring();
@@ -361,7 +361,12 @@ class _AppBootstrapState extends State<AppBootstrap> {
       if (kDebugMode) {
         debugPrint('[AppBootstrap] session bootstrap failed: $e');
       }
-      restored = false;
+      restored = await SessionPrefsService.instance.restoreSavedLocalSession();
+      if (restored) {
+        AppLockService.instance.ensureSessionMonitoring();
+        unawaited(SessionCloudSync.startSessionWithCloudSync());
+        unawaited(NotificationService.instance.onSessionStarted());
+      }
     }
 
     StartupProfiler.printSummary(title: 'Cold Start Summary');

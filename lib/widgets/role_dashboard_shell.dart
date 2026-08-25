@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
@@ -51,6 +53,8 @@ class RoleDashboardShell extends StatelessWidget {
         NotificationService.instance,
         DashboardBadgeService.instance,
         EnrollmentService.instance,
+        SchoolContentSyncService.instance,
+        ConversationRealtimeSync.instance,
         UserPreferencesService.instance,
         StaffRegistryNotifier.instance,
         StudentPortalSyncService.instance,

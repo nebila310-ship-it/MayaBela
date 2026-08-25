@@ -62,8 +62,9 @@ abstract final class SessionCloudSync {
     } finally {
       StaffContentRealtimeSync.markInitialSyncComplete();
       await RealtimeMessagingBootstrap.onSessionStarted();
-      if (CloudSyncFlags.enabled &&
-          await SchoolAuthCloudService.hasSchoolClaims()) {
+      // Start the live loop even if JWT claims are still catching up after a
+      // browser refresh — ticks no-op until school claims are present.
+      if (CloudSyncFlags.enabled && AuthService.currentUser != null) {
         CloudSyncEngine.start();
       }
     }
