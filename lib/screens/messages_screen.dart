@@ -141,6 +141,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
       ok = await _data.persistConversationToCloud(sent.single);
     }
     _refresh();
+    if (!ok && sent.isEmpty && draft.parentName != null) {
+      _showSendResult(false, classCheck: true);
+      return;
+    }
     _showSendResult(ok);
   }
 
@@ -157,7 +161,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
-  void _showSendResult(bool sent) {
+  void _showSendResult(bool sent, {bool classCheck = false}) {
     if (sent) {
       _showSentSnackBar();
       return;
@@ -165,7 +169,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final s = AppLocale.instance.strings;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(s.messageSendFailed),
+        content: Text(
+          classCheck ? s.messageParentNotInClasses : s.messageSendFailed,
+        ),
         backgroundColor: const Color(0xFFB91C1C),
       ),
     );
