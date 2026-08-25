@@ -256,4 +256,134 @@ void main() {
       isEmpty,
     );
   });
+
+  test('teacher send stamps parent phone from student record without enrollment',
+      () {
+    EnrollmentService.instance.replaceLinks(const []);
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: studentId,
+        fullName: 'Kidus Assefa',
+        grade: 'Grade 8',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2014, 4, 4),
+        fatherName: parentName,
+        fatherPhone: parentUsername,
+      ),
+    ]);
+
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    final ids = SchoolDataService.instance.sendAdminDirectMessage(
+      body: body,
+      parentName: parentName,
+    );
+    expect(ids, isNotEmpty);
+    expect(
+      SchoolDataService.instance
+          .getConversation(ids.single)!
+          .parentParticipantUsernames,
+      contains(parentUsername),
+    );
+
+    signIn(
+      username: parentUsername,
+      roleKey: AuthService.roleParent,
+      fullName: parentUsername,
+    );
+    expect(
+      SchoolDataService.instance
+          .getConversationsForRole(AuthService.roleParent)
+          .any((c) => c.id == ids.single),
+      isTrue,
+    );
+  });
+
+  test('teacher reply stamps missing parent username onto the thread', () {
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    SchoolDataService.instance.applyPersistedConversations([
+      Conversation(
+        id: 'direct-reply-stamp',
+        name: parentName,
+        role: 'Parent',
+        parentParticipantName: parentName,
+        staffParticipantId: StaffMemberOption.teacherKey(teacherId),
+        linkedStudentIds: const [studentId],
+        messages: [
+          ChatMessage(
+            text: 'From parent',
+            time: DateTime(2024, 3, 3),
+            senderRole: AuthService.roleParent,
+          ),
+        ],
+      ),
+    ]);
+
+    SchoolDataService.instance.sendMessage(
+      'direct-reply-stamp',
+      'Teacher reply for the parent',
+    );
+    final updated =
+        SchoolDataService.instance.getConversation('direct-reply-stamp')!;
+    expect(updated.parentParticipantUsernames, contains(parentUsername));
+    expect(updated.messages.last.text, 'Teacher reply for the parent');
+  });
+
+  test('cloud merge keeps local teacher messages the parent has not pulled yet',
+      () {
+    const id = 'direct-merge-keep-local';
+    SchoolDataService.instance.applyPersistedConversations([
+      Conversation(
+        id: id,
+        name: parentName,
+        role: 'Parent',
+        parentParticipantName: parentName,
+        parentParticipantUsernames: const [parentUsername],
+        linkedStudentIds: const [studentId],
+        messages: [
+          ChatMessage(
+            text: 'From parent',
+            time: DateTime(2024, 4, 1, 8),
+            senderRole: AuthService.roleParent,
+          ),
+          ChatMessage(
+            text: 'Teacher reply still local',
+            time: DateTime(2024, 4, 1, 9),
+            senderRole: AuthService.roleTeacher,
+            senderUsername: 'teacher.msg',
+          ),
+        ],
+      ),
+    ]);
+
+    SchoolDataService.instance.mergeConversationFromCloud(
+      Conversation(
+        id: id,
+        name: parentName,
+        role: 'Parent',
+        parentParticipantName: parentName,
+        parentParticipantUsernames: const [parentUsername],
+        linkedStudentIds: const [studentId],
+        messages: [
+          ChatMessage(
+            text: 'From parent',
+            time: DateTime(2024, 4, 1, 8),
+            senderRole: AuthService.roleParent,
+          ),
+        ],
+      ),
+    );
+
+    final merged = SchoolDataService.instance.getConversation(id)!;
+    expect(merged.messages.map((m) => m.text), contains('Teacher reply still local'));
+    expect(merged.messages.length, 2);
+  });
 }

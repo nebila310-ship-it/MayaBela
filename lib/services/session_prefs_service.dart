@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/models/school_lifecycle.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/persistence/auth_persistence_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 
@@ -45,17 +48,17 @@ class SessionPrefsService {
     final savedUsername = prefs.getString(_usernameKey);
     final savedSchool = prefs.getString(_schoolKey);
 
-    if (SupabaseBootstrap.isInitialized &&
-        savedUsername != null &&
-        savedUsername.isNotEmpty) {
-      // supabase_flutter recovers persistSession during initialize; wait briefly.
-      for (var i = 0; i < 20; i++) {
+    // Always wait for the persisted Supabase session — previous builds could
+    // wipe session_* keys while the JWT was still in localStorage.
+    if (SupabaseBootstrap.isInitialized) {
+      for (var i = 0; i < 50; i++) {
         if (SupabaseBootstrap.client.auth.currentSession != null) break;
         await Future<void>.delayed(const Duration(milliseconds: 100));
       }
     }
 
     if (await SchoolAuthCloudService.instance.restoreFromFirebaseAuth()) {
+      await _rememberRestoredSession();
       return true;
     }
 
@@ -66,14 +69,22 @@ class SessionPrefsService {
             .timeout(const Duration(seconds: 8));
       } catch (_) {}
       if (await SchoolAuthCloudService.instance.restoreFromFirebaseAuth()) {
+        await _rememberRestoredSession();
         return true;
       }
     }
 
-    return restoreSavedLocalSession(
+    final restored = await restoreSavedLocalSession(
       username: savedUsername,
       schoolId: savedSchool,
     );
+    if (restored) await _rememberRestoredSession();
+    return restored;
+  }
+
+  Future<void> _rememberRestoredSession() async {
+    await saveActiveSession();
+    unawaited(AuthPersistenceService.instance.saveAll());
   }
 
   /// Keep the last dashboard user after a slow/failed cloud token refresh.
@@ -82,12 +93,27 @@ class SessionPrefsService {
     String? schoolId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final user = (username ?? prefs.getString(_usernameKey) ?? '').trim();
-    final school = (schoolId ?? prefs.getString(_schoolKey) ?? '').trim();
+    var user = (username ?? prefs.getString(_usernameKey) ?? '').trim();
+    var school = (schoolId ?? prefs.getString(_schoolKey) ?? '').trim();
+    var role = (prefs.getString(_roleKey) ?? '').trim();
+    var staffRoles = prefs.getStringList(_staffRolesKey) ?? const <String>[];
+
+    if (user.isEmpty || role.isEmpty) {
+      final claims = _jwtSchoolClaims();
+      if (user.isEmpty) {
+        user = (claims['username'] as String?)?.trim() ?? '';
+      }
+      if (school.isEmpty) {
+        school = (claims['schoolId'] as String?)?.trim() ?? '';
+      }
+      if (role.isEmpty) {
+        role = (claims['role'] as String?)?.trim() ?? '';
+      }
+    }
+
     if (user.isEmpty) return false;
 
     if (AuthService.findUser(user) == null) {
-      final role = (prefs.getString(_roleKey) ?? '').trim();
       if (role.isEmpty) return false;
       AuthService.mergePersistedUser(
         RegisteredUser(
@@ -95,7 +121,7 @@ class SessionPrefsService {
           password: '',
           roleKey: role,
           schoolId: school.isEmpty ? null : school,
-          staffRoles: prefs.getStringList(_staffRolesKey) ?? const [],
+          staffRoles: staffRoles,
         ),
       );
     }
@@ -111,10 +137,22 @@ class SessionPrefsService {
       );
     }
 
-    return AuthService.restoreSession(
+    final restored = AuthService.restoreSession(
       user,
       schoolId: school.isEmpty ? null : school,
     );
+    if (restored) {
+      await saveActiveSession();
+    }
+    return restored;
+  }
+
+  Map<String, dynamic> _jwtSchoolClaims() {
+    if (!SupabaseBootstrap.isInitialized) return const {};
+    final token =
+        SupabaseBootstrap.client.auth.currentSession?.accessToken.trim();
+    if (token == null || token.isEmpty) return const {};
+    return SchoolAuthCloudService.schoolClaimsFromAccessToken(token);
   }
 
   Future<void> clearActiveSession() async {

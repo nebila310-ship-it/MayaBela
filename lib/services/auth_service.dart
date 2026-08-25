@@ -809,7 +809,8 @@ class AuthService {
             ),
           );
         }
-        unawaited(SessionPrefsService.instance.saveActiveSession());
+        await SessionPrefsService.instance.saveActiveSession();
+        unawaited(AuthPersistenceService.instance.saveAll());
         return null;
       }
 
@@ -822,7 +823,10 @@ class AuthService {
           username: username,
           password: password,
         );
-        if (localError == null) return null;
+        if (localError == null) {
+          await SessionPrefsService.instance.saveActiveSession();
+          return null;
+        }
         return 'cloud_required';
       }
       if (!kDebugMode) {
@@ -832,11 +836,15 @@ class AuthService {
       return 'cloud_required';
     }
 
-    return validateLogin(
+    final localError = validateLogin(
       roleKey: roleKey,
       username: username,
       password: password,
     );
+    if (localError == null) {
+      await SessionPrefsService.instance.saveActiveSession();
+    }
+    return localError;
   }
 
   static String? validateLogin({

@@ -855,23 +855,54 @@ class SchoolDataService {
     }
   }
 
-  /// Merge a single conversation from Firestore (real-time sync).
+  /// Merge a single conversation from the school cloud (real-time sync).
   void mergeConversationFromCloud(Conversation cloud) {
     final index = _conversations.indexWhere((c) => c.id == cloud.id);
-    if (index >= 0) {
-      final local = _conversations[index];
-      if (cloud.messages.length >= local.messages.length) {
-        _conversations[index] = cloud;
-        unawaited(
-          MessagePersistenceService.instance.saveFromService(pushCloud: false),
-        );
-      }
-    } else {
+    if (index < 0) {
       _conversations.add(cloud);
       unawaited(
         MessagePersistenceService.instance.saveFromService(pushCloud: false),
       );
+      return;
     }
+
+    final local = _conversations[index];
+    final seen = <String>{
+      for (final message in local.messages) _messageMergeKey(message),
+    };
+    var added = false;
+    for (final message in cloud.messages) {
+      if (seen.add(_messageMergeKey(message))) {
+        local.messages.add(message);
+        added = true;
+      }
+    }
+    if (added) {
+      local.messages.sort((a, b) => a.time.compareTo(b.time));
+    }
+    final beforeUsers = local.parentParticipantUsernames.length;
+    final beforeStudents = local.linkedStudentIds.length;
+    _mergeConversationParticipants(
+      local,
+      studentIds: cloud.linkedStudentIds,
+      parentUsernames: cloud.parentParticipantUsernames,
+      staffParticipantId: cloud.staffParticipantId,
+      counterpartyStaffId: cloud.counterpartyStaffId,
+      staffSubjectName: cloud.staffSubjectName,
+    );
+    if (added ||
+        local.parentParticipantUsernames.length != beforeUsers ||
+        local.linkedStudentIds.length != beforeStudents) {
+      unawaited(
+        MessagePersistenceService.instance.saveFromService(pushCloud: false),
+      );
+    }
+  }
+
+  String _messageMergeKey(ChatMessage message) {
+    final username = message.senderUsername?.trim().toLowerCase() ?? '';
+    final staff = message.senderStaffId?.trim().toLowerCase() ?? '';
+    return '${message.time.millisecondsSinceEpoch}|${message.senderRole}|$username|$staff|${message.text}';
   }
 
   void _persistConversation(String conversationId) {
@@ -1329,7 +1360,13 @@ class SchoolDataService {
                 linkedStudentIds: recipient?.studentIds ?? const [],
               ),
         linkedStudentIds: recipient?.studentIds,
-        parentParticipantUsernames: MessagingAccessService.usernamesOf(recipient),
+        parentParticipantUsernames: [
+          ...MessagingAccessService.usernamesOf(recipient),
+          ...MessagingAccessService.parentLoginKeysForStudentIds(
+            recipient?.studentIds ?? const [],
+            parentName: trimmedParent,
+          ),
+        ],
       );
     } else {
       final member = StaffMemberOption.resolve(trimmedStaff!);
@@ -1416,6 +1453,7 @@ class SchoolDataService {
       );
     }
 
+    _stampDirectParentThread(conversation);
     _persistConversation(conversationId);
     return [conversationId];
   }
@@ -1744,6 +1782,7 @@ class SchoolDataService {
     if (!MessagingAccessService.canView(conversation, senderRole)) {
       return;
     }
+    _stampDirectParentThread(conversation);
     final senderMeta = _messageSenderMeta(
       senderRole,
       relationshipStudentId: conversation.linkedStudentIds.isNotEmpty
@@ -1797,6 +1836,39 @@ class SchoolDataService {
       targetStudentId: targeting.targetStudentId,
     );
     _persistConversation(conversationId);
+  }
+
+  void _stampDirectParentThread(Conversation conversation) {
+    if (conversation.isGroup || conversation.isBroadcast) return;
+    final parentName = conversation.parentParticipantName?.trim();
+    if (parentName != null && parentName.isNotEmpty) {
+      final recipient = MessagingAccessService.findParentRecipient(
+        parentName,
+        schoolId: AuthService.activeSchoolId,
+      );
+      if (recipient != null) {
+        _mergeConversationParticipants(
+          conversation,
+          studentIds: recipient.studentIds,
+          parentUsernames: [
+            ...MessagingAccessService.usernamesOf(recipient),
+            ...MessagingAccessService.parentLoginKeysForStudentIds(
+              recipient.studentIds,
+              parentName: parentName,
+            ),
+          ],
+        );
+      }
+    }
+    if (conversation.linkedStudentIds.isNotEmpty) {
+      _mergeConversationParticipants(
+        conversation,
+        parentUsernames: MessagingAccessService.parentLoginKeysForStudentIds(
+          conversation.linkedStudentIds,
+          parentName: conversation.parentParticipantName,
+        ),
+      );
+    }
   }
 
   ({

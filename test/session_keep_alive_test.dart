@@ -55,6 +55,8 @@ void main() {
     expect(restored, isTrue);
     expect(AuthService.currentUser?.username, username);
     expect(AuthService.activeSchoolId, schoolId);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('session_role_key'), AuthService.roleTeacher);
   });
 
   test('local restore hydrates a missing school instead of sending login',

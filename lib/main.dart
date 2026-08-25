@@ -315,9 +315,7 @@ class AppBootstrap extends StatefulWidget {
 }
 
 class _AppBootstrapState extends State<AppBootstrap> {
-  late Widget _home = kIsWeb
-      ? const LoginScreen()
-      : const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget _home = const Scaffold(body: Center(child: CircularProgressIndicator()));
 
   @override
   void initState() {
@@ -372,13 +370,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
     StartupProfiler.printSummary(title: 'Cold Start Summary');
 
     if (!mounted) return;
-    if (restored) {
-      setState(() {
-        _home = AuthNavigation.homeForCurrentUser();
-      });
-    } else if (!kIsWeb) {
-      setState(() => _home = const LoginScreen());
-    }
+    setState(() {
+      _home = restored
+          ? AuthNavigation.homeForCurrentUser()
+          : const LoginScreen();
+    });
   }
 
   @override

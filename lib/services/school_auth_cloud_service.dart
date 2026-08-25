@@ -55,7 +55,6 @@ class SchoolAuthCloudService {
         schoolId.isNotEmpty;
   }
 
-  @visibleForTesting
   static Map<String, dynamic> schoolClaimsFromAccessToken(String accessToken) =>
       _claimsFromAccessToken(accessToken);
 
