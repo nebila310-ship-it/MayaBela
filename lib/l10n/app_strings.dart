@@ -99,6 +99,16 @@ class AppStrings implements AppStringsLike {
         'የተማሪ ሙከራ ተጠቀም',
         'Demo barataa fayyadami',
       );
+  String get transportDemoHint => t(
+        'Demo: School TB-001 · 0911667788 · Welcome12!',
+        'ሙከራ: School TB-001 · 0911667788 · Welcome12!',
+        'Demo: School TB-001 · 0911667788 · Welcome12!',
+      );
+  String get useTransportDemo => t(
+        'Use transport demo',
+        'የትራንስፖርት ሙከራ ተጠቀም',
+        'Demo geejjibaa fayyadami',
+      );
   String get login => t('Login', 'ግባ');
   String get signUp => t('Sign up', 'ተመዝገብ');
   String get forgotPassword => t('Forgot password?', 'የይለፍ ቃል ረሳሽ?');

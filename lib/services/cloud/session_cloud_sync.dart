@@ -123,6 +123,7 @@ abstract final class SessionCloudSync {
     final user = AuthService.currentUser;
     if (user == null || !SupabaseBootstrap.isInitialized) return;
     if (AuthService.isPublicDemoStudentSession) return;
+    if (AuthService.isPublicDemoDriverSession) return;
 
     await StartupProfiler.track('session.pullCloud', () async {
       switch (user.roleKey) {
@@ -229,6 +230,11 @@ abstract final class SessionCloudSync {
   }
 
   static Future<void> onDriverSessionStarted({bool trackProgress = false}) async {
+    if (AuthService.isPublicDemoDriverSession) {
+      AuthService.alignDriverSessionWithRegistry();
+      await _applyDriverSessionLocally(skipDatabaseSync: true);
+      return;
+    }
     if (trackProgress) CloudSyncProgressService.instance.step('Loading driver data…');
     await _pullIfReady(
       ({bool trackProgress = false}) =>
