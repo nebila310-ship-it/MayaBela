@@ -518,46 +518,70 @@ void main() {
   });
 
   test('two children with the same teacher get two conversation ids', () {
-    const siblingId = 'STU-8802';
+    const siblingId = 'STU-6602';
+    const localTeacherId = 'TCH-6601';
+    const localStudentId = 'STU-6601';
+    const localParent = 'Two Child Parent';
+    const localPhone = '0911660001';
     StudentRegistryService.instance.applyPersistedStudents([
       AdminStudentRecord(
-        studentId: studentId,
-        fullName: 'Kidus Assefa',
+        studentId: localStudentId,
+        fullName: 'Kidus Two',
         grade: 'Grade 8',
         className: className,
         schoolId: schoolId,
         dateOfBirth: DateTime(2014, 4, 4),
-        fatherName: parentName,
+        fatherName: localParent,
+        fatherPhone: localPhone,
+        homeroomTeacherId: localTeacherId,
       ),
       AdminStudentRecord(
         studentId: siblingId,
-        fullName: 'Hana Assefa',
+        fullName: 'Hana Two',
         grade: 'Grade 8',
         className: className,
         schoolId: schoolId,
         dateOfBirth: DateTime(2016, 4, 4),
-        fatherName: parentName,
+        fatherName: localParent,
+        fatherPhone: localPhone,
+        homeroomTeacherId: localTeacherId,
+      ),
+    ]);
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: localTeacherId,
+        fullName: 'Teacher Two',
+        assignedClass: className,
+        schoolId: schoolId,
+        subject: 'Mathematics',
+        loginUsername: 'teacher.two',
+        classAssignments: const [
+          TeacherClassAssignment(
+            className: className,
+            role: TeacherStaffRole.homeroomTeacher,
+          ),
+        ],
       ),
     ]);
 
     signIn(
-      username: parentUsername,
+      username: localPhone,
       roleKey: AuthService.roleParent,
-      fullName: parentUsername,
-      linkedStudentIds: const [studentId, siblingId],
+      fullName: localPhone,
+      linkedStudentIds: const [localStudentId, siblingId],
     );
     final first = SchoolDataService.instance.sendParentDirectMessage(
       body: 'About Kidus',
-      staffId: StaffMemberOption.teacherKey(teacherId),
-      studentId: studentId,
+      staffId: StaffMemberOption.teacherKey(localTeacherId),
+      studentId: localStudentId,
     );
     final second = SchoolDataService.instance.sendParentDirectMessage(
       body: 'About Hana',
-      staffId: StaffMemberOption.teacherKey(teacherId),
+      staffId: StaffMemberOption.teacherKey(localTeacherId),
       studentId: siblingId,
     );
     expect(first.single, isNot(second.single));
-    expect(first.single.toUpperCase(), contains(studentId));
+    expect(first.single.toUpperCase(), contains(localStudentId));
     expect(second.single.toUpperCase(), contains(siblingId));
   });
 
@@ -693,5 +717,105 @@ void main() {
       messages: [message],
     );
     expect(conversation.isVisibleToRole(AuthService.roleTeacher), isTrue);
+  });
+
+  test('reply on a split clone is copied onto the existing linked thread', () {
+    const localTeacherId = 'TCH-7701';
+    const localStudentId = 'STU-7701';
+    const localParent = 'Clone Parent';
+    const localPhone = '0911770001';
+    const originalId = 'direct-original-nabil';
+    const cloneId = 'direct-TEACHER:$localTeacherId-stu-$localStudentId';
+
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: localStudentId,
+        fullName: 'Maya Clone',
+        grade: 'Grade 8',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2014, 4, 4),
+        fatherName: localParent,
+        fatherPhone: localPhone,
+        homeroomTeacherId: localTeacherId,
+      ),
+    ]);
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: localTeacherId,
+        fullName: 'Teacher Clone',
+        assignedClass: className,
+        schoolId: schoolId,
+        subject: 'Mathematics',
+        loginUsername: 'teacher.clone',
+        classAssignments: const [
+          TeacherClassAssignment(
+            className: className,
+            role: TeacherStaffRole.homeroomTeacher,
+          ),
+        ],
+      ),
+    ]);
+
+    signIn(
+      username: 'teacher.clone',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: localTeacherId,
+    );
+    SchoolDataService.instance.applyPersistedConversations([
+      Conversation(
+        id: originalId,
+        name: localParent,
+        role: 'Parent',
+        parentParticipantName: localParent,
+        parentParticipantUsernames: const [localPhone],
+        staffParticipantId: StaffMemberOption.teacherKey(localTeacherId),
+        linkedStudentIds: const [localStudentId],
+        messages: [
+          ChatMessage(
+            text: 'what shall we do next',
+            time: DateTime(2024, 7, 1, 17, 39),
+            senderRole: AuthService.roleParent,
+            senderUsername: localPhone,
+          ),
+          ChatMessage(
+            text: 'nothing',
+            time: DateTime(2024, 7, 1, 17, 40),
+            senderRole: AuthService.roleTeacher,
+            senderUsername: 'teacher.clone',
+          ),
+        ],
+      ),
+      Conversation(
+        id: cloneId,
+        name: localParent,
+        role: 'Parent',
+        parentParticipantName: localParent,
+        parentParticipantUsernames: const [localPhone],
+        staffParticipantId: StaffMemberOption.teacherKey(localTeacherId),
+        linkedStudentIds: const [localStudentId],
+        messages: [
+          ChatMessage(
+            text: 'just do maya homework',
+            time: DateTime(2024, 7, 1, 18, 13),
+            senderRole: AuthService.roleTeacher,
+            senderUsername: 'teacher.clone',
+          ),
+        ],
+      ),
+    ]);
+
+    SchoolDataService.instance.sendMessage(cloneId, 'n');
+    expect(
+      SchoolDataService.instance.getConversation(originalId)!.messages.last.text,
+      'n',
+    );
+    expect(
+      SchoolDataService.instance
+          .getConversationsForRole(AuthService.roleTeacher)
+          .where((c) => c.linkedStudentIds.contains(localStudentId))
+          .map((c) => c.id),
+      [originalId],
+    );
   });
 }
