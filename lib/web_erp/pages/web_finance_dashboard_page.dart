@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_chart_widgets.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 
 class WebFinanceDashboardPage extends StatelessWidget {
   const WebFinanceDashboardPage({super.key});
@@ -38,7 +40,7 @@ class WebFinanceDashboardPage extends StatelessWidget {
     });
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: WebViewport.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -89,7 +91,8 @@ class WebFinanceDashboardPage extends StatelessWidget {
           Container(
             width: double.infinity,
             decoration: WebErpTheme.cardDecoration(context),
-            child: DataTable(
+            child: WebErpHScroll(
+              child: DataTable(
               columns: const [
                 DataColumn(label: Text('Student')),
                 DataColumn(label: Text('Title')),
@@ -108,6 +111,7 @@ class WebFinanceDashboardPage extends StatelessWidget {
                   ),
               ],
             ),
+            ),
           ),
         ],
       ),
@@ -120,44 +124,54 @@ class WebFinanceDashboardPage extends StatelessWidget {
     double value,
     Color color,
   ) {
-    return Container(
-      width: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: WebErpTheme.cardDecoration(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Text(
-            '${value.toStringAsFixed(0)} ETB',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final cardWidth = c.maxWidth < 440 ? c.maxWidth : 200.0;
+        return Container(
+          width: cardWidth,
+          padding: const EdgeInsets.all(16),
+          decoration: WebErpTheme.cardDecoration(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Text(
+                '${value.toStringAsFixed(0)} ETB',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _countCard(BuildContext context, String label, int value) {
-    return Container(
-      width: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: WebErpTheme.cardDecoration(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label),
-          const SizedBox(height: 8),
-          Text(
-            '$value',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final cardWidth = c.maxWidth < 440 ? c.maxWidth : 200.0;
+        return Container(
+          width: cardWidth,
+          padding: const EdgeInsets.all(16),
+          decoration: WebErpTheme.cardDecoration(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label),
+              const SizedBox(height: 8),
+              Text(
+                '$value',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

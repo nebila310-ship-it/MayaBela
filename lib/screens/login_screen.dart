@@ -1008,7 +1008,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final compact = WebViewport.isNarrow(context);
     final phone = WebViewport.isCompactPhone(context);
-    final cardMaxWidth = width < 480 ? width - 24 : 440.0;
+    final cardMaxWidth = phone
+        ? width - 32
+        : width < 480
+            ? width - 24
+            : 440.0;
 
     final loginCard = ConstrainedBox(
       constraints: BoxConstraints(
@@ -1017,10 +1021,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          vertical: compact ? 12 : 28,
-          horizontal: compact ? 12 : 20,
+          vertical: phone ? 0 : (compact ? 12 : 28),
+          horizontal: phone ? 0 : (compact ? 12 : 20),
         ),
         child: WebLoginCard(
+          showNotch: !phone,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               compact ? 20 : 28,
@@ -1056,13 +1061,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(width: 14),
-                        const Text(
-                          'SIGN IN',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2,
+                        const Expanded(
+                          child: Text(
+                            'SIGN IN',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                            ),
                           ),
                         ),
                       ],
@@ -1123,51 +1132,97 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           const WebLoginBackground(),
           if (!phone) const WebLoginWatermark(),
-          SafeArea(
-            child: compact
-                ? SingleChildScrollView(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: loginCard,
-                    ),
-                  )
-                : Row(
-                    children: [
-                      const Spacer(flex: 3),
-                      loginCard,
-                      const Spacer(flex: 2),
-                    ],
-                  ),
-          ),
-          Positioned(
-            top: 16,
-            right: compact ? 12 : 24,
-            child: SafeArea(child: _buildTopBar(_theme)),
-          ),
-          Positioned(
-            bottom: compact ? 12 : 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ParentSignUpScreen(),
+          if (phone)
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 28,
+                      ),
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: _buildTopBar(_theme),
+                          ),
+                          const SizedBox(height: 12),
+                          loginCard,
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ParentSignUpScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              s.registerAsParent,
+                              style: const TextStyle(
+                                color: Color(0xFF0D47A1),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
-                child: Text(
-                  s.registerAsParent,
-                  style: const TextStyle(
-                    color: Color(0xFF0D47A1),
-                    fontWeight: FontWeight.w600,
+              ),
+            )
+          else
+            SafeArea(
+              child: compact
+                  ? SingleChildScrollView(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: loginCard,
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        const Spacer(flex: 3),
+                        loginCard,
+                        const Spacer(flex: 2),
+                      ],
+                    ),
+            ),
+          if (!phone) ...[
+            Positioned(
+              top: 16,
+              right: compact ? 12 : 24,
+              child: SafeArea(child: _buildTopBar(_theme)),
+            ),
+            Positioned(
+              bottom: compact ? 12 : 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ParentSignUpScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    s.registerAsParent,
+                    style: const TextStyle(
+                      color: Color(0xFF0D47A1),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

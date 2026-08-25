@@ -208,7 +208,13 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                               const AdminEducationalBackground(
                                 accentColor: WebErpTheme.primary,
                               ),
-                              _pageBody(narrow: true),
+                              SafeArea(
+                                top: false,
+                                bottom: false,
+                                child: ClipRect(
+                                  child: _pageBody(narrow: true),
+                                ),
+                              ),
                             ],
                           ),
                         )
