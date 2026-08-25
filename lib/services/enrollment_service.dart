@@ -12,6 +12,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 
 class EnrollmentService {
   EnrollmentService._();
@@ -99,9 +100,10 @@ class EnrollmentService {
     }
 
     final sid = studentId.trim().toUpperCase();
+    final username = PhoneUtils.loginKey(parentUsername).toLowerCase();
     final existing = _parentLinks.where(
       (link) =>
-          link.parentUsername == parentUsername.toLowerCase() &&
+          _sameParentUsername(link.parentUsername, username) &&
           link.studentId == sid &&
           link.status != ParentLinkStatus.rejected,
     );
@@ -111,8 +113,12 @@ class EnrollmentService {
 
     _parentLinks.add(
       ParentLinkRequest(
-        id: 'PL-${_nextLinkId++}',
-        parentUsername: parentUsername.toLowerCase(),
+        id: cloudLinkId(
+          schoolId: schoolId,
+          parentUsername: username,
+          studentId: sid,
+        ),
+        parentUsername: username,
         parentFullName: parentFullName,
         studentId: sid,
         schoolId: schoolId.trim().toUpperCase(),
@@ -188,10 +194,32 @@ class EnrollmentService {
     );
   }
 
+  /// Stable cloud document id so the same parent+child is one row on every device.
+  static String cloudLinkId({
+    required String schoolId,
+    required String parentUsername,
+    required String studentId,
+  }) {
+    final school = schoolId.trim().toUpperCase();
+    final user = PhoneUtils.loginKey(parentUsername).toLowerCase();
+    final stu = studentId.trim().toUpperCase();
+    return 'PL-${school}__${user}__$stu'
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+  }
+
+  static bool _sameParentUsername(String stored, String username) {
+    final a = stored.trim().toLowerCase();
+    final b = username.trim().toLowerCase();
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+    return PhoneUtils.matches(stored, username);
+  }
+
   List<ParentLinkRequest> linksForParent(String username) {
     ensureSeeded();
-    final lower = username.toLowerCase();
-    return _parentLinks.where((l) => l.parentUsername == lower).toList();
+    return _parentLinks
+        .where((l) => _sameParentUsername(l.parentUsername, username))
+        .toList();
   }
 
   List<String> approvedStudentIdsForParent(String username) {

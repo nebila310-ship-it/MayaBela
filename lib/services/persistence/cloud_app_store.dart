@@ -29,6 +29,7 @@ import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 import 'package:mayabela/services/cloud/school_account_ids.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/cloud_sync_progress_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
@@ -1555,16 +1556,17 @@ class CloudAppStore {
 
   Future<void> _pullParentLinks() async {
     final role = AuthService.currentUser?.roleKey;
-    final List<Map<String, dynamic>> rows;
+    var rows = await _schoolRead(AppCollections.parentLinkRequests);
     if (role == AuthService.roleParent) {
-      final username = AuthService.currentUser?.username.toLowerCase();
-      if (username == null) return;
-      rows = await _schoolRead(
-        AppCollections.parentLinkRequests,
-        equals: {'parentUsername': username},
-      );
-    } else {
-      rows = await _schoolRead(AppCollections.parentLinkRequests);
+      final username = AuthService.currentUser?.username;
+      if (username == null || username.trim().isEmpty) return;
+      rows = rows.where((map) {
+        final stored = '${map['parentUsername'] ?? ''}';
+        final a = stored.trim().toLowerCase();
+        final b = username.trim().toLowerCase();
+        if (a.isNotEmpty && a == b) return true;
+        return PhoneUtils.matches(stored, username);
+      }).toList();
     }
     if (rows.isEmpty) return;
 
