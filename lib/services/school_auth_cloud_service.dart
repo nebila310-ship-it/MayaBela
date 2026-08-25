@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/models/cloud/app_data_maps.dart';
+import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -361,6 +362,7 @@ class SchoolAuthCloudService {
   Future<SchoolAuthCloudResult> registerParent({
     required RegisteredUser user,
     required String password,
+    List<ParentChildRegistration> children = const [],
   }) async {
     if (!isAvailable) {
       return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
@@ -373,7 +375,20 @@ class SchoolAuthCloudService {
         'email': user.email,
         'phone': user.phone,
         'fullName': user.fullName,
-        'linkedStudentIds': user.linkedStudentIds,
+        'children': children
+            .map(
+              (child) => {
+                'studentId': child.studentId,
+                'dateOfBirth': child.dateOfBirth.toIso8601String(),
+                'relationship': child.relationship.name,
+                'hasMedicalCondition': child.hasMedicalCondition,
+                if (child.medicalConditionDetails != null)
+                  'medicalConditionDetails': child.medicalConditionDetails,
+                if (child.otherMedicalInfo != null)
+                  'otherMedicalInfo': child.otherMedicalInfo,
+              },
+            )
+            .toList(),
       });
       if (data == null || data['error'] != null) {
         return SchoolAuthCloudResult(

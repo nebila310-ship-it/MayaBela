@@ -373,6 +373,42 @@ export function normalizeUsername(value: unknown): string {
   return String(value || "").trim().toLowerCase();
 }
 
+/** Ethiopian mobile login key, e.g. 0911234567. */
+export function ethiopianLoginKey(value: unknown): string {
+  const normalized = normalizeUsername(value);
+  let digits = normalized.replace(/\D/g, "");
+  if (!digits) return normalized;
+  if (digits.startsWith("251") && digits.length >= 12) {
+    digits = digits.slice(3);
+  }
+  digits = digits.replace(/^0+/, "");
+  if (digits.length === 9 && (digits.startsWith("9") || digits.startsWith("7"))) {
+    digits = `0${digits}`;
+  }
+  if (digits.length === 10 && digits.startsWith("0")) return digits;
+  return normalized;
+}
+
+export function usernamesMatch(a: unknown, b: unknown): boolean {
+  const na = normalizeUsername(a);
+  const nb = normalizeUsername(b);
+  if (na && nb && na === nb) return true;
+  const ka = ethiopianLoginKey(a);
+  const kb = ethiopianLoginKey(b);
+  return !!ka && ka === kb;
+}
+
+export function parentLinkDocId(
+  schoolId: string,
+  parentUsername: string,
+  studentId: string,
+): string {
+  const school = String(schoolId || "").trim().toUpperCase();
+  const user = ethiopianLoginKey(parentUsername);
+  const stu = String(studentId || "").trim().toUpperCase();
+  return `PL-${school}__${user}__${stu}`.replace(/[^A-Za-z0-9._-]/g, "_");
+}
+
 export function uniqueStrings(values: unknown, cap = ACCESS_CLAIM_CAP): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -993,16 +1029,22 @@ export async function enrichAccessProfile(
     );
     const hasClassNames =
       ((enriched.linkedClassNames as string[]) || []).length > 0;
-    // Skip a full parent_link_requests scan when the account already has
-    // linked students (typical after first successful login).
-    if (ids.size === 0) {
-      const links = await queryDocs(sb, "parent_link_requests", [
-        { column: "schoolId", op: "eq", value: schoolId },
-      ], 200);
-      for (const doc of links) {
-        if (doc.data.parentUsername !== username) continue;
-        if (doc.data.status !== "approved") continue;
-        const studentId = String(doc.data.studentId || "").trim().toUpperCase();
+    // Always scan approved parent_link_requests. Login used to take the first
+    // 200 school-wide rows, so this parent's approval could be missing on a
+    // new phone even after staff approved it.
+    if (schoolId) {
+      const { data: linkRows, error: linkError } = await sb
+        .from("app_documents")
+        .select("data")
+        .eq("collection", "parent_link_requests")
+        .eq("school_id", schoolId)
+        .eq("data->>status", "approved")
+        .limit(500);
+      if (linkError) throw linkError;
+      for (const row of linkRows || []) {
+        const data = (row.data || {}) as Record<string, unknown>;
+        if (!usernamesMatch(data.parentUsername, username)) continue;
+        const studentId = String(data.studentId || "").trim().toUpperCase();
         if (studentId) ids.add(studentId);
       }
     }

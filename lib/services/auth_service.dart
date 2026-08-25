@@ -573,25 +573,39 @@ class AuthService {
     final user = currentUser;
     if (user == null || user.roleKey != roleParent) return true;
     EnrollmentService.instance.ensureSeeded();
-    return EnrollmentService.instance.hasApprovedAccess(user.username);
+    if (EnrollmentService.instance.hasApprovedAccess(user.username)) {
+      return true;
+    }
+    // New phone/browser: enrollment rows may not be local yet, but school-login
+    // already stamped approved student IDs on the JWT / profile.
+    return user.linkedStudentIds.any((id) => id.trim().isNotEmpty);
   }
 
   static bool isParentPendingApproval() {
+    if (isParentAccessApproved()) return false;
     final user = currentUser;
     if (user == null || user.roleKey != roleParent) return false;
     EnrollmentService.instance.ensureSeeded();
     return EnrollmentService.instance.hasPendingOnly(user.username) ||
-        (!EnrollmentService.instance.hasApprovedAccess(user.username) &&
-            EnrollmentService.instance.linksForParent(user.username).any(
+        EnrollmentService.instance.linksForParent(user.username).any(
               (l) => l.status == ParentLinkStatus.pending,
-            ));
+            );
   }
 
   static void updateParentLinks(String username, List<String> studentIds) {
+    final ids = studentIds
+        .map((id) => id.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
+        .toList();
     final user = _users[username.toLowerCase()];
     if (user != null) {
-      user.linkedStudentIds = List.from(studentIds);
+      user.linkedStudentIds = List.from(ids);
       unawaited(_persistUser(user));
+    }
+    if (currentUser != null &&
+        currentUser!.username.toLowerCase() == username.toLowerCase()) {
+      currentUser!.linkedStudentIds = List.from(ids);
+      sessionListenable.value++;
     }
   }
 
@@ -1229,6 +1243,7 @@ class AuthService {
       final cloud = await SchoolAuthCloudService.instance.registerParent(
         user: user,
         password: password,
+        children: children,
       );
       if (cloud.ok) {
         user.password = passwordRedactedMarker;

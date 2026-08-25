@@ -131,7 +131,7 @@ class _ParentPendingScreenState extends State<ParentPendingScreen> {
     if (_refreshing) return;
     setState(() => _refreshing = true);
     try {
-      await SessionCloudSync.onSessionStarted();
+      await SessionCloudSync.awaitRoleCloudSync();
     } catch (_) {}
     if (!mounted) return;
     setState(() => _refreshing = false);
@@ -144,13 +144,26 @@ class _ParentPendingScreenState extends State<ParentPendingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthService.currentUser!;
-    final links = EnrollmentService.instance.sortedLinksForParent(user.username);
-    final hasPending = links.any((l) => l.status == ParentLinkStatus.pending);
-
     return ListenableBuilder(
-      listenable: AppLocale.instance,
+      listenable: Listenable.merge([
+        AppLocale.instance,
+        AuthService.sessionListenable,
+      ]),
       builder: (context, _) {
+        if (AuthService.isParentAccessApproved()) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ParentDashboard()),
+            );
+          });
+        }
+
+        final user = AuthService.currentUser!;
+        final links =
+            EnrollmentService.instance.sortedLinksForParent(user.username);
+        final hasPending =
+            links.any((l) => l.status == ParentLinkStatus.pending);
         final s = AppLocale.instance.strings;
         return Scaffold(
           appBar: AppBar(

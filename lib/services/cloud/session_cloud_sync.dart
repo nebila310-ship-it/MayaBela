@@ -484,7 +484,9 @@ abstract final class SessionCloudSync {
     EnrollmentService.instance.ensureSeeded();
     final approved =
         EnrollmentService.instance.approvedStudentIdsForParent(user.username);
-    AuthService.updateParentLinks(user.username, approved);
+    if (approved.isNotEmpty) {
+      AuthService.updateParentLinks(user.username, approved);
+    }
 
     if (SchoolDatabaseService.instance.isInitialized) {
       try {
