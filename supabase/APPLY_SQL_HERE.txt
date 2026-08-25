@@ -4,3 +4,7 @@
 # Paste the full contents of:
 # supabase/migrations/20260725120000_app_documents.sql
 # then click Run.
+#
+# Teacher Send: also paste and Run
+# supabase/migrations/20260825163000_upsert_school_conversation.sql
+

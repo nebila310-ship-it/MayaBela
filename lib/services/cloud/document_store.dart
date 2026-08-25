@@ -114,11 +114,13 @@ class DocumentStore {
 
     Map<String, dynamic> payload = scoped;
     if (merge) {
-      final existing = await readDoc(collection: collection, docId: docId);
-      if (existing != null) {
-        payload = {...existing, ...scoped};
-        payload.remove('_docId');
-      }
+      try {
+        final existing = await readDoc(collection: collection, docId: docId);
+        if (existing != null) {
+          payload = {...existing, ...scoped};
+          payload.remove('_docId');
+        }
+      } catch (_) {}
     }
     payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
     _stampRowVersion(collection, payload);
@@ -140,6 +142,33 @@ class DocumentStore {
         reason: 'cloud unavailable',
       );
       return;
+    }
+
+    if (collection == 'conversations') {
+      try {
+        await db.rpc(
+          'upsert_school_conversation',
+          params: {
+            'p_doc_id': docId,
+            'p_data': payload,
+          },
+        );
+        await CloudOutboxService.instance.ack(collection, docId);
+        return;
+      } catch (e) {
+        final s = '$e'.toLowerCase();
+        final rpcMissing = s.contains('upsert_school_conversation') ||
+            s.contains('pgrst202') ||
+            s.contains('does not exist') ||
+            s.contains('42883') ||
+            s.contains('404');
+        if (!rpcMissing && _isGuardError(e)) {
+          throw _guardError(collection, e);
+        }
+        if (!rpcMissing && kDebugMode) {
+          debugPrint('upsert_school_conversation fallback: $e');
+        }
+      }
     }
 
     try {
@@ -235,12 +264,16 @@ class DocumentStore {
     required String docId,
   }) async {
     if (!available) return null;
-    final row = await db
+    var q = db
         .from('app_documents')
         .select()
         .eq('collection', collection)
-        .eq('doc_id', docId)
-        .maybeSingle();
+        .eq('doc_id', docId);
+    final sid = _resolvedSchoolId();
+    if (sid != null && sid.isNotEmpty) {
+      q = q.eq('school_id', sid);
+    }
+    final row = await q.maybeSingle();
     if (row == null) return null;
     return _rowToDoc(Map<String, dynamic>.from(row));
   }

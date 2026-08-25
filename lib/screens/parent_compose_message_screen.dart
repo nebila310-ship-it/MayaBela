@@ -250,7 +250,9 @@ class _ParentComposeMessageScreenState extends State<ParentComposeMessageScreen>
 
         SnackBar(
 
-          content: Text(s.messageSendFailed),
+          content: Text(
+            _data.lastConversationPersistError ?? s.messageSendFailed,
+          ),
 
           backgroundColor: const Color(0xFFB91C1C),
 

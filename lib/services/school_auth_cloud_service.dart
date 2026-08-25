@@ -57,6 +57,11 @@ class SchoolAuthCloudService {
     if (fromUser != null && fromUser.isNotEmpty) {
       return fromUser.toUpperCase();
     }
+    return jwtSchoolId();
+  }
+
+  /// School id from the live JWT — must match `jwt_school_id()` on writes.
+  static String? jwtSchoolId() {
     if (!SupabaseBootstrap.isInitialized) return null;
     try {
       final session = SupabaseBootstrap.client.auth.currentSession;

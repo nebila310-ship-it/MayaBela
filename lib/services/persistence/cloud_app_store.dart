@@ -1465,7 +1465,8 @@ class CloudAppStore {
     String? schoolId,
     bool requireCloud = false,
   }) async {
-    final sid = (schoolId ??
+    final sid = (SchoolAuthCloudService.jwtSchoolId() ??
+            schoolId ??
             SchoolAuthCloudService.resolvedSchoolId() ??
             AuthService.activeSchoolId ??
             '')
