@@ -38,6 +38,7 @@ import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
 class SchoolDataService {
@@ -916,6 +917,7 @@ class SchoolDataService {
 
   Future<bool> persistConversationToCloud(String conversationId) async {
     AuthService.alignTeacherSessionWithRegistry();
+    await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
     var conversation = getConversation(conversationId);
     if (conversation == null) return false;
     _stampDirectParentThread(conversation);
@@ -932,6 +934,7 @@ class SchoolDataService {
         debugPrint('persistConversationToCloud: $e');
       }
       try {
+        await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
         await MessagePersistenceService.instance.saveConversation(
           conversation,
           requireCloud: true,
