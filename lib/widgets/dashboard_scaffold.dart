@@ -222,7 +222,8 @@ class DashboardScaffold extends StatelessWidget {
         final s = AppLocale.instance.strings;
         final unread = NotificationService.instance.unreadCount();
         final compact = UserPreferencesService.instance.compactDashboard;
-        final crossAxis = compact ? 3 : 2;
+        final width = MediaQuery.sizeOf(context).width;
+        final crossAxis = compact && width >= 520 ? 3 : 2;
         final themeColor = gradientColors.first;
         final sectionList = sections;
         final cardList = cards;

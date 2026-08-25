@@ -7,6 +7,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/services/web_admin_stats_service.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_chart_widgets.dart';
 import 'package:mayabela/web_erp/widgets/web_stat_card.dart';
 
@@ -22,7 +23,7 @@ class WebAdminOverviewPage extends StatelessWidget {
         SchoolDataService.instance.getUpcomingEvents(days: 45).take(5);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: WebViewport.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -151,7 +152,9 @@ class WebAdminOverviewPage extends StatelessWidget {
                 ? 4
                 : c.maxWidth > 600
                     ? 3
-                    : 2;
+                    : c.maxWidth > 400
+                        ? 2
+                        : 1;
         final cards = [
           WebStatCard(
             label: 'Total Students',
@@ -285,10 +288,10 @@ class WebAdminOverviewPage extends StatelessWidget {
             children: [
               Text(
                 'Welcome, $name',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
-                  fontSize: 24,
+                  fontSize: WebViewport.isCompactPhone(context) ? 20 : 24,
                 ),
               ),
               const SizedBox(height: 6),

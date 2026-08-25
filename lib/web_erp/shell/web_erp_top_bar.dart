@@ -53,7 +53,6 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
   @override
   Widget build(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
-    final phone = WebViewport.isCompactPhone(context);
     final schoolId = AuthService.activeSchoolId;
     final school = schoolId == null
         ? null
@@ -75,7 +74,7 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
           ),
         ),
       ),
-      padding: EdgeInsets.symmetric(horizontal: phone ? 8 : 16),
+      padding: EdgeInsets.symmetric(horizontal: narrow ? 8 : 16),
       child: Row(
         children: [
           if (widget.onOpenMenu != null) ...[
@@ -84,16 +83,16 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               onPressed: widget.onOpenMenu,
               icon: const Icon(Icons.menu),
             ),
-            if (!phone) const SizedBox(width: 4),
+            if (!narrow) const SizedBox(width: 4),
           ],
-          if (phone && widget.onBack != null) ...[
+          if (narrow && widget.onBack != null) ...[
             IconButton(
               tooltip: 'Back',
               onPressed: widget.onBack,
               icon: const Icon(Icons.arrow_back),
             ),
           ],
-          if (!phone) ...[
+          if (!narrow) ...[
             const SchoolBrandingHeader(compact: true),
             const SizedBox(width: 12),
           ],
@@ -102,7 +101,7 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               schoolName,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    fontSize: phone ? 14 : null,
+                    fontSize: narrow ? 14 : null,
                   ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -135,7 +134,7 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               onPressed: widget.onOpenSearch,
               icon: const Icon(Icons.search),
             ),
-          if (!phone)
+          if (!narrow)
             PopupMenuButton<String>(
               tooltip: 'Language',
               onSelected: (code) => AppLocale.instance.setLanguage(code),
@@ -153,7 +152,7 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             ),
           ),
-          if (!phone) ...[
+          if (!narrow) ...[
             if (ModuleAccess.canView('support'))
               _iconBtn(
                 Icons.mail_outline,
@@ -194,12 +193,12 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               const PopupMenuItem(value: 'logout', child: Text('Logout')),
             ],
             child: CircleAvatar(
-              radius: phone ? 14 : 16,
+              radius: narrow ? 14 : 16,
               backgroundColor: WebErpTheme.primary.withValues(alpha: 0.15),
-              child: Icon(Icons.person, size: phone ? 16 : 18),
+              child: Icon(Icons.person, size: narrow ? 16 : 18),
             ),
           ),
-          if (!phone) ...[
+          if (!narrow) ...[
             const SizedBox(width: 8),
             ListenableBuilder(
               listenable: UserPreferencesService.instance,

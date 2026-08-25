@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 
 String formatInventoryDate(DateTime date) {
   final d = date.toLocal();
@@ -16,27 +17,38 @@ Widget inventoryPageHeader(
   String? subtitle,
   List<Widget>? actions,
 }) {
+  final titleBlock = Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: WebErpTheme.sectionTitle(context)),
+      if (subtitle != null) ...[
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+      ],
+    ],
+  );
+  if (actions == null || actions.isEmpty) return titleBlock;
+  final narrow = MediaQuery.sizeOf(context).width < 768;
+  if (narrow) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        titleBlock,
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: actions),
+      ],
+    );
+  }
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: WebErpTheme.sectionTitle(context)),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      ...?actions,
+      Expanded(child: titleBlock),
+      ...actions,
     ],
   );
 }
@@ -46,8 +58,8 @@ Widget inventorySearchField({
   required ValueChanged<String> onChanged,
   double width = 280,
 }) {
-  return SizedBox(
-    width: width,
+  return ConstrainedBox(
+    constraints: BoxConstraints(maxWidth: width),
     child: TextField(
       decoration: InputDecoration(
         hintText: hint,
@@ -65,10 +77,7 @@ Widget inventoryDataCard(BuildContext context, {required Widget child}) {
   return Container(
     width: double.infinity,
     decoration: WebErpTheme.cardDecoration(context),
-    child: SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: child,
-    ),
+    child: WebErpHScroll(child: child),
   );
 }
 

@@ -10,6 +10,7 @@ import 'package:mayabela/web_erp/pages/web_buses_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_live_gps_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 import 'package:mayabela/widgets/mobile_erp_host.dart';
 
 class WebTransportDashboardPage extends StatefulWidget {
@@ -185,7 +186,8 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                         padding: EdgeInsets.all(32),
                         child: Center(child: Text('No buses registered yet.')),
                       )
-                    : DataTable(
+                    : WebErpHScroll(
+                        child: DataTable(
                         columns: const [
                           DataColumn(label: Text('Bus')),
                           DataColumn(label: Text('Plate')),
@@ -229,6 +231,7 @@ class _WebTransportDashboardPageState extends State<WebTransportDashboardPage> {
                             ),
                         ],
                       ),
+                    ),
               ),
             ],
           ),
