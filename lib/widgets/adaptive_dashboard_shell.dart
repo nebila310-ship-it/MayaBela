@@ -269,6 +269,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                 },
               ),
               Expanded(
+                child: ClipRect(
                 child: Column(
                   children: [
                     Material(
@@ -276,7 +277,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                       child: SafeArea(
                         bottom: false,
                         child: SizedBox(
-                          height: 64,
+                          height: ClassroomSidebar.headerHeight,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Row(
@@ -355,9 +356,9 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                           AdminEducationalBackground(accentColor: themeColor),
                           SingleChildScrollView(
                             padding: listPagePadding(context).copyWith(
-                              left: 28,
-                              right: 28,
-                              top: 24,
+                              left: 16,
+                              right: 20,
+                              top: 20,
                             ),
                             child: Align(
                               alignment: Alignment.topCenter,
@@ -432,6 +433,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             ],
