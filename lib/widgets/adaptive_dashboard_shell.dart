@@ -244,110 +244,109 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
         final collapsed =
             UserPreferencesService.instance.classroomSidebarCollapsed;
 
+        void toggleSidebar() {
+          UserPreferencesService.instance
+              .setClassroomSidebarCollapsed(!collapsed);
+        }
+
         return Scaffold(
           backgroundColor: const Color(0xFFCFDBEA),
-          body: Row(
+          body: Column(
             children: [
-              ClassroomSidebar(
-                title: widget.title,
-                accent: themeColor,
-                destinations: destinations,
-                selectedIndex: _selectedIndex.clamp(0, destinations.length - 1),
-                collapsed: collapsed,
-                onToggle: () {
-                  UserPreferencesService.instance
-                      .setClassroomSidebarCollapsed(!collapsed);
-                },
-                onSelect: (index) {
-                  setState(() => _selectedIndex = index);
-                  selectClassroomDestination(
-                    index: index,
-                    roleKey: widget.roleKey,
-                    destinations: destinations,
-                    onIndex: (i) => _selectedIndex = i,
-                  );
-                },
-              ),
-              Expanded(
-                child: ClipRect(
-                child: Column(
-                  children: [
-                    Material(
-                      color: themeColor,
-                      child: SafeArea(
-                        bottom: false,
-                        child: SizedBox(
-                          height: ClassroomSidebar.headerHeight,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Row(
-                              children: [
-                                IconButton(
-                                  key: const Key('classroom-top-menu'),
-                                  tooltip: collapsed
-                                      ? s.expandClassroomSidebar
-                                      : s.collapseClassroomSidebar,
-                                  onPressed: () {
-                                    UserPreferencesService.instance
-                                        .setClassroomSidebarCollapsed(
-                                      !collapsed,
-                                    );
-                                  },
-                                  icon: Icon(
-                                    collapsed
-                                        ? Icons.menu_open_rounded
-                                        : Icons.menu_rounded,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    widget.title,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const NotificationsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: Badge(
-                                    isLabelVisible: unread > 0,
-                                    label: Text(
-                                      unread > 99 ? '99+' : '$unread',
-                                    ),
-                                    child: const Icon(
-                                      Icons.notifications,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () => _openAccountMenu(context),
-                                  icon: const CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.white24,
-                                    child: Icon(
-                                      Icons.person_rounded,
-                                      size: 18,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
+              Material(
+                color: themeColor,
+                child: SafeArea(
+                  bottom: false,
+                  child: SizedBox(
+                    height: ClassroomSidebar.headerHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            key: const Key('classroom-top-menu'),
+                            tooltip: collapsed
+                                ? s.expandClassroomSidebar
+                                : s.collapseClassroomSidebar,
+                            onPressed: toggleSidebar,
+                            icon: Icon(
+                              collapsed
+                                  ? Icons.menu_rounded
+                                  : Icons.menu_open_rounded,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsScreen(),
+                                ),
+                              );
+                            },
+                            icon: Badge(
+                              isLabelVisible: unread > 0,
+                              label: Text(
+                                unread > 99 ? '99+' : '$unread',
+                              ),
+                              child: const Icon(
+                                Icons.notifications,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _openAccountMenu(context),
+                            icon: const CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.white24,
+                              child: Icon(
+                                Icons.person_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ClassroomSidebar(
+                      title: widget.title,
+                      accent: themeColor,
+                      destinations: destinations,
+                      selectedIndex:
+                          _selectedIndex.clamp(0, destinations.length - 1),
+                      collapsed: collapsed,
+                      onToggle: toggleSidebar,
+                      onSelect: (index) {
+                        setState(() => _selectedIndex = index);
+                        selectClassroomDestination(
+                          index: index,
+                          roleKey: widget.roleKey,
+                          destinations: destinations,
+                          onIndex: (i) => _selectedIndex = i,
+                        );
+                      },
                     ),
                     Expanded(
                       child: Stack(
@@ -356,7 +355,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                           AdminEducationalBackground(accentColor: themeColor),
                           SingleChildScrollView(
                             padding: listPagePadding(context).copyWith(
-                              left: 16,
+                              left: 20,
                               right: 20,
                               top: 20,
                             ),
@@ -367,7 +366,8 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                   maxWidth: AdaptiveBreakpoints.contentMaxWidth,
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     if (!widget.hideBrandingBanner &&
                                         AuthService.activeSchoolId != null &&
@@ -433,7 +433,6 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                       ),
                     ),
                   ],
-                ),
                 ),
               ),
             ],

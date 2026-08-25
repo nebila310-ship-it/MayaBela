@@ -63,7 +63,8 @@ void selectClassroomDestination({
       ?.call();
 }
 
-/// Opaque icon rail that expands to labels. No leftover text under the page.
+/// Material [NavigationRail] — labels slide with the rail instead of leaking
+/// under the page. Desktop has no second header; the shell owns the top bar.
 class ClassroomSidebar extends StatelessWidget {
   const ClassroomSidebar({
     super.key,
@@ -77,10 +78,9 @@ class ClassroomSidebar extends StatelessWidget {
     this.inDrawer = false,
   });
 
-  static const double expandedWidth = 240;
-  static const double collapsedWidth = 72;
+  static const double expandedWidth = 256;
+  static const double collapsedWidth = 80;
   static const double headerHeight = 56;
-  static const Duration animDuration = Duration(milliseconds: 280);
 
   final String title;
   final Color accent;
@@ -91,139 +91,99 @@ class ClassroomSidebar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final bool inDrawer;
 
+  void _hapticToggle() {
+    if (UserPreferencesService.instance.hapticFeedback) {
+      HapticFeedback.selectionClick();
+    }
+    onToggle();
+  }
+
+  void _hapticSelect(int index) {
+    if (UserPreferencesService.instance.hapticFeedback) {
+      HapticFeedback.lightImpact();
+    }
+    onSelect(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
     final iconOnly = collapsed && !inDrawer;
-    final width = inDrawer
-        ? expandedWidth
-        : (iconOnly ? collapsedWidth : expandedWidth);
-    final toggleTip = inDrawer
-        ? s.closeClassroomMenu
-        : iconOnly
-            ? s.expandClassroomSidebar
-            : s.collapseClassroomSidebar;
+    final rail = NavigationRail(
+      extended: !iconOnly,
+      minWidth: collapsedWidth,
+      minExtendedWidth: expandedWidth,
+      backgroundColor: Colors.white,
+      indicatorColor: accent.withValues(alpha: 0.12),
+      selectedIndex: selectedIndex.clamp(0, destinations.length - 1),
+      groupAlignment: -1,
+      labelType: NavigationRailLabelType.none,
+      onDestinationSelected: _hapticSelect,
+      leading: inDrawer
+          ? const SizedBox.shrink()
+          : IconButton(
+              key: const Key('classroom-sidebar-toggle'),
+              tooltip: iconOnly
+                  ? s.expandClassroomSidebar
+                  : s.collapseClassroomSidebar,
+              onPressed: _hapticToggle,
+              icon: Icon(
+                iconOnly
+                    ? Icons.chevron_right_rounded
+                    : Icons.chevron_left_rounded,
+                color: accent,
+              ),
+            ),
+      destinations: [
+        for (final item in destinations)
+          NavigationRailDestination(
+            icon: _RailIcon(
+              key: Key('classroom-nav-${item.id}'),
+              item: item,
+              selected: false,
+            ),
+            selectedIcon: _RailIcon(item: item, selected: true),
+            label: Text(item.label),
+          ),
+      ],
+    );
 
-    return AnimatedContainer(
+    if (!inDrawer) {
+      return Material(
+        key: const Key('classroom-sidebar'),
+        color: Colors.white,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(right: BorderSide(color: ClassroomPalette.line)),
+          ),
+          child: rail,
+        ),
+      );
+    }
+
+    return Material(
       key: const Key('classroom-sidebar'),
-      duration: animDuration,
-      curve: Curves.easeOutCubic,
-      width: width,
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: inDrawer
-            ? const BorderRadius.horizontal(right: Radius.circular(24))
-            : BorderRadius.zero,
-        border: inDrawer
-            ? null
-            : const Border(right: BorderSide(color: ClassroomPalette.line)),
-      ),
-      child: Material(
-        color: Colors.white,
+      color: Colors.white,
+      child: SizedBox(
+        width: expandedWidth,
         child: Column(
           children: [
-            _Header(
-              title: title,
-              accent: accent,
-              iconOnly: iconOnly,
-              tooltip: toggleTip,
-              inDrawer: inDrawer,
-              onToggle: () {
-                if (UserPreferencesService.instance.hapticFeedback) {
-                  HapticFeedback.selectionClick();
-                }
-                onToggle();
-              },
-            ),
-            SizedBox(
-              height: 4,
+            Container(
+              height: headerHeight,
+              color: accent,
               child: Row(
                 children: [
-                  for (final color in ClassroomPalette.classes.take(8))
-                    Expanded(child: ColoredBox(color: color)),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: destinations.length,
-                itemBuilder: (context, index) {
-                  final item = destinations[index];
-                  return _NavTile(
-                    item: item,
-                    selected: selectedIndex == index,
-                    iconOnly: iconOnly,
-                    onTap: () {
-                      if (UserPreferencesService.instance.hapticFeedback) {
-                        HapticFeedback.lightImpact();
-                      }
-                      onSelect(index);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.title,
-    required this.accent,
-    required this.iconOnly,
-    required this.tooltip,
-    required this.onToggle,
-    required this.inDrawer,
-  });
-
-  final String title;
-  final Color accent;
-  final bool iconOnly;
-  final String tooltip;
-  final VoidCallback onToggle;
-  final bool inDrawer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: ClassroomSidebar.headerHeight,
-      color: accent,
-      child: iconOnly
-          ? Center(
-              child: IconButton(
-                key: const Key('classroom-sidebar-toggle'),
-                tooltip: tooltip,
-                onPressed: onToggle,
-                icon: Icon(
-                  inDrawer ? Icons.close_rounded : Icons.menu_rounded,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          : Row(
-              children: [
-                IconButton(
-                  key: const Key('classroom-sidebar-toggle'),
-                  tooltip: tooltip,
-                  onPressed: onToggle,
-                  icon: Icon(
-                    inDrawer ? Icons.close_rounded : Icons.menu_open_rounded,
-                    color: Colors.white,
+                  IconButton(
+                    key: const Key('classroom-sidebar-toggle'),
+                    tooltip: s.closeClassroomMenu,
+                    onPressed: _hapticToggle,
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
                   ),
-                ),
-                Expanded(
-                  child: ClipRect(
+                  Expanded(
                     child: Text(
                       title,
                       maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.clip,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -231,102 +191,43 @@ class _Header extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            Expanded(child: rail),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _NavTile extends StatelessWidget {
-  const _NavTile({
+class _RailIcon extends StatelessWidget {
+  const _RailIcon({
+    super.key,
     required this.item,
     required this.selected,
-    required this.iconOnly,
-    required this.onTap,
   });
 
   final ClassroomNavDestination item;
   final bool selected;
-  final bool iconOnly;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final bubble = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        AnimatedContainer(
-          duration: ClassroomSidebar.animDuration,
-          curve: Curves.easeOutCubic,
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: selected ? item.color : item.color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            item.icon,
-            color: selected ? Colors.white : item.color,
-            size: 22,
-          ),
+    return Badge(
+      isLabelVisible: item.badge > 0,
+      smallSize: 8,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: selected ? item.color : item.color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
         ),
-        if (item.badge > 0)
-          Positioned(
-            right: -1,
-            top: -1,
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: ClassroomPalette.red,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-      ],
-    );
-
-    return Tooltip(
-      message: item.label,
-      waitDuration: iconOnly ? Duration.zero : const Duration(seconds: 2),
-      child: Material(
-        color: selected ? item.color.withValues(alpha: 0.12) : Colors.transparent,
-        child: InkWell(
-          key: Key('classroom-nav-${item.id}'),
-          onTap: onTap,
-          child: SizedBox(
-            height: 48,
-            child: iconOnly
-                ? Center(child: bubble)
-                : Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 8),
-                        child: bubble,
-                      ),
-                      Expanded(
-                        child: ClipRect(
-                          child: Text(
-                            item.label,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.clip,
-                            style: TextStyle(
-                              color: selected
-                                  ? item.color
-                                  : ClassroomPalette.ink,
-                              fontWeight: selected
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+        child: Icon(
+          item.icon,
+          color: selected ? Colors.white : item.color,
+          size: 22,
         ),
       ),
     );
