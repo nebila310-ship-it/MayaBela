@@ -164,12 +164,14 @@
       color: #fff;
     }
     .muted { color: #94a3b8; font-size: 16px; }
-    .row.photos.gps-shots .photo-shot {
+    .row.photos.gps-shots .photo-shot,
+    .row.photos.cctv-shots .photo-shot {
       height: 300px;
       object-fit: contain;
       object-position: top center;
       background: #fff;
     }
+    .row.photos.cctv-shots { grid-template-columns: 1.15fr 0.85fr; }
     @media print {
       .footer, .progress { display: none; }
       html, body { height: auto; overflow: visible; background: #070b14; }
@@ -195,7 +197,7 @@
           <div class="kicker">Fenote Raey Academy · Final decision meeting</div>
           <h1>One school system.<br>Every role in this room.</h1>
           <p style="font-size:20px;max-width:420px;color:#fff;">
-            Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the <strong>teacher, parent, student, and transport dashboards</strong>, student QR for bus, class, and profile, settings, language, and school-held backups.
+            Student affairs, quality assurance, inventory, payroll (Ethiopian tax), classroom, alumni — plus the <strong>teacher, parent, student, and transport dashboards</strong>, student QR for bus, class, and profile, <strong>Admin CCTV</strong> for the cameras already on campus, settings, language, and school-held backups.
           </p>
           <p class="am">የፍኖተ ራእይ አካዳሚ · እያንዳንዱ ሚና የሚጠቀመው ሞጁል ዛሬ ይታያል።</p>
           <p class="muted" style="margin-top:20px;">Presented by <strong style="color:#fff;">MaJo Bridge Technologies and Events</strong></p>
@@ -231,7 +233,7 @@
         <div>
           <p>Same School ID. Different doors. Nobody sees another school. Staff only see the modules their duty requires.</p>
           <ul>
-            <li><strong>Directors / Principal / VP</strong> — dashboard, approvals, QA, reports</li>
+            <li><strong>Directors / Principal / VP</strong> — dashboard, approvals, QA, reports, campus CCTV</li>
             <li><strong>Student affairs / registrar</strong> — students, alumni, discipline, leave</li>
             <li><strong>Classroom teachers</strong> — class, attendance, homework, grades</li>
             <li><strong>Quality assurance</strong> — findings, plans, follow-up</li>
@@ -534,6 +536,24 @@
     </section>
 
     <section class="slide">
+      <div class="kicker">Campus safety — CCTV</div>
+      <h2>The cameras already in the school sit in Admin CCTV. Same login. Staff only.</h2>
+      <div class="row photos cctv-shots">
+        <div>
+          <img class="photo-shot" src="screens/screen-cctv.png" alt="Administration CCTV with campus camera sites mapped" />
+          <p class="photo-cap">Administration — CCTV</p>
+          <p class="photo-sub">Main gate, playground, corridor, and parking are mapped. Live picture appears when the school NVR is linked.</p>
+        </div>
+        <div>
+          <img class="photo-shot" src="screens/screen-cctv-dashboard.png" alt="Director dashboard with CCTV in the Organization sidebar" />
+          <p class="photo-cap">Dashboard — CCTV in the office</p>
+          <p class="photo-sub">CCTV sits under Organization on the morning dashboard. Teachers and parents do not get a 24/7 feed.</p>
+        </div>
+      </div>
+      <p class="am">ያሉት ካሜራዎች በአስተዳደር ሲሲቲቪ ይገባሉ። ቀጥታ ምስል የNVR ግንኙነት ሲኖር ይታያል። ለሰራተኛ ብቻ።</p>
+    </section>
+
+    <section class="slide">
       <div class="kicker">Student QR identity</div>
       <h2>One printed QR. Bus, class, and the student file.</h2>
       <div class="row photos">
@@ -740,7 +760,7 @@
         </thead>
         <tbody>
             <tr><td>Role dashboards</td><td>Teacher home, parent home, student home, driver / transport home</td><td>Teachers, parents, students, drivers</td></tr>
-            <tr><td>Organization</td><td>Institution, school profile, campuses</td><td>Owners, directors</td></tr>
+            <tr><td>Organization</td><td>Institution, school profile, campuses, CCTV (existing cameras / NVR)</td><td>Owners, directors, leadership</td></tr>
             <tr><td>Student services</td><td>Students, parent-link, transfers, student affairs, alumni, student login from the grade the school sets</td><td>Registrar, student affairs</td></tr>
             <tr><td>Classroom</td><td>Classes, classroom teachers, timetable, QR attendance, exams, homework &amp; assignments</td><td>Principal, VP, teachers</td></tr>
             <tr><td>Communication</td><td>Announcements, events &amp; gallery, school calendar, internal messages</td><td>Every duty that must speak</td></tr>
