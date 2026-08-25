@@ -7,10 +7,13 @@ import {
   ensureAuthUser,
   ethiopianLoginKey,
   getDoc,
+  loadSecret,
   normalizeUsername,
   parentLinkDocId,
   profileFromAccount,
   upsertSecret,
+  usernamesMatch,
+  verifySecret,
 } from "../_shared/school_auth.ts";
 
 function sameDay(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -60,34 +63,59 @@ Deno.serve(async (req) => {
         String(legacy.schoolId || "").trim().toUpperCase() === schoolId
       ? legacy
       : null;
-    if (existingComposite || legacySameSchool) {
-      return errorResponse("Account already exists.", 409, "exists");
+    const existingAccount = existingComposite || legacySameSchool || null;
+
+    if (existingAccount) {
+      const secret = await loadSecret(
+        sb,
+        username,
+        schoolId,
+        accountDocId(schoolId, username),
+      );
+      const passwordOk = await verifySecret(
+        password,
+        secret,
+        existingAccount.password,
+      );
+      if (!passwordOk) {
+        return errorResponse("Account already exists.", 409, "exists");
+      }
+    } else {
+      await upsertSecret(sb, username, password, schoolId);
     }
 
-    await upsertSecret(sb, username, password, schoolId);
     // Never trust client-supplied student links at registration time.
     // Links are granted only after an approved parent_link_request / staff action.
+    const existingLinked = Array.isArray(existingAccount?.linkedStudentIds)
+      ? (existingAccount!.linkedStudentIds as unknown[]).map((id) =>
+        String(id || "").trim().toUpperCase()
+      ).filter((id) => !!id)
+      : [];
     const profile = {
       username,
       roleKey: "parent",
       schoolId,
-      email,
-      phone,
-      fullName,
+      email: email ?? existingAccount?.email ?? null,
+      phone: phone ?? existingAccount?.phone ?? null,
+      fullName: fullName ?? existingAccount?.fullName ?? null,
       linkedStudentIds: [] as string[],
       mustChangePassword: false,
       updatedAt: new Date().toISOString(),
     };
-    await sb.from("app_documents").upsert({
-      collection: "app_auth_accounts",
-      doc_id: accountDocId(schoolId, username),
-      school_id: schoolId,
-      data: profile,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "collection,school_id,doc_id" });
-    await ensureAuthUser(sb, username, password, profile);
+
+    const { data: linkRows, error: linkError } = await sb
+      .from("app_documents")
+      .select("doc_id, data")
+      .eq("collection", "parent_link_requests")
+      .eq("school_id", schoolId)
+      .limit(500);
+    if (linkError) throw linkError;
+
+    const reopenedStudentIds: string[] = [];
 
     // Service-role pending requests so staff can approve from any device.
+    // A previous approved row for this parent+student used to skip the write,
+    // so the teacher dashboard stayed empty while the parent kept waiting.
     for (const child of children) {
       const studentId = String(child?.studentId || "").trim().toUpperCase();
       if (!studentId) continue;
@@ -101,36 +129,74 @@ Deno.serve(async (req) => {
       }
       const relationship = String(child?.relationship || "guardian");
       const docId = parentLinkDocId(schoolId, username, studentId);
-      const existingLink = await getDoc(
-        sb,
-        "parent_link_requests",
-        docId,
-        schoolId,
+      const matching = (linkRows || []).filter((row) => {
+        const data = (row.data || {}) as Record<string, unknown>;
+        const rowStudent = String(data.studentId || "").trim().toUpperCase();
+        if (rowStudent !== studentId) return false;
+        return usernamesMatch(data.parentUsername, username);
+      });
+      const alreadyPending = matching.some((row) =>
+        String((row.data as Record<string, unknown>)?.status || "") === "pending"
       );
-      if (existingLink && String(existingLink.status || "") !== "rejected") {
-        continue;
-      }
+      const hadApproved = matching.some((row) =>
+        String((row.data as Record<string, unknown>)?.status || "") === "approved"
+      );
+      if (hadApproved) reopenedStudentIds.push(studentId);
+      if (alreadyPending && !hadApproved) continue;
+
+      const pendingData = {
+        id: docId,
+        parentUsername: username,
+        parentFullName: String(fullName || existingAccount?.fullName || "Parent"),
+        studentId,
+        schoolId,
+        relationship,
+        requestedAt: new Date().toISOString(),
+        status: "pending",
+        hasMedicalCondition: !!child?.hasMedicalCondition,
+        medicalConditionDetails: child?.medicalConditionDetails || null,
+        otherMedicalInfo: child?.otherMedicalInfo || null,
+        className: String(student.className || "").trim() || null,
+      };
       await sb.from("app_documents").upsert({
         collection: "parent_link_requests",
         doc_id: docId,
         school_id: schoolId,
-        data: {
-          id: docId,
-          parentUsername: username,
-          parentFullName: String(fullName || "Parent"),
-          studentId,
-          schoolId,
-          relationship,
-          requestedAt: new Date().toISOString(),
-          status: "pending",
-          hasMedicalCondition: !!child?.hasMedicalCondition,
-          medicalConditionDetails: child?.medicalConditionDetails || null,
-          otherMedicalInfo: child?.otherMedicalInfo || null,
-          className: String(student.className || "").trim() || null,
-        },
+        data: pendingData,
         updated_at: new Date().toISOString(),
       }, { onConflict: "collection,school_id,doc_id" });
+
+      for (const row of matching) {
+        const oldId = String(row.doc_id || "");
+        if (!oldId || oldId === docId) continue;
+        await sb.from("app_documents").upsert({
+          collection: "parent_link_requests",
+          doc_id: oldId,
+          school_id: schoolId,
+          data: {
+            ...(row.data as Record<string, unknown> || {}),
+            ...pendingData,
+            id: oldId,
+          },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "collection,school_id,doc_id" });
+      }
     }
+
+    if (existingAccount) {
+      profile.linkedStudentIds = existingLinked.filter(
+        (id) => !reopenedStudentIds.includes(id),
+      );
+    }
+
+    await sb.from("app_documents").upsert({
+      collection: "app_auth_accounts",
+      doc_id: accountDocId(schoolId, username),
+      school_id: schoolId,
+      data: profile,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "collection,school_id,doc_id" });
+    await ensureAuthUser(sb, username, password, profile);
 
     return jsonResponse({
       ok: true,

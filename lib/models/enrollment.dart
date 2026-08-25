@@ -168,13 +168,15 @@ class ParentLinkRequest {
       parentFullName: map['parentFullName'] as String,
       studentId: map['studentId'] as String,
       schoolId: map['schoolId'] as String,
-      relationship: ParentRelationship.values.byName(
-        map['relationship'] as String,
-      ),
+      relationship: ParentRelationship.values.asNameMap()[
+            '${map['relationship'] ?? ''}'.trim().toLowerCase()
+          ] ??
+          ParentRelationship.guardian,
       requestedAt: DateTime.parse(map['requestedAt'] as String),
-      status: ParentLinkStatus.values.byName(
-        map['status'] as String? ?? 'pending',
-      ),
+      status: ParentLinkStatus.values.asNameMap()[
+            '${map['status'] ?? 'pending'}'.trim().toLowerCase()
+          ] ??
+          ParentLinkStatus.pending,
       reviewedBy: map['reviewedBy'] as String?,
       reviewedAt: map['reviewedAt'] != null
           ? DateTime.tryParse(map['reviewedAt'] as String)
