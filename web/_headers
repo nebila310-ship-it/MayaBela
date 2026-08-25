@@ -31,3 +31,7 @@
 /fenote-raey-academy/fenote-raey-slides.zip
   Content-Disposition: attachment; filename="Fenote-Raey-Academy-slides.zip"
   Cache-Control: no-cache, must-revalidate
+
+/fenote-raey-academy/fenote-raey-talk-script-am.pdf
+  Content-Disposition: inline; filename="Fenote-Raey-talk-script-Amharic.pdf"
+  Cache-Control: no-cache, must-revalidate
