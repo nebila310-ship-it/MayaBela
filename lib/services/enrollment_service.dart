@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -14,7 +16,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 
-class EnrollmentService {
+class EnrollmentService extends ChangeNotifier {
   EnrollmentService._();
   static final instance = EnrollmentService._();
 
@@ -71,6 +73,7 @@ class EnrollmentService {
       ..addAll(links);
     if (nextId != null) _nextLinkId = nextId;
     _seeded = true;
+    notifyListeners();
   }
 
   /// Merges remote rows for one parent without wiping other parents' requests.
@@ -86,12 +89,14 @@ class EnrollmentService {
       ..addAll(byId.values);
     if (nextId != null && nextId > _nextLinkId) _nextLinkId = nextId;
     _seeded = true;
+    notifyListeners();
   }
 
   void removeLinksByIds(Iterable<String> ids) {
     final idSet = ids.toSet();
     if (idSet.isEmpty) return;
     _parentLinks.removeWhere((link) => idSet.contains(link.id));
+    notifyListeners();
   }
 
   Future<void> _persist({String? syncLinkId}) async {
@@ -123,14 +128,33 @@ class EnrollmentService {
 
     final sid = studentId.trim().toUpperCase();
     final username = PhoneUtils.loginKey(parentUsername).toLowerCase();
-    final existing = _parentLinks.where(
-      (link) =>
-          _sameParentUsername(link.parentUsername, username) &&
-          link.studentId == sid &&
-          link.status != ParentLinkStatus.rejected,
-    );
+    final existing = _parentLinks
+        .where(
+          (link) =>
+              _sameParentUsername(link.parentUsername, username) &&
+              link.studentId == sid &&
+              link.status != ParentLinkStatus.rejected,
+        )
+        .toList();
     if (existing.isNotEmpty) {
-      return 'already_linked';
+      final loggedInParent = AuthService.currentUser?.roleKey ==
+              AuthService.roleParent &&
+          _sameParentUsername(AuthService.currentUser!.username, username);
+      if (loggedInParent) {
+        return 'already_linked';
+      }
+      var reopened = false;
+      for (final link in existing) {
+        if (link.status == ParentLinkStatus.approved) {
+          link.status = ParentLinkStatus.pending;
+          link.reviewedBy = null;
+          link.reviewedAt = null;
+          reopened = true;
+        }
+      }
+      if (reopened) notifyListeners();
+      if (persist && reopened) unawaited(_persist());
+      return null;
     }
 
     final student = StudentRegistryService.instance.lookupById(sid);
@@ -157,6 +181,7 @@ class EnrollmentService {
         className: student?.className,
       ),
     );
+    notifyListeners();
 
     if (persist) unawaited(_persist());
     return null;
@@ -291,21 +316,44 @@ class EnrollmentService {
     return StudentRegistryService.instance.lookupById(link.studentId)?.className;
   }
 
-  bool _isHomeroomClass(String? className) {
-    if (className == null || className.trim().isEmpty) return false;
-    final needle = className.trim().toLowerCase();
-    return TeacherAccessService.instance.homeroomClassNames
-        .any((name) => name.trim().toLowerCase() == needle);
+  String _compactClassName(String? className) {
+    if (className == null) return '';
+    return className.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
+  }
+
+  Set<String> _assignedClassKeysForCurrentTeacher() {
+    final keys = <String>{};
+    void add(String? name) {
+      final key = _compactClassName(name);
+      if (key.isNotEmpty) keys.add(key);
+    }
+
+    for (final assignment in TeacherAccessService.instance.myClasses) {
+      add(assignment.className);
+    }
+    for (final name in TeacherAccessService.instance.homeroomClassNames) {
+      add(name);
+    }
+    for (final name in AuthService.cloudAssignedClassNames) {
+      add(name);
+    }
+    return keys;
+  }
+
+  bool _isAssignedClass(String? className) {
+    final key = _compactClassName(className);
+    if (key.isEmpty) return false;
+    return _assignedClassKeysForCurrentTeacher().contains(key);
   }
 
   List<ParentLinkRequest> pendingForHomeroomTeacher() {
     ensureSeeded();
-    final homeroomClasses = TeacherAccessService.instance.homeroomClassNames;
-    if (homeroomClasses.isEmpty) return [];
+    final assigned = _assignedClassKeysForCurrentTeacher();
+    if (assigned.isEmpty) return [];
 
     return _parentLinks.where((link) {
       if (link.status != ParentLinkStatus.pending) return false;
-      return _isHomeroomClass(_classNameForLink(link));
+      return _isAssignedClass(_classNameForLink(link));
     }).toList();
   }
 
@@ -334,11 +382,11 @@ class EnrollmentService {
 
   List<ParentLinkRequest> allLinksForHomeroomTeacher() {
     ensureSeeded();
-    final homeroomClasses = TeacherAccessService.instance.homeroomClassNames;
-    if (homeroomClasses.isEmpty) return [];
+    final assigned = _assignedClassKeysForCurrentTeacher();
+    if (assigned.isEmpty) return [];
 
     return _parentLinks
-        .where((link) => _isHomeroomClass(_classNameForLink(link)))
+        .where((link) => _isAssignedClass(_classNameForLink(link)))
         .toList();
   }
 
@@ -421,6 +469,7 @@ class EnrollmentService {
       recipientRole: AuthService.roleParent,
     );
     await _persist(syncLinkId: linkId);
+    notifyListeners();
   }
 
   Future<void> rejectLink(String linkId, String reviewerName) async {
@@ -430,6 +479,7 @@ class EnrollmentService {
     link.reviewedAt = DateTime.now();
     await _syncParentUserLinks(link.parentUsername);
     await _persist(syncLinkId: linkId);
+    notifyListeners();
   }
 
   Future<void> _syncParentUserLinks(String username) async {

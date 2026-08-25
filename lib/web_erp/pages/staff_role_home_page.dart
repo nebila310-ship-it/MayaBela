@@ -8,6 +8,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
+import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
@@ -97,6 +98,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         ProcurementService.instance,
         InventoryService.instance,
         DashboardBadgeService.instance,
+        EnrollmentService.instance,
       ]),
       builder: (context, _) {
         final stats = _buildStats();

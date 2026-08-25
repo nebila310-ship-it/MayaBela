@@ -345,6 +345,7 @@ List<DashboardEntry> _teacherEntries() {
       icon: Icons.how_to_reg,
       color: Colors.orange,
       isVisible: () =>
+          access.myClasses.isNotEmpty ||
           access.hasAnyHomeroomClass ||
           ModuleAccess.canManage('parents'),
       builder: (context) => DashboardCard(
