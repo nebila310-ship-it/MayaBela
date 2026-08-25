@@ -1077,9 +1077,9 @@ class AppStrings implements AppStringsLike {
   String get schoolAdministration =>
       t('School administration', 'የትምህርት ቤት አስተዳደር');
   String get messageSendFailed => t(
-        'Could not send the message. Check your connection and try again.',
-        'መልዕክት መላክ አልተቻለም። ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።',
-        'Ergaa erguu hin dandeenye. Quunnamtii keessan mirkaneessaa, irra deebi\'aa yaalaa.',
+        'Could not save the message to the school cloud. Stay signed in and send again.',
+        'መልዕክቱን ወደ የትምህርት ቤት ክላውድ ማስቀመጥ አልተቻለም። ተፈርመው ይቆዩ እና እንደገና ይላኩ።',
+        'Ergaa gara duumessa mana barumsaa kuusuu hin dandeenye. Seenaa turuu, irra deebi\'aa ergaa.',
       );
   String get messageParentNotInClasses => t(
         'Could not start a new chat. Check that this parent is in your classes.',

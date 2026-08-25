@@ -828,9 +828,12 @@ class CloudAppStore {
       }
       return;
     }
+
+    // Refresh claims when missing. Do not block an explicit Send on a
+    // false-negative claims check — the JWT may still be valid for RLS.
     if (!await SchoolAuthCloudService.hasSchoolClaims()) {
       final ok = await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
-      if (!ok) {
+      if (!ok && !immediate) {
         if (rethrowOnError) {
           throw StateError(
             'Cloud session expired — sign out, sign in as Admin, wait for Ready.',
