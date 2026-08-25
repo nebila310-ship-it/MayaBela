@@ -362,6 +362,14 @@ class Conversation {
   /// Direct threads are visible only to the parent and the staff member involved.
   bool _staffCanSeeDirectThread(String roleKey) {
     final viewerStaffId = _compositeStaffIdForRole(roleKey);
+    final username = AuthService.currentUser?.username.trim().toLowerCase();
+
+    bool sentByViewer() {
+      if (username == null || username.isEmpty) return false;
+      return messages.any(
+        (m) => m.senderUsername?.trim().toLowerCase() == username,
+      );
+    }
 
     if (_hasParentParticipant()) {
       if (viewerStaffId != null &&
@@ -375,7 +383,7 @@ class Conversation {
           messages.any((m) => m.senderStaffId?.trim() == viewerStaffId.trim())) {
         return true;
       }
-      return false;
+      return sentByViewer();
     }
 
     if (viewerStaffId != null &&
@@ -395,7 +403,7 @@ class Conversation {
       return true;
     }
 
-    return false;
+    return sentByViewer();
   }
 
   bool _adminInGroup() {
@@ -431,8 +439,8 @@ class Conversation {
         .toSet();
     if (linkedStudentIds.any(linked.contains)) return true;
 
-    if (contactRole == 'parent') {
-      return _parentNameMatchesCurrentUser(name);
+    if (contactRole == 'parent' && _parentNameMatchesCurrentUser(name)) {
+      return true;
     }
     if (parentParticipantName != null &&
         _parentNameMatchesCurrentUser(parentParticipantName!)) {
@@ -458,9 +466,33 @@ class Conversation {
   }
 
   bool _parentNameMatchesCurrentUser(String candidate) {
-    final userName = AuthService.currentUser?.fullName?.trim().toLowerCase();
-    if (userName == null || userName.isEmpty) return false;
-    return candidate.trim().toLowerCase() == userName;
+    final needle = candidate.trim().toLowerCase();
+    if (needle.isEmpty) return false;
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+
+    final names = <String>{};
+    void add(String? value) {
+      final trimmed = value?.trim().toLowerCase();
+      if (trimmed != null && trimmed.isNotEmpty) names.add(trimmed);
+    }
+
+    add(user.fullName);
+    add(user.username);
+    EnrollmentService.instance.ensureSeeded();
+    for (final link in EnrollmentService.instance.linksForParent(user.username)) {
+      if (link.status != ParentLinkStatus.approved) continue;
+      add(link.parentFullName);
+    }
+    for (final studentId in AuthService.activeLinkedStudentIds()) {
+      final student = StudentRegistryService.instance.lookupById(studentId);
+      if (student == null) continue;
+      add(student.primaryParentName);
+      add(student.fatherName);
+      add(student.motherName);
+      add(student.guardianName);
+    }
+    return names.contains(needle);
   }
 
 
@@ -827,25 +859,44 @@ class StaffMemberOption {
 
 
   static String? viewerStaffId(String? roleKey) {
-
     final user = AuthService.currentUser;
-
     if (user == null || roleKey == null) return null;
 
-    if (roleKey == AuthService.roleTeacher && user.linkedTeacherId != null) {
-
-      return teacherKey(user.linkedTeacherId!);
-
+    if (roleKey == AuthService.roleTeacher) {
+      final linked = user.linkedTeacherId?.trim();
+      if (linked != null && linked.isNotEmpty) {
+        return teacherKey(linked);
+      }
+      final record = TeacherRegistryService.instance.resolveForAuthUser(
+        linkedTeacherId: user.linkedTeacherId,
+        username: user.username,
+        phone: user.phone,
+        schoolId: AuthService.activeSchoolId ?? user.schoolId,
+      );
+      final resolved = record?.teacherId.trim();
+      if (resolved != null && resolved.isNotEmpty) {
+        return teacherKey(resolved);
+      }
     }
 
-    if (roleKey == AuthService.roleDriver && user.linkedDriverId != null) {
-
-      return driverKey(user.linkedDriverId!);
-
+    if (roleKey == AuthService.roleDriver) {
+      final linked = user.linkedDriverId?.trim();
+      if (linked != null && linked.isNotEmpty) {
+        return driverKey(linked);
+      }
+      final record = DriverRegistryService.instance.resolveForAuthUser(
+        linkedDriverId: user.linkedDriverId,
+        username: user.username,
+        phone: user.phone,
+        schoolId: AuthService.activeSchoolId ?? user.schoolId,
+      );
+      final resolved = record?.driverId.trim();
+      if (resolved != null && resolved.isNotEmpty) {
+        return driverKey(resolved);
+      }
     }
 
     return null;
-
   }
 
   static String? viewerAdminStaffId(String? roleKey) {
@@ -920,6 +971,8 @@ class ParentRecipientOption {
 
     this.parentUsername,
 
+    this.parentUsernames = const [],
+
   });
 
 
@@ -931,6 +984,20 @@ class ParentRecipientOption {
   final List<String> studentIds;
 
   final String? parentUsername;
+  final List<String> parentUsernames;
+
+  /// Login usernames that should be stamped on the conversation document.
+  List<String> get participantUsernames {
+    final fromList = parentUsernames
+        .map((u) => u.trim().toLowerCase())
+        .where((u) => u.isNotEmpty)
+        .toSet()
+        .toList();
+    if (fromList.isNotEmpty) return fromList;
+    final single = parentUsername?.trim().toLowerCase();
+    if (single == null || single.isEmpty) return const [];
+    return [single];
+  }
 
 
 

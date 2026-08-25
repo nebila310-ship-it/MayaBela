@@ -103,7 +103,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
     if (draft == null || !mounted) return;
 
-    _data.sendAdminGroupMessage(
+    final sent = _data.sendAdminGroupMessage(
       parentNames: draft.parentNames,
       staffIds: draft.staffIds,
       body: draft.body,
@@ -113,7 +113,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       attachments: draft.attachments,
     );
     _refresh();
-    _showSentSnackBar();
+    _showSendResult(sent.isNotEmpty);
   }
 
   Future<void> _directChat() async {
@@ -127,7 +127,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
     if (draft == null || !mounted) return;
 
-    _data.sendAdminDirectMessage(
+    final sent = _data.sendAdminDirectMessage(
       parentName: draft.parentName,
       staffId: draft.staffId,
       body: draft.body,
@@ -135,7 +135,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       attachments: draft.attachments,
     );
     _refresh();
-    _showSentSnackBar();
+    _showSendResult(sent.isNotEmpty);
   }
 
   Future<void> _parentCompose() async {
@@ -149,6 +149,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (conversation != null) {
       _openChat(conversation);
     }
+  }
+
+  void _showSendResult(bool sent) {
+    if (sent) {
+      _showSentSnackBar();
+      return;
+    }
+    final s = AppLocale.instance.strings;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(s.messageSendFailed),
+        backgroundColor: const Color(0xFFB91C1C),
+      ),
+    );
   }
 
   void _showSentSnackBar() {

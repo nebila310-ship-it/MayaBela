@@ -1077,8 +1077,9 @@ class AppStrings implements AppStringsLike {
   String get schoolAdministration =>
       t('School administration', 'የትምህርት ቤት አስተዳደር');
   String get messageSendFailed => t(
-        'Could not send message. Try again.',
-        'መልዕክት መላክ አልተቻለም። እንደገና ይሞክሩ።',
+        'Could not send message. Check that this parent is in your classes.',
+        'መልዕክት መላክ አልተቻለም። ይህ ወላጅ በክፍልዎ ውስጥ መሆኑን ያረጋግጡ።',
+        'Ergaa erguu hin dandeenye. Maatiin kun kutaa keessan keessa akka jiru mirkaneessaa.',
       );
   String get parentFeesComingSoonSubtitle => t(
         'Online fee payments for parents',
