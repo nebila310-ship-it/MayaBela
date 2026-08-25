@@ -1161,9 +1161,7 @@ class SchoolDataService {
         _mergeConversationParticipants(
           conversation,
           studentIds: recipient.studentIds,
-          parentUsernames: recipient.parentUsername == null
-              ? const []
-              : [recipient.parentUsername!],
+          parentUsernames: MessagingAccessService.usernamesOf(recipient),
         );
       }
       added = true;
@@ -1269,9 +1267,7 @@ class SchoolDataService {
         _mergeConversationParticipants(
           groupConversation,
           studentIds: recipient.studentIds,
-          parentUsernames: recipient.parentUsername == null
-              ? const []
-              : [recipient.parentUsername!],
+          parentUsernames: MessagingAccessService.usernamesOf(recipient),
         );
       }
     }
@@ -1333,9 +1329,7 @@ class SchoolDataService {
                 linkedStudentIds: recipient?.studentIds ?? const [],
               ),
         linkedStudentIds: recipient?.studentIds,
-        parentParticipantUsernames: recipient?.parentUsername == null
-            ? null
-            : [recipient!.parentUsername!],
+        parentParticipantUsernames: MessagingAccessService.usernamesOf(recipient),
       );
     } else {
       final member = StaffMemberOption.resolve(trimmedStaff!);
@@ -1453,31 +1447,51 @@ class SchoolDataService {
     String? relationshipStudentId,
   }) {
     final user = AuthService.currentUser;
-    if (senderRole == AuthService.roleTeacher && user?.linkedTeacherId != null) {
-      final teacherName = TeacherRegistryService.instance
-              .lookupById(user!.linkedTeacherId!)
-              ?.fullName
-              .trim() ??
-          user.fullName?.trim() ??
-          'Teacher';
+    final username = user?.username.trim();
+    final senderUsername =
+        username == null || username.isEmpty ? null : username;
+
+    if (senderRole == AuthService.roleTeacher) {
+      final record = TeacherRegistryService.instance.resolveForAuthUser(
+        linkedTeacherId: user?.linkedTeacherId,
+        username: user?.username,
+        phone: user?.phone,
+        schoolId: AuthService.activeSchoolId ?? user?.schoolId,
+      );
+      final teacherId = record?.teacherId.trim().isNotEmpty == true
+          ? record!.teacherId
+          : user?.linkedTeacherId;
+      final teacherName = record?.fullName.trim().isNotEmpty == true
+          ? record!.fullName.trim()
+          : (user?.fullName?.trim() ?? 'Teacher');
       return (
-        senderStaffId: StaffMemberOption.teacherKey(user.linkedTeacherId!),
+        senderStaffId: teacherId == null || teacherId.trim().isEmpty
+            ? null
+            : StaffMemberOption.teacherKey(teacherId),
         senderDisplayName: teacherName,
-        senderUsername: null,
+        senderUsername: senderUsername,
         senderRelationshipLabel: null,
       );
     }
-    if (senderRole == AuthService.roleDriver && user?.linkedDriverId != null) {
-      final driverName = DriverRegistryService.instance
-              .lookupById(user!.linkedDriverId!)
-              ?.fullName
-              .trim() ??
-          user.fullName?.trim() ??
-          'Driver';
+    if (senderRole == AuthService.roleDriver) {
+      final record = DriverRegistryService.instance.resolveForAuthUser(
+        linkedDriverId: user?.linkedDriverId,
+        username: user?.username,
+        phone: user?.phone,
+        schoolId: AuthService.activeSchoolId ?? user?.schoolId,
+      );
+      final driverId = record?.driverId.trim().isNotEmpty == true
+          ? record!.driverId
+          : user?.linkedDriverId;
+      final driverName = record?.fullName.trim().isNotEmpty == true
+          ? record!.fullName.trim()
+          : (user?.fullName?.trim() ?? 'Driver');
       return (
-        senderStaffId: StaffMemberOption.driverKey(user.linkedDriverId!),
+        senderStaffId: driverId == null || driverId.trim().isEmpty
+            ? null
+            : StaffMemberOption.driverKey(driverId),
         senderDisplayName: driverName,
-        senderUsername: null,
+        senderUsername: senderUsername,
         senderRelationshipLabel: null,
       );
     }
@@ -1507,7 +1521,7 @@ class SchoolDataService {
         return (
           senderStaffId: StaffMemberOption.adminKey(adminRecord.adminId),
           senderDisplayName: adminRecord.fullName.trim(),
-          senderUsername: null,
+          senderUsername: senderUsername,
           senderRelationshipLabel: null,
         );
       }
@@ -1523,14 +1537,14 @@ class SchoolDataService {
       return (
         senderStaffId: null,
         senderDisplayName: user?.fullName ?? 'Parent',
-        senderUsername: user?.username,
+        senderUsername: senderUsername,
         senderRelationshipLabel: relationship,
       );
     }
     return (
       senderStaffId: null,
       senderDisplayName: AuthService.displayNameForRole(senderRole),
-      senderUsername: null,
+      senderUsername: senderUsername,
       senderRelationshipLabel: null,
     );
   }

@@ -664,6 +664,8 @@ class CloudAppStore {
         _pullMaterialPurchases(),
         _pullDisciplineCases(),
         _pullLeaveRequests(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -700,6 +702,8 @@ class CloudAppStore {
         _pullQaFindings(),
         _pullInventory(),
         _pullProcurement(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -748,6 +752,8 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       _trackStep(trackProgress, 'Loading transport…');
       await pullTransportStateIntoServices();
@@ -763,6 +769,8 @@ class CloudAppStore {
       await Future.wait([
         _pullDriverRegistry(),
         _pullStudentRegistry(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -1820,17 +1828,11 @@ class CloudAppStore {
   }
 
   Future<void> _pullConversations() async {
-    final role = AuthService.currentUser?.roleKey;
-    final List<Map<String, dynamic>> rows;
-    if (role == AuthService.roleParent) {
-      rows = await _schoolRead(
-        AppCollections.conversations,
-        arrayContainsAnyField: 'linkedStudentIds',
-        arrayContainsAnyValues: AuthService.activeLinkedStudentIds(),
-      );
-    } else {
-      rows = await _schoolRead(AppCollections.conversations);
-    }
+    // Parent visibility is enforced by RLS (`app_doc_parent_conversation_visible`)
+    // and then again by MessagingAccessService.canView. Do not pre-filter by
+    // linkedStudentIds — username-only threads (and empty linked-student arrays)
+    // would never download, so parents would never see teacher messages.
+    final rows = await _schoolRead(AppCollections.conversations);
     if (rows.isEmpty) return;
 
     final parsed = <Conversation>[];

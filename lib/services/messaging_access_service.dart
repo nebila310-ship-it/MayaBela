@@ -73,10 +73,70 @@ abstract final class MessagingAccessService {
   }) {
     final normalized = parentName.trim().toLowerCase();
     if (normalized.isEmpty) return null;
+    ParentRecipientOption? merged;
     for (final option in parentsForSchool(schoolId ?? AuthService.activeSchoolId)) {
-      if (option.parentName.trim().toLowerCase() == normalized) return option;
+      if (option.parentName.trim().toLowerCase() != normalized) continue;
+      merged = _combineParentRecipients(merged, option);
     }
-    return null;
+    if (merged == null) return null;
+    return _attachEnrollmentUsernames(merged);
+  }
+
+  /// Login usernames to stamp on a thread so the parent can pull it from cloud.
+  static List<String> usernamesOf(ParentRecipientOption? recipient) {
+    return recipient?.participantUsernames ?? const [];
+  }
+
+  static ParentRecipientOption _combineParentRecipients(
+    ParentRecipientOption? existing,
+    ParentRecipientOption incoming,
+  ) {
+    if (existing == null) return incoming;
+    final studentNames = [...existing.studentNames];
+    for (final name in incoming.studentNames) {
+      if (!studentNames.contains(name)) studentNames.add(name);
+    }
+    final studentIds = [...existing.studentIds];
+    for (final id in incoming.studentIds) {
+      if (!studentIds.contains(id)) studentIds.add(id);
+    }
+    final usernames = <String>{
+      ...existing.participantUsernames,
+      ...incoming.participantUsernames,
+    };
+    return ParentRecipientOption(
+      parentName: existing.parentName,
+      studentNames: studentNames,
+      studentIds: studentIds,
+      parentUsername: existing.parentUsername ?? incoming.parentUsername,
+      parentUsernames: usernames.toList(),
+    );
+  }
+
+  static ParentRecipientOption _attachEnrollmentUsernames(
+    ParentRecipientOption option,
+  ) {
+    EnrollmentService.instance.ensureSeeded();
+    final usernames = <String>{...option.participantUsernames};
+    final studentIds = option.studentIds.map((id) => id.toUpperCase()).toSet();
+    final parentName = option.parentName.trim().toLowerCase();
+    for (final link in EnrollmentService.instance.allLinksSnapshot()) {
+      if (link.status != ParentLinkStatus.approved) continue;
+      final matchesStudent = studentIds.contains(link.studentId.toUpperCase());
+      final matchesName =
+          link.parentFullName.trim().toLowerCase() == parentName;
+      if (!matchesStudent && !matchesName) continue;
+      final username = link.parentUsername.trim().toLowerCase();
+      if (username.isNotEmpty) usernames.add(username);
+    }
+    return ParentRecipientOption(
+      parentName: option.parentName,
+      studentNames: option.studentNames,
+      studentIds: option.studentIds,
+      parentUsername: option.parentUsername ??
+          (usernames.isEmpty ? null : usernames.first),
+      parentUsernames: usernames.toList(),
+    );
   }
 
   static List<ParentRecipientOption> _collectParentRecipients({
@@ -166,11 +226,16 @@ abstract final class MessagingAccessService {
     if (!studentIds.contains(studentId)) {
       studentIds.add(studentId);
     }
+    final usernames = <String>{
+      ...existing.participantUsernames,
+      if (username != null && username.isNotEmpty) username,
+    };
     byKey[key] = ParentRecipientOption(
       parentName: existing.parentName,
       studentNames: studentNames,
       studentIds: studentIds,
       parentUsername: existing.parentUsername ?? username,
+      parentUsernames: usernames.toList(),
     );
   }
 
