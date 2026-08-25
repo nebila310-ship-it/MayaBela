@@ -27,6 +27,7 @@ void main() {
     String? fullName,
     String? linkedTeacherId,
     String? phone,
+    List<String> linkedStudentIds = const [],
   }) {
     AuthService.currentUser = RegisteredUser(
       username: username,
@@ -36,6 +37,7 @@ void main() {
       fullName: fullName ?? username,
       linkedTeacherId: linkedTeacherId,
       phone: phone,
+      linkedStudentIds: linkedStudentIds,
     );
   }
 
@@ -385,5 +387,75 @@ void main() {
     final merged = SchoolDataService.instance.getConversation(id)!;
     expect(merged.messages.map((m) => m.text), contains('Teacher reply still local'));
     expect(merged.messages.length, 2);
+  });
+
+  test('parent send and teacher reply stay on the same conversation', () {
+    signIn(
+      username: parentUsername,
+      roleKey: AuthService.roleParent,
+      fullName: parentUsername,
+      linkedStudentIds: const [studentId],
+    );
+    final parentIds = SchoolDataService.instance.sendParentDirectMessage(
+      body: 'Parent asking about homework',
+      staffId: StaffMemberOption.teacherKey(teacherId),
+      studentId: studentId,
+    );
+    expect(parentIds, isNotEmpty);
+
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    final teacherIds = SchoolDataService.instance.sendAdminDirectMessage(
+      body: 'Teacher reply on the same thread',
+      parentName: parentName,
+    );
+    expect(teacherIds.single, parentIds.single);
+
+    final conversation =
+        SchoolDataService.instance.getConversation(parentIds.single)!;
+    expect(
+      conversation.messages.map((m) => m.text),
+      containsAll([
+        'Parent asking about homework',
+        'Teacher reply on the same thread',
+      ]),
+    );
+  });
+
+  test('teacher send first still receives the parent reply on the same thread',
+      () {
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    final teacherIds = SchoolDataService.instance.sendAdminDirectMessage(
+      body: 'Please confirm pickup time',
+      parentName: parentName,
+    );
+    expect(teacherIds, isNotEmpty);
+
+    signIn(
+      username: parentUsername,
+      roleKey: AuthService.roleParent,
+      fullName: parentUsername,
+      linkedStudentIds: const [studentId],
+    );
+    final parentIds = SchoolDataService.instance.sendParentDirectMessage(
+      body: 'We will be there at 4',
+      staffId: StaffMemberOption.teacherKey(teacherId),
+      studentId: studentId,
+    );
+    expect(parentIds.single, teacherIds.single);
+    expect(
+      SchoolDataService.instance
+          .getConversation(teacherIds.single)!
+          .messages
+          .map((m) => m.text),
+      containsAll(['Please confirm pickup time', 'We will be there at 4']),
+    );
   });
 }
