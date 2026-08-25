@@ -37,6 +37,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   AdminDriverRecord? _driverRecord;
   String message = '';
   bool _messageIsSuccess = false;
+  bool _submitting = false;
 
   AppStrings get s => AppLocale.instance.strings;
   final _studentRegistry = StudentRegistryService.instance;
@@ -263,7 +264,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (selectedRole == AuthService.roleParent) {
       final agreed = await showParentGuardianTermsDialog(context);
       if (agreed && mounted) {
-        _completeRegistration();
+        await _completeRegistration();
       } else if (mounted) {
         _setMessage(s.mustAgreeTerms, isSuccess: false);
       }
@@ -280,7 +281,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
 
     if (agreed && mounted) {
-      _completeRegistration();
+      await _completeRegistration();
     } else if (mounted) {
       _setMessage(s.mustAgreeTerms, isSuccess: false);
     }
@@ -298,9 +299,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _showTermsDialog();
   }
 
-  void _completeRegistration() {
+  Future<void> _completeRegistration() async {
     if (selectedRole == AuthService.roleParent) {
-      _completeParentRegistration();
+      await _completeParentRegistration();
       return;
     }
 
@@ -370,7 +371,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  void _completeParentRegistration() {
+  Future<void> _completeParentRegistration() async {
+    if (_submitting) return;
     for (final child in _children) {
       if (child.record == null) {
         _setMessage(s.verifyChildFirst, isSuccess: false);
@@ -399,7 +401,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     }
 
-    final error = AuthService.registerParentAccount(
+    setState(() => _submitting = true);
+    final error = await AuthService.registerParentAccount(
       fullName: fullName.text.trim(),
       schoolId: schoolId.text.trim(),
       phone: phone.text.trim(),
@@ -407,21 +410,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       email: email.text.trim(),
       children: children,
     );
+    if (!mounted) return;
+    setState(() => _submitting = false);
 
     if (error != null) {
-      _setMessage(
-        switch (error) {
-          'exists' => s.phoneAlreadyRegistered,
-          'phone_used_by_staff' => s.phoneUsedByStaff,
-          'invalid_phone' => s.invalidPhone,
-          'already_linked' => s.alreadyLinkedStudent,
-          'student_mismatch' => s.studentVerifyFailed,
-          'school_blocked' => s.schoolAccessInactive,
-          'no_children' => s.addAtLeastOneChild,
-          _ => s.registrationFailed,
-        },
-        isSuccess: false,
-      );
+      _setMessage(s.parentRegisterError(error), isSuccess: false);
       return;
     }
 
@@ -784,7 +777,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   _parentRegistrationSection(),
                 ],
                 const SizedBox(height: 16),
-                ElevatedButton(onPressed: signUp, child: Text(s.signUp)),
+                ElevatedButton(
+                  onPressed: _submitting ? null : signUp,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(s.signUp),
+                ),
                 const SizedBox(height: 10),
                 if (message.isNotEmpty)
                   Text(

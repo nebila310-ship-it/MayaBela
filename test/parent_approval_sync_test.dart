@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +88,69 @@ void main() {
         parentUsername: '0911880001',
         studentId: 'STU-8801',
       ),
+    );
+  });
+
+  test('parent signup stamps className on the pending request', () {
+    EnrollmentService.instance.replaceLinks([], nextId: 903);
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-8804',
+        fullName: 'Pending Child',
+        grade: 'Grade 2',
+        className: 'Grade 2B',
+        schoolId: 'TB-001',
+        dateOfBirth: DateTime(2018, 4, 4),
+      ),
+    ], replace: true);
+
+    final err = EnrollmentService.instance.verifyAndCreateParentLink(
+      schoolId: 'TB-001',
+      studentId: 'STU-8804',
+      dateOfBirth: DateTime(2018, 4, 4),
+      parentUsername: '0911880004',
+      parentFullName: 'New Parent',
+      relationship: ParentRelationship.mother,
+      persist: false,
+    );
+    expect(err, isNull);
+    expect(
+      EnrollmentService.instance.linksForParent('0911880004').single.className,
+      'Grade 2B',
+    );
+  });
+
+  test('upserting one parent does not wipe another parent pending request', () {
+    EnrollmentService.instance.replaceLinks([
+      ParentLinkRequest(
+        id: 'PL-A',
+        parentUsername: '0911880005',
+        parentFullName: 'Parent A',
+        studentId: 'STU-8805',
+        schoolId: 'TB-001',
+        relationship: ParentRelationship.father,
+        requestedAt: DateTime(2026, 1, 1),
+        status: ParentLinkStatus.pending,
+      ),
+    ], nextId: 904);
+
+    EnrollmentService.instance.upsertLinks([
+      ParentLinkRequest(
+        id: 'PL-B',
+        parentUsername: '0911880006',
+        parentFullName: 'Parent B',
+        studentId: 'STU-8806',
+        schoolId: 'TB-001',
+        relationship: ParentRelationship.mother,
+        requestedAt: DateTime(2026, 1, 2),
+        status: ParentLinkStatus.approved,
+      ),
+    ]);
+
+    expect(EnrollmentService.instance.allLinksSnapshot(), hasLength(2));
+    expect(
+      EnrollmentService.instance.linksForParent('0911880005'),
+      hasLength(1),
     );
   });
 }

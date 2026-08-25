@@ -379,7 +379,10 @@ class SchoolAuthCloudService {
             .map(
               (child) => {
                 'studentId': child.studentId,
-                'dateOfBirth': child.dateOfBirth.toIso8601String(),
+                'dateOfBirth':
+                    '${child.dateOfBirth.year.toString().padLeft(4, '0')}-'
+                    '${child.dateOfBirth.month.toString().padLeft(2, '0')}-'
+                    '${child.dateOfBirth.day.toString().padLeft(2, '0')}',
                 'relationship': child.relationship.name,
                 'hasMedicalCondition': child.hasMedicalCondition,
                 if (child.medicalConditionDetails != null)

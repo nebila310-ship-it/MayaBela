@@ -73,6 +73,27 @@ class EnrollmentService {
     _seeded = true;
   }
 
+  /// Merges remote rows for one parent without wiping other parents' requests.
+  /// Logging in as a different parent used to replace the whole queue.
+  void upsertLinks(List<ParentLinkRequest> incoming, {int? nextId}) {
+    ensureSeeded();
+    final byId = {for (final link in _parentLinks) link.id: link};
+    for (final link in incoming) {
+      byId[link.id] = link;
+    }
+    _parentLinks
+      ..clear()
+      ..addAll(byId.values);
+    if (nextId != null && nextId > _nextLinkId) _nextLinkId = nextId;
+    _seeded = true;
+  }
+
+  void removeLinksByIds(Iterable<String> ids) {
+    final idSet = ids.toSet();
+    if (idSet.isEmpty) return;
+    _parentLinks.removeWhere((link) => idSet.contains(link.id));
+  }
+
   Future<void> _persist({String? syncLinkId}) async {
     await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
       syncLinkId: syncLinkId,
@@ -89,6 +110,7 @@ class EnrollmentService {
     bool hasMedicalCondition = false,
     String? medicalConditionDetails,
     String? otherMedicalInfo,
+    bool persist = true,
   }) {
     ensureSeeded();
     if (!StudentRegistryService.instance.verifyStudent(
@@ -111,6 +133,7 @@ class EnrollmentService {
       return 'already_linked';
     }
 
+    final student = StudentRegistryService.instance.lookupById(sid);
     _parentLinks.add(
       ParentLinkRequest(
         id: cloudLinkId(
@@ -131,10 +154,11 @@ class EnrollmentService {
         otherMedicalInfo: otherMedicalInfo?.trim().isEmpty == true
             ? null
             : otherMedicalInfo?.trim(),
+        className: student?.className,
       ),
     );
 
-    unawaited(_persist());
+    if (persist) unawaited(_persist());
     return null;
   }
 
@@ -261,6 +285,19 @@ class EnrollmentService {
         .toList();
   }
 
+  String? _classNameForLink(ParentLinkRequest link) {
+    final stamped = link.className?.trim();
+    if (stamped != null && stamped.isNotEmpty) return stamped;
+    return StudentRegistryService.instance.lookupById(link.studentId)?.className;
+  }
+
+  bool _isHomeroomClass(String? className) {
+    if (className == null || className.trim().isEmpty) return false;
+    final needle = className.trim().toLowerCase();
+    return TeacherAccessService.instance.homeroomClassNames
+        .any((name) => name.trim().toLowerCase() == needle);
+  }
+
   List<ParentLinkRequest> pendingForHomeroomTeacher() {
     ensureSeeded();
     final homeroomClasses = TeacherAccessService.instance.homeroomClassNames;
@@ -268,9 +305,7 @@ class EnrollmentService {
 
     return _parentLinks.where((link) {
       if (link.status != ParentLinkStatus.pending) return false;
-      final student = StudentRegistryService.instance.lookupById(link.studentId);
-      if (student == null) return false;
-      return homeroomClasses.contains(student.className);
+      return _isHomeroomClass(_classNameForLink(link));
     }).toList();
   }
 
@@ -302,11 +337,9 @@ class EnrollmentService {
     final homeroomClasses = TeacherAccessService.instance.homeroomClassNames;
     if (homeroomClasses.isEmpty) return [];
 
-    return _parentLinks.where((link) {
-      final student = StudentRegistryService.instance.lookupById(link.studentId);
-      if (student == null) return false;
-      return homeroomClasses.contains(student.className);
-    }).toList();
+    return _parentLinks
+        .where((link) => _isHomeroomClass(_classNameForLink(link)))
+        .toList();
   }
 
   /// Pending first, then approved, then rejected; newest first within each group.

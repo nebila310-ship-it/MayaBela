@@ -1583,7 +1583,11 @@ class CloudAppStore {
     }
 
     if (links.isNotEmpty) {
-      EnrollmentService.instance.replaceLinks(links, nextId: maxId);
+      if (role == AuthService.roleParent) {
+        EnrollmentService.instance.upsertLinks(links, nextId: maxId);
+      } else {
+        EnrollmentService.instance.replaceLinks(links, nextId: maxId);
+      }
       await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
         pushCloud: false,
       );
