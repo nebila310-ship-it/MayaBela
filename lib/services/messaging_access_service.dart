@@ -9,6 +9,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 
 /// Role-scoped conversation visibility — direct threads are participant-only.
 abstract final class MessagingAccessService {
@@ -75,7 +76,12 @@ abstract final class MessagingAccessService {
     if (normalized.isEmpty) return null;
     ParentRecipientOption? merged;
     for (final option in parentsForSchool(schoolId ?? AuthService.activeSchoolId)) {
-      if (option.parentName.trim().toLowerCase() != normalized) continue;
+      final nameMatch = option.parentName.trim().toLowerCase() == normalized;
+      final usernameMatch = option.participantUsernames.any(
+        (username) =>
+            username == normalized || PhoneUtils.matches(username, parentName),
+      );
+      if (!nameMatch && !usernameMatch) continue;
       merged = _combineParentRecipients(merged, option);
     }
     if (merged == null) return null;
@@ -129,6 +135,11 @@ abstract final class MessagingAccessService {
       final username = link.parentUsername.trim().toLowerCase();
       if (username.isNotEmpty) usernames.add(username);
     }
+    for (final id in option.studentIds) {
+      usernames.addAll(
+        parentLoginKeysForStudentIds([id], parentName: option.parentName),
+      );
+    }
     return ParentRecipientOption(
       parentName: option.parentName,
       studentNames: option.studentNames,
@@ -137,6 +148,60 @@ abstract final class MessagingAccessService {
           (usernames.isEmpty ? null : usernames.first),
       parentUsernames: usernames.toList(),
     );
+  }
+
+  /// Parent login keys (phone / username) that must be stamped so the parent
+  /// can read the conversation from the school cloud.
+  static List<String> parentLoginKeysForStudentIds(
+    List<String> studentIds, {
+    String? parentName,
+  }) {
+    final keys = <String>{};
+    final named = parentName?.trim().toLowerCase() ?? '';
+    for (final rawId in studentIds) {
+      final student = StudentRegistryService.instance.lookupById(rawId);
+      if (student == null) continue;
+      final phones = <String?>[];
+      if (named.isNotEmpty) {
+        if (student.fatherName?.trim().toLowerCase() == named) {
+          phones.add(student.fatherPhone);
+        } else if (student.motherName?.trim().toLowerCase() == named) {
+          phones.add(student.motherPhone);
+        } else if (student.guardianName?.trim().toLowerCase() == named) {
+          phones.add(student.guardianPhone);
+        } else {
+          phones.addAll([
+            student.fatherPhone,
+            student.motherPhone,
+            student.guardianPhone,
+          ]);
+        }
+      } else {
+        phones.addAll([
+          student.fatherPhone,
+          student.motherPhone,
+          student.guardianPhone,
+        ]);
+      }
+      for (final phone in phones) {
+        final normalized = PhoneUtils.normalizeLocal(phone ?? '');
+        if (normalized != null) keys.add(normalized);
+      }
+    }
+    EnrollmentService.instance.ensureSeeded();
+    final wanted = studentIds.map((id) => id.trim().toUpperCase()).toSet();
+    for (final link in EnrollmentService.instance.allLinksSnapshot()) {
+      if (link.status != ParentLinkStatus.approved) continue;
+      if (!wanted.contains(link.studentId.toUpperCase())) continue;
+      if (named.isNotEmpty &&
+          link.parentFullName.trim().toLowerCase() != named &&
+          link.parentUsername.trim().toLowerCase() != named) {
+        continue;
+      }
+      final username = link.parentUsername.trim().toLowerCase();
+      if (username.isNotEmpty) keys.add(username);
+    }
+    return keys.toList();
   }
 
   static List<ParentRecipientOption> _collectParentRecipients({
@@ -191,7 +256,7 @@ abstract final class MessagingAccessService {
       );
     }
 
-    return byKey.values.toList()
+    return byKey.values.map(_attachEnrollmentUsernames).toList()
       ..sort((a, b) => a.parentName.compareTo(b.parentName));
   }
 

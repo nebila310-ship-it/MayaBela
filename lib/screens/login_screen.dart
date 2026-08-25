@@ -282,6 +282,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     AppLockService.instance.handleLoginSuccess();
 
+    try {
+      await SessionPrefsService.instance
+          .saveActiveSession()
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {}
+
     if (!mounted) return;
 
     setState(() => _loggingIn = false);
