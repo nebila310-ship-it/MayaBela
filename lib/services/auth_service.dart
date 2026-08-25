@@ -79,6 +79,11 @@ class AuthService {
   static const demoStudentUsername = 'demo.student';
   static const demoStudentSchoolId = 'TB-001';
   static const demoStudentPassword = tempPassword;
+  /// Public sandbox transport-driver login (local seed only).
+  static const demoDriverUsername = 'demo.driver';
+  static const demoDriverPhone = '0911667788';
+  static const demoDriverSchoolId = demoStudentSchoolId;
+  static const demoDriverPassword = tempPassword;
   static const minPasswordLength = 10;
   static const passwordRedactedMarker = '__REDACTED__';
 
@@ -172,6 +177,36 @@ class AuthService {
       fullName: 'Sara Bekele',
       schoolId: demoStudentSchoolId,
       linkedStudentId: 'STU-1001',
+    ),
+    demoDriverPhone: RegisteredUser(
+      username: demoDriverPhone,
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
+    ),
+    demoDriverUsername: RegisteredUser(
+      username: demoDriverUsername,
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
+    ),
+    'transport': RegisteredUser(
+      username: 'transport',
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
     ),
     if (kDebugMode) ...{
       'teacher': RegisteredUser(
@@ -302,6 +337,8 @@ class AuthService {
     'transport',
     'student',
     demoStudentUsername,
+    demoDriverUsername,
+    demoDriverPhone,
   };
 
   /// Rebuilds phone logins from staff registries, saves locally, and pushes to Firestore.
@@ -579,12 +616,71 @@ class AuthService {
     StudentRegistryService.instance.ensureLocalDemoStudent();
   }
 
+  static bool isPublicDemoDriverLogin({
+    required String roleKey,
+    required String username,
+    required String password,
+    String? schoolId,
+  }) {
+    if (roleKey != roleDriver) return false;
+    if (password != demoDriverPassword) return false;
+    if ((schoolId ?? '').trim().toUpperCase() != demoDriverSchoolId) {
+      return false;
+    }
+    final raw = username.trim().toLowerCase();
+    final phone = PhoneUtils.normalizeLocal(username) ?? PhoneUtils.loginKey(username);
+    return raw == demoDriverUsername ||
+        raw == 'transport' ||
+        phone == demoDriverPhone;
+  }
+
+  static bool get isPublicDemoDriverSession {
+    final user = currentUser;
+    if (user == null || user.roleKey != roleDriver) return false;
+    if ((user.schoolId ?? '').toUpperCase() != demoDriverSchoolId) return false;
+    final name = user.username.toLowerCase();
+    return name == demoDriverUsername ||
+        name == 'transport' ||
+        name == demoDriverPhone ||
+        PhoneUtils.matches(user.phone, demoDriverPhone);
+  }
+
+  static void preparePublicDemoDriverSession() {
+    SchoolRegistryService.instance.ensureLocalDemoSchool();
+    DriverRegistryService.instance.ensureLocalDemoDriver();
+    _ensurePublicDemoDriverUsers();
+  }
+
+  static void _ensurePublicDemoDriverUsers() {
+    RegisteredUser make(String username) => RegisteredUser(
+          username: username,
+          password: demoDriverPassword,
+          roleKey: roleDriver,
+          email: 'demo.driver@mayaschool.et',
+          phone: demoDriverPhone,
+          fullName: 'Alemayehu T.',
+          schoolId: demoDriverSchoolId,
+          linkedDriverId: 'DRV-1001',
+        );
+    _users[demoDriverPhone] = make(demoDriverPhone);
+    _users[demoDriverUsername] = make(demoDriverUsername);
+    _users['transport'] = make('transport');
+  }
+
   static bool restoreSession(String username, {String? schoolId}) {
     final user = _findUser(username);
     if (user == null) return false;
 
     if (user.username.toLowerCase() == demoStudentUsername) {
       preparePublicDemoStudentSession();
+    }
+    if (user.roleKey == roleDriver &&
+        (user.schoolId ?? schoolId ?? '').toUpperCase() == demoDriverSchoolId &&
+        (user.username.toLowerCase() == demoDriverUsername ||
+            user.username.toLowerCase() == 'transport' ||
+            user.username == demoDriverPhone ||
+            PhoneUtils.matches(user.phone, demoDriverPhone))) {
+      preparePublicDemoDriverSession();
     }
 
     setSession(user);
@@ -848,6 +944,24 @@ class AuthService {
       schoolId: schoolId,
     )) {
       preparePublicDemoStudentSession();
+      final localError = validateLogin(
+        roleKey: roleKey,
+        username: username,
+        password: password,
+      );
+      if (localError == null) {
+        await SessionPrefsService.instance.saveActiveSession();
+      }
+      return localError;
+    }
+
+    if (isPublicDemoDriverLogin(
+      roleKey: roleKey,
+      username: username,
+      password: password,
+      schoolId: schoolId,
+    )) {
+      preparePublicDemoDriverSession();
       final localError = validateLogin(
         roleKey: roleKey,
         username: username,

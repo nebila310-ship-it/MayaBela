@@ -70,6 +70,33 @@ void main() {
       AuthService.clearSession();
     });
 
+    test('public transport demo login succeeds without cloud', () {
+      expect(
+        AuthService.isPublicDemoDriverLogin(
+          roleKey: AuthService.roleDriver,
+          username: AuthService.demoDriverPhone,
+          password: AuthService.demoDriverPassword,
+          schoolId: AuthService.demoDriverSchoolId,
+        ),
+        isTrue,
+      );
+      AuthService.preparePublicDemoDriverSession();
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleDriver,
+        username: AuthService.demoDriverPhone,
+        password: AuthService.demoDriverPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.roleKey, AuthService.roleDriver);
+      expect(AuthService.currentUser?.linkedDriverId, 'DRV-1001');
+      expect(AuthService.isPublicDemoDriverSession, isTrue);
+      expect(
+        AuthService.schoolAccessError(AuthService.demoDriverSchoolId),
+        isNull,
+      );
+      AuthService.clearSession();
+    });
+
     test('wrong password rejected', () {
       final error = AuthService.validateLogin(
         roleKey: AuthService.roleTeacher,

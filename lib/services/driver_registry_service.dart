@@ -181,6 +181,31 @@ class DriverRegistryService {
     }
   }
 
+  /// Alemayehu / Bus 12 row for the public transport demo. In-memory only.
+  void ensureLocalDemoDriver() {
+    const id = 'DRV-1001';
+    final existing = lookupById(id);
+    if (existing == null) {
+      _drivers.insert(
+        0,
+        AdminDriverRecord(
+          driverId: id,
+          busId: 'BUS-1001',
+          fullName: 'Alemayehu T.',
+          busNumber: 'Bus 12',
+          routeName: 'Bole → Megenagna → School',
+          plateNumber: 'AA-3-45678',
+          schoolId: 'TB-001',
+          email: 'alemayehu@mayaschool.et',
+          phone: '0911667788',
+          loginUsername: 'demo.driver',
+          initialPassword: AuthService.tempPassword,
+        ),
+      );
+    }
+    BusRegistryService.instance.ensureLocalDemoBus();
+  }
+
   AdminDriverRecord? lookupByBusId(String busId) {
     final id = busId.trim().toUpperCase();
     try {

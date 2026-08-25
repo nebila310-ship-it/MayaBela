@@ -715,7 +715,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Widget _buildStudentDemoBanner() {
+  void _fillTransportDemo() {
+    setState(() {
+      selectedRole = AuthService.roleDriver;
+      schoolId.text = AuthService.demoDriverSchoolId;
+      username.text = '911667788';
+      password.text = AuthService.demoDriverPassword;
+      _schoolIdEditing = false;
+    });
+  }
+
+  Widget _buildDemoBanner({
+    required String hint,
+    required String actionLabel,
+    required Key actionKey,
+    required VoidCallback onFill,
+  }) {
     return Material(
       color: Colors.white.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(12),
@@ -725,7 +740,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Expanded(
               child: Text(
-                s.studentDemoHint,
+                hint,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.82),
                   fontSize: 12,
@@ -734,10 +749,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             TextButton(
-              key: const Key('login-student-demo'),
-              onPressed: _fillStudentDemo,
+              key: actionKey,
+              onPressed: onFill,
               child: Text(
-                s.useStudentDemo,
+                actionLabel,
                 style: const TextStyle(
                   color: Color(0xFFFFB74D),
                   fontWeight: FontWeight.w800,
@@ -854,7 +869,21 @@ class _LoginScreenState extends State<LoginScreen> {
         _buildSchoolIdField(),
         if (selectedRole == AuthService.roleStudent) ...[
           const SizedBox(height: 10),
-          _buildStudentDemoBanner(),
+          _buildDemoBanner(
+            hint: s.studentDemoHint,
+            actionLabel: s.useStudentDemo,
+            actionKey: const Key('login-student-demo'),
+            onFill: _fillStudentDemo,
+          ),
+        ],
+        if (selectedRole == AuthService.roleDriver) ...[
+          const SizedBox(height: 10),
+          _buildDemoBanner(
+            hint: s.transportDemoHint,
+            actionLabel: s.useTransportDemo,
+            actionKey: const Key('login-transport-demo'),
+            onFill: _fillTransportDemo,
+          ),
         ],
         const SizedBox(height: 12),
         if (_usesPhoneLogin)

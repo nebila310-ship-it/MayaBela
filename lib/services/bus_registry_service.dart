@@ -108,6 +108,23 @@ class BusRegistryService extends ChangeNotifier {
     }
   }
 
+  /// Bus 12 for the public transport demo. In-memory only.
+  void ensureLocalDemoBus() {
+    if (lookupAnyById('BUS-1001') != null) return;
+    _buses.add(
+      BusRecord(
+        busId: 'BUS-1001',
+        busNumber: 'Bus 12',
+        schoolId: 'TB-001',
+        plateNumber: 'AA-3-45678',
+        routeName: 'Bole → Megenagna → School',
+        assignedDriverId: 'DRV-1001',
+      ),
+    );
+    final n = ShortRegistryId.parseNumber('BUS-1001', prefix: 'BUS') ?? 0;
+    if (n >= _nextId) _nextId = n + 1;
+  }
+
   Future<void> _persist() async {
     await BusPersistenceService.instance.saveFromService();
     notifyListeners();
