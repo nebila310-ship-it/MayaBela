@@ -59,7 +59,7 @@ void main() {
     expect(find.text('Home'), findsWidgets);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.expandedWidth, 24),
+      closeTo(ClassroomSidebar.expandedWidth, 8),
     );
   });
 
@@ -73,7 +73,7 @@ void main() {
     expect(UserPreferencesService.instance.classroomSidebarCollapsed, isTrue);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.collapsedWidth, 24),
+      closeTo(ClassroomSidebar.collapsedWidth, 8),
     );
 
     await tester.tap(find.byKey(const Key('classroom-top-menu')));
@@ -83,8 +83,9 @@ void main() {
     expect(UserPreferencesService.instance.classroomSidebarCollapsed, isFalse);
     expect(
       tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
-      closeTo(ClassroomSidebar.expandedWidth, 24),
+      closeTo(ClassroomSidebar.expandedWidth, 8),
     );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('phone classroom menu opens a slide-out sidebar', (tester) async {
@@ -99,5 +100,95 @@ void main() {
 
     expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
     expect(find.byKey(const Key('classroom-nav-home')), findsOneWidget);
+  });
+
+  testWidgets('parent desktop dashboard uses the same collapsible sidebar', (
+    tester,
+  ) async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.sara',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      fullName: 'Sara',
+    );
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(1280, 800)),
+          child: AdaptiveDashboardShell(
+            title: 'malo Parent Portal',
+            welcomeMessage: 'Welcome',
+            gradientColors: const [
+              Color(0xFF00695C),
+              Color(0xFF00897B),
+              Color(0xFF26A69A),
+            ],
+            roleKey: AuthService.roleParent,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
+    expect(find.byKey(const Key('classroom-top-menu')), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('classroom-sidebar-toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(UserPreferencesService.instance.classroomSidebarCollapsed, isTrue);
+    expect(
+      tester.getSize(find.byKey(const Key('classroom-sidebar'))).width,
+      closeTo(ClassroomSidebar.collapsedWidth, 8),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('parent phone dashboard opens the same slide-out menu', (
+    tester,
+  ) async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.sara',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      fullName: 'Sara',
+    );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(size: Size(390, 844)),
+          child: AdaptiveDashboardShell(
+            title: 'malo Parent Portal',
+            welcomeMessage: 'Welcome',
+            gradientColors: [
+              Color(0xFF00695C),
+              Color(0xFF00897B),
+              Color(0xFF26A69A),
+            ],
+            roleKey: AuthService.roleParent,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('classroom-open-menu')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('classroom-open-menu')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('classroom-sidebar')), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
   });
 }

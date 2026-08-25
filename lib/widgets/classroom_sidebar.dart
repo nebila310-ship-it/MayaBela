@@ -63,7 +63,7 @@ void selectClassroomDestination({
       ?.call();
 }
 
-/// Colorful classroom rail that opens, closes, and bounces.
+/// Opaque icon rail that expands to labels. No leftover text under the page.
 class ClassroomSidebar extends StatelessWidget {
   const ClassroomSidebar({
     super.key,
@@ -77,9 +77,10 @@ class ClassroomSidebar extends StatelessWidget {
     this.inDrawer = false,
   });
 
-  static const double expandedWidth = 248;
-  static const double collapsedWidth = 80;
-  static const Duration animDuration = Duration(milliseconds: 420);
+  static const double expandedWidth = 240;
+  static const double collapsedWidth = 72;
+  static const double headerHeight = 56;
+  static const Duration animDuration = Duration(milliseconds: 280);
 
   final String title;
   final Color accent;
@@ -93,13 +94,13 @@ class ClassroomSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
-    final hideLabels = collapsed && !inDrawer;
+    final iconOnly = collapsed && !inDrawer;
     final width = inDrawer
         ? expandedWidth
-        : (hideLabels ? collapsedWidth : expandedWidth);
+        : (iconOnly ? collapsedWidth : expandedWidth);
     final toggleTip = inDrawer
         ? s.closeClassroomMenu
-        : hideLabels
+        : iconOnly
             ? s.expandClassroomSidebar
             : s.collapseClassroomSidebar;
 
@@ -112,39 +113,31 @@ class ClassroomSidebar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: inDrawer
-            ? const BorderRadius.horizontal(right: Radius.circular(28))
+            ? const BorderRadius.horizontal(right: Radius.circular(24))
             : BorderRadius.zero,
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.16),
-            blurRadius: inDrawer ? 28 : 18,
-            offset: const Offset(6, 0),
-          ),
-        ],
+        border: inDrawer
+            ? null
+            : const Border(right: BorderSide(color: ClassroomPalette.line)),
       ),
-      child: OverflowBox(
-        alignment: Alignment.topLeft,
-        minWidth: expandedWidth,
-        maxWidth: expandedWidth,
-        child: SizedBox(
-          width: expandedWidth,
-          child: Column(
+      child: Material(
+        color: Colors.white,
+        child: Column(
           children: [
             _Header(
               title: title,
               accent: accent,
-              collapsed: hideLabels,
+              iconOnly: iconOnly,
               tooltip: toggleTip,
+              inDrawer: inDrawer,
               onToggle: () {
                 if (UserPreferencesService.instance.hapticFeedback) {
                   HapticFeedback.selectionClick();
                 }
                 onToggle();
               },
-              inDrawer: inDrawer,
             ),
             SizedBox(
-              height: 6,
+              height: 4,
               child: Row(
                 children: [
                   for (final color in ClassroomPalette.classes.take(8))
@@ -154,14 +147,14 @@ class ClassroomSidebar extends StatelessWidget {
             ),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: destinations.length,
                 itemBuilder: (context, index) {
                   final item = destinations[index];
                   return _NavTile(
                     item: item,
                     selected: selectedIndex == index,
-                    collapsed: hideLabels,
+                    iconOnly: iconOnly,
                     onTap: () {
                       if (UserPreferencesService.instance.hapticFeedback) {
                         HapticFeedback.lightImpact();
@@ -172,34 +165,7 @@ class ClassroomSidebar extends StatelessWidget {
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-              child: Row(
-                children: [
-                  for (var i = 0; i < 5; i++) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.6, end: 1),
-                      duration: Duration(milliseconds: 280 + (i * 70)),
-                      curve: Curves.easeOutBack,
-                      builder: (context, value, child) {
-                        return Transform.scale(scale: value, child: child);
-                      },
-                      child: Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: ClassroomPalette.at(i),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
           ],
-        ),
         ),
       ),
     );
@@ -210,7 +176,7 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.title,
     required this.accent,
-    required this.collapsed,
+    required this.iconOnly,
     required this.tooltip,
     required this.onToggle,
     required this.inDrawer,
@@ -218,7 +184,7 @@ class _Header extends StatelessWidget {
 
   final String title;
   final Color accent;
-  final bool collapsed;
+  final bool iconOnly;
   final String tooltip;
   final VoidCallback onToggle;
   final bool inDrawer;
@@ -226,65 +192,48 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            accent,
-            Color.lerp(accent, ClassroomPalette.cyan, 0.45)!,
-            Color.lerp(accent, ClassroomPalette.grape, 0.28)!,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            key: const Key('classroom-sidebar-toggle'),
-            tooltip: tooltip,
-            onPressed: onToggle,
-            icon: AnimatedRotation(
-              turns: collapsed ? 0.03 : -0.08,
-              duration: ClassroomSidebar.animDuration,
-              curve: Curves.easeOutBack,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-                ),
-                child: Icon(
-                  inDrawer ? Icons.close_rounded : Icons.auto_stories_rounded,
+      height: ClassroomSidebar.headerHeight,
+      color: accent,
+      child: iconOnly
+          ? Center(
+              child: IconButton(
+                key: const Key('classroom-sidebar-toggle'),
+                tooltip: tooltip,
+                onPressed: onToggle,
+                icon: Icon(
+                  inDrawer ? Icons.close_rounded : Icons.menu_rounded,
                   color: Colors.white,
                 ),
               ),
+            )
+          : Row(
+              children: [
+                IconButton(
+                  key: const Key('classroom-sidebar-toggle'),
+                  tooltip: tooltip,
+                  onPressed: onToggle,
+                  icon: Icon(
+                    inDrawer ? Icons.close_rounded : Icons.menu_open_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+                Expanded(
+                  child: ClipRect(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                height: 1.15,
-              ),
-            ),
-          ),
-          Icon(
-            collapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-            color: Colors.white.withValues(alpha: 0.9),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
     );
   }
 }
@@ -293,13 +242,13 @@ class _NavTile extends StatelessWidget {
   const _NavTile({
     required this.item,
     required this.selected,
-    required this.collapsed,
+    required this.iconOnly,
     required this.onTap,
   });
 
   final ClassroomNavDestination item;
   final bool selected;
-  final bool collapsed;
+  final bool iconOnly;
   final VoidCallback onTap;
 
   @override
@@ -308,22 +257,13 @@ class _NavTile extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         AnimatedContainer(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutBack,
+          duration: ClassroomSidebar.animDuration,
+          curve: Curves.easeOutCubic,
           width: 40,
           height: 40,
           decoration: BoxDecoration(
             color: selected ? item.color : item.color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: item.color.withValues(alpha: 0.38),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : null,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             item.icon,
@@ -333,8 +273,8 @@ class _NavTile extends StatelessWidget {
         ),
         if (item.badge > 0)
           Positioned(
-            right: -2,
-            top: -2,
+            right: -1,
+            top: -1,
             child: Container(
               width: 10,
               height: 10,
@@ -347,59 +287,45 @@ class _NavTile extends StatelessWidget {
       ],
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Tooltip(
-        message: item.label,
-        waitDuration: collapsed ? Duration.zero : const Duration(seconds: 2),
-        child: Material(
-          color: selected ? item.color.withValues(alpha: 0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            key: Key('classroom-nav-${item.id}'),
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            hoverColor: item.color.withValues(alpha: 0.08),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                children: [
-                  bubble,
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: selected ? item.color : ClassroomPalette.ink,
-                        fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                        fontSize: 13,
+    return Tooltip(
+      message: item.label,
+      waitDuration: iconOnly ? Duration.zero : const Duration(seconds: 2),
+      child: Material(
+        color: selected ? item.color.withValues(alpha: 0.12) : Colors.transparent,
+        child: InkWell(
+          key: Key('classroom-nav-${item.id}'),
+          onTap: onTap,
+          child: SizedBox(
+            height: 48,
+            child: iconOnly
+                ? Center(child: bubble)
+                : Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 8),
+                        child: bubble,
                       ),
-                    ),
-                  ),
-                  if (item.badge > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: ClassroomPalette.red,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        item.badge > 99 ? '99+' : '${item.badge}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: ClipRect(
+                          child: Text(
+                            item.label,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.clip,
+                            style: TextStyle(
+                              color: selected
+                                  ? item.color
+                                  : ClassroomPalette.ink,
+                              fontWeight: selected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
+                    ],
+                  ),
           ),
         ),
       ),
