@@ -1457,16 +1457,41 @@ class CloudAppStore {
 
   // —— CRUD: Conversations ——
 
-  Future<void> pushConversation(Conversation conversation, {String? schoolId}) async {
+  Future<void> pushConversation(
+    Conversation conversation, {
+    String? schoolId,
+    bool requireCloud = false,
+  }) async {
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    var merged = conversation;
+    try {
+      final existing = await _crud.readDoc(
+        collection: AppCollections.conversations,
+        docId: conversation.id,
+      );
+      if (existing != null) {
+        existing['id'] = conversation.id;
+        final cloud = ConversationDocument.fromMap(existing).toConversation();
+        SchoolDataService.instance.mergeConversationFromCloud(cloud);
+        merged =
+            SchoolDataService.instance.getConversation(conversation.id) ??
+                conversation;
+      }
+    } catch (_) {}
+
     final doc = ConversationDocument.fromConversation(
-      conversation,
-      schoolId: schoolId,
+      merged,
+      schoolId: sid.isEmpty ? null : sid,
     );
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.conversations,
-          docId: conversation.id,
-          data: doc.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.conversations,
+        docId: merged.id,
+        data: doc.toMap(),
+      ),
+      rethrowOnError: requireCloud,
+      immediate: true,
+    );
   }
 
   Future<void> pushAllConversations() async {

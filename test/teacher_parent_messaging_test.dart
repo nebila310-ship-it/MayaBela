@@ -458,4 +458,39 @@ void main() {
       containsAll(['Please confirm pickup time', 'We will be there at 4']),
     );
   });
+
+  test('teacher reply stays outgoing when staff id casing differs', () {
+    signIn(
+      username: 'teacher.msg',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: teacherId,
+    );
+    final message = ChatMessage(
+      text: 'Pickup at the gate',
+      time: DateTime(2024, 5, 5),
+      senderRole: AuthService.roleTeacher,
+      senderStaffId: 'teacher:${teacherId.toLowerCase()}',
+      senderUsername: 'teacher.msg',
+    );
+    expect(
+      message.isOutgoingFor(
+        AuthService.roleTeacher,
+        viewerStaffId: StaffMemberOption.teacherKey(teacherId),
+        viewerUsername: 'teacher.msg',
+      ),
+      isTrue,
+    );
+
+    final conversation = Conversation(
+      id: 'direct-case-thread',
+      name: parentName,
+      role: 'Parent',
+      parentParticipantName: parentName,
+      parentParticipantUsernames: const [parentUsername],
+      staffParticipantId: 'TEACHER:$teacherId',
+      linkedStudentIds: const [studentId],
+      messages: [message],
+    );
+    expect(conversation.isVisibleToRole(AuthService.roleTeacher), isTrue);
+  });
 }

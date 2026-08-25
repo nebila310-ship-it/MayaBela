@@ -40,9 +40,15 @@ class MessagePersistenceService {
     }
   }
 
-  Future<void> saveConversation(Conversation conversation) async {
+  Future<void> saveConversation(
+    Conversation conversation, {
+    bool requireCloud = false,
+  }) async {
     await saveFromService(pushCloud: false);
-    await CloudAppStore.instance.pushConversation(conversation);
+    await CloudAppStore.instance.pushConversation(
+      conversation,
+      requireCloud: requireCloud,
+    );
   }
 }
 
