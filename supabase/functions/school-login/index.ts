@@ -199,6 +199,17 @@ Deno.serve(async (req) => {
       );
     }
     console.error(e);
+    if (
+      msg.includes("schema cache") ||
+      msg.includes("PGRST002") ||
+      msg.includes("Could not query the database")
+    ) {
+      return errorResponse(
+        "Cloud login is temporarily unavailable. Try again in a minute.",
+        503,
+        "cloud_required",
+      );
+    }
     return errorResponse(msg, 500, "invalid");
   }
 });

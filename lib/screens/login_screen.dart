@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'account_inactive' => 'This student account is not active. Contact your school admin.',
           'portal_disabled' => 'Student portal is disabled for this school.',
           'cloud_required' =>
-            'Cloud login could not connect to Supabase. Check your internet and try again. If it keeps failing, the school-login function may be down.',
+            'Cloud login is temporarily unavailable. Wait a minute and try again. If it keeps failing, the school-login function or database may be down.',
           'password_too_short' => s.passwordTooShort,
           'rate_limited' =>
             'Too many login attempts. Please wait a few minutes and try again.',
