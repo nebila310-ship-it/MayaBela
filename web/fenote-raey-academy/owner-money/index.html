@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+  <meta charset="utf-8" />
+  <base href="/fenote-raey-academy/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ፍኖተ ራእይ — ለባለቤት፦ ገቢ እና ቁጠባ</title>
+  <style>
+    @font-face {
+      font-family: "Noto Ethiopic";
+      src: url("file:///usr/share/fonts/truetype/noto/NotoSansEthiopic-Regular.ttf");
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "Noto Ethiopic";
+      src: url("file:///usr/share/fonts/truetype/noto/NotoSansEthiopic-Bold.ttf");
+      font-weight: 700;
+    }
+    :root { --purple:#4527a0; --gold:#b45309; --teal:#0f766e; --ink:#0f172a; --muted:#475569; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Ethiopic", "Noto Sans Ethiopic", "Nyala", "Segoe UI", Arial, sans-serif;
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+    .page { max-width: 210mm; margin: 0 auto; padding: 10mm 12mm 8mm; }
+    .no-print { margin: 8px 16px; font-size: 13px; }
+    .kicker { color: var(--gold); font-weight: 800; letter-spacing: .08em; font-size: 11px; margin: 0 0 4px; }
+    h1 { color: var(--purple); margin: 0 0 4px; font-size: 22px; letter-spacing: -.02em; }
+    .lead { margin: 0 0 10px; font-size: 13.5px; }
+    .say {
+      background: #fff7ed;
+      border-left: 4px solid #f59e0b;
+      padding: 8px 10px;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .col {
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      padding: 10px 10px 8px;
+      background: #f8f6ff;
+      min-height: 0;
+    }
+    .col.now { background: #ecfdf5; border-color: #a7f3d0; }
+    .col.year { background: #f8f6ff; }
+    .col.later { background: #eff6ff; border-color: #bfdbfe; }
+    .col h2 { margin: 0 0 6px; font-size: 14px; color: var(--teal); }
+    .when { font-size: 11px; color: var(--muted); margin: 0 0 8px; font-weight: 700; }
+    .col ul { margin: 0; padding-left: 1.1em; }
+    .col li { margin: 0 0 7px; }
+    .en { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 2px; font-family: "Segoe UI", Arial, sans-serif; }
+    .foot {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 10px;
+    }
+    .box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
+    .box strong { color: var(--purple); }
+    .contact { font-size: 12px; }
+    @media print {
+      .no-print { display: none; }
+      .page { padding: 0; }
+    }
+    @page { size: A4; margin: 10mm; }
+  </style>
+</head>
+<body>
+  <p class="no-print">
+    <a href="index.html">ስላይዶች</a> ·
+    <a href="leave-behind.html">Leave-behind</a> ·
+    <a href="fenote-raey-owner-money.pdf">PDF</a> ·
+    ይህን ገጽ በ <strong>Ctrl+P</strong> አትሙ
+  </p>
+  <div class="page">
+    <p class="kicker">ፍኖተ ራእይ አካዳሚ · ለባለቤት / For the owner</p>
+    <h1>ትምህርት ቤቱ ገንዘብ የሚያገኘው እንዴት ነው?</h1>
+    <p class="lead">MaJo Bridge Technologies and Events · አዲስ ሱቅ ሳንከፍት፣ ያለውን ክፍያ እንሰበስባለን፣ የሚጠፋውን እንቆጥባለን።</p>
+    <div class="say">
+      የግንኙነት መጽሐፍ ክፍያው ይቀራል። መተግበሪያው ያን መጽሐፍ ይተካል። የምትቆጥበው ወጪም ትርፍ ነው።
+      <span class="en">Keep the communication-book fee. The app replaces the book. Money you stop wasting is also profit.</span>
+    </div>
+
+    <div class="cols">
+      <div class="col now">
+        <h2>1. በዚህ ወቅት</h2>
+        <p class="when">This term — now, with the app</p>
+        <ul>
+          <li>የወረቀት የግንኙነት መጽሐፍ ክፍያው በወላጅ መተግበሪያ ይቀጥላል።
+            <span class="en">Same parent fee as the communication book — now digital.</span></li>
+          <li>ወላጅ የራሱን ክፍያ ቀሪ ያያል። ያልተከፈለ ክፍያ ይታያል — የተመዘገበ ገቢ ይሰበሰባል።
+            <span class="en">Parents see their balance. Outstanding fees get collected.</span></li>
+          <li>ወረቀት፣ ማተም፣ WhatsApp ዝርዝር ይቀንሳል።
+            <span class="en">Less paper, printing, and WhatsApp lists.</span></li>
+          <li>የባስ GPS ለሌላ ኩባንያ አትክፈሉ። በስርዓቱ ውስጥ ነው።
+            <span class="en">No second GPS company. Tracking is in the school system.</span></li>
+          <li>አንድ የተማሪ QR / መታወቂያ — ለአውቶቡስ፣ ክፍል፣ ፋይል። የካርድ ክፍያ ካለ ይቀጥላል።
+            <span class="en">One QR card. ID / replacement fees can stay.</span></li>
+        </ul>
+      </div>
+      <div class="col year">
+        <h2>2. በዚህ ዓመት</h2>
+        <p class="when">This year — once the school is using it</p>
+        <ul>
+          <li>ኢ-ቡክ እና የትምህርት ቁሳቁስ በመተግበሪያ ይሸጣል። ትምህርት ቤቱ ህዳግ ይይዛል።
+            <span class="en">Sell e-books and materials in the app. School keeps the margin.</span></li>
+          <li>ስቶር በስም ይወጣል። መጽሐፍና ወረቀት መጥፋት ይቀንሳል።
+            <span class="en">Store issues by name. Less stock leakage.</span></li>
+          <li>ኤክሴል ብቻ ለመጻፍ ተጨማሪ ሰራተኛ አያስፈልግም።
+            <span class="en">Fewer extra clerks only to type Excel.</span></li>
+          <li>የደመወዝና ግብር ስህተት ይቀንሳል።
+            <span class="en">Fewer payroll and tax mistakes.</span></li>
+          <li>ካንቲን / ትንሽ ሱቅ ካለ፣ ሽያጭ በመዝገብ ይቀመጣል።
+            <span class="en">Canteen sales on record, not a short till.</span></li>
+          <li>የአውቶቡስ ተሳፋሪ በፋይል — ያልተከፈለ መቀመጫ ይቀንሳል።
+            <span class="en">Bus riders on file. Fewer unpaid seats.</span></li>
+        </ul>
+      </div>
+      <div class="col later">
+        <h2>3. በኋላ — ታብሌት</h2>
+        <p class="when">Later — after families use the app</p>
+        <ul>
+          <li>ትምህርት ቤቱ ታብሌት በጅምላ ይገዛል፣ ለወላጅና መምህር በትንሽ ህዳግ ይሸጣል።
+            <span class="en">Bulk tablets. Small margin to parents and teachers.</span></li>
+          <li>መተግበሪያው አስቀድሞ አለ — መሳሪያው ባዶ አይደለም።
+            <span class="en">The app is already there, so the device is useful.</span></li>
+          <li>መጀመሪያ ሶፍትዌሩ። ቤተሰቡ ከተለማመደ በኋላ መሳሪያ።
+            <span class="en">Software first. Devices after the parent app is in use.</span></li>
+          <li>CCTV ለወላጅ የሚሸጥ 24/7 ቪዲዮ አይደለም። ለሰራተኛና አመራር ብቻ።
+            <span class="en">Do not sell live CCTV to parents. Staff only.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="box">
+        <strong>አንድ ዓረፍተ ነገር፦</strong> የግንኙነት መጽሐፍ ክፍያውን እንይዛለን፣ ቁሳቁስ በመተግበሪያ እንሸጣለን፣ በኋላ በታብሌት ትንሽ ህዳግ — እና ወረቀት፣ የተለየ GPS፣ የሚጠፋ ስቶክ አንከፍልም። ሶፍትዌሩ ሱቁ ነው። የምትዘጋው ፍሳሽ ትርፉ ነው።
+        <span class="en">The software is the shop. The leak you close is the profit.</span>
+      </div>
+      <div class="box contact">
+        <strong>ቀጣዩ እርምጃ፦</strong> 30–60 ቀን ሙከራ፣ አንድ ካምፓስ ወይም ክፍል።<br>
+        ሙከራ፦ https://mayabela.pages.dev<br>
+        +251 911 646 444 · majobridgetech@gmail.com<br>
+        ሰኞ–ቅዳሜ 09:00–18:00
+      </div>
+    </div>
+  </div>
+</body>
+</html>
