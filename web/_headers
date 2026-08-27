@@ -33,5 +33,6 @@
   Cache-Control: no-cache, must-revalidate
 
 /fenote-raey-academy/fenote-raey-owner-money.pdf
+  Content-Type: application/pdf
   Content-Disposition: inline; filename="Fenote-Raey-owner-money.pdf"
   Cache-Control: no-cache, must-revalidate
