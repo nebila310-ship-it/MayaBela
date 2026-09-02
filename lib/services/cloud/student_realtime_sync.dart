@@ -6,8 +6,8 @@ import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
+import 'package:mayabela/services/cloud/role_sync_coordinator.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
-import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 
@@ -16,6 +16,7 @@ abstract final class StudentRealtimeSync {
   static final List<StreamSubscription<dynamic>> _subscriptions = [];
   static Timer? _debounce;
   static bool _active = false;
+  static bool _ignoreSubscribeSnapshot = true;
   static final _crud = DocumentStore();
 
   static void start() {
@@ -23,6 +24,7 @@ abstract final class StudentRealtimeSync {
     if (AuthService.currentUser?.roleKey != AuthService.roleStudent) return;
     if (_active) return;
     _active = true;
+    _ignoreSubscribeSnapshot = true;
 
     final collections = <String>[
       AppCollections.homework,
@@ -53,6 +55,7 @@ abstract final class StudentRealtimeSync {
     }
     _subscriptions.clear();
     _active = false;
+    _ignoreSubscribeSnapshot = true;
   }
 
   static void _onCloudChange(dynamic _) {
@@ -60,6 +63,10 @@ abstract final class StudentRealtimeSync {
     final generation = AuthService.sessionGeneration;
     _debounce = Timer(const Duration(milliseconds: 900), () {
       if (!AuthService.isLiveGeneration(generation)) return;
+      if (_ignoreSubscribeSnapshot) {
+        _ignoreSubscribeSnapshot = false;
+        return;
+      }
       unawaited(_refreshStudentData());
     });
   }
@@ -68,7 +75,13 @@ abstract final class StudentRealtimeSync {
     final generation = AuthService.sessionGeneration;
     if (AuthService.currentUser?.roleKey != AuthService.roleStudent) return;
     try {
-      await CloudAppStore.instance.pullForStudentSession();
+      RoleSyncCoordinator.log(
+        'realtime-triggered gen=$generation reason=realtime-student',
+      );
+      await RoleSyncCoordinator.requestFullRolePull(
+        reason: 'realtime-student',
+        generation: generation,
+      );
       if (!AuthService.isLiveGeneration(generation)) return;
       await SessionCloudSync.applyStudentSessionLocally();
       if (!AuthService.isLiveGeneration(generation)) return;

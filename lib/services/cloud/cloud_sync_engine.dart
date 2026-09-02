@@ -114,6 +114,10 @@ abstract final class CloudSyncEngine {
     if (!_engineIsLive(generation)) return;
 
     _tickRunning = true;
+    debugPrint(
+      '[RoleSync] tick start reason=$reason gen=$generation '
+      'role=${AuthService.currentUser?.roleKey}',
+    );
     try {
       await SyncCursorStore.instance.ensureLoaded();
       if (!_engineIsLive(generation)) return;
@@ -135,9 +139,9 @@ abstract final class CloudSyncEngine {
 
       _consecutiveFailures = 0;
       _backoffUntil = null;
-      if (kDebugMode && reason != 'periodic') {
-        debugPrint('[CloudSyncEngine] tick ok ($reason) changed=$changed');
-      }
+      debugPrint(
+        '[RoleSync] tick end reason=$reason gen=$generation changed=$changed',
+      );
     } catch (e) {
       if (!_engineIsLive(generation)) return;
       _consecutiveFailures++;

@@ -17,6 +17,7 @@ import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
 import 'package:mayabela/services/cloud/cloud_sync_router.dart';
 import 'package:mayabela/services/cloud/realtime_messaging_bootstrap.dart';
 import 'package:mayabela/services/cloud/role_cloud_live_sync.dart';
+import 'package:mayabela/services/cloud/role_sync_coordinator.dart';
 import 'package:mayabela/services/cloud/staff_content_realtime_sync.dart';
 import 'package:mayabela/services/cloud/sync_cursor_store.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
@@ -68,7 +69,20 @@ abstract final class SessionCloudSync {
       if (!_isLive(generation)) return;
       await SyncCursorStore.instance.clearAll();
       if (!_isLive(generation)) return;
-      await syncRoleWithProgress();
+      RoleSyncCoordinator.log(
+        'initial role sync start gen=$generation '
+        'role=${AuthService.currentUser?.roleKey}',
+      );
+      final synced = await syncRoleWithProgress();
+      if (synced && _isLive(generation)) {
+        await RoleSyncCoordinator.markInitialRoleSyncComplete(
+          generation: generation,
+        );
+      } else {
+        RoleSyncCoordinator.log(
+          'initial role sync end gen=$generation success=false',
+        );
+      }
     } finally {
       if (_isLive(generation)) {
         StaffContentRealtimeSync.markInitialSyncComplete();
@@ -345,29 +359,29 @@ abstract final class SessionCloudSync {
   }
 
   /// Sync with bottom progress bar (mobile + web).
-  static Future<void> syncRoleWithProgress() async {
+  static Future<bool> syncRoleWithProgress() async {
     final generation = AuthService.sessionGeneration;
     if (!CloudSyncFlags.enabled) {
       if (_isLive(generation)) {
         CloudSyncProgressService.instance.reset();
       }
-      return;
+      return false;
     }
-    if (!_isLive(generation)) return;
+    if (!_isLive(generation)) return false;
 
     final progress = CloudSyncProgressService.instance;
-    if (progress.isLoading) return;
+    if (progress.isLoading) return false;
 
     CloudBootstrapService.resetIfRegistriesEmpty();
 
     if (!SupabaseBootstrap.isInitialized) {
       await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: false);
     }
-    if (!_isLive(generation)) return;
+    if (!_isLive(generation)) return false;
     if (!SupabaseBootstrap.isInitialized) {
       progress.begin(totalSteps: 1, message: 'Connecting to cloud…');
       progress.fail('Cloud is not configured for this app build');
-      return;
+      return false;
     }
 
     final role = AuthService.currentUser?.roleKey;
@@ -379,26 +393,25 @@ abstract final class SessionCloudSync {
       if (_isLive(generation)) {
         progress.fail(_authFailureMessage());
       }
-      return;
+      return false;
     }
-    if (!_isLive(generation)) return;
+    if (!_isLive(generation)) return false;
 
     // Download cloud first so this browser sees other devices' data.
     // Uploading full local state before pull was overwriting shared IDs.
     try {
       if (role == AuthService.roleAdmin) {
-        await _syncAdminWithProgress();
-        return;
+        return await _syncAdminWithProgress();
       }
       await awaitRoleCloudSync(trackProgress: true);
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
       // Then upload school directories (clear router route) before Ready.
       progress.step('Uploading to cloud…');
       try {
         await CloudSyncRouter.publishActiveSchoolDirectories().timeout(
           _cloudPullTimeout,
         );
-        if (!_isLive(generation)) return;
+        if (!_isLive(generation)) return false;
         await CloudAppStore.instance.uploadLocalLeftoversToCloud().timeout(
           _cloudPullTimeout,
         );
@@ -407,23 +420,25 @@ abstract final class SessionCloudSync {
           debugPrint('[SessionCloudSync] post-pull upload failed: $e');
         }
       }
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
       if (progress.isLoading) {
         await CloudOutboxService.instance.clear();
         progress.complete(message: 'Ready');
       }
+      return _isLive(generation);
     } catch (e) {
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
       if (kDebugMode) {
         debugPrint('[SessionCloudSync] syncRoleWithProgress failed: $e');
       }
       if (progress.isLoading) {
         progress.fail(_friendlySyncError(e));
       }
+      return false;
     }
   }
 
-  static Future<void> _syncAdminWithProgress() async {
+  static Future<bool> _syncAdminWithProgress() async {
     final generation = AuthService.sessionGeneration;
     final progress = CloudSyncProgressService.instance;
     try {
@@ -433,13 +448,13 @@ abstract final class SessionCloudSync {
       await CloudAppStore.instance
           .pullForAdminSession()
           .timeout(_adminCloudPullTimeout);
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
 
       progress.step('Uploading to cloud…');
       try {
         await CloudSyncRouter.publishActiveSchoolDirectories()
             .timeout(_adminCloudPullTimeout);
-        if (!_isLive(generation)) return;
+        if (!_isLive(generation)) return false;
         await CloudAppStore.instance
             .uploadLocalLeftoversToCloud()
             .timeout(_adminCloudPullTimeout);
@@ -448,27 +463,29 @@ abstract final class SessionCloudSync {
           debugPrint('[SessionCloudSync] admin leftover upload failed: $e');
         }
       }
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
 
       progress.step('Applying data…');
       AuthService.alignTeacherSessionWithRegistry();
       AuthService.alignDriverSessionWithRegistry();
       await _applyStaffSessionLocally();
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
       await AuthService.persistRegistryLoginAccounts();
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
       StaffRegistryNotifier.instance.notifyChanged();
       SchoolContentSyncService.instance.markDataChanged();
       await CloudOutboxService.instance.clear();
       progress.complete(message: 'Ready');
+      return true;
     } catch (e) {
-      if (!_isLive(generation)) return;
+      if (!_isLive(generation)) return false;
       if (kDebugMode) {
         debugPrint('[SessionCloudSync] admin sync failed: $e');
       }
       if (progress.isLoading) {
         progress.fail(_friendlySyncError(e));
       }
+      return false;
     }
   }
 
