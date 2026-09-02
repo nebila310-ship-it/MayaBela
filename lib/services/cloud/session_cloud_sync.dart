@@ -70,14 +70,16 @@ abstract final class SessionCloudSync {
       if (!_isLive(generation)) return;
       await syncRoleWithProgress();
     } finally {
-      if (!_isLive(generation)) return;
-      StaffContentRealtimeSync.markInitialSyncComplete();
-      await RealtimeMessagingBootstrap.onSessionStarted();
-      if (!_isLive(generation)) return;
-      // Start the live loop even if JWT claims are still catching up after a
-      // browser refresh — ticks no-op until school claims are present.
-      if (CloudSyncFlags.enabled && AuthService.currentUser != null) {
-        CloudSyncEngine.start();
+      if (_isLive(generation)) {
+        StaffContentRealtimeSync.markInitialSyncComplete();
+        await RealtimeMessagingBootstrap.onSessionStarted();
+        // Start the live loop even if JWT claims are still catching up after a
+        // browser refresh — ticks no-op until school claims are present.
+        if (_isLive(generation) &&
+            CloudSyncFlags.enabled &&
+            AuthService.currentUser != null) {
+          CloudSyncEngine.start();
+        }
       }
     }
   }
