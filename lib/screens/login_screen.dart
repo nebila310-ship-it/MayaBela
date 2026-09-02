@@ -7,7 +7,6 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/app_lock_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
-import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
@@ -234,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _loggingIn = false;
         message = s.schoolAccessMessage(schoolError);
       });
-      AuthService.clearSession();
+      await AuthService.clearSession();
       return;
     }
 
@@ -246,8 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message =
             'This account is Administration Staff. Sign in as Administration Staff.';
       });
-      AuthService.clearSession();
-      unawaited(SchoolAuthCloudService.instance.signOutCloud());
+      await AuthService.clearSession();
       return;
     }
     if (selectedRole == AuthService.roleStaff &&
@@ -257,8 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message =
             'This account is a classroom Teacher. Sign in as Teacher.';
       });
-      AuthService.clearSession();
-      unawaited(SchoolAuthCloudService.instance.signOutCloud());
+      await AuthService.clearSession();
       return;
     }
 

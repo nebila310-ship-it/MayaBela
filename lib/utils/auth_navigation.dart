@@ -27,9 +27,9 @@ class AuthNavigation {
   }
 
   /// Ends the session and returns the user to the login screen.
-  static void performLogout() {
+  static Future<void> performLogout() async {
     if (AuthService.currentUser == null) return;
-    AuthService.clearSession();
+    await AuthService.clearSession();
     NotificationService.instance.clearForLogout();
     DashboardBadgeService.instance.clearForLogout();
 

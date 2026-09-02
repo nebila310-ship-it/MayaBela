@@ -10,7 +10,10 @@ import 'package:mayabela/services/cloud/transport_realtime_sync.dart';
 /// Optional realtime acceleration — [CloudSyncEngine] remains the 5s source of truth.
 abstract final class RealtimeMessagingBootstrap {
   static Future<void> onSessionStarted() async {
+    if (AuthService.currentUser == null) return;
+    final generation = AuthService.sessionGeneration;
     await FcmService.instance.registerForCurrentUser();
+    if (!AuthService.isLiveGeneration(generation)) return;
     if (!CloudSyncFlags.enabled) return;
 
     final role = AuthService.currentUser?.roleKey;
@@ -32,11 +35,13 @@ abstract final class RealtimeMessagingBootstrap {
   }
 
   static Future<void> onSessionEnded() async {
+    final generation = AuthService.sessionGeneration;
     ConversationRealtimeSync.instance.stop();
     StaffContentRealtimeSync.stop();
     StudentRealtimeSync.stop();
     TransportRealtimeSync.stop();
     InventoryRealtimeSync.stop();
+    if (!AuthService.isCurrentGeneration(generation)) return;
     await FcmService.instance.clearTokenForCurrentUser();
   }
 

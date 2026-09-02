@@ -516,7 +516,24 @@ class AuthService {
 
   static final ValueNotifier<int> sessionListenable = ValueNotifier<int>(0);
 
+  /// Bumped on each [setSession] and [clearSession] so in-flight sync from an
+  /// old login cannot start work for a newer session.
+  static int _sessionGeneration = 0;
+
+  static int get sessionGeneration => _sessionGeneration;
+
+  static bool isCurrentGeneration(int generation) =>
+      generation == _sessionGeneration;
+
+  static bool isLiveGeneration(int generation) =>
+      isCurrentGeneration(generation) && currentUser != null;
+
+  static int _bumpSessionGeneration() => ++_sessionGeneration;
+
+  static const _sessionCleanupTimeout = Duration(seconds: 4);
+
   static void setSession(RegisteredUser user) {
+    _bumpSessionGeneration();
     currentUser = user;
     sessionListenable.value++;
   }
@@ -698,18 +715,38 @@ class AuthService {
     return true;
   }
 
-  static void clearSession() {
+  /// Invalidates the session generation immediately, then stops live sync and
+  /// awaits cloud/realtime cleanup (with a short timeout) so an old Future
+  /// cannot restart services for the next user.
+  static Future<void> clearSession() async {
+    final logoutGeneration = _bumpSessionGeneration();
     RoleCloudLiveSync.stop();
-    unawaited(RealtimeMessagingBootstrap.onSessionEnded());
     currentUser = null;
     sessionSchoolId = null;
     clearCloudAccessScope();
     MaterialAccessService.instance.reset();
-    unawaited(SessionPrefsService.instance.clearActiveSession());
-    unawaited(SchoolAuthCloudService.instance.signOutCloud());
     AppLockService.instance.handleLogout();
     CloudSyncProgressService.instance.reset();
     sessionListenable.value++;
+
+    try {
+      await RealtimeMessagingBootstrap.onSessionEnded()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
+    if (!isCurrentGeneration(logoutGeneration)) return;
+
+    try {
+      await SchoolAuthCloudService.instance
+          .signOutCloud()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
+    if (!isCurrentGeneration(logoutGeneration)) return;
+
+    try {
+      await SessionPrefsService.instance
+          .clearActiveSession()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
   }
 
   static List<String> activeLinkedStudentIds() {

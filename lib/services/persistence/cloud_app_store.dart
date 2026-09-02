@@ -97,10 +97,18 @@ class CloudAppStore {
       CloudSyncFlags.enabled && SupabaseBootstrap.isInitialized;
 
   Future<T> _serializedPull<T>(Future<T> Function() action) {
+    final generation = AuthService.sessionGeneration;
     final previous = (_pullChain ?? Future<void>.value())
         .catchError((_) => null);
     late final Future<T> run;
-    run = previous.then((_) => action()).whenComplete(() {
+    run = previous.then((_) {
+      if (!AuthService.isLiveGeneration(generation)) {
+        return Future<T>.error(
+          StateError('Skipped cloud pull for ended session'),
+        );
+      }
+      return action();
+    }).whenComplete(() {
       if (identical(_pullChain, run)) {
         _pullChain = null;
       }
@@ -111,7 +119,16 @@ class CloudAppStore {
 
   Future<void> _prepareCloudRead() async {
     if (!available) return;
+    if (AuthService.currentUser == null) {
+      throw StateError(
+        'School cloud sign-in required. Sign in again to sync.',
+      );
+    }
+    final generation = AuthService.sessionGeneration;
     final authed = await SupabaseBootstrap.ensureReadyForFirestore();
+    if (!AuthService.isLiveGeneration(generation)) {
+      throw StateError('Skipped cloud read for ended session');
+    }
     if (!authed) {
       throw StateError(
         SupabaseBootstrap.lastAuthError ??

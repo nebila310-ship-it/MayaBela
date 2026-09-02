@@ -76,7 +76,9 @@ abstract final class InventoryRealtimeSync {
 
   static void _onCloudChange(dynamic _) {
     _debounce?.cancel();
+    final generation = AuthService.sessionGeneration;
     _debounce = Timer(const Duration(milliseconds: 900), () {
+      if (!AuthService.isLiveGeneration(generation)) return;
       unawaited(CloudAppStore.instance.pullInventoryIntoService());
     });
   }
