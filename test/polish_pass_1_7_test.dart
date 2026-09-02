@@ -20,9 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    AuthService.clearSession();
+    await AuthService.clearSession();
   });
 
   group('1. Unique temp passwords + change without OTP', () {

@@ -33,6 +33,7 @@ class SchoolAuthCloudService {
   static final instance = SchoolAuthCloudService._();
 
   static Future<bool>? _ensureJwtInFlight;
+  static int? _ensureJwtGeneration;
 
   bool get isAvailable => SupabaseBootstrap.isInitialized;
 
@@ -132,31 +133,48 @@ class SchoolAuthCloudService {
   /// token is expired or about to expire.
   Future<bool> ensureValidSchoolJwt({bool forceRefresh = false}) async {
     if (!isAvailable) return false;
+    if (AuthService.currentUser == null) return false;
+    final generation = AuthService.sessionGeneration;
     final inFlight = _ensureJwtInFlight;
-    if (inFlight != null) return inFlight;
-    final run = _ensureValidSchoolJwtUnlocked(forceRefresh: forceRefresh);
+    if (inFlight != null && _ensureJwtGeneration == generation) {
+      return inFlight;
+    }
+    final run = _ensureValidSchoolJwtUnlocked(
+      forceRefresh: forceRefresh,
+      generation: generation,
+    );
     _ensureJwtInFlight = run;
+    _ensureJwtGeneration = generation;
     try {
       return await run;
     } finally {
       if (identical(_ensureJwtInFlight, run)) {
         _ensureJwtInFlight = null;
+        _ensureJwtGeneration = null;
       }
     }
   }
 
   Future<bool> _ensureValidSchoolJwtUnlocked({
     required bool forceRefresh,
+    required int generation,
   }) async {
+    bool live() => AuthService.isLiveGeneration(generation);
+    if (!live()) return false;
     try {
       await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      if (!live()) return false;
 
-      if (!forceRefresh && await _currentSessionIsUsable()) return true;
+      if (!forceRefresh && await _currentSessionIsUsable()) {
+        return live();
+      }
+      if (!live()) return false;
 
       final session = SupabaseBootstrap.client.auth.currentSession;
       final tokenExpiring = session != null &&
           !accessTokenIsFresh(session.expiresAt);
       if (session != null && tokenExpiring) {
+        if (!live()) return false;
         try {
           await SupabaseBootstrap.client.auth
               .refreshSession()
@@ -168,30 +186,37 @@ class SchoolAuthCloudService {
             );
           }
           // Keep the existing token if it still carries school claims.
-          if (await hasSchoolClaims()) return true;
+          if (!live()) return false;
+          if (await hasSchoolClaims()) return live();
         }
-        if (await hasSchoolClaims()) return true;
+        if (!live()) return false;
+        if (await hasSchoolClaims()) return live();
       }
 
-      if (!forceRefresh && await hasSchoolClaims()) return true;
+      if (!live()) return false;
+      if (!forceRefresh && await hasSchoolClaims()) return live();
 
       // Session exists but school claims missing/stale — re-stamp metadata and
       // pull a fresh JWT (school-refresh-claims now returns new tokens).
+      if (!live()) return false;
       if (SupabaseBootstrap.client.auth.currentSession != null) {
         final refreshed = await refreshAccessClaims(
           username: AuthService.currentUser?.username,
           schoolId: resolvedSchoolId(),
         );
-        if (refreshed.ok && await hasSchoolClaims()) return true;
+        if (!live()) return false;
+        if (refreshed.ok && await hasSchoolClaims()) return live();
       }
 
       // Last resort: school password still in memory from this browser session.
-      if (await _trySilentReLogin()) return true;
+      if (!live()) return false;
+      if (await _trySilentReLogin()) return live();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SchoolAuthCloudService.ensureValidSchoolJwt: $e');
       }
     }
+    if (!live()) return false;
     return await hasSchoolClaims();
   }
 

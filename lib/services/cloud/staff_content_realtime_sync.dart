@@ -74,12 +74,15 @@ abstract final class StaffContentRealtimeSync {
   static void _onCloudChange(dynamic _) {
     if (_deferRefresh) return;
     _debounce?.cancel();
+    final generation = AuthService.sessionGeneration;
     _debounce = Timer(const Duration(milliseconds: 900), () {
+      if (!AuthService.isLiveGeneration(generation)) return;
       unawaited(_refreshStaffData());
     });
   }
 
   static Future<void> _refreshStaffData() async {
+    final generation = AuthService.sessionGeneration;
     final role = AuthService.currentUser?.roleKey;
     if (role == null || !_staffRoles.contains(role)) return;
     try {
@@ -92,6 +95,7 @@ abstract final class StaffContentRealtimeSync {
         case AuthService.roleParent:
           await store.pullForParentSession();
       }
+      if (!AuthService.isLiveGeneration(generation)) return;
       SchoolContentSyncService.instance.markDataChanged();
       NotificationService.instance.refreshBadges();
     } catch (error) {

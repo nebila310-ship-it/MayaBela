@@ -32,24 +32,34 @@ abstract final class CloudSyncEngine {
   static var _tickRunning = false;
   static var _consecutiveFailures = 0;
   static DateTime? _backoffUntil;
+  static int? _engineGeneration;
 
   static bool get isStarted => _started;
+
+  static bool _engineIsLive(int generation) =>
+      _started &&
+      _engineGeneration == generation &&
+      AuthService.isLiveGeneration(generation);
 
   /// Call after login / session restore when cloud claims exist.
   static void start() {
     if (!CloudSyncFlags.enabled) return;
     if (AuthService.currentUser == null) return;
     if (!SupabaseBootstrap.isInitialized) return;
+    final generation = AuthService.sessionGeneration;
     stop();
     _paused = false;
     _started = true;
+    _engineGeneration = generation;
     _consecutiveFailures = 0;
     _backoffUntil = null;
     _timer = Timer.periodic(interval, (_) {
+      if (!_engineIsLive(generation)) return;
       unawaited(tick(reason: 'periodic'));
     });
     unawaited(
       Future<void>.delayed(const Duration(milliseconds: 600), () {
+        if (!_engineIsLive(generation)) return;
         unawaited(tick(reason: 'start'));
       }),
     );
@@ -66,6 +76,7 @@ abstract final class CloudSyncEngine {
     _started = false;
     _paused = false;
     _tickRunning = false;
+    _engineGeneration = null;
   }
 
   static void pause() => _paused = true;
@@ -79,7 +90,8 @@ abstract final class CloudSyncEngine {
   static Future<void> tick({String reason = 'manual'}) async {
     if (!_started || _paused || _tickRunning) return;
     if (!CloudSyncFlags.enabled) return;
-    if (AuthService.currentUser == null) {
+    final generation = _engineGeneration ?? AuthService.sessionGeneration;
+    if (!_engineIsLive(generation)) {
       stop();
       return;
     }
@@ -94,23 +106,29 @@ abstract final class CloudSyncEngine {
     }
     if (!SupabaseBootstrap.isInitialized) return;
     if (!await SchoolAuthCloudService.hasSchoolClaims()) {
+      if (!_engineIsLive(generation)) return;
       if (!await SchoolAuthCloudService.instance.ensureValidSchoolJwt()) {
         return;
       }
     }
+    if (!_engineIsLive(generation)) return;
 
     _tickRunning = true;
     try {
       await SyncCursorStore.instance.ensureLoaded();
+      if (!_engineIsLive(generation)) return;
       await CloudOutboxService.instance.ensureLoaded();
+      if (!_engineIsLive(generation)) return;
 
       // 1) Flush local mutations (write-behind).
       await CloudAppStore.instance.flushOutboxForSyncEngine();
+      if (!_engineIsLive(generation)) return;
 
       // 2–5) Delta pull, apply, notify, advance cursors.
       final changed = await CloudAppStore.instance.pullRoleDeltaForSyncEngine(
         collections: collectionsForCurrentRole(),
       );
+      if (!_engineIsLive(generation)) return;
       if (changed) {
         SchoolContentSyncService.instance.markDataChanged();
       }
@@ -121,6 +139,7 @@ abstract final class CloudSyncEngine {
         debugPrint('[CloudSyncEngine] tick ok ($reason) changed=$changed');
       }
     } catch (e) {
+      if (!_engineIsLive(generation)) return;
       _consecutiveFailures++;
       final seconds = (1 << _consecutiveFailures.clamp(0, 5)).clamp(5, 60);
       _backoffUntil = DateTime.now().add(Duration(seconds: seconds));
@@ -130,7 +149,9 @@ abstract final class CloudSyncEngine {
         );
       }
     } finally {
-      _tickRunning = false;
+      if (_engineGeneration == generation) {
+        _tickRunning = false;
+      }
     }
   }
 

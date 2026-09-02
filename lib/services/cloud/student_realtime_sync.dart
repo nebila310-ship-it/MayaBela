@@ -57,16 +57,21 @@ abstract final class StudentRealtimeSync {
 
   static void _onCloudChange(dynamic _) {
     _debounce?.cancel();
+    final generation = AuthService.sessionGeneration;
     _debounce = Timer(const Duration(milliseconds: 900), () {
+      if (!AuthService.isLiveGeneration(generation)) return;
       unawaited(_refreshStudentData());
     });
   }
 
   static Future<void> _refreshStudentData() async {
+    final generation = AuthService.sessionGeneration;
     if (AuthService.currentUser?.roleKey != AuthService.roleStudent) return;
     try {
       await CloudAppStore.instance.pullForStudentSession();
+      if (!AuthService.isLiveGeneration(generation)) return;
       await SessionCloudSync.applyStudentSessionLocally();
+      if (!AuthService.isLiveGeneration(generation)) return;
       StudentPortalSyncService.instance.markDataChanged();
       SchoolContentSyncService.instance.markDataChanged();
     } catch (error) {

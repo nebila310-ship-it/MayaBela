@@ -234,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _loggingIn = false;
         message = s.schoolAccessMessage(schoolError);
       });
-      AuthService.clearSession();
+      await AuthService.clearSession();
       return;
     }
 
@@ -246,8 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message =
             'This account is Administration Staff. Sign in as Administration Staff.';
       });
-      AuthService.clearSession();
-      unawaited(SchoolAuthCloudService.instance.signOutCloud());
+      await AuthService.clearSession();
       return;
     }
     if (selectedRole == AuthService.roleStaff &&
@@ -257,8 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message =
             'This account is a classroom Teacher. Sign in as Teacher.';
       });
-      AuthService.clearSession();
-      unawaited(SchoolAuthCloudService.instance.signOutCloud());
+      await AuthService.clearSession();
       return;
     }
 
