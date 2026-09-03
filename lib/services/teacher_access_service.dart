@@ -14,6 +14,7 @@ class TeacherAccessService {
   static const _subjectTeacherDashboardTiles = {
     'classes',
     'attendance',
+    'at_risk',
     'messages',
     'homework',
     'exams',

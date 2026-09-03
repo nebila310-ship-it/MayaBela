@@ -286,6 +286,8 @@ abstract final class ModuleAccess {
     'lessons': 'academic',
     'curriculum': 'academic',
     'academic_meetings': 'academic',
+    'at_risk': 'attendance',
+    'attendance_insights': 'attendance',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

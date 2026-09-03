@@ -8,6 +8,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/admission_service.dart';
+import 'package:mayabela/services/attendance_intelligence_service.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
@@ -563,6 +564,12 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       Icons.event_note_outlined,
       'Lesson plans still in draft',
       LessonPlanService.instance.draftCount(sid),
+    );
+    add(
+      'at_risk',
+      Icons.warning_amber_outlined,
+      'Students flagged at-risk (low grades + high absence)',
+      AttendanceIntelligenceService.instance.atRiskCount(),
     );
     add(
       'curriculum',

@@ -23,6 +23,7 @@ import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/student_exam_screen.dart';
 import 'package:mayabela/screens/teacher_exams_screen.dart';
 import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
+import 'package:mayabela/screens/teacher_attendance_insights_screen.dart';
 import 'package:mayabela/screens/student_lesson_plans_screen.dart';
 import 'package:mayabela/screens/curriculum_portal_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
@@ -166,6 +167,25 @@ List<DashboardEntry> _teacherEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'at_risk',
+      icon: Icons.warning_amber_outlined,
+      color: const Color(0xFFEF6C00),
+      isVisible: () => access.canAccessTeacherDashboardTile('at_risk'),
+      builder: (context) => DashboardCard(
+        icon: Icons.warning_amber_outlined,
+        title: _t('at_risk', role),
+        color: const Color(0xFFEF6C00),
+        onTap: () => _openTile('at_risk', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TeacherAttendanceInsightsScreen(),
+            ),
           );
         }),
       ),
@@ -2121,7 +2141,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'My classroom',
           icon: Icons.class_,
-          entryIds: ['classes', 'attendance', 'parent_approvals', 'student_affairs'],
+          entryIds: ['classes', 'attendance', 'at_risk', 'parent_approvals', 'student_affairs'],
         ),
         const DashboardSectionDefinition(
           title: 'Teaching tools',
