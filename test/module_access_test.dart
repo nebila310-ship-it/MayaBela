@@ -155,6 +155,7 @@ void main() {
         'student_support',
         'safeguarding',
         'student_programs',
+        'go_live',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }

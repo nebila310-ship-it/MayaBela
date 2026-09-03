@@ -85,6 +85,12 @@ abstract final class AppCollections {
   static const qaSurveyResponses = 'qa_survey_responses';
   static const actionResearch = 'action_research';
 
+  /// LIA Phase J go-live (MFA, privacy rights, school backups).
+  static const mfaEnrollments = 'mfa_enrollments';
+  static const privacyConsents = 'privacy_consents';
+  static const dataRightsRequests = 'data_rights_requests';
+  static const schoolBackups = 'school_backups';
+
   // School inventory
   static const inventoryItems = 'inventory_items';
   static const stockTransactions = 'stock_transactions';

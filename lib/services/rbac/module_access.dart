@@ -260,6 +260,14 @@ abstract final class ModuleAccess {
       manage: [],
       departmental: false,
     ),
+    'go_live': ModuleRule(
+      view: [
+        SchoolPermissions.viewSystemHealth,
+        SchoolPermissions.manageSchoolSettings,
+      ],
+      manage: [SchoolPermissions.manageSchoolSettings],
+      departmental: false,
+    ),
     // School owner configures role → module checkboxes.
     'staff_roles': ModuleRule(adminOnly: true),
     // Personal app settings (language, security, appearance) — shared screen,
@@ -315,6 +323,15 @@ abstract final class ModuleAccess {
     'academic_audits': 'quality_assurance',
     'action_research': 'quality_assurance',
     'academic_monitoring': 'quality_assurance',
+    'go_live': 'go_live',
+    'golive': 'go_live',
+    'compliance': 'go_live',
+    'privacy': 'go_live',
+    'privacy_rights': 'go_live',
+    'data_rights': 'go_live',
+    'backups': 'go_live',
+    'training_manuals': 'go_live',
+    'mfa': 'go_live',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).
@@ -590,6 +607,19 @@ abstract final class ModuleAccess {
       manageBy: <String>{},
     ),
     'system_health': ModuleRoleAllocation(visibleTo: <String>{}),
+    'go_live': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.vicePresident,
+        StaffRoles.registrar,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.principal,
+        StaffRoles.vicePresident,
+        StaffRoles.registrar,
+        StaffRoles.generalManager,
+      },
+    ),
   };
 
   static String normalize(String moduleId) => _aliases[moduleId] ?? moduleId;

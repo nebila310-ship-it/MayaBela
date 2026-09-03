@@ -40,6 +40,7 @@ import 'package:mayabela/widgets/parent_child_picker.dart';
 import 'package:mayabela/screens/my_classes_screen.dart';
 import 'package:mayabela/screens/qr_entry_exit_screen.dart';
 import 'package:mayabela/screens/settings_screen.dart';
+import 'package:mayabela/screens/golive_self_service_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
@@ -74,6 +75,7 @@ import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_support_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_programs_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
+import 'package:mayabela/web_erp/pages/web_go_live_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
 
@@ -795,6 +797,17 @@ List<DashboardEntry> _staffModuleEntries() {
         child: const WebAuditLogPage(),
       ),
     ),
+    entry(
+      id: 'staff_go_live',
+      titleId: 'go_live',
+      icon: Icons.verified_user_outlined,
+      color: const Color(0xFF37474F),
+      moduleId: 'go_live',
+      screenBuilder: () => MobileErpHost(
+        title: _t('go_live', adminRole),
+        child: const WebGoLivePage(),
+      ),
+    ),
   ];
 }
 
@@ -986,6 +999,42 @@ List<DashboardEntry> _parentEntries() {
             context,
             MaterialPageRoute(
               builder: (_) => const ParentStudentProgramsScreen(),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'privacy_rights',
+      icon: Icons.privacy_tip_outlined,
+      color: const Color(0xFF455A64),
+      builder: (context) => DashboardCard(
+        icon: Icons.privacy_tip_outlined,
+        title: _t('privacy_rights', role),
+        color: const Color(0xFF455A64),
+        onTap: () => _openTile('privacy_rights', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GoliveSelfServiceScreen(initialTab: 1),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'training_manuals',
+      icon: Icons.menu_book_outlined,
+      color: const Color(0xFF5D4037),
+      builder: (context) => DashboardCard(
+        icon: Icons.menu_book_outlined,
+        title: _t('training_manuals', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('training_manuals', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GoliveSelfServiceScreen(initialTab: 2),
             ),
           );
         }),
@@ -1296,6 +1345,42 @@ List<DashboardEntry> _studentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const StudentProgramsScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'privacy_rights',
+      icon: Icons.privacy_tip_outlined,
+      color: const Color(0xFF455A64),
+      builder: (context) => DashboardCard(
+        icon: Icons.privacy_tip_outlined,
+        title: _t('privacy_rights', role),
+        color: const Color(0xFF455A64),
+        onTap: () => _openTile('privacy_rights', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GoliveSelfServiceScreen(initialTab: 1),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'training_manuals',
+      icon: Icons.menu_book_outlined,
+      color: const Color(0xFF5D4037),
+      builder: (context) => DashboardCard(
+        icon: Icons.menu_book_outlined,
+        title: _t('training_manuals', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('training_manuals', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GoliveSelfServiceScreen(initialTab: 2),
+            ),
           );
         }),
       ),
@@ -1866,6 +1951,27 @@ List<DashboardEntry> _adminEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'go_live',
+      icon: Icons.verified_user_outlined,
+      color: const Color(0xFF37474F),
+      builder: (context) => DashboardCard(
+        icon: Icons.verified_user_outlined,
+        title: _t('go_live', role),
+        color: const Color(0xFF37474F),
+        onTap: () => _openTile('go_live', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MobileErpHost(
+                title: _t('go_live', role),
+                child: const WebGoLivePage(),
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'grades',
       icon: Icons.bar_chart,
       color: Colors.deepOrange,
@@ -2283,7 +2389,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'System',
           icon: Icons.shield_outlined,
-          entryIds: ['audit_log', 'system_health', 'grade_workflow_settings'],
+          entryIds: ['audit_log', 'system_health', 'go_live', 'grade_workflow_settings'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',
@@ -2351,6 +2457,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
             'staff_announcements',
             'staff_reports',
             'staff_audit_log',
+            'staff_go_live',
           ],
         ),
         const DashboardSectionDefinition(
@@ -2378,7 +2485,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'Services',
           icon: Icons.miscellaneous_services,
-          entryIds: ['student_affairs', 'student_support', 'student_programs', 'fees', 'bus'],
+          entryIds: ['student_affairs', 'student_support', 'student_programs', 'privacy_rights', 'training_manuals', 'fees', 'bus'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',
@@ -2422,7 +2529,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'curriculum', 'qa_surveys', 'student_support', 'student_programs', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'curriculum', 'qa_surveys', 'student_support', 'student_programs', 'privacy_rights', 'training_manuals', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',

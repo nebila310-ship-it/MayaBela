@@ -57,6 +57,8 @@ abstract final class StaffContentRealtimeSync {
       AppCollections.qaSurveys,
       AppCollections.qaSurveyResponses,
       AppCollections.actionResearch,
+      AppCollections.privacyConsents,
+      AppCollections.dataRightsRequests,
       AppCollections.gradeReports,
       AppCollections.schoolRegistry,
       AppCollections.gradeAuditLog,
@@ -77,6 +79,8 @@ abstract final class StaffContentRealtimeSync {
         AppCollections.teacherEvaluations,
         AppCollections.academicMeetings,
         AppCollections.safeguardingCases,
+        AppCollections.mfaEnrollments,
+        AppCollections.schoolBackups,
       ]);
     }
 

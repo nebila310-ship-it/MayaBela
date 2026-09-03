@@ -26,6 +26,7 @@ import 'package:mayabela/models/curriculum_models.dart';
 import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/models/dosa_models.dart';
 import 'package:mayabela/models/qa_monitor_models.dart';
+import 'package:mayabela/models/golive_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -74,7 +75,9 @@ import 'package:mayabela/services/persistence/student_support_persistence_servic
 import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/persistence/qa_monitor_persistence_service.dart';
+import 'package:mayabela/services/persistence/golive_persistence_service.dart';
 import 'package:mayabela/services/qa_monitor_service.dart';
+import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -349,6 +352,7 @@ class CloudAppStore {
       _pullStudentSupport(),
       _pullDosa(),
       _pullQaMonitor(),
+      _pullGoLive(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -465,6 +469,7 @@ class CloudAppStore {
     await pushAllStudentSupport();
     await pushAllDosa();
     await pushAllQaMonitor();
+    await pushAllGoLive();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -721,6 +726,7 @@ class CloudAppStore {
         _pullStudentSupport(),
         _pullDosa(),
         _pullQaMonitor(),
+        _pullGoLive(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -762,6 +768,7 @@ class CloudAppStore {
         _pullStudentSupport(),
         _pullDosa(),
         _pullQaMonitor(),
+        _pullGoLive(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -821,6 +828,7 @@ class CloudAppStore {
         _pullStudentSupport(),
         _pullDosa(),
         _pullQaMonitor(),
+        _pullGoLive(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -873,6 +881,7 @@ class CloudAppStore {
         _pullStudentSupport(),
         _pullDosa(),
         _pullQaMonitor(),
+        _pullGoLive(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -3180,6 +3189,103 @@ class CloudAppStore {
       merge: true,
     );
     await QaMonitorPersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  /// MFA, consents, data-rights, school backup meta.
+  Future<void> pullGoLive() => _pullGoLive();
+
+  Future<void> pushAllGoLive() async {
+    final svc = GoliveService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+
+    Future<void> upsert(String collection, List<Map<String, dynamic>> items) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() async {
+        final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+          collection: collection,
+          records: items,
+        );
+        if (!result.ok) {
+          throw StateError(result.errorMessage ?? 'Go-live sync failed.');
+        }
+      });
+    }
+
+    await upsert(AppCollections.mfaEnrollments, svc.mfaMaps(cloud: true));
+    await upsert(AppCollections.privacyConsents, svc.consentMaps());
+    await upsert(AppCollections.dataRightsRequests, svc.rightsMaps());
+
+    if (publicReader) return;
+    final backups = svc.backupMaps();
+    if (backups.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.schoolBackups,
+          items: backups,
+          docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
+  Future<void> _pullGoLive() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final mfaRows = await _schoolRead(AppCollections.mfaEnrollments);
+    final consentRows = await _schoolRead(AppCollections.privacyConsents);
+    final rightsRows = await _schoolRead(AppCollections.dataRightsRequests);
+    final backupRows = role == AuthService.roleParent ||
+            role == AuthService.roleStudent
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.schoolBackups);
+
+    if (mfaRows.isEmpty &&
+        consentRows.isEmpty &&
+        rightsRows.isEmpty &&
+        backupRows.isEmpty) {
+      return;
+    }
+
+    final enrollments = <MfaEnrollment>[];
+    for (final map in mfaRows) {
+      try {
+        enrollments.add(MfaEnrollment.fromMap(map));
+      } catch (_) {}
+    }
+    final consents = <PrivacyConsent>[];
+    for (final map in consentRows) {
+      try {
+        consents.add(PrivacyConsent.fromMap(map));
+      } catch (_) {}
+    }
+    final rights = <DataRightsRequest>[];
+    for (final map in rightsRows) {
+      try {
+        rights.add(DataRightsRequest.fromMap(map));
+      } catch (_) {}
+    }
+    final backups = <SchoolBackupRecord>[];
+    for (final map in backupRows) {
+      try {
+        backups.add(SchoolBackupRecord.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (enrollments.isEmpty &&
+        consents.isEmpty &&
+        rights.isEmpty &&
+        backups.isEmpty) {
+      return;
+    }
+
+    GoliveService.instance.applyPersistedData(
+      enrollments: enrollments.isEmpty ? null : enrollments,
+      consents: consents.isEmpty ? null : consents,
+      rights: rights.isEmpty ? null : rights,
+      backups: backups.isEmpty ? null : backups,
+      merge: true,
+    );
+    await GolivePersistenceService.instance.saveFromService(pushCloud: false);
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

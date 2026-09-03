@@ -252,6 +252,10 @@ void main() {
         'qa_surveys',
         'qa_survey_responses',
         'action_research',
+        'mfa_enrollments',
+        'privacy_consents',
+        'data_rights_requests',
+        'school_backups',
       ]),
     );
   });

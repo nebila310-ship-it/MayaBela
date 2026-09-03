@@ -20,6 +20,9 @@ const ALLOWED = new Set([
   "scholarships",
   "grievances",
   "qa_survey_responses",
+  "mfa_enrollments",
+  "privacy_consents",
+  "data_rights_requests",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
@@ -36,6 +39,9 @@ const OWN_ID_COLLECTIONS = new Set([
   "scholarships",
   "grievances",
   "qa_survey_responses",
+  "mfa_enrollments",
+  "privacy_consents",
+  "data_rights_requests",
 ]);
 
 function normalizeRecord(
@@ -232,6 +238,26 @@ Deno.serve(async (req) => {
       callerRole !== "admin"
     ) {
       return errorResponse("Not allowed to write survey responses.", 403, "denied");
+    }
+    if (
+      collection === "mfa_enrollments" &&
+      callerRole !== "admin" &&
+      callerRole !== "teacher" &&
+      callerRole !== "parent" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse("Not allowed to write authenticator enrollments.", 403, "denied");
+    }
+    if (
+      (collection === "privacy_consents" ||
+        collection === "data_rights_requests") &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student" &&
+      callerRole !== "teacher" &&
+      callerRole !== "admin"
+    ) {
+      return errorResponse("Not allowed to write privacy records.", 403, "denied");
     }
 
     const rows: Array<{
