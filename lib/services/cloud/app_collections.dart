@@ -67,6 +67,14 @@ abstract final class AppCollections {
   static const supportRequests = 'support_requests';
   static const safeguardingCases = 'safeguarding_cases';
 
+  /// LIA Phase H DoSA programs (clubs/Gojo, scholarships, grievances).
+  static const extracurricularClubs = 'extracurricular_clubs';
+  static const clubMemberships = 'club_memberships';
+  static const scholarships = 'scholarships';
+  static const grievances = 'grievances';
+  static const internships = 'internships';
+  static const dosaMeetings = 'dosa_meetings';
+
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
 

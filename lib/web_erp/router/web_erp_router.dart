@@ -45,6 +45,7 @@ import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_support_page.dart';
+import 'package:mayabela/web_erp/pages/web_student_programs_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
@@ -119,6 +120,15 @@ class WebErpRouter {
           safeguardingOnly: true,
           onNavigate: onNavigate,
         );
+      case 'student_programs':
+      case 'clubs':
+      case 'gojo':
+      case 'scholarships':
+      case 'grievances':
+      case 'internships':
+      case 'leadership_meetings':
+      case 'dosa':
+        return WebStudentProgramsPage(onNavigate: onNavigate);
       case 'quality_assurance':
         return const WebQaPage();
       case 'finance':

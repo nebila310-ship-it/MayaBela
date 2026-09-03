@@ -241,6 +241,12 @@ void main() {
         'college_guidance',
         'support_requests',
         'safeguarding_cases',
+        'extracurricular_clubs',
+        'club_memberships',
+        'scholarships',
+        'grievances',
+        'internships',
+        'dosa_meetings',
       ]),
     );
   });

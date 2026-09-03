@@ -16,6 +16,9 @@ const ALLOWED = new Set([
   "exam_attempts",
   "curriculum_feedback",
   "support_requests",
+  "club_memberships",
+  "scholarships",
+  "grievances",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
@@ -28,6 +31,9 @@ const OWN_ID_COLLECTIONS = new Set([
   "exam_attempts",
   "curriculum_feedback",
   "support_requests",
+  "club_memberships",
+  "scholarships",
+  "grievances",
 ]);
 
 function normalizeRecord(
@@ -201,6 +207,20 @@ Deno.serve(async (req) => {
         "denied",
       );
     }
+    if (
+      (collection === "club_memberships" ||
+        collection === "scholarships" ||
+        collection === "grievances") &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse(
+        "Not allowed to write student-program records.",
+        403,
+        "denied",
+      );
+    }
 
     const rows: Array<{
       collection: string;
@@ -240,7 +260,10 @@ Deno.serve(async (req) => {
       }
       // Parents/students may only file support requests for linked students.
       if (
-        collection === "support_requests" &&
+        (collection === "support_requests" ||
+          collection === "club_memberships" ||
+          collection === "scholarships" ||
+          collection === "grievances") &&
         (callerRole === "parent" || callerRole === "student")
       ) {
         const linked = Array.isArray(meta.linkedStudentIds)

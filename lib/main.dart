@@ -52,6 +52,7 @@ import 'package:mayabela/services/persistence/exam_persistence_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
 import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
+import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
@@ -160,6 +161,7 @@ Future<void> bootstrapBackgroundServices() async {
       LessonPlanPersistenceService.instance.loadIntoService(),
       CurriculumPersistenceService.instance.loadIntoService(),
       StudentSupportPersistenceService.instance.loadIntoService(),
+      DosaPersistenceService.instance.loadIntoService(),
       GradePersistenceService.instance.loadIntoSchoolDataService(),
       GradeAuditPersistenceService.instance.loadIntoService(),
       DailyActivityPersistenceService.instance.loadIntoSchoolDataService(),

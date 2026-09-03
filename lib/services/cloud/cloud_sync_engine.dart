@@ -197,6 +197,12 @@ abstract final class CloudSyncEngine {
     AppCollections.collegeGuidance,
     AppCollections.supportRequests,
     AppCollections.safeguardingCases,
+    AppCollections.extracurricularClubs,
+    AppCollections.clubMemberships,
+    AppCollections.scholarships,
+    AppCollections.grievances,
+    AppCollections.internships,
+    AppCollections.dosaMeetings,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,
@@ -235,6 +241,12 @@ abstract final class CloudSyncEngine {
           AppCollections.iepPlans,
           AppCollections.collegeGuidance,
           AppCollections.supportRequests,
+          AppCollections.extracurricularClubs,
+          AppCollections.clubMemberships,
+          AppCollections.scholarships,
+          AppCollections.grievances,
+          AppCollections.internships,
+          AppCollections.dosaMeetings,
         ];
       case AuthService.roleDriver:
         return [
@@ -265,6 +277,12 @@ abstract final class CloudSyncEngine {
           AppCollections.curriculumFeedback,
           AppCollections.collegeGuidance,
           AppCollections.supportRequests,
+          AppCollections.extracurricularClubs,
+          AppCollections.clubMemberships,
+          AppCollections.scholarships,
+          AppCollections.grievances,
+          AppCollections.internships,
+          AppCollections.dosaMeetings,
         ];
       default:
         return highPriority;
