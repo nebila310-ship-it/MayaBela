@@ -48,6 +48,7 @@ import 'package:mayabela/services/material_purchase_service.dart';
 import 'package:mayabela/services/persistence/message_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
 import 'package:mayabela/services/persistence/admission_persistence_service.dart';
+import 'package:mayabela/services/persistence/exam_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
@@ -152,6 +153,7 @@ Future<void> bootstrapBackgroundServices() async {
     await Future.wait([
       StudentPersistenceService.instance.loadMedicalOverrides(),
       AdmissionPersistenceService.instance.loadIntoService(),
+      ExamPersistenceService.instance.loadIntoService(),
       GradePersistenceService.instance.loadIntoSchoolDataService(),
       GradeAuditPersistenceService.instance.loadIntoService(),
       DailyActivityPersistenceService.instance.loadIntoSchoolDataService(),

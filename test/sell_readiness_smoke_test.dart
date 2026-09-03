@@ -271,6 +271,7 @@ void main() {
         'examinations',
         'markbook',
         'report_cards',
+        'exam_bank',
         'finance',
         'transport',
         'inventory',

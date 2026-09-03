@@ -11,6 +11,9 @@ const ALLOWED = new Set([
   "discipline_cases",
   "leave_requests",
   "admission_applications",
+  "exam_questions",
+  "exam_papers",
+  "exam_attempts",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
@@ -18,6 +21,9 @@ const OWN_ID_COLLECTIONS = new Set([
   "discipline_cases",
   "leave_requests",
   "admission_applications",
+  "exam_questions",
+  "exam_papers",
+  "exam_attempts",
 ]);
 
 function normalizeRecord(
@@ -162,6 +168,22 @@ Deno.serve(async (req) => {
         "denied",
       );
     }
+    // Exam bank / papers: staff only. Attempts: staff + the student sitting.
+    if (
+      (collection === "exam_questions" || collection === "exam_papers") &&
+      callerRole !== "admin" &&
+      callerRole !== "teacher"
+    ) {
+      return errorResponse("Not allowed to write the exam bank.", 403, "denied");
+    }
+    if (
+      collection === "exam_attempts" &&
+      callerRole !== "admin" &&
+      callerRole !== "teacher" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse("Not allowed to write exam attempts.", 403, "denied");
+    }
 
     const rows: Array<{
       collection: string;
@@ -196,6 +218,16 @@ Deno.serve(async (req) => {
           : [];
         const sid = String(normalized.record.studentId || "").trim().toUpperCase();
         if (!sid || !linked.includes(sid)) {
+          continue;
+        }
+      }
+      // Students may only write their own exam attempts.
+      if (collection === "exam_attempts" && callerRole === "student") {
+        const selfId = String(
+          meta.linkedStudentId || meta.linked_student_id || "",
+        ).trim().toUpperCase();
+        const sid = String(normalized.record.studentId || "").trim().toUpperCase();
+        if (selfId && sid && sid !== selfId) {
           continue;
         }
       }

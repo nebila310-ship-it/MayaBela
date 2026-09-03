@@ -66,6 +66,12 @@ const List<WebErpNavItem> _allNavItems = [
       section: 'Academics',
     ),
     WebErpNavItem(
+      id: 'exam_bank',
+      label: 'Exam bank & papers',
+      icon: Icons.quiz_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
       id: 'attendance',
       label: 'Attendance',
       icon: Icons.check_circle_outline,

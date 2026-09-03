@@ -20,6 +20,7 @@ import 'package:mayabela/models/bus_record.dart';
 import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/models/admission_application.dart';
+import 'package:mayabela/models/exam_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -57,6 +58,8 @@ import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/admission_service.dart';
+import 'package:mayabela/services/exam_service.dart';
+import 'package:mayabela/services/persistence/exam_persistence_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -436,6 +439,7 @@ class CloudAppStore {
     await pushAllLeaveRequests();
     await pushAllQaFindings();
     await pushAllAdmissionApplications();
+    await pushAllExamBank();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -723,6 +727,7 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullQaFindings(),
         _pullAdmissionApplications(),
+        _pullExamBank(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -776,6 +781,7 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullQaFindings(),
         _pullAdmissionApplications(),
+        _pullExamBank(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -822,6 +828,7 @@ class CloudAppStore {
         _pullConversations(),
         _pullAppNotifications(),
         _pullMaterialPurchases(),
+        _pullExamBank(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -1396,6 +1403,42 @@ class CloudAppStore {
         throw StateError(
           result.errorMessage ?? 'Leave request sync failed.',
         );
+      }
+    });
+  }
+
+  /// Question bank + papers (staff writeBatch) and attempts (upsert so
+  /// students can submit without a client write-guard allowlist).
+  Future<void> pushAllExamBank() async {
+    final role = AuthService.currentUser?.roleKey;
+    final isStudent = role == AuthService.roleStudent;
+    if (!isStudent) {
+      final questions = ExamService.instance.questionMaps();
+      if (questions.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.examQuestions,
+              items: questions,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final papers = ExamService.instance.paperMaps();
+      if (papers.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.examPapers,
+              items: papers,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+    }
+    final attempts = ExamService.instance.attemptMaps();
+    if (attempts.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.examAttempts,
+        records: attempts,
+      );
+      if (!result.ok) {
+        throw StateError(result.errorMessage ?? 'Exam attempt sync failed.');
       }
     });
   }
@@ -2517,6 +2560,47 @@ class CloudAppStore {
     await AdmissionPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
+  }
+
+  /// Exam bank, papers, and attempts. Students pull all three so they can
+  /// sit published papers; parents/drivers never receive the bank.
+  Future<void> _pullExamBank() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleDriver) {
+      return;
+    }
+    final questionRows = await _schoolRead(AppCollections.examQuestions);
+    final paperRows = await _schoolRead(AppCollections.examPapers);
+    final attemptRows = await _schoolRead(AppCollections.examAttempts);
+    if (questionRows.isEmpty && paperRows.isEmpty && attemptRows.isEmpty) {
+      return;
+    }
+    final questions = <ExamQuestion>[];
+    for (final map in questionRows) {
+      try {
+        questions.add(ExamQuestion.fromMap(map));
+      } catch (_) {}
+    }
+    final papers = <ExamPaper>[];
+    for (final map in paperRows) {
+      try {
+        papers.add(ExamPaper.fromMap(map));
+      } catch (_) {}
+    }
+    final attempts = <ExamAttempt>[];
+    for (final map in attemptRows) {
+      try {
+        attempts.add(ExamAttempt.fromMap(map));
+      } catch (_) {}
+    }
+    if (questions.isEmpty && papers.isEmpty && attempts.isEmpty) return;
+    ExamService.instance.applyPersistedData(
+      questions: questions.isEmpty ? null : questions,
+      papers: papers.isEmpty ? null : papers,
+      attempts: attempts.isEmpty ? null : attempts,
+      merge: true,
+    );
+    await ExamPersistenceService.instance.saveFromService(pushCloud: false);
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

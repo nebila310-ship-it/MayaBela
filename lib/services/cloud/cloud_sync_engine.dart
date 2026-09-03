@@ -182,6 +182,9 @@ abstract final class CloudSyncEngine {
     AppCollections.leaveRequests,
     AppCollections.qaFindings,
     AppCollections.admissionApplications,
+    AppCollections.examQuestions,
+    AppCollections.examPapers,
+    AppCollections.examAttempts,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,
@@ -235,6 +238,9 @@ abstract final class CloudSyncEngine {
           AppCollections.calendarEvents,
           AppCollections.classTimetables,
           AppCollections.galleryPosts,
+          AppCollections.examQuestions,
+          AppCollections.examPapers,
+          AppCollections.examAttempts,
         ];
       default:
         return highPriority;

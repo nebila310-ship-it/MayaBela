@@ -222,6 +222,10 @@ void main() {
       CloudSyncEngine.standardPriority,
       contains('admission_applications'),
     );
+    expect(
+      CloudSyncEngine.standardPriority,
+      containsAll(['exam_questions', 'exam_papers', 'exam_attempts']),
+    );
   });
 
   test('QaFinding serializes round-trip with plan + metrics fields', () {

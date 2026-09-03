@@ -8,6 +8,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/admission_service.dart';
+import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -85,6 +86,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     LeaveRequestService.instance.ensureLoaded();
     QaFindingsService.instance.ensureLoaded();
     AdmissionService.instance.ensureLoaded();
+    ExamService.instance.ensureLoaded();
   }
 
   String? get _schoolId => AuthService.activeSchoolId;
@@ -100,6 +102,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         LeaveRequestService.instance,
         QaFindingsService.instance,
         AdmissionService.instance,
+        ExamService.instance,
         TransferWorkflowService.instance,
         ProcurementService.instance,
         InventoryService.instance,
@@ -542,6 +545,12 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       Icons.queue_outlined,
       'Applicants on the waitlist',
       AdmissionService.instance.waitlistCount(sid),
+    );
+    add(
+      'exam_bank',
+      Icons.quiz_outlined,
+      'Exam attempts waiting to be scored',
+      ExamService.instance.unscoredCount(sid),
     );
     add(
       'parents',
