@@ -274,6 +274,7 @@ void main() {
         'exam_bank',
         'lesson_plans',
         'curriculum',
+        'at_risk',
         'finance',
         'transport',
         'inventory',

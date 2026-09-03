@@ -462,6 +462,8 @@ class AppStrings implements AppStringsLike {
       return switch (id) {
         'classes' => 'ክፍሎቼ',
         'attendance' => 'መገኘት',
+        'at_risk' => 'አደጋ ላይ ያሉ ተማሪዎች',
+        'attendance_insights' => 'የመገኘት ግንዛቤ',
         'messages' => 'መልዕክቶች',
         'announcements' => 'ማስታወቂያዎች',
         'homework' => 'የቤት ስራ',
@@ -516,6 +518,8 @@ class AppStrings implements AppStringsLike {
       return switch (id) {
         'classes' => 'Kutaalee Koo',
         'attendance' => 'Argama',
+        'at_risk' => 'Barattoota balaa keessa',
+        'attendance_insights' => 'Hubannoo argamaa',
         'messages' => 'Ergaawwan',
         'announcements' => 'Beeksisa',
         'homework' => 'Hojii Manaa',
@@ -569,6 +573,8 @@ class AppStrings implements AppStringsLike {
     return switch (id) {
       'classes' => 'My Classes',
       'attendance' => 'Attendance',
+      'at_risk' => 'At-risk students',
+      'attendance_insights' => 'Attendance insights',
       'messages' => 'Messages',
       'announcements' => 'Announcements',
       'homework' => 'Homework',
