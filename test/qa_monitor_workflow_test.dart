@@ -188,6 +188,10 @@ void main() {
   });
 
   testWidgets('QA desk shows Phase I tabs', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: WebQaPage()),

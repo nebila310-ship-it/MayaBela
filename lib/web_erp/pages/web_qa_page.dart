@@ -167,10 +167,11 @@ class _WebQaPageState extends State<WebQaPage>
                       onSelected: (_) => setState(() => _statusFilter = value),
                     ),
                   SizedBox(
-                    width: 230,
+                    width: 260,
                     child: DropdownButtonFormField<QaFindingArea?>(
                       initialValue: _areaFilter,
                       isDense: true,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Audit area',
                         border: OutlineInputBorder(),
