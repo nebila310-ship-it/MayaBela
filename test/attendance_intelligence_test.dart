@@ -14,7 +14,10 @@ import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const className = 'Grade 9Z';
+  const andClass = 'Grade 9Z-AND';
+  const fridayClass = 'Grade 9Z-FRI';
+  const hiddenClass = 'Grade 9Z-HID';
+  const insightClass = 'Grade 9Z-INS';
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -32,7 +35,7 @@ void main() {
   test('profile serializes with patterns and risk level', () {
     final original = StudentRiskProfile(
       studentName: 'Amina Hailu',
-      className: className,
+      className: andClass,
       studentId: 'STU-9001',
       level: RiskLevel.atRisk,
       present: 2,
@@ -63,7 +66,7 @@ void main() {
   test('at-risk requires low grades AND high absence', () {
     final monday = DateTime.utc(2026, 8, 3);
     _seedSessions(
-      className: className,
+      className: andClass,
       students: {
         'Amina Hailu': [
           AttendanceStatus.absent,
@@ -86,30 +89,30 @@ void main() {
       },
       start: monday,
     );
-    _seedGrades(className, {
+    _seedGrades(andClass, {
       'Amina Hailu': 38,
       'Bekele Tadesse': 82,
       'Chaltu Lemma': 36,
     });
 
     final intel = AttendanceIntelligenceService.instance;
-    final flags = intel.atRiskFlags(className: className);
+    final flags = intel.atRiskFlags(className: andClass);
     expect(flags.map((p) => p.studentName), ['Amina Hailu']);
 
     final amina = intel
-        .profiles(className: className)
+        .profiles(className: andClass)
         .firstWhere((p) => p.studentName == 'Amina Hailu');
     expect(amina.level, RiskLevel.atRisk);
     expect(amina.patterns.any((p) => p.kind == AbsencePatternKind.consecutiveAbsences), isTrue);
     expect(amina.patterns.any((p) => p.kind == AbsencePatternKind.chronicAbsence), isTrue);
 
     final bekele = intel
-        .profiles(className: className)
+        .profiles(className: andClass)
         .firstWhere((p) => p.studentName == 'Bekele Tadesse');
     expect(bekele.level, RiskLevel.attendanceWatch);
 
     final chaltu = intel
-        .profiles(className: className)
+        .profiles(className: andClass)
         .firstWhere((p) => p.studentName == 'Chaltu Lemma');
     expect(chaltu.level, RiskLevel.academicWatch);
   });
@@ -124,7 +127,7 @@ void main() {
     SchoolDataService.instance.applyPersistedAttendance([
       for (final day in fridays)
         AttendanceSession(
-          className: className,
+          className: fridayClass,
           date: day,
           conductedBy: 'Ms. Test',
           entries: [
@@ -135,10 +138,10 @@ void main() {
           ],
         ),
     ]);
-    _seedGrades(className, {'Dawit Friday': 70});
+    _seedGrades(fridayClass, {'Dawit Friday': 70});
 
     final profile = AttendanceIntelligenceService.instance
-        .profiles(className: className)
+        .profiles(className: fridayClass)
         .firstWhere((p) => p.studentName == 'Dawit Friday');
     expect(
       profile.patterns.any((p) => p.kind == AbsencePatternKind.weekdayCluster),
@@ -148,7 +151,7 @@ void main() {
 
   test('students and parents never see at-risk flags', () {
     _seedSessions(
-      className: className,
+      className: hiddenClass,
       students: {
         'Hidden Risk': [
           AttendanceStatus.absent,
@@ -159,9 +162,9 @@ void main() {
       },
       start: DateTime.utc(2026, 8, 3),
     );
-    _seedGrades(className, {'Hidden Risk': 30});
+    _seedGrades(hiddenClass, {'Hidden Risk': 30});
     expect(
-      AttendanceIntelligenceService.instance.atRiskCount(className: className),
+      AttendanceIntelligenceService.instance.atRiskCount(className: hiddenClass),
       1,
     );
 
@@ -172,11 +175,11 @@ void main() {
       schoolId: 'TB-001',
     );
     expect(
-      AttendanceIntelligenceService.instance.profiles(className: className),
+      AttendanceIntelligenceService.instance.profiles(className: hiddenClass),
       isEmpty,
     );
     expect(
-      AttendanceIntelligenceService.instance.teacherInsights(className: className),
+      AttendanceIntelligenceService.instance.teacherInsights(className: hiddenClass),
       isEmpty,
     );
 
@@ -187,14 +190,14 @@ void main() {
       schoolId: 'TB-001',
     );
     expect(
-      AttendanceIntelligenceService.instance.atRiskFlags(className: className),
+      AttendanceIntelligenceService.instance.atRiskFlags(className: hiddenClass),
       isEmpty,
     );
   });
 
   test('teacher insights compare high-absence marks to the rest of the class', () {
     _seedSessions(
-      className: className,
+      className: insightClass,
       students: {
         'Low Both': [
           AttendanceStatus.absent,
@@ -211,13 +214,13 @@ void main() {
       },
       start: DateTime.utc(2026, 8, 3),
     );
-    _seedGrades(className, {
+    _seedGrades(insightClass, {
       'Low Both': 40,
       'Present High': 90,
     });
 
     final insight = AttendanceIntelligenceService.instance
-        .teacherInsights(className: className)
+        .teacherInsights(className: insightClass)
         .single;
     expect(insight.atRiskCount, 1);
     expect(insight.highAbsenceGradeAverage, 40);
@@ -227,8 +230,8 @@ void main() {
 
   test('analytics never write grades or exam scores', () {
     final before = SchoolDataService.instance.getAllGradeReports().length;
-    AttendanceIntelligenceService.instance.profiles(className: className);
-    AttendanceIntelligenceService.instance.teacherInsights(className: className);
+    AttendanceIntelligenceService.instance.profiles(className: insightClass);
+    AttendanceIntelligenceService.instance.teacherInsights(className: insightClass);
     expect(SchoolDataService.instance.getAllGradeReports(), hasLength(before));
   });
 
