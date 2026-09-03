@@ -45,6 +45,27 @@ void main() {
     expect(copy.isPublished, isTrue);
     expect(copy.covers(week.add(const Duration(days: 3))), isTrue);
     expect(copy.covers(week.add(const Duration(days: 8))), isFalse);
+    expect(copy.reviewStatus, LessonPlanReviewStatus.none);
+    expect(copy.curriculumUnitId, isNull);
+  });
+
+  test('Phase D maps without review fields still load', () {
+    final week = LessonPlan.mondayOf(DateTime.utc(2026, 9, 7));
+    final copy = LessonPlan.fromMap({
+      'id': 'LP-0002',
+      'schoolId': 'TB-001',
+      'title': 'Legacy plan',
+      'className': 'Grade 4A',
+      'subject': 'Science',
+      'weekStart': week.toIso8601String(),
+      'status': 'published',
+      'createdAt': week.toIso8601String(),
+      'updatedAt': week.toIso8601String(),
+    });
+    expect(copy.reviewStatus, LessonPlanReviewStatus.none);
+    expect(copy.curriculumUnitId, isNull);
+    expect(copy.latestReviewId, isNull);
+    expect(copy.isPublished, isTrue);
   });
 
   test('draft stays hidden from students until published', () async {

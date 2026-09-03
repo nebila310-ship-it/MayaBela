@@ -103,6 +103,12 @@ const List<WebErpNavItem> _allNavItems = [
       section: 'Academics',
     ),
     WebErpNavItem(
+      id: 'curriculum',
+      label: 'Curriculum office',
+      icon: Icons.account_tree_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
       id: 'grade_workflow_settings',
       label: 'Grade Workflow',
       icon: Icons.rule_outlined,

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 
@@ -44,6 +46,7 @@ class _WebQaPageState extends State<WebQaPage> {
   void initState() {
     super.initState();
     QaFindingsService.instance.ensureLoaded();
+    CurriculumService.instance.ensureLoaded();
   }
 
   @override
@@ -91,6 +94,11 @@ class _WebQaPageState extends State<WebQaPage> {
                       icon: const Icon(Icons.flag_outlined),
                       label: const Text('New Finding'),
                     ),
+                  OutlinedButton.icon(
+                    onPressed: () => showCurriculumFeedbackDialog(context),
+                    icon: const Icon(Icons.account_tree_outlined),
+                    label: const Text('Curriculum feedback'),
+                  ),
                   for (final (value, label) in const [
                     ('open', 'Open'),
                     ('resolved', 'Resolved'),

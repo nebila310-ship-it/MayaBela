@@ -22,6 +22,7 @@ import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/models/admission_application.dart';
 import 'package:mayabela/models/exam_models.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
+import 'package:mayabela/models/curriculum_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -63,6 +64,8 @@ import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/persistence/exam_persistence_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
+import 'package:mayabela/services/curriculum_service.dart';
+import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -333,6 +336,7 @@ class CloudAppStore {
       _pullHomework(),
       _pullLearningMaterials(),
       _pullLessonPlans(),
+      _pullCurriculumOffice(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -445,6 +449,7 @@ class CloudAppStore {
     await pushAllAdmissionApplications();
     await pushAllExamBank();
     await pushAllLessonPlans();
+    await pushAllCurriculumOffice();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -697,6 +702,7 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullCurriculumOffice(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -734,6 +740,7 @@ class CloudAppStore {
         _pullAdmissionApplications(),
         _pullExamBank(),
         _pullLessonPlans(),
+        _pullCurriculumOffice(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -789,6 +796,7 @@ class CloudAppStore {
         _pullAdmissionApplications(),
         _pullExamBank(),
         _pullLessonPlans(),
+        _pullCurriculumOffice(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -837,6 +845,7 @@ class CloudAppStore {
         _pullMaterialPurchases(),
         _pullExamBank(),
         _pullLessonPlans(),
+        _pullCurriculumOffice(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -1459,6 +1468,60 @@ class CloudAppStore {
           items: items,
           docIdFor: (item) => item['id'] as String,
         ));
+  }
+
+  /// Staff write units / reviews / evals / meetings. Feedback uses
+  /// school-upsert-registry so students and parents can submit comments.
+  Future<void> pushAllCurriculumOffice() async {
+    final svc = CurriculumService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      final units = svc.unitMaps();
+      if (units.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.curriculumUnits,
+              items: units,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final reviews = svc.reviewMaps();
+      if (reviews.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.lessonPlanReviews,
+              items: reviews,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final evals = svc.evaluationMaps();
+      if (evals.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.teacherEvaluations,
+              items: evals,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final meetings = svc.meetingMaps();
+      if (meetings.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.academicMeetings,
+              items: meetings,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+    }
+    final feedback = svc.feedbackMaps();
+    if (feedback.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.curriculumFeedback,
+        records: feedback,
+      );
+      if (!result.ok) {
+        throw StateError(result.errorMessage ?? 'Curriculum feedback sync failed.');
+      }
+    });
   }
 
   Future<void> pushAllBuses() async {
@@ -2637,6 +2700,81 @@ class CloudAppStore {
     if (plans.isEmpty) return;
     LessonPlanService.instance.applyPersistedData(plans, merge: true);
     await LessonPlanPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Curriculum office. Students/parents receive published units + own
+  /// feedback only — never reviews, evaluations, or meeting notes.
+  Future<void> _pullCurriculumOffice() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+    final unitRows = await _schoolRead(AppCollections.curriculumUnits);
+    final feedbackRows = await _schoolRead(AppCollections.curriculumFeedback);
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    final reviewRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.lessonPlanReviews);
+    final evalRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.teacherEvaluations);
+    final meetingRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.academicMeetings);
+    if (unitRows.isEmpty &&
+        feedbackRows.isEmpty &&
+        reviewRows.isEmpty &&
+        evalRows.isEmpty &&
+        meetingRows.isEmpty) {
+      return;
+    }
+    final units = <CurriculumUnit>[];
+    for (final map in unitRows) {
+      try {
+        units.add(CurriculumUnit.fromMap(map));
+      } catch (_) {}
+    }
+    final feedback = <CurriculumFeedback>[];
+    for (final map in feedbackRows) {
+      try {
+        feedback.add(CurriculumFeedback.fromMap(map));
+      } catch (_) {}
+    }
+    final reviews = <LessonPlanReview>[];
+    for (final map in reviewRows) {
+      try {
+        reviews.add(LessonPlanReview.fromMap(map));
+      } catch (_) {}
+    }
+    final evals = <TeacherEvaluation>[];
+    for (final map in evalRows) {
+      try {
+        evals.add(TeacherEvaluation.fromMap(map));
+      } catch (_) {}
+    }
+    final meetings = <AcademicMeeting>[];
+    for (final map in meetingRows) {
+      try {
+        meetings.add(AcademicMeeting.fromMap(map));
+      } catch (_) {}
+    }
+    if (units.isEmpty &&
+        feedback.isEmpty &&
+        reviews.isEmpty &&
+        evals.isEmpty &&
+        meetings.isEmpty) {
+      return;
+    }
+    CurriculumService.instance.applyPersistedData(
+      units: units.isEmpty ? null : units,
+      feedback: feedback.isEmpty ? null : feedback,
+      reviews: publicReader ? const [] : (reviews.isEmpty ? null : reviews),
+      evaluations: publicReader ? const [] : (evals.isEmpty ? null : evals),
+      meetings: publicReader ? const [] : (meetings.isEmpty ? null : meetings),
+      merge: true,
+    );
+    await CurriculumPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
   }

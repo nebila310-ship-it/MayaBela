@@ -86,6 +86,7 @@ void main() {
     expect(ids.contains('report_cards'), isTrue);
     expect(ids.contains('exam_bank'), isTrue);
     expect(ids.contains('lesson_plans'), isTrue);
+    expect(ids.contains('curriculum'), isTrue);
   });
 
   test('router opens every admin nav item', () {

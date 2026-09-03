@@ -9,6 +9,7 @@ import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/admission_service.dart';
 import 'package:mayabela/services/exam_service.dart';
+import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
@@ -89,6 +90,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     AdmissionService.instance.ensureLoaded();
     ExamService.instance.ensureLoaded();
     LessonPlanService.instance.ensureLoaded();
+    CurriculumService.instance.ensureLoaded();
   }
 
   String? get _schoolId => AuthService.activeSchoolId;
@@ -106,6 +108,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         AdmissionService.instance,
         ExamService.instance,
         LessonPlanService.instance,
+        CurriculumService.instance,
         TransferWorkflowService.instance,
         ProcurementService.instance,
         InventoryService.instance,
@@ -560,6 +563,24 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       Icons.event_note_outlined,
       'Lesson plans still in draft',
       LessonPlanService.instance.draftCount(sid),
+    );
+    add(
+      'curriculum',
+      Icons.account_tree_outlined,
+      'Curriculum units still unpublished',
+      CurriculumService.instance.unpublishedCount(sid),
+    );
+    add(
+      'curriculum',
+      Icons.rate_review_outlined,
+      'Lesson plans waiting for department-head review',
+      LessonPlanService.instance.pendingReviewCount(sid),
+    );
+    add(
+      'curriculum',
+      Icons.comment_outlined,
+      'Open curriculum feedback',
+      CurriculumService.instance.openFeedbackCount(sid),
     );
     add(
       'parents',

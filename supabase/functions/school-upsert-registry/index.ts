@@ -14,6 +14,7 @@ const ALLOWED = new Set([
   "exam_questions",
   "exam_papers",
   "exam_attempts",
+  "curriculum_feedback",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
@@ -24,6 +25,7 @@ const OWN_ID_COLLECTIONS = new Set([
   "exam_questions",
   "exam_papers",
   "exam_attempts",
+  "curriculum_feedback",
 ]);
 
 function normalizeRecord(

@@ -18,6 +18,7 @@ class TeacherAccessService {
     'homework',
     'exams',
     'lesson_plans',
+    'curriculum',
     'learning_materials',
     'grades',
     'qr',

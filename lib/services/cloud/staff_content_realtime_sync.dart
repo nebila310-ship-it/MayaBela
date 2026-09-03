@@ -39,6 +39,8 @@ abstract final class StaffContentRealtimeSync {
       AppCollections.homework,
       AppCollections.learningMaterials,
       AppCollections.lessonPlans,
+      AppCollections.curriculumUnits,
+      AppCollections.curriculumFeedback,
       AppCollections.gradeReports,
       AppCollections.schoolRegistry,
       AppCollections.gradeAuditLog,
@@ -53,6 +55,13 @@ abstract final class StaffContentRealtimeSync {
       AppCollections.fees,
       AppCollections.galleryPosts,
     ];
+    if (role != AuthService.roleParent) {
+      collections.addAll([
+        AppCollections.lessonPlanReviews,
+        AppCollections.teacherEvaluations,
+        AppCollections.academicMeetings,
+      ]);
+    }
 
     for (final collection in collections) {
       _subscriptions.add(

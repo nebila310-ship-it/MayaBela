@@ -186,6 +186,11 @@ abstract final class CloudSyncEngine {
     AppCollections.examPapers,
     AppCollections.examAttempts,
     AppCollections.lessonPlans,
+    AppCollections.curriculumUnits,
+    AppCollections.curriculumFeedback,
+    AppCollections.lessonPlanReviews,
+    AppCollections.teacherEvaluations,
+    AppCollections.academicMeetings,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,
@@ -217,6 +222,8 @@ abstract final class CloudSyncEngine {
           AppCollections.classTimetables,
           AppCollections.disciplineCases,
           AppCollections.leaveRequests,
+          AppCollections.curriculumUnits,
+          AppCollections.curriculumFeedback,
         ];
       case AuthService.roleDriver:
         return [
@@ -243,6 +250,8 @@ abstract final class CloudSyncEngine {
           AppCollections.examPapers,
           AppCollections.examAttempts,
           AppCollections.lessonPlans,
+          AppCollections.curriculumUnits,
+          AppCollections.curriculumFeedback,
         ];
       default:
         return highPriority;

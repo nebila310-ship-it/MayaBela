@@ -80,6 +80,7 @@ class LessonPlanService extends ChangeNotifier {
     List<String> homeworkIds = const [],
     List<String> examPaperIds = const [],
     List<String> learningMaterialIds = const [],
+    String? curriculumUnitId,
     String? schoolId,
   }) async {
     final now = DateTime.now();
@@ -99,6 +100,7 @@ class LessonPlanService extends ChangeNotifier {
       homeworkIds: List.of(homeworkIds),
       examPaperIds: List.of(examPaperIds),
       learningMaterialIds: List.of(learningMaterialIds),
+      curriculumUnitId: curriculumUnitId,
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -119,6 +121,8 @@ class LessonPlanService extends ChangeNotifier {
     List<String>? homeworkIds,
     List<String>? examPaperIds,
     List<String>? learningMaterialIds,
+    String? curriculumUnitId,
+    bool clearCurriculumUnit = false,
   }) async {
     final plan = planById(id);
     if (plan == null) return null;
@@ -133,10 +137,39 @@ class LessonPlanService extends ChangeNotifier {
     if (learningMaterialIds != null) {
       plan.learningMaterialIds = List.of(learningMaterialIds);
     }
+    if (clearCurriculumUnit) {
+      plan.curriculumUnitId = null;
+    } else if (curriculumUnitId != null) {
+      plan.curriculumUnitId = curriculumUnitId;
+    }
     plan.updatedAt = DateTime.now();
     await _persist();
     return plan;
   }
+
+  Future<LessonPlan?> applyReview({
+    required String id,
+    required LessonPlanReviewStatus reviewStatus,
+    String? latestReviewId,
+  }) async {
+    final plan = planById(id);
+    if (plan == null) return null;
+    plan.reviewStatus = reviewStatus;
+    if (latestReviewId != null) plan.latestReviewId = latestReviewId;
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
+  int pendingReviewCount([String? schoolId]) => forSchool(schoolId)
+      .where(
+        (p) =>
+            p.isPublished &&
+            (p.reviewStatus == LessonPlanReviewStatus.none ||
+                p.reviewStatus == LessonPlanReviewStatus.pending ||
+                p.reviewStatus == LessonPlanReviewStatus.changesRequested),
+      )
+      .length;
 
   Future<LessonPlan?> setStatus(String id, LessonPlanStatus status) async {
     final plan = planById(id);
