@@ -4,8 +4,10 @@ import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
+import 'package:mayabela/web_erp/pages/web_qa_monitor_tabs.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 
@@ -22,7 +24,9 @@ class WebQaPage extends StatefulWidget {
   State<WebQaPage> createState() => _WebQaPageState();
 }
 
-class _WebQaPageState extends State<WebQaPage> {
+class _WebQaPageState extends State<WebQaPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 6, vsync: this);
   String _statusFilter = 'open';
   QaFindingArea? _areaFilter;
 
@@ -46,12 +50,77 @@ class _WebQaPageState extends State<WebQaPage> {
   void initState() {
     super.initState();
     QaFindingsService.instance.ensureLoaded();
+    QaMonitorService.instance.ensureLoaded();
     CurriculumService.instance.ensureLoaded();
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            narrow ? 12 : 20,
+            narrow ? 12 : 20,
+            narrow ? 12 : 20,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Quality Assurance', style: WebErpTheme.sectionTitle(context)),
+              const SizedBox(height: 4),
+              Text(
+                'Findings stay on this desk. Phase I adds teaching '
+                'observations, curriculum audits, surveys, action research, '
+                'and a read-only Phase F snapshot. This does not write grades.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              TabBar(
+                controller: _tabs,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                tabs: const [
+                  Tab(text: 'Findings'),
+                  Tab(text: 'Observations'),
+                  Tab(text: 'Audits'),
+                  Tab(text: 'Surveys'),
+                  Tab(text: 'Action research'),
+                  Tab(text: 'Analytics'),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabs,
+            children: [
+              _findingsTab(narrow),
+              QaMonitorTabs.observations(),
+              QaMonitorTabs.audits(),
+              QaMonitorTabs.surveys(),
+              QaMonitorTabs.research(),
+              QaMonitorTabs.analytics(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _findingsTab(bool narrow) {
     return ListenableBuilder(
       listenable: QaFindingsService.instance,
       builder: (context, _) {
@@ -65,22 +134,10 @@ class _WebQaPageState extends State<WebQaPage> {
           findings = findings.where((f) => f.area == _areaFilter).toList();
         }
         return SingleChildScrollView(
-          padding: EdgeInsets.all(narrow ? 12 : 20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Quality Assurance', style: WebErpTheme.sectionTitle(context)),
-              const SizedBox(height: 4),
-              Text(
-                'Audit findings & improvement plans — academic standards, '
-                'assessment integrity, grading process, Student Affairs '
-                'fairness, and policy compliance. Metrics report to the '
-                'Deputy GM / General Manager.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 12),
               _metricsRow(context, narrow),
               const SizedBox(height: 14),
               Wrap(
@@ -110,10 +167,11 @@ class _WebQaPageState extends State<WebQaPage> {
                       onSelected: (_) => setState(() => _statusFilter = value),
                     ),
                   SizedBox(
-                    width: 230,
+                    width: 260,
                     child: DropdownButtonFormField<QaFindingArea?>(
                       initialValue: _areaFilter,
                       isDense: true,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Audit area',
                         border: OutlineInputBorder(),

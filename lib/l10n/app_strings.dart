@@ -515,6 +515,7 @@ class AppStrings implements AppStringsLike {
         'clubs' => 'ክለቦች',
         'scholarships' => 'ስኮላርሺፕ',
         'quality_assurance' => 'ጥራት ማረጋገጫ',
+        'qa_surveys' => 'የጥራት ጥናቶች',
         'maya_assistant' => 'ማያ ረዳት',
         _ => id,
       };
@@ -578,6 +579,7 @@ class AppStrings implements AppStringsLike {
         'clubs' => 'Kilaboota',
         'scholarships' => 'Gargaarsa barnootaa',
         'quality_assurance' => 'Mirkaneessa Qulqullina',
+        'qa_surveys' => 'Qorannoo qulqullinaa',
         'maya_assistant' => 'Gargaaraa Maya',
         _ => id,
       };
@@ -640,6 +642,7 @@ class AppStrings implements AppStringsLike {
       'clubs' => 'Clubs & Gojo',
       'scholarships' => 'Scholarships',
       'quality_assurance' => 'Quality Assurance',
+      'qa_surveys' => 'QA surveys',
       'grade_approvals' => 'Grade approvals',
       'grade_workflow_settings' => 'Grade workflow',
       'profile' => 'My Profile',

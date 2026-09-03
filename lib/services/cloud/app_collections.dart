@@ -78,6 +78,13 @@ abstract final class AppCollections {
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
 
+  /// LIA Phase I QA monitoring (observations, audits, surveys, action research).
+  static const teachingObservations = 'teaching_observations';
+  static const academicAudits = 'academic_audits';
+  static const qaSurveys = 'qa_surveys';
+  static const qaSurveyResponses = 'qa_survey_responses';
+  static const actionResearch = 'action_research';
+
   // School inventory
   static const inventoryItems = 'inventory_items';
   static const stockTransactions = 'stock_transactions';

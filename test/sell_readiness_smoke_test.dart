@@ -465,6 +465,7 @@ void main() {
         'student_affairs',
         'student_support',
         'student_programs',
+        'qa_surveys',
         'fees',
         'bus',
         'maya_assistant',

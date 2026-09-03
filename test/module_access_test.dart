@@ -303,6 +303,12 @@ void main() {
       expect(ModuleAccess.normalize('leadership_meetings'), 'student_affairs');
       expect(ModuleAccess.normalize('student_programs'), 'student_affairs');
       expect(ModuleAccess.normalize('dosa'), 'student_affairs');
+      expect(ModuleAccess.normalize('surveys'), 'quality_assurance');
+      expect(ModuleAccess.normalize('qa_surveys'), 'quality_assurance');
+      expect(ModuleAccess.normalize('observations'), 'quality_assurance');
+      expect(ModuleAccess.normalize('academic_audits'), 'quality_assurance');
+      expect(ModuleAccess.normalize('action_research'), 'quality_assurance');
+      expect(ModuleAccess.normalize('academic_monitoring'), 'quality_assurance');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
       expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
       expect(ModuleAccess.normalize('add_driver'), 'transport');

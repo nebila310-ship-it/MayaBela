@@ -19,6 +19,7 @@ import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/dosa_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
@@ -674,6 +675,18 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       Icons.verified_outlined,
       'QA findings without resolution',
       qa.open,
+    );
+    add(
+      'quality_assurance',
+      Icons.poll_outlined,
+      'Published QA surveys',
+      QaMonitorService.instance.openSurveyCount(sid),
+    );
+    add(
+      'quality_assurance',
+      Icons.science_outlined,
+      'Open action-research cycles',
+      QaMonitorService.instance.openResearchCount(sid),
     );
     add(
       'inventory',

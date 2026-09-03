@@ -130,6 +130,12 @@ class WebErpRouter {
       case 'dosa':
         return WebStudentProgramsPage(onNavigate: onNavigate);
       case 'quality_assurance':
+      case 'surveys':
+      case 'qa_surveys':
+      case 'observations':
+      case 'academic_audits':
+      case 'action_research':
+      case 'academic_monitoring':
         return const WebQaPage();
       case 'finance':
         return const WebFinanceDashboardPage();
