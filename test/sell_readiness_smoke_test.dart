@@ -265,6 +265,7 @@ void main() {
       for (final id in [
         'dashboard',
         'students',
+        'admissions',
         'student_affairs',
         'quality_assurance',
         'examinations',

@@ -19,6 +19,7 @@ import 'package:mayabela/models/procurement_models.dart';
 import 'package:mayabela/models/bus_record.dart';
 import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/models/leave_request.dart';
+import 'package:mayabela/models/admission_application.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -48,12 +49,14 @@ import 'package:mayabela/services/persistence/procurement_persistence_service.da
 import 'package:mayabela/services/persistence/transfer_persistence_service.dart';
 import 'package:mayabela/services/persistence/discipline_persistence_service.dart';
 import 'package:mayabela/services/persistence/leave_request_persistence_service.dart';
+import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/qa_findings_persistence_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_audit_persistence_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
+import 'package:mayabela/services/admission_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -432,6 +435,7 @@ class CloudAppStore {
     await pushAllDisciplineCases();
     await pushAllLeaveRequests();
     await pushAllQaFindings();
+    await pushAllAdmissionApplications();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -718,6 +722,7 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullAdmissionApplications(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -770,6 +775,7 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullAdmissionApplications(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -1349,6 +1355,17 @@ class CloudAppStore {
     if (items.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.disciplineCases,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
+  /// Admissions pipeline — registrar/admin writers pass the write guard.
+  Future<void> pushAllAdmissionApplications() async {
+    final items = AdmissionService.instance.snapshotMaps();
+    if (items.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.admissionApplications,
           items: items,
           docIdFor: (item) => item['id'] as String,
         ));
@@ -2477,6 +2494,27 @@ class CloudAppStore {
     if (requests.isEmpty) return;
     LeaveRequestService.instance.applyPersistedData(requests, merge: true);
     await LeaveRequestPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Admissions applications — staff/admin only.
+  Future<void> _pullAdmissionApplications() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final rows = await _schoolRead(AppCollections.admissionApplications);
+    if (rows.isEmpty) return;
+    final items = <AdmissionApplication>[];
+    for (final map in rows) {
+      try {
+        items.add(AdmissionApplication.fromMap(map));
+      } catch (_) {}
+    }
+    if (items.isEmpty) return;
+    AdmissionService.instance.applyPersistedData(items, merge: true);
+    await AdmissionPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
   }

@@ -18,6 +18,7 @@ class SchoolAuthCloudResult {
     this.errorMessage,
     this.profile,
     this.teacherSynced = false,
+    this.applicationId,
   });
 
   final bool ok;
@@ -25,6 +26,7 @@ class SchoolAuthCloudResult {
   final String? errorMessage;
   final RegisteredUser? profile;
   final bool teacherSynced;
+  final String? applicationId;
 }
 
 /// Server-side school login via Supabase Edge Functions + Auth session.
@@ -523,6 +525,60 @@ class SchoolAuthCloudService {
       );
     } catch (_) {
       return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+    }
+  }
+
+  /// Public (no school JWT) admission application. Rate-limited on the server.
+  Future<SchoolAuthCloudResult> submitApplication({
+    required String schoolId,
+    required String fullName,
+    String gradeApplying = '',
+    String guardianName = '',
+    String guardianPhone = '',
+    String guardianEmail = '',
+    String previousSchool = '',
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(
+        ok: false,
+        errorCode: 'cloud_required',
+        errorMessage: 'Cloud is not available on this device.',
+      );
+    }
+    try {
+      await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      final data = await _invoke('school-submit-application', {
+        'schoolId': schoolId.trim().toUpperCase(),
+        'fullName': fullName.trim(),
+        'gradeApplying': gradeApplying.trim(),
+        'guardianName': guardianName.trim(),
+        'guardianPhone': guardianPhone.trim(),
+        'guardianEmail': guardianEmail.trim(),
+        'previousSchool': previousSchool.trim(),
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'invalid',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return SchoolAuthCloudResult(
+        ok: true,
+        applicationId: data['id']?.toString(),
+      );
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
+      );
+    } catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: 'invalid',
+        errorMessage: e.toString(),
+      );
     }
   }
 

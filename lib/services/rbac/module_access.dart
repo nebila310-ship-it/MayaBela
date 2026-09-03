@@ -100,6 +100,14 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.manageStudents],
     ),
+    'admissions': ModuleRule(
+      view: [SchoolPermissions.viewStudents],
+      manage: [SchoolPermissions.manageStudents],
+    ),
+    'alumni': ModuleRule(
+      view: [SchoolPermissions.viewStudents],
+      manage: [SchoolPermissions.manageStudents],
+    ),
     'transfers': ModuleRule(
       view: [
         SchoolPermissions.createTransfers,
@@ -341,6 +349,30 @@ abstract final class ModuleAccess {
         ..._executiveOversight,
       },
       manageBy: {StaffRoles.registrar, StaffRoles.sectionDirector},
+    ),
+    'admissions': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.registrar,
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        StaffRoles.studentAffairs,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.registrar,
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+      },
+    ),
+    'alumni': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.registrar,
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        StaffRoles.studentAffairs,
+        ..._executiveOversight,
+      },
+      manageBy: {StaffRoles.registrar},
     ),
     'student_affairs': ModuleRoleAllocation(
       visibleTo: {

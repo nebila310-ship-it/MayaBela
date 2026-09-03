@@ -218,6 +218,10 @@ void main() {
       contains(SchoolPermissions.manageQaFindings),
     );
     expect(CloudSyncEngine.standardPriority, contains('qa_findings'));
+    expect(
+      CloudSyncEngine.standardPriority,
+      contains('admission_applications'),
+    );
   });
 
   test('QaFinding serializes round-trip with plan + metrics fields', () {

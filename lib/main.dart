@@ -7,7 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 
 import 'package:mayabela/screens/login_screen.dart';
-
+import 'package:mayabela/screens/public_admission_apply_screen.dart';
 import 'package:mayabela/screens/settings_screen.dart';
 
 import 'package:mayabela/services/app_lock_service.dart';
@@ -47,6 +47,7 @@ import 'package:mayabela/services/persistence/learning_materials_persistence_ser
 import 'package:mayabela/services/material_purchase_service.dart';
 import 'package:mayabela/services/persistence/message_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
+import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
@@ -150,6 +151,7 @@ Future<void> bootstrapBackgroundServices() async {
   await StartupProfiler.track('bootstrap.background.heavyPersistence', () async {
     await Future.wait([
       StudentPersistenceService.instance.loadMedicalOverrides(),
+      AdmissionPersistenceService.instance.loadIntoService(),
       GradePersistenceService.instance.loadIntoSchoolDataService(),
       GradeAuditPersistenceService.instance.loadIntoService(),
       DailyActivityPersistenceService.instance.loadIntoSchoolDataService(),
@@ -299,6 +301,7 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
       },
       routes: {
         '/settings': (_) => const SettingsScreen(),
+        '/apply': (_) => const PublicAdmissionApplyScreen(),
       },
       home: const AppBootstrap(),
     );

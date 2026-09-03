@@ -181,6 +181,7 @@ abstract final class CloudSyncEngine {
     AppCollections.disciplineCases,
     AppCollections.leaveRequests,
     AppCollections.qaFindings,
+    AppCollections.admissionApplications,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,

@@ -7,6 +7,7 @@ import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
+import 'package:mayabela/services/admission_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -82,6 +83,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     DisciplineService.instance.ensureLoaded();
     LeaveRequestService.instance.ensureLoaded();
     QaFindingsService.instance.ensureLoaded();
+    AdmissionService.instance.ensureLoaded();
   }
 
   String? get _schoolId => AuthService.activeSchoolId;
@@ -96,6 +98,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         DisciplineService.instance,
         LeaveRequestService.instance,
         QaFindingsService.instance,
+        AdmissionService.instance,
         TransferWorkflowService.instance,
         ProcurementService.instance,
         InventoryService.instance,
@@ -291,6 +294,19 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         color: Colors.indigo,
         value: '$active',
         label: 'Active students',
+      ));
+    }
+
+    if (ModuleAccess.canView('admissions')) {
+      final open = AdmissionService.instance.openCount(sid);
+      out.add(_StatCard(
+        moduleId: 'admissions',
+        icon: Icons.how_to_reg_outlined,
+        color: const Color(0xFF1565C0),
+        value: '$open',
+        label: 'Open applications',
+        sub:
+            '${AdmissionService.instance.waitlistCount(sid)} waitlist · ${AdmissionService.instance.enrolledThisYear(sid)} enrolled this year',
       ));
     }
 
@@ -513,6 +529,18 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       Icons.swap_horiz_rounded,
       'Transfer requests pending review',
       TransferWorkflowService.instance.pendingCount,
+    );
+    add(
+      'admissions',
+      Icons.how_to_reg_outlined,
+      'Admissions applications still open',
+      AdmissionService.instance.openCount(sid),
+    );
+    add(
+      'admissions',
+      Icons.queue_outlined,
+      'Applicants on the waitlist',
+      AdmissionService.instance.waitlistCount(sid),
     );
     add(
       'parents',

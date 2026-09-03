@@ -144,6 +144,8 @@ void main() {
         'library',
         'quality_assurance',
         'student_affairs',
+        'admissions',
+        'alumni',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }

@@ -58,3 +58,6 @@ verify_jwt = false
 
 [functions.client-crash-report]
 verify_jwt = false
+
+[functions.school-submit-application]
+verify_jwt = false
