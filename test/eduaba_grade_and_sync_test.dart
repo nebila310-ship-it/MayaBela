@@ -226,6 +226,7 @@ void main() {
       CloudSyncEngine.standardPriority,
       containsAll(['exam_questions', 'exam_papers', 'exam_attempts']),
     );
+    expect(CloudSyncEngine.standardPriority, contains('lesson_plans'));
   });
 
   test('QaFinding serializes round-trip with plan + metrics fields', () {

@@ -27,6 +27,7 @@ abstract final class StudentRealtimeSync {
     final collections = <String>[
       AppCollections.homework,
       AppCollections.learningMaterials,
+      AppCollections.lessonPlans,
       AppCollections.gradeReports,
       AppCollections.dailyActivities,
       AppCollections.announcements,

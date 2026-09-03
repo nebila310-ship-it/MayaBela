@@ -272,6 +272,7 @@ void main() {
         'markbook',
         'report_cards',
         'exam_bank',
+        'lesson_plans',
         'finance',
         'transport',
         'inventory',

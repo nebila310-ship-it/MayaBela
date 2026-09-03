@@ -21,6 +21,7 @@ import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/models/admission_application.dart';
 import 'package:mayabela/models/exam_models.dart';
+import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -60,6 +61,8 @@ import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/admission_service.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/persistence/exam_persistence_service.dart';
+import 'package:mayabela/services/lesson_plan_service.dart';
+import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -329,6 +332,7 @@ class CloudAppStore {
       _pullGradeReports(),
       _pullHomework(),
       _pullLearningMaterials(),
+      _pullLessonPlans(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -440,6 +444,7 @@ class CloudAppStore {
     await pushAllQaFindings();
     await pushAllAdmissionApplications();
     await pushAllExamBank();
+    await pushAllLessonPlans();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -728,6 +733,7 @@ class CloudAppStore {
         _pullQaFindings(),
         _pullAdmissionApplications(),
         _pullExamBank(),
+        _pullLessonPlans(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -782,6 +788,7 @@ class CloudAppStore {
         _pullQaFindings(),
         _pullAdmissionApplications(),
         _pullExamBank(),
+        _pullLessonPlans(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -829,6 +836,7 @@ class CloudAppStore {
         _pullAppNotifications(),
         _pullMaterialPurchases(),
         _pullExamBank(),
+        _pullLessonPlans(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -1441,6 +1449,16 @@ class CloudAppStore {
         throw StateError(result.errorMessage ?? 'Exam attempt sync failed.');
       }
     });
+  }
+
+  Future<void> pushAllLessonPlans() async {
+    final items = LessonPlanService.instance.snapshotMaps();
+    if (items.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.lessonPlans,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ));
   }
 
   Future<void> pushAllBuses() async {
@@ -2601,6 +2619,26 @@ class CloudAppStore {
       merge: true,
     );
     await ExamPersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  Future<void> _pullLessonPlans() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleDriver) {
+      return;
+    }
+    final rows = await _scopedClassRead(AppCollections.lessonPlans);
+    if (rows.isEmpty) return;
+    final plans = <LessonPlan>[];
+    for (final map in rows) {
+      try {
+        plans.add(LessonPlan.fromMap(map));
+      } catch (_) {}
+    }
+    if (plans.isEmpty) return;
+    LessonPlanService.instance.applyPersistedData(plans, merge: true);
+    await LessonPlanPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   /// QA findings — staff-only register (parents/students never pull it).
