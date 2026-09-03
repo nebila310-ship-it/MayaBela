@@ -152,6 +152,8 @@ void main() {
         'lesson_plans',
         'curriculum',
         'at_risk',
+        'student_support',
+        'safeguarding',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }
@@ -244,6 +246,8 @@ void main() {
       expect(ModuleAccess.canManage('examinations'), isTrue);
       expect(ModuleAccess.canManage('grade_approvals'), isTrue);
       expect(ModuleAccess.canView('support'), isTrue);
+      // Child-protection files are not a classroom or department-head desk.
+      expect(ModuleAccess.canView('safeguarding'), isFalse);
     });
   });
 
@@ -283,6 +287,13 @@ void main() {
       expect(ModuleAccess.normalize('academic_meetings'), 'academic');
       expect(ModuleAccess.normalize('at_risk'), 'attendance');
       expect(ModuleAccess.normalize('attendance_insights'), 'attendance');
+      expect(ModuleAccess.normalize('health'), 'student_affairs');
+      expect(ModuleAccess.normalize('counseling'), 'student_affairs');
+      expect(ModuleAccess.normalize('iep'), 'student_affairs');
+      expect(ModuleAccess.normalize('special_needs'), 'student_affairs');
+      expect(ModuleAccess.normalize('college_guidance'), 'student_affairs');
+      expect(ModuleAccess.normalize('student_support'), 'student_affairs');
+      expect(ModuleAccess.normalize('safeguarding'), 'safeguarding');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
       expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
       expect(ModuleAccess.normalize('add_driver'), 'transport');

@@ -507,6 +507,10 @@ class AppStrings implements AppStringsLike {
         'system_health' => 'የስርዓት ጤንነት',
         'student_affairs' =>
           roleKey == 'parent' ? 'ጠባይ እና ፈቃድ' : 'የተማሪ ጉዳዮች',
+        'student_support' =>
+          roleKey == 'student' ? 'የኮሌጅ መመሪያ' : 'የተማሪ ድጋፍ',
+        'college_guidance' => 'የኮሌጅ መመሪያ',
+        'safeguarding' => 'ሕፃናት ጥበቃ',
         'quality_assurance' => 'ጥራት ማረጋገጫ',
         'maya_assistant' => 'ማያ ረዳት',
         _ => id,
@@ -563,6 +567,10 @@ class AppStrings implements AppStringsLike {
         'system_health' => 'Fayyaa Sirnaa',
         'student_affairs' =>
           roleKey == 'parent' ? 'Amala fi Hayyama' : 'Dhimma Barattootaa',
+        'student_support' =>
+          roleKey == 'student' ? 'Qajeelfama kolleejjii' : 'Deeggarsa barataa',
+        'college_guidance' => 'Qajeelfama kolleejjii',
+        'safeguarding' => 'Eegumsa daa\'immanii',
         'quality_assurance' => 'Mirkaneessa Qulqullina',
         'maya_assistant' => 'Gargaaraa Maya',
         _ => id,
@@ -618,6 +626,10 @@ class AppStrings implements AppStringsLike {
       'system_health' => 'System Health',
       'student_affairs' =>
         roleKey == 'parent' ? 'Behaviour & Leave' : 'Student Affairs',
+      'student_support' =>
+        roleKey == 'student' ? 'College guidance' : 'Student support',
+      'college_guidance' => 'College guidance',
+      'safeguarding' => 'Safeguarding',
       'quality_assurance' => 'Quality Assurance',
       'grade_approvals' => 'Grade approvals',
       'grade_workflow_settings' => 'Grade workflow',

@@ -165,6 +165,18 @@ const List<WebErpNavItem> _allNavItems = [
       section: 'Student Services',
     ),
     WebErpNavItem(
+      id: 'student_support',
+      label: 'Student support',
+      icon: Icons.volunteer_activism_outlined,
+      section: 'Student Services',
+    ),
+    WebErpNavItem(
+      id: 'safeguarding',
+      label: 'Safeguarding',
+      icon: Icons.shield_outlined,
+      section: 'Student Services',
+    ),
+    WebErpNavItem(
       id: 'parents',
       label: 'Parents & Link Approvals',
       icon: Icons.family_restroom_outlined,

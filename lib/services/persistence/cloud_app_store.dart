@@ -23,6 +23,7 @@ import 'package:mayabela/models/admission_application.dart';
 import 'package:mayabela/models/exam_models.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/curriculum_models.dart';
+import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -66,6 +67,8 @@ import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
+import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -337,6 +340,7 @@ class CloudAppStore {
       _pullLearningMaterials(),
       _pullLessonPlans(),
       _pullCurriculumOffice(),
+      _pullStudentSupport(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -450,6 +454,7 @@ class CloudAppStore {
     await pushAllExamBank();
     await pushAllLessonPlans();
     await pushAllCurriculumOffice();
+    await pushAllStudentSupport();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -703,6 +708,7 @@ class CloudAppStore {
         _pullConversations(),
         _pullAppNotifications(),
         _pullCurriculumOffice(),
+        _pullStudentSupport(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -741,6 +747,7 @@ class CloudAppStore {
         _pullExamBank(),
         _pullLessonPlans(),
         _pullCurriculumOffice(),
+        _pullStudentSupport(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -797,6 +804,7 @@ class CloudAppStore {
         _pullExamBank(),
         _pullLessonPlans(),
         _pullCurriculumOffice(),
+        _pullStudentSupport(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -846,6 +854,7 @@ class CloudAppStore {
         _pullExamBank(),
         _pullLessonPlans(),
         _pullCurriculumOffice(),
+        _pullStudentSupport(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -2775,6 +2784,146 @@ class CloudAppStore {
       merge: true,
     );
     await CurriculumPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Staff write care files via writeBatch. Parents/students file
+  /// [support_requests] through school-upsert-registry. Safeguarding never
+  /// leaves the care-leadership desk.
+  Future<void> pushAllStudentSupport() async {
+    final svc = StudentSupportService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      Future<void> pushStaff(String collection, List<Map<String, dynamic>> items) async {
+        if (items.isEmpty) return;
+        await _pushSafe(() => _crud.writeBatch(
+              collection: collection,
+              items: items,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+
+      await pushStaff(AppCollections.healthRecords, svc.healthMaps());
+      await pushStaff(AppCollections.counselingRecords, svc.counselingMaps());
+      await pushStaff(AppCollections.iepPlans, svc.iepMaps());
+      await pushStaff(AppCollections.collegeGuidance, svc.collegeMaps());
+      if (role == AuthService.roleAdmin ||
+          role == AuthService.roleTeacher) {
+        await pushStaff(
+          AppCollections.safeguardingCases,
+          svc.safeguardingMaps(),
+        );
+      }
+    }
+    final requests = svc.requestMaps();
+    if (requests.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.supportRequests,
+        records: requests,
+      );
+      if (!result.ok) {
+        throw StateError(
+          result.errorMessage ?? 'Student-support request sync failed.',
+        );
+      }
+    });
+  }
+
+  /// Health / counseling / IEP / college / requests. Child-protection files
+  /// are never pulled for parents, students, or drivers.
+  Future<void> _pullStudentSupport() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final parent = role == AuthService.roleParent;
+    final student = role == AuthService.roleStudent;
+    final publicReader = parent || student;
+
+    final healthRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.healthRecords);
+    final counselingRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.counselingRecords);
+    final iepRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.iepPlans);
+    final collegeRows = await _schoolRead(AppCollections.collegeGuidance);
+    final requestRows = await _schoolRead(AppCollections.supportRequests);
+    final safeguardingRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.safeguardingCases);
+
+    if (healthRows.isEmpty &&
+        counselingRows.isEmpty &&
+        iepRows.isEmpty &&
+        collegeRows.isEmpty &&
+        requestRows.isEmpty &&
+        safeguardingRows.isEmpty) {
+      return;
+    }
+
+    final health = <HealthRecord>[];
+    for (final map in healthRows) {
+      try {
+        health.add(HealthRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final counseling = <CounselingRecord>[];
+    for (final map in counselingRows) {
+      try {
+        counseling.add(CounselingRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final iep = <IepPlan>[];
+    for (final map in iepRows) {
+      try {
+        iep.add(IepPlan.fromMap(map));
+      } catch (_) {}
+    }
+    final college = <CollegeGuidancePlan>[];
+    for (final map in collegeRows) {
+      try {
+        college.add(CollegeGuidancePlan.fromMap(map));
+      } catch (_) {}
+    }
+    final requests = <SupportRequest>[];
+    for (final map in requestRows) {
+      try {
+        requests.add(SupportRequest.fromMap(map));
+      } catch (_) {}
+    }
+    final safeguarding = <SafeguardingCase>[];
+    for (final map in safeguardingRows) {
+      try {
+        safeguarding.add(SafeguardingCase.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (health.isEmpty &&
+        counseling.isEmpty &&
+        iep.isEmpty &&
+        college.isEmpty &&
+        requests.isEmpty &&
+        safeguarding.isEmpty) {
+      return;
+    }
+
+    StudentSupportService.instance.applyPersistedData(
+      health: health.isEmpty ? null : health,
+      counseling: counseling.isEmpty ? null : counseling,
+      iep: iep.isEmpty ? null : iep,
+      college: college.isEmpty ? null : college,
+      requests: requests.isEmpty ? null : requests,
+      safeguarding:
+          publicReader ? const [] : (safeguarding.isEmpty ? null : safeguarding),
+      merge: true,
+    );
+    await StudentSupportPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
   }

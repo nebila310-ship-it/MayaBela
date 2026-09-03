@@ -235,6 +235,12 @@ void main() {
         'lesson_plan_reviews',
         'teacher_evaluations',
         'academic_meetings',
+        'health_records',
+        'counseling_records',
+        'iep_plans',
+        'college_guidance',
+        'support_requests',
+        'safeguarding_cases',
       ]),
     );
   });
