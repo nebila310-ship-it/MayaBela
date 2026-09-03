@@ -63,12 +63,18 @@ abstract final class SessionCloudSync {
         return;
       }
       if (!_isLive(generation)) return;
-      // Fresh login bootstraps role pack (clears stale delta boot marker).
+      // Keep cursors on the same school so the 5s engine does not treat
+      // every sign-in as a first-time full download. School switch wipes.
       await SyncCursorStore.instance.ensureLoaded();
       if (!_isLive(generation)) return;
-      await SyncCursorStore.instance.clearAll();
+      await SyncCursorStore.instance.bindToSchool(AuthService.activeSchoolId);
       if (!_isLive(generation)) return;
       await syncRoleWithProgress();
+      if (_isLive(generation) && CloudSyncProgressService.instance.isReady) {
+        await SyncCursorStore.instance.markRoleBoot(
+          CloudSyncEngine.collectionsForCurrentRole(),
+        );
+      }
     } finally {
       if (_isLive(generation)) {
         StaffContentRealtimeSync.markInitialSyncComplete();

@@ -23,10 +23,8 @@ abstract final class RealtimeMessagingBootstrap {
     if (role == AuthService.roleStudent) {
       StudentRealtimeSync.start();
     }
-    if (role == AuthService.roleDriver ||
-        role == AuthService.roleParent ||
-        role == AuthService.roleAdmin ||
-        role == AuthService.roleTeacher) {
+    // Messages / GPS / notifications / passenger status apply locally.
+    if (role != null) {
       TransportRealtimeSync.start();
     }
     if (role == AuthService.roleAdmin || role == AuthService.roleTeacher) {

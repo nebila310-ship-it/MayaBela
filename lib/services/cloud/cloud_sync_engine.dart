@@ -30,9 +30,23 @@ abstract final class CloudSyncEngine {
   static var _started = false;
   static var _paused = false;
   static var _tickRunning = false;
+  static var _tickIndex = 0;
   static var _consecutiveFailures = 0;
   static DateTime? _backoffUntil;
   static int? _engineGeneration;
+
+  /// How often the standard lane is probed (every Nth 5s tick).
+  static const standardTickEvery = 6;
+
+  /// Already applied by dedicated realtime listeners — skip on fast ticks
+  /// so a moving bus cannot trigger school-wide SELECTs.
+  static const liveRealtimeCollections = <String>{
+    AppCollections.conversations,
+    AppCollections.appNotifications,
+    AppCollections.busLivePositions,
+    AppCollections.transportPassengerStatus,
+    AppCollections.transportScans,
+  };
 
   static bool get isStarted => _started;
 
@@ -53,6 +67,7 @@ abstract final class CloudSyncEngine {
     _engineGeneration = generation;
     _consecutiveFailures = 0;
     _backoffUntil = null;
+    _tickIndex = 0;
     _timer = Timer.periodic(interval, (_) {
       if (!_engineIsLive(generation)) return;
       unawaited(tick(reason: 'periodic'));
@@ -124,9 +139,10 @@ abstract final class CloudSyncEngine {
       await CloudAppStore.instance.flushOutboxForSyncEngine();
       if (!_engineIsLive(generation)) return;
 
-      // 2–5) Delta pull, apply, notify, advance cursors.
+      // 2–5) Delta pull, apply only the collections that actually changed.
+      _tickIndex++;
       final changed = await CloudAppStore.instance.pullRoleDeltaForSyncEngine(
-        collections: collectionsForCurrentRole(),
+        collections: probeCollectionsForTick(_tickIndex),
       );
       if (!_engineIsLive(generation)) return;
       if (changed) {
@@ -217,6 +233,22 @@ abstract final class CloudSyncEngine {
     AppCollections.purchaseRequests,
     AppCollections.materialPurchaseRequests,
   ];
+
+  /// Fast ticks probe the high-priority lane minus live GPS/messages.
+  /// Every [standardTickEvery] ticks also probe the rest of the role pack
+  /// (including a live-collection backup if realtime dropped a change).
+  @visibleForTesting
+  static List<String> probeCollectionsForTick(int tickIndex) {
+    final role = collectionsForCurrentRole();
+    if (tickIndex <= 0 || tickIndex % standardTickEvery == 0) {
+      return role;
+    }
+    final roleSet = role.toSet();
+    return highPriority
+        .where(roleSet.contains)
+        .where((c) => !liveRealtimeCollections.contains(c))
+        .toList();
+  }
 
   static List<String> collectionsForCurrentRole() {
     final role = AuthService.currentUser?.roleKey;
