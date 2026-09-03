@@ -154,6 +154,7 @@ void main() {
         'at_risk',
         'student_support',
         'safeguarding',
+        'student_programs',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }
@@ -294,6 +295,14 @@ void main() {
       expect(ModuleAccess.normalize('college_guidance'), 'student_affairs');
       expect(ModuleAccess.normalize('student_support'), 'student_affairs');
       expect(ModuleAccess.normalize('safeguarding'), 'safeguarding');
+      expect(ModuleAccess.normalize('clubs'), 'student_affairs');
+      expect(ModuleAccess.normalize('gojo'), 'student_affairs');
+      expect(ModuleAccess.normalize('scholarships'), 'student_affairs');
+      expect(ModuleAccess.normalize('grievances'), 'student_affairs');
+      expect(ModuleAccess.normalize('internships'), 'student_affairs');
+      expect(ModuleAccess.normalize('leadership_meetings'), 'student_affairs');
+      expect(ModuleAccess.normalize('student_programs'), 'student_affairs');
+      expect(ModuleAccess.normalize('dosa'), 'student_affairs');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
       expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
       expect(ModuleAccess.normalize('add_driver'), 'transport');

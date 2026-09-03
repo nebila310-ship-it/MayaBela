@@ -277,6 +277,7 @@ void main() {
         'at_risk',
         'student_support',
         'safeguarding',
+        'student_programs',
         'finance',
         'transport',
         'inventory',
@@ -463,6 +464,7 @@ void main() {
       const parentEntries = [
         'student_affairs',
         'student_support',
+        'student_programs',
         'fees',
         'bus',
         'maya_assistant',

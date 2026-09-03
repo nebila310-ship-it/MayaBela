@@ -90,6 +90,7 @@ void main() {
     expect(ids.contains('at_risk'), isTrue);
     expect(ids.contains('student_support'), isTrue);
     expect(ids.contains('safeguarding'), isTrue);
+    expect(ids.contains('student_programs'), isTrue);
   });
 
   test('router opens every admin nav item', () {

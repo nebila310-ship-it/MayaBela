@@ -24,6 +24,7 @@ import 'package:mayabela/models/exam_models.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/curriculum_models.dart';
 import 'package:mayabela/models/student_support_models.dart';
+import 'package:mayabela/models/dosa_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -69,6 +70,8 @@ import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
+import 'package:mayabela/services/dosa_service.dart';
+import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -341,6 +344,7 @@ class CloudAppStore {
       _pullLessonPlans(),
       _pullCurriculumOffice(),
       _pullStudentSupport(),
+      _pullDosa(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -455,6 +459,7 @@ class CloudAppStore {
     await pushAllLessonPlans();
     await pushAllCurriculumOffice();
     await pushAllStudentSupport();
+    await pushAllDosa();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -709,6 +714,7 @@ class CloudAppStore {
         _pullAppNotifications(),
         _pullCurriculumOffice(),
         _pullStudentSupport(),
+        _pullDosa(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -748,6 +754,7 @@ class CloudAppStore {
         _pullLessonPlans(),
         _pullCurriculumOffice(),
         _pullStudentSupport(),
+        _pullDosa(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -805,6 +812,7 @@ class CloudAppStore {
         _pullLessonPlans(),
         _pullCurriculumOffice(),
         _pullStudentSupport(),
+        _pullDosa(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -855,6 +863,7 @@ class CloudAppStore {
         _pullLessonPlans(),
         _pullCurriculumOffice(),
         _pullStudentSupport(),
+        _pullDosa(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -2926,6 +2935,132 @@ class CloudAppStore {
     await StudentSupportPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
+  }
+
+  /// Staff write clubs / internships / meetings. Memberships, scholarships,
+  /// and grievances use upsert so students and parents can apply.
+  Future<void> pushAllDosa() async {
+    final svc = DosaService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      Future<void> pushStaff(
+        String collection,
+        List<Map<String, dynamic>> items,
+      ) async {
+        if (items.isEmpty) return;
+        await _pushSafe(() => _crud.writeBatch(
+              collection: collection,
+              items: items,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+
+      await pushStaff(AppCollections.extracurricularClubs, svc.clubMaps());
+      await pushStaff(AppCollections.internships, svc.internshipMaps());
+      await pushStaff(AppCollections.dosaMeetings, svc.meetingMaps());
+    }
+
+    Future<void> upsertPublic(
+      String collection,
+      List<Map<String, dynamic>> items,
+    ) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() async {
+        final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+          collection: collection,
+          records: items,
+        );
+        if (!result.ok) {
+          throw StateError(
+            result.errorMessage ?? 'Student-program sync failed.',
+          );
+        }
+      });
+    }
+
+    await upsertPublic(AppCollections.clubMemberships, svc.membershipMaps());
+    await upsertPublic(AppCollections.scholarships, svc.scholarshipMaps());
+    await upsertPublic(AppCollections.grievances, svc.grievanceMaps());
+  }
+
+  Future<void> _pullDosa() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final clubRows = await _schoolRead(AppCollections.extracurricularClubs);
+    final membershipRows = await _schoolRead(AppCollections.clubMemberships);
+    final scholarshipRows = await _schoolRead(AppCollections.scholarships);
+    final grievanceRows = await _schoolRead(AppCollections.grievances);
+    final internshipRows = await _schoolRead(AppCollections.internships);
+    final meetingRows = await _schoolRead(AppCollections.dosaMeetings);
+
+    if (clubRows.isEmpty &&
+        membershipRows.isEmpty &&
+        scholarshipRows.isEmpty &&
+        grievanceRows.isEmpty &&
+        internshipRows.isEmpty &&
+        meetingRows.isEmpty) {
+      return;
+    }
+
+    final clubs = <ExtracurricularClub>[];
+    for (final map in clubRows) {
+      try {
+        clubs.add(ExtracurricularClub.fromMap(map));
+      } catch (_) {}
+    }
+    final memberships = <ClubMembership>[];
+    for (final map in membershipRows) {
+      try {
+        memberships.add(ClubMembership.fromMap(map));
+      } catch (_) {}
+    }
+    final scholarships = <ScholarshipRecord>[];
+    for (final map in scholarshipRows) {
+      try {
+        scholarships.add(ScholarshipRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final grievances = <Grievance>[];
+    for (final map in grievanceRows) {
+      try {
+        grievances.add(Grievance.fromMap(map));
+      } catch (_) {}
+    }
+    final internships = <Internship>[];
+    for (final map in internshipRows) {
+      try {
+        internships.add(Internship.fromMap(map));
+      } catch (_) {}
+    }
+    final meetings = <DosaMeeting>[];
+    for (final map in meetingRows) {
+      try {
+        meetings.add(DosaMeeting.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (clubs.isEmpty &&
+        memberships.isEmpty &&
+        scholarships.isEmpty &&
+        grievances.isEmpty &&
+        internships.isEmpty &&
+        meetings.isEmpty) {
+      return;
+    }
+
+    DosaService.instance.applyPersistedData(
+      clubs: clubs.isEmpty ? null : clubs,
+      memberships: memberships.isEmpty ? null : memberships,
+      scholarships: scholarships.isEmpty ? null : scholarships,
+      grievances: grievances.isEmpty ? null : grievances,
+      internships: internships.isEmpty ? null : internships,
+      meetings: meetings.isEmpty ? null : meetings,
+      merge: true,
+    );
+    await DosaPersistenceService.instance.saveFromService(pushCloud: false);
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

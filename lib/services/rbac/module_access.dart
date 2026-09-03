@@ -301,6 +301,14 @@ abstract final class ModuleAccess {
     'special_needs': 'student_affairs',
     'college_guidance': 'student_affairs',
     'student_support': 'student_affairs',
+    'clubs': 'student_affairs',
+    'gojo': 'student_affairs',
+    'scholarships': 'student_affairs',
+    'grievances': 'student_affairs',
+    'internships': 'student_affairs',
+    'leadership_meetings': 'student_affairs',
+    'student_programs': 'student_affairs',
+    'dosa': 'student_affairs',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

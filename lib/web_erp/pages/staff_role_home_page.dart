@@ -18,6 +18,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
+import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
@@ -655,6 +656,18 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         StudentSupportService.instance.openSafeguardingCount(sid),
       );
     }
+    add(
+      'student_programs',
+      Icons.emoji_events_outlined,
+      'Scholarship applications waiting for a decision',
+      DosaService.instance.pendingScholarshipCount(sid),
+    );
+    add(
+      'student_programs',
+      Icons.report_gmailerrorred_outlined,
+      'Open student grievances',
+      DosaService.instance.openGrievanceCount(sid),
+    );
     final qa = QaFindingsService.instance.metricsForSchool(sid);
     add(
       'quality_assurance',
