@@ -59,6 +59,14 @@ abstract final class AppCollections {
   static const teacherEvaluations = 'teacher_evaluations';
   static const academicMeetings = 'academic_meetings';
 
+  /// LIA Phase G student support (health, counseling, IEP, college, CP).
+  static const healthRecords = 'health_records';
+  static const counselingRecords = 'counseling_records';
+  static const iepPlans = 'iep_plans';
+  static const collegeGuidance = 'college_guidance';
+  static const supportRequests = 'support_requests';
+  static const safeguardingCases = 'safeguarding_cases';
+
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
 

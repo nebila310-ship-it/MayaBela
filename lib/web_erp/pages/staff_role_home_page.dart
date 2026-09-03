@@ -17,6 +17,7 @@ import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
@@ -364,6 +365,30 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       ));
     }
 
+    if (ModuleAccess.canView('student_support')) {
+      final pending = StudentSupportService.instance.pendingRequestCount(sid);
+      final unsigned = StudentSupportService.instance.unsignedIepCount(sid);
+      out.add(_StatCard(
+        moduleId: 'student_support',
+        icon: Icons.volunteer_activism_outlined,
+        color: const Color(0xFF00897B),
+        value: '$pending',
+        label: 'Support requests waiting',
+        sub: '$unsigned IEP plans unsigned',
+      ));
+    }
+
+    if (ModuleAccess.canView('safeguarding')) {
+      final openCp = StudentSupportService.instance.openSafeguardingCount(sid);
+      out.add(_StatCard(
+        moduleId: 'safeguarding',
+        icon: Icons.shield_outlined,
+        color: const Color(0xFF6A1B9A),
+        value: '$openCp',
+        label: 'Open safeguarding files',
+      ));
+    }
+
     if (ModuleAccess.canView('quality_assurance')) {
       final qa = QaFindingsService.instance.metricsForSchool(sid);
       out.add(_StatCard(
@@ -610,6 +635,26 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
           .where((r) => r.status == LeaveRequestStatus.pending)
           .length,
     );
+    add(
+      'student_support',
+      Icons.volunteer_activism_outlined,
+      'Student-support requests waiting on the care desk',
+      StudentSupportService.instance.pendingRequestCount(sid),
+    );
+    add(
+      'student_support',
+      Icons.assignment_late_outlined,
+      'IEP plans still waiting for parent agreement',
+      StudentSupportService.instance.unsignedIepCount(sid),
+    );
+    if (ModuleAccess.canView('safeguarding')) {
+      add(
+        'safeguarding',
+        Icons.shield_outlined,
+        'Open safeguarding case files',
+        StudentSupportService.instance.openSafeguardingCount(sid),
+      );
+    }
     final qa = QaFindingsService.instance.metricsForSchool(sid);
     add(
       'quality_assurance',

@@ -41,6 +41,11 @@ abstract final class StaffContentRealtimeSync {
       AppCollections.lessonPlans,
       AppCollections.curriculumUnits,
       AppCollections.curriculumFeedback,
+      AppCollections.healthRecords,
+      AppCollections.counselingRecords,
+      AppCollections.iepPlans,
+      AppCollections.collegeGuidance,
+      AppCollections.supportRequests,
       AppCollections.gradeReports,
       AppCollections.schoolRegistry,
       AppCollections.gradeAuditLog,
@@ -60,6 +65,7 @@ abstract final class StaffContentRealtimeSync {
         AppCollections.lessonPlanReviews,
         AppCollections.teacherEvaluations,
         AppCollections.academicMeetings,
+        AppCollections.safeguardingCases,
       ]);
     }
 

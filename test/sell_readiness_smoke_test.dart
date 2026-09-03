@@ -275,6 +275,8 @@ void main() {
         'lesson_plans',
         'curriculum',
         'at_risk',
+        'student_support',
+        'safeguarding',
         'finance',
         'transport',
         'inventory',
@@ -458,7 +460,13 @@ void main() {
         'staff_announcements',
       ];
       const teacherEntries = ['student_affairs', 'maya_assistant'];
-      const parentEntries = ['student_affairs', 'fees', 'bus', 'maya_assistant'];
+      const parentEntries = [
+        'student_affairs',
+        'student_support',
+        'fees',
+        'bus',
+        'maya_assistant',
+      ];
       expect(staffEntries, isNotEmpty);
       expect(teacherEntries, contains('student_affairs'));
       expect(parentEntries, containsAll(['fees', 'bus']));

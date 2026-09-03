@@ -29,6 +29,8 @@ import 'package:mayabela/screens/curriculum_portal_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
+import 'package:mayabela/screens/parent_student_support_screen.dart';
+import 'package:mayabela/screens/student_college_guidance_screen.dart';
 import 'package:mayabela/screens/teacher_student_affairs_screen.dart';
 import 'package:mayabela/screens/maya_assistant_screen.dart';
 import 'package:mayabela/widgets/parent_child_picker.dart';
@@ -66,6 +68,7 @@ import 'package:mayabela/web_erp/pages/web_reports_page.dart';
 import 'package:mayabela/web_erp/pages/web_announcements_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
+import 'package:mayabela/web_erp/pages/web_student_support_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
@@ -590,6 +593,28 @@ List<DashboardEntry> _staffModuleEntries() {
       ),
     ),
     entry(
+      id: 'staff_student_support',
+      titleId: 'student_support',
+      icon: Icons.volunteer_activism_outlined,
+      color: const Color(0xFF00897B),
+      moduleId: 'student_support',
+      screenBuilder: () => MobileErpHost(
+        title: _t('student_support', adminRole),
+        child: const WebStudentSupportPage(),
+      ),
+    ),
+    entry(
+      id: 'staff_safeguarding',
+      titleId: 'safeguarding',
+      icon: Icons.shield_outlined,
+      color: const Color(0xFF6A1B9A),
+      moduleId: 'safeguarding',
+      screenBuilder: () => MobileErpHost(
+        title: _t('safeguarding', adminRole),
+        child: const WebStudentSupportPage(safeguardingOnly: true),
+      ),
+    ),
+    entry(
       id: 'staff_qa',
       titleId: 'quality_assurance',
       icon: Icons.verified_outlined,
@@ -883,6 +908,24 @@ List<DashboardEntry> _parentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'student_support',
+      icon: Icons.volunteer_activism_outlined,
+      color: const Color(0xFF00897B),
+      builder: (context) => DashboardCard(
+        icon: Icons.volunteer_activism_outlined,
+        title: _t('student_support', role),
+        color: const Color(0xFF00897B),
+        onTap: () => _openTile('student_support', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ParentStudentSupportScreen(),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'fees',
       icon: Icons.payment,
       color: Colors.indigo,
@@ -1137,6 +1180,24 @@ List<DashboardEntry> _studentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const StudentCurriculumScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'student_support',
+      icon: Icons.school_outlined,
+      color: const Color(0xFF00695C),
+      builder: (context) => DashboardCard(
+        icon: Icons.school_outlined,
+        title: _t('student_support', role),
+        color: const Color(0xFF00695C),
+        onTap: () => _openTile('student_support', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentCollegeGuidanceScreen(),
+            ),
           );
         }),
       ),
@@ -2175,6 +2236,8 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
             'staff_attendance',
             'staff_parent_approvals',
             'staff_student_affairs',
+            'staff_student_support',
+            'staff_safeguarding',
             'staff_qa',
             'staff_grades',
             'staff_grade_approvals',
@@ -2216,7 +2279,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'Services',
           icon: Icons.miscellaneous_services,
-          entryIds: ['student_affairs', 'fees', 'bus'],
+          entryIds: ['student_affairs', 'student_support', 'fees', 'bus'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',
@@ -2260,7 +2323,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'curriculum', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'curriculum', 'student_support', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',

@@ -30,6 +30,8 @@ abstract final class StudentRealtimeSync {
       AppCollections.lessonPlans,
       AppCollections.curriculumUnits,
       AppCollections.curriculumFeedback,
+      AppCollections.collegeGuidance,
+      AppCollections.supportRequests,
       AppCollections.gradeReports,
       AppCollections.dailyActivities,
       AppCollections.announcements,

@@ -15,6 +15,7 @@ const ALLOWED = new Set([
   "exam_papers",
   "exam_attempts",
   "curriculum_feedback",
+  "support_requests",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
@@ -26,6 +27,7 @@ const OWN_ID_COLLECTIONS = new Set([
   "exam_papers",
   "exam_attempts",
   "curriculum_feedback",
+  "support_requests",
 ]);
 
 function normalizeRecord(
@@ -186,6 +188,19 @@ Deno.serve(async (req) => {
     ) {
       return errorResponse("Not allowed to write exam attempts.", 403, "denied");
     }
+    // Phase G: parents/students file care requests; staff review.
+    if (
+      collection === "support_requests" &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse(
+        "Not allowed to write student-support requests.",
+        403,
+        "denied",
+      );
+    }
 
     const rows: Array<{
       collection: string;
@@ -220,6 +235,27 @@ Deno.serve(async (req) => {
           : [];
         const sid = String(normalized.record.studentId || "").trim().toUpperCase();
         if (!sid || !linked.includes(sid)) {
+          continue;
+        }
+      }
+      // Parents/students may only file support requests for linked students.
+      if (
+        collection === "support_requests" &&
+        (callerRole === "parent" || callerRole === "student")
+      ) {
+        const linked = Array.isArray(meta.linkedStudentIds)
+          ? (meta.linkedStudentIds as unknown[]).map((x) =>
+            String(x || "").trim().toUpperCase()
+          )
+          : [];
+        const selfId = String(
+          meta.linkedStudentId || meta.linked_student_id || "",
+        ).trim().toUpperCase();
+        const sid = String(normalized.record.studentId || "").trim().toUpperCase();
+        const allowed = new Set(
+          [...linked, selfId].filter((id) => id.length > 0),
+        );
+        if (!sid || !allowed.has(sid)) {
           continue;
         }
       }

@@ -130,6 +130,13 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.manageStudents],
     ),
+    // Child-protection files. Allocation (not view_all_school_data) decides
+    // who sees this desk — QA and classroom teachers stay out.
+    'safeguarding': ModuleRule(
+      view: [],
+      manage: [],
+      departmental: false,
+    ),
     // Owner ERP accounts (VP, Student Affairs, HR itself, …).
     'teachers': ModuleRule(
       view: [
@@ -288,6 +295,12 @@ abstract final class ModuleAccess {
     'academic_meetings': 'academic',
     'at_risk': 'attendance',
     'attendance_insights': 'attendance',
+    'health': 'student_affairs',
+    'counseling': 'student_affairs',
+    'iep': 'student_affairs',
+    'special_needs': 'student_affairs',
+    'college_guidance': 'student_affairs',
+    'student_support': 'student_affairs',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).
@@ -392,6 +405,18 @@ abstract final class ModuleAccess {
         ..._executiveOversight,
       },
       manageBy: {StaffRoles.studentAffairs, StaffRoles.vicePresident},
+    ),
+    'safeguarding': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.studentAffairs,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.studentAffairs,
+        StaffRoles.vicePresident,
+        StaffRoles.principal,
+      },
     ),
     'transfers': ModuleRoleAllocation(
       visibleTo: {

@@ -44,6 +44,7 @@ import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
+import 'package:mayabela/web_erp/pages/web_student_support_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
@@ -107,6 +108,17 @@ class WebErpRouter {
         return const ParentApprovalsScreen();
       case 'student_affairs':
         return const WebStudentAffairsPage();
+      case 'student_support':
+      case 'health':
+      case 'counseling':
+      case 'iep':
+      case 'college_guidance':
+        return WebStudentSupportPage(onNavigate: onNavigate);
+      case 'safeguarding':
+        return WebStudentSupportPage(
+          safeguardingOnly: true,
+          onNavigate: onNavigate,
+        );
       case 'quality_assurance':
         return const WebQaPage();
       case 'finance':
