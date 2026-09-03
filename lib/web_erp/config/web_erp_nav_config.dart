@@ -97,6 +97,12 @@ const List<WebErpNavItem> _allNavItems = [
       section: 'Academics',
     ),
     WebErpNavItem(
+      id: 'lesson_plans',
+      label: 'Lesson plans',
+      icon: Icons.event_note_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
       id: 'grade_workflow_settings',
       label: 'Grade Workflow',
       icon: Icons.rule_outlined,

@@ -22,6 +22,8 @@ import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/student_exam_screen.dart';
 import 'package:mayabela/screens/teacher_exams_screen.dart';
+import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
+import 'package:mayabela/screens/student_lesson_plans_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
@@ -235,6 +237,23 @@ List<DashboardEntry> _teacherEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const TeacherExamsScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'lesson_plans',
+      icon: Icons.event_note_outlined,
+      color: const Color(0xFF5D4037),
+      isVisible: () => access.canAccessTeacherDashboardTile('lesson_plans'),
+      builder: (context) => DashboardCard(
+        icon: Icons.event_note_outlined,
+        title: _t('lesson_plans', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('lesson_plans', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TeacherLessonPlansScreen()),
           );
         }),
       ),
@@ -1032,6 +1051,22 @@ List<DashboardEntry> _studentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const StudentExamScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'lesson_plans',
+      icon: Icons.event_note_outlined,
+      color: const Color(0xFF5D4037),
+      builder: (context) => DashboardCard(
+        icon: Icons.event_note_outlined,
+        title: _t('lesson_plans', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('lesson_plans', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentLessonPlansScreen()),
           );
         }),
       ),
@@ -2041,7 +2076,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'Teaching tools',
           icon: Icons.menu_book,
-          entryIds: ['homework', 'exams', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
+          entryIds: ['homework', 'exams', 'lesson_plans', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
         ),
         const DashboardSectionDefinition(
           title: 'Communication',
@@ -2155,7 +2190,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'exams', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',

@@ -49,6 +49,9 @@ abstract final class AppCollections {
   static const examPapers = 'exam_papers';
   static const examAttempts = 'exam_attempts';
 
+  /// LIA Phase D lesson plans (planning/content; not a grade store).
+  static const lessonPlans = 'lesson_plans';
+
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
 

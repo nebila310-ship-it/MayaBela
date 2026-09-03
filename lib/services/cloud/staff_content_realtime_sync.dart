@@ -38,6 +38,7 @@ abstract final class StaffContentRealtimeSync {
     final collections = <String>[
       AppCollections.homework,
       AppCollections.learningMaterials,
+      AppCollections.lessonPlans,
       AppCollections.gradeReports,
       AppCollections.schoolRegistry,
       AppCollections.gradeAuditLog,

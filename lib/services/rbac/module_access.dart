@@ -282,6 +282,8 @@ abstract final class ModuleAccess {
     'exam_bank': 'examinations',
     'exam_papers': 'examinations',
     'exam_desk': 'examinations',
+    'lesson_plans': 'academic',
+    'lessons': 'academic',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

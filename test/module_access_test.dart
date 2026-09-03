@@ -149,6 +149,7 @@ void main() {
         'markbook',
         'report_cards',
         'exam_bank',
+        'lesson_plans',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }
@@ -274,6 +275,8 @@ void main() {
       expect(ModuleAccess.normalize('exam_bank'), 'examinations');
       expect(ModuleAccess.normalize('exam_papers'), 'examinations');
       expect(ModuleAccess.normalize('exam_desk'), 'examinations');
+      expect(ModuleAccess.normalize('lesson_plans'), 'academic');
+      expect(ModuleAccess.normalize('lessons'), 'academic');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
       expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
       expect(ModuleAccess.normalize('add_driver'), 'transport');
