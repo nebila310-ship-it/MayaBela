@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -24,6 +25,7 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
   String _query = '';
   String? _gradeFilter;
   String? _campusFilter;
+  String _lifecycleFilter = 'active';
   int _page = 0;
 
   @override
@@ -59,10 +61,26 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
     final schoolId = AuthService.activeSchoolId;
     final campuses = SchoolRegistryService.instance.campusesForSchool(schoolId);
     final multiCampus = campuses.length > 1;
-    var students = schoolId == null
-        ? StudentRegistryService.instance.getAllStudents()
-        : StudentRegistryService.instance.studentsForSchool(schoolId);
-    students = students.where((s) => s.isActive).toList();
+    var students = StudentRegistryService.instance.registrySnapshot().toList();
+    if (schoolId != null) {
+      final sid = schoolId.toUpperCase();
+      students =
+          students.where((s) => s.schoolId.toUpperCase() == sid).toList();
+    }
+    students = switch (_lifecycleFilter) {
+      'active' => students.where((s) => s.isActive).toList(),
+      'graduated' => students
+          .where((s) => s.lifecycleStatus == StudentLifecycleStatus.graduated)
+          .toList(),
+      'left' => students
+          .where(
+            (s) =>
+                s.lifecycleStatus == StudentLifecycleStatus.left ||
+                s.lifecycleStatus == StudentLifecycleStatus.transferred,
+          )
+          .toList(),
+      _ => students,
+    };
 
     if (_query.isNotEmpty) {
       students = students
@@ -133,6 +151,20 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 ],
                 onChanged: (v) => setState(() {
                   _gradeFilter = v;
+                  _page = 0;
+                }),
+              ),
+              const SizedBox(width: 8),
+              DropdownButton<String>(
+                value: _lifecycleFilter,
+                items: const [
+                  DropdownMenuItem(value: 'active', child: Text('Active')),
+                  DropdownMenuItem(value: 'graduated', child: Text('Alumni')),
+                  DropdownMenuItem(value: 'left', child: Text('Left / transferred')),
+                  DropdownMenuItem(value: 'all', child: Text('All statuses')),
+                ],
+                onChanged: (v) => setState(() {
+                  _lifecycleFilter = v ?? 'active';
                   _page = 0;
                 }),
               ),
@@ -281,7 +313,7 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                                   ),
                                 ),
                                 DataCell(
-                                  Text(s.isActive ? 'Active' : 'Inactive'),
+                                  Text(s.lifecycleStatus.label),
                                 ),
                                 DataCell(
                                   Row(

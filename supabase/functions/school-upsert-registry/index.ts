@@ -10,10 +10,15 @@ const ALLOWED = new Set([
   "student_medical",
   "discipline_cases",
   "leave_requests",
+  "admission_applications",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
-const OWN_ID_COLLECTIONS = new Set(["discipline_cases", "leave_requests"]);
+const OWN_ID_COLLECTIONS = new Set([
+  "discipline_cases",
+  "leave_requests",
+  "admission_applications",
+]);
 
 function normalizeRecord(
   raw: Record<string, unknown>,

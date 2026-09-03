@@ -80,6 +80,8 @@ void main() {
     ]) {
       expect(ids.contains(id), isTrue, reason: 'missing shared module $id');
     }
+    expect(ids.contains('admissions'), isTrue);
+    expect(ids.contains('alumni'), isTrue);
   });
 
   test('router opens every admin nav item', () {

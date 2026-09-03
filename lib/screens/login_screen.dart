@@ -16,6 +16,7 @@ import 'package:mayabela/theme/login_role_theme.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/screens/public_admission_apply_screen.dart';
 import 'package:mayabela/screens/enrollment_screens.dart';
 import 'package:mayabela/screens/platform_console_screen.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -1174,22 +1175,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   _buildLoginFormFields(_theme),
                   const SizedBox(height: 16),
                   Center(
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => selectedRole ==
-                                    AuthService.roleStudent
-                                ? const StudentForgotPasswordScreen()
-                                : const ForgotPasswordScreen(),
+                    child: Column(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const PublicAdmissionApplyScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Apply for admission',
+                            style: TextStyle(color: Colors.white70),
                           ),
-                        );
-                      },
-                      child: Text(
-                        s.forgotPassword,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => selectedRole ==
+                                        AuthService.roleStudent
+                                    ? const StudentForgotPasswordScreen()
+                                    : const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            s.forgotPassword,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Align(
@@ -1464,6 +1484,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       child: Text(
                         s.registerAsParent,
+                        style: TextStyle(
+                          color: theme.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PublicAdmissionApplyScreen(
+                              initialSchoolId: null,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Apply for admission',
                         style: TextStyle(
                           color: theme.onPrimary,
                           fontWeight: FontWeight.w600,

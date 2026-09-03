@@ -42,6 +42,7 @@ abstract final class AppCollections {
   // Student Affairs & welfare (EDUABA)
   static const disciplineCases = 'discipline_cases';
   static const leaveRequests = 'leave_requests';
+  static const admissionApplications = 'admission_applications';
 
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
