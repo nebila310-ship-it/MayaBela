@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/dosa_models.dart';
+import 'package:mayabela/screens/parent_student_programs_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
@@ -12,6 +14,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
+import 'package:mayabela/web_erp/pages/web_student_programs_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -224,5 +227,42 @@ void main() {
     );
     final ids = webErpNavItemsForCurrentUser().map((e) => e.id).toSet();
     expect(ids, contains('student_programs'));
+  });
+
+  testWidgets('staff desk shows engagement chips and program tabs', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebStudentProgramsPage()),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Student programs'), findsOneWidget);
+    expect(find.textContaining('Clubs'), findsWidgets);
+    expect(find.textContaining('Gojo hours'), findsOneWidget);
+    expect(find.textContaining('Leadership'), findsWidgets);
+  });
+
+  testWidgets('parent programs show events and not leadership minutes',
+      (tester) async {
+    await DosaService.instance.recordMeeting(
+      title: 'DoSA closed briefing',
+      startsAt: DateTime.utc(2026, 9, 12),
+      schoolId: 'TB-001',
+    );
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.h',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      linkedStudentIds: const ['STU-1001'],
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: ParentStudentProgramsScreen()),
+    );
+    await tester.pump();
+    expect(find.text('Student programs'), findsOneWidget);
+    expect(find.text('Events'), findsOneWidget);
+    expect(find.text('File grievance'), findsOneWidget);
+    expect(find.text('DoSA closed briefing'), findsNothing);
   });
 }
