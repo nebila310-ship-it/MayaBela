@@ -277,6 +277,8 @@ abstract final class ModuleAccess {
     'student_portal_settings': 'school',
     'student_password_resets': 'students',
     'grade_workflow_settings': 'examinations',
+    'markbook': 'examinations',
+    'report_cards': 'examinations',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

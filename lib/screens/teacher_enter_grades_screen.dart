@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/file_attachment_share_service.dart';
 import 'package:mayabela/services/grade_mark_photo_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
+import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
@@ -23,21 +25,37 @@ class _StudentGradeDraft {
     String commentText = '',
     List<String>? markPhotoPaths,
     List<String>? attachmentPaths,
+    Map<String, String>? categoryScores,
   })  : scoreController = TextEditingController(text: scoreText),
         commentController = TextEditingController(text: commentText),
         markPhotoPaths = List<String>.from(markPhotoPaths ?? []),
-        attachmentPaths = List<String>.from(attachmentPaths ?? []);
+        attachmentPaths = List<String>.from(attachmentPaths ?? []) {
+    for (final entry in (categoryScores ?? const <String, String>{}).entries) {
+      categoryControllers[entry.key] = TextEditingController(text: entry.value);
+    }
+  }
 
   final TextEditingController scoreController;
   final TextEditingController commentController;
+  final Map<String, TextEditingController> categoryControllers = {};
   List<String> markPhotoPaths;
   List<String> attachmentPaths;
 
   int get attachmentCount => markPhotoPaths.length + attachmentPaths.length;
 
+  TextEditingController categoryController(String id, [String text = '']) {
+    return categoryControllers.putIfAbsent(
+      id,
+      () => TextEditingController(text: text),
+    );
+  }
+
   void dispose() {
     scoreController.dispose();
     commentController.dispose();
+    for (final controller in categoryControllers.values) {
+      controller.dispose();
+    }
   }
 }
 
@@ -70,6 +88,9 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
       GradeWorkflowService.requireApproval(AuthService.activeSchoolId);
 
   List<String> get _subjects => _access.teachableSubjects(widget.className);
+
+  List<AssessmentCategory> get _categories =>
+      MarkbookService.instance.settingsForSchool().categories;
 
   List<String> get _studentNames {
     return _data
@@ -137,6 +158,7 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
       var commentText = '';
       List<String> markPhotoPaths = [];
       List<String> attachmentPaths = [];
+      final categoryScores = <String, String>{};
       if (report != null) {
         for (final grade in report.subjects) {
           if (grade.subject == _selectedSubject) {
@@ -144,6 +166,11 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
             commentText = grade.comment ?? '';
             markPhotoPaths = List<String>.from(grade.markPhotoPaths);
             attachmentPaths = List<String>.from(grade.attachmentPaths);
+            for (final mark in MarkbookService.instance.marksForSubject(grade)) {
+              if (mark.score != null) {
+                categoryScores[mark.categoryId] = mark.score!.toInt().toString();
+              }
+            }
             break;
           }
         }
@@ -154,6 +181,7 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
         commentText: commentText,
         markPhotoPaths: markPhotoPaths,
         attachmentPaths: attachmentPaths,
+        categoryScores: categoryScores,
       );
     }
   }
@@ -163,6 +191,25 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
       studentName,
       () => _StudentGradeDraft(scoreText: ''),
     );
+  }
+
+  String _draftFinalLabel(_StudentGradeDraft draft) {
+    final marks = [
+      for (final cat in _categories)
+        AssessmentMark(
+          categoryId: cat.id,
+          label: cat.label,
+          weightPercent: cat.weightPercent,
+          score: double.tryParse(draft.categoryController(cat.id).text.trim()),
+        ),
+    ];
+    if (!marks.any((m) => m.isEntered)) return '—';
+    final pct = MarkbookMath.weightedPercentage(
+      marks,
+      missingCountsAsZero:
+          MarkbookService.instance.settingsForSchool().missingCountsAsZero,
+    );
+    return '${pct.toStringAsFixed(1)} ${MarkbookMath.letterFromPercentage(pct)}';
   }
 
   Future<void> _pickMarkPhotos(_StudentGradeDraft draft, String studentName) async {
@@ -242,19 +289,12 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
     final comments = <String, String>{};
     final markPhotos = <String, List<String>>{};
     final attachments = <String, List<String>>{};
+    final assessmentsByStudent = <String, List<AssessmentMark>>{};
+    final cats = _categories;
+    final missingAsZero =
+        MarkbookService.instance.settingsForSchool().missingCountsAsZero;
 
     for (final entry in _drafts.entries) {
-      final raw = entry.value.scoreController.text.trim();
-      if (raw.isEmpty) continue;
-      final score = double.tryParse(raw);
-      if (score == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.invalidScoreFor(entry.key))),
-        );
-        return;
-      }
-      scores[entry.key] = score.clamp(0, 100);
-
       final comment = entry.value.commentController.text.trim();
       if (comment.isNotEmpty) {
         comments[entry.key] = comment;
@@ -264,6 +304,57 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
       }
       if (entry.value.attachmentPaths.isNotEmpty) {
         attachments[entry.key] = List<String>.from(entry.value.attachmentPaths);
+      }
+
+      var usedCategories = false;
+      if (cats.isNotEmpty) {
+        final marks = <AssessmentMark>[];
+        var any = false;
+        for (final cat in cats) {
+          final raw = entry.value.categoryController(cat.id).text.trim();
+          double? score;
+          if (raw.isNotEmpty) {
+            score = double.tryParse(raw);
+            if (score == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(s.invalidScoreFor(entry.key))),
+              );
+              return;
+            }
+            score = score.clamp(0, 100);
+            any = true;
+          }
+          marks.add(
+            AssessmentMark(
+              categoryId: cat.id,
+              label: cat.label,
+              weightPercent: cat.weightPercent,
+              score: score,
+              enteredAt: score == null ? null : DateTime.now(),
+            ),
+          );
+        }
+        if (any) {
+          usedCategories = true;
+          assessmentsByStudent[entry.key] = marks;
+          scores[entry.key] = MarkbookMath.weightedPercentage(
+            marks,
+            missingCountsAsZero: missingAsZero,
+          );
+        }
+      }
+
+      if (!usedCategories) {
+        final raw = entry.value.scoreController.text.trim();
+        if (raw.isEmpty) continue;
+        final score = double.tryParse(raw);
+        if (score == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(s.invalidScoreFor(entry.key))),
+          );
+          return;
+        }
+        scores[entry.key] = score.clamp(0, 100);
       }
     }
 
@@ -289,6 +380,8 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
       commentsByStudentName: comments.isEmpty ? null : comments,
       markPhotoPathsByStudentName: markPhotos.isEmpty ? null : markPhotos,
       attachmentPathsByStudentName: attachments.isEmpty ? null : attachments,
+      assessmentsByStudentName:
+          assessmentsByStudent.isEmpty ? null : assessmentsByStudent,
     );
 
     if (!mounted) return;
@@ -501,19 +594,54 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                SizedBox(
-                  width: 56,
-                  child: TextField(
-                    controller: draft.scoreController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 15),
-                    decoration: _compactScoreDecoration(s),
+                if (_categories.isEmpty)
+                  SizedBox(
+                    width: 56,
+                    child: TextField(
+                      controller: draft.scoreController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 15),
+                      decoration: _compactScoreDecoration(s),
+                    ),
+                  )
+                else
+                  Text(
+                    _draftFinalLabel(draft),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
-                ),
               ],
             ),
           ),
+          if (_categories.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final cat in _categories)
+                    SizedBox(
+                      width: 88,
+                      child: TextField(
+                        controller: draft.categoryController(cat.id),
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: '${cat.label} ${cat.weightPercent.toStringAsFixed(0)}%',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 10,
+                          ),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
             child: Row(

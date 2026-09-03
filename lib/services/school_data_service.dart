@@ -35,10 +35,12 @@ import 'package:mayabela/services/persistence/message_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/models/grade_workflow.dart';
+import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
 class SchoolDataService {
@@ -3846,14 +3848,15 @@ class SchoolDataService {
   bool updateSubjectGrade({
     required String studentName,
     required String className,
-    required String subject,
     required double score,
+    required String subject,
     String? comment,
     List<String>? markPhotoPaths,
     List<String>? attachmentPaths,
     String? enteredByTeacherId,
     String? subjectId,
     String? teachingSlotId,
+    List<AssessmentMark>? assessments,
   }) {
     final subjectGrade = _findSubjectGrade(
       studentName: studentName,
@@ -3872,6 +3875,16 @@ class SchoolDataService {
       subjectGrade.status = SubjectGradeStatus.draft;
     }
     subjectGrade.score = score;
+    if (assessments != null) {
+      subjectGrade.assessments
+        ..clear()
+        ..addAll(assessments.map((m) => m.copy()));
+      if (subjectGrade.assessments.any((m) => m.isEntered)) {
+        subjectGrade.applyWeightedScore(
+          missingCountsAsZero: _markbookMissingCountsAsZero(),
+        );
+      }
+    }
     if (comment != null) subjectGrade.comment = comment;
     if (markPhotoPaths != null) {
       subjectGrade.markPhotoPaths
@@ -4480,6 +4493,7 @@ class SchoolDataService {
     Map<String, String>? commentsByStudentName,
     Map<String, List<String>>? markPhotoPathsByStudentName,
     Map<String, List<String>>? attachmentPathsByStudentName,
+    Map<String, List<AssessmentMark>>? assessmentsByStudentName,
   }) {
     final canonicalClass = _canonicalClassName(className);
     var saved = 0;
@@ -4509,6 +4523,7 @@ class SchoolDataService {
         enteredByTeacherId: teacherId,
         subjectId: subjectId,
         teachingSlotId: teachingSlotId,
+        assessments: assessmentsByStudentName?[studentName],
       );
       if (!updated) {
         final existing = _findSubjectGrade(
@@ -4598,13 +4613,106 @@ class SchoolDataService {
     GradePersistenceService.instance.saveFromService();
   }
 
+  bool _markbookMissingCountsAsZero() {
+    final schoolId = AuthService.activeSchoolId;
+    if (schoolId == null || schoolId.isEmpty) return false;
+    return SchoolRegistryService.instance
+            .lookup(schoolId)
+            ?.markbookSettings
+            .missingCountsAsZero ??
+        false;
+  }
+
+  StudentAttendanceSnapshot attendanceSnapshotForStudent({
+    required String studentName,
+    required String className,
+  }) {
+    var present = 0;
+    var late = 0;
+    var absent = 0;
+    for (final session in getAttendanceHistory(className)) {
+      for (final entry in session.entries) {
+        if (entry.studentName != studentName) continue;
+        switch (entry.status) {
+          case AttendanceStatus.present:
+            present++;
+          case AttendanceStatus.late:
+            late++;
+          case AttendanceStatus.absent:
+            absent++;
+        }
+      }
+    }
+    return StudentAttendanceSnapshot(
+      present: present,
+      late: late,
+      absent: absent,
+    );
+  }
+
+  bool updateTermReportCard({
+    required String studentName,
+    required String className,
+    String? term,
+    String? academicYear,
+    String? homeroomComment,
+    String? principalComment,
+    bool? publish,
+    bool refreshAttendance = true,
+  }) {
+    final report = _findGradeReport(
+      studentName: studentName,
+      className: className,
+    );
+    if (report == null) return false;
+    if (term != null && term.trim().isNotEmpty) {
+      report.term = term.trim();
+    }
+    if (academicYear != null) {
+      report.academicYear = academicYear.trim().isEmpty ? null : academicYear.trim();
+    }
+    if (homeroomComment != null) {
+      report.homeroomComment =
+          homeroomComment.trim().isEmpty ? null : homeroomComment.trim();
+    }
+    if (principalComment != null) {
+      report.principalComment =
+          principalComment.trim().isEmpty ? null : principalComment.trim();
+    }
+    if (refreshAttendance) {
+      final snap = attendanceSnapshotForStudent(
+        studentName: studentName,
+        className: className,
+      );
+      report.attendancePresent = snap.present;
+      report.attendanceLate = snap.late;
+      report.attendanceAbsent = snap.absent;
+    }
+    if (publish != null) {
+      report.reportCardPublished = publish;
+      report.reportCardPublishedAt = publish ? DateTime.now() : null;
+    }
+    _persistGradeReports();
+    return true;
+  }
+
+  int unpublishedReportCardCount({String? className}) {
+    final reports = className == null || className.isEmpty
+        ? _gradeReports
+        : getGradeReportsForClass(className);
+    return reports
+        .where(
+          (r) =>
+              !r.reportCardPublished &&
+              r.subjects.any((s) => s.status == SubjectGradeStatus.approved),
+        )
+        .length;
+  }
+
   void applyPersistedGradeReports(List<StudentGradeReport> reports) {
     for (final persisted in reports) {
-      final normalized = StudentGradeReport(
-        studentName: persisted.studentName,
+      final normalized = persisted.copyWith(
         className: _canonicalClassName(persisted.className),
-        term: persisted.term,
-        studentId: persisted.studentId,
         subjects: persisted.subjects.map(_normalizeSubjectWorkflow).toList(),
       );
       final index = _gradeReports.indexWhere(
@@ -4654,11 +4762,21 @@ class SchoolDataService {
       );
     }
 
-    return StudentGradeReport(
+    return local.copyWith(
       studentName: incoming.studentName,
       className: incoming.className,
       term: incoming.term,
       studentId: incoming.studentId ?? local.studentId,
+      academicYear: incoming.academicYear ?? local.academicYear,
+      homeroomComment: incoming.homeroomComment ?? local.homeroomComment,
+      principalComment: incoming.principalComment ?? local.principalComment,
+      reportCardPublished:
+          incoming.reportCardPublished || local.reportCardPublished,
+      reportCardPublishedAt:
+          incoming.reportCardPublishedAt ?? local.reportCardPublishedAt,
+      attendancePresent: incoming.attendancePresent ?? local.attendancePresent,
+      attendanceLate: incoming.attendanceLate ?? local.attendanceLate,
+      attendanceAbsent: incoming.attendanceAbsent ?? local.attendanceAbsent,
       subjects: mergedBySubject.values.toList(),
     );
   }
@@ -4712,36 +4830,8 @@ class SchoolDataService {
     return _gradeReports
         .where((report) => report.subjects.isNotEmpty)
         .map(
-          (report) => StudentGradeReport(
-            studentName: report.studentName,
-            className: report.className,
-            term: report.term,
-            studentId: report.studentId,
-            subjects: report.subjects
-                .map(
-                  (subject) => SubjectGrade(
-                    subject: subject.subject,
-                    score: subject.score,
-                    maxScore: subject.maxScore,
-                    comment: subject.comment,
-                    enteredByTeacherId: subject.enteredByTeacherId,
-                    subjectId: subject.subjectId,
-                    teachingSlotId: subject.teachingSlotId,
-                    publishedToParents: subject.publishedToParents,
-                    publishedAt: subject.publishedAt,
-                    status: subject.status,
-                    approvalLevelIndex: subject.approvalLevelIndex,
-                    submittedAt: subject.submittedAt,
-                    submittedByTeacherId: subject.submittedByTeacherId,
-                    reviewComment: subject.reviewComment,
-                    lastReviewedBy: subject.lastReviewedBy,
-                    lastReviewedAt: subject.lastReviewedAt,
-                    markPhotoPaths: List<String>.from(subject.markPhotoPaths),
-                    attachmentPaths:
-                        List<String>.from(subject.attachmentPaths),
-                  ),
-                )
-                .toList(),
+          (report) => report.copyWith(
+            subjects: report.subjects.map((subject) => subject.clone()).toList(),
           ),
         )
         .toList();
@@ -5628,7 +5718,15 @@ class SchoolDataService {
     final published = report.subjects
         .where((subject) => subject.isVisibleToParent)
         .toList();
-    return report.copyWithSubjects(published);
+    if (!report.reportCardPublished) {
+      return report.copyWith(
+        subjects: published,
+        clearHomeroomComment: true,
+        clearPrincipalComment: true,
+        reportCardPublished: false,
+      );
+    }
+    return report.copyWith(subjects: published);
   }
 
   final List<ChildBusAssignment> _childBusAssignments = [

@@ -7,6 +7,7 @@ import 'package:mayabela/models/school_lifecycle.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/models/grade_workflow.dart';
+import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
@@ -44,6 +45,7 @@ class SchoolRecord {
     this.adminFullName,
     this.studentPortal = const StudentPortalSettings(),
     this.gradeWorkflow = const GradeWorkflowSettings(),
+    this.markbookSettings = MarkbookSettings.liaDefaults,
     this.allowSelfApproval = false,
   });
 
@@ -71,6 +73,7 @@ class SchoolRecord {
   String? adminFullName;
   StudentPortalSettings studentPortal;
   GradeWorkflowSettings gradeWorkflow;
+  MarkbookSettings markbookSettings;
 
   /// Whether a requester may approve their own purchase / issue requests.
   /// Off by default (separation of duties); only the owner can enable it.
@@ -118,6 +121,7 @@ class SchoolRecord {
     String? adminFullName,
     StudentPortalSettings? studentPortal,
     GradeWorkflowSettings? gradeWorkflow,
+    MarkbookSettings? markbookSettings,
     bool? allowSelfApproval,
   }) {
     return SchoolRecord(
@@ -147,6 +151,7 @@ class SchoolRecord {
       adminFullName: adminFullName ?? this.adminFullName,
       studentPortal: studentPortal ?? this.studentPortal,
       gradeWorkflow: gradeWorkflow ?? this.gradeWorkflow,
+      markbookSettings: markbookSettings ?? this.markbookSettings,
       allowSelfApproval: allowSelfApproval ?? this.allowSelfApproval,
     );
   }
@@ -176,6 +181,7 @@ class SchoolRecord {
         'adminFullName': adminFullName,
         'studentPortal': studentPortal.toMap(),
         'gradeWorkflow': gradeWorkflow.toMap(),
+        'markbookSettings': markbookSettings.toMap(),
         // The SQL write-guard reads data->settings->allowSelfApproval.
         'settings': {'allowSelfApproval': allowSelfApproval},
       };
@@ -222,6 +228,9 @@ class SchoolRecord {
       ),
       gradeWorkflow: GradeWorkflowSettings.fromMap(
         json['gradeWorkflow'] as Map<String, dynamic>?,
+      ),
+      markbookSettings: MarkbookSettings.fromMap(
+        json['markbookSettings'] as Map<String, dynamic>?,
       ),
       allowSelfApproval:
           ((json['settings'] as Map<String, dynamic>?)?['allowSelfApproval']

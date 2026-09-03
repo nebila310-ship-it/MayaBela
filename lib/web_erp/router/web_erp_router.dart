@@ -18,6 +18,8 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/web_erp/pages/inventory/web_inventory_shell_page.dart';
 import 'package:mayabela/web_erp/pages/staff_role_home_page.dart';
 import 'package:mayabela/web_erp/pages/web_admissions_page.dart';
+import 'package:mayabela/web_erp/pages/web_markbook_page.dart';
+import 'package:mayabela/web_erp/pages/web_report_cards_page.dart';
 import 'package:mayabela/web_erp/pages/web_alumni_page.dart';
 import 'package:mayabela/web_erp/pages/web_admin_overview_page.dart';
 import 'package:mayabela/web_erp/pages/web_announcements_page.dart';
@@ -112,6 +114,10 @@ class WebErpRouter {
       case 'examinations':
       case 'grade_approvals':
         return const GradeApprovalQueueScreen();
+      case 'markbook':
+        return WebMarkbookPage(onNavigate: onNavigate);
+      case 'report_cards':
+        return WebReportCardsPage(onNavigate: onNavigate);
       case 'grades':
         return const AdminGradeOverviewScreen();
       case 'academic':

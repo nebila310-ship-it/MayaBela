@@ -146,6 +146,8 @@ void main() {
         'student_affairs',
         'admissions',
         'alumni',
+        'markbook',
+        'report_cards',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }
@@ -266,6 +268,8 @@ void main() {
       expect(ModuleAccess.normalize('add_teacher'), 'hr');
       expect(ModuleAccess.normalize('add_staff'), 'teachers');
       expect(ModuleAccess.normalize('grade_approvals'), 'examinations');
+      expect(ModuleAccess.normalize('markbook'), 'examinations');
+      expect(ModuleAccess.normalize('report_cards'), 'examinations');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
       expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
       expect(ModuleAccess.normalize('add_driver'), 'transport');
