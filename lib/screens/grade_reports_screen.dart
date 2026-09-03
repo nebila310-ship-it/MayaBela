@@ -23,6 +23,8 @@ import 'package:mayabela/widgets/class_picker_bar.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/platform_path_image.dart';
+import 'package:mayabela/widgets/term_report_card_view.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 
 enum GradeReportView { teacher, parent, student, admin }
 
@@ -976,9 +978,17 @@ class _ReportDetail extends StatelessWidget {
                   color: _gradeTeacherAccent.withValues(alpha: 0.15),
                 ),
               ),
-              child: Padding(
+                child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(
+                child: report.reportCardPublished
+                    ? TermReportCardView(
+                        report: report,
+                        schoolName: SchoolRegistryService.instance
+                            .lookup(AuthService.activeSchoolId ?? '')
+                            ?.name,
+                        compact: true,
+                      )
+                    : Column(
                   children: [
                     Text(
                       report.studentName,
@@ -1002,6 +1012,14 @@ class _ReportDetail extends StatelessWidget {
                               ? _visibleAverage
                               : report.average,
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'GPA ${report.gpa.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade800,
                       ),
                     ),
                   ],
@@ -1171,6 +1189,23 @@ class _ReportDetail extends StatelessWidget {
                         minHeight: 8,
                         borderRadius: BorderRadius.circular(4),
                       ),
+                      if (subject.hasMarkbook) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final mark in subject.assessments.where((m) => m.isEntered))
+                              Chip(
+                                visualDensity: VisualDensity.compact,
+                                label: Text(
+                                  '${mark.label} ${mark.score!.toStringAsFixed(0)} (${mark.weightPercent.toStringAsFixed(0)}%)',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                       if (!publishedOnly &&
                           (subject.status == SubjectGradeStatus.rejected ||
                               subject.status ==

@@ -54,6 +54,18 @@ const List<WebErpNavItem> _allNavItems = [
       badgeId: 'grades',
     ),
     WebErpNavItem(
+      id: 'markbook',
+      label: 'Weighted Markbook',
+      icon: Icons.grid_on_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
+      id: 'report_cards',
+      label: 'Report Cards',
+      icon: Icons.assignment_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
       id: 'attendance',
       label: 'Attendance',
       icon: Icons.check_circle_outline,

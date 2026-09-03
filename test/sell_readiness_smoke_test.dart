@@ -269,6 +269,8 @@ void main() {
         'student_affairs',
         'quality_assurance',
         'examinations',
+        'markbook',
+        'report_cards',
         'finance',
         'transport',
         'inventory',

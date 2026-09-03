@@ -13,6 +13,7 @@ import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
+import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -519,10 +520,10 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     }
 
     add(
-      'examinations',
-      Icons.fact_check_outlined,
-      'Grade reports waiting for approval',
-      SchoolDataService.instance.pendingGradeApprovalCount(schoolId: sid),
+      'report_cards',
+      Icons.assignment_outlined,
+      'Report cards not yet published',
+      MarkbookService.instance.unpublishedCount(),
     );
     add(
       'transfers',

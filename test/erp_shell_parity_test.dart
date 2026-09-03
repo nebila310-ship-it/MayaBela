@@ -82,6 +82,8 @@ void main() {
     }
     expect(ids.contains('admissions'), isTrue);
     expect(ids.contains('alumni'), isTrue);
+    expect(ids.contains('markbook'), isTrue);
+    expect(ids.contains('report_cards'), isTrue);
   });
 
   test('router opens every admin nav item', () {
