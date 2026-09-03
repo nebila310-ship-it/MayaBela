@@ -10,6 +10,9 @@ import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
+import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/persistence/cloud_app_store.dart';
+import 'package:mayabela/widgets/mfa_challenge_dialog.dart';
 import 'package:mayabela/services/cloud_sync_progress_service.dart';
 import 'package:mayabela/services/session_prefs_service.dart';
 import 'package:mayabela/theme/login_role_theme.dart';
@@ -271,6 +274,30 @@ class _LoginScreenState extends State<LoginScreen> {
           'login.applyLocalSession',
           SessionCloudSync.applyLocalForCurrentUser,
         );
+      }
+    }
+
+    await GoliveService.instance.ensureLoaded();
+    try {
+      await CloudAppStore.instance
+          .pullGoLive()
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {}
+    final mfaUser = AuthService.currentUser?.username ?? _loginIdentifierValue();
+    if (GoliveService.instance.isEnabledFor(mfaUser)) {
+      if (!mounted) {
+        await AuthService.clearSession();
+        return;
+      }
+      final passed = await showMfaChallengeDialog(context, username: mfaUser);
+      if (!passed) {
+        await AuthService.clearSession();
+        if (!mounted) return;
+        setState(() {
+          _loggingIn = false;
+          message = 'Authenticator code required.';
+        });
+        return;
       }
     }
 

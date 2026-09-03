@@ -466,6 +466,8 @@ void main() {
         'student_support',
         'student_programs',
         'qa_surveys',
+        'privacy_rights',
+        'training_manuals',
         'fees',
         'bus',
         'maya_assistant',

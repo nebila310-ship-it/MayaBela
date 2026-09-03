@@ -7,6 +7,8 @@ import 'package:mayabela/constants/app_info.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/screens/change_password_screen.dart';
 import 'package:mayabela/widgets/app_security_settings.dart';
+import 'package:mayabela/widgets/mfa_settings_card.dart';
+import 'package:mayabela/screens/golive_self_service_screen.dart';
 import 'package:mayabela/widgets/notification_preference_settings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
@@ -529,6 +531,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 16),
                   const AppSecuritySettings(),
                   const SizedBox(height: 16),
+                  const MfaSettingsCard(),
+                  const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: s.changePassword,
                     subtitle: s.changePasswordHint,
@@ -564,8 +568,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           title: s.settingsPrivacyPolicy,
                           subtitle: s.settingsPrivacyPolicyHint,
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(s.settingsOpeningSoon)),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const GoliveSelfServiceScreen(
+                                  initialTab: 1,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        SettingsActionTile(
+                          icon: Icons.menu_book_outlined,
+                          title: 'Training manuals',
+                          subtitle: 'Short admin, teacher, and parent guides',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const GoliveSelfServiceScreen(
+                                  initialTab: 2,
+                                ),
+                              ),
                             );
                           },
                         ),

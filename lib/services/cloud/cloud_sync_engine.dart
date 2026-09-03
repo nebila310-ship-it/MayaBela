@@ -208,6 +208,10 @@ abstract final class CloudSyncEngine {
     AppCollections.qaSurveys,
     AppCollections.qaSurveyResponses,
     AppCollections.actionResearch,
+    AppCollections.mfaEnrollments,
+    AppCollections.privacyConsents,
+    AppCollections.dataRightsRequests,
+    AppCollections.schoolBackups,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,
@@ -254,6 +258,9 @@ abstract final class CloudSyncEngine {
           AppCollections.dosaMeetings,
           AppCollections.qaSurveys,
           AppCollections.qaSurveyResponses,
+          AppCollections.privacyConsents,
+          AppCollections.dataRightsRequests,
+          AppCollections.mfaEnrollments,
         ];
       case AuthService.roleDriver:
         return [
@@ -292,6 +299,9 @@ abstract final class CloudSyncEngine {
           AppCollections.dosaMeetings,
           AppCollections.qaSurveys,
           AppCollections.qaSurveyResponses,
+          AppCollections.privacyConsents,
+          AppCollections.dataRightsRequests,
+          AppCollections.mfaEnrollments,
         ];
       default:
         return highPriority;
