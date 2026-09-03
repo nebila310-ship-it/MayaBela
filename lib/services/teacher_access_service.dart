@@ -20,6 +20,7 @@ class TeacherAccessService {
     'exams',
     'lesson_plans',
     'curriculum',
+    'qa_surveys',
     'learning_materials',
     'grades',
     'qr',

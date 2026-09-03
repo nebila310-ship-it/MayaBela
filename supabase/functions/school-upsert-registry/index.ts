@@ -19,6 +19,7 @@ const ALLOWED = new Set([
   "club_memberships",
   "scholarships",
   "grievances",
+  "qa_survey_responses",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
@@ -34,6 +35,7 @@ const OWN_ID_COLLECTIONS = new Set([
   "club_memberships",
   "scholarships",
   "grievances",
+  "qa_survey_responses",
 ]);
 
 function normalizeRecord(
@@ -221,6 +223,16 @@ Deno.serve(async (req) => {
         "denied",
       );
     }
+    if (
+      collection === "qa_survey_responses" &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student" &&
+      callerRole !== "teacher" &&
+      callerRole !== "admin"
+    ) {
+      return errorResponse("Not allowed to write survey responses.", 403, "denied");
+    }
 
     const rows: Array<{
       collection: string;
@@ -279,6 +291,22 @@ Deno.serve(async (req) => {
           [...linked, selfId].filter((id) => id.length > 0),
         );
         if (!sid || !allowed.has(sid)) {
+          continue;
+        }
+      }
+      if (
+        collection === "qa_survey_responses" &&
+        (callerRole === "parent" ||
+          callerRole === "student" ||
+          callerRole === "teacher")
+      ) {
+        const author = String(normalized.record.authorUsername || "")
+          .trim()
+          .toLowerCase();
+        const uname = String(meta.username || meta.userName || "")
+          .trim()
+          .toLowerCase();
+        if (!author || !uname || author !== uname) {
           continue;
         }
       }

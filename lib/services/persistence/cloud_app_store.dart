@@ -25,6 +25,7 @@ import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/curriculum_models.dart';
 import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/models/dosa_models.dart';
+import 'package:mayabela/models/qa_monitor_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -72,6 +73,8 @@ import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
 import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
+import 'package:mayabela/services/persistence/qa_monitor_persistence_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -345,6 +348,7 @@ class CloudAppStore {
       _pullCurriculumOffice(),
       _pullStudentSupport(),
       _pullDosa(),
+      _pullQaMonitor(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -460,6 +464,7 @@ class CloudAppStore {
     await pushAllCurriculumOffice();
     await pushAllStudentSupport();
     await pushAllDosa();
+    await pushAllQaMonitor();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -715,6 +720,7 @@ class CloudAppStore {
         _pullCurriculumOffice(),
         _pullStudentSupport(),
         _pullDosa(),
+        _pullQaMonitor(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -755,6 +761,7 @@ class CloudAppStore {
         _pullCurriculumOffice(),
         _pullStudentSupport(),
         _pullDosa(),
+        _pullQaMonitor(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -813,6 +820,7 @@ class CloudAppStore {
         _pullCurriculumOffice(),
         _pullStudentSupport(),
         _pullDosa(),
+        _pullQaMonitor(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -864,6 +872,7 @@ class CloudAppStore {
         _pullCurriculumOffice(),
         _pullStudentSupport(),
         _pullDosa(),
+        _pullQaMonitor(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -3061,6 +3070,116 @@ class CloudAppStore {
       merge: true,
     );
     await DosaPersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  /// Staff write observations / audits / surveys / research. Responses upsert
+  /// so parents, students, and teachers can submit.
+  Future<void> pushAllQaMonitor() async {
+    final svc = QaMonitorService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      Future<void> pushStaff(
+        String collection,
+        List<Map<String, dynamic>> items,
+      ) async {
+        if (items.isEmpty) return;
+        await _pushSafe(() => _crud.writeBatch(
+              collection: collection,
+              items: items,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+
+      await pushStaff(
+        AppCollections.teachingObservations,
+        svc.observationMaps(),
+      );
+      await pushStaff(AppCollections.academicAudits, svc.auditMaps());
+      await pushStaff(AppCollections.qaSurveys, svc.surveyMaps());
+      await pushStaff(AppCollections.actionResearch, svc.researchMaps());
+    }
+
+    if (svc.responseMaps().isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.qaSurveyResponses,
+        records: svc.responseMaps(),
+      );
+      if (!result.ok) {
+        throw StateError(result.errorMessage ?? 'Survey response sync failed.');
+      }
+    });
+  }
+
+  Future<void> _pullQaMonitor() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final observationRows =
+        await _schoolRead(AppCollections.teachingObservations);
+    final auditRows = await _schoolRead(AppCollections.academicAudits);
+    final surveyRows = await _schoolRead(AppCollections.qaSurveys);
+    final responseRows = await _schoolRead(AppCollections.qaSurveyResponses);
+    final researchRows = await _schoolRead(AppCollections.actionResearch);
+
+    if (observationRows.isEmpty &&
+        auditRows.isEmpty &&
+        surveyRows.isEmpty &&
+        responseRows.isEmpty &&
+        researchRows.isEmpty) {
+      return;
+    }
+
+    final observations = <TeachingObservation>[];
+    for (final map in observationRows) {
+      try {
+        observations.add(TeachingObservation.fromMap(map));
+      } catch (_) {}
+    }
+    final audits = <AcademicAudit>[];
+    for (final map in auditRows) {
+      try {
+        audits.add(AcademicAudit.fromMap(map));
+      } catch (_) {}
+    }
+    final surveys = <QaSurvey>[];
+    for (final map in surveyRows) {
+      try {
+        surveys.add(QaSurvey.fromMap(map));
+      } catch (_) {}
+    }
+    final responses = <QaSurveyResponse>[];
+    for (final map in responseRows) {
+      try {
+        responses.add(QaSurveyResponse.fromMap(map));
+      } catch (_) {}
+    }
+    final research = <ActionResearch>[];
+    for (final map in researchRows) {
+      try {
+        research.add(ActionResearch.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (observations.isEmpty &&
+        audits.isEmpty &&
+        surveys.isEmpty &&
+        responses.isEmpty &&
+        research.isEmpty) {
+      return;
+    }
+
+    QaMonitorService.instance.applyPersistedData(
+      observations: observations.isEmpty ? null : observations,
+      audits: audits.isEmpty ? null : audits,
+      surveys: surveys.isEmpty ? null : surveys,
+      responses: responses.isEmpty ? null : responses,
+      research: research.isEmpty ? null : research,
+      merge: true,
+    );
+    await QaMonitorPersistenceService.instance.saveFromService(pushCloud: false);
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

@@ -247,6 +247,11 @@ void main() {
         'grievances',
         'internships',
         'dosa_meetings',
+        'teaching_observations',
+        'academic_audits',
+        'qa_surveys',
+        'qa_survey_responses',
+        'action_research',
       ]),
     );
   });

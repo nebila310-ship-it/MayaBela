@@ -309,6 +309,12 @@ abstract final class ModuleAccess {
     'leadership_meetings': 'student_affairs',
     'student_programs': 'student_affairs',
     'dosa': 'student_affairs',
+    'surveys': 'quality_assurance',
+    'qa_surveys': 'quality_assurance',
+    'observations': 'quality_assurance',
+    'academic_audits': 'quality_assurance',
+    'action_research': 'quality_assurance',
+    'academic_monitoring': 'quality_assurance',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

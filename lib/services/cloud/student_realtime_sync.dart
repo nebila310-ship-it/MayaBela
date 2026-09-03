@@ -38,6 +38,8 @@ abstract final class StudentRealtimeSync {
       AppCollections.grievances,
       AppCollections.internships,
       AppCollections.dosaMeetings,
+      AppCollections.qaSurveys,
+      AppCollections.qaSurveyResponses,
       AppCollections.gradeReports,
       AppCollections.dailyActivities,
       AppCollections.announcements,
