@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
+import 'package:mayabela/services/cloud/role_sync_coordinator.dart';
 import 'package:mayabela/services/cloud/sync_cursor_store.dart';
 import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
 import 'package:mayabela/models/announcement.dart';
@@ -182,24 +183,28 @@ class CloudAppStore {
   Future<bool> pullRoleDeltaForSyncEngine({
     required List<String> collections,
   }) async {
+    final generation = AuthService.sessionGeneration;
+    if (!AuthService.isLiveGeneration(generation)) return false;
     if (!available) return false;
     await _prepareCloudRead();
+    if (!AuthService.isLiveGeneration(generation)) return false;
     final cursors = SyncCursorStore.instance;
     await cursors.ensureLoaded();
+    if (!AuthService.isLiveGeneration(generation)) return false;
 
-    final now = DateTime.now().toUtc();
-    final bootKey = '_role_boot';
-    if (cursors.cursorFor(bootKey) == null) {
-      await _pullCurrentRolePack();
-      for (final collection in collections) {
-        await cursors.setCursor(collection, now);
-      }
-      await cursors.setCursor(bootKey, now);
-      return true;
+    if (cursors.cursorFor(RoleSyncCoordinator.bootCursorKey) == null) {
+      RoleSyncCoordinator.log(
+        'polling-triggered gen=$generation reason=engine-boot',
+      );
+      return RoleSyncCoordinator.requestFullRolePull(
+        reason: 'engine-boot',
+        generation: generation,
+      );
     }
 
     var anyChanged = false;
     for (final collection in collections) {
+      if (!AuthService.isLiveGeneration(generation)) return false;
       final raw = cursors.cursorFor(collection);
       final since = raw == null ? null : DateTime.tryParse(raw);
       final rows = await _schoolRead(collection, updatedSince: since);
@@ -209,13 +214,19 @@ class CloudAppStore {
     }
 
     if (!anyChanged) return false;
+    if (!AuthService.isLiveGeneration(generation)) return false;
 
-    await _pullCurrentRolePack();
-    for (final collection in collections) {
-      await cursors.setCursor(collection, now);
-    }
-    return true;
+    RoleSyncCoordinator.log(
+      'polling-triggered gen=$generation reason=engine-delta',
+    );
+    return RoleSyncCoordinator.requestFullRolePull(
+      reason: 'engine-delta',
+      generation: generation,
+    );
   }
+
+  /// Full role pack used by [RoleSyncCoordinator] only.
+  Future<void> pullCurrentRolePack() => _pullCurrentRolePack();
 
   Future<void> _pullCurrentRolePack() async {
     final role = AuthService.currentUser?.roleKey;

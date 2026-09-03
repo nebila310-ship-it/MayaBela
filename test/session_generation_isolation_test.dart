@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
+import 'package:mayabela/services/cloud/role_sync_coordinator.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
 
 void main() {
@@ -20,11 +21,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await AuthService.clearSession();
     CloudSyncEngine.stop();
+    RoleSyncCoordinator.resetForTests();
   });
 
   tearDown(() async {
     await AuthService.clearSession();
     CloudSyncEngine.stop();
+    RoleSyncCoordinator.resetForTests();
   });
 
   test('A logout then B login invalidates A generation (Tests A/E)', () async {
