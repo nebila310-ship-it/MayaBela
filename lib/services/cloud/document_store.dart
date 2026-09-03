@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -80,8 +81,29 @@ class DocumentStore {
     return int.tryParse('$v') ?? 0;
   }
 
+  static const _payloadEquality = DeepCollectionEquality();
+
   static bool _isVersioned(String collection) =>
       versionedCollections.contains(collection);
+
+  /// True when two documents match aside from sync timestamps / local ids.
+  /// Used so republishing an unchanged directory does not bump `updated_at`
+  /// and wake every other signed-in client.
+  @visibleForTesting
+  static bool sameDocumentPayload(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    return _payloadEquality.equals(_stripVolatile(a), _stripVolatile(b));
+  }
+
+  static Map<String, dynamic> _stripVolatile(Map<String, dynamic> data) {
+    final copy = Map<String, dynamic>.from(data);
+    copy.remove('_docId');
+    copy.remove('updatedAt');
+    copy.remove('updated_at');
+    return copy;
+  }
 
   static bool _isGuardError(Object e) {
     final s = '$e'.toLowerCase();
@@ -113,14 +135,19 @@ class DocumentStore {
     scoped.remove('_docId');
 
     Map<String, dynamic> payload = scoped;
+    Map<String, dynamic>? existing;
     if (merge) {
       try {
-        final existing = await readDoc(collection: collection, docId: docId);
+        existing = await readDoc(collection: collection, docId: docId);
         if (existing != null) {
           payload = {...existing, ...scoped};
           payload.remove('_docId');
         }
       } catch (_) {}
+    }
+    if (existing != null && sameDocumentPayload(existing, payload)) {
+      await CloudOutboxService.instance.ack(collection, docId);
+      return;
     }
     payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
     _stampRowVersion(collection, payload);
@@ -349,12 +376,29 @@ class DocumentStore {
     }
   }
 
+  Future<Map<String, Map<String, dynamic>>> _existingDocsById(
+    String collection,
+  ) async {
+    try {
+      final existing = await readBySchool(
+        collection,
+        schoolId: _resolvedSchoolId(),
+      );
+      return {
+        for (final doc in existing) '${doc['_docId']}': doc,
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
   Future<void> writeBatch({
     required String collection,
     required List<Map<String, dynamic>> items,
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
+    final existingById = await _existingDocsById(collection);
     const chunkSize = 200;
     for (var start = 0; start < items.length; start += chunkSize) {
       final end = start + chunkSize > items.length
@@ -366,6 +410,10 @@ class DocumentStore {
         final id = docIdFor(item);
         final scoped = _withSchoolScope(Map<String, dynamic>.from(item));
         scoped.remove('_docId');
+        final existing = existingById[id];
+        if (existing != null && sameDocumentPayload(existing, scoped)) {
+          continue;
+        }
         scoped['updatedAt'] = DateTime.now().toUtc().toIso8601String();
         if (_isVersioned(collection)) {
           scoped['rowVersion'] = clientRowVersion(scoped);
@@ -378,6 +426,7 @@ class DocumentStore {
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         });
       }
+      if (rows.isEmpty) continue;
       await db.from('app_documents').upsert(
         rows,
         onConflict: 'collection,school_id,doc_id',

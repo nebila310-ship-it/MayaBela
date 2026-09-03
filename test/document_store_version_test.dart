@@ -8,6 +8,16 @@ void main() {
     expect(DocumentStore.clientRowVersion({}), 0);
   });
 
+  test('sameDocumentPayload ignores volatile timestamps', () {
+    expect(
+      DocumentStore.sameDocumentPayload(
+        {'name': 'Desk', 'updatedAt': 'a', 'updated_at': 'b', '_docId': '1'},
+        {'name': 'Desk', 'updatedAt': 'c'},
+      ),
+      isTrue,
+    );
+  });
+
   test('fees and inventory are the only versioned collections', () {
     expect(DocumentStore.versionedCollections, {
       'fees',

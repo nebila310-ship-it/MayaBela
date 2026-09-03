@@ -195,11 +195,12 @@ class CloudAppStore {
     await uploadLocalLeftoversToCloud();
   }
 
-  /// EDUABA CloudSyncEngine — cheap delta probe, then role-scoped apply.
+  /// EDUABA CloudSyncEngine — cheap delta probe, then collection-scoped apply.
   ///
   /// First boot (no cursor): full role download once.
-  /// Later ticks: probe collections with `updated_at > cursor`; only re-pull
-  /// the role pack when at least one collection has changes.
+  /// Later ticks: probe collections with `updated_at > cursor` and re-pull
+  /// only the collections that have new rows. A GPS ping no longer downloads
+  /// the whole school.
   Future<bool> pullRoleDeltaForSyncEngine({
     required List<String> collections,
   }) async {
@@ -208,34 +209,255 @@ class CloudAppStore {
     final cursors = SyncCursorStore.instance;
     await cursors.ensureLoaded();
 
-    final now = DateTime.now().toUtc();
-    final bootKey = '_role_boot';
-    if (cursors.cursorFor(bootKey) == null) {
+    if (cursors.cursorFor(SyncCursorStore.bootCursorKey) == null) {
       await _pullCurrentRolePack();
-      for (final collection in collections) {
-        await cursors.setCursor(collection, now);
-      }
-      await cursors.setCursor(bootKey, now);
+      await cursors.markRoleBoot(collections);
       return true;
     }
 
-    var anyChanged = false;
+    final changed = <String>[];
     for (final collection in collections) {
       final raw = cursors.cursorFor(collection);
       final since = raw == null ? null : DateTime.tryParse(raw);
       final rows = await _schoolRead(collection, updatedSince: since);
       if (rows.isEmpty) continue;
-      anyChanged = true;
-      break;
+      changed.add(collection);
     }
 
-    if (!anyChanged) return false;
+    if (changed.isEmpty) return false;
 
-    await _pullCurrentRolePack();
-    for (final collection in collections) {
+    await pullMappedCollections(changed);
+    final now = DateTime.now().toUtc();
+    for (final collection in changed) {
       await cursors.setCursor(collection, now);
     }
     return true;
+  }
+
+  /// Apply only the named collections (realtime / targeted refresh).
+  Future<void> pullMappedCollections(Iterable<String> collections) {
+    return _serializedPull(() async {
+      if (!available) return;
+      await _prepareCloudRead();
+      await _applyMappedCollections(collections);
+    });
+  }
+
+  Future<void> _applyMappedCollections(Iterable<String> collections) async {
+    final seen = <String>{};
+    for (final collection in collections) {
+      final key = _pullGroupKey(collection);
+      if (key == null || !seen.add(key)) continue;
+      await _runPullGroup(key);
+    }
+  }
+
+  @visibleForTesting
+  String? pullGroupKeyForTest(String collection) => _pullGroupKey(collection);
+
+  String? _pullGroupKey(String collection) {
+    switch (collection) {
+      case AppCollections.conversations:
+        return 'conversations';
+      case AppCollections.appNotifications:
+        return 'notifications';
+      case AppCollections.attendanceSessions:
+        return 'attendance';
+      case AppCollections.gradeReports:
+        return 'grades';
+      case AppCollections.busLivePositions:
+        return 'bus_gps';
+      case AppCollections.transportPassengerStatus:
+        return 'passenger_status';
+      case AppCollections.transportScans:
+        return 'transport_scans';
+      case AppCollections.parentLinkRequests:
+        return 'parent_links';
+      case AppCollections.studentRegistry:
+        return 'students';
+      case AppCollections.teacherRegistry:
+        return 'teachers';
+      case AppCollections.driverRegistry:
+        return 'drivers';
+      case AppCollections.employeeRegistry:
+        return 'employees';
+      case AppCollections.studentMedical:
+        return 'medical';
+      case AppCollections.schoolRegistry:
+        return 'school_registry';
+      case AppCollections.gradeAuditLog:
+        return 'grade_audit';
+      case AppCollections.homework:
+        return 'homework';
+      case AppCollections.dailyActivities:
+        return 'daily_activities';
+      case AppCollections.announcements:
+        return 'announcements';
+      case AppCollections.learningMaterials:
+        return 'learning_materials';
+      case AppCollections.calendarEvents:
+        return 'calendar';
+      case AppCollections.galleryPosts:
+        return 'gallery';
+      case AppCollections.classTimetables:
+        return 'timetables';
+      case AppCollections.fees:
+        return 'fees';
+      case AppCollections.buses:
+        return 'buses';
+      case AppCollections.disciplineCases:
+        return 'discipline';
+      case AppCollections.leaveRequests:
+        return 'leave';
+      case AppCollections.qaFindings:
+        return 'qa_findings';
+      case AppCollections.admissionApplications:
+        return 'admissions';
+      case AppCollections.examQuestions:
+      case AppCollections.examPapers:
+      case AppCollections.examAttempts:
+        return 'exam_bank';
+      case AppCollections.lessonPlans:
+        return 'lesson_plans';
+      case AppCollections.curriculumUnits:
+      case AppCollections.curriculumFeedback:
+      case AppCollections.lessonPlanReviews:
+      case AppCollections.teacherEvaluations:
+      case AppCollections.academicMeetings:
+        return 'curriculum';
+      case AppCollections.healthRecords:
+      case AppCollections.counselingRecords:
+      case AppCollections.iepPlans:
+      case AppCollections.collegeGuidance:
+      case AppCollections.supportRequests:
+      case AppCollections.safeguardingCases:
+        return 'student_support';
+      case AppCollections.extracurricularClubs:
+      case AppCollections.clubMemberships:
+      case AppCollections.scholarships:
+      case AppCollections.grievances:
+      case AppCollections.internships:
+      case AppCollections.dosaMeetings:
+        return 'dosa';
+      case AppCollections.teachingObservations:
+      case AppCollections.academicAudits:
+      case AppCollections.qaSurveys:
+      case AppCollections.qaSurveyResponses:
+      case AppCollections.actionResearch:
+        return 'qa_monitor';
+      case AppCollections.mfaEnrollments:
+      case AppCollections.privacyConsents:
+      case AppCollections.dataRightsRequests:
+      case AppCollections.schoolBackups:
+        return 'golive';
+      case AppCollections.inventoryItems:
+      case AppCollections.classroomInventory:
+      case AppCollections.stockTransactions:
+      case AppCollections.studentIssuedItems:
+      case AppCollections.assets:
+      case AppCollections.suppliers:
+      case AppCollections.maintenanceReports:
+        return 'inventory';
+      case AppCollections.purchaseRequests:
+        return 'procurement';
+      case AppCollections.materialPurchaseRequests:
+        return 'material_purchases';
+      case AppCollections.transferRequests:
+        return 'transfers';
+      case AppCollections.schoolAuditLog:
+        return 'school_audit';
+      case AppCollections.authAccounts:
+        return 'auth_accounts';
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _runPullGroup(String key) async {
+    switch (key) {
+      case 'conversations':
+        await _pullConversations();
+      case 'notifications':
+        await _pullAppNotifications();
+      case 'attendance':
+        await _pullAttendanceSessions();
+      case 'grades':
+        await _pullGradeReports();
+      case 'bus_gps':
+        await _pullBusLivePositions();
+      case 'passenger_status':
+        await _pullTransportPassengerStatus();
+      case 'transport_scans':
+        await _pullTransportScans();
+      case 'parent_links':
+        await _pullParentLinks();
+      case 'students':
+        await _pullStudentRegistry();
+      case 'teachers':
+        await _pullTeacherRegistry();
+      case 'drivers':
+        await _pullDriverRegistry();
+      case 'employees':
+        await _pullEmployeeRegistry();
+      case 'medical':
+        await _pullStudentMedical();
+      case 'school_registry':
+        await _pullSchoolRegistry();
+      case 'grade_audit':
+        await _pullGradeAuditLog();
+      case 'homework':
+        await _pullHomework();
+      case 'daily_activities':
+        await _pullDailyActivities();
+      case 'announcements':
+        await _pullAnnouncements();
+      case 'learning_materials':
+        await _pullLearningMaterials();
+      case 'calendar':
+        await _pullCalendarEvents();
+      case 'gallery':
+        await _pullGalleryPosts();
+      case 'timetables':
+        await _pullClassTimetables();
+      case 'fees':
+        await _pullFees();
+      case 'buses':
+        await _pullBuses();
+      case 'discipline':
+        await _pullDisciplineCases();
+      case 'leave':
+        await _pullLeaveRequests();
+      case 'qa_findings':
+        await _pullQaFindings();
+      case 'admissions':
+        await _pullAdmissionApplications();
+      case 'exam_bank':
+        await _pullExamBank();
+      case 'lesson_plans':
+        await _pullLessonPlans();
+      case 'curriculum':
+        await _pullCurriculumOffice();
+      case 'student_support':
+        await _pullStudentSupport();
+      case 'dosa':
+        await _pullDosa();
+      case 'qa_monitor':
+        await _pullQaMonitor();
+      case 'golive':
+        await _pullGoLive();
+      case 'inventory':
+        await _pullInventory();
+      case 'procurement':
+        await _pullProcurement();
+      case 'material_purchases':
+        await _pullMaterialPurchases();
+      case 'transfers':
+        await _pullTransferRequests();
+      case 'school_audit':
+        await _pullSchoolAudit();
+      case 'auth_accounts':
+        await _pullAuthAccounts();
+    }
   }
 
   Future<void> _pullCurrentRolePack() async {
