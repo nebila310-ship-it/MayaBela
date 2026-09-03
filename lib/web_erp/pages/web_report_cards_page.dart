@@ -76,112 +76,21 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
   }
 
   Future<void> _openEditor(StudentGradeReport report) async {
-    final homeroom = TextEditingController(text: report.homeroomComment ?? '');
-    final principal = TextEditingController(text: report.principalComment ?? '');
-    final term = TextEditingController(text: report.term);
-    final published = report.reportCardPublished;
-    await showDialog<void>(
+    final result = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(report.studentName),
-          content: SizedBox(
-            width: 560,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TermReportCardView(
-                    report: report,
-                    schoolName:
-                        SchoolRegistryService.instance.lookup(_schoolId)?.name,
-                    compact: true,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: term,
-                    enabled: _canManage,
-                    decoration: const InputDecoration(
-                      labelText: 'Term',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: homeroom,
-                    enabled: _canManage,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Homeroom comment',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: principal,
-                    enabled: _canManage,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Principal comment',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  if (published)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('This report card is already published to parents.'),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-            if (_canManage)
-              TextButton(
-                onPressed: () {
-                  MarkbookService.instance.saveReportCardDraft(
-                    studentName: report.studentName,
-                    className: report.className,
-                    term: term.text,
-                    homeroomComment: homeroom.text,
-                    principalComment: principal.text,
-                  );
-                  Navigator.pop(context);
-                  setState(() {});
-                },
-                child: const Text('Save draft'),
-              ),
-            if (_canManage)
-              FilledButton(
-                onPressed: () {
-                  MarkbookService.instance.publishReportCard(
-                    studentName: report.studentName,
-                    className: report.className,
-                    term: term.text,
-                    homeroomComment: homeroom.text,
-                    principalComment: principal.text,
-                  );
-                  Navigator.pop(context);
-                  setState(() {});
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(
-                      content: Text('Published ${report.studentName} report card'),
-                    ),
-                  );
-                },
-                child: const Text('Publish to parents'),
-              ),
-          ],
-        );
-      },
+      builder: (context) => _ReportCardEditorDialog(
+        report: report,
+        schoolName: SchoolRegistryService.instance.lookup(_schoolId)?.name,
+        canManage: _canManage,
+      ),
     );
-    homeroom.dispose();
-    principal.dispose();
-    term.dispose();
+    if (!mounted) return;
+    if (result != null) setState(() {});
+    if (result == 'published') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Published ${report.studentName} report card')),
+      );
+    }
   }
 
   @override
@@ -284,6 +193,137 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
               ),
             );
           }),
+      ],
+    );
+  }
+}
+
+class _ReportCardEditorDialog extends StatefulWidget {
+  const _ReportCardEditorDialog({
+    required this.report,
+    required this.canManage,
+    this.schoolName,
+  });
+
+  final StudentGradeReport report;
+  final String? schoolName;
+  final bool canManage;
+
+  @override
+  State<_ReportCardEditorDialog> createState() => _ReportCardEditorDialogState();
+}
+
+class _ReportCardEditorDialogState extends State<_ReportCardEditorDialog> {
+  late final TextEditingController _homeroom;
+  late final TextEditingController _principal;
+  late final TextEditingController _term;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeroom = TextEditingController(text: widget.report.homeroomComment ?? '');
+    _principal =
+        TextEditingController(text: widget.report.principalComment ?? '');
+    _term = TextEditingController(text: widget.report.term);
+  }
+
+  @override
+  void dispose() {
+    _homeroom.dispose();
+    _principal.dispose();
+    _term.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final report = widget.report;
+    return AlertDialog(
+      title: Text(report.studentName),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TermReportCardView(
+                report: report,
+                schoolName: widget.schoolName,
+                compact: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _term,
+                enabled: widget.canManage,
+                decoration: const InputDecoration(
+                  labelText: 'Term',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _homeroom,
+                enabled: widget.canManage,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Homeroom comment',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _principal,
+                enabled: widget.canManage,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Principal comment',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (report.reportCardPublished)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'This report card is already published to parents.',
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+        if (widget.canManage)
+          TextButton(
+            onPressed: () {
+              MarkbookService.instance.saveReportCardDraft(
+                studentName: report.studentName,
+                className: report.className,
+                term: _term.text,
+                homeroomComment: _homeroom.text,
+                principalComment: _principal.text,
+              );
+              Navigator.of(context).pop('draft');
+            },
+            child: const Text('Save draft'),
+          ),
+        if (widget.canManage)
+          FilledButton(
+            onPressed: () {
+              MarkbookService.instance.publishReportCard(
+                studentName: report.studentName,
+                className: report.className,
+                term: _term.text,
+                homeroomComment: _homeroom.text,
+                principalComment: _principal.text,
+              );
+              Navigator.of(context).pop('published');
+            },
+            child: const Text('Publish to parents'),
+          ),
       ],
     );
   }
