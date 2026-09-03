@@ -16,6 +16,7 @@ class TeacherAccessService {
     'attendance',
     'messages',
     'homework',
+    'exams',
     'learning_materials',
     'grades',
     'qr',

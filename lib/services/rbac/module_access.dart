@@ -279,6 +279,9 @@ abstract final class ModuleAccess {
     'grade_workflow_settings': 'examinations',
     'markbook': 'examinations',
     'report_cards': 'examinations',
+    'exam_bank': 'examinations',
+    'exam_papers': 'examinations',
+    'exam_desk': 'examinations',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

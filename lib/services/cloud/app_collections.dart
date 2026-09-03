@@ -44,6 +44,11 @@ abstract final class AppCollections {
   static const leaveRequests = 'leave_requests';
   static const admissionApplications = 'admission_applications';
 
+  /// LIA Phase C exams: question bank, papers, student attempts.
+  static const examQuestions = 'exam_questions';
+  static const examPapers = 'exam_papers';
+  static const examAttempts = 'exam_attempts';
+
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
 

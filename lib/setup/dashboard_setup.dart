@@ -20,6 +20,8 @@ import 'package:mayabela/screens/admin_grade_workflow_settings_screen.dart';
 import 'package:mayabela/screens/grade_approval_queue_screen.dart';
 import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
+import 'package:mayabela/screens/student_exam_screen.dart';
+import 'package:mayabela/screens/teacher_exams_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
@@ -215,6 +217,24 @@ List<DashboardEntry> _teacherEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const HomeworkScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'exams',
+      icon: Icons.quiz_outlined,
+      color: const Color(0xFF00695C),
+      isVisible: () => access.canAccessTeacherDashboardTile('exams'),
+      builder: (context) => DashboardCard(
+        icon: Icons.quiz_outlined,
+        title: _t('exams', role),
+        color: const Color(0xFF00695C),
+        badgeCount: _badge('exams'),
+        onTap: () => _openTile('exams', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TeacherExamsScreen()),
           );
         }),
       ),
@@ -996,6 +1016,22 @@ List<DashboardEntry> _studentEntries() {
             MaterialPageRoute(
               builder: (_) => const HomeworkScreen(mode: HomeworkViewMode.student),
             ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'exams',
+      icon: Icons.quiz_outlined,
+      color: const Color(0xFF00695C),
+      builder: (context) => DashboardCard(
+        icon: Icons.quiz_outlined,
+        title: _t('exams', role),
+        color: const Color(0xFF00695C),
+        onTap: () => _openTile('exams', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentExamScreen()),
           );
         }),
       ),
@@ -2005,7 +2041,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'Teaching tools',
           icon: Icons.menu_book,
-          entryIds: ['homework', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
+          entryIds: ['homework', 'exams', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
         ),
         const DashboardSectionDefinition(
           title: 'Communication',
@@ -2119,7 +2155,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'exams', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',
