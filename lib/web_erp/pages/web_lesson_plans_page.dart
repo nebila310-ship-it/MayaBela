@@ -5,6 +5,7 @@ import 'package:mayabela/models/exam_models.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -59,13 +60,18 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
     super.initState();
     _plans.ensureLoaded();
     ExamService.instance.ensureLoaded();
+    CurriculumService.instance.ensureLoaded();
   }
 
   @override
   Widget build(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([_plans, ExamService.instance]),
+      listenable: Listenable.merge([
+        _plans,
+        ExamService.instance,
+        CurriculumService.instance,
+      ]),
       builder: (context, _) {
         var items = _plans.forSchool(_schoolId);
         if (_className != null) {
@@ -181,6 +187,7 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
             '${plan.className} · ${plan.subject} · '
             '${_weekLabel(plan.weekStart)} · '
             '${plan.isPublished ? 'Published' : 'Draft'}'
+            '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${_reviewLabel(plan.reviewStatus)}'}'
             '${plan.hasLinks ? ' · linked work' : ''}',
           ),
           trailing: _canManage
@@ -222,6 +229,13 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
     );
   }
 
+  static String _reviewLabel(LessonPlanReviewStatus status) => switch (status) {
+        LessonPlanReviewStatus.none => '',
+        LessonPlanReviewStatus.pending => 'Review pending',
+        LessonPlanReviewStatus.approved => 'DH approved',
+        LessonPlanReviewStatus.changesRequested => 'Changes requested',
+      };
+
   static String _weekLabel(DateTime start) {
     final end = start.add(const Duration(days: 6));
     return '${start.day}/${start.month}–${end.day}/${end.month}';
@@ -254,6 +268,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
   late Set<String> _homework;
   late Set<String> _papers;
   late Set<String> _materials;
+  String? _unitId;
 
   @override
   void initState() {
@@ -271,6 +286,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     _homework = {...?p?.homeworkIds};
     _papers = {...?p?.examPaperIds};
     _materials = {...?p?.learningMaterialIds};
+    _unitId = p?.curriculumUnitId;
   }
 
   @override
@@ -322,8 +338,9 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
       );
       return;
     }
+    final LessonPlan plan;
     if (widget.existing == null) {
-      await LessonPlanService.instance.createPlan(
+      plan = await LessonPlanService.instance.createPlan(
         title: title,
         className: _className,
         subject: _subject,
@@ -333,9 +350,10 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         homeworkIds: _homework.toList(),
         examPaperIds: _papers.toList(),
         learningMaterialIds: _materials.toList(),
+        curriculumUnitId: _unitId,
       );
     } else {
-      await LessonPlanService.instance.updatePlan(
+      plan = (await LessonPlanService.instance.updatePlan(
         widget.existing!.id,
         title: title,
         className: _className,
@@ -346,7 +364,12 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         homeworkIds: _homework.toList(),
         examPaperIds: _papers.toList(),
         learningMaterialIds: _materials.toList(),
-      );
+        curriculumUnitId: _unitId,
+        clearCurriculumUnit: _unitId == null,
+      ))!;
+    }
+    if (_unitId != null) {
+      await CurriculumService.instance.attachLessonPlan(_unitId!, plan.id);
     }
     if (mounted) Navigator.of(context).pop();
   }
@@ -409,6 +432,23 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
                   child: const Text('Change'),
                 ),
               ),
+              DropdownButtonFormField<String?>(
+                key: ValueKey('lp-unit-$_unitId'),
+                initialValue: _unitId,
+                decoration: const InputDecoration(
+                  labelText: 'Curriculum unit (optional)',
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not linked'),
+                  ),
+                  for (final unit in CurriculumService.instance.unitsForSchool())
+                    DropdownMenuItem(value: unit.id, child: Text(unit.title)),
+                ],
+                onChanged: (v) => setState(() => _unitId = v),
+              ),
+              const SizedBox(height: 8),
               TextField(
                 controller: _objectives,
                 maxLines: 3,

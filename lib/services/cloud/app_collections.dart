@@ -52,6 +52,13 @@ abstract final class AppCollections {
   /// LIA Phase D lesson plans (planning/content; not a grade store).
   static const lessonPlans = 'lesson_plans';
 
+  /// LIA Phase E curriculum office (maps, feedback, DH reviews, academic evals).
+  static const curriculumUnits = 'curriculum_units';
+  static const curriculumFeedback = 'curriculum_feedback';
+  static const lessonPlanReviews = 'lesson_plan_reviews';
+  static const teacherEvaluations = 'teacher_evaluations';
+  static const academicMeetings = 'academic_meetings';
+
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
 

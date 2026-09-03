@@ -22,6 +22,7 @@ import 'package:mayabela/web_erp/pages/web_markbook_page.dart';
 import 'package:mayabela/web_erp/pages/web_report_cards_page.dart';
 import 'package:mayabela/web_erp/pages/web_exam_desk_page.dart';
 import 'package:mayabela/web_erp/pages/web_lesson_plans_page.dart';
+import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
 import 'package:mayabela/web_erp/pages/web_alumni_page.dart';
 import 'package:mayabela/web_erp/pages/web_admin_overview_page.dart';
 import 'package:mayabela/web_erp/pages/web_announcements_page.dart';
@@ -191,6 +192,9 @@ class WebErpRouter {
       case 'lesson_plans':
       case 'lessons':
         return WebLessonPlansPage(onNavigate: onNavigate);
+      case 'curriculum':
+      case 'academic_meetings':
+        return WebCurriculumPage(onNavigate: onNavigate);
       default:
         return WebErpPlaceholderPage(
           title: routeId,

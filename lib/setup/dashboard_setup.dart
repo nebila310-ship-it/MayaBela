@@ -24,6 +24,7 @@ import 'package:mayabela/screens/student_exam_screen.dart';
 import 'package:mayabela/screens/teacher_exams_screen.dart';
 import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
 import 'package:mayabela/screens/student_lesson_plans_screen.dart';
+import 'package:mayabela/screens/curriculum_portal_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
@@ -254,6 +255,23 @@ List<DashboardEntry> _teacherEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const TeacherLessonPlansScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'curriculum',
+      icon: Icons.account_tree_outlined,
+      color: const Color(0xFF1565C0),
+      isVisible: () => access.canAccessTeacherDashboardTile('curriculum'),
+      builder: (context) => DashboardCard(
+        icon: Icons.account_tree_outlined,
+        title: _t('curriculum', role),
+        color: const Color(0xFF1565C0),
+        onTap: () => _openTile('curriculum', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TeacherCurriculumScreen()),
           );
         }),
       ),
@@ -781,6 +799,22 @@ List<DashboardEntry> _parentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'curriculum',
+      icon: Icons.account_tree_outlined,
+      color: const Color(0xFF1565C0),
+      builder: (context) => DashboardCard(
+        icon: Icons.account_tree_outlined,
+        title: _t('curriculum', role),
+        color: const Color(0xFF1565C0),
+        onTap: () => _openTile('curriculum', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ParentCurriculumScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'messages',
       icon: Icons.message,
       color: Colors.orange,
@@ -1067,6 +1101,22 @@ List<DashboardEntry> _studentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const StudentLessonPlansScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'curriculum',
+      icon: Icons.account_tree_outlined,
+      color: const Color(0xFF1565C0),
+      builder: (context) => DashboardCard(
+        icon: Icons.account_tree_outlined,
+        title: _t('curriculum', role),
+        color: const Color(0xFF1565C0),
+        onTap: () => _openTile('curriculum', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentCurriculumScreen()),
           );
         }),
       ),
@@ -2076,7 +2126,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'Teaching tools',
           icon: Icons.menu_book,
-          entryIds: ['homework', 'exams', 'lesson_plans', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
+          entryIds: ['homework', 'exams', 'lesson_plans', 'curriculum', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
         ),
         const DashboardSectionDefinition(
           title: 'Communication',
@@ -2136,7 +2186,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My children',
           icon: Icons.child_care,
-          entryIds: ['children', 'attendance', 'homework', 'learning_materials', 'grades', 'timetable'],
+          entryIds: ['children', 'attendance', 'homework', 'curriculum', 'learning_materials', 'grades', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'School updates',
@@ -2190,7 +2240,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'exams', 'lesson_plans', 'curriculum', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',

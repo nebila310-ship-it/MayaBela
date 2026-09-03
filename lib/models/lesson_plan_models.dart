@@ -1,6 +1,8 @@
 /// Weekly lesson plans (LIA Phase D). Planning/content only — never a grade store.
 enum LessonPlanStatus { draft, published }
 
+enum LessonPlanReviewStatus { none, pending, approved, changesRequested }
+
 class LessonPlan {
   LessonPlan({
     required this.id,
@@ -17,6 +19,9 @@ class LessonPlan {
     this.examPaperIds = const [],
     this.learningMaterialIds = const [],
     this.status = LessonPlanStatus.draft,
+    this.reviewStatus = LessonPlanReviewStatus.none,
+    this.curriculumUnitId,
+    this.latestReviewId,
     this.createdBy,
     this.publishedAt,
   });
@@ -33,6 +38,9 @@ class LessonPlan {
   List<String> examPaperIds;
   List<String> learningMaterialIds;
   LessonPlanStatus status;
+  LessonPlanReviewStatus reviewStatus;
+  String? curriculumUnitId;
+  String? latestReviewId;
   String? createdBy;
   final DateTime createdAt;
   DateTime updatedAt;
@@ -65,6 +73,9 @@ class LessonPlan {
         'examPaperIds': examPaperIds,
         'learningMaterialIds': learningMaterialIds,
         'status': status.name,
+        'reviewStatus': reviewStatus.name,
+        if (curriculumUnitId != null) 'curriculumUnitId': curriculumUnitId,
+        if (latestReviewId != null) 'latestReviewId': latestReviewId,
         if (createdBy != null) 'createdBy': createdBy,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -90,6 +101,12 @@ class LessonPlan {
         (v) => v.name == map['status'],
         orElse: () => LessonPlanStatus.draft,
       ),
+      reviewStatus: LessonPlanReviewStatus.values.firstWhere(
+        (v) => v.name == map['reviewStatus'],
+        orElse: () => LessonPlanReviewStatus.none,
+      ),
+      curriculumUnitId: map['curriculumUnitId'] as String?,
+      latestReviewId: map['latestReviewId'] as String?,
       createdBy: map['createdBy'] as String?,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
+import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
@@ -41,6 +42,7 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
   void initState() {
     super.initState();
     _plans.ensureLoaded();
+    CurriculumService.instance.ensureLoaded();
     if (_classOptions.isNotEmpty) _selectedClass = _classOptions.first;
   }
 
@@ -104,7 +106,8 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                               child: ListTile(
                                 title: Text(plan.title),
                                 subtitle: Text(
-                                  '${plan.subject} · ${plan.isPublished ? 'Published' : 'Draft'}',
+                                  '${plan.subject} · ${plan.isPublished ? 'Published' : 'Draft'}'
+                                  '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${plan.reviewStatus.name}'}',
                                 ),
                                 trailing: TextButton(
                                   onPressed: () => _plans.setStatus(
