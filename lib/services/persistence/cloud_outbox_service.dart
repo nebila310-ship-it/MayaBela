@@ -70,6 +70,9 @@ class CloudOutboxService extends ChangeNotifier {
   bool get isFlushing => _flushing;
   int get mutationCount => _mutations.length;
 
+  /// Mutations plus a full-snapshot marker, for "N changes waiting" copy.
+  int get pendingCount => _mutations.length + (_pending ? 1 : 0);
+
   List<CloudOutboxMutation> snapshotMutations() =>
       List<CloudOutboxMutation>.unmodifiable(_mutations);
 

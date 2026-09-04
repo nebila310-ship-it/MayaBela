@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -124,7 +126,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
   }
 
-  void _saveAttendance() {
+  Future<void> _saveAttendance() async {
     final s = AppLocale.instance.strings;
     final conductor = AuthService.displayNameForRole(AuthService.roleTeacher);
     _data.saveAttendanceSession(
@@ -134,11 +136,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       entries: entries,
     );
     conductedBy = conductor;
+    final outcome = await CloudSaveHonesty.settle(
+      persist: SchoolContentPersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(s.attendanceSavedFor(selectedClass, conductor)),
-        backgroundColor: Colors.green,
+      CloudSaveHonesty.snackBar(
+        savedOk: s.attendanceSavedFor(selectedClass, conductor),
+        outcome: outcome,
+        strings: s,
       ),
     );
   }

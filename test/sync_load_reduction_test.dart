@@ -61,6 +61,7 @@ void main() {
   test('fast ticks skip live GPS/messages; slow ticks still cover the role pack', () {
     expect(CloudSyncEngine.interval, const Duration(seconds: 5));
     expect(CloudSyncEngine.highPriority, contains(AppCollections.busLivePositions));
+    expect(CloudSyncEngine.transportBackupTickEvery, 2);
 
     final fast = CloudSyncEngine.probeCollectionsForTick(1);
     expect(fast, isNotEmpty);
@@ -70,6 +71,13 @@ void main() {
     expect(fast, contains(AppCollections.gradeReports));
     expect(fast, contains(AppCollections.attendanceSessions));
     expect(fast, contains(AppCollections.parentLinkRequests));
+
+    // ~10s transport backup: bus GPS only, not messages/notifications.
+    final transport = CloudSyncEngine.probeCollectionsForTick(2);
+    expect(transport, contains(AppCollections.busLivePositions));
+    expect(transport, contains(AppCollections.gradeReports));
+    expect(transport, isNot(contains(AppCollections.conversations)));
+    expect(transport, isNot(contains(AppCollections.appNotifications)));
 
     // Signed-out tests use the default high-priority pack, including live
     // collections as a backup on the slow tick.

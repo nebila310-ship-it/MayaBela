@@ -12,6 +12,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/utils/adaptive_breakpoints.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
@@ -326,6 +327,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                   ),
                 ),
               ),
+              const WebCloudSyncBar(horizontalPadding: 16),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

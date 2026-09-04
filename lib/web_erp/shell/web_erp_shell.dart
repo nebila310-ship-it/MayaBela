@@ -19,6 +19,7 @@ import 'package:mayabela/web_erp/shell/web_erp_sidebar.dart';
 import 'package:mayabela/web_erp/shell/web_erp_top_bar.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/web_erp/widgets/web_global_search_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_session_timeout.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
@@ -104,6 +105,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                 WebErpPrefsService.instance.toggleFavorite(_routeId),
           ),
         ),
+        WebCloudSyncBar(horizontalPadding: narrow ? 12 : 20),
         if (ModuleAccess.isReadOnly(_routeId))
           Padding(
             padding: EdgeInsets.fromLTRB(

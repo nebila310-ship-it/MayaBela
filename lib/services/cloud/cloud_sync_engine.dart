@@ -38,6 +38,10 @@ abstract final class CloudSyncEngine {
   /// How often the standard lane is probed (every Nth 5s tick).
   static const standardTickEvery = 6;
 
+  /// How often bus GPS is polled as a realtime backup (every Nth 5s tick ≈ 10s).
+  /// Does not restore the old school-wide stream fan-out — only these collections.
+  static const transportBackupTickEvery = 2;
+
   /// Already applied by dedicated realtime listeners — skip on fast ticks
   /// so a moving bus cannot trigger school-wide SELECTs.
   static const liveRealtimeCollections = <String>{
@@ -47,6 +51,14 @@ abstract final class CloudSyncEngine {
     AppCollections.transportPassengerStatus,
     AppCollections.transportScans,
   };
+
+  /// GPS / boarding backup when realtime drops a change. Passenger status
+  /// and scans are included only if the current role pack already has them.
+  static const transportBackupCollections = <String>[
+    AppCollections.busLivePositions,
+    AppCollections.transportPassengerStatus,
+    AppCollections.transportScans,
+  ];
 
   static bool get isStarted => _started;
 
@@ -237,6 +249,9 @@ abstract final class CloudSyncEngine {
   ];
 
   /// Fast ticks probe the high-priority lane minus live GPS/messages.
+  /// Every [transportBackupTickEvery] ticks also re-probe bus GPS (and any
+  /// other transport collections in the role pack) so a dropped realtime
+  /// event cannot leave the map stale for a full 30s.
   /// Every [standardTickEvery] ticks also probe the rest of the role pack
   /// (including a live-collection backup if realtime dropped a change).
   @visibleForTesting
@@ -246,10 +261,18 @@ abstract final class CloudSyncEngine {
       return role;
     }
     final roleSet = role.toSet();
-    return highPriority
+    final fast = highPriority
         .where(roleSet.contains)
         .where((c) => !liveRealtimeCollections.contains(c))
         .toList();
+    if (tickIndex % transportBackupTickEvery == 0) {
+      for (final collection in transportBackupCollections) {
+        if (roleSet.contains(collection) && !fast.contains(collection)) {
+          fast.add(collection);
+        }
+      }
+    }
+    return fast;
   }
 
   static List<String> collectionsForCurrentRole() {
