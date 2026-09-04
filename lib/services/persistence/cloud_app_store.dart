@@ -258,6 +258,21 @@ class CloudAppStore {
   @visibleForTesting
   String? pullGroupKeyForTest(String collection) => _pullGroupKey(collection);
 
+  @visibleForTesting
+  bool classReadsAreSchoolWideForTest() => !AuthService.usesScopedCloudReads;
+
+  @visibleForTesting
+  bool studentIdReadsAreSchoolWideForTest() {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleStudent) {
+      return false;
+    }
+    if (role == AuthService.roleTeacher) {
+      return !AuthService.usesScopedCloudReads;
+    }
+    return true;
+  }
+
   String? _pullGroupKey(String collection) {
     switch (collection) {
       case AppCollections.conversations:
@@ -511,6 +526,9 @@ class CloudAppStore {
     return _schoolRead(collection);
   }
 
+  /// Parent / student stay linked-id scoped. Classroom teachers stay on
+  /// assigned classes. Office desks with [AuthService.mayReadAllSchoolData]
+  /// read the whole school (same rule as JWT RLS).
   Future<List<Map<String, dynamic>>> _scopedStudentIdRead(String collection) {
     final role = AuthService.currentUser?.roleKey;
     if (role == AuthService.roleParent || role == AuthService.roleStudent) {
@@ -520,7 +538,7 @@ class CloudAppStore {
         whereInValues: AuthService.activeLinkedStudentIds(),
       );
     }
-    if (role == AuthService.roleTeacher) {
+    if (role == AuthService.roleTeacher && AuthService.usesScopedCloudReads) {
       return _schoolRead(
         collection,
         whereInField: 'studentId',
@@ -969,6 +987,11 @@ class CloudAppStore {
     return _serializedPull(() async {
       if (!available) return;
       await _prepareCloudRead();
+      if (AuthService.usesScopedCloudReads) {
+        try {
+          await SchoolAuthCloudService.instance.refreshAccessClaims();
+        } catch (_) {}
+      }
       // Teachers first so class assignments exist before any class-scoped reads.
       await _pullTeacherRegistry();
       await Future.wait([
@@ -1092,6 +1115,11 @@ class CloudAppStore {
     return _serializedPull(() async {
       if (!available) return;
       await _prepareCloudRead();
+      if (AuthService.usesScopedCloudReads) {
+        try {
+          await SchoolAuthCloudService.instance.refreshAccessClaims();
+        } catch (_) {}
+      }
       await Future.wait([
         _pullStudentRegistry(),
         _pullTeacherRegistry(),
