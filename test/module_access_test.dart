@@ -156,13 +156,17 @@ void main() {
         'safeguarding',
         'student_programs',
         'go_live',
+        'homework',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }
-      // EDUABA allocation: events/calendar belong to Section Director
-      // (executives also see them read-only; VP does not operate them).
-      expect(ModuleAccess.canView('calendar'), isFalse);
-      expect(ModuleAccess.canView('events'), isFalse);
+      expect(ModuleAccess.canView('calendar'), isTrue);
+      expect(ModuleAccess.canView('events'), isTrue);
+      expect(ModuleAccess.canManage('calendar'), isFalse);
+      expect(ModuleAccess.canManage('events'), isFalse);
+      expect(ModuleAccess.canView('homework'), isTrue);
+      expect(ModuleAccess.canManage('homework'), isFalse);
+      expect(ModuleAccess.isReadOnly('homework'), isTrue);
       // Reports opened for VP oversight (export read-only).
       expect(ModuleAccess.canView('reports'), isTrue);
       expect(ModuleAccess.canManage('reports'), isFalse);
@@ -246,10 +250,22 @@ void main() {
       expect(ModuleAccess.canLinkStudentTransport, isTrue);
       expect(ModuleAccess.canManage('parents'), isTrue);
       expect(ModuleAccess.canManage('examinations'), isTrue);
+      expect(ModuleAccess.canView('homework'), isTrue);
+      expect(ModuleAccess.canManage('homework'), isFalse);
       expect(ModuleAccess.canManage('grade_approvals'), isTrue);
       expect(ModuleAccess.canView('support'), isTrue);
       // Child-protection files are not a classroom or department-head desk.
       expect(ModuleAccess.canView('safeguarding'), isFalse);
+    });
+  });
+
+  group('Student Affairs', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.studentAffairs]));
+
+    test('can view and manage parent link approvals', () {
+      expect(ModuleAccess.canView('parents'), isTrue);
+      expect(ModuleAccess.canManage('parents'), isTrue);
+      expect(ModuleAccess.canView('students'), isTrue);
     });
   });
 
@@ -280,6 +296,7 @@ void main() {
       expect(ModuleAccess.canView('finance'), isFalse);
       expect(ModuleAccess.canView('examinations'), isFalse);
       expect(ModuleAccess.canManage('parents'), isFalse);
+      expect(ModuleAccess.canView('homework'), isFalse);
       expect(ModuleAccess.hasErpAccess, isTrue);
     });
 

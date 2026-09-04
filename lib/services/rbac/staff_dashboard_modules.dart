@@ -159,6 +159,14 @@ abstract final class StaffDashboardModules {
       },
     ),
     const StaffDashboardModule(
+      id: 'homework',
+      labelEn: 'Homework',
+      permissions: {
+        SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewStudents,
+      },
+    ),
+    const StaffDashboardModule(
       id: 'examinations',
       labelEn: 'Examinations',
       permissions: {

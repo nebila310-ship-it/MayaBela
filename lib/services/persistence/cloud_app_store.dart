@@ -502,11 +502,15 @@ class CloudAppStore {
   }
 
   List<String> _localStudentIdsForTeacherScope() {
-    final classes = AuthService.accessClassNamesForSync().toSet();
+    final classes = AuthService.accessClassNamesForSync();
     if (classes.isEmpty) return const [];
     return StudentRegistryService.instance
         .registrySnapshot()
-        .where((s) => classes.contains(s.className))
+        .where(
+          (s) => classes.any(
+            (c) => StudentRegistryService.classNamesMatch(c, s.className),
+          ),
+        )
         .map((s) => s.studentId)
         .toList();
   }
@@ -555,7 +559,7 @@ class CloudAppStore {
     return _schoolRead(
       collection,
       whereInField: 'className',
-      whereInValues: AuthService.accessClassNamesForSync(),
+      whereInValues: AuthService.cloudClassNameQueryValues(),
     );
   }
 
@@ -973,6 +977,7 @@ class CloudAppStore {
         _pullConversations(),
         _pullAppNotifications(),
         _pullCurriculumOffice(),
+        _pullLessonPlans(),
         _pullStudentSupport(),
         _pullDosa(),
         _pullQaMonitor(),
@@ -2984,7 +2989,7 @@ class CloudAppStore {
 
   Future<void> _pullLessonPlans() async {
     final role = AuthService.currentUser?.roleKey;
-    if (role == AuthService.roleParent || role == AuthService.roleDriver) {
+    if (role == AuthService.roleDriver) {
       return;
     }
     final rows = await _scopedClassRead(AppCollections.lessonPlans);

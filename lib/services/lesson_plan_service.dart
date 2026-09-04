@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
 /// Weekly lesson plans. Does not write grades, exams, or admissions scores.
@@ -32,15 +33,16 @@ class LessonPlanService extends ChangeNotifier {
           .trim()
           .toUpperCase();
 
-  bool get _isStudent =>
-      AuthService.currentUser?.roleKey == AuthService.roleStudent;
+  bool get _isPublicReader =>
+      AuthService.currentUser?.roleKey == AuthService.roleStudent ||
+      AuthService.currentUser?.roleKey == AuthService.roleParent;
 
   List<LessonPlan> forSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).toUpperCase();
     final list = sid.isEmpty
         ? _plans.toList()
         : _plans.where((p) => p.schoolId == sid).toList();
-    if (_isStudent) {
+    if (_isPublicReader) {
       return list.where((p) => p.isPublished).toList();
     }
     return list;
@@ -48,14 +50,20 @@ class LessonPlanService extends ChangeNotifier {
 
   List<LessonPlan> publishedForClass(String className, {String? schoolId}) {
     return forSchool(schoolId)
-        .where((p) => p.className == className && p.isPublished)
+        .where(
+          (p) =>
+              StudentRegistryService.classNamesMatch(p.className, className) &&
+              p.isPublished,
+        )
         .toList()
       ..sort((a, b) => b.weekStart.compareTo(a.weekStart));
   }
 
   List<LessonPlan> forClass(String className, {String? schoolId}) {
     return forSchool(schoolId)
-        .where((p) => p.className == className)
+        .where(
+          (p) => StudentRegistryService.classNamesMatch(p.className, className),
+        )
         .toList()
       ..sort((a, b) => b.weekStart.compareTo(a.weekStart));
   }
@@ -184,7 +192,7 @@ class LessonPlanService extends ChangeNotifier {
 
   void applyPersistedData(List<LessonPlan> incoming, {bool merge = false}) {
     var next = incoming;
-    if (_isStudent) {
+    if (_isPublicReader) {
       next = incoming.where((p) => p.isPublished).toList();
     }
     if (!merge) {
@@ -196,7 +204,7 @@ class LessonPlanService extends ChangeNotifier {
       for (final p in next) {
         byId[p.id] = p;
       }
-      if (_isStudent) {
+      if (_isPublicReader) {
         byId.removeWhere((_, p) => !p.isPublished);
       }
       _plans

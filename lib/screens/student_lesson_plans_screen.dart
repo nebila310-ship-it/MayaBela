@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
-/// Student portal: published weekly plans for this class.
+/// Published weekly plans for the signed-in student or a parent's children.
 class StudentLessonPlansScreen extends StatefulWidget {
   const StudentLessonPlansScreen({super.key});
 
@@ -20,14 +21,17 @@ class StudentLessonPlansScreen extends StatefulWidget {
 class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
   final _plans = LessonPlanService.instance;
 
-  String get _className {
+  List<String> get _classNames {
+    final names = <String>{};
     final profile = StudentProfileService.profileForCurrentUser();
     if (profile != null && profile.className.trim().isNotEmpty) {
-      return profile.className.trim();
+      names.add(profile.className.trim());
     }
-    final children = SchoolDataService.instance.getChildren();
-    if (children.isNotEmpty) return children.first.className;
-    return '';
+    for (final child in SchoolDataService.instance.getChildren()) {
+      final n = child.className.trim();
+      if (n.isNotEmpty) names.add(n);
+    }
+    return names.toList();
   }
 
   @override
@@ -43,18 +47,28 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
     return ListenableBuilder(
       listenable: Listenable.merge([_plans, AppLocale.instance]),
       builder: (context, _) {
-        final className = _className;
-        final items = className.isEmpty
-            ? const <LessonPlan>[]
-            : _plans.publishedForClass(className);
+        final classNames = _classNames;
+        final seen = <String>{};
+        final items = <LessonPlan>[];
+        for (final name in classNames) {
+          for (final plan in _plans.publishedForClass(name)) {
+            if (seen.add(plan.id)) items.add(plan);
+          }
+        }
+        items.sort((a, b) => b.weekStart.compareTo(a.weekStart));
+        final emptyClass = classNames.isEmpty;
+        final emptyHint =
+            AuthService.currentUser?.roleKey == AuthService.roleParent
+                ? 'No linked student class yet.'
+                : 'Class not found for this student.';
         return Scaffold(
           backgroundColor: const Color(0xFFCFDBEA),
           appBar: AppBar(
             backgroundColor: accent,
             title: Text(AppLocale.instance.strings.dashboardTitle('lesson_plans')),
           ),
-          body: className.isEmpty
-              ? const Center(child: Text('Class not found for this student.'))
+          body: emptyClass
+              ? Center(child: Text(emptyHint))
               : items.isEmpty
                   ? const Center(child: Text('No published lesson plans yet.'))
                   : ListView.builder(

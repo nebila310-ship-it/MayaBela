@@ -277,6 +277,7 @@ abstract final class CloudSyncEngine {
           AppCollections.classTimetables,
           AppCollections.disciplineCases,
           AppCollections.leaveRequests,
+          AppCollections.lessonPlans,
           AppCollections.curriculumUnits,
           AppCollections.curriculumFeedback,
           AppCollections.healthRecords,

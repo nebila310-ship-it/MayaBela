@@ -126,6 +126,39 @@ void main() {
     AuthService.currentUser = null;
   });
 
+  test('publishedForClass matches compact 5B with Grade 5B', () async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.sci',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.createPlan(
+      title: 'Fractions',
+      className: 'Grade 5B',
+      subject: 'Mathematics',
+      schoolId: 'TB-001',
+    );
+    final draft = LessonPlanService.instance.forClass('5B', schoolId: 'TB-001');
+    expect(draft, hasLength(1));
+    await LessonPlanService.instance.setStatus(
+      draft.first.id,
+      LessonPlanStatus.published,
+    );
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.5b',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+    );
+    expect(
+      LessonPlanService.instance.publishedForClass('5B', schoolId: 'TB-001'),
+      hasLength(1),
+    );
+    AuthService.currentUser = null;
+  });
+
   test('lesson plans ride academic, not examinations', () {
     AuthService.currentUser = RegisteredUser(
       username: 'vp.lessons',

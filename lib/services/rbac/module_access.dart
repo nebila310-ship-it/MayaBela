@@ -192,6 +192,13 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.manageStudents],
     ),
+    'homework': ModuleRule(
+      view: [
+        SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewStudents,
+      ],
+      manage: [],
+    ),
 
     // Resources
     'library': ModuleRule(
@@ -389,12 +396,14 @@ abstract final class ModuleAccess {
   /// 7 Classroom teachers → VP + HR + SD. 8 Finance → Finance Manager + VP.
   /// 9 Transport & buses → VP + HR (+ Transport Head, the unit operator).
   /// 10 Attendance → VP + SD, QA read-only. 11 Parent link approvals → VP +
-  /// SD (+ homeroom teachers on their own dashboard). 12 Inventory →
-  /// Procurement + VP (+ Store Keeper, the counter side). 13–14 Library &
-  /// e-books → VP + SD (+ Librarian); teachers/students/parents use their
-  /// own dashboard tiles. 15 Announcements → all roles. 16 Events & calendar
-  /// → SD (staff side). 17 QA findings → QA + VP. 18 Messages → all roles.
-  /// 19–20 Settings & profile → everyone (open chrome).
+  /// SD + Student Affairs (+ homeroom teachers on their own dashboard).
+  /// 12 Inventory → Procurement + VP (+ Store Keeper, the counter side).
+  /// 13–14 Library & e-books → VP + SD (+ Librarian); teachers/students/parents
+  /// use their own dashboard tiles. 15 Announcements → all roles. 16 Events &
+  /// calendar → SD manages; VP + executives read-only. 17 QA findings → QA +
+  /// VP. 18 Messages → all roles. 19–20 Settings & profile → everyone (open
+  /// chrome). Homework on the ERP is office read-only; teachers still post
+  /// from teacher tiles.
   static const Map<String, ModuleRoleAllocation> roleAllocations = {
     'examinations': ModuleRoleAllocation(
       visibleTo: {
@@ -546,13 +555,27 @@ abstract final class ModuleAccess {
       },
       manageBy: {StaffRoles.vicePresident, StaffRoles.sectionDirector},
     ),
+    'homework': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.vicePresident,
+        StaffRoles.sectionDirector,
+        StaffRoles.qualityAssurance,
+        ..._executiveOversight,
+      },
+      manageBy: <String>{},
+    ),
     'parents': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.vicePresident,
         StaffRoles.sectionDirector,
+        StaffRoles.studentAffairs,
         ..._executiveOversight,
       },
-      manageBy: {StaffRoles.vicePresident, StaffRoles.sectionDirector},
+      manageBy: {
+        StaffRoles.vicePresident,
+        StaffRoles.sectionDirector,
+        StaffRoles.studentAffairs,
+      },
     ),
     'inventory': ModuleRoleAllocation(
       visibleTo: {
@@ -595,11 +618,19 @@ abstract final class ModuleAccess {
     ),
     'announcements': ModuleRoleAllocation(visibleTo: _everyStaffRole),
     'events': ModuleRoleAllocation(
-      visibleTo: {StaffRoles.sectionDirector, ..._executiveOversight},
+      visibleTo: {
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
       manageBy: {StaffRoles.sectionDirector},
     ),
     'calendar': ModuleRoleAllocation(
-      visibleTo: {StaffRoles.sectionDirector, ..._executiveOversight},
+      visibleTo: {
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
       manageBy: {StaffRoles.sectionDirector},
     ),
     'quality_assurance': ModuleRoleAllocation(

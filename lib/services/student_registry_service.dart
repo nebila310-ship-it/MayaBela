@@ -467,9 +467,98 @@ class StudentRegistryService {
     return className.trim().replaceAll(RegExp(r'\s+'), ' ');
   }
 
+  /// Compact `"5B"` and roster `"Grade 5B"` must hit the same cloud rows.
+  static const int maxClassNameQueryValues = 10;
+
+  /// Distinct spellings of one class for `whereIn` / local alias matching.
+  static List<String> classNameQueryValues(String className) {
+    final raw = className.trim();
+    if (raw.isEmpty) return const [];
+    final seen = <String>{};
+
+    void add(String value) {
+      final t = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (t.isNotEmpty) seen.add(t);
+    }
+
+    add(raw);
+    add(canonicalClassName(raw));
+
+    final parts = parseClassNameParts(raw);
+    if (parts != null && parts.section.isNotEmpty) {
+      add(buildClassName(parts.grade, parts.section));
+      add('${parts.grade} ${parts.section}');
+      final digits = RegExp(r'(\d+)').firstMatch(parts.grade)?.group(1);
+      if (digits != null) {
+        add('$digits${parts.section}');
+        add('$digits ${parts.section}');
+        add('Grade $digits${parts.section}');
+        add('Grade $digits ${parts.section}');
+      }
+    }
+
+    final compact = RegExp(r'^(\d+)\s*([A-Za-z]{1,3})$').firstMatch(raw);
+    if (compact != null) {
+      final n = compact.group(1)!;
+      final s = compact.group(2)!;
+      add('$n$s');
+      add('$n $s');
+      add(buildClassName('Grade $n', s));
+      add('Grade $n $s');
+    }
+
+    final gradeForm = RegExp(
+      r'^Grade\s+(\d+)\s*([A-Za-z]{1,3})?$',
+      caseSensitive: false,
+    ).firstMatch(canonicalClassName(raw).replaceAll(RegExp(r'\s+'), ' '));
+    if (gradeForm != null) {
+      final n = gradeForm.group(1)!;
+      final s = gradeForm.group(2);
+      if (s != null && s.isNotEmpty) {
+        add('$n$s');
+        add('Grade $n$s');
+        add('Grade $n $s');
+      }
+    }
+
+    return seen.take(maxClassNameQueryValues).toList();
+  }
+
+  /// Expands several class names, keeping originals first, capped for `whereIn`.
+  static List<String> expandClassNameQueryValues(
+    Iterable<String> classNames, {
+    int cap = maxClassNameQueryValues,
+  }) {
+    final seen = <String>{};
+    final originals = <String>[];
+    for (final name in classNames) {
+      final t = name.trim();
+      if (t.isEmpty) continue;
+      originals.add(t);
+      if (seen.add(t) && seen.length >= cap) return seen.toList();
+    }
+    for (final name in originals) {
+      for (final alias in classNameQueryValues(name)) {
+        if (seen.add(alias) && seen.length >= cap) return seen.toList();
+      }
+    }
+    return seen.toList();
+  }
+
   static bool classNamesMatch(String a, String b) {
-    if (canonicalClassName(a) == canonicalClassName(b)) return true;
-    return a.trim().toLowerCase() == b.trim().toLowerCase();
+    final left = a.trim();
+    final right = b.trim();
+    if (left.isEmpty || right.isEmpty) return false;
+    if (left.toLowerCase() == right.toLowerCase()) return true;
+    if (canonicalClassName(left).toLowerCase() ==
+        canonicalClassName(right).toLowerCase()) {
+      return true;
+    }
+    final aliasesA =
+        classNameQueryValues(left).map((e) => e.toLowerCase()).toSet();
+    final aliasesB =
+        classNameQueryValues(right).map((e) => e.toLowerCase()).toSet();
+    return aliasesA.intersection(aliasesB).isNotEmpty;
   }
 
   AdminStudentRecord? lookupById(String studentId) {

@@ -892,6 +892,22 @@ List<DashboardEntry> _parentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'lesson_plans',
+      icon: Icons.event_note_outlined,
+      color: const Color(0xFF5D4037),
+      builder: (context) => DashboardCard(
+        icon: Icons.event_note_outlined,
+        title: _t('lesson_plans', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('lesson_plans', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentLessonPlansScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'learning_materials',
       icon: Icons.menu_book,
       color: const Color(0xFF4527A0),
@@ -2522,7 +2538,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My children',
           icon: Icons.child_care,
-          entryIds: ['children', 'attendance', 'homework', 'curriculum', 'qa_surveys', 'learning_materials', 'grades', 'timetable'],
+          entryIds: ['children', 'attendance', 'homework', 'lesson_plans', 'curriculum', 'qa_surveys', 'learning_materials', 'grades', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'School updates',
