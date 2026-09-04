@@ -393,14 +393,27 @@ class AuthService {
     cloudAssignedClassNames = const [];
   }
 
-  /// Class names the signed-in parent/teacher may sync from Firestore.
+  /// Mirrors `public.jwt_can_read_all_school_data()` so office desks that
+  /// authenticate as cloud `teacher` still pull school-wide rows.
+  /// Classroom teachers and Staff (no school-wide permission) stay class-scoped.
+  static bool get mayReadAllSchoolData {
+    final user = currentUser;
+    if (user == null) return false;
+    if (user.roleKey == roleAdmin) return true;
+    if (user.staffRoles.contains(StaffRoles.fullAccess)) return true;
+    return hasPermission(SchoolPermissions.viewAllSchoolData) ||
+        hasPermission(SchoolPermissions.viewAllDepartments);
+  }
+
+  /// Class names the signed-in parent/teacher/student may sync from cloud.
   static List<String> accessClassNamesForSync() {
     final user = currentUser;
     if (user == null) return const [];
     if (user.roleKey == roleParent) {
       final fromKids = <String>{};
       for (final id in activeLinkedStudentIds()) {
-        final student = StudentRegistryService.instance.lookupById(id);
+        final student = StudentRegistryService.instance.lookupById(id) ??
+            StudentRegistryService.instance.lookupAnyById(id);
         final className = student?.className.trim();
         if (className != null && className.isNotEmpty) {
           fromKids.add(className);
@@ -408,6 +421,18 @@ class AuthService {
       }
       if (fromKids.isNotEmpty) return fromKids.toList();
       return List<String>.from(cloudLinkedClassNames);
+    }
+    if (user.roleKey == roleStudent) {
+      final student = StudentRegistryService.instance.lookupAnyById(
+            (user.linkedStudentId ?? '').trim(),
+          ) ??
+          StudentRegistryService.instance.lookupByLoginUsername(user.username);
+      final className = student?.className.trim();
+      if (className != null && className.isNotEmpty) return [className];
+      if (cloudLinkedClassNames.isNotEmpty) {
+        return List<String>.from(cloudLinkedClassNames);
+      }
+      return const [];
     }
     if (user.roleKey == roleTeacher) {
       final fromRegistry = <String>{};
@@ -427,6 +452,7 @@ class AuthService {
   }
 
   static bool get usesScopedCloudReads {
+    if (mayReadAllSchoolData) return false;
     final role = currentUser?.roleKey;
     return role == roleParent || role == roleTeacher || role == roleStudent;
   }
