@@ -117,7 +117,7 @@ void main() {
       );
     });
 
-    test('vice president has oversight plus communications and library', () {
+    test('vice president has allocated write claims plus communications', () {
       final vp = StaffRoles.lookup(StaffRoles.vicePresident)!.permissions;
       expect(vp, contains(SchoolPermissions.approveTransfers));
       expect(vp, contains(SchoolPermissions.approvePurchaseRequests));
@@ -126,8 +126,11 @@ void main() {
       expect(vp, contains(SchoolPermissions.manageMaterialAccess));
       expect(vp, contains(SchoolPermissions.accessSupport));
       expect(vp, contains(SchoolPermissions.messageParents));
-      expect(vp, isNot(contains(SchoolPermissions.manageStudents)));
-      expect(vp, isNot(contains(SchoolPermissions.manageFees)));
+      expect(vp, contains(SchoolPermissions.manageStudents));
+      expect(vp, contains(SchoolPermissions.manageFees));
+      expect(vp, contains(SchoolPermissions.manageParentLinks));
+      expect(vp, isNot(contains(SchoolPermissions.assignRoles)));
+      expect(vp, isNot(contains(SchoolPermissions.manageSchoolSettings)));
     });
 
     test('unknown role keys are ignored', () {
