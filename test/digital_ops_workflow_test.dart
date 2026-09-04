@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,7 @@ import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
+import 'package:mayabela/web_erp/pages/web_digital_ops_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -118,5 +120,25 @@ void main() {
     expect(StaffRoles.lookup(StaffRoles.staffs)!.permissions,
         contains(SchoolPermissions.manageDigitalOps));
     expect(StaffRoles.templates.any((r) => r.key == 'it'), isFalse);
+  });
+
+  testWidgets('Digital operations desk shows all five phases', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebDigitalOpsPage()),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Digital operations'), findsOneWidget);
+    expect(find.text('1 · People & devices'), findsOneWidget);
+    expect(find.text('2 · Access help'), findsOneWidget);
+    expect(find.text('3 · Go-live ops'), findsOneWidget);
+    expect(find.text('4 · Campus systems'), findsOneWidget);
+    expect(find.text('5 · Weekly ritual'), findsOneWidget);
+    expect(find.text('Add device'), findsOneWidget);
   });
 }
