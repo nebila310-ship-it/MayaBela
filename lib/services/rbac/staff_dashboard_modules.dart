@@ -239,6 +239,11 @@ abstract final class StaffDashboardModules {
       permissions: {SchoolPermissions.viewSystemHealth},
     ),
     const StaffDashboardModule(
+      id: 'digital_ops',
+      labelEn: 'Digital operations',
+      permissions: {SchoolPermissions.manageDigitalOps},
+    ),
+    const StaffDashboardModule(
       id: 'settings',
       labelEn: 'Settings',
       permissions: {},

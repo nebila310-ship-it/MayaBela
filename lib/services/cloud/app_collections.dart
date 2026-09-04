@@ -91,6 +91,10 @@ abstract final class AppCollections {
   static const dataRightsRequests = 'data_rights_requests';
   static const schoolBackups = 'school_backups';
 
+  /// Administration Staff digital-ops desk (device register + Friday ritual).
+  static const ictDevices = 'ict_devices';
+  static const ictWeeklyReviews = 'ict_weekly_reviews';
+
   // School inventory
   static const inventoryItems = 'inventory_items';
   static const stockTransactions = 'stock_transactions';

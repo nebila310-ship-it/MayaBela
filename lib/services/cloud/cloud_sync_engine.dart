@@ -228,6 +228,8 @@ abstract final class CloudSyncEngine {
     AppCollections.privacyConsents,
     AppCollections.dataRightsRequests,
     AppCollections.schoolBackups,
+    AppCollections.ictDevices,
+    AppCollections.ictWeeklyReviews,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,

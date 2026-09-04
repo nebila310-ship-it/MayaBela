@@ -88,6 +88,10 @@ abstract final class SchoolPermissions {
   static const manageSchoolSettings = 'manage_school_settings';
   static const manageCampuses = 'manage_campuses';
 
+  /// Administration Staff digital-ops desk (devices, access help, go-live
+  /// buttons, campus systems, Friday checklist). Not Full Access.
+  static const manageDigitalOps = 'manage_digital_ops';
+
   static const Set<String> all = {
     viewStudents,
     manageStudents,
@@ -134,6 +138,7 @@ abstract final class SchoolPermissions {
     manageQaFindings,
     manageSchoolSettings,
     manageCampuses,
+    manageDigitalOps,
   };
 }
 
@@ -514,6 +519,7 @@ abstract final class StaffRoles {
       permissions: _withBaseline({
         SchoolPermissions.viewStaff,
         SchoolPermissions.accessSupport,
+        SchoolPermissions.manageDigitalOps,
       }),
     ),
   ];

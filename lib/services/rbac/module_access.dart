@@ -70,8 +70,14 @@ abstract final class ModuleAccess {
       manage: [SchoolPermissions.manageCampuses],
     ),
     'cctv': ModuleRule(
-      view: [SchoolPermissions.manageSchoolSettings],
-      manage: [SchoolPermissions.manageSchoolSettings],
+      view: [
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
+      manage: [
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
       departmental: false,
     ),
 
@@ -264,8 +270,17 @@ abstract final class ModuleAccess {
       view: [
         SchoolPermissions.viewSystemHealth,
         SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
       ],
-      manage: [SchoolPermissions.manageSchoolSettings],
+      manage: [
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
+      departmental: false,
+    ),
+    'digital_ops': ModuleRule(
+      view: [SchoolPermissions.manageDigitalOps],
+      manage: [SchoolPermissions.manageDigitalOps],
       departmental: false,
     ),
     // School owner configures role → module checkboxes.
@@ -332,6 +347,8 @@ abstract final class ModuleAccess {
     'backups': 'go_live',
     'training_manuals': 'go_live',
     'mfa': 'go_live',
+    'ict': 'digital_ops',
+    'devices': 'digital_ops',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).
@@ -509,9 +526,13 @@ abstract final class ModuleAccess {
     ),
     'cctv': ModuleRoleAllocation(
       visibleTo: {
+        StaffRoles.staffs,
+        StaffRoles.humanResource,
+        StaffRoles.vicePresident,
         ..._executiveOversight,
       },
       manageBy: {
+        StaffRoles.staffs,
         StaffRoles.generalManager,
         StaffRoles.principal,
       },
@@ -606,18 +627,34 @@ abstract final class ModuleAccess {
       },
       manageBy: <String>{},
     ),
-    'system_health': ModuleRoleAllocation(visibleTo: <String>{}),
+    'system_health': ModuleRoleAllocation(
+      visibleTo: {StaffRoles.staffs},
+    ),
     'go_live': ModuleRoleAllocation(
       visibleTo: {
+        StaffRoles.staffs,
         StaffRoles.vicePresident,
         StaffRoles.registrar,
         ..._executiveOversight,
       },
       manageBy: {
+        StaffRoles.staffs,
         StaffRoles.principal,
         StaffRoles.vicePresident,
         StaffRoles.registrar,
         StaffRoles.generalManager,
+      },
+    ),
+    'digital_ops': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.staffs,
+        StaffRoles.humanResource,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.staffs,
+        StaffRoles.principal,
       },
     ),
   };

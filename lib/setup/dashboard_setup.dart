@@ -76,6 +76,8 @@ import 'package:mayabela/web_erp/pages/web_student_support_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_programs_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
 import 'package:mayabela/web_erp/pages/web_go_live_page.dart';
+import 'package:mayabela/web_erp/pages/web_digital_ops_page.dart';
+import 'package:mayabela/web_erp/pages/web_cctv_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
 
@@ -806,6 +808,28 @@ List<DashboardEntry> _staffModuleEntries() {
       screenBuilder: () => MobileErpHost(
         title: _t('go_live', adminRole),
         child: const WebGoLivePage(),
+      ),
+    ),
+    entry(
+      id: 'staff_digital_ops',
+      titleId: 'digital_ops',
+      icon: Icons.devices_other_outlined,
+      color: const Color(0xFF455A64),
+      moduleId: 'digital_ops',
+      screenBuilder: () => MobileErpHost(
+        title: _t('digital_ops', adminRole),
+        child: const WebDigitalOpsPage(),
+      ),
+    ),
+    entry(
+      id: 'staff_cctv',
+      titleId: 'cctv',
+      icon: Icons.videocam_outlined,
+      color: const Color(0xFF37474F),
+      moduleId: 'cctv',
+      screenBuilder: () => MobileErpHost(
+        title: _t('cctv', adminRole),
+        child: const WebCctvPage(),
       ),
     ),
   ];
@@ -1951,6 +1975,27 @@ List<DashboardEntry> _adminEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'digital_ops',
+      icon: Icons.devices_other_outlined,
+      color: const Color(0xFF455A64),
+      builder: (context) => DashboardCard(
+        icon: Icons.devices_other_outlined,
+        title: _t('digital_ops', role),
+        color: const Color(0xFF455A64),
+        onTap: () => _openTile('digital_ops', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MobileErpHost(
+                title: _t('digital_ops', role),
+                child: const WebDigitalOpsPage(),
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'go_live',
       icon: Icons.verified_user_outlined,
       color: const Color(0xFF37474F),
@@ -2389,7 +2434,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'System',
           icon: Icons.shield_outlined,
-          entryIds: ['audit_log', 'system_health', 'go_live', 'grade_workflow_settings'],
+          entryIds: ['audit_log', 'system_health', 'digital_ops', 'go_live', 'grade_workflow_settings'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',
@@ -2458,6 +2503,8 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
             'staff_reports',
             'staff_audit_log',
             'staff_go_live',
+            'staff_digital_ops',
+            'staff_cctv',
           ],
         ),
         const DashboardSectionDefinition(

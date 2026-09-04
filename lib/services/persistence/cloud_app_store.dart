@@ -27,6 +27,7 @@ import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/models/dosa_models.dart';
 import 'package:mayabela/models/qa_monitor_models.dart';
 import 'package:mayabela/models/golive_models.dart';
+import 'package:mayabela/models/digital_ops_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -76,8 +77,10 @@ import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/persistence/qa_monitor_persistence_service.dart';
 import 'package:mayabela/services/persistence/golive_persistence_service.dart';
+import 'package:mayabela/services/persistence/digital_ops_persistence_service.dart';
 import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/digital_ops_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -350,6 +353,9 @@ class CloudAppStore {
       case AppCollections.dataRightsRequests:
       case AppCollections.schoolBackups:
         return 'golive';
+      case AppCollections.ictDevices:
+      case AppCollections.ictWeeklyReviews:
+        return 'digital_ops';
       case AppCollections.inventoryItems:
       case AppCollections.classroomInventory:
       case AppCollections.stockTransactions:
@@ -445,6 +451,8 @@ class CloudAppStore {
         await _pullQaMonitor();
       case 'golive':
         await _pullGoLive();
+      case 'digital_ops':
+        await _pullDigitalOps();
       case 'inventory':
         await _pullInventory();
       case 'procurement':
@@ -575,6 +583,7 @@ class CloudAppStore {
       _pullDosa(),
       _pullQaMonitor(),
       _pullGoLive(),
+      _pullDigitalOps(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -692,6 +701,7 @@ class CloudAppStore {
     await pushAllDosa();
     await pushAllQaMonitor();
     await pushAllGoLive();
+    await pushAllDigitalOps();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -991,6 +1001,7 @@ class CloudAppStore {
         _pullDosa(),
         _pullQaMonitor(),
         _pullGoLive(),
+        _pullDigitalOps(),
         _pullInventory(),
         _pullProcurement(),
         _pullConversations(),
@@ -1051,6 +1062,7 @@ class CloudAppStore {
         _pullDosa(),
         _pullQaMonitor(),
         _pullGoLive(),
+        _pullDigitalOps(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -3508,6 +3520,60 @@ class CloudAppStore {
       merge: true,
     );
     await GolivePersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  Future<void> pushAllDigitalOps() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent ||
+        role == AuthService.roleStudent ||
+        role == AuthService.roleDriver) {
+      return;
+    }
+    final svc = DigitalOpsService.instance;
+    Future<void> push(String collection, List<Map<String, dynamic>> items) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ));
+    }
+
+    await push(AppCollections.ictDevices, svc.deviceMaps());
+    await push(AppCollections.ictWeeklyReviews, svc.reviewMaps());
+  }
+
+  Future<void> _pullDigitalOps() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final deviceRows = await _schoolRead(AppCollections.ictDevices);
+    final reviewRows = await _schoolRead(AppCollections.ictWeeklyReviews);
+    if (deviceRows.isEmpty && reviewRows.isEmpty) return;
+
+    final devices = <IctDeviceRecord>[];
+    for (final map in deviceRows) {
+      try {
+        devices.add(IctDeviceRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final reviews = <IctWeeklyReview>[];
+    for (final map in reviewRows) {
+      try {
+        reviews.add(IctWeeklyReview.fromMap(map));
+      } catch (_) {}
+    }
+    if (devices.isEmpty && reviews.isEmpty) return;
+
+    DigitalOpsService.instance.applyPersistedData(
+      devices: devices.isEmpty ? null : devices,
+      reviews: reviews.isEmpty ? null : reviews,
+      merge: true,
+    );
+    await DigitalOpsPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

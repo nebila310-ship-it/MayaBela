@@ -20,6 +20,8 @@ import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/qa_monitor_service.dart';
+import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/digital_ops_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
@@ -118,6 +120,8 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         InventoryService.instance,
         DashboardBadgeService.instance,
         EnrollmentService.instance,
+        DigitalOpsService.instance,
+        GoliveService.instance,
         SchoolContentSyncService.instance,
         ConversationRealtimeSync.instance,
       ]),
@@ -473,6 +477,21 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       ));
     }
 
+    if (ModuleAccess.canView('digital_ops')) {
+      final pending = DigitalOpsService.instance.pendingParentLinks(sid);
+      final devices = DigitalOpsService.instance.devicesForSchool(sid).length;
+      final week = DigitalOpsService.instance.reviewThisWeek(sid);
+      out.add(_StatCard(
+        moduleId: 'digital_ops',
+        icon: Icons.devices_other_outlined,
+        color: const Color(0xFF455A64),
+        value: '$pending',
+        label: 'Parent links to help',
+        sub: '$devices devices · '
+            '${week?.complete == true ? 'Friday checklist done' : 'Friday checklist open'}',
+      ));
+    }
+
     return out;
   }
 
@@ -621,6 +640,18 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       Icons.family_restroom_outlined,
       'Parent link requests to approve',
       DashboardBadgeService.instance.countFor('parent_approvals'),
+    );
+    add(
+      'digital_ops',
+      Icons.support_agent_outlined,
+      'Parent-link pile to escalate (do not approve here)',
+      DigitalOpsService.instance.pendingParentLinks(sid),
+    );
+    add(
+      'digital_ops',
+      Icons.event_available_outlined,
+      'Friday digital-ops checklist not finished',
+      DigitalOpsService.instance.reviewThisWeek(sid)?.complete == true ? 0 : 1,
     );
     add(
       'student_affairs',
