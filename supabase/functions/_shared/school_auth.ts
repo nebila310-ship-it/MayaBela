@@ -111,8 +111,6 @@ const LEADERSHIP = withBaseline([
   "access_support",
   "message_parents",
   "manage_staff_accounts",
-  "assign_teachers",
-  "manage_classes",
 ]);
 
 export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -127,8 +125,15 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_reports",
     "view_audit_log",
   ]),
-  general_manager: LEADERSHIP,
-  deputy_general_manager: LEADERSHIP,
+  general_manager: withBaseline([
+    ...LEADERSHIP,
+    "manage_digital_ops",
+  ]),
+  deputy_general_manager: withBaseline([
+    ...LEADERSHIP,
+    "assign_teachers",
+    "manage_classes",
+  ]),
   principal: withBaseline([
     "view_students",
     "view_staff",
@@ -143,6 +148,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "message_parents",
     "access_support",
     "view_transport",
+    "manage_digital_ops",
   ]),
   quality_assurance: withBaseline([
     "view_students",
@@ -175,6 +181,16 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "message_parents",
     "assign_teachers",
     "manage_classes",
+    "manage_students",
+    "manage_parent_links",
+    "manage_fees",
+    "record_payments",
+    "manage_staff_accounts",
+    "manage_buses",
+    "manage_drivers",
+    "assign_student_transport",
+    "manage_qa_findings",
+    "manage_digital_ops",
   ]),
   section_director: withBaseline([
     "manage_classes",
@@ -195,6 +211,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_parent_links",
     "access_support",
     "message_parents",
+    "send_announcements",
   ]),
   student_affairs: withBaseline([
     "view_students",
@@ -214,6 +231,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "promote_students",
     "message_parents",
     "access_support",
+    "manage_digital_ops",
   ]),
   accountant: withBaseline([
     "manage_fees",
@@ -281,7 +299,8 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_all_grades",
     "view_all_school_data",
     "approve_grades",
-    "approve_transfers",
+    "create_transfers",
+    "manage_students",
     "manage_learning_materials",
     "manage_material_access",
     "view_students",
@@ -291,6 +310,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_parent_links",
     "access_support",
     "message_parents",
+    "send_announcements",
   ]),
   hr_admin: withBaseline([
     "view_staff",
