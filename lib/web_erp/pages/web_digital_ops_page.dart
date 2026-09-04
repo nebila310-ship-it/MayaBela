@@ -6,7 +6,6 @@ import 'package:mayabela/models/digital_ops_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
 import 'package:mayabela/services/digital_ops_service.dart';
-import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -86,8 +85,6 @@ class _WebDigitalOpsPageState extends State<WebDigitalOpsPage>
               DigitalOpsService.instance,
               EnrollmentService.instance,
               GoliveService.instance,
-              DriverRegistryService.instance,
-              CctvCatalogService.instance,
             ]),
             builder: (context, _) {
               return TabBarView(
