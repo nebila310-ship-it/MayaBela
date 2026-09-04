@@ -29,6 +29,12 @@ class _WebDigitalOpsPageState extends State<WebDigitalOpsPage>
   bool get _canManage => ModuleAccess.canManage('digital_ops');
 
   @override
+  void initState() {
+    super.initState();
+    CctvCatalogService.instance.ensureLoaded();
+  }
+
+  @override
   void dispose() {
     _tabs.dispose();
     super.dispose();
@@ -494,20 +500,24 @@ class _CampusTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sid = AuthService.activeSchoolId;
-    final sites = CctvCatalogService.instance.sitesForSchool(sid);
-    final wired = sites.where((s) => s.isWired).length;
     final missingGps = DigitalOpsService.instance.driverPhonesWithoutGps(sid);
     final labPcs = DigitalOpsService.instance
         .devicesForSchool(sid)
         .where((d) => d.kind == IctDeviceKind.labPc)
         .length;
-    return ListView(
+    return ListenableBuilder(
+      listenable: CctvCatalogService.instance,
+      builder: (context, _) {
+        final sites = CctvCatalogService.instance.sitesForSchool(sid);
+        final wired = sites.where((s) => s.isWired).length;
+        return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
           'Hardware and access stay with Administration Staff. Academics stay '
           'with teachers. Tick GPS on the driver phone, keep lab PCs on this '
-          'register, open CCTV when the school has cameras.',
+          'register, open CCTV when the school has cameras. CCTV footage stays '
+          'on the school NVR — it is not uploaded to the MayaBela cloud.',
         ),
         const SizedBox(height: 12),
         Card(
@@ -545,6 +555,8 @@ class _CampusTab extends StatelessWidget {
             ),
           ),
       ],
+        );
+      },
     );
   }
 }

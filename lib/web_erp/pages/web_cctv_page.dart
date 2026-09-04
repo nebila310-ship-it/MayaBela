@@ -1,62 +1,100 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/admin_edit_dialog.dart';
+import 'package:mayabela/widgets/admin_form_ui.dart';
 
-/// Admin CCTV hub. Camera sites are real module UI; live picture attaches
-/// later when [CctvCameraSite.streamUrl] is filled from the school NVR.
-class WebCctvPage extends StatelessWidget {
+/// Admin CCTV hub. Camera sites stay on this device / the school NVR.
+/// MayaBela does not store or sync footage to the school cloud.
+class WebCctvPage extends StatefulWidget {
   const WebCctvPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final sites = CctvCatalogService.instance.sitesForSchool(
-      AuthService.activeSchoolId,
-    );
-    final wired = sites.where((s) => s.isWired).length;
+  State<WebCctvPage> createState() => _WebCctvPageState();
+}
 
-    return SingleChildScrollView(
-      padding: WebViewport.pagePadding(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header(context, siteCount: sites.length, wiredCount: wired),
-          const SizedBox(height: 20),
-          Text('Camera sites', style: WebErpTheme.sectionTitle(context)),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, c) {
-              final width = c.maxWidth;
-              final columns = width >= 1100
-                  ? 4
-                  : width >= 720
-                      ? 2
-                      : 1;
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: columns,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.35,
-                children: [
-                  for (final site in sites) _CameraTile(site: site),
-                ],
-              );
-            },
+class _WebCctvPageState extends State<WebCctvPage> {
+  @override
+  void initState() {
+    super.initState();
+    CctvCatalogService.instance.ensureLoaded();
+  }
+
+  bool get _canManage => ModuleAccess.canManage('cctv');
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        CctvCatalogService.instance,
+        AppLocale.instance,
+      ]),
+      builder: (context, _) {
+        final s = AppLocale.instance.strings;
+        final sites = CctvCatalogService.instance.sitesForSchool(
+          AuthService.activeSchoolId,
+        );
+        final wired = sites.where((site) => site.isWired).length;
+
+        return SingleChildScrollView(
+          padding: WebViewport.pagePadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _header(context, s, siteCount: sites.length, wiredCount: wired),
+              const SizedBox(height: 12),
+              _localOnlyBanner(context, s),
+              const SizedBox(height: 20),
+              Text(s.cctvCameraSites, style: WebErpTheme.sectionTitle(context)),
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, c) {
+                  final width = c.maxWidth;
+                  final columns = width >= 1100
+                      ? 4
+                      : width >= 720
+                          ? 2
+                          : 1;
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: _canManage ? 1.15 : 1.35,
+                    children: [
+                      for (final site in sites)
+                        _CameraTile(
+                          site: site,
+                          canManage: _canManage,
+                          onLink: () => _linkSite(site),
+                          onOpen: site.isWired
+                              ? () => _openNvrLink(site.streamUrl!)
+                              : null,
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              _connectCard(context, s),
+            ],
           ),
-          const SizedBox(height: 24),
-          _connectCard(context),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _header(
-    BuildContext context, {
+    BuildContext context,
+    AppStrings s, {
     required int siteCount,
     required int wiredCount,
   }) {
@@ -67,9 +105,9 @@ class WebCctvPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'CCTV',
-            style: TextStyle(
+          Text(
+            s.cctvTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
               fontSize: 22,
@@ -78,8 +116,7 @@ class WebCctvPage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Campus cameras from the school’s existing recorder. '
-            'Live picture appears when the NVR is linked.',
+            s.cctvHeaderSubtitle,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.92),
               height: 1.35,
@@ -90,13 +127,14 @@ class WebCctvPage extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _chip('$siteCount sites mapped'),
+              _chip(s.cctvSitesMapped(siteCount)),
               _chip(
                 wiredCount == 0
-                    ? 'Ready to connect'
-                    : '$wiredCount live feeds',
+                    ? s.cctvReadyToConnect
+                    : s.cctvWiredOnDevice(wiredCount),
               ),
-              _chip('Staff only'),
+              _chip(s.cctvStaffOnly),
+              _chip(s.cctvNotInCloudChip),
             ],
           ),
         ],
@@ -122,7 +160,37 @@ class WebCctvPage extends StatelessWidget {
     );
   }
 
-  Widget _connectCard(BuildContext context) {
+  Widget _localOnlyBanner(BuildContext context, AppStrings s) {
+    return Container(
+      key: const Key('cctv-local-only-banner'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.videocam_off_outlined, size: 18, color: Colors.amber.shade900),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              s.cctvLocalOnlyBanner,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Colors.amber.shade900,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _connectCard(BuildContext context, AppStrings s) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -130,12 +198,10 @@ class WebCctvPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('How live feed connects', style: WebErpTheme.sectionTitle(context)),
+          Text(s.cctvHowConnectTitle, style: WebErpTheme.sectionTitle(context)),
           const SizedBox(height: 8),
           Text(
-            'The school keeps its current cameras and NVR. MayaBela only '
-            'opens the views for signed-in admin and leadership. Supported '
-            'hooks: Hik-Connect / DMSS cloud, RTSP, or HLS from the recorder.',
+            s.cctvHowConnectBody,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: WebErpTheme.paperInk.withValues(alpha: 0.75),
                   height: 1.4,
@@ -145,26 +211,93 @@ class WebCctvPage extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: const [
-              Chip(label: Text('Hik-Connect')),
-              Chip(label: Text('RTSP')),
-              Chip(label: Text('HLS')),
-              Chip(label: Text('Staff roles')),
+            children: [
+              Chip(label: Text(s.cctvHookHik)),
+              Chip(label: Text(s.cctvHookRtsp)),
+              Chip(label: Text(s.cctvHookHls)),
+              Chip(label: Text(s.cctvNotInCloudChip)),
             ],
           ),
         ],
       ),
     );
   }
+
+  Future<void> _linkSite(CctvCameraSite site) async {
+    final s = AppLocale.instance.strings;
+    final controller = TextEditingController(text: site.streamUrl ?? '');
+    final saved = await showAdminFormDialog(
+      context: context,
+      title: s.cctvLinkNvrTitle,
+      subtitle: site.name,
+      accent: ClassroomPalette.navy,
+      icon: Icons.videocam_outlined,
+      saveLabel: s.save,
+      builder: (context, setDialogState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            s.cctvLinkNvrHint,
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 13,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          adminDialogField(
+            TextField(
+              controller: controller,
+              decoration: adminFieldDecoration(
+                label: s.cctvStreamUrlLabel,
+                icon: Icons.link_outlined,
+                accent: ClassroomPalette.navy,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (saved) {
+      await CctvCatalogService.instance.setLocalStreamUrl(
+        siteId: site.id,
+        streamUrl: controller.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s.cctvSavedLocalOnly),
+            backgroundColor: Colors.orange.shade800,
+          ),
+        );
+      }
+    }
+    controller.dispose();
+  }
+
+  Future<void> _openNvrLink(String raw) async {
+    final uri = Uri.tryParse(raw.trim());
+    if (uri == null || !(uri.hasScheme)) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 }
 
 class _CameraTile extends StatelessWidget {
-  const _CameraTile({required this.site});
+  const _CameraTile({
+    required this.site,
+    required this.canManage,
+    required this.onLink,
+    this.onOpen,
+  });
 
   final CctvCameraSite site;
+  final bool canManage;
+  final VoidCallback onLink;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
+    final s = AppLocale.instance.strings;
     final wired = site.isWired;
     return Container(
       key: Key('cctv-site-${site.id}'),
@@ -192,7 +325,7 @@ class _CameraTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  wired ? 'Live' : 'Ready to connect',
+                  wired ? s.cctvWiredOnThisDevice : s.cctvReadyToConnect,
                   style: TextStyle(
                     color: wired
                         ? ClassroomPalette.green
@@ -221,6 +354,24 @@ class _CameraTile extends StatelessWidget {
               fontSize: 13,
             ),
           ),
+          if (canManage) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                TextButton(
+                  onPressed: onLink,
+                  child: Text(s.cctvLinkNvrAction),
+                ),
+                if (onOpen != null)
+                  TextButton(
+                    onPressed: onOpen,
+                    child: Text(s.cctvOpenNvrLink),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );

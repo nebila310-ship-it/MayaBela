@@ -1423,6 +1423,95 @@ class AppStrings implements AppStringsLike {
         'በዚህ መሣሪያ ተቀምጧል። ወደ ክላውድ በመላክ ላይ…',
         'Meeshaa kana irratti olkaa\'ame. Gara clouditti ergaa jira…',
       );
+  String get cctvTitle => t('CCTV', 'ሲሲቲቪ', 'CCTV');
+  String get cctvCameraSites => t(
+        'Camera sites',
+        'Camera sites',
+        'Bakkeewwan kaameeraa',
+      );
+  String get cctvHeaderSubtitle => t(
+        'Campus cameras stay on the school recorder. Live picture opens from the NVR — MayaBela does not store footage.',
+        'Campus cameras stay on the school recorder. Live picture opens from the NVR — MayaBela does not store footage.',
+        'Kaameerri kampaasii waraabbii mana barumsaa irratti hafe. Fakkii jireenyaa NVR irraa bana — MayaBela viidiyoo hin kuusne.',
+      );
+  String get cctvLocalOnlyBanner => t(
+        'Video stays on the school NVR. MayaBela does not upload CCTV to the school cloud.',
+        'Video stays on the school NVR. MayaBela does not upload CCTV to the school cloud.',
+        'Viidiyoon NVR mana barumsaa irratti hafe. MayaBela CCTV gara cloud mana barumsaa hin ergu.',
+      );
+  String get cctvNotInCloudChip => t(
+        'Not in MayaBela cloud',
+        'Not in MayaBela cloud',
+        'Cloud MayaBela keessa hin jiru',
+      );
+  String get cctvStaffOnly => t('Staff only', 'Staff only', 'Hojjettoota qofa');
+  String get cctvReadyToConnect => t(
+        'Ready to connect',
+        'Ready to connect',
+        'Qunnamuuf qophaa\'e',
+      );
+  String cctvSitesMapped(int count) => t(
+        '$count sites mapped',
+        '$count sites mapped',
+        'Bakkeewwan $count galmaa\'aniiru',
+      );
+  String cctvWiredOnDevice(int count) => t(
+        '$count wired on this device',
+        '$count wired on this device',
+        '$count meeshaa kana irratti hidhameera',
+      );
+  String get cctvWiredOnThisDevice => t(
+        'Wired on this device',
+        'Wired on this device',
+        'Meeshaa kana irratti hidhameera',
+      );
+  String get cctvHowConnectTitle => t(
+        'How live feed connects',
+        'How live feed connects',
+        'Fakkii jireenyaa akkamitti wal qunnamu',
+      );
+  String get cctvHowConnectBody => t(
+        'The school keeps its current cameras and NVR. MayaBela only opens the views for signed-in admin and leadership. Paste a Hik-Connect, RTSP, or HLS link from the recorder — that link stays on this device and is never synced to the school cloud.',
+        'The school keeps its current cameras and NVR. MayaBela only opens the views for signed-in admin and leadership. Paste a Hik-Connect, RTSP, or HLS link from the recorder — that link stays on this device and is never synced to the school cloud.',
+        'Mani barumsaa kaameeraa fi NVR ammaa isaa qaba. MayaBela ilaalcha bulchaa fi hoogganaa seene qofaaf bana. Hidhaa Hik-Connect, RTSP, yookiin HLS waraabbii irraa maxxansaa — hidhaan kun meeshaa kana irratti hafe, gara cloud mana barumsaa hin ergamu.',
+      );
+  String get cctvHookHik => t(
+        'Hik-Connect (school NVR)',
+        'Hik-Connect (school NVR)',
+        'Hik-Connect (NVR mana barumsaa)',
+      );
+  String get cctvHookRtsp => t('RTSP', 'RTSP', 'RTSP');
+  String get cctvHookHls => t('HLS', 'HLS', 'HLS');
+  String get cctvLinkNvrTitle => t(
+        'Link school NVR',
+        'Link school NVR',
+        'NVR mana barumsaa hidhi',
+      );
+  String get cctvLinkNvrHint => t(
+        'Paste the recorder URL. It is saved on this device only and is not uploaded to MayaBela cloud.',
+        'Paste the recorder URL. It is saved on this device only and is not uploaded to MayaBela cloud.',
+        'URL waraabbii maxxansaa. Meeshaa kana qofa irratti olkaa\'ama, gara cloud MayaBela hin ergamu.',
+      );
+  String get cctvStreamUrlLabel => t(
+        'NVR / HLS / RTSP URL',
+        'NVR / HLS / RTSP URL',
+        'URL NVR / HLS / RTSP',
+      );
+  String get cctvLinkNvrAction => t(
+        'Link NVR on this device',
+        'Link NVR on this device',
+        'NVR meeshaa kana irratti hidhi',
+      );
+  String get cctvOpenNvrLink => t(
+        'Open recorder link',
+        'Open recorder link',
+        'Hidhaa waraabbii bani',
+      );
+  String get cctvSavedLocalOnly => t(
+        'Saved on this device. CCTV is not uploaded to the school cloud.',
+        'Saved on this device. CCTV is not uploaded to the school cloud.',
+        'Meeshaa kana irratti olkaa\'ame. CCTV gara cloud mana barumsaa hin ergamne.',
+      );
   String get moduleAccessDeniedTitle =>
       t('No access', 'መዳረሻ የለም', 'Seensi hin jiru');
   String get moduleAccessDeniedBody => t(
