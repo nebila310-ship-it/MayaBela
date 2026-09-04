@@ -261,6 +261,39 @@ void main() {
       expect(ModuleAccess.canView('students'), isFalse);
       expect(ModuleAccess.canView('inventory'), isFalse);
       expect(ModuleAccess.canView('transport'), isFalse);
+      expect(ModuleAccess.canView('digital_ops'), isFalse);
+    });
+  });
+
+  group('Administration Staff (staffs)', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.staffs]));
+
+    test('runs the digital-ops desk without Full Access', () {
+      expect(ModuleAccess.canView('digital_ops'), isTrue);
+      expect(ModuleAccess.canManage('digital_ops'), isTrue);
+      expect(ModuleAccess.canView('go_live'), isTrue);
+      expect(ModuleAccess.canManage('go_live'), isTrue);
+      expect(ModuleAccess.canView('cctv'), isTrue);
+      expect(ModuleAccess.canManage('cctv'), isTrue);
+      expect(ModuleAccess.canView('system_health'), isTrue);
+      expect(ModuleAccess.canManage('system_health'), isFalse);
+      expect(ModuleAccess.canView('finance'), isFalse);
+      expect(ModuleAccess.canView('examinations'), isFalse);
+      expect(ModuleAccess.canManage('parents'), isFalse);
+      expect(ModuleAccess.hasErpAccess, isTrue);
+    });
+
+    test('sidebar lists digital ops plus chrome, not markbook', () {
+      final ids = webErpNavItemsForCurrentUser().map((e) => e.id).toSet();
+      expect(ids, contains('digital_ops'));
+      expect(ids, contains('go_live'));
+      expect(ids, contains('cctv'));
+      expect(ids, contains('system_health'));
+      expect(ids, isNot(contains('finance')));
+      expect(ids, isNot(contains('examinations')));
+      expect(ids, isNot(contains('markbook')));
+      expect(ids, contains('dashboard'));
+      expect(ids, contains('logout'));
     });
   });
 

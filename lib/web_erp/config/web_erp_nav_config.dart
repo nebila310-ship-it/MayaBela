@@ -338,6 +338,12 @@ const List<WebErpNavItem> _allNavItems = [
       section: 'System',
     ),
     WebErpNavItem(
+      id: 'digital_ops',
+      label: 'Digital operations',
+      icon: Icons.devices_other_outlined,
+      section: 'System',
+    ),
+    WebErpNavItem(
       id: 'go_live',
       label: 'Go-live & compliance',
       icon: Icons.verified_user_outlined,

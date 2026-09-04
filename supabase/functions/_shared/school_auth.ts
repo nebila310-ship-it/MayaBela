@@ -69,6 +69,8 @@ export const ALL_PERMISSIONS: string[] = [
   // Settings
   "manage_school_settings",
   "manage_campuses",
+  // Administration Staff digital-ops desk (not a new IT role)
+  "manage_digital_ops",
 ];
 
 const BASELINE: string[] = [
@@ -268,6 +270,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
   staffs: withBaseline([
     "view_staff",
     "access_support",
+    "manage_digital_ops",
   ]),
   // Legacy keys (same bundles as their aliases).
   academic_admin: withBaseline([

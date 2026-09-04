@@ -42,6 +42,7 @@ import 'package:mayabela/web_erp/pages/staff_role_config_page.dart';
 import 'package:mayabela/web_erp/pages/web_students_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
 import 'package:mayabela/web_erp/pages/web_go_live_page.dart';
+import 'package:mayabela/web_erp/pages/web_digital_ops_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
@@ -183,6 +184,9 @@ class WebErpRouter {
         return const StaffRoleConfigPage();
       case 'system_health':
         return const WebSystemHealthPage();
+      case 'digital_ops':
+      case 'ict':
+        return WebDigitalOpsPage(onNavigate: onNavigate);
       case 'go_live':
       case 'compliance':
       case 'privacy':

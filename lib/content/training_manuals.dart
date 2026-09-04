@@ -97,6 +97,29 @@ abstract final class TrainingManuals {
               'safeguarding detail in chat — use the Student support desk.',
         ),
         const TrainingArticle(
+          id: 'staff-digital-ops',
+          audience: 'teacher',
+          title: 'Administration Staff digital operations',
+          summary: 'Devices, access help, go-live buttons, CCTV, Friday checklist.',
+          body:
+              'Sign in on the Administration Staff tile with the Staff role. '
+              'Open Digital operations. This is not Full Access and does not '
+              'change markbook or fees.\n\n'
+              '1 People & devices — record whose laptop, phone, driver phone, '
+              'and lab PC. Tell colleagues: web is https://mayabela.pages.dev, '
+              'hard-refresh Ctrl+Shift+R, keep the phone app closed until web '
+              'is stable. First passwords still come from HR / Admin.\n\n'
+              '2 Access help — count parent-link requests, copy the student id, '
+              'and escalate to registrar. Do not approve unless Admin also '
+              'gave you Parents.\n\n'
+              '3 Go-live ops — you run Friday backup, MFA help, Excel import, '
+              'and training. Admin owns policy.\n\n'
+              '4 Campus systems — CCTV shortcut, driver GPS checklist, lab PCs '
+              'on this register.\n\n'
+              '5 Weekly ritual — ten minutes on Friday, you chair, Admin in '
+              'the room. MaJo only joins if the whole school cannot log in.',
+        ),
+        const TrainingArticle(
           id: 'parent-start',
           audience: 'parent',
           title: 'See your children',
