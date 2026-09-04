@@ -2152,7 +2152,7 @@ class SchoolDataService {
 
     for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
       for (final assignment in teacher.classAssignments) {
-        if (assignment.className == className &&
+        if (_classNamesMatch(assignment.className, className) &&
             assignment.role == TeacherStaffRole.homeroomTeacher) {
           return teacher.teacherId;
         }
@@ -2868,8 +2868,18 @@ class SchoolDataService {
     return fallback.trim().isEmpty ? null : fallback;
   }
 
-  List<ClassSubjectTeacher> getSubjectsForClass(String className) =>
-      List.unmodifiable(_classSubjectTeachers[className] ?? []);
+  List<ClassSubjectTeacher> getSubjectsForClass(String className) {
+    final merged = <ClassSubjectTeacher>[];
+    final seen = <String>{};
+    for (final entry in _classSubjectTeachers.entries) {
+      if (!_classNamesMatch(entry.key, className)) continue;
+      for (final item in entry.value) {
+        final key = '${item.teacherId}|${item.subject}';
+        if (seen.add(key)) merged.add(item);
+      }
+    }
+    return List.unmodifiable(merged);
+  }
 
   List<StudentRef> getStudentsForClass(String className, {String? schoolId}) {
     final normalized = className.trim();
@@ -2877,7 +2887,10 @@ class SchoolDataService {
       normalized,
       schoolId: schoolId ?? AuthService.activeSchoolId,
     );
-    final rosterCache = _classRosters[normalized] ?? const <StudentRef>[];
+    final rosterCache = <StudentRef>[
+      for (final entry in _classRosters.entries)
+        if (_classNamesMatch(entry.key, normalized)) ...entry.value,
+    ];
 
     if (registryStudents.isNotEmpty) {
       return registryStudents.map((record) {
@@ -3155,7 +3168,7 @@ class SchoolDataService {
 
   List<DailyActivityReport> getDailyActivitiesForClass(String className) {
     return _dailyActivities
-        .where((report) => report.className == className)
+        .where((report) => _classNamesMatch(report.className, className))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
@@ -3619,7 +3632,7 @@ class SchoolDataService {
 
   List<GalleryPost> getGalleryForClass(String className) {
     return _galleryPosts
-        .where((post) => post.className == className)
+        .where((post) => _classNamesMatch(post.className, className))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
@@ -3627,7 +3640,9 @@ class SchoolDataService {
   List<GalleryPost> getGalleryForParent() {
     final classNames = getChildren().map((child) => child.className).toSet();
     return _galleryPosts
-        .where((post) => classNames.contains(post.className))
+        .where(
+          (post) => classNames.any((name) => _classNamesMatch(name, post.className)),
+        )
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
@@ -3675,7 +3690,8 @@ class SchoolDataService {
     try {
       return _attendanceSessions.firstWhere(
         (session) =>
-            session.className == className && _isSameDay(session.date, date),
+            _classNamesMatch(session.className, className) &&
+            _isSameDay(session.date, date),
       );
     } catch (_) {
       return null;
@@ -3798,7 +3814,7 @@ class SchoolDataService {
 
   List<AttendanceSession> getAttendanceHistory(String className) {
     return _attendanceSessions
-        .where((session) => session.className == className)
+        .where((session) => _classNamesMatch(session.className, className))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
@@ -4930,7 +4946,7 @@ class SchoolDataService {
     for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
       if (!teacher.isActive) continue;
       final assigned = teacher.classAssignments.any(
-        (a) => a.className == classKey,
+        (a) => _classNamesMatch(a.className, classKey),
       );
       if (!assigned) continue;
       final option = StaffMemberOption.fromTeacher(teacher);
@@ -5273,7 +5289,7 @@ class SchoolDataService {
       if (entry.value.trim().toUpperCase() != teacherId) continue;
       final stillHomeroom = teacher.classAssignments.any(
         (assignment) =>
-            assignment.className == entry.key &&
+            _classNamesMatch(assignment.className, entry.key) &&
             assignment.role == TeacherStaffRole.homeroomTeacher,
       );
       if (!stillHomeroom) {
@@ -5370,7 +5386,7 @@ class SchoolDataService {
       final list = _classSubjectTeachers[className];
       if (list == null) continue;
       final allowedSubjects = teacher.classAssignments
-          .where((assignment) => assignment.className == className)
+          .where((assignment) => _classNamesMatch(assignment.className, className))
           .expand((assignment) => _subjectSlotsForAssignment(teacher, assignment))
           .map((slot) => slot.subjectName)
           .toSet();
@@ -6100,8 +6116,20 @@ class SchoolDataService {
   List<FeeRecord> getAllFees() => List.unmodifiable(_fees);
 
   List<FeeRecord> getFeesForParent() {
-    final childNames = _children.map((c) => c.name).toSet();
-    return _fees.where((f) => childNames.contains(f.studentName)).toList();
+    final children = getChildren();
+    final childIds = children
+        .map((c) => c.studentId?.trim().toUpperCase())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final childNames = children.map((c) => c.name.trim()).toSet();
+    return _fees.where((f) {
+      final sid = f.studentId?.trim().toUpperCase();
+      if (sid != null && sid.isNotEmpty) {
+        return childIds.contains(sid);
+      }
+      return childNames.contains(f.studentName.trim());
+    }).toList();
   }
 
   PaymentSummary getPaymentSummary({bool parentOnly = true}) {
@@ -6304,13 +6332,23 @@ class SchoolDataService {
 
   List<StudentQrProfile> getStudentQrProfilesForClass(String className) {
     return _studentQrProfiles
-        .where((profile) => profile.className == className)
+        .where((profile) => _classNamesMatch(profile.className, className))
         .toList();
   }
 
   List<StudentQrProfile> getStudentQrProfilesForParent() {
-    final childNames = _children.map((c) => c.name).toSet();
-    return _studentQrProfiles.where((s) => childNames.contains(s.name)).toList();
+    final children = getChildren();
+    final childIds = children
+        .map((c) => c.studentId?.trim().toUpperCase())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final childNames = children.map((c) => c.name.trim()).toSet();
+    return _studentQrProfiles.where((s) {
+      final sid = s.id.trim().toUpperCase();
+      if (sid.isNotEmpty && childIds.contains(sid)) return true;
+      return childNames.contains(s.name.trim());
+    }).toList();
   }
 
   StudentQrProfile? findStudentByQrCode(String code) {
@@ -6636,12 +6674,14 @@ class SchoolDataService {
     if (audience.isEmpty || audience == 'all') return true;
 
     final classNames = getChildren()
-        .map((child) => child.className.trim().toLowerCase())
+        .map((child) => child.className.trim())
         .where((name) => name.isNotEmpty)
         .toSet();
 
     bool matchesClass() => classNames.any(
-          (className) => audience == className || audience.contains(className),
+          (className) =>
+              _classNamesMatch(className, event.audience) ||
+              audience.contains(className.toLowerCase()),
         );
 
     return switch (roleKey) {

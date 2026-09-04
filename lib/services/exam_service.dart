@@ -58,7 +58,11 @@ class ExamService extends ChangeNotifier {
   List<ExamPaper> openPapersForClass(String className, {String? schoolId}) {
     final now = DateTime.now();
     return papersForSchool(schoolId)
-        .where((p) => p.className == className && p.isOpenAt(now))
+        .where(
+          (p) =>
+              StudentRegistryService.classNamesMatch(p.className, className) &&
+              p.isOpenAt(now),
+        )
         .toList();
   }
 

@@ -293,6 +293,8 @@ abstract final class CloudSyncEngine {
           AppCollections.conversations,
           AppCollections.appNotifications,
           AppCollections.busLivePositions,
+          AppCollections.transportPassengerStatus,
+          AppCollections.transportScans,
           AppCollections.fees,
           AppCollections.learningMaterials,
           AppCollections.galleryPosts,
@@ -325,6 +327,8 @@ abstract final class CloudSyncEngine {
           AppCollections.studentRegistry,
           AppCollections.buses,
           AppCollections.busLivePositions,
+          AppCollections.transportPassengerStatus,
+          AppCollections.transportScans,
           AppCollections.conversations,
           AppCollections.appNotifications,
         ];

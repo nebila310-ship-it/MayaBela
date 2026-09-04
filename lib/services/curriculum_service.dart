@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
@@ -77,7 +78,10 @@ class CurriculumService extends ChangeNotifier {
               u.isPublished &&
               (u.className == null ||
                   u.className!.isEmpty ||
-                  u.className == className),
+                  StudentRegistryService.classNamesMatch(
+                    u.className!,
+                    className,
+                  )),
         )
         .toList();
   }

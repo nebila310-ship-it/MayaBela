@@ -15,6 +15,7 @@ import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
 import 'package:mayabela/services/persistence/grade_persistence_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/utils/attachment_path_utils.dart';
@@ -66,7 +67,14 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
         final classFilter = _selectedClass ?? widget.initialClass;
         if (classFilter != null && classFilter.isNotEmpty) {
           reports =
-              reports.where((r) => r.className == classFilter).toList();
+              reports
+                  .where(
+                    (r) => StudentRegistryService.classNamesMatch(
+                      r.className,
+                      classFilter,
+                    ),
+                  )
+                  .toList();
         }
         final studentFilter = widget.initialStudentName;
         if (studentFilter != null && studentFilter.isNotEmpty) {

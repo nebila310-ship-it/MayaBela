@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/fee_record.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
@@ -79,12 +80,22 @@ class _FeesPaymentsScreenState extends State<FeesPaymentsScreen>
     if (!mounted) return;
 
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? s.paymentSuccessVia(method) : s.paymentFailed,
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.paymentFailed),
+          backgroundColor: Colors.red,
         ),
-        backgroundColor: success ? Colors.green : Colors.red,
+      );
+      return;
+    }
+    final outcome = await CloudSaveHonesty.settle();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      CloudSaveHonesty.snackBar(
+        savedOk: s.feeRecordedOnThisDevice,
+        outcome: outcome,
+        strings: s,
       ),
     );
   }
