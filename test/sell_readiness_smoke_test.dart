@@ -273,6 +273,7 @@ void main() {
         'report_cards',
         'exam_bank',
         'lesson_plans',
+        'homework',
         'curriculum',
         'at_risk',
         'student_support',

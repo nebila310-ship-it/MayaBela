@@ -451,6 +451,14 @@ class AuthService {
     return const [];
   }
 
+  /// Compact and `Grade N` spellings of [accessClassNamesForSync] for cloud
+  /// `className` `whereIn` queries (capped).
+  static List<String> cloudClassNameQueryValues() {
+    return StudentRegistryService.expandClassNameQueryValues(
+      accessClassNamesForSync(),
+    );
+  }
+
   static bool get usesScopedCloudReads {
     if (mayReadAllSchoolData) return false;
     final role = currentUser?.roleKey;

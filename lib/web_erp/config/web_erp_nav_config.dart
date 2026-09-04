@@ -79,6 +79,12 @@ const List<WebErpNavItem> _allNavItems = [
       badgeId: 'attendance',
     ),
     WebErpNavItem(
+      id: 'homework',
+      label: 'Homework',
+      icon: Icons.assignment_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
       id: 'at_risk',
       label: 'At-risk & insights',
       icon: Icons.warning_amber_outlined,

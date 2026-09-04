@@ -75,7 +75,14 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
       builder: (context, _) {
         var items = _plans.forSchool(_schoolId);
         if (_className != null) {
-          items = items.where((p) => p.className == _className).toList();
+          items = items
+              .where(
+                (p) => StudentRegistryService.classNamesMatch(
+                  p.className,
+                  _className!,
+                ),
+              )
+              .toList();
         }
         if (_subject != null) {
           items = items.where((p) => p.subject == _subject).toList();

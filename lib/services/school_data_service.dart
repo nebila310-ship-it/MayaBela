@@ -3575,8 +3575,7 @@ class SchoolDataService {
   }
 
   bool _classNamesMatch(String a, String b) {
-    if (_canonicalClassName(a) == _canonicalClassName(b)) return true;
-    return a.trim().toLowerCase() == b.trim().toLowerCase();
+    return StudentRegistryService.classNamesMatch(a, b);
   }
 
   bool _gradeReportMatches(
