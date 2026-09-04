@@ -9,6 +9,8 @@ import 'package:mayabela/services/file_attachment_share_service.dart';
 import 'package:mayabela/services/grade_mark_photo_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/grade_persistence_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
@@ -405,14 +407,18 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
     final skippedNote = result.skippedLocked > 0
         ? ' (${result.skippedLocked} locked grade(s) skipped)'
         : '';
+    final savedOk = shouldSubmit && _requireApproval
+        ? 'Submitted ${result.saved} grade(s) for approval$skippedNote'
+        : '${s.gradesSavedForClass(result.saved, widget.className)}$skippedNote';
+    final outcome = await CloudSaveHonesty.settle(
+      persist: GradePersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          shouldSubmit && _requireApproval
-              ? 'Submitted ${result.saved} grade(s) for approval$skippedNote'
-              : '${s.gradesSavedForClass(result.saved, widget.className)}$skippedNote',
-        ),
-        backgroundColor: Colors.green,
+      CloudSaveHonesty.snackBar(
+        savedOk: savedOk,
+        outcome: outcome,
+        strings: s,
       ),
     );
     Navigator.pop(context, true);

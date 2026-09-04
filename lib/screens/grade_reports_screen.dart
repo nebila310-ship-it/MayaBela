@@ -11,6 +11,8 @@ import 'package:mayabela/services/grade_report_export_service.dart';
 import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/grade_persistence_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
@@ -166,16 +168,26 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
     if (!mounted) return;
     setState(() {});
     SchoolContentSyncService.instance.markDataChanged();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ok
-              ? (requireApproval
-                  ? 'Submitted for approval'
-                  : s.gradePublishedSuccess)
-              : s.gradePublishFailed,
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.gradePublishFailed),
+          backgroundColor: Colors.orange.shade800,
         ),
-        backgroundColor: ok ? const Color(0xFF15803D) : Colors.orange.shade800,
+      );
+      return;
+    }
+    final outcome = await CloudSaveHonesty.settle(
+      persist: GradePersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      CloudSaveHonesty.snackBar(
+        savedOk: requireApproval
+            ? 'Submitted for approval'
+            : s.gradePublishedSuccess,
+        outcome: outcome,
+        strings: s,
       ),
     );
   }

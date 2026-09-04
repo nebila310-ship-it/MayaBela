@@ -1397,6 +1397,32 @@ class AppStrings implements AppStringsLike {
         'Ilaalcha dubbisuu qofa — gaheen keessan kutaa kana ilaaluu danda\'a, '
         'garuu jijjiirraa gochuu hin danda\'u.',
       );
+  String get cloudSyncingBanner => t(
+        'Syncing…',
+        'ወደ ክላውድ በመላክ ላይ…',
+        'Gara clouditti ergaa jira…',
+      );
+  String cloudWaitingChangesBanner(int count) => t(
+        count == 1
+            ? '1 change waiting to sync'
+            : '$count changes waiting to sync',
+        count == 1
+            ? '1 ለውጥ ወደ ክላውድ ይጠብቃል'
+            : '$count ለውጦች ወደ ክላውድ ይጠብቃሉ',
+        count == 1
+            ? 'Jijjiirraan 1 sync eegaa jira'
+            : 'Jijjiirraan $count sync eegaa jiru',
+      );
+  String get savedWaitingToSync => t(
+        'Saved on this device. Waiting to sync to cloud.',
+        'በዚህ መሣሪያ ተቀምጧል። ወደ ክላውድ መላክ ይጠብቃል።',
+        'Meeshaa kana irratti olkaa\'ame. Gara clouditti erguu eegaa jira.',
+      );
+  String get savedSyncingToCloud => t(
+        'Saved on this device. Syncing to cloud…',
+        'በዚህ መሣሪያ ተቀምጧል። ወደ ክላውድ በመላክ ላይ…',
+        'Meeshaa kana irratti olkaa\'ame. Gara clouditti ergaa jira…',
+      );
   String get moduleAccessDeniedTitle =>
       t('No access', 'መዳረሻ የለም', 'Seensi hin jiru');
   String get moduleAccessDeniedBody => t(

@@ -10,6 +10,7 @@ import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
@@ -313,52 +314,69 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
               ),
             ],
           ),
-          body: Stack(
-            fit: StackFit.expand,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AdminEducationalBackground(accentColor: themeColor),
-              SingleChildScrollView(
-                padding: listPagePadding(context),
-                child: Column(
+              const WebCloudSyncBar(horizontalPadding: 16),
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    if (!widget.hideBrandingBanner &&
-                        AuthService.activeSchoolId != null &&
-                        SchoolRegistryService.instance
-                                .lookup(AuthService.activeSchoolId) !=
-                            null)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: themeColor.withValues(alpha: 0.12),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: themeColor.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                    AdminEducationalBackground(accentColor: themeColor),
+                    SingleChildScrollView(
+                      padding: listPagePadding(context),
+                      child: Column(
+                        children: [
+                          if (!widget.hideBrandingBanner &&
+                              AuthService.activeSchoolId != null &&
+                              SchoolRegistryService.instance
+                                      .lookup(AuthService.activeSchoolId) !=
+                                  null)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: themeColor.withValues(alpha: 0.12),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: themeColor.withValues(alpha: 0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: SchoolBrandingHeader(
+                                schoolId: AuthService.activeSchoolId,
+                                compact: true,
+                              ),
                             ),
+                          if (!widget.hideWelcomeBanner)
+                            widget._buildWelcomeBanner(s),
+                          if (widget.header != null) ...[
+                            const SizedBox(height: 16),
+                            widget.header!,
                           ],
-                        ),
-                        child: SchoolBrandingHeader(
-                          schoolId: AuthService.activeSchoolId,
-                          compact: true,
-                        ),
+                          const SizedBox(height: 20),
+                          if (sectionList != null && sectionList.isNotEmpty)
+                            widget._buildSectionedCards(
+                              sectionList,
+                              crossAxis,
+                              compact,
+                            )
+                          else
+                            widget._buildCardGrid(
+                              cardList,
+                              crossAxis,
+                              compact,
+                            ),
+                        ],
                       ),
-                    if (!widget.hideWelcomeBanner) widget._buildWelcomeBanner(s),
-                    if (widget.header != null) ...[
-                      const SizedBox(height: 16),
-                      widget.header!,
-                    ],
-                    const SizedBox(height: 20),
-                    if (sectionList != null && sectionList.isNotEmpty)
-                      widget._buildSectionedCards(sectionList, crossAxis, compact)
-                    else
-                      widget._buildCardGrid(cardList, crossAxis, compact),
+                    ),
                   ],
                 ),
               ),

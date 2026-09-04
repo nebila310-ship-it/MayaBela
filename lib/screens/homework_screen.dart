@@ -7,6 +7,8 @@ import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/homework_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/student_account_service.dart';
@@ -113,30 +115,27 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         teachingSlotId: slot?.slotId,
         attachmentPaths: attachmentPaths,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s.homeworkPostedForParents),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     } else {
       _data.updateHomework(
         id: homeworkId,
         description: descriptionController.text.trim(),
         attachmentPaths: attachmentPaths,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s.homeworkUpdated),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
+    final outcome = await CloudSaveHonesty.settle(
+      persist: HomeworkPersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
     setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      CloudSaveHonesty.snackBar(
+        savedOk: homeworkId == null
+            ? s.homeworkPostedForParents
+            : s.homeworkUpdated,
+        outcome: outcome,
+        strings: s,
+      ),
+    );
   }
 
   Future<void> _showHomeworkDialog({
@@ -286,12 +285,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       studentId: studentId,
       paths: picked.map((attachment) => attachment.filePath).toList(),
     );
+    final outcome = await CloudSaveHonesty.settle(
+      persist: HomeworkPersistenceService.instance.saveFromService(),
+    );
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(s.worksheetUploadedSuccess),
-        backgroundColor: Colors.green,
+      CloudSaveHonesty.snackBar(
+        savedOk: s.worksheetUploadedSuccess,
+        outcome: outcome,
+        strings: s,
       ),
     );
   }
