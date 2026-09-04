@@ -148,8 +148,12 @@ abstract final class ModuleAccess {
       view: [
         SchoolPermissions.viewStaff,
         SchoolPermissions.assignRoles,
+        SchoolPermissions.manageStaffAccounts,
       ],
-      manage: [SchoolPermissions.assignRoles],
+      manage: [
+        SchoolPermissions.manageStaffAccounts,
+        SchoolPermissions.assignRoles,
+      ],
     ),
     // Classroom teachers directory (VP / HR / Section Director).
     'classroom_teachers': ModuleRule(
@@ -760,7 +764,12 @@ abstract final class ModuleAccess {
           if (myRoles.intersection(allocation.visibleTo).isEmpty) return false;
           final managers = allocation.manageBy;
           if (managers != null) {
-            return myRoles.intersection(managers).isNotEmpty;
+            if (myRoles.intersection(managers).isEmpty) return false;
+            // Allocation-only desks (empty manage list) stay role-gated.
+            // Otherwise JWT must hold a matching write permission so RLS
+            // and the sidebar agree.
+            if (rule.manage.isEmpty) return true;
+            return AuthService.hasAnyPermission(rule.manage);
           }
           return AuthService.hasAnyPermission(rule.manage);
         }
@@ -768,6 +777,25 @@ abstract final class ModuleAccess {
     }
     if (rule.open) return true;
     return AuthService.hasAnyPermission(rule.manage);
+  }
+
+  /// True when [heldPermissions] cover every allocated manage desk for [roleKey].
+  /// Empty-manage desks (homework, reports) stay allocation-only.
+  static bool allocationJwtManageIsCovered(
+    String roleKey,
+    Set<String> heldPermissions,
+  ) {
+    final role = StaffRoles.canonicalize(roleKey);
+    for (final entry in roleAllocations.entries) {
+      final allocation = entry.value;
+      final managers = allocation.manageBy;
+      if (managers == null || !managers.contains(role)) continue;
+      if (!allocation.visibleTo.contains(role)) continue;
+      final rule = rules[entry.key];
+      if (rule == null || rule.manage.isEmpty) continue;
+      if (!rule.manage.any(heldPermissions.contains)) return false;
+    }
+    return true;
   }
 
   /// Signed-in staff roles, canonicalized (legacy keys → current catalog).

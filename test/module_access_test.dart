@@ -247,6 +247,10 @@ void main() {
       // Item 16: events & calendar belong to SD on the staff side.
       expect(ModuleAccess.canView('events'), isTrue);
       expect(ModuleAccess.canManage('calendar'), isTrue);
+      expect(
+        AuthService.hasPermission(SchoolPermissions.sendAnnouncements),
+        isTrue,
+      );
       expect(ModuleAccess.canLinkStudentTransport, isTrue);
       expect(ModuleAccess.canManage('parents'), isTrue);
       expect(ModuleAccess.canManage('examinations'), isTrue);
