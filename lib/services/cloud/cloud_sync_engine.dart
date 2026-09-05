@@ -62,6 +62,8 @@ abstract final class CloudSyncEngine {
 
   static bool get isStarted => _started;
 
+  static bool get isPaused => _paused;
+
   static bool _engineIsLive(int generation) =>
       _started &&
       _engineGeneration == generation &&
@@ -109,8 +111,8 @@ abstract final class CloudSyncEngine {
   static void pause() => _paused = true;
 
   static void resume() {
-    if (!_started) return;
     _paused = false;
+    if (!_started) return;
     unawaited(tick(reason: 'resume'));
   }
 

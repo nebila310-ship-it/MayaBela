@@ -15,7 +15,26 @@ abstract final class RealtimeMessagingBootstrap {
     await FcmService.instance.registerForCurrentUser();
     if (!AuthService.isLiveGeneration(generation)) return;
     if (!CloudSyncFlags.enabled) return;
+    _startLiveChannels();
+  }
 
+  /// Drop live sockets so an idle / hidden tab stops billing PostgREST.
+  static void pauseLive() {
+    ConversationRealtimeSync.instance.stop();
+    StaffContentRealtimeSync.stop();
+    StudentRealtimeSync.stop();
+    TransportRealtimeSync.stop();
+    InventoryRealtimeSync.stop();
+  }
+
+  /// Re-open role channels after the user comes back. Does not re-register FCM.
+  static void resumeLive() {
+    if (AuthService.currentUser == null) return;
+    if (!CloudSyncFlags.enabled) return;
+    _startLiveChannels();
+  }
+
+  static void _startLiveChannels() {
     final role = AuthService.currentUser?.roleKey;
     ConversationRealtimeSync.instance.start();
     StaffContentRealtimeSync.start();
