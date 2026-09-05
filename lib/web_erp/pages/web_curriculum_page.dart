@@ -14,6 +14,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Staff curriculum office — maps, DH lesson-plan review, academic evals, meetings.
 class WebCurriculumPage extends StatefulWidget {
@@ -184,8 +185,19 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
             Text(
               'Linked: ${unit.lessonPlanIds.length} plans · '
               '${unit.examPaperIds.length} papers · '
-              '${unit.homeworkIds.length} homework',
+              '${unit.homeworkIds.length} homework'
+              '${unit.attachmentPaths.isEmpty ? '' : ' · ${unit.attachmentPaths.length} file(s)'}',
             ),
+            if (unit.attachmentPaths.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              CourseAttachmentPicker(
+                paths: unit.attachmentPaths,
+                subdir: 'curriculum_attachments',
+                canEdit: false,
+                allowShareDownload: true,
+                sectionTitle: 'Course files',
+              ),
+            ],
             if (unit.versions.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
@@ -718,6 +730,7 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
   late CurriculumFramework _framework;
   late Set<String> _papers;
   late Set<String> _homework;
+  late List<String> _attachments;
 
   @override
   void initState() {
@@ -736,6 +749,7 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
     _framework = u?.framework ?? CurriculumFramework.national;
     _papers = {...?u?.examPaperIds};
     _homework = {...?u?.homeworkIds};
+    _attachments = List<String>.from(u?.attachmentPaths ?? const []);
   }
 
   @override
@@ -775,6 +789,7 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
         standardCodes: _standardList,
         examPaperIds: _papers.toList(),
         homeworkIds: _homework.toList(),
+        attachmentPaths: _attachments,
       );
     } else {
       await CurriculumService.instance.updateUnit(
@@ -790,6 +805,7 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
         standardCodes: _standardList,
         examPaperIds: _papers.toList(),
         homeworkIds: _homework.toList(),
+        attachmentPaths: _attachments,
         note: 'Edited from curriculum office',
       );
     }
@@ -882,6 +898,13 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
                 controller: _description,
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 12),
+              CourseAttachmentPicker(
+                paths: _attachments,
+                subdir: 'curriculum_attachments',
+                sectionTitle: 'Course files',
+                onChanged: (next) => setState(() => _attachments = next),
               ),
               const SizedBox(height: 12),
               Align(

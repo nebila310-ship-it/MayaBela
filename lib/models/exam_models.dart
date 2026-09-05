@@ -38,6 +38,7 @@ class ExamQuestion {
     this.correctChoiceId,
     this.gradeLevel,
     this.createdBy,
+    this.attachmentPaths = const [],
   });
 
   final String id;
@@ -50,6 +51,7 @@ class ExamQuestion {
   double points;
   String? gradeLevel;
   String? createdBy;
+  List<String> attachmentPaths;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -66,6 +68,7 @@ class ExamQuestion {
         if (correctChoiceId != null) 'correctChoiceId': correctChoiceId,
         if (gradeLevel != null) 'gradeLevel': gradeLevel,
         if (createdBy != null) 'createdBy': createdBy,
+        'attachmentPaths': attachmentPaths,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -89,6 +92,10 @@ class ExamQuestion {
       correctChoiceId: map['correctChoiceId'] as String?,
       gradeLevel: map['gradeLevel'] as String?,
       createdBy: map['createdBy'] as String?,
+      attachmentPaths: (map['attachmentPaths'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -112,6 +119,7 @@ class ExamPaper {
     this.startAt,
     this.endAt,
     this.createdBy,
+    this.attachmentPaths = const [],
   });
 
   final String id;
@@ -125,6 +133,7 @@ class ExamPaper {
   DateTime? startAt;
   DateTime? endAt;
   String? createdBy;
+  List<String> attachmentPaths;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -149,6 +158,7 @@ class ExamPaper {
         if (startAt != null) 'startAt': startAt!.toIso8601String(),
         if (endAt != null) 'endAt': endAt!.toIso8601String(),
         if (createdBy != null) 'createdBy': createdBy,
+        'attachmentPaths': attachmentPaths,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -176,6 +186,10 @@ class ExamPaper {
           ? DateTime.tryParse(map['endAt'] as String)
           : null,
       createdBy: map['createdBy'] as String?,
+      attachmentPaths: (map['attachmentPaths'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:

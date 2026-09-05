@@ -14,6 +14,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Staff lesson plans — weekly planning that can link homework, materials, and exam papers.
 class WebLessonPlansPage extends StatefulWidget {
@@ -195,7 +196,8 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
             '${_weekLabel(plan.weekStart)} · '
             '${plan.isPublished ? 'Published' : 'Draft'}'
             '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${_reviewLabel(plan.reviewStatus)}'}'
-            '${plan.hasLinks ? ' · linked work' : ''}',
+            '${plan.hasLinks ? ' · linked work' : ''}'
+            '${plan.attachmentPaths.isEmpty ? '' : ' · ${plan.attachmentPaths.length} file(s)'}',
           ),
           trailing: _canManage
               ? Wrap(
@@ -275,6 +277,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
   late Set<String> _homework;
   late Set<String> _papers;
   late Set<String> _materials;
+  late List<String> _attachments;
   String? _unitId;
 
   @override
@@ -293,6 +296,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     _homework = {...?p?.homeworkIds};
     _papers = {...?p?.examPaperIds};
     _materials = {...?p?.learningMaterialIds};
+    _attachments = List<String>.from(p?.attachmentPaths ?? const []);
     _unitId = p?.curriculumUnitId;
   }
 
@@ -357,6 +361,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         homeworkIds: _homework.toList(),
         examPaperIds: _papers.toList(),
         learningMaterialIds: _materials.toList(),
+        attachmentPaths: _attachments,
         curriculumUnitId: _unitId,
       );
     } else {
@@ -371,6 +376,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         homeworkIds: _homework.toList(),
         examPaperIds: _papers.toList(),
         learningMaterialIds: _materials.toList(),
+        attachmentPaths: _attachments,
         curriculumUnitId: _unitId,
         clearCurriculumUnit: _unitId == null,
       ))!;
@@ -466,6 +472,13 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
                 controller: _activities,
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Activities'),
+              ),
+              const SizedBox(height: 12),
+              CourseAttachmentPicker(
+                paths: _attachments,
+                subdir: 'lesson_plan_attachments',
+                sectionTitle: 'Course files',
+                onChanged: (next) => setState(() => _attachments = next),
               ),
               const SizedBox(height: 12),
               Align(

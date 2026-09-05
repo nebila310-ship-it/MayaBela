@@ -9,6 +9,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 enum CurriculumPortalMode { teacher, student, parent }
 
@@ -143,6 +144,16 @@ class _CurriculumPortalScreenState extends State<CurriculumPortalScreen> {
             if (papers.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Assessments: ${papers.map((p) => p.title).join(', ')}'),
+            ],
+            if (unit.attachmentPaths.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              CourseAttachmentPicker(
+                paths: unit.attachmentPaths,
+                subdir: 'curriculum_attachments',
+                canEdit: false,
+                allowShareDownload: true,
+                sectionTitle: 'Course files',
+              ),
             ],
             Align(
               alignment: Alignment.centerRight,

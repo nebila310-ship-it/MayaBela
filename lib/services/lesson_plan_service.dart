@@ -88,6 +88,7 @@ class LessonPlanService extends ChangeNotifier {
     List<String> homeworkIds = const [],
     List<String> examPaperIds = const [],
     List<String> learningMaterialIds = const [],
+    List<String> attachmentPaths = const [],
     String? curriculumUnitId,
     String? schoolId,
   }) async {
@@ -108,6 +109,7 @@ class LessonPlanService extends ChangeNotifier {
       homeworkIds: List.of(homeworkIds),
       examPaperIds: List.of(examPaperIds),
       learningMaterialIds: List.of(learningMaterialIds),
+      attachmentPaths: List.of(attachmentPaths),
       curriculumUnitId: curriculumUnitId,
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
@@ -129,6 +131,7 @@ class LessonPlanService extends ChangeNotifier {
     List<String>? homeworkIds,
     List<String>? examPaperIds,
     List<String>? learningMaterialIds,
+    List<String>? attachmentPaths,
     String? curriculumUnitId,
     bool clearCurriculumUnit = false,
   }) async {
@@ -144,6 +147,9 @@ class LessonPlanService extends ChangeNotifier {
     if (examPaperIds != null) plan.examPaperIds = List.of(examPaperIds);
     if (learningMaterialIds != null) {
       plan.learningMaterialIds = List.of(learningMaterialIds);
+    }
+    if (attachmentPaths != null) {
+      plan.attachmentPaths = List.of(attachmentPaths);
     }
     if (clearCurriculumUnit) {
       plan.curriculumUnitId = null;

@@ -8,6 +8,7 @@ import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Published weekly plans for the signed-in student or a parent's children.
 class StudentLessonPlansScreen extends StatefulWidget {
@@ -139,6 +140,16 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
               const SizedBox(height: 4),
               Text(
                 'Materials: ${materials.map((m) => m.bookName.isEmpty ? m.materialName : m.bookName).join(', ')}',
+              ),
+            ],
+            if (plan.attachmentPaths.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              CourseAttachmentPicker(
+                paths: plan.attachmentPaths,
+                subdir: 'lesson_plan_attachments',
+                canEdit: false,
+                allowShareDownload: true,
+                sectionTitle: 'Course files',
               ),
             ],
           ],
