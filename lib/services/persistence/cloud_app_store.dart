@@ -748,12 +748,7 @@ class CloudAppStore {
         await pushFullLocalStateToCloud();
       }
     } catch (e) {
-      final text = e.toString().toLowerCase();
-      final authFail = text.contains('sub claim') ||
-          text.contains('jwt') ||
-          text.contains('denied') ||
-          text.contains('sign in');
-      if (!authFail) {
+      if (shouldEscalateToFullPush(e)) {
         await CloudOutboxService.instance.markFullPushNeeded(
           reason: 'upload failed: $e',
         );
@@ -803,6 +798,12 @@ class CloudAppStore {
           );
           await CloudOutboxService.instance.ack(m.collection, m.docId);
         } catch (e) {
+          if (DocumentStore.isStaleWrite(e)) {
+            // Cloud already has a newer row. Retrying the stale payload
+            // every 5s is what produced thousands of 40001 errors.
+            await CloudOutboxService.instance.ack(m.collection, m.docId);
+            continue;
+          }
           if (kDebugMode) {
             debugPrint('[CloudAppStore] outbox upsert failed ${m.docId}: $e');
           }
@@ -1222,14 +1223,29 @@ class CloudAppStore {
     try {
       await action().timeout(const Duration(seconds: 45));
     } catch (e) {
-      await CloudOutboxService.instance.markFullPushNeeded(
-        reason: e.toString(),
-      );
+      if (shouldEscalateToFullPush(e)) {
+        await CloudOutboxService.instance.markFullPushNeeded(
+          reason: e.toString(),
+        );
+      }
       if (kDebugMode) {
         debugPrint('[CloudAppStore] push failed: $e');
       }
       if (rethrowOnError) rethrow;
     }
+  }
+
+  /// Full-school dump is for offline catch-up, not version conflicts.
+  /// `stale_write` (40001) plus JWT/deny must not re-queue every fee/inventory
+  /// row — that loop is what filled Postgres logs in a minute.
+  @visibleForTesting
+  static bool shouldEscalateToFullPush(Object error) {
+    if (DocumentStore.isStaleWrite(error)) return false;
+    final text = error.toString().toLowerCase();
+    return !text.contains('sub claim') &&
+        !text.contains('jwt') &&
+        !text.contains('denied') &&
+        !text.contains('sign in');
   }
 
   // —— CRUD: Auth ——
