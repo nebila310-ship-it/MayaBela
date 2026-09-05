@@ -47,6 +47,41 @@ void main() {
     );
   });
 
+  test('RLS 42501 and duplicate upsert must not dump the whole school', () {
+    expect(
+      CloudAppStore.shouldEscalateToFullPush(
+        Exception(
+          'new row violates row-level security policy for table "app_documents"',
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      CloudAppStore.shouldEscalateToFullPush(
+        Exception(
+          'ON CONFLICT DO UPDATE command cannot affect row a second time',
+        ),
+      ),
+      isFalse,
+    );
+  });
+
+  test('writeBatch keeps the last row when the same doc id appears twice', () {
+    final rows = DocumentStore.dedupeByDocId(
+      [
+        {'id': 'fee-1', 'amount': 10},
+        {'id': 'fee-2', 'amount': 20},
+        {'id': 'fee-1', 'amount': 99},
+        {'id': '', 'amount': 1},
+      ],
+      (item) => '${item['id']}',
+    );
+    expect(rows, [
+      {'id': 'fee-1', 'amount': 99},
+      {'id': 'fee-2', 'amount': 20},
+    ]);
+  });
+
   test('a real transport error may still request a later snapshot', () {
     expect(
       CloudAppStore.shouldEscalateToFullPush(Exception('SocketException')),

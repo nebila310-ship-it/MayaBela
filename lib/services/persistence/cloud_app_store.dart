@@ -1241,6 +1241,8 @@ class CloudAppStore {
   @visibleForTesting
   static bool shouldEscalateToFullPush(Object error) {
     if (DocumentStore.isStaleWrite(error)) return false;
+    if (DocumentStore.isWritePolicyDenied(error)) return false;
+    if (DocumentStore.isDuplicateUpsert(error)) return false;
     final text = error.toString().toLowerCase();
     return !text.contains('sub claim') &&
         !text.contains('jwt') &&
