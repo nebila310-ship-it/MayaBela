@@ -8,6 +8,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/pending_notification_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 class NotificationService extends ChangeNotifier {
   NotificationService._();
   static final instance = NotificationService._();
@@ -23,6 +24,7 @@ class NotificationService extends ChangeNotifier {
       fromName: 'Miss Belen',
       recipientRole: AuthService.roleParent,
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      targetClassName: 'Grade 4A',
     ),
     AppNotification(
       id: 'seed-2',
@@ -48,21 +50,49 @@ class NotificationService extends ChangeNotifier {
   bool _matchesCurrentUser(AppNotification item, String role) {
     if (item.recipientRole != role) return false;
     if (role == AuthService.roleParent) {
-      final linkedStudentIds = AuthService.activeLinkedStudentIds()
-          .map((id) => id.trim().toUpperCase())
-          .toSet();
-      final target = item.targetStudentId?.trim().toUpperCase();
-      if (target == null || target.isEmpty) return true;
-      return linkedStudentIds.contains(target);
+      return _matchesLinkedStudentScope(
+        item,
+        AuthService.activeLinkedStudentIds()
+            .map((id) => id.trim().toUpperCase())
+            .where((id) => id.isNotEmpty)
+            .toSet(),
+      );
     }
     if (role == AuthService.roleStudent) {
       final linkedStudentId =
           AuthService.currentUser?.linkedStudentId?.trim().toUpperCase();
       if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
-      final target = item.targetStudentId?.trim().toUpperCase();
-      if (target == null || target.isEmpty) return true;
-      return target == linkedStudentId;
+      return _matchesLinkedStudentScope(item, {linkedStudentId});
     }
+    return true;
+  }
+
+  bool _matchesLinkedStudentScope(
+    AppNotification item,
+    Set<String> linkedStudentIds,
+  ) {
+    final target = item.targetStudentId?.trim().toUpperCase();
+    if (target != null && target.isNotEmpty) {
+      if (!linkedStudentIds.contains(target)) return false;
+    }
+
+    final className = item.targetClassName?.trim();
+    if (className != null && className.isNotEmpty) {
+      var inClass = false;
+      for (final studentId in linkedStudentIds) {
+        final student = StudentRegistryService.instance.lookupById(studentId);
+        if (student != null &&
+            StudentRegistryService.classNamesMatch(
+              student.className,
+              className,
+            )) {
+          inClass = true;
+          break;
+        }
+      }
+      if (!inClass) return false;
+    }
+
     return true;
   }
 
@@ -151,6 +181,7 @@ class NotificationService extends ChangeNotifier {
         createdAt: DateTime.now(),
         showOnMessagesBadge: showOnMessagesBadge,
         targetStudentId: targetStudentId,
+        targetClassName: targetClassName,
       ),
     );
     final created = _items.first;
@@ -238,6 +269,7 @@ class NotificationService extends ChangeNotifier {
           createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
               DateTime.now(),
           targetStudentId: item['targetStudentId'] as String?,
+          targetClassName: item['targetClassName'] as String?,
         ),
       );
     }

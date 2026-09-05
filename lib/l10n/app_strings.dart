@@ -2736,6 +2736,10 @@ class AppStrings implements AppStringsLike {
   String get cashAtSchool =>
       t('Cash at School', 'በትምህርት ቤት ጥሬ ገንዘብ');
   String paymentSuccessVia(String method) => t('Payment successful via $method', 'ክፍያ በ $method ተሳክቷል');
+  String get feeRecordedOnThisDevice => t(
+        'Payment recorded on this device. The office still needs to confirm it.',
+        'ክፍያ በዚህ መሣሪያ ተመዝግቧል። ጽሕፈት ቤቱ ማረጋገጥ አለበት።',
+      );
   String get paymentFailed =>
       t('Payment failed. Please try again.', 'ክፍያ አልተሳካም። እንደገና ይሞክሩ።');
   String overdueItems(int count) => t('$count items', '$count ያለፉ');

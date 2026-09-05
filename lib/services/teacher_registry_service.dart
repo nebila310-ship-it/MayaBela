@@ -3,6 +3,7 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
@@ -562,7 +563,7 @@ class TeacherRegistryService {
     );
     assignments.removeWhere(
       (a) =>
-          a.className == className &&
+          StudentRegistryService.classNamesMatch(a.className, className) &&
           a.role == TeacherStaffRole.homeroomTeacher,
     );
     assignments.add(

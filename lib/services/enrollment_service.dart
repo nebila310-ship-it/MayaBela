@@ -7,6 +7,7 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -316,16 +317,11 @@ class EnrollmentService extends ChangeNotifier {
     return StudentRegistryService.instance.lookupById(link.studentId)?.className;
   }
 
-  String _compactClassName(String? className) {
-    if (className == null) return '';
-    return className.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
-  }
-
-  Set<String> _assignedClassKeysForCurrentTeacher() {
-    final keys = <String>{};
+  Set<String> _assignedClassNamesForCurrentTeacher() {
+    final names = <String>{};
     void add(String? name) {
-      final key = _compactClassName(name);
-      if (key.isNotEmpty) keys.add(key);
+      final trimmed = name?.trim() ?? '';
+      if (trimmed.isNotEmpty) names.add(trimmed);
     }
 
     for (final assignment in TeacherAccessService.instance.myClasses) {
@@ -337,18 +333,30 @@ class EnrollmentService extends ChangeNotifier {
     for (final name in AuthService.cloudAssignedClassNames) {
       add(name);
     }
-    return keys;
+    return names;
   }
 
   bool _isAssignedClass(String? className) {
-    final key = _compactClassName(className);
-    if (key.isEmpty) return false;
-    return _assignedClassKeysForCurrentTeacher().contains(key);
+    if (className == null || className.trim().isEmpty) return false;
+    return _assignedClassNamesForCurrentTeacher().any(
+      (assigned) => StudentRegistryService.classNamesMatch(assigned, className),
+    );
+  }
+
+  /// Approve/reject only for parents-desk managers or classroom teachers
+  /// of the student's class. Administration Staff cannot approve.
+  bool canCurrentUserManageParentLink(ParentLinkRequest link) {
+    if (ModuleAccess.canManage('parents')) return true;
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    if (user.roleKey != AuthService.roleTeacher) return false;
+    if (AuthService.isAdministrationStaff) return false;
+    return _isAssignedClass(_classNameForLink(link));
   }
 
   List<ParentLinkRequest> pendingForHomeroomTeacher() {
     ensureSeeded();
-    final assigned = _assignedClassKeysForCurrentTeacher();
+    final assigned = _assignedClassNamesForCurrentTeacher();
     if (assigned.isEmpty) return [];
 
     return _parentLinks.where((link) {
@@ -382,7 +390,7 @@ class EnrollmentService extends ChangeNotifier {
 
   List<ParentLinkRequest> allLinksForHomeroomTeacher() {
     ensureSeeded();
-    final assigned = _assignedClassKeysForCurrentTeacher();
+    final assigned = _assignedClassNamesForCurrentTeacher();
     if (assigned.isEmpty) return [];
 
     return _parentLinks
@@ -437,7 +445,8 @@ class EnrollmentService extends ChangeNotifier {
   int pendingCountForCurrentUser() => pendingApprovalsForCurrentUser().length;
 
   Future<void> approveLink(String linkId, String reviewerName) async {
-    final link = _parentLinks.firstWhere((l) => l.id == linkId);
+    final link = findLink(linkId);
+    if (link == null || !canCurrentUserManageParentLink(link)) return;
     link.status = ParentLinkStatus.approved;
     link.reviewedBy = reviewerName;
     link.reviewedAt = DateTime.now();
@@ -473,7 +482,8 @@ class EnrollmentService extends ChangeNotifier {
   }
 
   Future<void> rejectLink(String linkId, String reviewerName) async {
-    final link = _parentLinks.firstWhere((l) => l.id == linkId);
+    final link = findLink(linkId);
+    if (link == null || !canCurrentUserManageParentLink(link)) return;
     link.status = ParentLinkStatus.rejected;
     link.reviewedBy = reviewerName;
     link.reviewedAt = DateTime.now();

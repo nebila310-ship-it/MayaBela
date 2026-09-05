@@ -320,6 +320,7 @@ abstract final class AppDataMaps {
         'showOnMessagesBadge': n.showOnMessagesBadge,
         'isRead': n.isRead,
         if (n.targetStudentId != null) 'targetStudentId': n.targetStudentId,
+        if (n.targetClassName != null) 'targetClassName': n.targetClassName,
       };
 
   static AppNotification appNotificationFromMap(Map<String, dynamic> map) =>
@@ -338,6 +339,7 @@ abstract final class AppDataMaps {
         showOnMessagesBadge: map['showOnMessagesBadge'] as bool? ?? true,
         isRead: map['isRead'] as bool? ?? false,
         targetStudentId: map['targetStudentId'] as String?,
+        targetClassName: map['targetClassName'] as String?,
       );
 
   // —— Class timetables ——

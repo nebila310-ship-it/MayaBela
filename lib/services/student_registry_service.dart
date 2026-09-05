@@ -735,7 +735,8 @@ class StudentRegistryService {
   }) {
     final normalizedClass = className.trim();
     return _students.where((student) {
-      if (!student.isActive || student.className != normalizedClass) {
+      if (!student.isActive ||
+          !classNamesMatch(student.className, normalizedClass)) {
         return false;
       }
       if (schoolId == null) return true;

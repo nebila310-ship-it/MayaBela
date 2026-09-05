@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
@@ -52,7 +53,16 @@ class TimetableService {
     );
   }
 
-  ClassTimetable? getTimetable(String className) => _byClass[className];
+  ClassTimetable? getTimetable(String className) {
+    final direct = _byClass[className];
+    if (direct != null) return direct;
+    for (final entry in _byClass.entries) {
+      if (StudentRegistryService.classNamesMatch(entry.key, className)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
 
   void applyPersistedTimetables(List<ClassTimetable> timetables) {
     for (final timetable in timetables) {
@@ -68,7 +78,7 @@ class TimetableService {
   List<ClassTimetable> allPersistedTimetables() => List.unmodifiable(_byClass.values);
 
   ClassTimetable getOrCreateForClass(String className) {
-    final existing = _byClass[className];
+    final existing = getTimetable(className);
     if (existing != null) return _withResolvedHomeroom(existing);
 
     final homeroom = _resolveHomeroomForClass(className);
@@ -105,7 +115,9 @@ class TimetableService {
     for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
       if (TeacherRegistryService.instance
           .homeroomClassesFor(teacher.teacherId)
-          .contains(className)) {
+          .any(
+            (name) => StudentRegistryService.classNamesMatch(name, className),
+          )) {
         return teacher;
       }
     }

@@ -471,7 +471,9 @@ class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
                                 ),
                               ),
                             ],
-                            if (isPending) ...[
+                            if (isPending &&
+                                EnrollmentService.instance
+                                    .canCurrentUserManageParentLink(link)) ...[
                               const SizedBox(height: 12),
                               Row(
                                 children: [

@@ -454,7 +454,12 @@ abstract final class MessagingAccessService {
       }
 
       for (final assignment in teacher.classAssignments) {
-        if (assignment.className != student.className) continue;
+        if (!StudentRegistryService.classNamesMatch(
+          assignment.className,
+          student.className,
+        )) {
+          continue;
+        }
         if (assignment.role == TeacherStaffRole.homeroomTeacher) {
           return 'Homeroom';
         }
