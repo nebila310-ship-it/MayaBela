@@ -109,6 +109,7 @@ class CurriculumService extends ChangeNotifier {
     List<String> standardCodes = const [],
     List<String> examPaperIds = const [],
     List<String> homeworkIds = const [],
+    List<String> attachmentPaths = const [],
     String? schoolId,
   }) async {
     final now = DateTime.now();
@@ -126,6 +127,7 @@ class CurriculumService extends ChangeNotifier {
       standardCodes: List.of(standardCodes),
       examPaperIds: List.of(examPaperIds),
       homeworkIds: List.of(homeworkIds),
+      attachmentPaths: List.of(attachmentPaths),
       createdBy: _username,
       createdAt: now,
       updatedAt: now,
@@ -149,6 +151,7 @@ class CurriculumService extends ChangeNotifier {
     List<String>? examPaperIds,
     List<String>? homeworkIds,
     List<String>? lessonPlanIds,
+    List<String>? attachmentPaths,
     String? note,
   }) async {
     final unit = unitById(id);
@@ -176,6 +179,9 @@ class CurriculumService extends ChangeNotifier {
     if (examPaperIds != null) unit.examPaperIds = List.of(examPaperIds);
     if (homeworkIds != null) unit.homeworkIds = List.of(homeworkIds);
     if (lessonPlanIds != null) unit.lessonPlanIds = List.of(lessonPlanIds);
+    if (attachmentPaths != null) {
+      unit.attachmentPaths = List.of(attachmentPaths);
+    }
     unit.updatedAt = DateTime.now();
     await _persist();
     return unit;

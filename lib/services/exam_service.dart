@@ -126,6 +126,7 @@ class ExamService extends ChangeNotifier {
     List<ExamChoice> choices = const [],
     String? correctChoiceId,
     String? gradeLevel,
+    List<String> attachmentPaths = const [],
     String? schoolId,
   }) async {
     final now = DateTime.now();
@@ -139,6 +140,7 @@ class ExamService extends ChangeNotifier {
       choices: choices,
       correctChoiceId: correctChoiceId,
       gradeLevel: gradeLevel,
+      attachmentPaths: List.of(attachmentPaths),
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -155,6 +157,7 @@ class ExamService extends ChangeNotifier {
     double? points,
     List<ExamChoice>? choices,
     String? correctChoiceId,
+    List<String>? attachmentPaths,
   }) async {
     final question = questionById(id);
     if (question == null) return null;
@@ -163,6 +166,9 @@ class ExamService extends ChangeNotifier {
     if (points != null) question.points = points;
     if (choices != null) question.choices = choices;
     if (correctChoiceId != null) question.correctChoiceId = correctChoiceId;
+    if (attachmentPaths != null) {
+      question.attachmentPaths = List.of(attachmentPaths);
+    }
     question.updatedAt = DateTime.now();
     await _persist();
     return question;
@@ -176,6 +182,7 @@ class ExamService extends ChangeNotifier {
     String markbookCategoryId = 'final',
     DateTime? startAt,
     DateTime? endAt,
+    List<String> attachmentPaths = const [],
     String? schoolId,
   }) async {
     final now = DateTime.now();
@@ -189,6 +196,7 @@ class ExamService extends ChangeNotifier {
       markbookCategoryId: markbookCategoryId,
       startAt: startAt,
       endAt: endAt,
+      attachmentPaths: List.of(attachmentPaths),
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -206,6 +214,7 @@ class ExamService extends ChangeNotifier {
     DateTime? startAt,
     DateTime? endAt,
     bool clearWindow = false,
+    List<String>? attachmentPaths,
   }) async {
     final paper = paperById(id);
     if (paper == null) return null;
@@ -220,6 +229,9 @@ class ExamService extends ChangeNotifier {
     } else {
       if (startAt != null) paper.startAt = startAt;
       if (endAt != null) paper.endAt = endAt;
+    }
+    if (attachmentPaths != null) {
+      paper.attachmentPaths = List.of(attachmentPaths);
     }
     paper.updatedAt = DateTime.now();
     await _persist();

@@ -45,6 +45,7 @@ void main() {
       framework: CurriculumFramework.national,
       standardCodes: const ['NS-4.1', 'NS-4.2'],
       examPaperIds: const ['EX-0001'],
+      attachmentPaths: const ['curriculum_attachments/map.pdf'],
       version: 2,
       versions: [
         CurriculumUnitVersion(
@@ -63,6 +64,7 @@ void main() {
     expect(copy.framework, CurriculumFramework.national);
     expect(copy.standardCodes, ['NS-4.1', 'NS-4.2']);
     expect(copy.examPaperIds, ['EX-0001']);
+    expect(copy.attachmentPaths, ['curriculum_attachments/map.pdf']);
     expect(copy.versions, hasLength(1));
     expect(copy.versions.first.note, 'Renamed');
   });

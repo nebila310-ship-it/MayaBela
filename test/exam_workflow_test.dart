@@ -36,6 +36,7 @@ void main() {
           ExamChoice(id: 'B', text: '100°C'),
         ],
         correctChoiceId: 'A',
+        attachmentPaths: const ['exam_question_attachments/diagram.png'],
         createdAt: now,
         updatedAt: now,
       );
@@ -48,6 +49,7 @@ void main() {
         questionIds: const ['Q-0001'],
         markbookCategoryId: 'midterm',
         status: ExamPaperStatus.published,
+        attachmentPaths: const ['exam_paper_attachments/cover.pdf'],
         createdAt: now,
         updatedAt: now,
       );
@@ -66,7 +68,15 @@ void main() {
       );
 
       expect(ExamQuestion.fromMap(question.toMap()).correctChoiceId, 'A');
+      expect(
+        ExamQuestion.fromMap(question.toMap()).attachmentPaths,
+        ['exam_question_attachments/diagram.png'],
+      );
       expect(ExamPaper.fromMap(paper.toMap()).markbookCategoryId, 'midterm');
+      expect(
+        ExamPaper.fromMap(paper.toMap()).attachmentPaths,
+        ['exam_paper_attachments/cover.pdf'],
+      );
       expect(ExamPaper.fromMap(paper.toMap()).isOpenAt(now), isTrue);
       expect(ExamAttempt.fromMap(attempt.toMap()).percent, 100);
     });
