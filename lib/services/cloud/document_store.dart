@@ -102,12 +102,32 @@ class DocumentStore {
     copy.remove('_docId');
     copy.remove('updatedAt');
     copy.remove('updated_at');
+    copy.remove('rowVersion');
     return copy;
+  }
+
+  /// Optimistic-concurrency reject from `app_documents_reject_stale`.
+  @visibleForTesting
+  static bool isStaleWrite(Object e) {
+    final s = '$e'.toLowerCase();
+    return s.contains('stale_write') || s.contains('updated elsewhere');
   }
 
   static bool _isGuardError(Object e) {
     final s = '$e'.toLowerCase();
-    return s.contains('stale_write') || s.contains('write_denied');
+    return isStaleWrite(e) || s.contains('write_denied');
+  }
+
+  /// Version the server expects: the value last stored, not a local 0 default.
+  @visibleForTesting
+  static int writeRowVersion({
+    required String collection,
+    Map<String, dynamic>? existing,
+    required Map<String, dynamic> incoming,
+  }) {
+    if (!_isVersioned(collection)) return clientRowVersion(incoming);
+    if (existing != null) return clientRowVersion(existing);
+    return clientRowVersion(incoming);
   }
 
   static StateError _guardError(String collection, Object e) {
@@ -118,11 +138,6 @@ class DocumentStore {
       );
     }
     return StateError('Not allowed to save this $collection record.');
-  }
-
-  void _stampRowVersion(String collection, Map<String, dynamic> payload) {
-    if (!_isVersioned(collection)) return;
-    payload['rowVersion'] = clientRowVersion(payload);
   }
 
   Future<void> createOrUpdate({
@@ -136,6 +151,7 @@ class DocumentStore {
 
     Map<String, dynamic> payload = scoped;
     Map<String, dynamic>? existing;
+    var existingReadFailed = false;
     if (merge) {
       try {
         existing = await readDoc(collection: collection, docId: docId);
@@ -143,14 +159,33 @@ class DocumentStore {
           payload = {...existing, ...scoped};
           payload.remove('_docId');
         }
-      } catch (_) {}
+      } catch (_) {
+        existingReadFailed = true;
+      }
+    }
+    if (_isVersioned(collection) && existingReadFailed) {
+      await CloudOutboxService.instance.enqueue(
+        collection: collection,
+        docId: docId,
+        op: 'upsert',
+        schoolId: _schoolIdOf(payload),
+        data: payload,
+        reason: 'could not read current rowVersion',
+      );
+      return;
     }
     if (existing != null && sameDocumentPayload(existing, payload)) {
       await CloudOutboxService.instance.ack(collection, docId);
       return;
     }
     payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-    _stampRowVersion(collection, payload);
+    if (_isVersioned(collection)) {
+      payload['rowVersion'] = writeRowVersion(
+        collection: collection,
+        existing: existing,
+        incoming: payload,
+      );
+    }
 
     final schoolId = _schoolIdOf(payload);
     if (schoolId == null || schoolId.isEmpty) {
@@ -376,19 +411,21 @@ class DocumentStore {
     }
   }
 
-  Future<Map<String, Map<String, dynamic>>> _existingDocsById(
-    String collection,
-  ) async {
+  Future<({Map<String, Map<String, dynamic>> byId, bool loadFailed})>
+      _existingDocsById(String collection) async {
     try {
       final existing = await readBySchool(
         collection,
         schoolId: _resolvedSchoolId(),
       );
-      return {
-        for (final doc in existing) '${doc['_docId']}': doc,
-      };
+      return (
+        byId: {
+          for (final doc in existing) '${doc['_docId']}': doc,
+        },
+        loadFailed: false,
+      );
     } catch (_) {
-      return const {};
+      return (byId: const <String, Map<String, dynamic>>{}, loadFailed: true);
     }
   }
 
@@ -398,7 +435,17 @@ class DocumentStore {
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
-    final existingById = await _existingDocsById(collection);
+    final loaded = await _existingDocsById(collection);
+    if (_isVersioned(collection) && loaded.loadFailed) {
+      if (kDebugMode) {
+        debugPrint(
+          '[DocumentStore] skip $collection writeBatch — '
+          'could not read current rowVersion',
+        );
+      }
+      return;
+    }
+    final existingById = loaded.byId;
     const chunkSize = 200;
     for (var start = 0; start < items.length; start += chunkSize) {
       final end = start + chunkSize > items.length
@@ -416,7 +463,11 @@ class DocumentStore {
         }
         scoped['updatedAt'] = DateTime.now().toUtc().toIso8601String();
         if (_isVersioned(collection)) {
-          scoped['rowVersion'] = clientRowVersion(scoped);
+          scoped['rowVersion'] = writeRowVersion(
+            collection: collection,
+            existing: existing,
+            incoming: scoped,
+          );
         }
         rows.add({
           'collection': collection,

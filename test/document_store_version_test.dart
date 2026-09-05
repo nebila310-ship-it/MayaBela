@@ -18,6 +18,50 @@ void main() {
     );
   });
 
+  test('sameDocumentPayload ignores rowVersion so republish is not a write', () {
+    expect(
+      DocumentStore.sameDocumentPayload(
+        {'title': 'Term 1', 'amount': 200, 'rowVersion': 6},
+        {'title': 'Term 1', 'amount': 200},
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.sameDocumentPayload(
+        {'title': 'Term 1', 'amount': 200, 'rowVersion': 6},
+        {'title': 'Term 1', 'amount': 250, 'rowVersion': 0},
+      ),
+      isFalse,
+    );
+  });
+
+  test('writeRowVersion prefers the cloud snapshot over a local 0', () {
+    expect(
+      DocumentStore.writeRowVersion(
+        collection: 'fees',
+        existing: {'id': 'f1', 'rowVersion': 6},
+        incoming: {'id': 'f1', 'title': 'Term 1'},
+      ),
+      6,
+    );
+    expect(
+      DocumentStore.writeRowVersion(
+        collection: 'fees',
+        existing: null,
+        incoming: {'id': 'f1'},
+      ),
+      0,
+    );
+    expect(
+      DocumentStore.writeRowVersion(
+        collection: 'homework',
+        existing: {'rowVersion': 9},
+        incoming: {'title': 'Essay'},
+      ),
+      0,
+    );
+  });
+
   test('fees and inventory are the only versioned collections', () {
     expect(DocumentStore.versionedCollections, {
       'fees',
