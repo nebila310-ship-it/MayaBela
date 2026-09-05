@@ -16,130 +16,146 @@
       src: url("file:///usr/share/fonts/truetype/noto/NotoSansEthiopic-Bold.ttf");
       font-weight: 700;
     }
-    :root { --purple:#4527a0; --gold:#b45309; --teal:#0f766e; --ink:#0f172a; --muted:#475569; }
+    :root { --purple:#4527a0; --gold:#b45309; --teal:#0f766e; --ink:#0f172a; --muted:#475569; --blue:#0b4f8a; --green:#0d7a3e; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       color: var(--ink);
       font-family: "Noto Ethiopic", "Noto Sans Ethiopic", "Nyala", "Segoe UI", Arial, sans-serif;
-      font-size: 12.5px;
-      line-height: 1.4;
+      font-size: 12.2px;
+      line-height: 1.38;
     }
-    .page { max-width: 210mm; margin: 0 auto; padding: 10mm 12mm 8mm; }
+    .page { max-width: 210mm; margin: 0 auto; padding: 8mm 11mm 7mm; }
     .no-print { margin: 8px 16px; font-size: 13px; }
+    .top {
+      display: grid;
+      grid-template-columns: 28mm 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .brand {
+      width: 28mm;
+      height: auto;
+      display: block;
+    }
     .kicker { color: var(--gold); font-weight: 800; letter-spacing: .08em; font-size: 11px; margin: 0 0 4px; }
-    h1 { color: var(--purple); margin: 0 0 4px; font-size: 22px; letter-spacing: -.02em; }
-    .lead { margin: 0 0 10px; font-size: 13.5px; }
+    h1 { color: var(--purple); margin: 0 0 4px; font-size: 20px; letter-spacing: -.02em; }
+    .lead { margin: 0; font-size: 12.5px; }
     .say {
       background: #fff7ed;
       border-left: 4px solid #f59e0b;
       padding: 8px 10px;
-      margin: 0 0 12px;
+      margin: 0 0 10px;
       font-weight: 700;
     }
-    .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
     .col {
       border: 1px solid #ddd6fe;
       border-radius: 10px;
-      padding: 10px 10px 8px;
+      padding: 9px 9px 7px;
       background: #f8f6ff;
       min-height: 0;
     }
     .col.now { background: #ecfdf5; border-color: #a7f3d0; }
     .col.year { background: #f8f6ff; }
     .col.later { background: #eff6ff; border-color: #bfdbfe; }
-    .col h2 { margin: 0 0 6px; font-size: 14px; color: var(--teal); }
-    .when { font-size: 11px; color: var(--muted); margin: 0 0 8px; font-weight: 700; }
+    .col h2 { margin: 0 0 4px; font-size: 13.5px; color: var(--teal); }
+    .when { font-size: 10.5px; color: var(--muted); margin: 0 0 7px; font-weight: 700; }
     .col ul { margin: 0; padding-left: 1.1em; }
-    .col li { margin: 0 0 7px; }
-    .en { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 2px; font-family: "Segoe UI", Arial, sans-serif; }
+    .col li { margin: 0 0 6px; }
+    .sell { font-size: 13px; }
+    .en { display: block; color: var(--muted); font-size: 10.5px; font-weight: 400; margin-top: 2px; font-family: "Segoe UI", Arial, sans-serif; }
+    .sell .en { color: var(--green); font-weight: 700; }
+    .money { font-weight: 800; }
     .foot {
-      margin-top: 10px;
+      margin-top: 9px;
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 10px;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 9px;
     }
     .box { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; }
     .box strong { color: var(--purple); }
-    .contact { font-size: 12px; }
+    .contact { font-size: 11.5px; }
     @media print {
       .no-print { display: none; }
       .page { padding: 0; }
     }
-    @page { size: A4; margin: 10mm; }
+    @page { size: A4; margin: 9mm; }
   </style>
 </head>
 <body>
   <p class="no-print">
     <a href="index.html">ስላይዶች</a> ·
     <a href="leave-behind.html">Leave-behind</a> ·
-    <a href="https://cdn.jsdelivr.net/gh/nebila310-ship-it/MayaBela@25cb40c/web/fenote-raey-academy/fenote-raey-owner-money.pdf">PDF</a> ·
+    <a href="fenote-raey-owner-money.pdf">PDF</a> ·
     ይህን ገጽ በ <strong>Ctrl+P</strong> አትሙ
   </p>
   <div class="page">
-    <p class="kicker">ፍኖተ ራእይ አካዳሚ · ለባለቤት / For the owner</p>
-    <h1>ትምህርት ቤቱ ገንዘብ የሚያገኘው እንዴት ነው?</h1>
-    <p class="lead">MaJo Bridge Technologies and Events · አዲስ ሱቅ ሳንከፍት፣ ያለውን ክፍያ እንሰበስባለን፣ የሚጠፋውን እንቆጥባለን።</p>
+    <div class="top">
+      <img class="brand" src="majo-bridge-logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+      <div>
+        <p class="kicker">ፍኖተ ራእይ አካዳሚ · ለባለቤት / For the owner</p>
+        <h1>ትምህርት ቤቱ ገንዘብ የሚያገኘው እንዴት ነው?</h1>
+        <p class="lead">MaJo-Bridge Technology and Events PLC · ትምህርት ቤቱ መተግበሪያውን ለወላጅ <strong>አሁን</strong> ይሸጣል። በኋላ የሚቀረው ታብሌት ብቻ ነው።</p>
+      </div>
+    </div>
     <div class="say">
-      የግንኙነት መጽሐፍ ክፍያው ይቀራል። መተግበሪያው ያን መጽሐፍ ይተካል። የምትቆጥበው ወጪም ትርፍ ነው።
-      <span class="en">Keep the communication-book fee. The app replaces the book. Money you stop wasting is also profit.</span>
+      ትምህርት ቤቱ የወላጅ መተግበሪያውን <strong>አሁን ይሸጣል</strong>። ወላጅ ለመተግበሪያው ይከፍላል — በኋላ አይደለም። የግንኙነት መጽሐፍ ይተካል። ገቢው የትምህርት ቤቱ ነው።
+      <span class="en">The school sells the parent app now. Parents pay this term. Later is tablets only.</span>
     </div>
 
     <div class="cols">
       <div class="col now">
         <h2>1. በዚህ ወቅት</h2>
-        <p class="when">This term — now, with the app</p>
+        <p class="when">This term — parents pay for the app now</p>
         <ul>
-          <li>የወረቀት የግንኙነት መጽሐፍ ክፍያው በወላጅ መተግበሪያ ይቀጥላል።
-            <span class="en">Same parent fee as the communication book — now digital.</span></li>
-          <li>ወላጅ የራሱን ክፍያ ቀሪ ያያል። ያልተከፈለ ክፍያ ይታያል — የተመዘገበ ገቢ ይሰበሰባል።
+          <li class="sell">ትምህርት ቤቱ መተግበሪያውን ለወላጅ ይሸጣል። ወላጅ አሁን ይከፍላል።
+            <span class="en">School sells the app. Parent pays now — this is the income.</span></li>
+          <li>የወረቀት የግንኙነት መጽሐፍ ይተካል። ክፍያው አይጠፋም — ዲጂታል ይሆናል።
+            <span class="en">The communication book is replaced. The fee stays, as the app.</span></li>
+          <li>ወላጅ የራሱን ክፍያ ቀሪ ያያል። ያልተከፈለ ክፍያ ይሰበሰባል።
             <span class="en">Parents see their balance. Outstanding fees get collected.</span></li>
-          <li>ወረቀት፣ ማተም፣ WhatsApp ዝርዝር ይቀንሳል።
-            <span class="en">Less paper, printing, and WhatsApp lists.</span></li>
           <li>የባስ GPS ለሌላ ኩባንያ አትክፈሉ። በስርዓቱ ውስጥ ነው።
             <span class="en">No second GPS company. Tracking is in the school system.</span></li>
-          <li>አንድ የተማሪ QR / መታወቂያ — ለአውቶቡስ፣ ክፍል፣ ፋይል። የካርድ ክፍያ ካለ ይቀጥላል።
+          <li>አንድ የተማሪ QR / መታወቂያ። የካርድ ክፍያ ካለ ይቀጥላል።
             <span class="en">One QR card. ID / replacement fees can stay.</span></li>
         </ul>
       </div>
       <div class="col year">
         <h2>2. በዚህ ዓመት</h2>
-        <p class="when">This year — once the school is using it</p>
+        <p class="when">This year — art, film, and events in our package</p>
         <ul>
+          <li>የስነ ጥበብና የፊልም ፕሮግራም በጥቅሉ ውስጥ ነው። MaJo-Bridge ያቀርባል።
+            <span class="en">Art and film program is in the package — our company runs it.</span></li>
+          <li class="money">ታዋቂ ሰው ወደ ዝግጅት መጥራት ውድ ነው። ኩባንያችን አልፎ አልፎ ያመጣል። ከዚህ ዝግጅት <strong>ትልቅ ገንዘብ</strong> ይገኛል።
+            <span class="en">Inviting celebrities is expensive. We bring them to school events from time to time. Those events are big money.</span></li>
           <li>ኢ-ቡክ እና የትምህርት ቁሳቁስ በመተግበሪያ ይሸጣል። ትምህርት ቤቱ ህዳግ ይይዛል።
             <span class="en">Sell e-books and materials in the app. School keeps the margin.</span></li>
-          <li>ስቶር በስም ይወጣል። መጽሐፍና ወረቀት መጥፋት ይቀንሳል።
-            <span class="en">Store issues by name. Less stock leakage.</span></li>
-          <li>ኤክሴል ብቻ ለመጻፍ ተጨማሪ ሰራተኛ አያስፈልግም።
-            <span class="en">Fewer extra clerks only to type Excel.</span></li>
-          <li>የደመወዝና ግብር ስህተት ይቀንሳል።
-            <span class="en">Fewer payroll and tax mistakes.</span></li>
-          <li>ካንቲን / ትንሽ ሱቅ ካለ፣ ሽያጭ በመዝገብ ይቀመጣል።
-            <span class="en">Canteen sales on record, not a short till.</span></li>
-          <li>የአውቶቡስ ተሳፋሪ በፋይል — ያልተከፈለ መቀመጫ ይቀንሳል።
-            <span class="en">Bus riders on file. Fewer unpaid seats.</span></li>
+          <li>ስቶር፣ ካንቲን፣ ያልተከፈለ የባስ መቀመጫ — መዝገብ ስለሚኖር ፍሳሽ ይቀንሳል።
+            <span class="en">Store, canteen, unpaid bus seats: less leak when it is on file.</span></li>
         </ul>
       </div>
       <div class="col later">
         <h2>3. በኋላ — ታብሌት</h2>
-        <p class="when">Later — after families use the app</p>
+        <p class="when">Later — tablets only, after the app is in use</p>
         <ul>
+          <li>በኋላ ታብሌት እንሸጣለን። አሁን አይደለም።
+            <span class="en">Tablets are later. Not now.</span></li>
           <li>ትምህርት ቤቱ ታብሌት በጅምላ ይገዛል፣ ለወላጅና መምህር በትንሽ ህዳግ ይሸጣል።
             <span class="en">Bulk tablets. Small margin to parents and teachers.</span></li>
-          <li>መተግበሪያው አስቀድሞ አለ — መሳሪያው ባዶ አይደለም።
-            <span class="en">The app is already there, so the device is useful.</span></li>
+          <li>መተግበሪያው አስቀድሞ ተሽጧል — መሳሪያው ባዶ አይደለም።
+            <span class="en">The app is already sold, so the device is useful.</span></li>
           <li>መጀመሪያ ሶፍትዌሩ። ቤተሰቡ ከተለማመደ በኋላ መሳሪያ።
-            <span class="en">Software first. Devices after the parent app is in use.</span></li>
-          <li>CCTV ለወላጅ የሚሸጥ 24/7 ቪዲዮ አይደለም። ለሰራተኛና አመራር ብቻ።
-            <span class="en">Do not sell live CCTV to parents. Staff only.</span></li>
+            <span class="en">Software first. Devices after families use the app.</span></li>
         </ul>
       </div>
     </div>
 
     <div class="foot">
       <div class="box">
-        <strong>አንድ ዓረፍተ ነገር፦</strong> የግንኙነት መጽሐፍ ክፍያውን እንይዛለን፣ ቁሳቁስ በመተግበሪያ እንሸጣለን፣ በኋላ በታብሌት ትንሽ ህዳግ — እና ወረቀት፣ የተለየ GPS፣ የሚጠፋ ስቶክ አንከፍልም። ሶፍትዌሩ ሱቁ ነው። የምትዘጋው ፍሳሽ ትርፉ ነው።
-        <span class="en">The software is the shop. The leak you close is the profit.</span>
+        <strong>አንድ ዓረፍተ ነገር፦</strong> ትምህርት ቤቱ መተግበሪያውን ለወላጅ አሁን ይሸጣል። የስነ ጥበብ፣ ፊልም፣ እና ታዋቂ ሰዎች ዝግጅት በጥቅሉ ውስጥ ነው — ዝግጅቱ ትልቅ ገንዘብ ነው። በኋላ ታብሌት።
+        <span class="en">The school sells the app to parents now. Art, film, and celebrity events are in our package — that is the big money. Tablets come later.</span>
       </div>
       <div class="box contact">
         <strong>ቀጣዩ እርምጃ፦</strong> 30–60 ቀን ሙከራ፣ አንድ ካምፓስ ወይም ክፍል።<br>
