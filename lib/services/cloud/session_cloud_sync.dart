@@ -12,6 +12,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
+import 'package:mayabela/services/cloud/cloud_idle_sync.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
 import 'package:mayabela/services/cloud/cloud_sync_router.dart';
@@ -85,6 +86,7 @@ abstract final class SessionCloudSync {
             CloudSyncFlags.enabled &&
             AuthService.currentUser != null) {
           CloudSyncEngine.start();
+          CloudIdleSync.onEngineStarted();
         }
       }
     }

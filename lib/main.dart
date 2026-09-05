@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
@@ -67,6 +68,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
+import 'package:mayabela/services/cloud/cloud_idle_sync.dart';
 import 'package:mayabela/services/cloud/fcm_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
 
@@ -270,13 +272,20 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
     super.initState();
     AppLocale.instance.addListener(_rebuild);
     UserPreferencesService.instance.addListener(_rebuild);
+    HardwareKeyboard.instance.addHandler(_onKeyActivity);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyActivity);
     AppLocale.instance.removeListener(_rebuild);
     UserPreferencesService.instance.removeListener(_rebuild);
     super.dispose();
+  }
+
+  bool _onKeyActivity(KeyEvent event) {
+    CloudIdleSync.bumpActivity();
+    return false;
   }
 
 
@@ -311,8 +320,13 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
         // Do NOT put sync/Maya overlays in a Stack here. On Flutter web,
         // builder-level Stack siblings of the navigator grey the whole page
         // when those chips are hovered. Overlays live in [AppFloatingChrome].
-        return SystemNavSafeScope(
-          child: AppLockGate(child: child ?? const SizedBox.shrink()),
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => CloudIdleSync.bumpActivity(),
+          onPointerSignal: (_) => CloudIdleSync.bumpActivity(),
+          child: SystemNavSafeScope(
+            child: AppLockGate(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
       routes: {
