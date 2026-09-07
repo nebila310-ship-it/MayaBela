@@ -8,6 +8,8 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Student portal: sit published papers for this class.
 class StudentExamScreen extends StatefulWidget {
@@ -286,6 +288,16 @@ class _StudentAttemptPageState extends State<_StudentAttemptPage> {
                 '${paper.subject} · ${questions.length} questions',
                 style: TextStyle(color: Colors.grey.shade800),
               ),
+              if (paper.attachmentPaths.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                CourseAttachmentPicker(
+                  paths: paper.attachmentPaths,
+                  subdir: 'exam_paper_attachments',
+                  canEdit: false,
+                  allowShareDownload: true,
+                  sectionTitle: 'Paper files',
+                ),
+              ],
               const SizedBox(height: 12),
               for (var i = 0; i < questions.length; i++)
                 _questionCard(questions[i], attempt, i + 1, locked),
@@ -341,6 +353,16 @@ class _StudentAttemptPageState extends State<_StudentAttemptPage> {
               '$number. ${question.prompt}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
+            if (question.attachmentPaths.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              CourseAttachmentPicker(
+                paths: question.attachmentPaths,
+                subdir: 'exam_question_attachments',
+                canEdit: false,
+                allowShareDownload: true,
+                sectionTitle: 'Question files',
+              ),
+            ],
             const SizedBox(height: 8),
             if (question.isMcq)
               for (final choice in question.choices)

@@ -18,6 +18,7 @@ class LessonPlan {
     this.homeworkIds = const [],
     this.examPaperIds = const [],
     this.learningMaterialIds = const [],
+    this.attachmentPaths = const [],
     this.status = LessonPlanStatus.draft,
     this.reviewStatus = LessonPlanReviewStatus.none,
     this.curriculumUnitId,
@@ -37,6 +38,7 @@ class LessonPlan {
   List<String> homeworkIds;
   List<String> examPaperIds;
   List<String> learningMaterialIds;
+  List<String> attachmentPaths;
   LessonPlanStatus status;
   LessonPlanReviewStatus reviewStatus;
   String? curriculumUnitId;
@@ -72,6 +74,7 @@ class LessonPlan {
         'homeworkIds': homeworkIds,
         'examPaperIds': examPaperIds,
         'learningMaterialIds': learningMaterialIds,
+        'attachmentPaths': attachmentPaths,
         'status': status.name,
         'reviewStatus': reviewStatus.name,
         if (curriculumUnitId != null) 'curriculumUnitId': curriculumUnitId,
@@ -97,6 +100,7 @@ class LessonPlan {
       homeworkIds: _ids(map['homeworkIds']),
       examPaperIds: _ids(map['examPaperIds']),
       learningMaterialIds: _ids(map['learningMaterialIds']),
+      attachmentPaths: _ids(map['attachmentPaths']),
       status: LessonPlanStatus.values.firstWhere(
         (v) => v.name == map['status'],
         orElse: () => LessonPlanStatus.draft,

@@ -65,6 +65,7 @@ class CurriculumUnit {
     this.lessonPlanIds = const [],
     this.examPaperIds = const [],
     this.homeworkIds = const [],
+    this.attachmentPaths = const [],
     this.createdBy,
     this.publishedAt,
   });
@@ -86,6 +87,7 @@ class CurriculumUnit {
   List<String> lessonPlanIds;
   List<String> examPaperIds;
   List<String> homeworkIds;
+  List<String> attachmentPaths;
   String? createdBy;
   final DateTime createdAt;
   DateTime updatedAt;
@@ -112,6 +114,7 @@ class CurriculumUnit {
         'lessonPlanIds': lessonPlanIds,
         'examPaperIds': examPaperIds,
         'homeworkIds': homeworkIds,
+        'attachmentPaths': attachmentPaths,
         if (createdBy != null) 'createdBy': createdBy,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -161,6 +164,10 @@ class CurriculumUnit {
       homeworkIds:
           (map['homeworkIds'] as List?)?.map((e) => e.toString()).toList() ??
               const [],
+      attachmentPaths: (map['attachmentPaths'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       createdBy: map['createdBy'] as String?,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),

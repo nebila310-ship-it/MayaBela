@@ -12,6 +12,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Staff exam desk: question bank, papers, and scoring that writes Phase B.
 class WebExamDeskPage extends StatefulWidget {
@@ -213,7 +214,8 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 title: Text(question.prompt),
                 subtitle: Text(
                   '${question.subject} · ${_typeLabel(question.type)} · '
-                  '${question.points.toStringAsFixed(0)} pts · ${question.id}',
+                  '${question.points.toStringAsFixed(0)} pts · ${question.id}'
+                  '${question.attachmentPaths.isEmpty ? '' : ' · ${question.attachmentPaths.length} file(s)'}',
                 ),
                 trailing: _canManage
                     ? IconButton(
@@ -252,7 +254,8 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 subtitle: Text(
                   '${paper.className} · ${paper.subject} · '
                   '${_categoryLabel(paper.markbookCategoryId)} · '
-                  '${paper.questionIds.length} questions · ${_statusLabel(paper.status)}',
+                  '${paper.questionIds.length} questions · ${_statusLabel(paper.status)}'
+                  '${paper.attachmentPaths.isEmpty ? '' : ' · ${paper.attachmentPaths.length} file(s)'}',
                 ),
                 trailing: _canManage
                     ? Wrap(
@@ -489,6 +492,7 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
   late String _subject;
   late ExamQuestionType _type;
   String? _correctId;
+  late List<String> _attachments;
 
   @override
   void initState() {
@@ -511,6 +515,7 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
         ),
     ];
     _correctId = q?.correctChoiceId ?? 'A';
+    _attachments = List<String>.from(q?.attachmentPaths ?? const []);
   }
 
   @override
@@ -550,6 +555,7 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
         points: points,
         choices: choices,
         correctChoiceId: _type == ExamQuestionType.mcq ? _correctId : null,
+        attachmentPaths: _attachments,
       );
     } else {
       await ExamService.instance.updateQuestion(
@@ -559,6 +565,7 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
         points: points,
         choices: choices,
         correctChoiceId: _type == ExamQuestionType.mcq ? _correctId : null,
+        attachmentPaths: _attachments,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -636,6 +643,13 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
                   ),
                 const Text('Select the radio next to the correct choice.'),
               ],
+              const SizedBox(height: 12),
+              CourseAttachmentPicker(
+                paths: _attachments,
+                subdir: 'exam_question_attachments',
+                sectionTitle: 'Question files',
+                onChanged: (next) => setState(() => _attachments = next),
+              ),
             ],
           ),
         ),
@@ -674,6 +688,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late String _subject;
   late String _categoryId;
   late Set<String> _selected;
+  late List<String> _attachments;
 
   @override
   void initState() {
@@ -691,6 +706,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
       _categoryId = widget.categories.first.id;
     }
     _selected = {...?p?.questionIds};
+    _attachments = List<String>.from(p?.attachmentPaths ?? const []);
   }
 
   @override
@@ -714,6 +730,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         subject: _subject,
         questionIds: _selected.toList(),
         markbookCategoryId: _categoryId,
+        attachmentPaths: _attachments,
       );
     } else {
       await ExamService.instance.updatePaper(
@@ -721,6 +738,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         title: title,
         questionIds: _selected.toList(),
         markbookCategoryId: _categoryId,
+        attachmentPaths: _attachments,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -789,6 +807,13 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                     DropdownMenuItem(value: cat.id, child: Text(cat.label)),
                 ],
                 onChanged: (v) => setState(() => _categoryId = v ?? _categoryId),
+              ),
+              const SizedBox(height: 12),
+              CourseAttachmentPicker(
+                paths: _attachments,
+                subdir: 'exam_paper_attachments',
+                sectionTitle: 'Paper files',
+                onChanged: (next) => setState(() => _attachments = next),
               ),
               const SizedBox(height: 12),
               Align(
@@ -954,6 +979,16 @@ class _AttemptScoreDialogState extends State<_AttemptScoreDialog> {
             question.prompt,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
+          if (question.attachmentPaths.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            CourseAttachmentPicker(
+              paths: question.attachmentPaths,
+              subdir: 'exam_question_attachments',
+              canEdit: false,
+              allowShareDownload: true,
+              sectionTitle: 'Question files',
+            ),
+          ],
           const SizedBox(height: 4),
           Text(
             question.isMcq

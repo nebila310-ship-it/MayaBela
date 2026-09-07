@@ -32,6 +32,7 @@ void main() {
       homeworkIds: const ['HW-1'],
       examPaperIds: const ['EX-0001'],
       learningMaterialIds: const ['LM-1'],
+      attachmentPaths: const ['lesson_plan_attachments/notes.pdf'],
       status: LessonPlanStatus.published,
       createdAt: week,
       updatedAt: week,
@@ -42,6 +43,7 @@ void main() {
     expect(copy.homeworkIds, ['HW-1']);
     expect(copy.examPaperIds, ['EX-0001']);
     expect(copy.learningMaterialIds, ['LM-1']);
+    expect(copy.attachmentPaths, ['lesson_plan_attachments/notes.pdf']);
     expect(copy.isPublished, isTrue);
     expect(copy.covers(week.add(const Duration(days: 3))), isTrue);
     expect(copy.covers(week.add(const Duration(days: 8))), isFalse);
@@ -65,6 +67,7 @@ void main() {
     expect(copy.reviewStatus, LessonPlanReviewStatus.none);
     expect(copy.curriculumUnitId, isNull);
     expect(copy.latestReviewId, isNull);
+    expect(copy.attachmentPaths, isEmpty);
     expect(copy.isPublished, isTrue);
   });
 
@@ -182,6 +185,28 @@ void main() {
     );
     final ids = webErpNavItemsForCurrentUser().map((e) => e.id).toSet();
     expect(ids, contains('lesson_plans'));
+    AuthService.currentUser = null;
+  });
+
+  test('createPlan keeps course file paths', () async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.sci',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+    );
+    final plan = await LessonPlanService.instance.createPlan(
+      title: 'Plants',
+      className: 'Grade 4A',
+      subject: 'Science',
+      schoolId: 'TB-001',
+      attachmentPaths: const ['lesson_plan_attachments/slides.pdf'],
+    );
+    expect(plan.attachmentPaths, ['lesson_plan_attachments/slides.pdf']);
+    expect(
+      LessonPlanService.instance.planById(plan.id)?.attachmentPaths,
+      ['lesson_plan_attachments/slides.pdf'],
+    );
     AuthService.currentUser = null;
   });
 }
