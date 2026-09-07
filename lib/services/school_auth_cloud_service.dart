@@ -314,6 +314,12 @@ class SchoolAuthCloudService {
     }
     if (details.contains('school')) return 'school_mismatch';
     if (details.contains('password')) return 'password_too_short';
+    if (details.contains('sms_gateway') || details.contains('sms gateway')) {
+      return 'sms_gateway_required';
+    }
+    if (details.contains('sms')) return 'sms_failed';
+    if (details.contains('expired')) return 'expired';
+    if (details.contains('otp')) return 'invalid_otp';
     if (details.contains('role')) return 'role_mismatch';
     if (e.status == 401 || e.status == 403) return 'denied';
     if (e.status == 404) return 'cloud_required';
@@ -443,6 +449,75 @@ class SchoolAuthCloudService {
         );
       }
       return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+    }
+  }
+
+  Future<SchoolAuthCloudResult> sendPasswordResetOtp({
+    required String phone,
+    required String schoolId,
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    try {
+      final data = await _invoke('school-send-otp', {
+        'phone': phone.trim(),
+        'schoolId': schoolId.trim().toUpperCase(),
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'sms_failed',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return SchoolAuthCloudResult(
+        ok: true,
+        errorMessage: data['e164Phone']?.toString(),
+      );
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
+      );
+    } catch (_) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'sms_failed');
+    }
+  }
+
+  Future<SchoolAuthCloudResult> resetPasswordWithOtp({
+    required String phone,
+    required String schoolId,
+    required String otp,
+    required String newPassword,
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    try {
+      final data = await _invoke('school-reset-password-otp', {
+        'phone': phone.trim(),
+        'schoolId': schoolId.trim().toUpperCase(),
+        'otp': otp.trim(),
+        'newPassword': newPassword,
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'invalid_otp',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return const SchoolAuthCloudResult(ok: true);
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
+      );
+    } catch (_) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid_otp');
     }
   }
 

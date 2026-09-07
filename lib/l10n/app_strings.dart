@@ -230,6 +230,11 @@ class AppStrings implements AppStringsLike {
   String get passwordResetSuccess =>
       t('Password reset successful!', 'የይለፍ ቃል ተቀይሯል!');
   String get demoOtpNote => t('(Demo: OTP shown in app for testing)', '(ማሳያ OTP በመተግበሪያው ላይ ይታያል)');
+  String get otpSmsGatewayHint => t(
+        'We will text a 6-digit code to this registered phone. The code is never shown in the app.',
+        'ወደዚህ የተመዘገበ ስልክ የ 6 አሃዝ ኮድ እንልካለን። ኮዱ በመተግበሪያው ውስጥ አይታይም።',
+        'Koodii lakkoofsa 6 gara bilbila galmaa\'e kana ni ergina. Koodiin app keessatti hin mul\'atu.',
+      );
 
   String get enterName => t('Please enter your name', 'ስምዎን ያስገቡ');
   String get enterSchoolId =>
@@ -3701,29 +3706,39 @@ class AppStrings implements AppStringsLike {
         'Koodii mirkaneessaa SMSn ergame',
       );
   String get otpFirebaseFallback => t(
-        'Firebase not configured — using demo OTP for testing',
-        'Firebase አልተዋቀረም — ለሙከራ demo OTP ጥቅም ላይ ይውላል',
-        'Firebase hin qindaa\'e — OTP demo tijaajilaaf',
+        'SMS gateway not configured — using demo OTP for testing',
+        'የ SMS አገልግሎት አልተዋቀረም — ለሙከራ demo OTP ጥቅም ላይ ይውላል',
+        'SMS hin qindaa\'e — OTP demo tijaajilaaf',
       );
   String get otpSmsFailed => t(
-        'SMS could not be sent. Check the phone number and Firebase Phone Auth setup.',
-        'SMS መላክ አልተቻለም። ስልክ ቁጥር እና Firebase Phone Auth ያረጋግጡ።',
-        'SMS ergamuu hin dandeenye. Lakkoofsa bilbilaa fi Firebase mirkaneessi.',
+        'SMS could not be sent. Check the phone number and SMS gateway setup.',
+        'SMS መላክ አልተቻለም። ስልክ ቁጥር እና የ SMS አገልግሎት ያረጋግጡ።',
+        'SMS ergamuu hin dandeenye. Lakkoofsa bilbilaa fi SMS mirkaneessi.',
+      );
+  String get otpSmsGatewayRequired => t(
+        'Real SMS is not connected yet. In Supabase Edge Function secrets set Africa\'s Talking (AT_USERNAME, AT_API_KEY) or Twilio, deploy school-send-otp, then try again.',
+        'እውነተኛ SMS ገና አልተገናኘም። በ Supabase Edge Function secrets Africa\'s Talking ወይም Twilio ያስገቡ።',
+        'SMS dhugaa hin qindaa\'e. Supabase keessatti Africa\'s Talking ykn Twilio secret galchaa.',
+      );
+  String get otpExpired => t(
+        'This code expired. Request a new SMS code.',
+        'ይህ ኮድ ጊዜው አልፏል። አዲስ SMS ኮድ ይጠይቁ።',
+        'Koodiin kun yeroo isaa darbe. Koodii SMS haaraa gaafadhaa.',
       );
   String get otpFirebaseSha1Setup => t(
-        'Firebase Phone Auth is not fully set up. In Firebase Console: (1) Authentication → enable Phone and Google sign-in, (2) Project settings → Android app → add SHA-1 and SHA-256, (3) wait 5 minutes and re-download google-services.json. Until oauth_client is populated, add a test phone number under Authentication → Phone → Phone numbers for testing.',
-        'Firebase Phone Auth ሙሉ አልተዋቀረም። Firebase Console → Authentication → Phone እና Google sign-in ያንቁ፣ SHA-1/SHA-256 ያክሉ፣ google-services.json እንደገና ያውርዱ።',
-        'Firebase Phone Auth hin qindaa\'e. Firebase Console keessatti Phone fi Google sign-in banadhaa, SHA-1/SHA-256 dabalaa.',
+        'Real SMS is not connected yet. Set Africa\'s Talking or Twilio secrets on the school-send-otp function.',
+        'እውነተኛ SMS ገና አልተገናኘም። የ Africa\'s Talking ወይም Twilio ቁልፎችን ያስገቡ።',
+        'SMS dhugaa hin qindaa\'e. Africa\'s Talking ykn Twilio secret galchaa.',
       );
   String get otpSmsRegionNotEnabled => t(
-        'Ethiopia (+251) is not enabled for SMS in Firebase. Go to Authentication → Settings → SMS region policy → Allow → add Ethiopia (ET), then try again. Real SMS also requires the Blaze (pay-as-you-go) plan.',
-        'ኢትዮጵያ (+251) ለ SMS በ Firebase አልተነቀሰም። Authentication → Settings → SMS region policy → Allow → Ethiopia (ET) ያክሉ። እውነተኛ SMS Blaze plan ይፈልጋል።',
-        'Itoophiyaa (+251) SMS irratti hin bane. Firebase → Authentication → Settings → SMS region policy keessatti ET dabalaa.',
+        'SMS could not be sent to this Ethiopian number. Check the Africa\'s Talking / Twilio account can send to +251.',
+        'ወደዚህ የኢትዮጵያ ቁጥር SMS መላክ አልተቻለም። Africa\'s Talking / Twilio +251 መላክ እንደሚችል ያረጋግጡ።',
+        'SMS gara lakkoofsa Itoophiyaa kana hin ergamne. +251 mirkaneessi.',
       );
   String get otpBillingNotEnabled => t(
-        'Real SMS requires Firebase Blaze (pay-as-you-go) billing. In Firebase Console click Upgrade, enable billing, then retry. For free testing: Authentication → Phone → add your number under Phone numbers for testing (fixed code, no SMS).',
-        'እውነተኛ SMS Firebase Blaze billing ይፈልጋል። Firebase Console → Upgrade → billing ያንቁ። ለነጻ ሙከራ: Authentication → Phone → Phone numbers for testing ይጠቀሙ።',
-        'SMS dhugaa Firebase Blaze billing barbaachisa. Testing: Authentication → Phone → test numbers.',
+        'Real SMS requires a paid gateway (Africa\'s Talking or Twilio). Add the API keys in Supabase secrets, then retry.',
+        'እውነተኛ SMS የተከፈለ SMS አገልግሎት ይፈልጋል (Africa\'s Talking ወይም Twilio)። ቁልፎቹን በ Supabase ያስገቡ።',
+        'SMS dhugaa kaffaltii gateway (Africa\'s Talking ykn Twilio) barbaachisa.',
       );
   String otpSmsFailedDetail(String? detail) => t(
         'SMS could not be sent. $detail',

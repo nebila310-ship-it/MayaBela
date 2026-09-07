@@ -412,6 +412,43 @@ export function ethiopianLoginKey(value: unknown): string {
   return normalized;
 }
 
+/** E.164 for Ethiopian mobiles, e.g. +251911234567. */
+export function toE164Ethiopian(value: unknown): string | null {
+  const key = ethiopianLoginKey(value);
+  if (key.length === 10 && key.startsWith("0") && /^0[79]\d{8}$/.test(key)) {
+    return `+251${key.slice(1)}`;
+  }
+  return null;
+}
+
+/** Find a school account by registered phone / login phone. */
+export async function findAccountByPhone(
+  sb: SupabaseClient,
+  phone: string,
+  schoolId: string,
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const sid = String(schoolId || "").trim().toUpperCase();
+  const phoneKey = ethiopianLoginKey(phone);
+  if (!sid || !phoneKey) return null;
+
+  for (const role of ROLES) {
+    const found = await findAccountDoc(sb, phoneKey, role, sid);
+    if (found) return found;
+  }
+
+  const inSchool = await queryDocs(
+    sb,
+    "app_auth_accounts",
+    [{ column: "schoolId", op: "eq", value: sid }],
+    500,
+  );
+  for (const doc of inSchool) {
+    if (usernamesMatch(doc.data.username || doc.id, phone)) return doc;
+    if (usernamesMatch(doc.data.phone, phone)) return doc;
+  }
+  return null;
+}
+
 export function usernamesMatch(a: unknown, b: unknown): boolean {
   const na = normalizeUsername(a);
   const nb = normalizeUsername(b);
