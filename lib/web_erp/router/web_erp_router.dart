@@ -24,6 +24,7 @@ import 'package:mayabela/web_erp/pages/web_exam_desk_page.dart';
 import 'package:mayabela/web_erp/pages/web_lesson_plans_page.dart';
 import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
 import 'package:mayabela/web_erp/pages/web_attendance_intelligence_page.dart';
+import 'package:mayabela/web_erp/pages/web_academic_analytics_page.dart';
 import 'package:mayabela/web_erp/pages/web_homework_page.dart';
 import 'package:mayabela/web_erp/pages/web_alumni_page.dart';
 import 'package:mayabela/web_erp/pages/web_admin_overview_page.dart';
@@ -151,6 +152,9 @@ class WebErpRouter {
       case 'at_risk':
       case 'attendance_insights':
         return WebAttendanceIntelligencePage(onNavigate: onNavigate);
+      case 'analytics':
+      case 'academic_analytics':
+        return WebAcademicAnalyticsPage(onNavigate: onNavigate);
       case 'examinations':
       case 'grade_approvals':
         return const GradeApprovalQueueScreen();

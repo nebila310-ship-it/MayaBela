@@ -138,20 +138,20 @@ class _MaterialPaymentSheetState extends State<_MaterialPaymentSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _open(
-                      SchoolPaymentAccounts.telegramReceiptUri(_message),
+                      SchoolPaymentAccounts.whatsappReceiptUri(_message),
                     ),
-                    icon: const Icon(Icons.send_outlined),
-                    label: Text(s.sendViaTelegram),
+                    icon: const Icon(Icons.chat_outlined),
+                    label: Text(s.sendViaWhatsApp),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _open(
-                      SchoolPaymentAccounts.whatsappReceiptUri(_message),
+                      SchoolPaymentAccounts.telegramReceiptUri(_message),
                     ),
-                    icon: const Icon(Icons.chat_outlined),
-                    label: Text(s.sendViaWhatsApp),
+                    icon: const Icon(Icons.send_outlined),
+                    label: Text(s.sendViaTelegram),
                   ),
                 ),
               ],

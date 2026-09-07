@@ -20,7 +20,7 @@ class WebStudentProgramsPage extends StatefulWidget {
 
 class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 5, vsync: this);
+  late final TabController _tabs = TabController(length: 6, vsync: this);
   final _svc = DosaService.instance;
 
   bool get _canManage => ModuleAccess.canManage('student_affairs');
@@ -77,9 +77,9 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                   const SizedBox(height: 4),
                   Text(
                     'Clubs and Gojo, merit scholarships (reads the markbook, '
-                    'never writes grades), grievances, internships, and '
-                    'leadership meetings. Minutes stay on the meeting — '
-                    'chat is only for coordination.',
+                    'never writes grades), grievances, internships, '
+                    'leadership meetings, and open leadership tasks. Minutes stay '
+                    'on the meeting — chat is only for coordination.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -109,6 +109,10 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                         text:
                             'Leadership (${_svc.meetingsForSchool(_schoolId).length})',
                       ),
+                      Tab(
+                        text:
+                            'Tasks (${_svc.openLeadershipTaskCount(_schoolId)})',
+                      ),
                     ],
                   ),
                 ],
@@ -123,6 +127,7 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                   _grievancesTab(),
                   _internshipsTab(),
                   _meetingsTab(),
+                  _tasksTab(),
                 ],
               ),
             ),
@@ -379,6 +384,42 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     );
   }
 
+  Widget _tasksTab() {
+    final items = _svc.leadershipTasksForSchool(_schoolId);
+    return _list(
+      action: _canManage
+          ? FilledButton.icon(
+              onPressed: _addLeadershipTask,
+              icon: const Icon(Icons.add_task_outlined),
+              label: const Text('Leadership task'),
+            )
+          : null,
+      empty: 'No open leadership tasks. Meeting checklists stay on the meeting.',
+      children: [
+        for (final row in items)
+          _card(
+            title: row.title,
+            subtitle: [
+              if (row.assignee.trim().isNotEmpty) row.assignee,
+              if (row.dueAt != null)
+                'Due ${row.dueAt!.toIso8601String().substring(0, 10)}',
+              row.done ? 'Done' : 'Open',
+            ].join(' · '),
+            body: [
+              if (row.notes.trim().isNotEmpty) Text(row.notes),
+              if (_canManage)
+                CheckboxListTile(
+                  dense: true,
+                  value: row.done,
+                  title: const Text('Complete'),
+                  onChanged: (_) => _svc.toggleLeadershipTask(row.id),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
   Widget _list({
     Widget? action,
     required String empty,
@@ -612,6 +653,51 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
       studentId: studentId,
       host: host.text,
       role: role.text,
+    );
+  }
+
+  Future<void> _addLeadershipTask() async {
+    final title = TextEditingController();
+    final assignee = TextEditingController();
+    final notes = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Leadership task'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: title,
+              decoration: const InputDecoration(labelText: 'Task'),
+            ),
+            TextField(
+              controller: assignee,
+              decoration: const InputDecoration(labelText: 'Assignee'),
+            ),
+            TextField(
+              controller: notes,
+              decoration: const InputDecoration(labelText: 'Notes'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _svc.addLeadershipTask(
+      title: title.text,
+      assignee: assignee.text,
+      notes: notes.text,
     );
   }
 

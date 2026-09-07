@@ -67,6 +67,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ListTile(
                 leading: const Icon(Icons.sms_outlined, color: Colors.teal),
                 title: Text(s.sendViaSms),
+                subtitle: const Text('Preferred'),
                 onTap: () => Navigator.pop(context, OtpDeliveryChannel.sms),
               ),
               ListTile(
@@ -77,6 +78,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ListTile(
                 leading: const Icon(Icons.send, color: Colors.lightBlue),
                 title: Text(s.sendViaTelegram),
+                subtitle: const Text('Still available'),
                 onTap: () => Navigator.pop(context, OtpDeliveryChannel.telegram),
               ),
             ],

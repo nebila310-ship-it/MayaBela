@@ -36,6 +36,7 @@ class AdminStudentRecord {
     this.emergencyContact2Name,
     this.homeroomTeacherId,
     this.academicYear,
+    this.house,
     this.hasMedicalCondition = false,
     this.medicalConditionDetails,
     this.otherMedicalInfo,
@@ -77,6 +78,8 @@ class AdminStudentRecord {
   final String? emergencyContact2Name;
   final String? homeroomTeacherId;
   final String? academicYear;
+  /// Optional house / Gojo colour group. Not a second campus or class.
+  final String? house;
   final bool hasMedicalCondition;
   final String? medicalConditionDetails;
   final String? otherMedicalInfo;
@@ -162,6 +165,7 @@ class AdminStudentRecord {
     DateTime? dateOfBirth,
     String? homeroomTeacherId,
     String? academicYear,
+    String? house,
     String? campus,
     String? gender,
     String? fatherName,
@@ -217,6 +221,7 @@ class AdminStudentRecord {
       emergencyContact2Name: emergencyContact2Name ?? this.emergencyContact2Name,
       homeroomTeacherId: homeroomTeacherId ?? this.homeroomTeacherId,
       academicYear: academicYear ?? this.academicYear,
+      house: house ?? this.house,
       hasMedicalCondition: hasMedicalCondition ?? this.hasMedicalCondition,
       medicalConditionDetails:
           medicalConditionDetails ?? this.medicalConditionDetails,
@@ -262,6 +267,7 @@ class AdminStudentRecord {
           'emergencyContact2Name': emergencyContact2Name,
         if (homeroomTeacherId != null) 'homeroomTeacherId': homeroomTeacherId,
         if (academicYear != null) 'academicYear': academicYear,
+        if (house != null) 'house': house,
         'hasMedicalCondition': hasMedicalCondition,
         if (medicalConditionDetails != null)
           'medicalConditionDetails': medicalConditionDetails,
@@ -311,6 +317,7 @@ class AdminStudentRecord {
       emergencyContact2Name: map['emergencyContact2Name'] as String?,
       homeroomTeacherId: map['homeroomTeacherId'] as String?,
       academicYear: map['academicYear'] as String?,
+      house: map['house'] as String?,
       hasMedicalCondition: map['hasMedicalCondition'] as bool? ?? false,
       medicalConditionDetails: map['medicalConditionDetails'] as String?,
       otherMedicalInfo: map['otherMedicalInfo'] as String?,
@@ -897,6 +904,7 @@ class StudentRegistryService {
     String? emergencyContact2Name,
     String? homeroomTeacherId,
     String? academicYear,
+    String? house,
     String? campus,
   }) {
     final contact = _trimOrNull(emergencyContact) ??
@@ -930,6 +938,7 @@ class StudentRegistryService {
       emergencyContact2Name: _trimOrNull(emergencyContact2Name),
       homeroomTeacherId: _trimOrNull(homeroomTeacherId)?.toUpperCase(),
       academicYear: _trimOrNull(academicYear),
+      house: _trimOrNull(house),
       campus: _trimOrNull(campus) ?? 'Main Campus',
     );
     _students.add(record);

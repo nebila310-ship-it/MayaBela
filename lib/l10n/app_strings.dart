@@ -463,6 +463,7 @@ class AppStrings implements AppStringsLike {
         'classes' => 'ክፍሎቼ',
         'attendance' => 'መገኘት',
         'at_risk' => 'አደጋ ላይ ያሉ ተማሪዎች',
+        'analytics' => 'ትንታኔ እና ሪፖርት',
         'attendance_insights' => 'የመገኘት ግንዛቤ',
         'messages' => 'መልዕክቶች',
         'announcements' => 'ማስታወቂያዎች',
@@ -531,6 +532,7 @@ class AppStrings implements AppStringsLike {
         'classes' => 'Kutaalee Koo',
         'attendance' => 'Argama',
         'at_risk' => 'Barattoota balaa keessa',
+        'analytics' => 'Xiinxala fi gabaasa',
         'attendance_insights' => 'Hubannoo argamaa',
         'messages' => 'Ergaawwan',
         'announcements' => 'Beeksisa',
@@ -598,6 +600,7 @@ class AppStrings implements AppStringsLike {
       'classes' => 'My Classes',
       'attendance' => 'Attendance',
       'at_risk' => 'At-risk students',
+      'analytics' => 'Analytics & exports',
       'attendance_insights' => 'Attendance insights',
       'messages' => 'Messages',
       'announcements' => 'Announcements',
@@ -1295,9 +1298,9 @@ class AppStrings implements AppStringsLike {
         'Akkaawuntii yaalii kana keessaa tokkotti kaffalaa, ergaa ragaa ergaa',
       );
   String get bookPaymentSendReceiptHint => t(
-        'Send payment receipt via Telegram (@nabilmaya) or WhatsApp, then tap below.',
-        'የክፍያ ደረሰኝ በቴሌግራም (@nabilmaya) ወይም በዋትስአፕ ይላኩ፣ ከዚያ ከታች ይጫኑ።',
-        'Ragaa kaffaltii Telegram (@nabilmaya) ykn WhatsApp tiin ergaa, sana booda gadi tuqi.',
+        'Send the payment receipt by SMS or WhatsApp first. Telegram (@nabilmaya) is still available if those are not.',
+        'የክፍያ ደረሰኝ በመጀመሪያ በኤስኤምኤስ ወይም በዋትስአፕ ይላኩ። ቴሌግራም (@nabilmaya) አማራጭ ነው።',
+        'Ragaa kaffaltii duraan SMS ykn WhatsApp tiin ergaa. Telegram (@nabilmaya) filannootti jira.',
       );
   String get iSentReceipt => t(
         'I’ve sent the receipt',

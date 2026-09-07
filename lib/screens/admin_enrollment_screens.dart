@@ -1078,6 +1078,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
   final _section = TextEditingController();
   final _homeroomTeacherId = TextEditingController();
   final _academicYear = TextEditingController(text: '2025/2026');
+  final _house = TextEditingController();
   final _transportId = TextEditingController();
   bool _transport = false;
   String? _selectedGender;
@@ -1111,6 +1112,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
     _section.dispose();
     _homeroomTeacherId.dispose();
     _academicYear.dispose();
+    _house.dispose();
     _transportId.dispose();
     super.dispose();
   }
@@ -1352,6 +1354,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       emergencyContact2Name: _emergencyName2.text,
       homeroomTeacherId: homeroomTeacherId,
       academicYear: _academicYear.text.trim(),
+      house: _house.text.trim(),
       transportEnabled: _transport,
       transportId: transportIdRaw.isEmpty ? null : transportIdRaw,
       campus: _selectedCampus,
@@ -1710,6 +1713,16 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
                     label: s.academicYear,
                     hint: '2025/2026',
                     icon: Icons.calendar_today_outlined,
+                    accent: theme.secondary,
+                  ),
+                ),
+                TextField(
+                  controller: _house,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: adminFieldDecoration(
+                    label: 'House',
+                    hint: 'Blue, Green, Red, Yellow…',
+                    icon: Icons.home_outlined,
                     accent: theme.secondary,
                   ),
                 ),
