@@ -1,7 +1,12 @@
 import 'dart:io';
 
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+
+import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/platform/platform_file_storage.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/services/announcement_attachment_service.dart';
 
 class GalleryMediaPick {
   const GalleryMediaPick({
@@ -13,55 +18,93 @@ class GalleryMediaPick {
   final String displayName;
 }
 
-/// Picks photos/videos from device storage for class gallery posts.
+/// Picks photos/videos for class gallery posts on web and native.
 class GalleryMediaService {
   GalleryMediaService._();
   static final instance = GalleryMediaService._();
 
-  final _picker = ImagePicker();
+  Future<GalleryMediaPick?> pickPhoto() => _pick(images: true);
 
-  Future<GalleryMediaPick?> pickPhoto() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 88,
-    );
-    if (picked == null) return null;
-    return _persistPick(picked, prefix: 'gallery_photo');
+  Future<GalleryMediaPick?> pickVideo() => _pick(images: false);
+
+  Future<GalleryMediaPick?> _pick({required bool images}) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: images ? FileType.image : FileType.video,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return null;
+      return await persistPlatformFile(result.files.first, images: images);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GalleryMediaService pick failed: $e');
+      }
+      return null;
+    }
   }
 
-  Future<GalleryMediaPick?> pickVideo() async {
-    final picked = await _picker.pickVideo(source: ImageSource.gallery);
-    if (picked == null) return null;
-    return _persistPick(picked, prefix: 'gallery_video');
-  }
-
-  Future<GalleryMediaPick?> _persistPick(
-    XFile picked, {
-    required String prefix,
+  Future<GalleryMediaPick?> persistPlatformFile(
+    PlatformFile file, {
+    required bool images,
   }) async {
-    final source = File(picked.path);
-    if (!await source.exists()) return null;
+    List<int>? bytes = file.bytes;
+    if ((bytes == null || bytes.isEmpty) &&
+        !kIsWeb &&
+        file.path != null &&
+        file.path!.isNotEmpty) {
+      try {
+        bytes = await File(file.path!).readAsBytes();
+      } catch (_) {
+        bytes = null;
+      }
+    }
+    if (bytes == null || bytes.isEmpty) return null;
 
-    final dir = await _galleryDir();
-    final ext = picked.name.contains('.')
-        ? picked.name.split('.').last
-        : (prefix.contains('video') ? 'mp4' : 'jpg');
-    final id = DateTime.now().millisecondsSinceEpoch;
-    final dest = File('${dir.path}/${prefix}_$id.$ext');
-    await source.copy(dest.path);
+    final name = file.name.trim().isNotEmpty
+        ? file.name
+        : (images ? 'gallery_photo.jpg' : 'gallery_video.mp4');
+    return persistBytes(fileName: name, bytes: bytes);
+  }
+
+  Future<GalleryMediaPick?> persistBytes({
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    if (bytes.isEmpty) return null;
+    final safeName = fileName.trim().isEmpty ? 'gallery_media.bin' : fileName;
+
+    AnnouncementAttachment? saved;
+    try {
+      saved = await saveAttachmentBytes(
+        fileName: safeName,
+        bytes: bytes,
+        subdir: 'gallery_media',
+        size: bytes.length,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GalleryMediaService persist failed: $e');
+      }
+    }
+
+    final localPath = saved?.filePath ??
+        WebAttachmentCache.instance.store(safeName, bytes);
+    final displayName = saved?.fileName ?? safeName;
+
+    final uploaded = await AnnouncementAttachmentService.instance
+        .uploadSavedAttachment(
+      fileName: displayName,
+      bytes: bytes,
+      localPath: localPath,
+      subdir: 'gallery_media',
+      attachmentId: saved?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+    );
 
     return GalleryMediaPick(
-      filePath: dest.path,
-      displayName: picked.name.isNotEmpty ? picked.name : dest.path.split('/').last,
+      filePath: uploaded ?? localPath,
+      displayName: displayName,
     );
-  }
-
-  Future<Directory> _galleryDir() async {
-    final base = await getApplicationDocumentsDirectory();
-    final dir = Directory('${base.path}/gallery_media');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
   }
 }

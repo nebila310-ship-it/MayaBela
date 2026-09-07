@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/cloud/app_data_maps.dart';
 import 'package:mayabela/models/teacher_features.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
@@ -75,6 +77,19 @@ void main() {
     expect(ModuleAccess.canView('gallery'), isTrue);
     expect(ModuleAccess.canManage('gallery'), isTrue);
     expect(WebErpRouter.pageFor('gallery'), isA<WebGalleryPage>());
+  });
+
+  test('gallery media persistBytes attaches without hanging', () async {
+    final pick = await GalleryMediaService.instance.persistBytes(
+      fileName: 'class.jpg',
+      bytes: List<int>.filled(64, 9),
+    );
+    expect(pick, isNotNull);
+    expect(pick!.displayName, 'class.jpg');
+    expect(pick.filePath, isNotEmpty);
+    if (WebAttachmentCache.instance.isWebPath(pick.filePath)) {
+      expect(WebAttachmentCache.instance.read(pick.filePath), isNotNull);
+    }
   });
 
   test('missing local files do not pretend to open', () async {
