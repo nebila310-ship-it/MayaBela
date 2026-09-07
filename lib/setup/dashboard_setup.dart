@@ -1799,6 +1799,27 @@ List<DashboardEntry> _adminEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'gallery',
+      icon: Icons.photo_library,
+      color: Colors.purple,
+      builder: (context) => DashboardCard(
+        icon: Icons.photo_library,
+        title: _t('gallery', role),
+        color: Colors.purple,
+        badgeCount: _badge('gallery'),
+        onTap: () => _openTile('gallery', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GalleryScreen(
+                mode: GalleryViewMode.school,
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'finance',
       icon: Icons.payment,
       color: Colors.orange,
@@ -2433,6 +2454,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
             'buses',
             'inventory',
             'announcements',
+            'gallery',
             'messages',
             'timetable',
           ],

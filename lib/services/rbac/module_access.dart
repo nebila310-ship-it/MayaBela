@@ -363,6 +363,7 @@ abstract final class ModuleAccess {
     'mfa': 'go_live',
     'ict': 'digital_ops',
     'devices': 'digital_ops',
+    'gallery': 'events',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).

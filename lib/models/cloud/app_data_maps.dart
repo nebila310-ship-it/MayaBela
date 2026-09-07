@@ -93,6 +93,7 @@ abstract final class AppDataMaps {
         'postedAt': post.postedAt.toIso8601String(),
         if (post.mediaLabel != null) 'mediaLabel': post.mediaLabel,
         if (post.mediaPath != null) 'mediaPath': post.mediaPath,
+        'attachmentPaths': post.attachmentPaths,
       };
 
   static GalleryPost galleryPostFromMap(Map<String, dynamic> map) => GalleryPost(
@@ -105,6 +106,10 @@ abstract final class AppDataMaps {
         postedAt: DateTime.parse(map['postedAt'] as String),
         mediaLabel: map['mediaLabel'] as String?,
         mediaPath: map['mediaPath'] as String?,
+        attachmentPaths: (map['attachmentPaths'] as List?)
+                ?.map((item) => item.toString())
+                .toList() ??
+            const [],
       );
 
   // —— QR scans ——

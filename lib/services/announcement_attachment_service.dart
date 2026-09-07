@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:open_file/open_file.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
@@ -189,18 +190,26 @@ class AnnouncementAttachmentService {
     }
     final path = attachment.filePath;
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      await WebFileUtils.openOrDownload(
-        filePath: path,
-        fileName: attachment.fileName,
-      );
-      return OpenResult(type: ResultType.done);
+      if (kIsWeb) {
+        final opened = await WebFileUtils.openOrDownload(
+          filePath: path,
+          fileName: attachment.fileName,
+        );
+        return OpenResult(type: opened ? ResultType.done : ResultType.error);
+      }
+      final uri = Uri.tryParse(path);
+      if (uri != null &&
+          await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        return OpenResult(type: ResultType.done);
+      }
+      return OpenResult(type: ResultType.noAppToOpen);
     }
     if (kIsWeb || WebAttachmentCache.instance.isWebPath(path)) {
-      await WebFileUtils.openOrDownload(
+      final opened = await WebFileUtils.openOrDownload(
         filePath: path,
         fileName: attachment.fileName,
       );
-      return OpenResult(type: ResultType.done);
+      return OpenResult(type: opened ? ResultType.done : ResultType.error);
     }
     return OpenFile.open(path);
   }
