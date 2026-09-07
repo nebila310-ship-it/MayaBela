@@ -1692,7 +1692,7 @@ class AuthService {
   }
 
   static String? sendOtp(String phoneOrUsername) {
-    // Demo OTP is debug-only. Release must use Firebase Phone Auth.
+    // Demo OTP is debug-only. Release uses the paid SMS gateway edge function.
     if (!kDebugMode) return 'demo_disabled';
 
     final user = _findUser(phoneOrUsername.trim());
@@ -1717,7 +1717,10 @@ class AuthService {
     return resetPasswordWithoutOtpCheck(newPassword);
   }
 
-  static bool resetPasswordWithoutOtpCheck(String newPassword) {
+  static bool resetPasswordWithoutOtpCheck(
+    String newPassword, {
+    bool syncCloud = true,
+  }) {
     if (_pendingOtpUser == null && currentUser != null) {
       _pendingOtpUser = currentUser!.username;
     }
@@ -1732,12 +1735,14 @@ class AuthService {
     _pendingOtp = null;
     _pendingOtpUser = null;
     unawaited(_persistUser(user));
-    unawaited(
-      SchoolAuthCloudService.instance.changePassword(
-        newPassword: newPassword,
-        username: user.username,
-      ),
-    );
+    if (syncCloud) {
+      unawaited(
+        SchoolAuthCloudService.instance.changePassword(
+          newPassword: newPassword,
+          username: user.username,
+        ),
+      );
+    }
     return true;
   }
 
