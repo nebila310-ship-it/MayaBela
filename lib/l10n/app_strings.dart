@@ -972,7 +972,6 @@ class AppStrings implements AppStringsLike {
   String get noGalleryPosts =>
       t('No gallery posts yet', 'ጋለሪ ልጥፎች የሉም');
   String get galleryPosted => t('Posted — parents in this class can view it', 'ተለጠፈ — ወላጆች ሊያዩት ይችላሉ');
-  String get allClasses => t('All classes', 'ሁሉም ክፍሎች', 'Kutaalee hunda');
   String get schoolGalleryHint => t(
         'Share class photos, videos, notes, and file attachments. Parents see posts for their children.',
         'ፎቶ፣ ቪዲዮ፣ ማስታወሻ እና ፋይሎችን ለክፍል ያጋሩ። ወላጆች የልጆቻቸውን ልጥፎች ያያሉ።',
@@ -2014,7 +2013,7 @@ class AppStrings implements AppStringsLike {
   String get dueDate => t('Due date', 'የመጨረሻ ጊዜ');
   String get homeworkPosted => t('Homework posted', 'የቤት ስራ ተለጠፈ');
   String get selectClass => t('Select class', 'ክፍል ይምረጡ');
-  String get allClasses => t('All classes', 'ሁሉም ክፍሎች');
+  String get allClasses => t('All classes', 'ሁሉም ክፍሎች', 'Kutaalee hunda');
   String get readOnly => t('Read only', 'ለማንበብ ብቻ');
   String get historyTab => t('History', 'ታሪክ');
   String get markPresent => t('Present', 'ተገኝቷል');

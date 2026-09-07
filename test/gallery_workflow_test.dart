@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -82,5 +83,31 @@ void main() {
       fileName: 'gallery.pdf',
     );
     expect(opened, isFalse);
+  });
+
+  testWidgets('admin gallery page lists posts and can add attachments', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 900,
+            height: 800,
+            child: WebGalleryPage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gallery'), findsWidgets);
+    expect(find.text('Add Post'), findsOneWidget);
+
+    await tester.tap(find.text('Add Post'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add to Gallery'), findsOneWidget);
+    expect(find.text('Add attachment'), findsOneWidget);
   });
 }
