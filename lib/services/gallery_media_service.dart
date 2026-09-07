@@ -7,6 +7,7 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
+import 'package:mayabela/utils/attachment_size_limit.dart';
 
 class GalleryMediaPick {
   const GalleryMediaPick({
@@ -23,11 +24,16 @@ class GalleryMediaService {
   GalleryMediaService._();
   static final instance = GalleryMediaService._();
 
+  String? lastPickError;
+  int? lastRejectedMaxMb;
+
   Future<GalleryMediaPick?> pickPhoto() => _pick(images: true);
 
   Future<GalleryMediaPick?> pickVideo() => _pick(images: false);
 
   Future<GalleryMediaPick?> _pick({required bool images}) async {
+    lastPickError = null;
+    lastRejectedMaxMb = null;
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
@@ -60,6 +66,12 @@ class GalleryMediaService {
       }
     }
     if (bytes == null || bytes.isEmpty) return null;
+    if (AttachmentSizeLimit.exceeds(file.name, bytes.length)) {
+      lastRejectedMaxMb = AttachmentSizeLimit.maxMbForFileName(file.name);
+      lastPickError =
+          'That file is too large. Use a file under $lastRejectedMaxMb MB.';
+      return null;
+    }
 
     final name = file.name.trim().isNotEmpty
         ? file.name
@@ -73,6 +85,12 @@ class GalleryMediaService {
   }) async {
     if (bytes.isEmpty) return null;
     final safeName = fileName.trim().isEmpty ? 'gallery_media.bin' : fileName;
+    if (AttachmentSizeLimit.exceeds(safeName, bytes.length)) {
+      lastRejectedMaxMb = AttachmentSizeLimit.maxMbForFileName(safeName);
+      lastPickError =
+          'That file is too large. Use a file under $lastRejectedMaxMb MB.';
+      return null;
+    }
 
     AnnouncementAttachment? saved;
     try {
@@ -101,6 +119,9 @@ class GalleryMediaService {
       attachmentId: saved?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
     );
+    if (uploaded != null) {
+      WebAttachmentCache.instance.remember(uploaded, bytes);
+    }
 
     return GalleryMediaPick(
       filePath: uploaded ?? localPath,
