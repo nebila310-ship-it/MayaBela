@@ -13,6 +13,9 @@ class StudentSupportPersistenceService {
   static const _collegeKey = 'college_guidance_v1';
   static const _requestsKey = 'support_requests_v1';
   static const _safeguardingKey = 'safeguarding_cases_v1';
+  static const _documentsKey = 'student_documents_v1';
+  static const _medsKey = 'medication_stock_v1';
+  static const _selKey = 'sel_observations_v1';
 
   Future<void> loadIntoService() async {
     final health = <HealthRecord>[];
@@ -51,6 +54,24 @@ class StudentSupportPersistenceService {
         safeguarding.add(SafeguardingCase.fromMap(map));
       } catch (_) {}
     }
+    final documents = <StudentDocument>[];
+    for (final map in await LocalJsonStore.readList(_documentsKey)) {
+      try {
+        documents.add(StudentDocument.fromMap(map));
+      } catch (_) {}
+    }
+    final meds = <MedicationStockItem>[];
+    for (final map in await LocalJsonStore.readList(_medsKey)) {
+      try {
+        meds.add(MedicationStockItem.fromMap(map));
+      } catch (_) {}
+    }
+    final sel = <SelObservation>[];
+    for (final map in await LocalJsonStore.readList(_selKey)) {
+      try {
+        sel.add(SelObservation.fromMap(map));
+      } catch (_) {}
+    }
     StudentSupportService.instance.applyPersistedData(
       health: health,
       counseling: counseling,
@@ -58,6 +79,9 @@ class StudentSupportPersistenceService {
       college: college,
       requests: requests,
       safeguarding: safeguarding,
+      documents: documents,
+      medication: meds,
+      sel: sel,
     );
   }
 
@@ -69,6 +93,9 @@ class StudentSupportPersistenceService {
     await LocalJsonStore.writeList(_collegeKey, svc.collegeMaps());
     await LocalJsonStore.writeList(_requestsKey, svc.requestMaps());
     await LocalJsonStore.writeList(_safeguardingKey, svc.safeguardingMaps());
+    await LocalJsonStore.writeList(_documentsKey, svc.documentMaps());
+    await LocalJsonStore.writeList(_medsKey, svc.medicationMaps());
+    await LocalJsonStore.writeList(_selKey, svc.selMaps());
     if (pushCloud) {
       await CloudAppStore.instance.pushAllStudentSupport();
     }

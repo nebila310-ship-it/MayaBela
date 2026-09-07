@@ -42,6 +42,7 @@ Future<bool?> showAdminStudentEditDialog(
   );
   final academicYearCtrl =
       TextEditingController(text: student.academicYear ?? '2025/2026');
+  final houseCtrl = TextEditingController(text: student.house ?? '');
   final homeroomTeacherIdCtrl =
       TextEditingController(text: student.homeroomTeacherId ?? '');
   final transportIdCtrl = TextEditingController(text: student.transportId ?? '');
@@ -424,6 +425,18 @@ Future<bool?> showAdminStudentEditDialog(
               ),
               adminDialogField(
                 TextField(
+                  controller: houseCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: adminFieldDecoration(
+                    label: 'House',
+                    hint: 'Blue, Green, Red, Yellow…',
+                    icon: Icons.home_outlined,
+                    accent: theme.secondary,
+                  ),
+                ),
+              ),
+              adminDialogField(
+                TextField(
                   controller: dobCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: dateSlashFormatters,
@@ -676,6 +689,7 @@ Future<bool?> showAdminStudentEditDialog(
       className: className,
       campus: selectedCampus,
       academicYear: academicYearCtrl.text.trim(),
+      house: houseCtrl.text.trim().isEmpty ? null : houseCtrl.text.trim(),
       homeroomTeacherId: homeroomTeacherId,
       transportEnabled: transportEnabled,
       transportId: transportEnabled && transportIdRaw.isNotEmpty

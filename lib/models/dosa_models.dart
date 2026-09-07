@@ -498,3 +498,61 @@ class DosaMeeting {
     );
   }
 }
+
+class LeadershipTask {
+  LeadershipTask({
+    required this.id,
+    required this.schoolId,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+    this.assignee = '',
+    this.notes = '',
+    this.done = false,
+    this.dueAt,
+    this.createdBy,
+  });
+
+  final String id;
+  final String schoolId;
+  String title;
+  String assignee;
+  String notes;
+  bool done;
+  DateTime? dueAt;
+  String? createdBy;
+  final DateTime createdAt;
+  DateTime updatedAt;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'schoolId': schoolId,
+        'title': title,
+        'assignee': assignee,
+        'notes': notes,
+        'done': done,
+        if (dueAt != null) 'dueAt': dueAt!.toIso8601String(),
+        if (createdBy != null) 'createdBy': createdBy,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+
+  factory LeadershipTask.fromMap(Map<String, dynamic> map) {
+    return LeadershipTask(
+      id: map['id'] as String? ?? '',
+      schoolId: (map['schoolId'] as String? ?? '').trim().toUpperCase(),
+      title: map['title'] as String? ?? '',
+      assignee: map['assignee'] as String? ?? '',
+      notes: map['notes'] as String? ?? '',
+      done: map['done'] as bool? ?? false,
+      dueAt: map['dueAt'] != null
+          ? DateTime.tryParse(map['dueAt'] as String)
+          : null,
+      createdBy: map['createdBy'] as String?,
+      createdAt:
+          DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      updatedAt:
+          DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+}

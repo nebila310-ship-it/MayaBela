@@ -349,6 +349,9 @@ class CloudAppStore {
       case AppCollections.collegeGuidance:
       case AppCollections.supportRequests:
       case AppCollections.safeguardingCases:
+      case AppCollections.studentDocuments:
+      case AppCollections.medicationStock:
+      case AppCollections.selObservations:
         return 'student_support';
       case AppCollections.extracurricularClubs:
       case AppCollections.clubMemberships:
@@ -356,6 +359,7 @@ class CloudAppStore {
       case AppCollections.grievances:
       case AppCollections.internships:
       case AppCollections.dosaMeetings:
+      case AppCollections.leadershipTasks:
         return 'dosa';
       case AppCollections.teachingObservations:
       case AppCollections.academicAudits:
@@ -3120,6 +3124,9 @@ class CloudAppStore {
       await pushStaff(AppCollections.counselingRecords, svc.counselingMaps());
       await pushStaff(AppCollections.iepPlans, svc.iepMaps());
       await pushStaff(AppCollections.collegeGuidance, svc.collegeMaps());
+      await pushStaff(AppCollections.studentDocuments, svc.documentMaps());
+      await pushStaff(AppCollections.medicationStock, svc.medicationMaps());
+      await pushStaff(AppCollections.selObservations, svc.selMaps());
       if (role == AuthService.roleAdmin ||
           role == AuthService.roleTeacher) {
         await pushStaff(
@@ -3167,13 +3174,23 @@ class CloudAppStore {
     final safeguardingRows = publicReader
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.safeguardingCases);
+    final documentRows = await _schoolRead(AppCollections.studentDocuments);
+    final medRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.medicationStock);
+    final selRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.selObservations);
 
     if (healthRows.isEmpty &&
         counselingRows.isEmpty &&
         iepRows.isEmpty &&
         collegeRows.isEmpty &&
         requestRows.isEmpty &&
-        safeguardingRows.isEmpty) {
+        safeguardingRows.isEmpty &&
+        documentRows.isEmpty &&
+        medRows.isEmpty &&
+        selRows.isEmpty) {
       return;
     }
 
@@ -3213,13 +3230,34 @@ class CloudAppStore {
         safeguarding.add(SafeguardingCase.fromMap(map));
       } catch (_) {}
     }
+    final documents = <StudentDocument>[];
+    for (final map in documentRows) {
+      try {
+        documents.add(StudentDocument.fromMap(map));
+      } catch (_) {}
+    }
+    final meds = <MedicationStockItem>[];
+    for (final map in medRows) {
+      try {
+        meds.add(MedicationStockItem.fromMap(map));
+      } catch (_) {}
+    }
+    final sel = <SelObservation>[];
+    for (final map in selRows) {
+      try {
+        sel.add(SelObservation.fromMap(map));
+      } catch (_) {}
+    }
 
     if (health.isEmpty &&
         counseling.isEmpty &&
         iep.isEmpty &&
         college.isEmpty &&
         requests.isEmpty &&
-        safeguarding.isEmpty) {
+        safeguarding.isEmpty &&
+        documents.isEmpty &&
+        meds.isEmpty &&
+        sel.isEmpty) {
       return;
     }
 
@@ -3231,6 +3269,9 @@ class CloudAppStore {
       requests: requests.isEmpty ? null : requests,
       safeguarding:
           publicReader ? const [] : (safeguarding.isEmpty ? null : safeguarding),
+      documents: documents.isEmpty ? null : documents,
+      medication: publicReader ? const [] : (meds.isEmpty ? null : meds),
+      sel: student ? const [] : (sel.isEmpty ? null : sel),
       merge: true,
     );
     await StudentSupportPersistenceService.instance.saveFromService(
@@ -3261,6 +3302,7 @@ class CloudAppStore {
       await pushStaff(AppCollections.extracurricularClubs, svc.clubMaps());
       await pushStaff(AppCollections.internships, svc.internshipMaps());
       await pushStaff(AppCollections.dosaMeetings, svc.meetingMaps());
+      await pushStaff(AppCollections.leadershipTasks, svc.leadershipTaskMaps());
     }
 
     Future<void> upsertPublic(
@@ -3296,13 +3338,18 @@ class CloudAppStore {
     final grievanceRows = await _schoolRead(AppCollections.grievances);
     final internshipRows = await _schoolRead(AppCollections.internships);
     final meetingRows = await _schoolRead(AppCollections.dosaMeetings);
+    final taskRows = role == AuthService.roleStudent ||
+            role == AuthService.roleParent
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.leadershipTasks);
 
     if (clubRows.isEmpty &&
         membershipRows.isEmpty &&
         scholarshipRows.isEmpty &&
         grievanceRows.isEmpty &&
         internshipRows.isEmpty &&
-        meetingRows.isEmpty) {
+        meetingRows.isEmpty &&
+        taskRows.isEmpty) {
       return;
     }
 
@@ -3342,13 +3389,20 @@ class CloudAppStore {
         meetings.add(DosaMeeting.fromMap(map));
       } catch (_) {}
     }
+    final tasks = <LeadershipTask>[];
+    for (final map in taskRows) {
+      try {
+        tasks.add(LeadershipTask.fromMap(map));
+      } catch (_) {}
+    }
 
     if (clubs.isEmpty &&
         memberships.isEmpty &&
         scholarships.isEmpty &&
         grievances.isEmpty &&
         internships.isEmpty &&
-        meetings.isEmpty) {
+        meetings.isEmpty &&
+        tasks.isEmpty) {
       return;
     }
 
@@ -3359,6 +3413,7 @@ class CloudAppStore {
       grievances: grievances.isEmpty ? null : grievances,
       internships: internships.isEmpty ? null : internships,
       meetings: meetings.isEmpty ? null : meetings,
+      leadershipTasks: tasks.isEmpty ? null : tasks,
       merge: true,
     );
     await DosaPersistenceService.instance.saveFromService(pushCloud: false);

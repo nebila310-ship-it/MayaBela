@@ -618,6 +618,12 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       AttendanceIntelligenceService.instance.atRiskCount(),
     );
     add(
+      'analytics',
+      Icons.insights_outlined,
+      'Analytics exports and at-risk rules (not ML)',
+      AttendanceIntelligenceService.instance.atRiskCount(),
+    );
+    add(
       'curriculum',
       Icons.account_tree_outlined,
       'Curriculum units still unpublished',

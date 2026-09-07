@@ -71,6 +71,26 @@ class _StudentCollegeGuidanceScreenState
                     ),
                   ),
                 ),
+              if (plan != null)
+                for (final art in plan.artifacts)
+                  Card(
+                    child: ListTile(
+                      leading: Icon(
+                        art.done
+                            ? Icons.check_circle_outline
+                            : Icons.radio_button_unchecked,
+                      ),
+                      title: Text('${art.kind.name} · ${art.title}'),
+                      subtitle: Text(
+                        [
+                          if (art.dueAt != null)
+                            'Due ${art.dueAt!.toIso8601String().substring(0, 10)}',
+                          if (art.filePath != null) 'File attached',
+                          if (art.notes.trim().isNotEmpty) art.notes,
+                        ].join('\n'),
+                      ),
+                    ),
+                  ),
               for (final row in requests)
                 Card(
                   child: ListTile(

@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 
@@ -422,7 +423,35 @@ class _AdmissionDetail extends StatelessWidget {
               CheckboxListTile(
                 value: doc.verified,
                 title: Text(doc.label),
-                subtitle: Text(doc.verified ? 'Verified' : 'Awaiting review'),
+                subtitle: Text(
+                  [
+                    doc.verified ? 'Verified' : 'Awaiting review',
+                    if (doc.filePath != null && doc.filePath!.trim().isNotEmpty)
+                      'File attached',
+                  ].join(' · '),
+                ),
+                secondary: canManage
+                    ? IconButton(
+                        tooltip: 'Attach scan',
+                        icon: const Icon(Icons.attach_file),
+                        onPressed: () async {
+                          final picked = await AnnouncementAttachmentService
+                              .instance
+                              .pickAndSaveFiles(
+                            subdir: 'admission_documents',
+                          );
+                          if (picked.isEmpty) return;
+                          await AdmissionService.instance.setDocument(
+                            app.id,
+                            doc.id,
+                            submitted: true,
+                            filePath: picked.first.filePath,
+                          );
+                        },
+                      )
+                    : (doc.filePath == null
+                        ? null
+                        : const Icon(Icons.insert_drive_file_outlined)),
                 onChanged: !canManage
                     ? null
                     : (v) => AdmissionService.instance.setDocument(

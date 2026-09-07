@@ -28,6 +28,7 @@ class AdmissionDocument {
     this.submitted = false,
     this.verified = false,
     this.notes = '',
+    this.filePath,
   });
 
   final String id;
@@ -35,12 +36,15 @@ class AdmissionDocument {
   final bool submitted;
   final bool verified;
   final String notes;
+  final String? filePath;
 
   AdmissionDocument copyWith({
     String? label,
     bool? submitted,
     bool? verified,
     String? notes,
+    String? filePath,
+    bool clearFilePath = false,
   }) {
     return AdmissionDocument(
       id: id,
@@ -48,6 +52,7 @@ class AdmissionDocument {
       submitted: submitted ?? this.submitted,
       verified: verified ?? this.verified,
       notes: notes ?? this.notes,
+      filePath: clearFilePath ? null : (filePath ?? this.filePath),
     );
   }
 
@@ -57,6 +62,7 @@ class AdmissionDocument {
         'submitted': submitted,
         'verified': verified,
         'notes': notes,
+        if (filePath != null) 'filePath': filePath,
       };
 
   factory AdmissionDocument.fromMap(Map<String, dynamic> map) {
@@ -66,6 +72,7 @@ class AdmissionDocument {
       submitted: map['submitted'] == true,
       verified: map['verified'] == true,
       notes: (map['notes'] as String? ?? '').trim(),
+      filePath: (map['filePath'] as String?)?.trim(),
     );
   }
 }

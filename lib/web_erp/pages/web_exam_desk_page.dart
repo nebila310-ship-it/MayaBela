@@ -253,6 +253,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 title: Text(paper.title),
                 subtitle: Text(
                   '${paper.className} · ${paper.subject} · '
+                  '${_kindLabel(paper.kind)} · ${_sittingLabel(paper.sittingMode)} · '
                   '${_categoryLabel(paper.markbookCategoryId)} · '
                   '${paper.questionIds.length} questions · ${_statusLabel(paper.status)}'
                   '${paper.attachmentPaths.isEmpty ? '' : ' · ${paper.attachmentPaths.length} file(s)'}',
@@ -469,6 +470,17 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
         ExamPaperStatus.draft => 'Draft',
         ExamPaperStatus.published => 'Published',
         ExamPaperStatus.closed => 'Closed',
+      };
+
+  static String _kindLabel(ExamKind kind) => switch (kind) {
+        ExamKind.school => 'School',
+        ExamKind.national => 'National',
+        ExamKind.model => 'Model',
+      };
+
+  static String _sittingLabel(ExamSittingMode mode) => switch (mode) {
+        ExamSittingMode.online => 'Online sit',
+        ExamSittingMode.offline => 'Offline / lockdown',
       };
 }
 
@@ -689,6 +701,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late String _categoryId;
   late Set<String> _selected;
   late List<String> _attachments;
+  late ExamKind _kind;
+  late ExamSittingMode _sittingMode;
 
   @override
   void initState() {
@@ -707,6 +721,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
     }
     _selected = {...?p?.questionIds};
     _attachments = List<String>.from(p?.attachmentPaths ?? const []);
+    _kind = p?.kind ?? ExamKind.school;
+    _sittingMode = p?.sittingMode ?? ExamSittingMode.online;
   }
 
   @override
@@ -731,6 +747,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         questionIds: _selected.toList(),
         markbookCategoryId: _categoryId,
         attachmentPaths: _attachments,
+        kind: _kind,
+        sittingMode: _sittingMode,
       );
     } else {
       await ExamService.instance.updatePaper(
@@ -739,6 +757,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         questionIds: _selected.toList(),
         markbookCategoryId: _categoryId,
         attachmentPaths: _attachments,
+        kind: _kind,
+        sittingMode: _sittingMode,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -807,6 +827,50 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                     DropdownMenuItem(value: cat.id, child: Text(cat.label)),
                 ],
                 onChanged: (v) => setState(() => _categoryId = v ?? _categoryId),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<ExamKind>(
+                key: ValueKey('paper-kind-$_kind'),
+                initialValue: _kind,
+                decoration: const InputDecoration(labelText: 'Paper kind'),
+                items: const [
+                  DropdownMenuItem(
+                    value: ExamKind.school,
+                    child: Text('School exam'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamKind.national,
+                    child: Text('National exam desk'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamKind.model,
+                    child: Text('Model exam'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _kind = v ?? _kind),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<ExamSittingMode>(
+                key: ValueKey('paper-sit-$_sittingMode'),
+                initialValue: _sittingMode,
+                decoration: const InputDecoration(
+                  labelText: 'Sitting',
+                  helperText:
+                      'Offline / lockdown papers are printed or attached. '
+                      'Students do not sit them in the portal.',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: ExamSittingMode.online,
+                    child: Text('Online (student portal)'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamSittingMode.offline,
+                    child: Text('Offline / lockdown print'),
+                  ),
+                ],
+                onChanged: (v) =>
+                    setState(() => _sittingMode = v ?? _sittingMode),
               ),
               const SizedBox(height: 12),
               CourseAttachmentPicker(

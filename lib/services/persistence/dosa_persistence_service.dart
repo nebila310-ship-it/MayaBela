@@ -13,6 +13,7 @@ class DosaPersistenceService {
   static const _grievancesKey = 'grievances_v1';
   static const _internshipsKey = 'internships_v1';
   static const _meetingsKey = 'dosa_meetings_v1';
+  static const _tasksKey = 'leadership_tasks_v1';
 
   Future<void> loadIntoService() async {
     final clubs = <ExtracurricularClub>[];
@@ -51,6 +52,12 @@ class DosaPersistenceService {
         meetings.add(DosaMeeting.fromMap(map));
       } catch (_) {}
     }
+    final tasks = <LeadershipTask>[];
+    for (final map in await LocalJsonStore.readList(_tasksKey)) {
+      try {
+        tasks.add(LeadershipTask.fromMap(map));
+      } catch (_) {}
+    }
     DosaService.instance.applyPersistedData(
       clubs: clubs,
       memberships: memberships,
@@ -58,6 +65,7 @@ class DosaPersistenceService {
       grievances: grievances,
       internships: internships,
       meetings: meetings,
+      leadershipTasks: tasks,
     );
   }
 
@@ -69,6 +77,7 @@ class DosaPersistenceService {
     await LocalJsonStore.writeList(_grievancesKey, svc.grievanceMaps());
     await LocalJsonStore.writeList(_internshipsKey, svc.internshipMaps());
     await LocalJsonStore.writeList(_meetingsKey, svc.meetingMaps());
+    await LocalJsonStore.writeList(_tasksKey, svc.leadershipTaskMaps());
     if (pushCloud) {
       await CloudAppStore.instance.pushAllDosa();
     }

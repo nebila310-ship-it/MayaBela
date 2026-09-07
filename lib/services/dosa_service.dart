@@ -21,6 +21,7 @@ class DosaService extends ChangeNotifier {
   final List<Grievance> _grievances = [];
   final List<Internship> _internships = [];
   final List<DosaMeeting> _meetings = [];
+  final List<LeadershipTask> _leadershipTasks = [];
   bool _loaded = false;
 
   @visibleForTesting
@@ -31,6 +32,7 @@ class DosaService extends ChangeNotifier {
     instance._grievances.clear();
     instance._internships.clear();
     instance._meetings.clear();
+    instance._leadershipTasks.clear();
     instance._loaded = true;
   }
 
@@ -113,6 +115,19 @@ class DosaService extends ChangeNotifier {
     }
     return list..sort((a, b) => b.startsAt.compareTo(a.startsAt));
   }
+
+  List<LeadershipTask> leadershipTasksForSchool([String? schoolId]) {
+    if (_isPublicReader) return const [];
+    return _schoolFilter(_leadershipTasks, schoolId)
+      ..sort((a, b) {
+        final aDue = a.dueAt ?? a.updatedAt;
+        final bDue = b.dueAt ?? b.updatedAt;
+        return aDue.compareTo(bDue);
+      });
+  }
+
+  int openLeadershipTaskCount([String? schoolId]) =>
+      leadershipTasksForSchool(schoolId).where((row) => !row.done).length;
 
   List<ClubMembership> membershipsForClub(String clubId) =>
       membershipsForSchool().where((row) => row.clubId == clubId).toList();
@@ -529,6 +544,46 @@ class DosaService extends ChangeNotifier {
     return meeting;
   }
 
+  Future<LeadershipTask> addLeadershipTask({
+    required String title,
+    String assignee = '',
+    String notes = '',
+    DateTime? dueAt,
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final now = DateTime.now();
+    final row = LeadershipTask(
+      id: _id('LT', _leadershipTasks.map((item) => item.id)),
+      schoolId: (schoolId ?? _schoolId).toUpperCase(),
+      title: title.trim(),
+      assignee: assignee.trim(),
+      notes: notes.trim(),
+      dueAt: dueAt,
+      createdBy: _username,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _leadershipTasks.add(row);
+    await _persist();
+    return row;
+  }
+
+  Future<LeadershipTask> toggleLeadershipTask(String id) async {
+    _requireStaffDesk();
+    final row = _leadershipTasks.cast<LeadershipTask?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Leadership task not found.');
+    }
+    row.done = !row.done;
+    row.updatedAt = DateTime.now();
+    await _persist();
+    return row;
+  }
+
   void applyPersistedData({
     List<ExtracurricularClub>? clubs,
     List<ClubMembership>? memberships,
@@ -536,6 +591,7 @@ class DosaService extends ChangeNotifier {
     List<Grievance>? grievances,
     List<Internship>? internships,
     List<DosaMeeting>? meetings,
+    List<LeadershipTask>? leadershipTasks,
     bool merge = false,
   }) {
     void mergeList<T>(
@@ -580,6 +636,13 @@ class DosaService extends ChangeNotifier {
         mergeList(_meetings, meetings, (row) => row.id);
       }
     }
+    if (leadershipTasks != null) {
+      if (_isPublicReader) {
+        _leadershipTasks.clear();
+      } else {
+        mergeList(_leadershipTasks, leadershipTasks, (row) => row.id);
+      }
+    }
     _loaded = true;
     notifyListeners();
   }
@@ -596,6 +659,8 @@ class DosaService extends ChangeNotifier {
       _internships.map((row) => row.toMap()).toList();
   List<Map<String, dynamic>> meetingMaps() =>
       _meetings.map((row) => row.toMap()).toList();
+  List<Map<String, dynamic>> leadershipTaskMaps() =>
+      _leadershipTasks.map((row) => row.toMap()).toList();
 
   List<T> _schoolFilter<T>(List<T> rows, String? schoolId) {
     final sid = (schoolId ?? _schoolId).toUpperCase();
@@ -608,6 +673,7 @@ class DosaService extends ChangeNotifier {
         Grievance r => r.schoolId,
         Internship r => r.schoolId,
         DosaMeeting r => r.schoolId,
+        LeadershipTask r => r.schoolId,
         _ => '',
       };
       return rowSchool == sid;

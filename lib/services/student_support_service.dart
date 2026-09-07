@@ -22,6 +22,9 @@ class StudentSupportService extends ChangeNotifier {
   final List<CollegeGuidancePlan> _college = [];
   final List<SupportRequest> _requests = [];
   final List<SafeguardingCase> _safeguarding = [];
+  final List<StudentDocument> _documents = [];
+  final List<MedicationStockItem> _meds = [];
+  final List<SelObservation> _sel = [];
   bool _loaded = false;
 
   @visibleForTesting
@@ -32,6 +35,9 @@ class StudentSupportService extends ChangeNotifier {
     instance._college.clear();
     instance._requests.clear();
     instance._safeguarding.clear();
+    instance._documents.clear();
+    instance._meds.clear();
+    instance._sel.clear();
     instance._loaded = true;
   }
 
@@ -175,6 +181,40 @@ class StudentSupportService extends ChangeNotifier {
 
   int openSafeguardingCount([String? schoolId]) =>
       openSafeguarding(schoolId).length;
+
+  List<StudentDocument> documentsForSchool([String? schoolId]) {
+    var list = _schoolFilter(_documents, schoolId);
+    if (_isPublicReader) {
+      list = list.where((row) => _ownsStudent(row.studentId)).toList();
+    }
+    return list..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  List<StudentDocument> documentsForStudent(String studentId) =>
+      documentsForSchool().where((row) => row.studentId == studentId).toList();
+
+  List<MedicationStockItem> medicationStockForSchool([String? schoolId]) {
+    if (_isPublicReader) return const [];
+    return _schoolFilter(_meds, schoolId)
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  List<SelObservation> selForSchool([String? schoolId]) {
+    if (_isStudent) return const [];
+    var list = _schoolFilter(_sel, schoolId);
+    if (_isParent) {
+      list = list.where((row) => _ownsStudent(row.studentId)).toList();
+    }
+    return list..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  double? selAverageForStudent(String studentId, [String? schoolId]) {
+    final rows = selForSchool(schoolId)
+        .where((row) => row.studentId == studentId)
+        .toList();
+    if (rows.isEmpty) return null;
+    return rows.fold<int>(0, (sum, row) => sum + row.rating) / rows.length;
+  }
 
   Future<HealthRecord> addHealthRecord({
     required String studentId,
@@ -339,6 +379,7 @@ class StudentSupportService extends ChangeNotifier {
     String portfolio = '',
     String notes = '',
     DateTime? nextAppointmentAt,
+    List<CollegeArtifact>? artifacts,
     String? schoolId,
   }) async {
     _requireStaffDesk();
@@ -356,6 +397,7 @@ class StudentSupportService extends ChangeNotifier {
       existing.portfolio = portfolio.trim();
       existing.notes = notes.trim();
       existing.nextAppointmentAt = nextAppointmentAt;
+      if (artifacts != null) existing.artifacts = List.of(artifacts);
       existing.updatedAt = now;
       await _persist();
       return existing;
@@ -371,6 +413,7 @@ class StudentSupportService extends ChangeNotifier {
       portfolio: portfolio.trim(),
       notes: notes.trim(),
       nextAppointmentAt: nextAppointmentAt,
+      artifacts: List.of(artifacts ?? const []),
       createdBy: _username,
       createdAt: now,
       updatedAt: now,
@@ -378,6 +421,219 @@ class StudentSupportService extends ChangeNotifier {
     _college.add(plan);
     await _persist();
     return plan;
+  }
+
+  Future<CollegeGuidancePlan> addCollegeArtifact({
+    required String studentId,
+    required String title,
+    CollegeArtifactKind kind = CollegeArtifactKind.other,
+    DateTime? dueAt,
+    String? filePath,
+    String notes = '',
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final plan = collegeForStudent(studentId) ??
+        await upsertCollegePlan(studentId: studentId, schoolId: schoolId);
+    plan.artifacts = [
+      ...plan.artifacts,
+      CollegeArtifact(
+        id: _id('CA', plan.artifacts.map((row) => row.id)),
+        title: title.trim(),
+        kind: kind,
+        dueAt: dueAt,
+        filePath: filePath,
+        notes: notes.trim(),
+      ),
+    ];
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
+  Future<CollegeGuidancePlan> toggleCollegeArtifact(
+    String studentId,
+    String artifactId,
+  ) async {
+    _requireStaffDesk();
+    final plan = collegeForStudent(studentId);
+    if (plan == null) {
+      throw StateError('College plan not found.');
+    }
+    for (final row in plan.artifacts) {
+      if (row.id == artifactId) {
+        row.done = !row.done;
+        break;
+      }
+    }
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
+  Future<IepPlan> addIepTraining({
+    required String planId,
+    required String topic,
+    DateTime? trainedAt,
+    String trainer = '',
+    String notes = '',
+  }) async {
+    _requireStaffDesk();
+    final plan = _iep.cast<IepPlan?>().firstWhere(
+          (row) => row?.id == planId,
+          orElse: () => null,
+        );
+    if (plan == null) {
+      throw StateError('IEP plan not found.');
+    }
+    plan.trainingSessions = [
+      ...plan.trainingSessions,
+      IepTrainingSession(
+        id: _id('IT', plan.trainingSessions.map((row) => row.id)),
+        topic: topic.trim(),
+        trainedAt: trainedAt,
+        trainer: trainer.trim(),
+        notes: notes.trim(),
+      ),
+    ];
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
+  Future<StudentDocument> addStudentDocument({
+    required String studentId,
+    required String title,
+    String category = 'other',
+    String? filePath,
+    String notes = '',
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final now = DateTime.now();
+    final meta = _studentMeta(studentId);
+    final row = StudentDocument(
+      id: _id('SD', _documents.map((item) => item.id)),
+      schoolId: (schoolId ?? _schoolId).toUpperCase(),
+      studentId: studentId.trim().toUpperCase(),
+      studentName: meta.name,
+      className: meta.className,
+      title: title.trim(),
+      category: category.trim().isEmpty ? 'other' : category.trim(),
+      filePath: filePath,
+      notes: notes.trim(),
+      uploadedBy: _username,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _documents.add(row);
+    await _persist();
+    return row;
+  }
+
+  Future<MedicationStockItem> upsertMedicationStock({
+    String? id,
+    required String name,
+    String unit = 'unit',
+    double quantityOnHand = 0,
+    double reorderLevel = 0,
+    String notes = '',
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final now = DateTime.now();
+    if (id != null) {
+      final existing = _meds.cast<MedicationStockItem?>().firstWhere(
+            (row) => row?.id == id,
+            orElse: () => null,
+          );
+      if (existing != null) {
+        existing.name = name.trim();
+        existing.unit = unit.trim().isEmpty ? 'unit' : unit.trim();
+        existing.quantityOnHand = quantityOnHand;
+        existing.reorderLevel = reorderLevel;
+        existing.notes = notes.trim();
+        existing.updatedAt = now;
+        await _persist();
+        return existing;
+      }
+    }
+    final row = MedicationStockItem(
+      id: _id('MS', _meds.map((item) => item.id)),
+      schoolId: (schoolId ?? _schoolId).toUpperCase(),
+      name: name.trim(),
+      unit: unit.trim().isEmpty ? 'unit' : unit.trim(),
+      quantityOnHand: quantityOnHand,
+      reorderLevel: reorderLevel,
+      notes: notes.trim(),
+      createdBy: _username,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _meds.add(row);
+    await _persist();
+    return row;
+  }
+
+  Future<MedicationStockItem> adjustMedicationStock({
+    required String id,
+    required double delta,
+    String? studentId,
+    String note = '',
+  }) async {
+    _requireStaffDesk();
+    final row = _meds.cast<MedicationStockItem?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Medication stock item not found.');
+    }
+    row.quantityOnHand = (row.quantityOnHand + delta).clamp(0, 1e9);
+    row.updatedAt = DateTime.now();
+    if (studentId != null && studentId.trim().isNotEmpty && delta < 0) {
+      await addHealthRecord(
+        studentId: studentId,
+        type: HealthRecordType.medication,
+        title: 'Dispensed ${row.name}',
+        details: '${delta.abs()} ${row.unit}'
+            '${note.trim().isEmpty ? '' : ' · ${note.trim()}'}',
+      );
+      return row;
+    }
+    await _persist();
+    return row;
+  }
+
+  Future<SelObservation> addSelObservation({
+    required String studentId,
+    SelDomain domain = SelDomain.selfAwareness,
+    int rating = 3,
+    String notes = '',
+    DateTime? observedAt,
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final now = DateTime.now();
+    final meta = _studentMeta(studentId);
+    final clamped = rating.clamp(1, 5);
+    final row = SelObservation(
+      id: _id('SEL', _sel.map((item) => item.id)),
+      schoolId: (schoolId ?? _schoolId).toUpperCase(),
+      studentId: studentId.trim().toUpperCase(),
+      studentName: meta.name,
+      className: meta.className,
+      domain: domain,
+      rating: clamped,
+      notes: notes.trim(),
+      observedAt: observedAt ?? now,
+      createdBy: _username,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _sel.add(row);
+    await _persist();
+    return row;
   }
 
   Future<SupportRequest> submitSupportRequest({
@@ -531,6 +787,9 @@ class StudentSupportService extends ChangeNotifier {
     List<CollegeGuidancePlan>? college,
     List<SupportRequest>? requests,
     List<SafeguardingCase>? safeguarding,
+    List<StudentDocument>? documents,
+    List<MedicationStockItem>? medication,
+    List<SelObservation>? sel,
     bool merge = false,
   }) {
     void mergeList<T>(
@@ -567,6 +826,21 @@ class StudentSupportService extends ChangeNotifier {
         mergeList(_safeguarding, safeguarding, (row) => row.id);
       }
     }
+    if (documents != null) mergeList(_documents, documents, (row) => row.id);
+    if (medication != null) {
+      if (_isPublicReader) {
+        _meds.clear();
+      } else {
+        mergeList(_meds, medication, (row) => row.id);
+      }
+    }
+    if (sel != null) {
+      if (_isStudent) {
+        _sel.clear();
+      } else {
+        mergeList(_sel, sel, (row) => row.id);
+      }
+    }
     _loaded = true;
     notifyListeners();
   }
@@ -583,6 +857,12 @@ class StudentSupportService extends ChangeNotifier {
       _requests.map((row) => row.toMap()).toList();
   List<Map<String, dynamic>> safeguardingMaps() =>
       _safeguarding.map((row) => row.toMap()).toList();
+  List<Map<String, dynamic>> documentMaps() =>
+      _documents.map((row) => row.toMap()).toList();
+  List<Map<String, dynamic>> medicationMaps() =>
+      _meds.map((row) => row.toMap()).toList();
+  List<Map<String, dynamic>> selMaps() =>
+      _sel.map((row) => row.toMap()).toList();
 
   Future<SupportRequest> _setRequestStatus(
     String id,
@@ -612,6 +892,9 @@ class StudentSupportService extends ChangeNotifier {
         CollegeGuidancePlan r => r.schoolId,
         SupportRequest r => r.schoolId,
         SafeguardingCase r => r.schoolId,
+        StudentDocument r => r.schoolId,
+        MedicationStockItem r => r.schoolId,
+        SelObservation r => r.schoolId,
         _ => '',
       };
       return rowSchool == sid;
@@ -668,6 +951,7 @@ class StudentSupportService extends ChangeNotifier {
         parentSignedBy: row.parentSignedBy,
         nextReviewAt: row.nextReviewAt,
         createdBy: row.createdBy,
+        trainingSessions: List.of(row.trainingSessions),
       );
 
   CollegeGuidancePlan _publicCollege(CollegeGuidancePlan row) =>
@@ -685,6 +969,7 @@ class StudentSupportService extends ChangeNotifier {
         notes: '',
         nextAppointmentAt: row.nextAppointmentAt,
         createdBy: row.createdBy,
+        artifacts: List.of(row.artifacts),
       );
 
   ({String name, String? className}) _studentMeta(String studentId) {

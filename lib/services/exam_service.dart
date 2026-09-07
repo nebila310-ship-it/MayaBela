@@ -61,6 +61,7 @@ class ExamService extends ChangeNotifier {
         .where(
           (p) =>
               StudentRegistryService.classNamesMatch(p.className, className) &&
+              p.isOnlineSit &&
               p.isOpenAt(now),
         )
         .toList();
@@ -183,6 +184,8 @@ class ExamService extends ChangeNotifier {
     DateTime? startAt,
     DateTime? endAt,
     List<String> attachmentPaths = const [],
+    ExamKind kind = ExamKind.school,
+    ExamSittingMode sittingMode = ExamSittingMode.online,
     String? schoolId,
   }) async {
     final now = DateTime.now();
@@ -197,6 +200,8 @@ class ExamService extends ChangeNotifier {
       startAt: startAt,
       endAt: endAt,
       attachmentPaths: List.of(attachmentPaths),
+      kind: kind,
+      sittingMode: sittingMode,
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -215,6 +220,8 @@ class ExamService extends ChangeNotifier {
     DateTime? endAt,
     bool clearWindow = false,
     List<String>? attachmentPaths,
+    ExamKind? kind,
+    ExamSittingMode? sittingMode,
   }) async {
     final paper = paperById(id);
     if (paper == null) return null;
@@ -233,6 +240,8 @@ class ExamService extends ChangeNotifier {
     if (attachmentPaths != null) {
       paper.attachmentPaths = List.of(attachmentPaths);
     }
+    if (kind != null) paper.kind = kind;
+    if (sittingMode != null) paper.sittingMode = sittingMode;
     paper.updatedAt = DateTime.now();
     await _persist();
     return paper;
@@ -257,6 +266,12 @@ class ExamService extends ChangeNotifier {
     final existing = attemptFor(paperId: paperId, studentName: studentName);
     if (existing != null) return existing;
     final paper = paperById(paperId);
+    if (paper != null && !paper.isOnlineSit) {
+      throw StateError(
+        'This paper is offline / lockdown. Staff print or attach files; '
+        'students do not sit it in the portal.',
+      );
+    }
     final now = DateTime.now();
     final questions = paper == null ? const <ExamQuestion>[] : questionsOnPaper(paper);
     final attempt = ExamAttempt(

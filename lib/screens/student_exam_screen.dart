@@ -9,7 +9,6 @@ import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/course_attachment_picker.dart';
-import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Student portal: sit published papers for this class.
 class StudentExamScreen extends StatefulWidget {
@@ -83,8 +82,11 @@ class _StudentExamScreenState extends State<StudentExamScreen> {
                   padding: listPagePadding(context),
                   children: [
                     Text(
-                      'Open papers for $className. Multiple-choice is scored '
-                      'when you submit. Short and essay answers wait for a teacher.',
+                      'Open online papers for $className. National and model '
+                      'papers appear here only when they are set to an online sit. '
+                      'Offline / lockdown papers stay with staff for print. '
+                      'Multiple-choice is scored when you submit. Short and essay '
+                      'answers wait for a teacher.',
                       style: TextStyle(color: Colors.grey.shade800, height: 1.35),
                     ),
                     const SizedBox(height: 16),
@@ -135,7 +137,10 @@ class _StudentExamScreenState extends State<StudentExamScreen> {
       child: ListTile(
         leading: Icon(Icons.quiz_outlined, color: accent),
         title: Text(paper.title),
-        subtitle: Text('${paper.subject} · ${_categoryLabel(paper.markbookCategoryId)} · $status'),
+        subtitle: Text(
+          '${paper.subject} · ${_kindLabel(paper.kind)} · '
+          '${_categoryLabel(paper.markbookCategoryId)} · $status',
+        ),
         trailing: TextButton(
           onPressed: () => _openPaper(paper, attempt),
           child: Text(
@@ -184,6 +189,12 @@ class _StudentExamScreenState extends State<StudentExamScreen> {
         'midterm' => 'Midterm',
         'final' => 'Final',
         _ => id,
+      };
+
+  static String _kindLabel(ExamKind kind) => switch (kind) {
+        ExamKind.school => 'School',
+        ExamKind.national => 'National',
+        ExamKind.model => 'Model',
       };
 }
 

@@ -147,6 +147,8 @@ class AdmissionService extends ChangeNotifier {
     bool? submitted,
     bool? verified,
     String? notes,
+    String? filePath,
+    bool clearFilePath = false,
   }) {
     return update(applicationId, (a) {
       final docs = [
@@ -156,6 +158,8 @@ class AdmissionService extends ChangeNotifier {
               submitted: submitted,
               verified: verified,
               notes: notes,
+              filePath: filePath,
+              clearFilePath: clearFilePath,
             )
           else
             d,

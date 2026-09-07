@@ -8,6 +8,14 @@ enum ExamPaperStatus { draft, published, closed }
 
 enum ExamAttemptStatus { inProgress, submitted, scored }
 
+/// School-set vs national / model papers. Defaults keep existing papers
+/// as in-school online sittings.
+enum ExamKind { school, national, model }
+
+/// Online = student portal sit. Offline = staff print / attach papers;
+/// not a lockdown browser.
+enum ExamSittingMode { online, offline }
+
 class ExamChoice {
   const ExamChoice({required this.id, required this.text});
 
@@ -120,6 +128,8 @@ class ExamPaper {
     this.endAt,
     this.createdBy,
     this.attachmentPaths = const [],
+    this.kind = ExamKind.school,
+    this.sittingMode = ExamSittingMode.online,
   });
 
   final String id;
@@ -134,10 +144,14 @@ class ExamPaper {
   DateTime? endAt;
   String? createdBy;
   List<String> attachmentPaths;
+  ExamKind kind;
+  ExamSittingMode sittingMode;
   final DateTime createdAt;
   DateTime updatedAt;
 
   bool get isPublished => status == ExamPaperStatus.published;
+
+  bool get isOnlineSit => sittingMode == ExamSittingMode.online;
 
   bool isOpenAt(DateTime now) {
     if (status != ExamPaperStatus.published) return false;
@@ -159,6 +173,8 @@ class ExamPaper {
         if (endAt != null) 'endAt': endAt!.toIso8601String(),
         if (createdBy != null) 'createdBy': createdBy,
         'attachmentPaths': attachmentPaths,
+        'kind': kind.name,
+        'sittingMode': sittingMode.name,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -190,6 +206,14 @@ class ExamPaper {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      kind: ExamKind.values.firstWhere(
+        (v) => v.name == map['kind'],
+        orElse: () => ExamKind.school,
+      ),
+      sittingMode: ExamSittingMode.values.firstWhere(
+        (v) => v.name == map['sittingMode'],
+        orElse: () => ExamSittingMode.online,
+      ),
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
