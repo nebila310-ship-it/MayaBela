@@ -69,7 +69,7 @@ class AnnouncementAttachmentService {
     if (local == null) return null;
 
     // Prefer a cloud URL so other roles / devices can open the file.
-    final cloud = await _uploadToCloud(
+    final cloud = await uploadSavedAttachment(
       fileName: file.name,
       bytes: bytes,
       localPath: local.filePath,
@@ -87,6 +87,26 @@ class AnnouncementAttachmentService {
     return local;
   }
 
+  Future<String?> uploadSavedAttachment({
+    required String fileName,
+    required List<int>? bytes,
+    required String localPath,
+    required String subdir,
+    required String attachmentId,
+  }) async {
+    try {
+      return await _uploadToCloud(
+        fileName: fileName,
+        bytes: bytes,
+        localPath: localPath,
+        subdir: subdir,
+        attachmentId: attachmentId,
+      ).timeout(const Duration(seconds: 12), onTimeout: () => null);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> _uploadToCloud({
     required String fileName,
     required List<int>? bytes,
@@ -96,7 +116,10 @@ class AnnouncementAttachmentService {
   }) async {
     if (!SupabaseBootstrap.isInitialized) return null;
     if (SupabaseStorageBootstrap.deferred) return null;
-    final ready = await SupabaseStorageBootstrap.ensureReady();
+    final ready = await SupabaseStorageBootstrap.ensureReady().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => false,
+    );
     if (!ready) return null;
 
     try {

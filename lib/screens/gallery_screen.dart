@@ -270,9 +270,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       ? null
                       : () async {
                           setDialogState(() => pickingMedia = true);
-                          final pick = type == GalleryPostType.photo
-                              ? await GalleryMediaService.instance.pickPhoto()
-                              : await GalleryMediaService.instance.pickVideo();
+                          GalleryMediaPick? pick;
+                          var failed = false;
+                          try {
+                            pick = type == GalleryPostType.photo
+                                ? await GalleryMediaService.instance.pickPhoto()
+                                : await GalleryMediaService.instance
+                                    .pickVideo();
+                          } catch (_) {
+                            failed = true;
+                            pick = null;
+                          }
+                          if (!context.mounted) return;
                           setDialogState(() {
                             pickingMedia = false;
                             if (pick != null) {
@@ -280,6 +289,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               mediaLabel = pick.displayName;
                             }
                           });
+                          if (failed) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(s.galleryMediaPickFailed)),
+                            );
+                          }
                         },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),

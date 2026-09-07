@@ -972,6 +972,11 @@ class AppStrings implements AppStringsLike {
   String get noGalleryPosts =>
       t('No gallery posts yet', 'ጋለሪ ልጥፎች የሉም');
   String get galleryPosted => t('Posted — parents in this class can view it', 'ተለጠፈ — ወላጆች ሊያዩት ይችላሉ');
+  String get galleryMediaPickFailed => t(
+        'Could not add that photo or video. Try another file.',
+        'ፎቶ ወይም ቪዲዮ መጨመር አልተቻለም። ሌላ ፋይል ይሞክሩ።',
+        'Suuraa ykn viidiyoo dabaluun hin dandeenye. Faayilii biraa yaali.',
+      );
   String get schoolGalleryHint => t(
         'Share class photos, videos, notes, and file attachments. Parents see posts for their children.',
         'ፎቶ፣ ቪዲዮ፣ ማስታወሻ እና ፋይሎችን ለክፍል ያጋሩ። ወላጆች የልጆቻቸውን ልጥፎች ያያሉ።',
