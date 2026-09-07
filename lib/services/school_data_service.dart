@@ -40,6 +40,7 @@ import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
@@ -3681,6 +3682,7 @@ class SchoolDataService {
       fromRole: AuthService.roleTeacher,
       fromName: authorName,
     );
+    SchoolContentSyncService.instance.markDataChanged();
     _persistSchoolContent();
   }
 

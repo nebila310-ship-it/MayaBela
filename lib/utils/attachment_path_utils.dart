@@ -4,6 +4,16 @@ String attachmentFileName(String path) {
   return parts.isEmpty ? path : parts.last;
 }
 
+bool attachmentPathIsVideo(String path) {
+  final lower = path.toLowerCase();
+  return lower.endsWith('.mp4') ||
+      lower.endsWith('.mov') ||
+      lower.endsWith('.webm') ||
+      lower.endsWith('.mkv') ||
+      lower.endsWith('.avi') ||
+      lower.endsWith('.m4v');
+}
+
 bool attachmentPathIsImage(String path) {
   final lower = path.toLowerCase();
   return lower.endsWith('.png') ||
