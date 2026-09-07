@@ -977,13 +977,28 @@ class AppStrings implements AppStringsLike {
         'ከመስቀልዎ በፊት አርእስት፣ ፎቶ፣ ቪዲዮ ወይም ፋይል ያክሉ።',
         'Mata duree, suuraa, viidiyoo ykn maxxansa dabali osoo hin ol-fe\'in dura.',
       );
+  String galleryFileTooLarge(int maxMb) => t(
+        'That file is too large. Use a file under $maxMb MB.',
+        'ፋይሉ በጣም ትልቅ ነው። ከ$maxMb MB በታች የሆነ ፋይል ይጠቀሙ።',
+        'Faayilii sun baay\'ee guddaadha. MB $maxMb gadi fayyadami.',
+      );
+  String get gallerySizeHint => t(
+        'Photos up to 8 MB, videos up to 25 MB, other files up to 10 MB.',
+        'ፎቶ እስከ 8 MB፣ ቪዲዮ እስከ 25 MB፣ ሌላ ፋይል እስከ 10 MB።',
+        'Suuraan MB 8, viidiyoon MB 25, faayileen biroo MB 10.',
+      );
+  String get galleryPhotoOpenFailed => t(
+        'Could not show this photo.',
+        'ይህን ፎቶ ማሳየት አልተቻለም።',
+        'Suuraa kana agarsiisuu hin dandeenye.',
+      );
   String get galleryMediaPickFailed => t(
         'Could not add that photo or video. Try another file.',
         'ፎቶ ወይም ቪዲዮ መጨመር አልተቻለም። ሌላ ፋይል ይሞክሩ።',
         'Suuraa ykn viidiyoo dabaluun hin dandeenye. Faayilii biraa yaali.',
       );
   String get schoolGalleryHint => t(
-        'Share class photos, videos, notes, and file attachments. Parents see posts for their children.',
+        'Share class photos, videos, notes, and file attachments. Photos up to 8 MB, videos up to 25 MB, other files up to 10 MB. Parents see posts for their children.',
         'ፎቶ፣ ቪዲዮ፣ ማስታወሻ እና ፋይሎችን ለክፍል ያጋሩ። ወላጆች የልጆቻቸውን ልጥፎች ያያሉ።',
         'Suuraa, viidiyoo, yaadannoo fi faayilii kutaaf qoodi. Maatii maxxansa ijoollee isaanii argu.',
       );

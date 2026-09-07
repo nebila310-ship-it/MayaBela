@@ -10,6 +10,7 @@ import 'package:mayabela/services/gallery_compose.dart';
 import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/utils/attachment_size_limit.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 import 'package:mayabela/web_erp/pages/web_gallery_page.dart';
@@ -114,6 +115,24 @@ void main() {
         .firstWhere((post) => post.mediaPath == 'gallery_attachments/class.jpg');
     expect(posted.title, 'class.jpg');
     expect(posted.attachmentPaths, ['gallery_attachments/class.jpg']);
+  });
+
+  test('cloud photo URLs can preview from remembered bytes', () {
+    const url = 'https://example.test/gallery/class.jpg';
+    WebAttachmentCache.instance.remember(url, List<int>.filled(24, 3));
+    expect(WebAttachmentCache.instance.read(url), isNotNull);
+  });
+
+  test('oversize gallery photos are rejected', () async {
+    final huge = List<int>.filled(AttachmentSizeLimit.imageBytes + 1, 1);
+    final pick = await GalleryMediaService.instance.persistBytes(
+      fileName: 'huge.jpg',
+      bytes: huge,
+    );
+    expect(pick, isNull);
+    expect(GalleryMediaService.instance.lastRejectedMaxMb, 8);
+    expect(AttachmentSizeLimit.maxMbForFileName('clip.mp4'), 25);
+    expect(AttachmentSizeLimit.maxMbForFileName('notes.pdf'), 10);
   });
 
   test('gallery media persistBytes attaches without hanging', () async {

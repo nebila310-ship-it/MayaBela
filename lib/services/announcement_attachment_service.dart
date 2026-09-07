@@ -12,11 +12,15 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/utils/attachment_size_limit.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
 
 class AnnouncementAttachmentService {
   AnnouncementAttachmentService._();
   static final instance = AnnouncementAttachmentService._();
+
+  String? lastPickError;
+  int? lastRejectedMaxMb;
 
   Future<List<AnnouncementAttachment>> pickAndSaveFiles({
     String subdir = 'announcement_attachments',
@@ -33,8 +37,17 @@ class AnnouncementAttachmentService {
     );
     if (result == null || result.files.isEmpty) return [];
 
+    lastPickError = null;
+    lastRejectedMaxMb = null;
     final saved = <AnnouncementAttachment>[];
     for (final file in result.files) {
+      final size = file.size > 0 ? file.size : (file.bytes?.length ?? 0);
+      if (AttachmentSizeLimit.exceeds(file.name, size)) {
+        lastRejectedMaxMb = AttachmentSizeLimit.maxMbForFileName(file.name);
+        lastPickError =
+            'That file is too large. Use a file under $lastRejectedMaxMb MB.';
+        continue;
+      }
       final attachment = await _savePlatformFile(file, subdir: subdir);
       if (attachment != null) saved.add(attachment);
     }
@@ -77,6 +90,9 @@ class AnnouncementAttachmentService {
       attachmentId: local.id,
     );
     if (cloud != null) {
+      if (bytes != null && bytes.isNotEmpty) {
+        WebAttachmentCache.instance.remember(cloud, bytes);
+      }
       return AnnouncementAttachment(
         id: local.id,
         fileName: local.fileName,

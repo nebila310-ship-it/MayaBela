@@ -38,8 +38,23 @@ class _CourseAttachmentPickerState extends State<CourseAttachmentPicker> {
       final picked = await AnnouncementAttachmentService.instance
           .pickAndSaveFiles(subdir: widget.subdir);
       if (!mounted) return;
-      if (picked.isEmpty) return;
+      final s = AppLocale.instance.strings;
+      final maxMb =
+          AnnouncementAttachmentService.instance.lastRejectedMaxMb;
+      if (picked.isEmpty) {
+        if (maxMb != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(s.galleryFileTooLarge(maxMb))),
+          );
+        }
+        return;
+      }
       onChanged([...widget.paths, ...picked.map((a) => a.filePath)]);
+      if (maxMb != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(s.galleryFileTooLarge(maxMb))),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
       final s = AppLocale.instance.strings;

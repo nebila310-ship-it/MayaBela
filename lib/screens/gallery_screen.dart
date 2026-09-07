@@ -310,9 +310,21 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               mediaLabel = pick.displayName;
                             }
                           });
-                          if (failed) {
+                          if (failed ||
+                              (pick == null &&
+                                  GalleryMediaService
+                                          .instance.lastRejectedMaxMb !=
+                                      null)) {
+                            final maxMb = GalleryMediaService
+                                .instance.lastRejectedMaxMb;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(s.galleryMediaPickFailed)),
+                              SnackBar(
+                                content: Text(
+                                  maxMb != null
+                                      ? s.galleryFileTooLarge(maxMb)
+                                      : s.galleryMediaPickFailed,
+                                ),
+                              ),
                             );
                           }
                         },
@@ -339,6 +351,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 allowShareDownload: false,
                 onChanged: (paths) =>
                     setDialogState(() => attachments = List<String>.from(paths)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                s.gallerySizeHint,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
               ),
             ],
           ),
@@ -475,10 +492,21 @@ class _GalleryScreenState extends State<GalleryScreen> {
             allowShareDownload: widget.mode == GalleryViewMode.parent,
             image: PlatformPathImage(
               path: path,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.broken_image_outlined,
-                color: Colors.white54,
-                size: 64,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white54,
+                    size: 64,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    AppLocale.instance.strings.galleryPhotoOpenFailed,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
               ),
             ),
           ),
