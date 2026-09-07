@@ -3655,6 +3655,7 @@ class SchoolDataService {
     required String authorName,
     String? mediaLabel,
     String? mediaPath,
+    List<String> attachmentPaths = const [],
   }) {
     _galleryPosts.insert(
       0,
@@ -3668,6 +3669,7 @@ class SchoolDataService {
         postedAt: DateTime.now(),
         mediaLabel: mediaLabel,
         mediaPath: mediaPath,
+        attachmentPaths: List<String>.from(attachmentPaths),
       ),
     );
 

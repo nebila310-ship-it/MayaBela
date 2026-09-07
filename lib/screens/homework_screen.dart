@@ -17,6 +17,7 @@ import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/attachment_share_actions.dart';
 import 'package:mayabela/widgets/homework_attachments_panel.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
 
@@ -241,6 +242,8 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                         path.split(Platform.pathSeparator).last,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      onPressed: () =>
+                          openAttachmentWithFeedback(context, path: path),
                       onDeleted: () {
                         setDialogState(() => attachmentPaths.remove(path));
                       },

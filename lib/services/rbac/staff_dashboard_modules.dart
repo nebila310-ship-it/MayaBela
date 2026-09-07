@@ -214,6 +214,11 @@ abstract final class StaffDashboardModules {
       permissions: {SchoolPermissions.sendAnnouncements},
     ),
     const StaffDashboardModule(
+      id: 'gallery',
+      labelEn: 'Gallery',
+      permissions: {SchoolPermissions.sendAnnouncements},
+    ),
+    const StaffDashboardModule(
       id: 'calendar',
       labelEn: 'Calendar',
       permissions: {

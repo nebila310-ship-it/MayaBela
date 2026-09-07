@@ -972,6 +972,17 @@ class AppStrings implements AppStringsLike {
   String get noGalleryPosts =>
       t('No gallery posts yet', 'ጋለሪ ልጥፎች የሉም');
   String get galleryPosted => t('Posted — parents in this class can view it', 'ተለጠፈ — ወላጆች ሊያዩት ይችላሉ');
+  String get allClasses => t('All classes', 'ሁሉም ክፍሎች', 'Kutaalee hunda');
+  String get schoolGalleryHint => t(
+        'Share class photos, videos, notes, and file attachments. Parents see posts for their children.',
+        'ፎቶ፣ ቪዲዮ፣ ማስታወሻ እና ፋይሎችን ለክፍል ያጋሩ። ወላጆች የልጆቻቸውን ልጥፎች ያያሉ።',
+        'Suuraa, viidiyoo, yaadannoo fi faayilii kutaaf qoodi. Maatii maxxansa ijoollee isaanii argu.',
+      );
+  String get attachmentOpened => t(
+        'Attachment opened',
+        'attachment ተከፍቷል',
+        'Maxxansi baneera',
+      );
   String get share => t('Share', 'አጋራ');
   String get download => t('Download', 'አውርድ');
   String attachmentDownloaded(String file) =>

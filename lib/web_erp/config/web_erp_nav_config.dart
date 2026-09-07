@@ -292,9 +292,16 @@ const List<WebErpNavItem> _allNavItems = [
     ),
     WebErpNavItem(
       id: 'events',
-      label: 'Events & Gallery',
+      label: 'Events',
       icon: Icons.event_outlined,
       section: 'Communication',
+    ),
+    WebErpNavItem(
+      id: 'gallery',
+      label: 'Gallery',
+      icon: Icons.photo_library_outlined,
+      section: 'Communication',
+      badgeId: 'gallery',
     ),
     WebErpNavItem(
       id: 'calendar',

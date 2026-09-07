@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
@@ -33,16 +32,8 @@ class HomeworkAttachmentsPanel extends StatelessWidget {
     );
   }
 
-  Future<void> _open(BuildContext context, String path) async {
-    final s = AppLocale.instance.strings;
-    final result = await AnnouncementAttachmentService.instance
-        .openAttachment(_attachmentFor(path));
-    if (!context.mounted) return;
-    if (result.type != ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
-      );
-    }
+  Future<void> _open(BuildContext context, String path) {
+    return openAttachmentWithFeedback(context, path: path);
   }
 
   void _previewImage(BuildContext context, String path) {

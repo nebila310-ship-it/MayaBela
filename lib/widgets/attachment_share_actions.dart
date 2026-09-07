@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
 
@@ -92,6 +93,46 @@ class AttachmentShareDownloadRow extends StatelessWidget {
   }
 }
 
+/// Opens a file attachment and always tells the user what happened.
+Future<void> openAttachmentWithFeedback(
+  BuildContext context, {
+  required String path,
+}) async {
+  final s = AppLocale.instance.strings;
+  final shareService = FileAttachmentShareService.instance;
+  if (shareService.isAssetPath(path)) {
+    _previewAssetImage(context, path);
+    return;
+  }
+
+  try {
+    final result = await AnnouncementAttachmentService.instance.openAttachment(
+      AnnouncementAttachment(
+        id: path,
+        fileName: shareService.displayName(path),
+        filePath: path,
+      ),
+    );
+    if (!context.mounted) return;
+    if (result.type != ResultType.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
+      );
+      return;
+    }
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.attachmentOpened)),
+      );
+    }
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
+    );
+  }
+}
+
 Future<void> showAttachmentActionSheet(
   BuildContext context, {
   required String path,
@@ -122,25 +163,8 @@ Future<void> showAttachmentActionSheet(
             title: Text(s.open),
             onTap: () async {
               Navigator.pop(ctx);
-              if (shareService.isAssetPath(path)) {
-                if (!context.mounted) return;
-                _previewAssetImage(context, path);
-                return;
-              }
-              final result = await AnnouncementAttachmentService.instance
-                  .openAttachment(
-                AnnouncementAttachment(
-                  id: path,
-                  fileName: fileName,
-                  filePath: path,
-                ),
-              );
               if (!context.mounted) return;
-              if (result.type != ResultType.done) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
-                );
-              }
+              await openAttachmentWithFeedback(context, path: path);
             },
           ),
           ListTile(

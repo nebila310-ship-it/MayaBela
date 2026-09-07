@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
@@ -19,6 +18,7 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/screens/parent_compose_message_screen.dart';
 import 'package:mayabela/widgets/messages_ui.dart';
 import 'package:mayabela/widgets/message_voice_input_bar.dart';
+import 'package:mayabela/widgets/attachment_share_actions.dart';
 import 'package:mayabela/widgets/voice_message_player.dart';
 
 enum MessageComposeScope { admin, teacher }
@@ -1233,13 +1233,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       return;
     }
-    final result =
-        await AnnouncementAttachmentService.instance.openAttachment(attachment);
-    if (!mounted || result.type == ResultType.done) return;
-    final s = AppLocale.instance.strings;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
-    );
+    await openAttachmentWithFeedback(context, path: attachment.filePath);
   }
 
   String _formatTime(DateTime time) {

@@ -1,4 +1,3 @@
-import 'package:open_file/open_file.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
@@ -12,6 +11,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/announcements_ui.dart';
+import 'package:mayabela/widgets/attachment_share_actions.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({
@@ -177,16 +177,8 @@ class AnnouncementDetailScreen extends StatelessWidget {
   Future<void> _openAttachment(
     BuildContext context,
     AnnouncementAttachment attachment,
-  ) async {
-    final s = AppLocale.instance.strings;
-    final result =
-        await AnnouncementAttachmentService.instance.openAttachment(attachment);
-    if (!context.mounted) return;
-    if (result.type != ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
-      );
-    }
+  ) {
+    return openAttachmentWithFeedback(context, path: attachment.filePath);
   }
 
   @override

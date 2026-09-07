@@ -323,7 +323,8 @@ class GalleryPost {
     required this.postedAt,
     this.mediaLabel,
     this.mediaPath,
-  });
+    List<String>? attachmentPaths,
+  }) : attachmentPaths = attachmentPaths ?? [];
 
   final String id;
   final String className;
@@ -334,6 +335,7 @@ class GalleryPost {
   final DateTime postedAt;
   final String? mediaLabel;
   final String? mediaPath;
+  List<String> attachmentPaths;
 }
 
 class DailyActivityOption {

@@ -9,7 +9,7 @@ abstract final class WebFileUtils {
   }) =>
       impl.downloadBytes(fileName: fileName, bytes: bytes);
 
-  static Future<void> openOrDownload({
+  static Future<bool> openOrDownload({
     required String filePath,
     required String fileName,
     List<int>? bytes,
