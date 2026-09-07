@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/gallery_compose.dart';
 import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/gallery_share_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -163,6 +164,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Future<void> _addPost() async {
     final s = AppLocale.instance.strings;
     var className = _selectedClass == _allClasses ? null : _selectedClass;
+    className ??= _classOptions.firstOrNull;
     if (!_isSchoolWide && className == null) return;
 
     final titleController = TextEditingController();
@@ -180,6 +182,24 @@ class _GalleryScreenState extends State<GalleryScreen> {
       accent: Colors.deepPurple,
       icon: Icons.collections_outlined,
       saveLabel: s.upload,
+      canSave: (_) =>
+          (className ?? '').trim().isNotEmpty &&
+          GalleryCompose.hasPublishableContent(
+            title: titleController.text,
+            mediaPath: mediaPath,
+            attachments: attachments,
+          ),
+      saveBlockedReason: (_) {
+        if ((className ?? '').trim().isEmpty) return s.selectClass;
+        if (!GalleryCompose.hasPublishableContent(
+          title: titleController.text,
+          mediaPath: mediaPath,
+          attachments: attachments,
+        )) {
+          return s.galleryNeedContent;
+        }
+        return null;
+      },
       builder: (context, setDialogState) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -246,6 +266,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               adminDialogField(
                 TextField(
                   controller: titleController,
+                  onChanged: (_) => setDialogState(() {}),
                   decoration: adminFieldDecoration(
                     label: s.titleLabel,
                     icon: Icons.title_outlined,
@@ -325,28 +346,58 @@ class _GalleryScreenState extends State<GalleryScreen> {
       ),
     );
 
-    if (saved != true ||
-        (className == null || className!.trim().isEmpty) ||
-        titleController.text.trim().isEmpty ||
-        captionController.text.trim().isEmpty ||
-        (type != GalleryPostType.note && mediaPath == null)) {
+    if (saved != true) {
       titleController.dispose();
       captionController.dispose();
       return;
     }
 
-    _data.addGalleryPost(
-      className: className!,
+    final composed = GalleryCompose.resolve(
+      title: titleController.text,
+      caption: captionController.text,
       type: type,
-      title: titleController.text.trim(),
-      caption: captionController.text.trim(),
-      authorName: _authorName,
-      mediaLabel: mediaLabel,
       mediaPath: mediaPath,
-      attachmentPaths: attachments,
+      mediaLabel: mediaLabel,
+      attachments: attachments,
     );
+    final postedClass = className?.trim();
     titleController.dispose();
     captionController.dispose();
+
+    if (postedClass == null ||
+        postedClass.isEmpty ||
+        !GalleryCompose.hasPublishableContent(
+          title: composed.title,
+          mediaPath: composed.mediaPath,
+          attachments: attachments,
+        )) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              postedClass == null || postedClass.isEmpty
+                  ? s.selectClass
+                  : s.galleryNeedContent,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    _data.addGalleryPost(
+      className: postedClass,
+      type: composed.type,
+      title: composed.title,
+      caption: composed.caption,
+      authorName: _authorName,
+      mediaLabel: composed.mediaLabel,
+      mediaPath: composed.mediaPath,
+      attachmentPaths: attachments,
+    );
+    if (_isSchoolWide && _selectedClass != _allClasses) {
+      _selectedClass = postedClass;
+    }
     setState(() {});
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -6,6 +6,7 @@ import 'package:mayabela/models/cloud/app_data_maps.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/gallery_compose.dart';
 import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -77,6 +78,42 @@ void main() {
     expect(ModuleAccess.canView('gallery'), isTrue);
     expect(ModuleAccess.canManage('gallery'), isTrue);
     expect(WebErpRouter.pageFor('gallery'), isA<WebGalleryPage>());
+  });
+
+  test('compose allows upload from attachments without title or caption', () {
+    final composed = GalleryCompose.resolve(
+      title: '',
+      caption: '',
+      type: GalleryPostType.photo,
+      attachments: const ['gallery_attachments/class.jpg'],
+    );
+    expect(composed.title, 'class.jpg');
+    expect(composed.mediaPath, 'gallery_attachments/class.jpg');
+    expect(composed.type, GalleryPostType.photo);
+    expect(
+      GalleryCompose.hasPublishableContent(
+        title: '',
+        attachments: const ['gallery_attachments/class.jpg'],
+      ),
+      isTrue,
+    );
+  });
+
+  test('addGalleryPost with attachments appears in the class list', () {
+    SchoolDataService.instance.addGalleryPost(
+      className: 'Grade 4A',
+      type: GalleryPostType.photo,
+      title: 'class.jpg',
+      caption: '',
+      authorName: 'School Admin',
+      mediaPath: 'gallery_attachments/class.jpg',
+      attachmentPaths: const ['gallery_attachments/class.jpg'],
+    );
+    final posted = SchoolDataService.instance
+        .getGalleryForClass('Grade 4A')
+        .firstWhere((post) => post.mediaPath == 'gallery_attachments/class.jpg');
+    expect(posted.title, 'class.jpg');
+    expect(posted.attachmentPaths, ['gallery_attachments/class.jpg']);
   });
 
   test('gallery media persistBytes attaches without hanging', () async {
