@@ -13,6 +13,9 @@ class WebPayrollPage extends StatefulWidget {
 
   final bool embedded;
 
+  /// Wide enough for every payroll column without clipping headers.
+  static const registerMinWidth = 1640.0;
+
   @override
   State<WebPayrollPage> createState() => _WebPayrollPageState();
 }
@@ -39,6 +42,9 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
   }
 
   String _etb(num value) => EthiopianPayrollTax.etb(value);
+
+  String _amount(num value) =>
+      EthiopianPayrollTax.etb(value).replaceAll(' ETB', '');
 
   Future<void> _edit(PayrollPerson person) async {
     final svc = PayrollService.instance;
@@ -438,19 +444,33 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                 .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Amounts in ETB. Scroll sideways to see every column.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
                           const SizedBox(height: 8),
                           Container(
                             decoration: WebErpTheme.cardDecoration(context),
+                            clipBehavior: Clip.antiAlias,
                             child: WebErpHScroll(
+                              minChildWidth: WebPayrollPage.registerMinWidth,
                               child: DataTable(
+                                key: const ValueKey('payroll-register-table'),
                                 showCheckboxColumn: false,
                                 headingRowHeight: 44,
-                                dataRowMinHeight: 44,
-                                dataRowMaxHeight: 56,
+                                dataRowMinHeight: 40,
+                                dataRowMaxHeight: 52,
                                 headingTextStyle: const TextStyle(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 12,
                                 ),
+                                columnSpacing: 16,
+                                horizontalMargin: 12,
                                 columns: const [
                                   DataColumn(label: Text('Staff ID')),
                                   DataColumn(label: Text('Name')),
@@ -458,6 +478,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                   DataColumn(label: Text('Basic'), numeric: true),
                                   DataColumn(label: Text('Gross'), numeric: true),
                                   DataColumn(label: Text('PAYE'), numeric: true),
+                                  DataColumn(label: Text('Net pay'), numeric: true),
                                   DataColumn(
                                     label: Text('Staff pension'),
                                     numeric: true,
@@ -471,7 +492,6 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                     label: Text('Total deduct.'),
                                     numeric: true,
                                   ),
-                                  DataColumn(label: Text('Net pay'), numeric: true),
                                   DataColumn(label: Text('')),
                                 ],
                                 rows: [
@@ -497,25 +517,29 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                           ),
                                         ),
                                         DataCell(Text(row.person.jobTitle)),
-                                        DataCell(Text(_etb(row.calc.basicSalary))),
-                                        DataCell(Text(_etb(row.calc.gross))),
-                                        DataCell(Text(_etb(row.calc.paye))),
-                                        DataCell(
-                                          Text(_etb(row.calc.employeePension)),
-                                        ),
-                                        DataCell(Text(_etb(row.calc.salaryAdvance))),
-                                        DataCell(
-                                          Text(_etb(row.calc.otherDeductions)),
-                                        ),
-                                        DataCell(
-                                          Text(_etb(row.calc.totalStaffDeductions)),
-                                        ),
+                                        DataCell(Text(_amount(row.calc.basicSalary))),
+                                        DataCell(Text(_amount(row.calc.gross))),
+                                        DataCell(Text(_amount(row.calc.paye))),
                                         DataCell(
                                           Text(
-                                            _etb(row.calc.net),
+                                            _amount(row.calc.net),
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w800,
                                             ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(_amount(row.calc.employeePension)),
+                                        ),
+                                        DataCell(
+                                          Text(_amount(row.calc.salaryAdvance)),
+                                        ),
+                                        DataCell(
+                                          Text(_amount(row.calc.otherDeductions)),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            _amount(row.calc.totalStaffDeductions),
                                           ),
                                         ),
                                         DataCell(
@@ -547,41 +571,41 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                         ),
                                         DataCell(Text('${paid.length} staff')),
                                         DataCell(
-                                          Text(_etb(sum((r) => r.calc.basicSalary))),
+                                          Text(_amount(sum((r) => r.calc.basicSalary))),
                                         ),
                                         DataCell(
-                                          Text(_etb(sum((r) => r.calc.gross))),
+                                          Text(_amount(sum((r) => r.calc.gross))),
                                         ),
                                         DataCell(
-                                          Text(_etb(sum((r) => r.calc.paye))),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _etb(sum((r) => r.calc.employeePension)),
-                                          ),
+                                          Text(_amount(sum((r) => r.calc.paye))),
                                         ),
                                         DataCell(
                                           Text(
-                                            _etb(sum((r) => r.calc.salaryAdvance)),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _etb(sum((r) => r.calc.otherDeductions)),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _etb(
-                                              sum((r) => r.calc.totalStaffDeductions),
+                                            _amount(sum((r) => r.calc.net)),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
                                             ),
                                           ),
                                         ),
                                         DataCell(
                                           Text(
-                                            _etb(sum((r) => r.calc.net)),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
+                                            _amount(sum((r) => r.calc.employeePension)),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            _amount(sum((r) => r.calc.salaryAdvance)),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            _amount(sum((r) => r.calc.otherDeductions)),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            _amount(
+                                              sum((r) => r.calc.totalStaffDeductions),
                                             ),
                                           ),
                                         ),
@@ -610,6 +634,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                             Container(
                               decoration: WebErpTheme.cardDecoration(context),
                               child: WebErpHScroll(
+                                minChildWidth: 720,
                                 child: DataTable(
                                   columns: const [
                                     DataColumn(label: Text('Staff ID')),
@@ -660,6 +685,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                             Container(
                               decoration: WebErpTheme.cardDecoration(context),
                               child: WebErpHScroll(
+                                minChildWidth: 720,
                                 child: DataTable(
                                   columns: const [
                                     DataColumn(label: Text('Staff ID')),

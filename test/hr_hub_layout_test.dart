@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
+import 'package:mayabela/web_erp/pages/web_payroll_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
 
@@ -89,6 +90,14 @@ void main() {
     expect(find.text('Print / PDF'), findsOneWidget);
     expect(find.text('Net pay'), findsWidgets);
     expect(find.text('Payroll register'), findsOneWidget);
+    expect(
+      find.textContaining('Scroll sideways to see every column'),
+      findsOneWidget,
+    );
+    final tableSize = tester.getSize(
+      find.byKey(const ValueKey('payroll-register-table')),
+    );
+    expect(tableSize.width, greaterThanOrEqualTo(WebPayrollPage.registerMinWidth));
   });
 
   testWidgets('Transport tile hosts Register Driver and Live GPS',
