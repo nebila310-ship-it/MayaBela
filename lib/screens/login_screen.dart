@@ -237,7 +237,11 @@ class _LoginScreenState extends State<LoginScreen> {
           'rate_limited' =>
             'Too many login attempts. Please wait a few minutes and try again.',
           'school_inactive' => s.schoolAccessMessage('school_inactive'),
-          _ => s.invalidCredentials,
+          _ => (!kIsWeb &&
+                  (AuthService.lastCloudLoginDetail?.trim().isNotEmpty ??
+                      false))
+              ? AuthService.lastCloudLoginDetail!.trim()
+              : s.invalidCredentials,
         };
       });
       return;

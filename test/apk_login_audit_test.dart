@@ -5,7 +5,7 @@ import 'package:mayabela/supabase_options.dart';
 
 void main() {
   test('pilot APK version is 1.0.5+6 so testers can see a new install', () {
-    expect(kMayaBelaVersion, '1.0.5+6');
+    expect(kMayaBelaVersion, '1.0.6+7');
   });
 
   test('APK uses the same live Supabase project as the website', () {
