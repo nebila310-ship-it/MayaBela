@@ -100,6 +100,54 @@ void main() {
       find.byKey(const ValueKey('payroll-register-table')),
     );
     expect(tableSize.width, greaterThanOrEqualTo(WebPayrollPage.registerMinWidth));
+
+    final registerScroll = tester
+        .widget<SingleChildScrollView>(
+          find.ancestor(
+            of: find.byKey(const ValueKey('payroll-register-table')),
+            matching: find.byKey(const ValueKey('web-erp-hscroll-view')),
+          ),
+        )
+        .controller!;
+    expect(registerScroll.position.maxScrollExtent, greaterThan(100));
+
+    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.pumpAndSettle();
+    expect(registerScroll.position.pixels, greaterThan(0));
+  });
+
+  testWidgets('payroll register can scroll horizontally on a 500px surface',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(500, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebHrHubPage(initialTab: 3)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('payroll-register-table')), findsOneWidget);
+
+    final registerScroll = tester
+        .widget<SingleChildScrollView>(
+          find.ancestor(
+            of: find.byKey(const ValueKey('payroll-register-table')),
+            matching: find.byKey(const ValueKey('web-erp-hscroll-view')),
+          ),
+        )
+        .controller!;
+    expect(registerScroll.position.maxScrollExtent, greaterThan(1000));
+    expect(registerScroll.position.pixels, 0);
+
+    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.pumpAndSettle();
+    expect(registerScroll.position.pixels, greaterThan(200));
+
+    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.pumpAndSettle();
+    expect(registerScroll.position.pixels, greaterThan(400));
   });
 
   testWidgets('Transport tile hosts Register Driver and Live GPS',
