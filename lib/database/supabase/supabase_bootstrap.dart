@@ -33,6 +33,12 @@ abstract final class SupabaseBootstrap {
           await Supabase.initialize(
             url: kSupabaseUrl,
             publishableKey: kSupabaseAnonKey,
+            authOptions: kIsWeb
+                ? const FlutterAuthClientOptions()
+                : const FlutterAuthClientOptions(
+                    authFlowType: AuthFlowType.implicit,
+                    detectSessionInUri: false,
+                  ),
           ).timeout(Duration(seconds: kIsWeb ? 8 : 20));
           _initialized = true;
           lastInitError = null;

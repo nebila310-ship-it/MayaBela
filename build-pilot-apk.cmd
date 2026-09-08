@@ -27,7 +27,7 @@ if exist ".env.local" (
 )
 
 echo Using SUPABASE_URL from APK build (same cloud as the web app)
-set "DART_DEFINES=--dart-define=SUPABASE_CONFIGURED=true --dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY% --dart-define=MAYABELA_VERSION=1.0.5+6"
+set "DART_DEFINES=--dart-define=SUPABASE_CONFIGURED=true --dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY% --dart-define=MAYABELA_VERSION=1.0.6+7"
 
 echo.
 echo === flutter build apk --release ===

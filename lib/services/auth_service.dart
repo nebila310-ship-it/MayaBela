@@ -107,6 +107,9 @@ class AuthService {
   static const supportPhone = '+251911646444';
   static const supportEmail = 'nebila310@gmail.com';
 
+  /// Last cloud-login detail for the APK error banner (web keeps short codes).
+  static String? lastCloudLoginDetail;
+
   static const roleTeacher = 'teacher';
   static const roleParent = 'parent';
   static const roleAdmin = 'admin';
@@ -1004,6 +1007,7 @@ class AuthService {
     required String password,
     String? schoolId,
   }) async {
+    lastCloudLoginDetail = null;
     if (username.trim().isEmpty || password.isEmpty) {
       return 'empty';
     }
@@ -1067,7 +1071,9 @@ class AuthService {
         password: password,
         schoolId: schoolId,
       );
+      lastCloudLoginDetail = cloud.errorMessage;
       if (cloud.ok) {
+        lastCloudLoginDetail = null;
         alignTeacherSessionWithRegistry();
         alignDriverSessionWithRegistry();
         EnrollmentService.instance.ensureSeeded();

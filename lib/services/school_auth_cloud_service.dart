@@ -366,6 +366,7 @@ class SchoolAuthCloudService {
         return SchoolAuthCloudResult(
           ok: false,
           errorCode: (data?['code'] as String?) ?? 'invalid',
+          errorMessage: data?['error']?.toString(),
         );
       }
 
@@ -373,25 +374,42 @@ class SchoolAuthCloudService {
       final accessToken = data['access_token'] as String?;
       final profileMap = Map<String, dynamic>.from(data['profile'] as Map);
       if (refreshToken == null || refreshToken.isEmpty) {
-        return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+        return const SchoolAuthCloudResult(
+          ok: false,
+          errorCode: 'invalid',
+          errorMessage: 'Cloud login returned no session token.',
+        );
       }
 
-      await SupabaseBootstrap.client.auth.setSession(
-        refreshToken,
-        accessToken: accessToken,
-      );
+      // setSession(accessToken:) calls Auth getUser(). That extra round-trip
+      // often fails on phone networks after school-login already succeeded,
+      // which made the APK show "invalid credentials" while web worked.
+      try {
+        await SupabaseBootstrap.client.auth.setSession(
+          refreshToken,
+          accessToken: accessToken,
+        );
+      } catch (e) {
+        try {
+          await SupabaseBootstrap.client.auth.setSession(refreshToken);
+        } catch (e2) {
+          if (kIsWeb) {
+            return SchoolAuthCloudResult(
+              ok: false,
+              errorCode: 'invalid',
+              errorMessage: e2.toString(),
+            );
+          }
+        }
+      }
       try {
         await SupabaseBootstrap.client.auth.refreshSession();
       } catch (_) {}
 
-      // Heal missing/stale app_metadata so Admin writes work on first try.
       if (!await hasSchoolClaims()) {
-        final healed = await refreshAccessClaims(username: username.trim());
-        if (!healed.ok) {
-          return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
-        }
+        await refreshAccessClaims(username: username.trim());
       }
-      if (!await hasSchoolClaims()) {
+      if (!await hasSchoolClaims() && kIsWeb) {
         return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
       }
 
@@ -438,6 +456,7 @@ class SchoolAuthCloudService {
       return SchoolAuthCloudResult(
         ok: false,
         errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -449,12 +468,17 @@ class SchoolAuthCloudService {
           text.contains('unavailable') ||
           text.contains('failed host lookup') ||
           text.contains('network')) {
-        return const SchoolAuthCloudResult(
+        return SchoolAuthCloudResult(
           ok: false,
           errorCode: 'cloud_required',
+          errorMessage: e.toString(),
         );
       }
-      return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: 'invalid',
+        errorMessage: e.toString(),
+      );
     }
   }
 
