@@ -5,10 +5,10 @@ import 'package:mayabela/services/ethiopia_payroll_tax.dart';
 void main() {
   test('PAYE 1395/2025 and POESSA pension on common monthly salaries', () {
     final twelveK = EthiopianPayrollTax.breakdown(basicSalary: 12000);
-    expect(twelveK.paye, 2550);
+    expect(twelveK.paye, 2250);
     expect(twelveK.employeePension, 840);
     expect(twelveK.employerPension, 1320);
-    expect(twelveK.net, 8610);
+    expect(twelveK.net, 8910);
 
     final exempt = EthiopianPayrollTax.breakdown(basicSalary: 2000);
     expect(exempt.paye, 0);
@@ -36,10 +36,10 @@ void main() {
       basicSalary: 12000,
       pensionEligible: false,
     );
-    expect(noPension.paye, 2550);
+    expect(noPension.paye, 2250);
     expect(noPension.employeePension, 0);
     expect(noPension.employerPension, 0);
-    expect(noPension.net, 9450);
+    expect(noPension.net, 9750);
 
     final withExempt = EthiopianPayrollTax.breakdown(
       basicSalary: 4000,
