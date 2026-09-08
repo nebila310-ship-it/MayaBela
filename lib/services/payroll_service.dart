@@ -123,11 +123,25 @@ class PayrollService extends ChangeNotifier {
     return profile.preview;
   }
 
+  List<PayrollRegisterRow> registerRows([String? schoolId]) {
+    return [
+      for (final person in peopleForSchool(schoolId))
+        PayrollRegisterRow(
+          person: person,
+          profile: profileFor(person),
+          calc: previewFor(person),
+        ),
+    ];
+  }
+
   Future<PayrollProfile> upsertProfile({
     required PayrollPerson person,
     required double basicSalary,
     double taxableAllowances = 0,
     double exemptAllowances = 0,
+    double salaryAdvance = 0,
+    double otherDeductions = 0,
+    String otherDeductionNote = '',
     bool pensionEligible = true,
     String notes = '',
   }) async {
@@ -143,6 +157,9 @@ class PayrollService extends ChangeNotifier {
       basicSalary: basicSalary,
       taxableAllowances: taxableAllowances,
       exemptAllowances: exemptAllowances,
+      salaryAdvance: salaryAdvance,
+      otherDeductions: otherDeductions,
+      otherDeductionNote: otherDeductionNote.trim(),
       pensionEligible: pensionEligible,
       notes: notes.trim(),
       updatedAt: now,
@@ -190,6 +207,9 @@ class PayrollService extends ChangeNotifier {
           basicSalary: calc.basicSalary,
           taxableAllowances: calc.taxableAllowances,
           exemptAllowances: calc.exemptAllowances,
+          salaryAdvance: calc.salaryAdvance,
+          otherDeductions: calc.otherDeductions,
+          otherDeductionNote: profile.otherDeductionNote,
           taxableIncome: calc.taxableIncome,
           paye: calc.paye,
           employeePension: calc.employeePension,
