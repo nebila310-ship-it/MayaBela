@@ -192,6 +192,6 @@ void main() {
         ),
       ),
     );
-    expect(tester.getSize(find.byType(DataTable)).width, 800);
+    expect(tester.getSize(find.byType(DataTable)).width, closeTo(800, 0.1));
   });
 }

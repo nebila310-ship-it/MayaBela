@@ -487,6 +487,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                           const SizedBox(height: 8),
                           Expanded(
                             child: Container(
+                              width: double.infinity,
                               decoration: WebErpTheme.cardDecoration(context),
                               clipBehavior: Clip.hardEdge,
                               child: WebErpHScroll(
@@ -533,9 +534,6 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                 rows: [
                                   for (final row in rows)
                                     DataRow(
-                                      onSelectChanged: canManage
-                                          ? (_) => _edit(row.person)
-                                          : null,
                                       cells: [
                                         DataCell(Text(row.person.personId)),
                                         DataCell(
