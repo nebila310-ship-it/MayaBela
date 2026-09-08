@@ -31,7 +31,7 @@ abstract final class FreeMapLinks {
   }
 }
 
-/// Raster styles that do not need a Google / Mapbox / MapTiler key.
+/// Raster styles that do not need a Google / Mapbox / MapTiler / CARTO key.
 enum FreeMapStyle {
   streets,
   osm,
@@ -40,22 +40,20 @@ enum FreeMapStyle {
 
 extension FreeMapStyleTiles on FreeMapStyle {
   String get urlTemplate => switch (this) {
+        // Esri World Street Map — keyless. CARTO voyager now watermarks
+        // "API KEY REQUIRED" on unpaid requests.
         FreeMapStyle.streets =>
-          'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
         FreeMapStyle.osm =>
           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         FreeMapStyle.satellite =>
           'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       };
 
-  List<String> get subdomains => switch (this) {
-        FreeMapStyle.streets => const ['a', 'b', 'c', 'd'],
-        FreeMapStyle.osm => const [],
-        FreeMapStyle.satellite => const [],
-      };
+  List<String> get subdomains => const [];
 
   String get attribution => switch (this) {
-        FreeMapStyle.streets => '© OpenStreetMap © CARTO',
+        FreeMapStyle.streets => 'Tiles © Esri © OpenStreetMap',
         FreeMapStyle.osm => '© OpenStreetMap contributors',
         FreeMapStyle.satellite => 'Tiles © Esri',
       };

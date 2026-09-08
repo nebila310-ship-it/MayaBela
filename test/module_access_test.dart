@@ -327,6 +327,7 @@ void main() {
       expect(ModuleAccess.canManage('add_teacher'), isFalse);
       expect(ModuleAccess.normalize('staff'), 'hr');
       expect(ModuleAccess.normalize('employees'), 'hr');
+      expect(ModuleAccess.normalize('payroll'), 'hr');
       // Classroom teachers is its own module now (item 7 allocation).
       expect(ModuleAccess.normalize('classroom_teachers'), 'classroom_teachers');
       expect(ModuleAccess.normalize('add_teacher'), 'hr');

@@ -99,6 +99,10 @@ abstract final class AppCollections {
   static const ictDevices = 'ict_devices';
   static const ictWeeklyReviews = 'ict_weekly_reviews';
 
+  /// HR payroll (PAYE + POESSA).
+  static const payrollProfiles = 'payroll_profiles';
+  static const payrollRuns = 'payroll_runs';
+
   // School inventory
   static const inventoryItems = 'inventory_items';
   static const stockTransactions = 'stock_transactions';

@@ -64,6 +64,7 @@ void main() {
       'transport_live_gps',
       'transport',
       'hr',
+      'payroll',
       'students',
       'add_student',
       'add_teacher',

@@ -60,6 +60,7 @@ import 'package:mayabela/services/persistence/digital_ops_persistence_service.da
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
+import 'package:mayabela/services/persistence/payroll_persistence_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
@@ -123,6 +124,7 @@ Future<void> _bootstrapCriticalForLogin() async {
       TeacherPersistenceService.instance.loadRegistryIntoService(),
       DriverPersistenceService.instance.loadRegistryIntoService(),
       EmployeePersistenceService.instance.loadRegistryIntoService(),
+      PayrollPersistenceService.instance.loadIntoService(),
       BusPersistenceService.instance.loadIntoService(),
       AppLocale.instance.load(),
       UserPreferencesService.instance.load(),

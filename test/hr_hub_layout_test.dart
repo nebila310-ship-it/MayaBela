@@ -72,6 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Teachers'), findsOneWidget);
+    expect(find.text('Payroll'), findsOneWidget);
     expect(find.byKey(const ValueKey('hr-register-driver')), findsNothing);
     expect(find.byKey(const ValueKey('hr-live-gps')), findsNothing);
 
@@ -79,6 +80,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('hr-register-driver')), findsOneWidget);
     expect(find.byKey(const ValueKey('hr-live-gps')), findsOneWidget);
+
+    await tester.tap(find.text('Payroll'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Proclamation 1395/2025'), findsOneWidget);
+    expect(find.text('Run payroll'), findsOneWidget);
   });
 
   testWidgets('Transport tile hosts Register Driver and Live GPS',

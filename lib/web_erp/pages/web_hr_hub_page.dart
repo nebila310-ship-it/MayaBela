@@ -5,15 +5,17 @@ import 'package:mayabela/services/employee_registry_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
+import 'package:mayabela/web_erp/pages/web_payroll_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
-/// Human Resource hub: classroom teachers, record-only employees, transport.
+/// Human Resource hub: classroom teachers, record-only employees, transport, payroll.
 class WebHrHubPage extends StatefulWidget {
-  const WebHrHubPage({super.key, this.onNavigate});
+  const WebHrHubPage({super.key, this.onNavigate, this.initialTab = 0});
 
   final ValueChanged<String>? onNavigate;
+  final int initialTab;
 
   @override
   State<WebHrHubPage> createState() => _WebHrHubPageState();
@@ -26,7 +28,11 @@ class _WebHrHubPageState extends State<WebHrHubPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 3),
+    );
   }
 
   @override
@@ -57,6 +63,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                   Tab(text: 'Teachers'),
                   Tab(text: 'Other staff'),
                   Tab(text: 'Transport'),
+                  Tab(text: 'Payroll'),
                 ],
               ),
             ],
@@ -74,6 +81,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
               ),
               _EmployeesTab(onNavigate: widget.onNavigate),
               WebTransportDashboardPage(onNavigate: widget.onNavigate),
+              const WebPayrollPage(embedded: true),
             ],
           ),
         ),

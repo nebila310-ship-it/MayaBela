@@ -22,7 +22,9 @@ void main() {
       FreeMapLinks.appleMaps(latitude: lat, longitude: lng).host,
       'maps.apple.com',
     );
-    expect(FreeMapStyle.streets.urlTemplate, contains('basemaps.cartocdn.com'));
+    expect(FreeMapStyle.streets.urlTemplate, contains('arcgisonline.com'));
+    expect(FreeMapStyle.streets.urlTemplate, contains('World_Street_Map'));
+    expect(FreeMapStyle.streets.urlTemplate, isNot(contains('cartocdn')));
     expect(FreeMapStyle.osm.urlTemplate, contains('tile.openstreetmap.org'));
     expect(FreeMapStyle.satellite.urlTemplate, contains('arcgisonline.com'));
   });

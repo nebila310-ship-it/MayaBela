@@ -100,6 +100,8 @@ class WebErpRouter {
       case 'employees':
       case 'staff':
         return WebHrHubPage(onNavigate: onNavigate);
+      case 'payroll':
+        return WebHrHubPage(onNavigate: onNavigate, initialTab: 3);
       case 'teachers':
         return WebTeachersTablePage(
           onNavigate: onNavigate,

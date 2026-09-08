@@ -306,6 +306,7 @@ abstract final class ModuleAccess {
   static const Map<String, String> _aliases = {
     'staff': 'hr',
     'employees': 'hr',
+    'payroll': 'hr',
     'add_teacher': 'hr',
     'add_staff': 'teachers',
     'grades': 'examinations',

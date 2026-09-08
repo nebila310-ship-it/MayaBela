@@ -248,6 +248,8 @@ abstract final class CloudSyncEngine {
     AppCollections.schoolBackups,
     AppCollections.ictDevices,
     AppCollections.ictWeeklyReviews,
+    AppCollections.payrollProfiles,
+    AppCollections.payrollRuns,
     AppCollections.inventoryItems,
     AppCollections.classroomInventory,
     AppCollections.purchaseRequests,
