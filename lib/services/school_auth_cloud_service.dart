@@ -262,15 +262,27 @@ class SchoolAuthCloudService {
     String name,
     Map<String, dynamic> body,
   ) async {
-    final res = await SupabaseBootstrap.client.functions.invoke(
-      name,
-      body: body,
-    );
-    final data = res.data;
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
+    Future<Map<String, dynamic>?> once() async {
+      final res = await SupabaseBootstrap.client.functions.invoke(
+        name,
+        body: body,
+      );
+      final data = res.data;
+      if (data is Map) {
+        return Map<String, dynamic>.from(data);
+      }
+      return null;
     }
-    return null;
+
+    try {
+      return await once();
+    } on FunctionException {
+      rethrow;
+    } catch (_) {
+      if (kIsWeb) rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      return await once();
+    }
   }
 
   Map<String, dynamic>? _detailsMap(Object? details) {

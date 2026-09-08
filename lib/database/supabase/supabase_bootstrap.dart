@@ -28,30 +28,41 @@ abstract final class SupabaseBootstrap {
         return false;
       }
 
-      try {
-        await Supabase.initialize(
-          url: kSupabaseUrl,
-          publishableKey: kSupabaseAnonKey,
-        ).timeout(Duration(seconds: kIsWeb ? 8 : 20));
-        _initialized = true;
-        lastInitError = null;
-        return true;
-      } catch (e) {
-        // initialize may throw if already initialized
+      Future<bool> connectOnce() async {
         try {
-          // ignore: unnecessary_statements
-          Supabase.instance.client;
+          await Supabase.initialize(
+            url: kSupabaseUrl,
+            publishableKey: kSupabaseAnonKey,
+          ).timeout(Duration(seconds: kIsWeb ? 8 : 20));
           _initialized = true;
           lastInitError = null;
           return true;
-        } catch (_) {
-          lastInitError = e.toString();
-          if (kDebugMode) {
-            debugPrint('SupabaseBootstrap: initialize failed — $e');
+        } catch (e) {
+          // initialize may throw if already initialized
+          try {
+            // ignore: unnecessary_statements
+            Supabase.instance.client;
+            _initialized = true;
+            lastInitError = null;
+            return true;
+          } catch (_) {
+            lastInitError = e.toString();
+            if (kDebugMode) {
+              debugPrint('SupabaseBootstrap: initialize failed — $e');
+            }
+            return false;
           }
-          return false;
         }
       }
+
+      if (await connectOnce()) return true;
+      // Phone networks often miss the first handshake; web already succeeded
+      // by the time login is tapped, so only retry on the APK.
+      if (!kIsWeb) {
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        if (await connectOnce()) return true;
+      }
+      return false;
     });
   }
 

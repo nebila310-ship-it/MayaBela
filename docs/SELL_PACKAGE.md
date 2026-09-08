@@ -136,7 +136,7 @@ No install. Hard-refresh after deploys: **Ctrl+Shift+R**.
 ### Pilot APK (Android sideload)
 
 Script: `build-pilot-apk.cmd` → `build\app\outputs\flutter-apk\app-release.apk`  
-App id: `com.mayabela.app` · version from `pubspec.yaml` (currently **1.0.4+5**).
+App id: `com.mayabela.app` · version from `pubspec.yaml` (currently **1.0.5+6**).
 
 ```bat
 cmd /c "set MAYABELA_NOPAUSE=1&& build-pilot-apk.cmd"
@@ -145,7 +145,7 @@ cmd /c "set MAYABELA_NOPAUSE=1&& build-pilot-apk.cmd"
 **Status (Aug 2026):** release APK **builds** on Flutter **3.47** when Android stays on AGP **8.12.0** + Gradle **8.14.3** + Kotlin **2.2.20**.  
 Do **not** bump those to AGP 9 / Gradle 9 until Flutter’s gradle plugin stops crashing on `afterEvaluate` / the new DSL. `add_2_calendar` is still vendored at **3.0.1**.
 
-Verified locally: `flutter build apk --release --target-platform android-arm64` → `com.mayabela.app` **1.0.4+5**.
+Verified locally: `flutter build apk --release --target-platform android-arm64` → `com.mayabela.app` **1.0.5+6**.
 
 1. Share `app-release.apk` for sideload (arm64 phones)  
 2. Keep web ERP as the no-install fallback: **https://mayabela.pages.dev**  

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/utils/critical_bootstrap_gate.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/app_lock_service.dart';
@@ -185,6 +186,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _onLocaleChanged() => setState(() {});
 
+  String _apkCloudLoginError() {
+    final detail = SupabaseBootstrap.lastInitError?.trim();
+    if (detail != null && detail.isNotEmpty) {
+      return 'Cloud login failed on this APK. $detail';
+    }
+    return 'Cloud login failed on this APK. Check mobile data/Wi-Fi, '
+        'uninstall the old MayaBela app, then install App $kMayaBelaVersion.';
+  }
+
   Future<void> login() async {
     setState(() {
       message = '';
@@ -220,7 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
           'account_inactive' => 'This student account is not active. Contact your school admin.',
           'portal_disabled' => 'Student portal is disabled for this school.',
           'cloud_required' =>
-            'Cloud login could not connect to Supabase. Check your internet and try again. If it keeps failing, the school-login function may be down.',
+            kIsWeb
+                ? 'Cloud login could not connect to Supabase. Check your internet and try again. If it keeps failing, the school-login function may be down.'
+                : _apkCloudLoginError(),
           'password_too_short' => s.passwordTooShort,
           'rate_limited' =>
             'Too many login attempts. Please wait a few minutes and try again.',
@@ -1408,7 +1420,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: _buildTopBar(theme),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+                    Text(
+                      'App $kMayaBelaVersion',
+                      key: const ValueKey('apk-app-version'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: theme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     LoginBrandHeader(
                       schoolId: schoolId.text,
                       onSecretTap: _onLogoTap,
