@@ -50,9 +50,15 @@ void main() {
     ];
     final exporter = PayrollExportService.instance;
     final csv = exporter.buildCsv(rows);
+    expect(csv, contains('Income tax'));
     expect(csv, contains('Net pay'));
     expect(csv, contains('TOTAL'));
     expect(csv, contains('A Teacher'));
+    expect(PayrollExportService.payrollHeaders.last, 'Net pay');
+    expect(
+      PayrollExportService.payrollHeaders.indexOf('Income tax'),
+      lessThan(PayrollExportService.payrollHeaders.indexOf('Net pay')),
+    );
 
     final advances = exporter.advanceSheet(rows);
     expect(advances.length, 2);
