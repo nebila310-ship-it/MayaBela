@@ -25,6 +25,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
   late String _periodYm;
   late final TextEditingController _periodController;
   var _exporting = false;
+  final _tableHScroll = ScrollController();
 
   @override
   void initState() {
@@ -38,7 +39,21 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
   @override
   void dispose() {
     _periodController.dispose();
+    _tableHScroll.dispose();
     super.dispose();
+  }
+
+  void _nudgeTable(double delta) {
+    if (!_tableHScroll.hasClients) return;
+    final next = (_tableHScroll.offset + delta).clamp(
+      0.0,
+      _tableHScroll.position.maxScrollExtent,
+    );
+    _tableHScroll.animateTo(
+      next,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   String _etb(num value) => EthiopianPayrollTax.etb(value);
@@ -329,12 +344,8 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
               if (!widget.embedded)
                 Text('Payroll', style: WebErpTheme.sectionTitle(context)),
               Text(
-                'Income tax is PAYE (Pay As You Earn) — Ethiopian employment tax '
-                'from Proclamation 1395/2025 (first 2,000 ETB exempt, then 15–35%). '
-                'POESSA pension is 7% staff / 11% school on basic. '
-                'Advances and other deductions come off after tax. '
-                'Net pay is last, after every deduction. '
-                'This is a school register, not a substitute for a licensed accountant.',
+                'Income tax (PAYE) is employment tax. Pension, advances, and other '
+                'deductions follow. Net pay is the last column.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -437,18 +448,36 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                       )
-                    : ListView(
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'Payroll register',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Payroll register',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                              IconButton(
+                                key: const ValueKey('payroll-scroll-left'),
+                                tooltip: 'Scroll left',
+                                onPressed: () => _nudgeTable(-280),
+                                icon: const Icon(Icons.chevron_left),
+                              ),
+                              IconButton(
+                                key: const ValueKey('payroll-scroll-right'),
+                                tooltip: 'Scroll right to Net pay',
+                                onPressed: () => _nudgeTable(280),
+                                icon: const Icon(Icons.chevron_right),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
                           Text(
-                            'Amounts in ETB. Scroll sideways to see every column.',
+                            'Amounts in ETB. Use the scrollbar or arrows to see every column.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
@@ -456,12 +485,14 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                 ),
                           ),
                           const SizedBox(height: 8),
-                          Container(
-                            decoration: WebErpTheme.cardDecoration(context),
-                            clipBehavior: Clip.antiAlias,
-                            child: WebErpHScroll(
-                              minChildWidth: WebPayrollPage.registerMinWidth,
-                              child: DataTable(
+                          Expanded(
+                            child: Container(
+                              decoration: WebErpTheme.cardDecoration(context),
+                              clipBehavior: Clip.hardEdge,
+                              child: WebErpHScroll(
+                                controller: _tableHScroll,
+                                minChildWidth: WebPayrollPage.registerMinWidth,
+                                child: DataTable(
                                 key: const ValueKey('payroll-register-table'),
                                 showCheckboxColumn: false,
                                 headingRowHeight: 44,
@@ -618,6 +649,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                       ],
                                     ),
                                 ],
+                              ),
                               ),
                             ),
                           ),
