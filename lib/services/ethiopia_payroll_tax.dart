@@ -46,23 +46,32 @@ class EthiopianPayrollTax {
     required double basicSalary,
     double taxableAllowances = 0,
     double exemptAllowances = 0,
+    double salaryAdvance = 0,
+    double otherDeductions = 0,
     bool pensionEligible = true,
   }) {
-    final basic = _money(basicSalary);
-    final taxableAllow = _money(taxableAllowances);
-    final exemptAllow = _money(exemptAllowances);
-    final payeBase = _money(basic + taxableAllow);
+    final basic = money(basicSalary);
+    final taxableAllow = money(taxableAllowances);
+    final exemptAllow = money(exemptAllowances);
+    final advance = money(salaryAdvance);
+    final other = money(otherDeductions);
+    final payeBase = money(basic + taxableAllow);
     final incomeTax = paye(payeBase);
     final employeePension =
-        pensionEligible ? _money(basic * employeePensionRate) : 0.0;
+        pensionEligible ? money(basic * employeePensionRate) : 0.0;
     final employerPension =
-        pensionEligible ? _money(basic * employerPensionRate) : 0.0;
-    final gross = _money(basic + taxableAllow + exemptAllow);
-    final net = _money(gross - incomeTax - employeePension);
+        pensionEligible ? money(basic * employerPensionRate) : 0.0;
+    final gross = money(basic + taxableAllow + exemptAllow);
+    final net = money(
+      (gross - incomeTax - employeePension - advance - other)
+          .clamp(0, double.infinity),
+    );
     return EthiopianPayslipBreakdown(
       basicSalary: basic,
       taxableAllowances: taxableAllow,
       exemptAllowances: exemptAllow,
+      salaryAdvance: advance,
+      otherDeductions: other,
       taxableIncome: payeBase,
       paye: incomeTax,
       employeePension: employeePension,
@@ -74,9 +83,26 @@ class EthiopianPayrollTax {
     );
   }
 
-  static double _money(double value) {
+  static double money(double value) {
     if (value.isNaN || value.isInfinite) return 0;
     return (value * 100).round() / 100;
+  }
+
+  static double _money(double value) => money(value);
+
+  static String etb(num value) {
+    final n = money(value.toDouble());
+    final whole = n.truncate();
+    final cents = ((n - whole) * 100).round().abs();
+    final digits = whole.abs().toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      final fromEnd = digits.length - i;
+      if (i > 0 && fromEnd % 3 == 0) buf.write(',');
+      buf.write(digits[i]);
+    }
+    final sign = n < 0 ? '-' : '';
+    return '$sign${buf.toString()}.${cents.toString().padLeft(2, '0')} ETB';
   }
 }
 
@@ -107,6 +133,8 @@ class EthiopianPayslipBreakdown {
     required this.basicSalary,
     required this.taxableAllowances,
     required this.exemptAllowances,
+    this.salaryAdvance = 0,
+    this.otherDeductions = 0,
     required this.taxableIncome,
     required this.paye,
     required this.employeePension,
@@ -120,6 +148,8 @@ class EthiopianPayslipBreakdown {
   final double basicSalary;
   final double taxableAllowances;
   final double exemptAllowances;
+  final double salaryAdvance;
+  final double otherDeductions;
   final double taxableIncome;
   final double paye;
   final double employeePension;
@@ -129,9 +159,18 @@ class EthiopianPayslipBreakdown {
   final bool pensionEligible;
   final EthiopianPayeBracket band;
 
+  double get statutoryDeductions =>
+      EthiopianPayrollTax.money(paye + employeePension);
+
+  double get extraDeductions =>
+      EthiopianPayrollTax.money(salaryAdvance + otherDeductions);
+
+  double get totalStaffDeductions =>
+      EthiopianPayrollTax.money(statutoryDeductions + extraDeductions);
+
   double get totalPension =>
-      EthiopianPayrollTax._money(employeePension + employerPension);
+      EthiopianPayrollTax.money(employeePension + employerPension);
 
   double get employerCost =>
-      EthiopianPayrollTax._money(gross + employerPension);
+      EthiopianPayrollTax.money(gross + employerPension);
 }

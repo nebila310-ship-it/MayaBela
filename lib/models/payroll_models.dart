@@ -31,6 +31,9 @@ class PayrollProfile {
     required this.basicSalary,
     this.taxableAllowances = 0,
     this.exemptAllowances = 0,
+    this.salaryAdvance = 0,
+    this.otherDeductions = 0,
+    this.otherDeductionNote = '',
     this.pensionEligible = true,
     this.notes = '',
     required this.updatedAt,
@@ -43,6 +46,9 @@ class PayrollProfile {
   final double basicSalary;
   final double taxableAllowances;
   final double exemptAllowances;
+  final double salaryAdvance;
+  final double otherDeductions;
+  final String otherDeductionNote;
   final bool pensionEligible;
   final String notes;
   final DateTime updatedAt;
@@ -51,6 +57,8 @@ class PayrollProfile {
         basicSalary: basicSalary,
         taxableAllowances: taxableAllowances,
         exemptAllowances: exemptAllowances,
+        salaryAdvance: salaryAdvance,
+        otherDeductions: otherDeductions,
         pensionEligible: pensionEligible,
       );
 
@@ -58,6 +66,9 @@ class PayrollProfile {
     double? basicSalary,
     double? taxableAllowances,
     double? exemptAllowances,
+    double? salaryAdvance,
+    double? otherDeductions,
+    String? otherDeductionNote,
     bool? pensionEligible,
     String? notes,
     DateTime? updatedAt,
@@ -70,6 +81,9 @@ class PayrollProfile {
       basicSalary: basicSalary ?? this.basicSalary,
       taxableAllowances: taxableAllowances ?? this.taxableAllowances,
       exemptAllowances: exemptAllowances ?? this.exemptAllowances,
+      salaryAdvance: salaryAdvance ?? this.salaryAdvance,
+      otherDeductions: otherDeductions ?? this.otherDeductions,
+      otherDeductionNote: otherDeductionNote ?? this.otherDeductionNote,
       pensionEligible: pensionEligible ?? this.pensionEligible,
       notes: notes ?? this.notes,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -84,6 +98,9 @@ class PayrollProfile {
         'basicSalary': basicSalary,
         'taxableAllowances': taxableAllowances,
         'exemptAllowances': exemptAllowances,
+        'salaryAdvance': salaryAdvance,
+        'otherDeductions': otherDeductions,
+        'otherDeductionNote': otherDeductionNote,
         'pensionEligible': pensionEligible,
         'notes': notes,
         'updatedAt': updatedAt.toIso8601String(),
@@ -101,11 +118,31 @@ class PayrollProfile {
       basicSalary: (map['basicSalary'] as num?)?.toDouble() ?? 0,
       taxableAllowances: (map['taxableAllowances'] as num?)?.toDouble() ?? 0,
       exemptAllowances: (map['exemptAllowances'] as num?)?.toDouble() ?? 0,
+      salaryAdvance: (map['salaryAdvance'] as num?)?.toDouble() ?? 0,
+      otherDeductions: (map['otherDeductions'] as num?)?.toDouble() ?? 0,
+      otherDeductionNote: (map['otherDeductionNote'] ?? '').toString(),
       pensionEligible: map['pensionEligible'] != false,
       notes: (map['notes'] ?? '').toString(),
       updatedAt: DateTime.tryParse('${map['updatedAt']}') ?? DateTime.now(),
     );
   }
+}
+
+class PayrollRegisterRow {
+  const PayrollRegisterRow({
+    required this.person,
+    required this.profile,
+    required this.calc,
+  });
+
+  final PayrollPerson person;
+  final PayrollProfile? profile;
+  final EthiopianPayslipBreakdown calc;
+
+  String get otherNote => profile?.otherDeductionNote ?? '';
+  bool get hasSalary => calc.basicSalary > 0;
+  bool get hasAdvance => calc.salaryAdvance > 0;
+  bool get hasOtherDeduction => calc.otherDeductions > 0;
 }
 
 class PayrollSlip {
@@ -117,6 +154,9 @@ class PayrollSlip {
     required this.basicSalary,
     required this.taxableAllowances,
     required this.exemptAllowances,
+    this.salaryAdvance = 0,
+    this.otherDeductions = 0,
+    this.otherDeductionNote = '',
     required this.taxableIncome,
     required this.paye,
     required this.employeePension,
@@ -133,6 +173,9 @@ class PayrollSlip {
   final double basicSalary;
   final double taxableAllowances;
   final double exemptAllowances;
+  final double salaryAdvance;
+  final double otherDeductions;
+  final String otherDeductionNote;
   final double taxableIncome;
   final double paye;
   final double employeePension;
@@ -140,6 +183,10 @@ class PayrollSlip {
   final double gross;
   final double net;
   final bool pensionEligible;
+
+  double get totalStaffDeductions => EthiopianPayrollTax.money(
+        paye + employeePension + salaryAdvance + otherDeductions,
+      );
 
   Map<String, dynamic> toMap() => {
         'personId': personId,
@@ -149,6 +196,9 @@ class PayrollSlip {
         'basicSalary': basicSalary,
         'taxableAllowances': taxableAllowances,
         'exemptAllowances': exemptAllowances,
+        'salaryAdvance': salaryAdvance,
+        'otherDeductions': otherDeductions,
+        'otherDeductionNote': otherDeductionNote,
         'taxableIncome': taxableIncome,
         'paye': paye,
         'employeePension': employeePension,
@@ -170,6 +220,9 @@ class PayrollSlip {
       basicSalary: (map['basicSalary'] as num?)?.toDouble() ?? 0,
       taxableAllowances: (map['taxableAllowances'] as num?)?.toDouble() ?? 0,
       exemptAllowances: (map['exemptAllowances'] as num?)?.toDouble() ?? 0,
+      salaryAdvance: (map['salaryAdvance'] as num?)?.toDouble() ?? 0,
+      otherDeductions: (map['otherDeductions'] as num?)?.toDouble() ?? 0,
+      otherDeductionNote: (map['otherDeductionNote'] ?? '').toString(),
       taxableIncome: (map['taxableIncome'] as num?)?.toDouble() ?? 0,
       paye: (map['paye'] as num?)?.toDouble() ?? 0,
       employeePension: (map['employeePension'] as num?)?.toDouble() ?? 0,
@@ -205,8 +258,13 @@ class PayrollRun {
       slips.fold(0.0, (s, e) => s + e.employeePension);
   double get totalEmployerPension =>
       slips.fold(0.0, (s, e) => s + e.employerPension);
+  double get totalAdvance => slips.fold(0.0, (s, e) => s + e.salaryAdvance);
+  double get totalOtherDeductions =>
+      slips.fold(0.0, (s, e) => s + e.otherDeductions);
   double get totalNet => slips.fold(0.0, (s, e) => s + e.net);
   double get totalGross => slips.fold(0.0, (s, e) => s + e.gross);
+  double get totalStaffDeductions =>
+      slips.fold(0.0, (s, e) => s + e.totalStaffDeductions);
 
   Map<String, dynamic> toMap() => {
         'id': id,

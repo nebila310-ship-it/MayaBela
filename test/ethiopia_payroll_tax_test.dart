@@ -53,4 +53,18 @@ void main() {
     expect(withExempt.employeePension, 280);
     expect(withExempt.net, 4720);
   });
+
+  test('salary advance and other deductions come off net after PAYE', () {
+    final row = EthiopianPayrollTax.breakdown(
+      basicSalary: 12000,
+      salaryAdvance: 1000,
+      otherDeductions: 250,
+    );
+    expect(row.paye, 2250);
+    expect(row.employeePension, 840);
+    expect(row.salaryAdvance, 1000);
+    expect(row.otherDeductions, 250);
+    expect(row.totalStaffDeductions, 4340);
+    expect(row.net, 7660);
+  });
 }

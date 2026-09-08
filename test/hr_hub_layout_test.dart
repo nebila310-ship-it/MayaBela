@@ -85,6 +85,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Proclamation 1395/2025'), findsOneWidget);
     expect(find.text('Run payroll'), findsOneWidget);
+    expect(find.text('Export Excel'), findsOneWidget);
+    expect(find.text('Print / PDF'), findsOneWidget);
+    expect(find.text('Net pay'), findsWidgets);
+    expect(find.text('Payroll register'), findsOneWidget);
   });
 
   testWidgets('Transport tile hosts Register Driver and Live GPS',
