@@ -73,6 +73,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
         Expanded(
           child: TabBarView(
             controller: _tabs,
+            physics: const NeverScrollableScrollPhysics(),
             children: [
               WebTeachersTablePage(
                 onNavigate: widget.onNavigate,

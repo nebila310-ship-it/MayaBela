@@ -84,7 +84,7 @@ void main() {
 
     await tester.tap(find.text('Payroll'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Proclamation 1395/2025'), findsOneWidget);
+    expect(find.textContaining('Income tax (PAYE)'), findsOneWidget);
     expect(find.text('Run payroll'), findsOneWidget);
     expect(find.text('Export Excel'), findsOneWidget);
     expect(find.text('Print / PDF'), findsOneWidget);
@@ -92,9 +92,10 @@ void main() {
     expect(find.text('Net pay'), findsWidgets);
     expect(find.text('Payroll register'), findsOneWidget);
     expect(
-      find.textContaining('Scroll sideways to see every column'),
+      find.textContaining('Use the scrollbar or arrows'),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('payroll-scroll-right')), findsOneWidget);
     final tableSize = tester.getSize(
       find.byKey(const ValueKey('payroll-register-table')),
     );
