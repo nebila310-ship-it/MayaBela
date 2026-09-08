@@ -88,6 +88,7 @@ void main() {
     expect(find.text('Run payroll'), findsOneWidget);
     expect(find.text('Export Excel'), findsOneWidget);
     expect(find.text('Print / PDF'), findsOneWidget);
+    expect(find.text('Income tax'), findsWidgets);
     expect(find.text('Net pay'), findsWidgets);
     expect(find.text('Payroll register'), findsOneWidget);
     expect(

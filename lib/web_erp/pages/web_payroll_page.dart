@@ -14,7 +14,7 @@ class WebPayrollPage extends StatefulWidget {
   final bool embedded;
 
   /// Wide enough for every payroll column without clipping headers.
-  static const registerMinWidth = 1640.0;
+  static const registerMinWidth = 1880.0;
 
   @override
   State<WebPayrollPage> createState() => _WebPayrollPageState();
@@ -118,21 +118,21 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                       _moneyField(
                         controller: taxable,
                         label: 'Taxable allowances (ETB)',
-                        helper: 'Overtime, taxable benefits — added to PAYE base',
+                        helper: 'Overtime, taxable benefits — added to the income tax base',
                         onChanged: () => setLocal(() {}),
                       ),
                       const SizedBox(height: 12),
                       _moneyField(
                         controller: exempt,
                         label: 'Tax-exempt allowances (ETB)',
-                        helper: 'Paid to staff but not added to PAYE',
+                        helper: 'Paid to staff but not added to income tax',
                         onChanged: () => setLocal(() {}),
                       ),
                       const SizedBox(height: 12),
                       _moneyField(
                         controller: advance,
                         label: 'Salary advance recovered this month (ETB)',
-                        helper: 'Taken from net after PAYE and pension',
+                        helper: 'Taken from net after income tax and pension',
                         onChanged: () => setLocal(() {}),
                       ),
                       const SizedBox(height: 12),
@@ -161,7 +161,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'PAYE ${_etb(preview.paye)} · Staff pension ${_etb(preview.employeePension)} · '
+                        'Income tax ${_etb(preview.paye)} · Staff pension ${_etb(preview.employeePension)} · '
                         'Advance ${_etb(preview.salaryAdvance)} · Other ${_etb(preview.otherDeductions)}',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
@@ -244,7 +244,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
         SnackBar(
           content: Text(
             'Payroll $_periodYm: ${run.slips.length} slips · '
-            'PAYE ${_etb(run.totalPaye)} · net ${_etb(run.totalNet)}',
+            'Income tax ${_etb(run.totalPaye)} · net ${_etb(run.totalNet)}',
           ),
         ),
       );
@@ -329,9 +329,11 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
               if (!widget.embedded)
                 Text('Payroll', style: WebErpTheme.sectionTitle(context)),
               Text(
-                'Automatic PAYE from Proclamation 1395/2025 (first 2,000 ETB exempt, '
-                'then 15–35%) and POESSA pension (7% staff / 11% school on basic). '
-                'Advances and other deductions come off net after tax. '
+                'Income tax is PAYE (Pay As You Earn) — Ethiopian employment tax '
+                'from Proclamation 1395/2025 (first 2,000 ETB exempt, then 15–35%). '
+                'POESSA pension is 7% staff / 11% school on basic. '
+                'Advances and other deductions come off after tax. '
+                'Net pay is last, after every deduction. '
                 'This is a school register, not a substitute for a licensed accountant.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -340,7 +342,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
               const SizedBox(height: 8),
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                title: const Text('Ethiopian PAYE monthly schedule (1395/2025)'),
+                title: const Text('Ethiopian income tax monthly schedule (1395/2025)'),
                 children: [
                   for (final band in EthiopianPayrollTax.brackets)
                     ListTile(
@@ -417,7 +419,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                 children: [
                   _stat('Period', _periodYm),
                   _stat('Gross', _etb(sum((r) => r.calc.gross))),
-                  _stat('PAYE', _etb(sum((r) => r.calc.paye))),
+                  _stat('Income tax', _etb(sum((r) => r.calc.paye))),
                   _stat(
                     'Staff deductions',
                     _etb(sum((r) => r.calc.totalStaffDeductions)),
@@ -477,8 +479,10 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                   DataColumn(label: Text('Job')),
                                   DataColumn(label: Text('Basic'), numeric: true),
                                   DataColumn(label: Text('Gross'), numeric: true),
-                                  DataColumn(label: Text('PAYE'), numeric: true),
-                                  DataColumn(label: Text('Net pay'), numeric: true),
+                                  DataColumn(
+                                    label: Text('Income tax'),
+                                    numeric: true,
+                                  ),
                                   DataColumn(
                                     label: Text('Staff pension'),
                                     numeric: true,
@@ -492,6 +496,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                     label: Text('Total deduct.'),
                                     numeric: true,
                                   ),
+                                  DataColumn(label: Text('Net pay'), numeric: true),
                                   DataColumn(label: Text('')),
                                 ],
                                 rows: [
@@ -521,14 +526,6 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                         DataCell(Text(_amount(row.calc.gross))),
                                         DataCell(Text(_amount(row.calc.paye))),
                                         DataCell(
-                                          Text(
-                                            _amount(row.calc.net),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
                                           Text(_amount(row.calc.employeePension)),
                                         ),
                                         DataCell(
@@ -540,6 +537,14 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                         DataCell(
                                           Text(
                                             _amount(row.calc.totalStaffDeductions),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            _amount(row.calc.net),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                            ),
                                           ),
                                         ),
                                         DataCell(
@@ -581,14 +586,6 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                         ),
                                         DataCell(
                                           Text(
-                                            _amount(sum((r) => r.calc.net)),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
                                             _amount(sum((r) => r.calc.employeePension)),
                                           ),
                                         ),
@@ -606,6 +603,14 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                                           Text(
                                             _amount(
                                               sum((r) => r.calc.totalStaffDeductions),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            _amount(sum((r) => r.calc.net)),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
                                             ),
                                           ),
                                         ),
@@ -627,7 +632,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Recovered from net pay after PAYE and pension.',
+                              'Recovered from net pay after income tax and pension.',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             const SizedBox(height: 8),
