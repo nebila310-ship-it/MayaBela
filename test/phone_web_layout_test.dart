@@ -163,4 +163,35 @@ void main() {
     expect(find.byType(WebErpHScroll), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('h-scroll minChildWidth keeps tables from clipping', (tester) async {
+    await pumpPhone(
+      tester,
+      Scaffold(
+        body: SizedBox(
+          width: 390,
+          child: WebErpHScroll(
+            minChildWidth: 800,
+            child: DataTable(
+              columns: const [
+                DataColumn(label: Text('A')),
+                DataColumn(label: Text('B')),
+                DataColumn(label: Text('C')),
+              ],
+              rows: const [
+                DataRow(
+                  cells: [
+                    DataCell(Text('one')),
+                    DataCell(Text('two')),
+                    DataCell(Text('three')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.getSize(find.byType(DataTable)).width, 800);
+  });
 }
