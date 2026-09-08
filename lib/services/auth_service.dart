@@ -1053,8 +1053,14 @@ class AuthService {
       if (phone != null) cloudUsername = phone;
     }
 
-    if (SupabaseBootstrap.isInitialized ||
-        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true)) {
+    var cloudReady = SupabaseBootstrap.isInitialized ||
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+    if (!cloudReady && !kIsWeb) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      cloudReady =
+          await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+    }
+    if (cloudReady) {
       final cloud = await SchoolAuthCloudService.instance.login(
         roleKey: roleKey,
         username: cloudUsername,

@@ -3,5 +3,5 @@
 /// Override with `--dart-define=MAYABELA_VERSION=...` when building a pilot APK.
 const kMayaBelaVersion = String.fromEnvironment(
   'MAYABELA_VERSION',
-  defaultValue: '1.0.4+5',
+  defaultValue: '1.0.5+6',
 );

@@ -9,13 +9,17 @@
 -keep class io.flutter.** { *; }
 -keep class com.google.firebase.** { *; }
 
-# Cloud login (Supabase + OkHttp) on minified release APKs.
+# Cloud login (Supabase + OkHttp) if minify is re-enabled later.
 -keep class io.github.jan.supabase.** { *; }
 -keep class supabase.** { *; }
+-keep class io.supabase.** { *; }
+-keep class com.supabase.** { *; }
 -keep class okhttp3.** { *; }
 -keep class okio.** { *; }
+-keep class kotlinx.serialization.** { *; }
 -dontwarn okhttp3.**
 -dontwarn okio.**
+-dontwarn kotlinx.serialization.**
 -dontwarn com.google.firebase.**
 -keepattributes Signature
 -keepattributes *Annotation*

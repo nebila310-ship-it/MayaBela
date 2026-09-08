@@ -66,8 +66,11 @@ android {
                 // Local/dev fallback only — create android/key.properties for store builds.
                 signingConfigs.getByName("debug")
             }
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Pilot sideload APKs: R8/minify has broken school-login on device
+            // while the same credentials work on web. Keep release unminified
+            // until a Play Store signing pipeline is in place.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
