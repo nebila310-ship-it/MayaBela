@@ -78,9 +78,12 @@ import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/persistence/qa_monitor_persistence_service.dart';
 import 'package:mayabela/services/persistence/golive_persistence_service.dart';
 import 'package:mayabela/services/persistence/digital_ops_persistence_service.dart';
+import 'package:mayabela/services/persistence/payroll_persistence_service.dart';
 import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/services/digital_ops_service.dart';
+import 'package:mayabela/services/payroll_service.dart';
+import 'package:mayabela/models/payroll_models.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -375,6 +378,9 @@ class CloudAppStore {
       case AppCollections.ictDevices:
       case AppCollections.ictWeeklyReviews:
         return 'digital_ops';
+      case AppCollections.payrollProfiles:
+      case AppCollections.payrollRuns:
+        return 'payroll';
       case AppCollections.inventoryItems:
       case AppCollections.classroomInventory:
       case AppCollections.stockTransactions:
@@ -472,6 +478,8 @@ class CloudAppStore {
         await _pullGoLive();
       case 'digital_ops':
         await _pullDigitalOps();
+      case 'payroll':
+        await _pullPayroll();
       case 'inventory':
         await _pullInventory();
       case 'procurement':
@@ -728,6 +736,7 @@ class CloudAppStore {
     await pushAllQaMonitor();
     await pushAllGoLive();
     await pushAllDigitalOps();
+    await pushAllPayroll();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -3678,6 +3687,58 @@ class CloudAppStore {
     await DigitalOpsPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
+  }
+
+  Future<void> pushAllPayroll() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent ||
+        role == AuthService.roleStudent ||
+        role == AuthService.roleDriver) {
+      return;
+    }
+    final svc = PayrollService.instance;
+    Future<void> push(String collection, List<Map<String, dynamic>> items) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ));
+    }
+
+    await push(AppCollections.payrollProfiles, svc.profileMaps());
+    await push(AppCollections.payrollRuns, svc.runMaps());
+  }
+
+  Future<void> _pullPayroll() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final profileRows = await _schoolRead(AppCollections.payrollProfiles);
+    final runRows = await _schoolRead(AppCollections.payrollRuns);
+    if (profileRows.isEmpty && runRows.isEmpty) return;
+
+    final profiles = <PayrollProfile>[];
+    for (final map in profileRows) {
+      try {
+        profiles.add(PayrollProfile.fromMap(map));
+      } catch (_) {}
+    }
+    final runs = <PayrollRun>[];
+    for (final map in runRows) {
+      try {
+        runs.add(PayrollRun.fromMap(map));
+      } catch (_) {}
+    }
+    if (profiles.isEmpty && runs.isEmpty) return;
+
+    PayrollService.instance.applyPersistedData(
+      profiles: profiles.isEmpty ? null : profiles,
+      runs: runs.isEmpty ? null : runs,
+      merge: true,
+    );
+    await PayrollPersistenceService.instance.saveFromService(pushCloud: false);
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

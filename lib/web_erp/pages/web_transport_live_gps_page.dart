@@ -16,7 +16,7 @@ import 'package:mayabela/widgets/free_street_map.dart';
 import 'package:mayabela/widgets/mobile_erp_host.dart';
 
 /// Web ERP live bus GPS. Positions come from the driver phone via
-/// `bus_live_positions`. The in-page map uses free OSM/Carto/Esri tiles.
+/// `bus_live_positions`. The in-page map uses free Esri / OSM tiles (no API key).
 class WebTransportLiveGpsPage extends StatefulWidget {
   const WebTransportLiveGpsPage({super.key, this.onNavigate});
 
@@ -113,8 +113,8 @@ class _WebTransportLiveGpsPageState extends State<WebTransportLiveGpsPage> {
                         const SizedBox(height: 4),
                         Text(
                           'A moving pin appears only while a driver is signed in '
-                          'on a phone with location on. The map uses OpenStreetMap, '
-                          'CARTO, and Esri — no Google Maps key required.',
+                          'on a phone with location on. The map uses free Esri and '
+                          'OpenStreetMap tiles — no Google or CARTO API key.',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Theme.of(context)
