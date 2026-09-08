@@ -16,8 +16,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM Prefer .env.local Supabase defines when present (same pattern as web deploy).
-set "DART_DEFINES="
+REM Same live Supabase project as https://mayabela.pages.dev
+set "SUPABASE_URL=https://hwkiihonthueadbhcvfi.supabase.co"
+set "SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3a2lpaG9udGh1ZWFkYmhjdmZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNjI4MzcsImV4cCI6MjEwMDczODgzN30.eD6RjusSvYm-3vm4QDiiRtEAihmFvznf5ZkeumJDGdY"
 if exist ".env.local" (
   for /f "usebackq tokens=1,* delims==" %%A in (".env.local") do (
     if /i "%%A"=="SUPABASE_URL" set "SUPABASE_URL=%%B"
@@ -25,12 +26,8 @@ if exist ".env.local" (
   )
 )
 
-if defined SUPABASE_URL if defined SUPABASE_ANON_KEY (
-  echo Using SUPABASE_URL from environment / .env.local
-  set "DART_DEFINES=--dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY% --dart-define=SUPABASE_CONFIGURED=true"
-) else (
-  echo Using compiled-in supabase_options.dart fallbacks
-)
+echo Using SUPABASE_URL from APK build (same cloud as the web app)
+set "DART_DEFINES=--dart-define=SUPABASE_CONFIGURED=true --dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY% --dart-define=MAYABELA_VERSION=1.0.4+5"
 
 echo.
 echo === flutter build apk --release ===

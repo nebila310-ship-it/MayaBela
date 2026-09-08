@@ -32,6 +32,7 @@ import 'package:mayabela/widgets/ethiopian_phone_field.dart';
 import 'package:mayabela/widgets/dom_backed_text_field.dart';
 import 'package:mayabela/web_erp/login/web_login_shell.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/app_version.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -1573,6 +1574,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w600,
                         color: theme.onPrimary.withValues(alpha: 0.92),
                         height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'App $kMayaBelaVersion',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.onPrimary.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 12),

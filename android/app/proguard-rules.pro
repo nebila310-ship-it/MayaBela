@@ -8,6 +8,14 @@
 # Flutter / Firebase
 -keep class io.flutter.** { *; }
 -keep class com.google.firebase.** { *; }
+
+# Cloud login (Supabase + OkHttp) on minified release APKs.
+-keep class io.github.jan.supabase.** { *; }
+-keep class supabase.** { *; }
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
 -dontwarn com.google.firebase.**
 -keepattributes Signature
 -keepattributes *Annotation*

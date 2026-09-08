@@ -32,7 +32,7 @@ abstract final class SupabaseBootstrap {
         await Supabase.initialize(
           url: kSupabaseUrl,
           publishableKey: kSupabaseAnonKey,
-        ).timeout(const Duration(seconds: 8));
+        ).timeout(Duration(seconds: kIsWeb ? 8 : 20));
         _initialized = true;
         lastInitError = null;
         return true;
