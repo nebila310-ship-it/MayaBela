@@ -301,11 +301,15 @@ class SchoolAuthCloudService {
 
   String _mapFunctionsError(FunctionException e) {
     final mapped = _detailsMap(e.details);
+    final details = '${e.details}'.toLowerCase();
+    final err = (mapped?['error']?.toString() ?? '').toLowerCase();
+    if (_isCloudInfraFailure(details, err, e.status)) {
+      return 'cloud_required';
+    }
     final code = mapped?['code']?.toString().trim();
     if (code != null && code.isNotEmpty && code != 'error') {
       return code;
     }
-    final details = '${e.details}'.toLowerCase();
     if (details.contains('rate')) return 'rate_limited';
     if (details.contains('school_blocked')) return 'school_inactive';
     if (details.contains('admin authentication') ||
@@ -318,6 +322,23 @@ class SchoolAuthCloudService {
     if (e.status == 401 || e.status == 403) return 'denied';
     if (e.status == 404) return 'cloud_required';
     return 'invalid';
+  }
+
+  static bool _isCloudInfraFailure(String details, String error, int? status) {
+    if (status == 503) return true;
+    if (status != null && status >= 500) {
+      if (details.contains('schema cache') ||
+          details.contains('pgrst002') ||
+          error.contains('schema cache') ||
+          error.contains('pgrst002') ||
+          details.contains('could not query the database')) {
+        return true;
+      }
+    }
+    return details.contains('schema cache') ||
+        details.contains('pgrst002') ||
+        error.contains('schema cache') ||
+        error.contains('pgrst002');
   }
 
   String? _functionsErrorMessage(FunctionException e) {
@@ -351,6 +372,13 @@ class SchoolAuthCloudService {
       });
 
       if (data == null || data['error'] != null) {
+        final err = '${data?['error'] ?? ''}'.toLowerCase();
+        if (err.contains('schema cache') || err.contains('pgrst002')) {
+          return const SchoolAuthCloudResult(
+            ok: false,
+            errorCode: 'cloud_required',
+          );
+        }
         return SchoolAuthCloudResult(
           ok: false,
           errorCode: (data?['code'] as String?) ?? 'invalid',
