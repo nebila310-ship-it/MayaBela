@@ -9,6 +9,7 @@ import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/services/school_report_export_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 
@@ -44,6 +45,9 @@ void main() {
       gradeApplying: 'Grade 5',
       guardianName: 'Almaz',
       guardianPhone: '0911000000',
+      previousSchool: 'Lideta Primary',
+      lastGradeCompleted: 'Grade 4',
+      previousAverage: 86,
       documents: AdmissionApplication.defaultDocuments(),
       createdAt: now,
       updatedAt: now,
@@ -54,6 +58,9 @@ void main() {
     expect(copy.source, AdmissionSource.online);
     expect(copy.documents, hasLength(4));
     expect(copy.documentsComplete, isFalse);
+    expect(copy.previousSchool, 'Lideta Primary');
+    expect(copy.lastGradeCompleted, 'Grade 4');
+    expect(copy.previousAverage, 86);
   });
 
   test('pipeline inquiry → documents → offer → enroll creates a student',
@@ -182,6 +189,108 @@ void main() {
               s.schoolId.toUpperCase() == 'LIA-001',
         );
     expect(alumni.map((s) => s.studentId), contains(student.studentId));
+  });
+
+  test('declining an offer promotes the next waitlisted applicant', () async {
+    final offered = await AdmissionService.instance.createInquiry(
+      fullName: 'First Seat',
+      gradeApplying: 'Grade 5',
+      schoolId: 'LIA-001',
+      stage: AdmissionStage.offered,
+    );
+    await AdmissionService.instance.update(
+      offered.id,
+      (a) => a.copyWith(stage: AdmissionStage.offered),
+    );
+    final waiting = await AdmissionService.instance.createInquiry(
+      fullName: 'Next Seat',
+      gradeApplying: 'Grade 5',
+      schoolId: 'LIA-001',
+    );
+    await AdmissionService.instance.recordExam(
+      waiting.id,
+      examDate: DateTime(2026, 9, 1),
+      score: 91,
+    );
+    await AdmissionService.instance.placeOnWaitlist(waiting.id);
+    expect(
+      AdmissionService.instance.byId(waiting.id)!.stage,
+      AdmissionStage.waitlist,
+    );
+
+    await AdmissionService.instance.moveTo(
+      offered.id,
+      AdmissionStage.declined,
+      reason: 'Family declined',
+    );
+    expect(
+      AdmissionService.instance.byId(waiting.id)!.stage,
+      AdmissionStage.offered,
+    );
+  });
+
+  test('expired offers decline and free the waitlist seat', () async {
+    final stale = await AdmissionService.instance.createInquiry(
+      fullName: 'Expired Offer',
+      gradeApplying: 'Grade 6',
+      schoolId: 'LIA-001',
+    );
+    await AdmissionService.instance.update(
+      stale.id,
+      (a) => a.copyWith(
+        stage: AdmissionStage.offered,
+        offerExpiresAt: DateTime(2026, 1, 1),
+      ),
+    );
+    final waiting = await AdmissionService.instance.createInquiry(
+      fullName: 'Waiter',
+      gradeApplying: 'Grade 6',
+      schoolId: 'LIA-001',
+    );
+    await AdmissionService.instance.placeOnWaitlist(waiting.id);
+
+    final expired = await AdmissionService.instance.expireStaleOffers(
+      schoolId: 'LIA-001',
+      now: DateTime(2026, 1, 15),
+    );
+    expect(expired, 1);
+    expect(
+      AdmissionService.instance.byId(stale.id)!.stage,
+      AdmissionStage.declined,
+    );
+    expect(
+      AdmissionService.instance.byId(waiting.id)!.stage,
+      AdmissionStage.offered,
+    );
+  });
+
+  test('analytics and admissions report include the funnel', () async {
+    await AdmissionService.instance.createInquiry(
+      fullName: 'Closed Enroll',
+      schoolId: 'LIA-001',
+      stage: AdmissionStage.enrolled,
+    );
+    await AdmissionService.instance.createInquiry(
+      fullName: 'Closed Reject',
+      schoolId: 'LIA-001',
+      stage: AdmissionStage.rejected,
+    );
+    final stats = AdmissionService.instance.analytics('LIA-001');
+    expect(stats.funnel[AdmissionStage.enrolled], 1);
+    expect(stats.funnel[AdmissionStage.rejected], 1);
+    expect(stats.conversionPercent, 50);
+    expect(stats.sources[AdmissionSource.staff], 2);
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'reg.lia',
+      password: 'secret',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'LIA-001',
+      staffRoles: const [StaffRoles.registrar],
+    );
+    final bytes = await SchoolReportExportService.instance
+        .buildPdfBytes(SchoolReportKind.admissions);
+    expect(bytes, isNotEmpty);
   });
 
   test('registrar sees admissions module; collection is on the sync engine', () {

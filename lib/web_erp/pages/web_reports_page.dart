@@ -65,6 +65,12 @@ class _WebReportsPageState extends State<WebReportsPage> {
       viewModules: ['inventory'],
       inventorySection: 9,
     ),
+    _ReportTile(
+      'Admissions Reports',
+      Icons.how_to_reg_outlined,
+      kind: SchoolReportKind.admissions,
+      viewModules: ['admissions'],
+    ),
   ];
 
   Future<void> _export(_ReportTile report, String format) async {

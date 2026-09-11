@@ -94,6 +94,8 @@ class AdmissionApplication {
     this.guardianPhone = '',
     this.guardianEmail = '',
     this.previousSchool = '',
+    this.lastGradeCompleted = '',
+    this.previousAverage,
     this.notes = '',
     this.documents = const [],
     this.examDate,
@@ -125,6 +127,10 @@ class AdmissionApplication {
   final String guardianPhone;
   final String guardianEmail;
   final String previousSchool;
+  /// Last grade finished at the previous school (admissions academic record).
+  final String lastGradeCompleted;
+  /// Prior-school average / last report mark, when known.
+  final double? previousAverage;
   final String notes;
   final List<AdmissionDocument> documents;
   final DateTime? examDate;
@@ -267,6 +273,8 @@ class AdmissionApplication {
     String? guardianPhone,
     String? guardianEmail,
     String? previousSchool,
+    String? lastGradeCompleted,
+    double? previousAverage,
     String? notes,
     List<AdmissionDocument>? documents,
     DateTime? examDate,
@@ -297,6 +305,8 @@ class AdmissionApplication {
       guardianPhone: guardianPhone ?? this.guardianPhone,
       guardianEmail: guardianEmail ?? this.guardianEmail,
       previousSchool: previousSchool ?? this.previousSchool,
+      lastGradeCompleted: lastGradeCompleted ?? this.lastGradeCompleted,
+      previousAverage: previousAverage ?? this.previousAverage,
       notes: notes ?? this.notes,
       documents: documents ?? this.documents,
       examDate: examDate ?? this.examDate,
@@ -332,6 +342,8 @@ class AdmissionApplication {
         'guardianPhone': guardianPhone,
         'guardianEmail': guardianEmail,
         'previousSchool': previousSchool,
+        'lastGradeCompleted': lastGradeCompleted,
+        if (previousAverage != null) 'previousAverage': previousAverage,
         'notes': notes,
         'documents': documents.map((d) => d.toMap()).toList(),
         'examDate': examDate?.toIso8601String(),
@@ -403,6 +415,8 @@ class AdmissionApplication {
       guardianPhone: (map['guardianPhone'] as String? ?? '').trim(),
       guardianEmail: (map['guardianEmail'] as String? ?? '').trim(),
       previousSchool: (map['previousSchool'] as String? ?? '').trim(),
+      lastGradeCompleted: (map['lastGradeCompleted'] as String? ?? '').trim(),
+      previousAverage: (map['previousAverage'] as num?)?.toDouble(),
       notes: (map['notes'] as String? ?? '').trim(),
       documents: docs,
       examDate: parseDate(map['examDate']),

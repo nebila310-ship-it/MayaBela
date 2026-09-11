@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/school_report_export_service.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -31,7 +32,9 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
   @override
   void initState() {
     super.initState();
-    AdmissionService.instance.ensureLoaded();
+    AdmissionService.instance.ensureLoaded().then((_) {
+      return AdmissionService.instance.expireStaleOffers(schoolId: _schoolId);
+    });
   }
 
   @override
@@ -90,6 +93,21 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
                       icon: const Icon(Icons.person_add_alt_1_outlined),
                       label: const Text('New inquiry / application'),
                     ),
+                  if (_canManage)
+                    OutlinedButton.icon(
+                      onPressed: () => AdmissionService.instance
+                          .promoteNextWaitlisted(schoolId: _schoolId),
+                      icon: const Icon(Icons.moving_outlined),
+                      label: const Text('Offer next on waitlist'),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: () => SchoolReportExportService.instance.export(
+                      kind: SchoolReportKind.admissions,
+                      format: 'CSV',
+                    ),
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Export report'),
+                  ),
                   SizedBox(
                     width: 240,
                     child: TextField(
@@ -134,51 +152,81 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
   }
 
   Widget _funnel(BuildContext context, bool narrow) {
-    final svc = AdmissionService.instance;
-    final counts = svc.funnelCounts(_schoolId);
+    final stats = AdmissionService.instance.analytics(_schoolId);
     final tiles = [
-      ('Open', '${svc.openCount(_schoolId)}', Icons.inbox_outlined),
-      ('Waitlist', '${svc.waitlistCount(_schoolId)}', Icons.queue_outlined),
+      ('Open', '${stats.open}', Icons.inbox_outlined),
+      ('Waitlist', '${stats.waitlist}', Icons.queue_outlined),
       (
         'Enrolled this year',
-        '${svc.enrolledThisYear(_schoolId)}',
+        '${stats.enrolledThisYear}',
         Icons.how_to_reg_outlined,
       ),
       (
-        'Offers',
-        '${counts[AdmissionStage.offered] ?? 0}',
-        Icons.mail_outline,
+        'Conversion',
+        '${stats.conversionPercent.toStringAsFixed(0)}%',
+        Icons.trending_up_outlined,
       ),
     ];
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final (label, value, icon) in tiles)
-          SizedBox(
-            width: narrow ? double.infinity : 210,
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: WebErpTheme.cardDecoration(context),
-              child: Row(
-                children: [
-                  Icon(icon, color: WebErpTheme.primary),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final (label, value, icon) in tiles)
+              SizedBox(
+                width: narrow ? double.infinity : 210,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: WebErpTheme.cardDecoration(context),
+                  child: Row(
                     children: [
-                      Text(
-                        value,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                      Icon(icon, color: WebErpTheme.primary),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            value,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          Text(label),
+                        ],
                       ),
-                      Text(label),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final stage in AdmissionApplication.funnelStages)
+              Chip(
+                label: Text(
+                  '${AdmissionApplication.stageLabelOf(stage)}: '
+                  '${stats.funnel[stage] ?? 0}',
+                ),
+              ),
+            for (final source in AdmissionSource.values)
+              if ((stats.sources[source] ?? 0) > 0)
+                Chip(
+                  avatar: const Icon(Icons.public, size: 16),
+                  label: Text(
+                    '${source.name}: ${stats.sources[source]}',
+                  ),
+                ),
+            if (stats.expiredOffers > 0)
+              Chip(
+                label: Text('${stats.expiredOffers} expired offers'),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -233,6 +281,9 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
     final guardian = TextEditingController();
     final phone = TextEditingController();
     final school = TextEditingController();
+    final previousSchool = TextEditingController();
+    final lastGrade = TextEditingController();
+    final priorAverage = TextEditingController();
     var asApplication = false;
     final grades = ClassStructureService.instance.gradesForSchool();
     final campuses =
@@ -308,6 +359,25 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
                         decoration:
                             const InputDecoration(labelText: 'Guardian phone'),
                       ),
+                      TextField(
+                        controller: previousSchool,
+                        decoration: const InputDecoration(
+                          labelText: 'Previous school',
+                        ),
+                      ),
+                      TextField(
+                        controller: lastGrade,
+                        decoration: const InputDecoration(
+                          labelText: 'Last grade completed',
+                        ),
+                      ),
+                      TextField(
+                        controller: priorAverage,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Prior-school average (optional)',
+                        ),
+                      ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Record as submitted application'),
@@ -340,6 +410,9 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
       campus: school.text,
       guardianName: guardian.text,
       guardianPhone: phone.text,
+      previousSchool: previousSchool.text,
+      lastGradeCompleted: lastGrade.text,
+      previousAverage: double.tryParse(priorAverage.text.trim()),
       source: AdmissionSource.walkIn,
       stage: asApplication
           ? AdmissionStage.application
@@ -417,6 +490,39 @@ class _AdmissionDetail extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text('Enrolled as ${app.enrolledStudentId}'),
               ),
+            if (app.waitlistRank != null &&
+                app.stage == AdmissionStage.waitlist)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Waitlist rank ${app.waitlistRank}'),
+              ),
+            if (app.offerExpiresAt != null &&
+                app.stage == AdmissionStage.offered)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Offer expires ${app.offerExpiresAt!.toIso8601String().substring(0, 10)}',
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              'Academic record',
+              style: WebErpTheme.sectionTitle(context),
+            ),
+            Text(
+              [
+                if (app.previousSchool.isNotEmpty)
+                  'Previous school: ${app.previousSchool}',
+                if (app.lastGradeCompleted.isNotEmpty)
+                  'Last grade: ${app.lastGradeCompleted}',
+                if (app.previousAverage != null)
+                  'Prior average: ${app.previousAverage}',
+                if (app.previousSchool.isEmpty &&
+                    app.lastGradeCompleted.isEmpty &&
+                    app.previousAverage == null)
+                  'No prior-school marks yet. Attach the previous school report below.',
+              ].join('\n'),
+            ),
             const SizedBox(height: 16),
             Text('Documents', style: WebErpTheme.sectionTitle(context)),
             for (final doc in app.documents)
