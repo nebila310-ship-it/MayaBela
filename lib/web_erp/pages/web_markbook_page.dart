@@ -4,6 +4,7 @@ import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -81,7 +82,8 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
+    GradeAuditService.instance.load();
     final classes = _classes;
     if (classes.isNotEmpty) _className = classes.first;
     final subjects = _subjects;
@@ -228,6 +230,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                 tabs: const [
                   Tab(text: 'Class grid'),
                   Tab(text: 'Category weights'),
+                  Tab(text: 'Audit trail'),
                 ],
               ),
             ],
@@ -239,6 +242,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
             children: [
               _gridTab(narrow),
               _weightsTab(narrow),
+              _auditTab(narrow),
             ],
           ),
         ),
@@ -412,7 +416,49 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
   String _letterFor(String studentName) {
     final raw = _finalFor(studentName);
     if (raw == '—') return '—';
-    return MarkbookMath.letterFromPercentage(double.tryParse(raw) ?? 0);
+    return MarkbookMath.letterFromPercentage(
+      double.tryParse(raw) ?? 0,
+      bands: _markbook.settingsForSchool().letterBands,
+    );
+  }
+
+  Widget _auditTab(bool narrow) {
+    final schoolId = _schoolId.toUpperCase();
+    final entries = GradeAuditService.instance.recentForSchool(
+      schoolId,
+      limit: 80,
+    );
+    return ListView(
+      padding: EdgeInsets.all(narrow ? 12 : 20),
+      children: [
+        Text(
+          'Submit, approve, reject, and unlock events already logged by the '
+          'grade workflow. This is the audit trail — it does not change scores.',
+          style: TextStyle(color: Colors.grey.shade700),
+        ),
+        const SizedBox(height: 12),
+        if (entries.isEmpty)
+          const Text('No grade audit events for this school yet.')
+        else
+          for (final entry in entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: WebErpTheme.cardDecoration(context),
+                child: ListTile(
+                  title: Text(
+                    '${entry.action.name} · ${entry.studentName} · ${entry.subject}',
+                  ),
+                  subtitle: Text(
+                    '${entry.className}'
+                    '${entry.actorName == null || entry.actorName!.isEmpty ? '' : ' · ${entry.actorName}'}'
+                    '${entry.detail == null || entry.detail!.isEmpty ? '' : ' — ${entry.detail}'}',
+                  ),
+                ),
+              ),
+            ),
+      ],
+    );
   }
 
   Widget _weightsTab(bool narrow) {
@@ -444,6 +490,7 @@ class _MarkbookWeightsEditor extends StatefulWidget {
 
 class _MarkbookWeightsEditorState extends State<_MarkbookWeightsEditor> {
   late List<AssessmentCategory> _cats;
+  late List<LetterGradeBand> _bands;
   late bool _missingZero;
   var _saving = false;
 
@@ -452,6 +499,7 @@ class _MarkbookWeightsEditorState extends State<_MarkbookWeightsEditor> {
     super.initState();
     final settings = MarkbookService.instance.settingsForSchool();
     _cats = List.of(settings.categories);
+    _bands = List.of(settings.letterBands);
     _missingZero = settings.missingCountsAsZero;
   }
 
@@ -461,6 +509,7 @@ class _MarkbookWeightsEditorState extends State<_MarkbookWeightsEditor> {
       MarkbookSettings(
         categories: _cats,
         missingCountsAsZero: _missingZero,
+        letterBands: _bands,
       ),
     );
     if (!mounted) return;
@@ -534,6 +583,54 @@ class _MarkbookWeightsEditorState extends State<_MarkbookWeightsEditor> {
           ),
         ),
         const SizedBox(height: 8),
+        const SizedBox(height: 16),
+        Text(
+          'Letter scale (minimum percent)',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < _bands.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 72,
+                  child: TextFormField(
+                    initialValue: _bands[i].letter,
+                    enabled: widget.canManage,
+                    decoration: const InputDecoration(
+                      labelText: 'Letter',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) =>
+                        _bands[i] = _bands[i].copyWith(letter: v.trim()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 100,
+                  child: TextFormField(
+                    initialValue: _bands[i].minPercent.toStringAsFixed(0),
+                    enabled: widget.canManage,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Min %',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) {
+                      final n = double.tryParse(v) ?? 0;
+                      setState(
+                        () => _bands[i] = _bands[i].copyWith(minPercent: n),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Count missing categories as zero'),

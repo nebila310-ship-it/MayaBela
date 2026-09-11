@@ -22,7 +22,7 @@ class WebAcademicAnalyticsPage extends StatefulWidget {
 
 class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 3, vsync: this);
+  late final TabController _tabs = TabController(length: 4, vsync: this);
   String? _busy;
 
   bool get _canView => ModuleAccess.canView('analytics');
@@ -94,6 +94,7 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                 tabs: [
                   Tab(text: 'At-risk (${atRisk.length})'),
                   Tab(text: 'Low marks ($lowMarkCount)'),
+                  const Tab(text: 'Breakdown'),
                   const Tab(text: 'Exports'),
                 ],
               ),
@@ -106,6 +107,7 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
             children: [
               _riskTab(atRisk),
               _gradesTab(grades),
+              _breakdownTab(),
               _exportTab(),
             ],
           ),
@@ -171,6 +173,37 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                   ),
                 ),
               ),
+      ],
+    );
+  }
+
+  Widget _breakdownTab() {
+    final categories = GradeAnalyticsService.instance.categoryAverages();
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Assessment-type averages from the existing markbook. '
+          'This is not a new grade store.',
+        ),
+        const SizedBox(height: 12),
+        if (categories.isEmpty)
+          const Text('No category marks entered yet.')
+        else
+          for (final row in categories)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: WebErpTheme.cardDecoration(context),
+                child: ListTile(
+                  title: Text(row.label),
+                  subtitle: Text(
+                    '${row.average.toStringAsFixed(1)}% · ${row.count} mark'
+                    '${row.count == 1 ? '' : 's'}',
+                  ),
+                ),
+              ),
+            ),
       ],
     );
   }
