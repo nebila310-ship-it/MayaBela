@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/student_conduct.dart';
+import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/screens/admin_people_screens.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
