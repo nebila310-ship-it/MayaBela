@@ -77,6 +77,18 @@ class QaMonitorService extends ChangeNotifier {
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
+  /// Curriculum office can read the latest QA verdict without opening the QA desk.
+  AcademicAudit? latestAuditForUnit(String curriculumUnitId, {String? schoolId}) {
+    if (_isPublicReader) return null;
+    final id = curriculumUnitId.trim();
+    if (id.isEmpty) return null;
+    final list = _schoolFilter(_audits, schoolId)
+        .where((a) => a.curriculumUnitId == id)
+        .toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return list.isEmpty ? null : list.first;
+  }
+
   List<QaSurvey> surveysForSchool([String? schoolId]) {
     var list = _schoolFilter(_surveys, schoolId);
     if (_isPublicReader || !canViewDesk) {

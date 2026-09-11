@@ -397,9 +397,11 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         clearOnlineSession: _onlineUrl.text.trim().isEmpty,
       ))!;
     }
-    if (_unitId != null) {
-      await CurriculumService.instance.attachLessonPlan(_unitId!, plan.id);
-    }
+    await CurriculumService.instance.syncLessonPlanUnit(
+      planId: plan.id,
+      previousUnitId: widget.existing?.curriculumUnitId,
+      nextUnitId: _unitId,
+    );
     if (mounted) Navigator.of(context).pop();
   }
 
