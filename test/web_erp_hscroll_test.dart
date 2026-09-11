@@ -51,8 +51,9 @@ void main() {
     },
   );
 
-  testWidgets('unbounded-height parent still pins horizontal viewport',
-      (tester) async {
+  testWidgets('unbounded-height parent still pins horizontal viewport', (
+    tester,
+  ) async {
     final controller = ScrollController();
     addTearDown(controller.dispose);
 
@@ -66,10 +67,7 @@ void main() {
               child: WebErpHScroll(
                 minChildWidth: 900,
                 controller: controller,
-                child: const SizedBox(
-                  height: 40,
-                  child: Text('in-list'),
-                ),
+                child: const SizedBox(height: 40, child: Text('in-list')),
               ),
             ),
           ),
@@ -81,4 +79,47 @@ void main() {
     expect(controller.hasClients, isTrue);
     expect(controller.position.maxScrollExtent, greaterThan(400));
   });
+
+  testWidgets(
+    'bounded-height parent of a tall child has a real vertical extent',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 300));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 400,
+                height: 160,
+                child: WebErpHScroll(
+                  minChildWidth: 900,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      SizedBox(height: 80, child: Text('row-a')),
+                      SizedBox(height: 80, child: Text('row-b')),
+                      SizedBox(height: 80, child: Text('row-c')),
+                      SizedBox(height: 80, child: Text('row-d')),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('row-a'), findsOneWidget);
+      final verticalFinder = find.byWidgetPredicate(
+        (widget) => widget is Scrollable && widget.axis == Axis.vertical,
+      );
+      expect(verticalFinder, findsWidgets);
+      final vertical = tester.widget<Scrollable>(verticalFinder.first);
+      expect(vertical.controller, isNotNull);
+      expect(vertical.controller!.position.maxScrollExtent, greaterThan(100));
+    },
+  );
 }

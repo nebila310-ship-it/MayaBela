@@ -9,13 +9,11 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
+import 'package:mayabela/widgets/maya_floating_chat.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 
 /// Unified directory for administration staff or classroom teachers.
-enum WebTeachersDirectoryMode {
-  administrationStaff,
-  classroomTeachers,
-}
+enum WebTeachersDirectoryMode { administrationStaff, classroomTeachers }
 
 /// Lists registered staff or classroom teachers; add button matches the mode.
 class WebTeachersTablePage extends StatefulWidget {
@@ -155,7 +153,10 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(_title, style: WebErpTheme.sectionTitle(context)),
+                    child: Text(
+                      _title,
+                      style: WebErpTheme.sectionTitle(context),
+                    ),
                   ),
                   if (canAdd)
                     FilledButton.icon(
@@ -169,8 +170,8 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
             Text(
               _subtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
           ],
@@ -262,14 +263,16 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                               _query.isNotEmpty
                                   ? 'No ${_isStaffDir ? 'staff' : 'teachers'} match this search.'
                                   : (_isStaffDir
-                                      ? 'No administration staff registered yet.'
-                                      : 'No classroom teachers registered yet.'),
+                                        ? 'No administration staff registered yet.'
+                                        : 'No classroom teachers registered yet.'),
                             ),
                             if (canAdd) ...[
                               const SizedBox(height: 16),
                               FilledButton.icon(
                                 onPressed: _openAdd,
-                                icon: const Icon(Icons.person_add_alt_1_outlined),
+                                icon: const Icon(
+                                  Icons.person_add_alt_1_outlined,
+                                ),
                                 label: Text(_addLabel),
                               ),
                             ],
@@ -277,88 +280,96 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                         ),
                       )
                     : narrow
-                        ? ListView.separated(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            itemCount: slice.length,
-                            separatorBuilder: (_, _) => const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final t = slice[index];
-                              final roleText = _roleOrAssignmentText(t, s);
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  child: Text(
-                                    t.fullName.isEmpty
-                                        ? '?'
-                                        : t.fullName[0].toUpperCase(),
-                                  ),
-                                ),
-                                title: Text(
-                                  t.fullName,
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                subtitle: Text(
-                                  [
-                                    t.employeeId ?? t.teacherId,
-                                    t.phone ?? t.loginUsername ?? '—',
-                                    if (multiCampus) t.campus,
-                                    roleText,
-                                    t.isActive ? 'Active' : 'Inactive',
-                                  ].join(' · '),
-                                ),
-                                isThreeLine: true,
-                                onTap: () => showWebTeacherProfileDialog(
-                                  context,
-                                  teacherId: t.teacherId,
-                                  onUpdated: () => setState(() {}),
-                                ),
-                                trailing: AuthService.canAssignStaffRoles
-                                    ? IconButton(
-                                        tooltip: s.staffRolesTitle,
-                                        icon: const Icon(
-                                          Icons.admin_panel_settings_outlined,
-                                        ),
-                                        onPressed: () => showStaffRolesDialog(
-                                          context: context,
-                                          teacher: t,
-                                          onSaved: () {
-                                            if (mounted) setState(() {});
-                                          },
-                                        ),
-                                      )
-                                    : const Icon(Icons.chevron_right),
-                              );
-                            },
-                          )
-                        : _wideTeacherTable(
-                            context: context,
-                            slice: slice,
-                            multiCampus: multiCampus,
-                            strings: s,
-                          ),
+                    ? ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        itemCount: slice.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final t = slice[index];
+                          final roleText = _roleOrAssignmentText(t, s);
+                          return ListTile(
+                            leading: CircleAvatar(
+                              child: Text(
+                                t.fullName.isEmpty
+                                    ? '?'
+                                    : t.fullName[0].toUpperCase(),
+                              ),
+                            ),
+                            title: Text(
+                              t.fullName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              [
+                                t.employeeId ?? t.teacherId,
+                                t.phone ?? t.loginUsername ?? '—',
+                                if (multiCampus) t.campus,
+                                roleText,
+                                t.isActive ? 'Active' : 'Inactive',
+                              ].join(' · '),
+                            ),
+                            isThreeLine: true,
+                            onTap: () => showWebTeacherProfileDialog(
+                              context,
+                              teacherId: t.teacherId,
+                              onUpdated: () => setState(() {}),
+                            ),
+                            trailing: AuthService.canAssignStaffRoles
+                                ? IconButton(
+                                    tooltip: s.staffRolesTitle,
+                                    icon: const Icon(
+                                      Icons.admin_panel_settings_outlined,
+                                    ),
+                                    onPressed: () => showStaffRolesDialog(
+                                      context: context,
+                                      teacher: t,
+                                      onSaved: () {
+                                        if (mounted) setState(() {});
+                                      },
+                                    ),
+                                  )
+                                : const Icon(Icons.chevron_right),
+                          );
+                        },
+                      )
+                    : _wideTeacherTable(
+                        context: context,
+                        slice: slice,
+                        multiCampus: multiCampus,
+                        strings: s,
+                      ),
               ),
             ),
           ),
-          if (teachers.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text('Page ${_page + 1} of $pageCount'),
-                IconButton(
-                  onPressed: _page <= 0
-                      ? null
-                      : () => setState(() => _page -= 1),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                IconButton(
-                  onPressed: _page >= pageCount - 1
-                      ? null
-                      : () => setState(() => _page += 1),
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ],
+          if (teachers.isNotEmpty)
+            Padding(
+              key: const ValueKey('teachers-pagination'),
+              padding: const EdgeInsets.only(
+                top: 4,
+                right: MayaFloatingChat.pageEndClearance,
+                bottom: 8,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text('Page ${_page + 1} of $pageCount'),
+                  IconButton(
+                    onPressed: _page <= 0
+                        ? null
+                        : () => setState(() => _page -= 1),
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  IconButton(
+                    onPressed: _page >= pageCount - 1
+                        ? null
+                        : () => setState(() => _page += 1),
+                    icon: const Icon(Icons.chevron_right),
+                  ),
+                ],
+              ),
             ),
-          ],
         ],
       ),
     );
@@ -373,8 +384,8 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
     const statusWidth = 96.0;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final tableWidth = constraints.maxWidth <
-                WebTeachersTablePage.directoryMinTableWidth
+        final tableWidth =
+            constraints.maxWidth < WebTeachersTablePage.directoryMinTableWidth
             ? WebTeachersTablePage.directoryMinTableWidth
             : constraints.maxWidth;
         return Scrollbar(
@@ -397,8 +408,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                     const DataColumn(label: Text('Staff ID')),
                     const DataColumn(label: Text('Name')),
                     const DataColumn(label: Text('Phone')),
-                    if (multiCampus)
-                      const DataColumn(label: Text('Campus')),
+                    if (multiCampus) const DataColumn(label: Text('Campus')),
                     DataColumn(
                       label: Text(_isStaffDir ? 'Role' : 'Assignment'),
                     ),
@@ -409,10 +419,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                       ),
                     ),
                     const DataColumn(
-                      label: SizedBox(
-                        width: 120,
-                        child: Text('Actions'),
-                      ),
+                      label: SizedBox(width: 120, child: Text('Actions')),
                     ),
                   ],
                   rows: [
@@ -445,9 +452,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                               ),
                             ),
                           ),
-                          DataCell(
-                            Text(t.phone ?? t.loginUsername ?? '—'),
-                          ),
+                          DataCell(Text(t.phone ?? t.loginUsername ?? '—')),
                           if (multiCampus) DataCell(Text(t.campus)),
                           DataCell(
                             Text(
@@ -463,9 +468,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                           DataCell(
                             SizedBox(
                               width: statusWidth,
-                              child: Text(
-                                t.isActive ? 'Active' : 'Inactive',
-                              ),
+                              child: Text(t.isActive ? 'Active' : 'Inactive'),
                             ),
                           ),
                           DataCell(
@@ -479,10 +482,10 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                                     icon: const Icon(Icons.visibility_outlined),
                                     onPressed: () =>
                                         showWebTeacherProfileDialog(
-                                      context,
-                                      teacherId: t.teacherId,
-                                      onUpdated: () => setState(() {}),
-                                    ),
+                                          context,
+                                          teacherId: t.teacherId,
+                                          onUpdated: () => setState(() {}),
+                                        ),
                                   ),
                                   if (AuthService.canAssignStaffRoles)
                                     IconButton(
