@@ -13,6 +13,7 @@ import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
 enum SchoolReportKind {
@@ -24,6 +25,7 @@ enum SchoolReportKind {
   teachers,
   inventory,
   admissions,
+  health,
 }
 
 /// Web-safe school report exporter (CSV / Excel via in-memory bytes + share).
@@ -95,6 +97,7 @@ class SchoolReportExportService {
         SchoolReportKind.teachers => 'Teacher Reports',
         SchoolReportKind.inventory => 'Inventory Reports',
         SchoolReportKind.admissions => 'Admissions Reports',
+        SchoolReportKind.health => 'Health & Clinic Reports',
       };
 
   Future<void> _shareBytes({
@@ -351,6 +354,8 @@ class SchoolReportExportService {
               a.enrolledStudentId ?? '',
             ],
         ];
+      case SchoolReportKind.health:
+        return StudentSupportService.instance.healthReportRows(schoolId);
     }
   }
 

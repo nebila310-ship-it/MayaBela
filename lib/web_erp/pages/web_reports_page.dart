@@ -71,6 +71,12 @@ class _WebReportsPageState extends State<WebReportsPage> {
       kind: SchoolReportKind.admissions,
       viewModules: ['admissions'],
     ),
+    _ReportTile(
+      'Health & Clinic Reports',
+      Icons.medical_services_outlined,
+      kind: SchoolReportKind.health,
+      viewModules: ['student_affairs', 'health'],
+    ),
   ];
 
   Future<void> _export(_ReportTile report, String format) async {

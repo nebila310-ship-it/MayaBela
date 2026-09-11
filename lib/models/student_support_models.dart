@@ -4,6 +4,89 @@
 
 enum HealthRecordType { clinicVisit, vaccination, medication, emergencyAlert }
 
+/// Suggested vaccine names — stored as free text on [HealthRecord.vaccineName].
+abstract final class HealthVaccineHints {
+  static const names = <String>[
+    'BCG',
+    'OPV',
+    'DTP',
+    'MMR',
+    'HepB',
+    'HPV',
+    'Td',
+    'COVID-19',
+  ];
+}
+
+class HealthClinicSummary {
+  const HealthClinicSummary({
+    required this.day,
+    required this.visits,
+    required this.vaccinations,
+    required this.medications,
+    required this.alerts,
+  });
+
+  final DateTime day;
+  final int visits;
+  final int vaccinations;
+  final int medications;
+  final int alerts;
+
+  int get total => visits + vaccinations + medications + alerts;
+}
+
+class MedicationStockMovement {
+  MedicationStockMovement({
+    required this.id,
+    required this.delta,
+    required this.createdAt,
+    this.reason = 'adjust',
+    this.studentId,
+    this.studentName,
+    this.note = '',
+    this.createdBy,
+    this.quantityAfter,
+  });
+
+  final String id;
+  final double delta;
+  final String reason;
+  final String? studentId;
+  final String? studentName;
+  final String note;
+  final String? createdBy;
+  final double? quantityAfter;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'delta': delta,
+        'reason': reason,
+        if (studentId != null) 'studentId': studentId,
+        if (studentName != null) 'studentName': studentName,
+        'note': note,
+        if (createdBy != null) 'createdBy': createdBy,
+        if (quantityAfter != null) 'quantityAfter': quantityAfter,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory MedicationStockMovement.fromMap(Map<String, dynamic> map) {
+    return MedicationStockMovement(
+      id: map['id'] as String? ?? '',
+      delta: (map['delta'] as num?)?.toDouble() ?? 0,
+      reason: map['reason'] as String? ?? 'adjust',
+      studentId: map['studentId'] as String?,
+      studentName: map['studentName'] as String?,
+      note: map['note'] as String? ?? '',
+      createdBy: map['createdBy'] as String?,
+      quantityAfter: (map['quantityAfter'] as num?)?.toDouble(),
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
 enum CounselingKind { session, appointment, referral }
 
 enum IepStage { intake, draftPlan, parentAgreement, review }
@@ -37,6 +120,15 @@ class HealthRecord {
     this.staffNotes = '',
     this.occurredAt,
     this.createdBy,
+    this.severity = 'routine',
+    this.vaccineName = '',
+    this.doseNumber,
+    this.nextDueAt,
+    this.medicationStockItemId,
+    this.quantity,
+    this.unit = '',
+    this.parentNotifiedAt,
+    this.parentNotifiedBy,
   });
 
   final String id;
@@ -50,8 +142,22 @@ class HealthRecord {
   String staffNotes;
   DateTime? occurredAt;
   String? createdBy;
+  String severity;
+  String vaccineName;
+  int? doseNumber;
+  DateTime? nextDueAt;
+  String? medicationStockItemId;
+  double? quantity;
+  String unit;
+  DateTime? parentNotifiedAt;
+  String? parentNotifiedBy;
   final DateTime createdAt;
   DateTime updatedAt;
+
+  DateTime get recordedAt => occurredAt ?? createdAt;
+
+  bool get isUrgent =>
+      severity == 'urgent' || type == HealthRecordType.emergencyAlert;
 
   Map<String, dynamic> toMap({bool includeStaffNotes = true}) => {
         'id': id,
@@ -65,6 +171,17 @@ class HealthRecord {
         if (includeStaffNotes) 'staffNotes': staffNotes,
         if (occurredAt != null) 'occurredAt': occurredAt!.toIso8601String(),
         if (createdBy != null) 'createdBy': createdBy,
+        'severity': severity,
+        if (vaccineName.isNotEmpty) 'vaccineName': vaccineName,
+        if (doseNumber != null) 'doseNumber': doseNumber,
+        if (nextDueAt != null) 'nextDueAt': nextDueAt!.toIso8601String(),
+        if (medicationStockItemId != null)
+          'medicationStockItemId': medicationStockItemId,
+        if (quantity != null) 'quantity': quantity,
+        if (unit.isNotEmpty) 'unit': unit,
+        if (parentNotifiedAt != null)
+          'parentNotifiedAt': parentNotifiedAt!.toIso8601String(),
+        if (parentNotifiedBy != null) 'parentNotifiedBy': parentNotifiedBy,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -87,6 +204,19 @@ class HealthRecord {
           ? DateTime.tryParse(map['occurredAt'] as String)
           : null,
       createdBy: map['createdBy'] as String?,
+      severity: map['severity'] as String? ?? 'routine',
+      vaccineName: map['vaccineName'] as String? ?? '',
+      doseNumber: (map['doseNumber'] as num?)?.toInt(),
+      nextDueAt: map['nextDueAt'] != null
+          ? DateTime.tryParse(map['nextDueAt'] as String)
+          : null,
+      medicationStockItemId: map['medicationStockItemId'] as String?,
+      quantity: (map['quantity'] as num?)?.toDouble(),
+      unit: map['unit'] as String? ?? '',
+      parentNotifiedAt: map['parentNotifiedAt'] != null
+          ? DateTime.tryParse(map['parentNotifiedAt'] as String)
+          : null,
+      parentNotifiedBy: map['parentNotifiedBy'] as String?,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -671,6 +801,9 @@ class MedicationStockItem {
     this.reorderLevel = 0,
     this.notes = '',
     this.createdBy,
+    this.batchNumber = '',
+    this.expiresAt,
+    this.movements = const [],
   });
 
   final String id;
@@ -681,6 +814,9 @@ class MedicationStockItem {
   double reorderLevel;
   String notes;
   String? createdBy;
+  String batchNumber;
+  DateTime? expiresAt;
+  List<MedicationStockMovement> movements;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -696,6 +832,9 @@ class MedicationStockItem {
         'reorderLevel': reorderLevel,
         'notes': notes,
         if (createdBy != null) 'createdBy': createdBy,
+        if (batchNumber.isNotEmpty) 'batchNumber': batchNumber,
+        if (expiresAt != null) 'expiresAt': expiresAt!.toIso8601String(),
+        'movements': movements.map((row) => row.toMap()).toList(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -710,6 +849,19 @@ class MedicationStockItem {
       reorderLevel: (map['reorderLevel'] as num?)?.toDouble() ?? 0,
       notes: map['notes'] as String? ?? '',
       createdBy: map['createdBy'] as String?,
+      batchNumber: map['batchNumber'] as String? ?? '',
+      expiresAt: map['expiresAt'] != null
+          ? DateTime.tryParse(map['expiresAt'] as String)
+          : null,
+      movements: (map['movements'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (row) => MedicationStockMovement.fromMap(
+                  Map<String, dynamic>.from(row),
+                ),
+              )
+              .toList() ??
+          const [],
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
