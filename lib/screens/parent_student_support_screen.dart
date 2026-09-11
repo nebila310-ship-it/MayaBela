@@ -79,8 +79,16 @@ class _ParentStudentSupportScreenState
             child: ListTile(
               title: Text(row.title.isEmpty ? row.type.name : row.title),
               subtitle: Text(
-                '${row.studentName}\n${row.details}'
-                '${row.staffNotes.trim().isEmpty ? '' : '\n${row.staffNotes}'}',
+                [
+                  row.studentName,
+                  if (row.isUrgent) 'Urgent',
+                  row.details,
+                  if (row.vaccineName.isNotEmpty)
+                    'Vaccine ${row.vaccineName}'
+                        '${row.nextDueAt == null ? '' : ' · next ${row.nextDueAt!.toIso8601String().split('T').first}'}',
+                  if (row.recordedAt != row.createdAt || row.occurredAt != null)
+                    row.recordedAt.toIso8601String().split('T').first,
+                ].where((part) => part.trim().isNotEmpty).join('\n'),
               ),
               isThreeLine: true,
             ),

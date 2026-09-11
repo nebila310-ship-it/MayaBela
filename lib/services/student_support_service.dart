@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -232,6 +234,14 @@ class StudentSupportService extends ChangeNotifier {
     String staffNotes = '',
     DateTime? occurredAt,
     String? schoolId,
+    String severity = 'routine',
+    String vaccineName = '',
+    int? doseNumber,
+    DateTime? nextDueAt,
+    String? medicationStockItemId,
+    double? quantity,
+    String unit = '',
+    bool notifyParent = false,
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -246,15 +256,132 @@ class StudentSupportService extends ChangeNotifier {
       title: title.trim(),
       details: details.trim(),
       staffNotes: staffNotes.trim(),
-      occurredAt: occurredAt,
+      occurredAt: occurredAt ?? now,
       createdBy: _username,
+      severity: type == HealthRecordType.emergencyAlert ? 'urgent' : severity,
+      vaccineName: vaccineName.trim(),
+      doseNumber: doseNumber,
+      nextDueAt: nextDueAt,
+      medicationStockItemId: medicationStockItemId,
+      quantity: quantity,
+      unit: unit.trim(),
       createdAt: now,
       updatedAt: now,
     );
     _health.add(record);
+    final shouldAlert = notifyParent || record.isUrgent;
+    if (shouldAlert) {
+      _pushHealthParentNotification(record);
+    }
     await _persist();
     return record;
   }
+
+  List<HealthRecord> clinicLogForDate(DateTime day, [String? schoolId]) {
+    return healthForSchool(schoolId)
+        .where((row) => _sameDay(row.recordedAt, day))
+        .toList();
+  }
+
+  HealthClinicSummary clinicSummaryForDate(DateTime day, [String? schoolId]) {
+    final rows = clinicLogForDate(day, schoolId);
+    return HealthClinicSummary(
+      day: DateTime(day.year, day.month, day.day),
+      visits: rows.where((r) => r.type == HealthRecordType.clinicVisit).length,
+      vaccinations:
+          rows.where((r) => r.type == HealthRecordType.vaccination).length,
+      medications:
+          rows.where((r) => r.type == HealthRecordType.medication).length,
+      alerts:
+          rows.where((r) => r.type == HealthRecordType.emergencyAlert).length,
+    );
+  }
+
+  List<HealthRecord> vaccinesDueSoon({
+    int withinDays = 30,
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final until = today.add(Duration(days: withinDays));
+    return healthForSchool(schoolId).where((row) {
+      if (row.type != HealthRecordType.vaccination || row.nextDueAt == null) {
+        return false;
+      }
+      final due = row.nextDueAt!;
+      return !due.isAfter(until);
+    }).toList()
+      ..sort((a, b) => a.nextDueAt!.compareTo(b.nextDueAt!));
+  }
+
+  List<List<String>> healthReportRows([String? schoolId]) {
+    return [
+      [
+        'When',
+        'Student',
+        'Class',
+        'Type',
+        'Title',
+        'Details',
+        'Vaccine',
+        'Dose',
+        'Next due',
+        'Severity',
+        'Qty',
+        'Unit',
+        'Recorded by',
+        'Parent notified',
+      ],
+      for (final row in healthForSchool(schoolId))
+        [
+          row.recordedAt.toIso8601String(),
+          row.studentName,
+          row.className ?? '',
+          row.type.name,
+          row.title,
+          row.details,
+          row.vaccineName,
+          row.doseNumber?.toString() ?? '',
+          row.nextDueAt?.toIso8601String().split('T').first ?? '',
+          row.severity,
+          row.quantity?.toString() ?? '',
+          row.unit,
+          row.createdBy ?? '',
+          row.parentNotifiedAt?.toIso8601String() ?? '',
+        ],
+    ];
+  }
+
+  void _pushHealthParentNotification(HealthRecord row) {
+    final kind = switch (row.type) {
+      HealthRecordType.emergencyAlert => 'Emergency clinic alert',
+      HealthRecordType.vaccination => 'Vaccination recorded',
+      HealthRecordType.medication => 'Medication given',
+      HealthRecordType.clinicVisit => 'Clinic visit',
+    };
+    NotificationService.instance.push(
+      title: '$kind — ${row.studentName}',
+      body: [
+        if (row.title.trim().isNotEmpty) row.title.trim(),
+        if (row.details.trim().isNotEmpty) row.details.trim(),
+        if (row.vaccineName.isNotEmpty)
+          'Vaccine ${row.vaccineName}'
+              '${row.doseNumber == null ? '' : ' dose ${row.doseNumber}'}',
+        if (row.nextDueAt != null)
+          'Next due ${row.nextDueAt!.toIso8601String().split('T').first}',
+      ].join(' · '),
+      type: NotificationType.general,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'School clinic',
+      recipientRole: AuthService.roleParent,
+      targetStudentId: row.studentId,
+    );
+    row.parentNotifiedAt = DateTime.now();
+    row.parentNotifiedBy = _username;
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<CounselingRecord> addCounselingRecord({
     required String studentId,
@@ -547,6 +674,8 @@ class StudentSupportService extends ChangeNotifier {
     double reorderLevel = 0,
     String notes = '',
     String? schoolId,
+    String batchNumber = '',
+    DateTime? expiresAt,
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -561,6 +690,8 @@ class StudentSupportService extends ChangeNotifier {
         existing.quantityOnHand = quantityOnHand;
         existing.reorderLevel = reorderLevel;
         existing.notes = notes.trim();
+        existing.batchNumber = batchNumber.trim();
+        existing.expiresAt = expiresAt;
         existing.updatedAt = now;
         await _persist();
         return existing;
@@ -575,6 +706,19 @@ class StudentSupportService extends ChangeNotifier {
       reorderLevel: reorderLevel,
       notes: notes.trim(),
       createdBy: _username,
+      batchNumber: batchNumber.trim(),
+      expiresAt: expiresAt,
+      movements: [
+        if (quantityOnHand != 0)
+          MedicationStockMovement(
+            id: 'mv-${now.millisecondsSinceEpoch}',
+            delta: quantityOnHand,
+            reason: 'receive',
+            createdBy: _username,
+            quantityAfter: quantityOnHand,
+            createdAt: now,
+          ),
+      ],
       createdAt: now,
       updatedAt: now,
     );
@@ -588,6 +732,7 @@ class StudentSupportService extends ChangeNotifier {
     required double delta,
     String? studentId,
     String note = '',
+    String reason = '',
   }) async {
     _requireStaffDesk();
     final row = _meds.cast<MedicationStockItem?>().firstWhere(
@@ -597,15 +742,40 @@ class StudentSupportService extends ChangeNotifier {
     if (row == null) {
       throw StateError('Medication stock item not found.');
     }
+    final now = DateTime.now();
     row.quantityOnHand = (row.quantityOnHand + delta).clamp(0, 1e9);
-    row.updatedAt = DateTime.now();
+    row.updatedAt = now;
+    final meta = studentId == null || studentId.trim().isEmpty
+        ? null
+        : _studentMeta(studentId);
+    final movementReason = reason.trim().isNotEmpty
+        ? reason.trim()
+        : (delta < 0 && meta != null ? 'dispense' : 'adjust');
+    row.movements = [
+      ...row.movements,
+      MedicationStockMovement(
+        id: 'mv-${now.millisecondsSinceEpoch}',
+        delta: delta,
+        reason: movementReason,
+        studentId: studentId?.trim().toUpperCase(),
+        studentName: meta?.name,
+        note: note.trim(),
+        createdBy: _username,
+        quantityAfter: row.quantityOnHand,
+        createdAt: now,
+      ),
+    ];
     if (studentId != null && studentId.trim().isNotEmpty && delta < 0) {
       await addHealthRecord(
         studentId: studentId,
         type: HealthRecordType.medication,
         title: 'Dispensed ${row.name}',
         details: '${delta.abs()} ${row.unit}'
-            '${note.trim().isEmpty ? '' : ' · ${note.trim()}'}',
+            '${note.trim().isEmpty ? '' : ' · ${note.trim()}'}'
+            '${row.batchNumber.isEmpty ? '' : ' · batch ${row.batchNumber}'}',
+        medicationStockItemId: row.id,
+        quantity: delta.abs(),
+        unit: row.unit,
       );
       return row;
     }
@@ -923,6 +1093,14 @@ class StudentSupportService extends ChangeNotifier {
         staffNotes: '',
         occurredAt: row.occurredAt,
         createdBy: row.createdBy,
+        severity: row.severity,
+        vaccineName: row.vaccineName,
+        doseNumber: row.doseNumber,
+        nextDueAt: row.nextDueAt,
+        quantity: row.quantity,
+        unit: row.unit,
+        parentNotifiedAt: row.parentNotifiedAt,
+        parentNotifiedBy: row.parentNotifiedBy,
       );
 
   CounselingRecord _publicCounseling(CounselingRecord row) => CounselingRecord(

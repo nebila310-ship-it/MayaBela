@@ -4,6 +4,7 @@ import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/school_report_export_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/widgets/course_attachment_picker.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
@@ -29,6 +30,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   final _svc = StudentSupportService.instance;
+  String _healthFilter = 'today';
+  DateTime _clinicDay = DateTime.now();
+  String? _exporting;
 
   bool get _canManage => ModuleAccess.canManage('student_affairs');
   bool get _canViewCp => ModuleAccess.canView('safeguarding');
@@ -106,9 +110,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     widget.safeguardingOnly
                         ? 'Child-protection case files stay on this desk. '
                             'Do not put case narrative in parent chat.'
-                        : 'Clinic, medication stock, document vault, counseling, '
-                            'IEP training, SEL scores, and college artifacts. '
-                            'Child-protection files use the Safeguarding tab. '
+                        : 'Clinic log, vaccinations, emergency alerts, and '
+                            'clinic medication stock on the existing care '
+                            'register. Child-protection files stay on Safeguarding. '
                             'This does not enter grades.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -169,30 +173,112 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       };
 
   Widget _healthTab() {
-    final items = _svc.healthForSchool(_schoolId);
+    final all = _svc.healthForSchool(_schoolId);
+    final summary = _svc.clinicSummaryForDate(_clinicDay, _schoolId);
+    final due = _svc.vaccinesDueSoon(schoolId: _schoolId);
+    final items = switch (_healthFilter) {
+      'today' => _svc.clinicLogForDate(_clinicDay, _schoolId),
+      'clinic' => all.where((r) => r.type == HealthRecordType.clinicVisit).toList(),
+      'vaccine' => all.where((r) => r.type == HealthRecordType.vaccination).toList(),
+      'meds' => all.where((r) => r.type == HealthRecordType.medication).toList(),
+      'alert' =>
+        all.where((r) => r.type == HealthRecordType.emergencyAlert).toList(),
+      'due' => due,
+      _ => all,
+    };
     return _listTab(
-      action: _canManage
-          ? FilledButton.icon(
-              onPressed: _addHealth,
-              icon: const Icon(Icons.add),
-              label: const Text('Clinic / vaccine / medication'),
-            )
-          : null,
-      empty: 'No clinic, vaccination, or medication notes yet.',
+      action: null,
+      empty: 'No clinic notes in this view.',
       children: [
-        for (final row in items)
-          _card(
-            title: row.title.isEmpty ? row.type.name : row.title,
-            subtitle:
-                '${row.studentName} · ${row.type.name}'
-                '${row.className == null || row.className!.isEmpty ? '' : ' · ${row.className}'}',
-            body: [
-              if (row.details.trim().isNotEmpty) Text(row.details),
-              if (row.staffNotes.trim().isNotEmpty)
-                Text('Staff notes: ${row.staffNotes}'),
-              _parentBtn(row.studentId),
-            ],
-          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (_canManage)
+              FilledButton.icon(
+                onPressed: _addHealth,
+                icon: const Icon(Icons.add),
+                label: const Text('Log clinic / vaccine / alert'),
+              ),
+            TextButton.icon(
+              onPressed: _pickClinicDay,
+              icon: const Icon(Icons.calendar_today_outlined),
+              label: Text(
+                'Clinic day ${_clinicDay.year}-'
+                '${_clinicDay.month.toString().padLeft(2, '0')}-'
+                '${_clinicDay.day.toString().padLeft(2, '0')}',
+              ),
+            ),
+            if (_canManage)
+              FilledButton.tonalIcon(
+                onPressed: _exporting != null ? null : _exportHealth,
+                icon: const Icon(Icons.download_outlined),
+                label: Text(_exporting == null ? 'Export clinic CSV' : 'Exporting…'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Today’s log: ${summary.visits} visits · '
+          '${summary.vaccinations} vaccines · '
+          '${summary.medications} meds · '
+          '${summary.alerts} alerts'
+          '${due.isEmpty ? '' : ' · ${due.length} vaccine(s) due'}',
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final (value, label) in const [
+              ('today', 'Daily log'),
+              ('all', 'All records'),
+              ('clinic', 'Clinic'),
+              ('vaccine', 'Vaccines'),
+              ('due', 'Due soon'),
+              ('meds', 'Medication'),
+              ('alert', 'Emergencies'),
+            ])
+              ChoiceChip(
+                label: Text(label),
+                selected: _healthFilter == value,
+                onSelected: (_) => setState(() => _healthFilter = value),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (items.isEmpty)
+          const Text('No clinic notes in this view.')
+        else
+          for (final row in items)
+            _card(
+              title: row.title.isEmpty ? row.type.name : row.title,
+              subtitle: [
+                row.studentName,
+                row.type.name,
+                if (row.className != null && row.className!.isNotEmpty)
+                  row.className!,
+                if (row.isUrgent) 'URGENT',
+                row.recordedAt.toIso8601String().split('T').first,
+              ].join(' · '),
+              body: [
+                if (row.details.trim().isNotEmpty) Text(row.details),
+                if (row.vaccineName.isNotEmpty)
+                  Text(
+                    'Vaccine ${row.vaccineName}'
+                    '${row.doseNumber == null ? '' : ' · dose ${row.doseNumber}'}'
+                    '${row.nextDueAt == null ? '' : ' · next ${row.nextDueAt!.toIso8601String().split('T').first}'}',
+                  ),
+                if (row.quantity != null)
+                  Text('Given ${row.quantity} ${row.unit}'),
+                if (row.createdBy != null && row.createdBy!.isNotEmpty)
+                  Text('Recorded by ${row.createdBy}'),
+                if (row.parentNotifiedAt != null)
+                  Text('Parent notified ${row.parentNotifiedAt}'),
+                if (row.staffNotes.trim().isNotEmpty)
+                  Text('Staff notes: ${row.staffNotes}'),
+                _parentBtn(row.studentId),
+              ],
+            ),
       ],
     );
   }
@@ -213,11 +299,26 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           _card(
             title:
                 '${row.name} · ${row.quantityOnHand.toStringAsFixed(0)} ${row.unit}',
-            subtitle: row.needsReorder
-                ? 'Reorder at ${row.reorderLevel.toStringAsFixed(0)}'
-                : 'On hand',
+            subtitle: [
+              if (row.needsReorder)
+                'Reorder at ${row.reorderLevel.toStringAsFixed(0)}'
+              else
+                'On hand',
+              if (row.batchNumber.isNotEmpty) 'batch ${row.batchNumber}',
+              if (row.expiresAt != null)
+                'exp ${row.expiresAt!.toIso8601String().split('T').first}',
+            ].join(' · '),
             body: [
               if (row.notes.trim().isNotEmpty) Text(row.notes),
+              if (row.movements.isNotEmpty)
+                Text(
+                  'Ledger: ${row.movements.reversed.take(4).map((m) {
+                    final who = m.studentName == null || m.studentName!.isEmpty
+                        ? m.reason
+                        : '${m.reason} ${m.studentName}';
+                    return '${m.delta > 0 ? '+' : ''}${m.delta} $who';
+                  }).join(' · ')}',
+                ),
               if (_canManage)
                 Wrap(
                   spacing: 8,
@@ -226,8 +327,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                       onPressed: () => _svc.adjustMedicationStock(
                         id: row.id,
                         delta: 1,
+                        reason: 'receive',
+                        note: 'Restock +1',
                       ),
-                      child: const Text('+1'),
+                      child: const Text('+1 restock'),
                     ),
                     TextButton(
                       onPressed: () => _dispenseMed(row),
@@ -596,47 +699,164 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     return ok == true ? studentId : null;
   }
 
+  Future<void> _pickClinicDay() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _clinicDay,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2032),
+    );
+    if (picked == null) return;
+    setState(() {
+      _clinicDay = picked;
+      _healthFilter = 'today';
+    });
+  }
+
+  Future<void> _exportHealth() async {
+    setState(() => _exporting = 'health');
+    try {
+      await SchoolReportExportService.instance.export(
+        kind: SchoolReportKind.health,
+        format: 'csv',
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = null);
+    }
+  }
+
   Future<void> _addHealth() async {
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
     var type = HealthRecordType.clinicVisit;
+    var severity = 'routine';
+    var vaccineName = '';
+    var occurredAt = DateTime.now();
+    DateTime? nextDue;
     final title = TextEditingController();
     final details = TextEditingController();
     final notes = TextEditingController();
+    final dose = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Health record'),
+          title: const Text('Clinic record'),
           content: SizedBox(
-            width: 420,
+            width: 440,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<HealthRecordType>(
                     key: ValueKey(type),
                     initialValue: type,
                     decoration: const InputDecoration(labelText: 'Type'),
-                    items: [
-                      for (final value in HealthRecordType.values)
-                        DropdownMenuItem(
-                          value: value,
-                          child: Text(value.name),
-                        ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: HealthRecordType.clinicVisit,
+                        child: Text('Clinic visit'),
+                      ),
+                      DropdownMenuItem(
+                        value: HealthRecordType.vaccination,
+                        child: Text('Vaccination'),
+                      ),
+                      DropdownMenuItem(
+                        value: HealthRecordType.medication,
+                        child: Text('Medication given'),
+                      ),
+                      DropdownMenuItem(
+                        value: HealthRecordType.emergencyAlert,
+                        child: Text('Emergency alert'),
+                      ),
                     ],
                     onChanged: (v) =>
                         setDialogState(() => type = v ?? type),
                   ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: severity,
+                    decoration: const InputDecoration(labelText: 'Severity'),
+                    items: const [
+                      DropdownMenuItem(value: 'routine', child: Text('Routine')),
+                      DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => severity = v ?? severity),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: occurredAt,
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime(2032),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => occurredAt = picked);
+                      }
+                    },
+                    child: Text(
+                      'Recorded ${occurredAt.year}-'
+                      '${occurredAt.month.toString().padLeft(2, '0')}-'
+                      '${occurredAt.day.toString().padLeft(2, '0')}',
+                    ),
+                  ),
                   TextField(
                     controller: title,
-                    decoration: const InputDecoration(labelText: 'Title'),
+                    decoration: const InputDecoration(
+                      labelText: 'Complaint / title',
+                    ),
                   ),
                   TextField(
                     controller: details,
                     maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Details'),
+                    decoration: const InputDecoration(
+                      labelText: 'Treatment / details',
+                    ),
                   ),
+                  if (type == HealthRecordType.vaccination) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (final name in HealthVaccineHints.names)
+                          FilterChip(
+                            label: Text(name),
+                            selected: vaccineName == name,
+                            onSelected: (on) => setDialogState(
+                              () => vaccineName = on ? name : '',
+                            ),
+                          ),
+                      ],
+                    ),
+                    TextField(
+                      controller: dose,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Dose number'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: nextDue ?? DateTime.now().add(
+                            const Duration(days: 30),
+                          ),
+                          firstDate: DateTime(2024),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => nextDue = picked);
+                        }
+                      },
+                      child: Text(
+                        nextDue == null
+                            ? 'Set next due date'
+                            : 'Next due ${nextDue!.toIso8601String().split('T').first}',
+                      ),
+                    ),
+                  ],
                   TextField(
                     controller: notes,
                     maxLines: 2,
@@ -665,9 +885,18 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     await _svc.addHealthRecord(
       studentId: studentId,
       type: type,
-      title: title.text,
+      title: title.text.isEmpty && vaccineName.isNotEmpty
+          ? vaccineName
+          : title.text,
       details: details.text,
       staffNotes: notes.text,
+      occurredAt: occurredAt,
+      severity: severity,
+      vaccineName: vaccineName,
+      doseNumber: int.tryParse(dose.text),
+      nextDueAt: nextDue,
+      notifyParent: type == HealthRecordType.emergencyAlert ||
+          severity == 'urgent',
     );
   }
 
@@ -983,6 +1212,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     final qty = TextEditingController(text: '0');
     final reorder = TextEditingController(text: '5');
     final unit = TextEditingController(text: 'unit');
+    final batch = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1010,6 +1240,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Reorder level'),
               ),
+              TextField(
+                controller: batch,
+                decoration: const InputDecoration(labelText: 'Batch number'),
+              ),
             ],
           ),
         ),
@@ -1031,16 +1265,53 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       unit: unit.text,
       quantityOnHand: double.tryParse(qty.text) ?? 0,
       reorderLevel: double.tryParse(reorder.text) ?? 0,
+      batchNumber: batch.text,
     );
   }
 
   Future<void> _dispenseMed(MedicationStockItem row) async {
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
+    final qty = TextEditingController(text: '1');
+    final note = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Dispense ${row.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: qty,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'Quantity (${row.unit})'),
+            ),
+            TextField(
+              controller: note,
+              decoration: const InputDecoration(labelText: 'Dose / note'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Record'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final amount = double.tryParse(qty.text) ?? 1;
     await _svc.adjustMedicationStock(
       id: row.id,
-      delta: -1,
+      delta: -amount.abs(),
       studentId: studentId,
+      note: note.text,
+      reason: 'dispense',
     );
   }
 
