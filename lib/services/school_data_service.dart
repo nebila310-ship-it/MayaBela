@@ -3656,14 +3656,58 @@ class SchoolDataService {
   StudentGradeReport? _findGradeReport({
     required String studentName,
     required String className,
+    String? term,
+    String? academicYear,
   }) {
-    try {
-      return _gradeReports.firstWhere(
-        (item) => _gradeReportMatches(item, studentName, className),
-      );
-    } catch (_) {
+    final matches = _gradeReports.where(
+      (item) => _gradeReportMatches(item, studentName, className),
+    );
+    final wantTerm = (term ?? '').trim().toLowerCase();
+    final wantYear = (academicYear ?? '').trim().toLowerCase();
+    if (wantTerm.isNotEmpty) {
+      for (final item in matches) {
+        if (item.term.trim().toLowerCase() != wantTerm) continue;
+        if (wantYear.isNotEmpty &&
+            (item.academicYear ?? '').trim().toLowerCase() != wantYear) {
+          continue;
+        }
+        return item;
+      }
       return null;
     }
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  /// Opens or creates a term/year report without merging into another term.
+  StudentGradeReport openTermGradeReport({
+    required String studentName,
+    required String className,
+    required String term,
+    String? academicYear,
+  }) {
+    final canonicalClass = _canonicalClassName(className);
+    final existing = _findGradeReport(
+      studentName: studentName,
+      className: canonicalClass,
+      term: term,
+      academicYear: academicYear,
+    );
+    if (existing != null) return existing;
+    final created = StudentGradeReport(
+      studentName: studentName,
+      className: canonicalClass,
+      term: term.trim().isEmpty ? 'Term 1' : term.trim(),
+      academicYear: academicYear?.trim().isEmpty == true
+          ? null
+          : academicYear?.trim(),
+      subjects: [],
+      studentId: StudentRegistryService.instance
+          .lookupByName(studentName)
+          ?.studentId,
+    );
+    _gradeReports.add(created);
+    _persistGradeReports();
+    return created;
   }
 
   SubjectGrade? _findSubjectGrade({
@@ -6587,17 +6631,24 @@ class SchoolDataService {
     required String teacherId,
     String? subjectId,
     String? teachingSlotId,
+    String? term,
+    String? academicYear,
   }) {
     final canonicalClass = _canonicalClassName(className);
     StudentGradeReport? report = _findGradeReport(
       studentName: studentName,
       className: canonicalClass,
+      term: term,
+      academicYear: academicYear,
     );
     if (report == null) {
       report = StudentGradeReport(
         studentName: studentName,
         className: canonicalClass,
-        term: 'Term 1',
+        term: (term ?? 'Term 1').trim().isEmpty ? 'Term 1' : (term ?? 'Term 1').trim(),
+        academicYear: academicYear?.trim().isEmpty == true
+            ? null
+            : academicYear?.trim(),
         subjects: [],
         studentId: StudentRegistryService.instance
             .lookupByName(studentName)

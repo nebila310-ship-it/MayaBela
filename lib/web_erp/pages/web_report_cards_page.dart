@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -251,6 +252,21 @@ class _ReportCardEditorDialogState extends State<_ReportCardEditorDialog> {
                 schoolName: widget.schoolName,
                 compact: true,
               ),
+              if (GradeAnalyticsService.instance
+                      .termTrendForStudent(
+                        studentId: report.studentId,
+                        studentName: report.studentName,
+                      )
+                      .length >
+                  1) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Trend: ${GradeAnalyticsService.instance.termTrendForStudent(
+                    studentId: report.studentId,
+                    studentName: report.studentName,
+                  ).map((p) => '${p.term} ${p.average.toStringAsFixed(0)}%').join(' → ')}',
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
                 controller: _term,

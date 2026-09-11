@@ -99,11 +99,41 @@ class AssessmentMark {
   }
 }
 
+class LetterGradeBand {
+  const LetterGradeBand({
+    required this.letter,
+    required this.minPercent,
+  });
+
+  final String letter;
+  final double minPercent;
+
+  LetterGradeBand copyWith({String? letter, double? minPercent}) {
+    return LetterGradeBand(
+      letter: letter ?? this.letter,
+      minPercent: minPercent ?? this.minPercent,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'letter': letter,
+        'minPercent': minPercent,
+      };
+
+  factory LetterGradeBand.fromMap(Map<String, dynamic> map) {
+    return LetterGradeBand(
+      letter: (map['letter'] as String? ?? '').trim(),
+      minPercent: (map['minPercent'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
 class MarkbookSettings {
   const MarkbookSettings({
     this.categories = const [],
     this.missingCountsAsZero = false,
     this.defaultTerm = 'Term 1',
+    this.letterBands = MarkbookMath.defaultLetterBands,
   });
 
   /// School-wide assessment categories. Weights should sum to 100.
@@ -114,6 +144,9 @@ class MarkbookSettings {
   final bool missingCountsAsZero;
 
   final String defaultTerm;
+
+  /// School letter scale. Defaults keep the existing A–F cutoffs.
+  final List<LetterGradeBand> letterBands;
 
   static const liaDefaults = MarkbookSettings(
     categories: [
@@ -142,11 +175,13 @@ class MarkbookSettings {
     List<AssessmentCategory>? categories,
     bool? missingCountsAsZero,
     String? defaultTerm,
+    List<LetterGradeBand>? letterBands,
   }) {
     return MarkbookSettings(
       categories: categories ?? this.categories,
       missingCountsAsZero: missingCountsAsZero ?? this.missingCountsAsZero,
       defaultTerm: defaultTerm ?? this.defaultTerm,
+      letterBands: letterBands ?? this.letterBands,
     );
   }
 
@@ -154,6 +189,7 @@ class MarkbookSettings {
         'categories': categories.map((c) => c.toMap()).toList(),
         'missingCountsAsZero': missingCountsAsZero,
         'defaultTerm': defaultTerm,
+        'letterBands': letterBands.map((b) => b.toMap()).toList(),
       };
 
   factory MarkbookSettings.fromMap(Map<String, dynamic>? map) {
@@ -166,12 +202,22 @@ class MarkbookSettings {
             .map((e) => AssessmentCategory.fromMap(Map<String, dynamic>.from(e)))
             .where((c) => c.id.isNotEmpty)
             .toList();
+    final bandsRaw = map['letterBands'] as List?;
+    final bands = bandsRaw == null
+        ? MarkbookMath.defaultLetterBands
+        : bandsRaw
+            .whereType<Map>()
+            .map((e) => LetterGradeBand.fromMap(Map<String, dynamic>.from(e)))
+            .where((b) => b.letter.isNotEmpty)
+            .toList();
     return MarkbookSettings(
       categories: cats,
       missingCountsAsZero: map['missingCountsAsZero'] as bool? ?? false,
       defaultTerm: (map['defaultTerm'] as String?)?.trim().isNotEmpty == true
           ? (map['defaultTerm'] as String).trim()
           : 'Term 1',
+      letterBands:
+          bands.isEmpty ? MarkbookMath.defaultLetterBands : bands,
     );
   }
 }
@@ -241,6 +287,14 @@ abstract final class MarkbookMath {
     return marks.every((m) => m.isEntered);
   }
 
+  static const defaultLetterBands = <LetterGradeBand>[
+    LetterGradeBand(letter: 'A', minPercent: 90),
+    LetterGradeBand(letter: 'B', minPercent: 80),
+    LetterGradeBand(letter: 'C', minPercent: 70),
+    LetterGradeBand(letter: 'D', minPercent: 60),
+    LetterGradeBand(letter: 'F', minPercent: 0),
+  ];
+
   static double gpaPoints(String letter) {
     return switch (letter) {
       'A' => 4.0,
@@ -251,11 +305,15 @@ abstract final class MarkbookMath {
     };
   }
 
-  static String letterFromPercentage(double percentage) {
-    if (percentage >= 90) return 'A';
-    if (percentage >= 80) return 'B';
-    if (percentage >= 70) return 'C';
-    if (percentage >= 60) return 'D';
-    return 'F';
+  static String letterFromPercentage(
+    double percentage, {
+    List<LetterGradeBand>? bands,
+  }) {
+    final list = [...(bands ?? defaultLetterBands)]
+      ..sort((a, b) => b.minPercent.compareTo(a.minPercent));
+    for (final band in list) {
+      if (percentage >= band.minPercent) return band.letter;
+    }
+    return list.isEmpty ? 'F' : list.last.letter;
   }
 }

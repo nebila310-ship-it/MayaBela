@@ -77,6 +77,34 @@ class GradeAnalyticsSnapshot {
   final List<GradeUnderperformers> underperformers;
 }
 
+class CategoryAverage {
+  const CategoryAverage({
+    required this.categoryId,
+    required this.label,
+    required this.average,
+    required this.count,
+  });
+
+  final String categoryId;
+  final String label;
+  final double average;
+  final int count;
+}
+
+class TermTrendPoint {
+  const TermTrendPoint({
+    required this.term,
+    this.academicYear,
+    required this.average,
+    required this.subjectCount,
+  });
+
+  final String term;
+  final String? academicYear;
+  final double average;
+  final int subjectCount;
+}
+
 class GradeAnalyticsService {
   GradeAnalyticsService._();
   static final instance = GradeAnalyticsService._();
@@ -270,5 +298,73 @@ class GradeAnalyticsService {
     final match = RegExp(r'(\d+)').firstMatch(grade);
     if (match != null) return int.tryParse(match.group(1)!) ?? 999;
     return 999;
+  }
+
+  /// Average by assessment category (homework, quiz, midterm, …).
+  List<CategoryAverage> categoryAverages({
+    String? className,
+    String? subject,
+  }) {
+    final sums = <String, double>{};
+    final counts = <String, int>{};
+    final labels = <String, String>{};
+    for (final report in _data.getAllGradeReports()) {
+      if (className != null &&
+          className.trim().isNotEmpty &&
+          report.className != className) {
+        continue;
+      }
+      for (final grade in report.subjects) {
+        if (subject != null &&
+            subject.trim().isNotEmpty &&
+            grade.subject != subject) {
+          continue;
+        }
+        for (final mark in grade.assessments) {
+          if (!mark.isEntered) continue;
+          sums[mark.categoryId] = (sums[mark.categoryId] ?? 0) + mark.percentage;
+          counts[mark.categoryId] = (counts[mark.categoryId] ?? 0) + 1;
+          labels[mark.categoryId] = mark.label;
+        }
+      }
+    }
+    final rows = [
+      for (final id in sums.keys)
+        CategoryAverage(
+          categoryId: id,
+          label: labels[id] ?? id,
+          average: sums[id]! / counts[id]!,
+          count: counts[id]!,
+        ),
+    ]..sort((a, b) => a.label.compareTo(b.label));
+    return rows;
+  }
+
+  List<TermTrendPoint> termTrendForStudent({
+    String? studentId,
+    String? studentName,
+  }) {
+    final reports = studentId != null && studentId.trim().isNotEmpty
+        ? _data.gradeReportsForStudent(studentId)
+        : _data
+            .getAllGradeReports()
+            .where((r) => r.studentName == studentName)
+            .toList();
+    final byKey = <String, TermTrendPoint>{};
+    for (final report in reports) {
+      if (report.subjects.isEmpty) continue;
+      final key = '${report.academicYear ?? ''}|${report.term}';
+      byKey[key] = TermTrendPoint(
+        term: report.term,
+        academicYear: report.academicYear,
+        average: report.average,
+        subjectCount: report.subjects.length,
+      );
+    }
+    return byKey.values.toList()
+      ..sort((a, b) {
+        final year = (a.academicYear ?? '').compareTo(b.academicYear ?? '');
+        return year != 0 ? year : a.term.compareTo(b.term);
+      });
   }
 }
