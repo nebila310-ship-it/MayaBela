@@ -91,6 +91,10 @@ class _ParentStudentAffairsScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(_parentStatusText(c)),
+                    if (c.conductCode.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('School rule: ${c.conductCode}'),
+                    ],
                     if (c.outcomeNotes.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text('Note from school: ${c.outcomeNotes}'),
@@ -308,6 +312,7 @@ class _ParentStudentAffairsScreenState
         DisciplineCaseStatus.resolved =>
           'Resolved — ${switch (c.outcome) {
             DisciplineOutcome.warning => 'warning issued',
+            DisciplineOutcome.detention => 'detention',
             DisciplineOutcome.suspension => 'suspension',
             DisciplineOutcome.restorative => 'restorative action',
             DisciplineOutcome.none => 'closed',

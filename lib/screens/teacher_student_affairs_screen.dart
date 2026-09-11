@@ -7,6 +7,7 @@ import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
+import 'package:mayabela/widgets/discipline_conduct_code_chips.dart';
 
 /// Teacher side of EDUABA Student Affairs:
 /// - Subject / homeroom teachers file behaviour & incident reports.
@@ -213,6 +214,7 @@ class _TeacherStudentAffairsScreenState
     var kind = _isHomeroom
         ? DisciplineCaseKind.behaviour
         : DisciplineCaseKind.incident;
+    var conductCode = '';
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
 
@@ -256,6 +258,11 @@ class _TeacherStudentAffairsScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
+                DisciplineConductCodeChips(
+                  selected: conductCode,
+                  onSelected: (v) => setDialogState(() => conductCode = v),
+                ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: titleCtrl,
                   decoration: const InputDecoration(labelText: 'Summary'),
@@ -294,6 +301,7 @@ class _TeacherStudentAffairsScreenState
       kind: kind,
       title: titleCtrl.text,
       description: descCtrl.text,
+      conductCode: conductCode,
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

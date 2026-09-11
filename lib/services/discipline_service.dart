@@ -58,6 +58,8 @@ class DisciplineService extends ChangeNotifier {
     required DisciplineCaseKind kind,
     required String title,
     required String description,
+    String conductCode = '',
+    bool notifyParent = true,
   }) async {
     final user = AuthService.currentUser;
     final now = DateTime.now();
@@ -75,12 +77,18 @@ class DisciplineService extends ChangeNotifier {
       kind: kind,
       title: title.trim(),
       description: description.trim(),
+      conductCode: conductCode.trim(),
+      parentNotified: notifyParent,
       createdAt: now,
       updatedAt: now,
     );
     _cases.insert(0, newCase);
     notifyListeners();
     await DisciplinePersistenceService.instance.saveFromService();
+    _pushStaffDeskNotification(newCase);
+    if (notifyParent) {
+      _pushParentNotification(newCase);
+    }
     return newCase;
   }
 
@@ -102,6 +110,9 @@ class DisciplineService extends ChangeNotifier {
     await DisciplinePersistenceService.instance.saveFromService();
     if (notifyParent) {
       _pushParentNotification(updated);
+    }
+    if (updated.status == DisciplineCaseStatus.escalated) {
+      _pushStaffDeskNotification(updated);
     }
     // EDUABA §1A: outcomes are communicated to the reporting teacher too.
     if (updated.status == DisciplineCaseStatus.resolved ||
@@ -133,13 +144,43 @@ class DisciplineService extends ChangeNotifier {
     );
   }
 
+  void _pushStaffDeskNotification(DisciplineCase c) {
+    final kindLabel =
+        c.kind == DisciplineCaseKind.behaviour ? 'behaviour' : 'incident';
+    final body = c.status == DisciplineCaseStatus.escalated
+        ? '${c.studentName} (${c.className}) escalated to '
+            '${DisciplineConductCodes.escalationLabel(c.escalatedTo)}.'
+        : '${c.reporterName} filed a $kindLabel report for ${c.studentName} '
+            '(${c.className}): ${c.title}.';
+    NotificationService.instance.push(
+      title: c.status == DisciplineCaseStatus.escalated
+          ? 'Discipline case escalated'
+          : 'New discipline report',
+      body: body,
+      type: NotificationType.general,
+      fromRole: AuthService.roleTeacher,
+      fromName: c.reporterName.isNotEmpty ? c.reporterName : 'Student Affairs',
+      recipientRole: AuthService.roleAdmin,
+      targetClassName: c.className,
+      showOnMessagesBadge: false,
+    );
+  }
+
   void _pushParentNotification(DisciplineCase c) {
+    final rule = c.conductCode.isEmpty ? '' : ' Rule: ${c.conductCode}.';
     final statusText = switch (c.status) {
+      DisciplineCaseStatus.submitted =>
+        '${c.reporterName} recorded a ${c.kind.name} report for ${c.studentName}: '
+            '${c.title}.$rule',
+      DisciplineCaseStatus.escalated =>
+        'The case for ${c.studentName} was escalated to '
+            '${DisciplineConductCodes.escalationLabel(c.escalatedTo)}.$rule',
       DisciplineCaseStatus.hearingScheduled =>
         'A discipline hearing has been scheduled for ${c.studentName}.'
             '${c.hearingAt != null ? ' Date: ${c.hearingAt}' : ''}',
       DisciplineCaseStatus.resolved =>
-        'Discipline case for ${c.studentName} resolved: ${c.outcome.name}.'
+        'Discipline case for ${c.studentName} resolved: '
+            '${DisciplineConductCodes.outcomeLabel(c.outcome)}.'
             '${c.outcomeNotes.isNotEmpty ? ' ${c.outcomeNotes}' : ''}',
       DisciplineCaseStatus.dismissed =>
         'Discipline case for ${c.studentName} was dismissed.',
@@ -182,4 +223,11 @@ class DisciplineService extends ChangeNotifier {
 
   List<Map<String, dynamic>> snapshotMaps() =>
       _cases.map((c) => c.toMap()).toList();
+
+  @visibleForTesting
+  void resetForTests() {
+    _cases.clear();
+    _loaded = true;
+    notifyListeners();
+  }
 }
