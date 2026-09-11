@@ -7,7 +7,9 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 
 class AdminAttendanceReportsScreen extends StatefulWidget {
-  const AdminAttendanceReportsScreen({super.key});
+  const AdminAttendanceReportsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<AdminAttendanceReportsScreen> createState() =>
@@ -141,37 +143,7 @@ class _AdminAttendanceReportsScreenState
         final report = _data.buildDailyAttendanceReport(_selectedDate);
         final hasData = report.totalCount > 0;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF4F6FB),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF1A237E),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            title: Text(s.attendanceReportsTitle),
-            actions: [
-              if (_exporting)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 18),
-                  child: Center(
-                    child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                IconButton(
-                  tooltip: s.exportAttendanceExcel,
-                  onPressed: _exportAttendance,
-                  icon: const Icon(Icons.download_rounded),
-                ),
-            ],
-          ),
-          body: ListView(
+        final body = ListView(
             padding: listPagePadding(context),
             children: [
               _ReportHeaderCard(
@@ -218,7 +190,72 @@ class _AdminAttendanceReportsScreenState
               ] else
                 _EmptyReportCard(message: s.noAttendanceReportForDay),
             ],
+        );
+
+        if (widget.embedded) {
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        s.attendanceReportsTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (_exporting)
+                      const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.2),
+                      )
+                    else
+                      IconButton(
+                        tooltip: s.exportAttendanceExcel,
+                        onPressed: _exportAttendance,
+                        icon: const Icon(Icons.download_rounded),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(child: body),
+            ],
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF4F6FB),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF1A237E),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            title: Text(s.attendanceReportsTitle),
+            actions: [
+              if (_exporting)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 18),
+                  child: Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                IconButton(
+                  tooltip: s.exportAttendanceExcel,
+                  onPressed: _exportAttendance,
+                  icon: const Icon(Icons.download_rounded),
+                ),
+            ],
           ),
+          body: body,
         );
       },
     );

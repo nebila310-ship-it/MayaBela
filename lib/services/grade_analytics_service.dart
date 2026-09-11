@@ -91,6 +91,22 @@ class CategoryAverage {
   final int count;
 }
 
+class GradeAttendanceRow {
+  const GradeAttendanceRow({
+    required this.studentName,
+    required this.className,
+    required this.gradeAverage,
+    required this.attendanceRate,
+    required this.sessions,
+  });
+
+  final String studentName;
+  final String className;
+  final double gradeAverage;
+  final double attendanceRate;
+  final int sessions;
+}
+
 class TermTrendPoint {
   const TermTrendPoint({
     required this.term,
@@ -337,6 +353,34 @@ class GradeAnalyticsService {
           count: counts[id]!,
         ),
     ]..sort((a, b) => a.label.compareTo(b.label));
+    return rows;
+  }
+
+  /// Markbook averages next to the live attendance register (same stores).
+  List<GradeAttendanceRow> gradeAttendanceRows({String? className}) {
+    final rows = <GradeAttendanceRow>[];
+    for (final report in _data.getAllGradeReports()) {
+      if (className != null &&
+          className.trim().isNotEmpty &&
+          report.className != className) {
+        continue;
+      }
+      if (report.subjects.isEmpty) continue;
+      final snap = _data.attendanceSnapshotForStudent(
+        studentName: report.studentName,
+        className: report.className,
+      );
+      rows.add(
+        GradeAttendanceRow(
+          studentName: report.studentName,
+          className: report.className,
+          gradeAverage: report.average,
+          attendanceRate: snap.rate,
+          sessions: snap.sessions,
+        ),
+      );
+    }
+    rows.sort((a, b) => a.studentName.compareTo(b.studentName));
     return rows;
   }
 

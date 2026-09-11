@@ -376,4 +376,7 @@ class NotificationService extends ChangeNotifier {
     _nextId = 1;
     notifyListeners();
   }
+
+  @visibleForTesting
+  List<AppNotification> itemsForTests() => List.unmodifiable(_items);
 }
