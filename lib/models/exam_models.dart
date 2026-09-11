@@ -160,6 +160,13 @@ class ExamPaper {
     return true;
   }
 
+  /// Closed papers and sittings whose window has ended.
+  bool isHistoricalAt(DateTime now) {
+    if (status == ExamPaperStatus.closed) return true;
+    if (endAt != null && now.isAfter(endAt!)) return true;
+    return false;
+  }
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'schoolId': schoolId,

@@ -30,6 +30,8 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
   final _exams = ExamService.instance;
   String? _bankSubject;
   String? _scorePaperId;
+  ExamKind? _kindFilter;
+  bool _showHistory = false;
 
   bool get _canManage => ModuleAccess.canManage('exam_bank');
   String get _schoolId => AuthService.activeSchoolId ?? '';
@@ -230,22 +232,62 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
   }
 
   Widget _papersTab(bool narrow) {
-    final papers = _exams.papersForSchool(_schoolId);
+    final now = DateTime.now();
+    var papers = _exams.papersForSchool(_schoolId);
+    if (_kindFilter != null) {
+      papers = papers.where((p) => p.kind == _kindFilter).toList();
+    }
+    papers = papers
+        .where((p) => _showHistory ? p.isHistoricalAt(now) : !p.isHistoricalAt(now))
+        .toList();
     return ListView(
       padding: EdgeInsets.all(narrow ? 12 : 20),
       children: [
-        if (_canManage)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton.icon(
-              onPressed: () => _editPaper(),
-              icon: const Icon(Icons.note_add_outlined),
-              label: const Text('New paper'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (_canManage)
+              FilledButton.icon(
+                onPressed: () => _editPaper(),
+                icon: const Icon(Icons.note_add_outlined),
+                label: const Text('New paper'),
+              ),
+            FilterChip(
+              label: const Text('All kinds'),
+              selected: _kindFilter == null,
+              onSelected: (_) => setState(() => _kindFilter = null),
             ),
-          ),
+            FilterChip(
+              label: const Text('School'),
+              selected: _kindFilter == ExamKind.school,
+              onSelected: (_) => setState(() => _kindFilter = ExamKind.school),
+            ),
+            FilterChip(
+              label: const Text('National'),
+              selected: _kindFilter == ExamKind.national,
+              onSelected: (_) => setState(() => _kindFilter = ExamKind.national),
+            ),
+            FilterChip(
+              label: const Text('Model'),
+              selected: _kindFilter == ExamKind.model,
+              onSelected: (_) => setState(() => _kindFilter = ExamKind.model),
+            ),
+            FilterChip(
+              label: const Text('History'),
+              selected: _showHistory,
+              onSelected: (v) => setState(() => _showHistory = v),
+            ),
+          ],
+        ),
         const SizedBox(height: 14),
         if (papers.isEmpty)
-          _emptyCard('Compose a paper from the bank, pick a class and markbook category, then publish.')
+          _emptyCard(
+            _showHistory
+                ? 'No closed or expired papers in the historical repository yet.'
+                : 'Compose a paper from the bank, pick a class and markbook category, then publish.',
+          )
         else
           for (final paper in papers)
             _card(
@@ -256,6 +298,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                   '${_kindLabel(paper.kind)} · ${_sittingLabel(paper.sittingMode)} · '
                   '${_categoryLabel(paper.markbookCategoryId)} · '
                   '${paper.questionIds.length} questions · ${_statusLabel(paper.status)}'
+                  '${_windowLabel(paper)}'
                   '${paper.attachmentPaths.isEmpty ? '' : ' · ${paper.attachmentPaths.length} file(s)'}',
                 ),
                 trailing: _canManage
@@ -278,6 +321,13 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                               ),
                               child: const Text('Close'),
                             ),
+                          TextButton(
+                            onPressed: () async {
+                              await _exams.duplicatePaper(paper.id);
+                              if (mounted) setState(() {});
+                            },
+                            child: const Text('Template'),
+                          ),
                           IconButton(
                             icon: const Icon(Icons.edit_outlined),
                             onPressed: () => _editPaper(paper),
@@ -482,6 +532,16 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
         ExamSittingMode.online => 'Online sit',
         ExamSittingMode.offline => 'Offline / lockdown',
       };
+
+  static String _windowLabel(ExamPaper paper) {
+    if (paper.startAt == null && paper.endAt == null) return '';
+    String d(DateTime day) => '${day.day}/${day.month}/${day.year}';
+    if (paper.startAt != null && paper.endAt != null) {
+      return ' · ${d(paper.startAt!)}–${d(paper.endAt!)}';
+    }
+    if (paper.startAt != null) return ' · from ${d(paper.startAt!)}';
+    return ' · until ${d(paper.endAt!)}';
+  }
 }
 
 class _QuestionEditorDialog extends StatefulWidget {
@@ -703,6 +763,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late List<String> _attachments;
   late ExamKind _kind;
   late ExamSittingMode _sittingMode;
+  DateTime? _startAt;
+  DateTime? _endAt;
 
   @override
   void initState() {
@@ -723,6 +785,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
     _attachments = List<String>.from(p?.attachmentPaths ?? const []);
     _kind = p?.kind ?? ExamKind.school;
     _sittingMode = p?.sittingMode ?? ExamSittingMode.online;
+    _startAt = p?.startAt;
+    _endAt = p?.endAt;
   }
 
   @override
@@ -749,6 +813,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         attachmentPaths: _attachments,
         kind: _kind,
         sittingMode: _sittingMode,
+        startAt: _startAt,
+        endAt: _endAt,
       );
     } else {
       await ExamService.instance.updatePaper(
@@ -759,6 +825,9 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         attachmentPaths: _attachments,
         kind: _kind,
         sittingMode: _sittingMode,
+        startAt: _startAt,
+        endAt: _endAt,
+        clearWindow: _startAt == null && _endAt == null,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -871,6 +940,59 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                 ],
                 onChanged: (v) =>
                     setState(() => _sittingMode = v ?? _sittingMode),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  _startAt == null
+                      ? 'Sitting opens (optional)'
+                      : 'Opens ${_startAt!.day}/${_startAt!.month}/${_startAt!.year}',
+                ),
+                trailing: TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _startAt ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) setState(() => _startAt = picked);
+                  },
+                  child: const Text('Set start'),
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  _endAt == null
+                      ? 'Sitting closes (optional)'
+                      : 'Closes ${_endAt!.day}/${_endAt!.month}/${_endAt!.year}',
+                ),
+                trailing: Wrap(
+                  children: [
+                    TextButton(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _endAt ?? _startAt ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) setState(() => _endAt = picked);
+                      },
+                      child: const Text('Set end'),
+                    ),
+                    if (_startAt != null || _endAt != null)
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _startAt = null;
+                          _endAt = null;
+                        }),
+                        child: const Text('Clear'),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               CourseAttachmentPicker(
