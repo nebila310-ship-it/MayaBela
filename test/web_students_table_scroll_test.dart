@@ -63,24 +63,29 @@ void main() {
       final pager = tester.widget<Padding>(
         find.byKey(const ValueKey('students-pagination')),
       );
-      expect(pager.padding.right, MayaFloatingChat.pageEndClearance);
+      expect(pager.padding, isA<EdgeInsets>());
+      expect(
+        (pager.padding as EdgeInsets).right,
+        MayaFloatingChat.pageEndClearance,
+      );
       expect(MayaFloatingChat.pageEndClearance, greaterThanOrEqualTo(72));
 
-      final verticalFinder = find.byWidgetPredicate(
-        (widget) => widget is Scrollable && widget.axis == Axis.vertical,
+      final verticalFinder = find.descendant(
+        of: find.byType(WebErpHScroll),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Scrollable && widget.axis == Axis.vertical,
+        ),
       );
-      expect(verticalFinder, findsWidgets);
-      final vertical = tester.widget<Scrollable>(verticalFinder.first);
+      expect(verticalFinder, findsOneWidget);
+      final vertical = tester.widget<Scrollable>(verticalFinder);
       expect(vertical.controller, isNotNull);
       expect(vertical.controller!.position.maxScrollExtent, greaterThan(0));
 
-      final horizontalFinder = find.byWidgetPredicate(
-        (widget) => widget is Scrollable && widget.axis == Axis.horizontal,
+      final hView = tester.widget<SingleChildScrollView>(
+        find.byKey(const ValueKey('web-erp-hscroll-view')),
       );
-      expect(horizontalFinder, findsWidgets);
-      final horizontal = tester.widget<Scrollable>(horizontalFinder.first);
-      expect(horizontal.controller, isNotNull);
-      expect(horizontal.controller!.position.maxScrollExtent, greaterThan(200));
+      expect(hView.controller, isNotNull);
+      expect(hView.controller!.position.maxScrollExtent, greaterThan(200));
     },
   );
 }
