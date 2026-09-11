@@ -55,6 +55,16 @@ class ExamService extends ChangeNotifier {
     return _papers.where((p) => p.schoolId == sid).toList();
   }
 
+  List<ExamPaper> papersForKind(ExamKind kind, [String? schoolId]) =>
+      papersForSchool(schoolId).where((p) => p.kind == kind).toList();
+
+  List<ExamPaper> historicalPapersForSchool([String? schoolId]) {
+    final now = DateTime.now();
+    return papersForSchool(schoolId)
+        .where((p) => p.isHistoricalAt(now))
+        .toList();
+  }
+
   List<ExamPaper> openPapersForClass(String className, {String? schoolId}) {
     final now = DateTime.now();
     return papersForSchool(schoolId)
@@ -256,6 +266,26 @@ class ExamService extends ChangeNotifier {
     return paper;
   }
 
+  /// Copies questions, kind, sitting, and files into a new draft. Not a new product.
+  Future<ExamPaper> duplicatePaper(String id, {String? title}) async {
+    final paper = paperById(id);
+    if (paper == null) {
+      throw StateError('Exam paper not found.');
+    }
+    final label = (title ?? '').trim();
+    return createPaper(
+      title: label.isEmpty ? '${paper.title} (template)' : label,
+      className: paper.className,
+      subject: paper.subject,
+      questionIds: List.of(paper.questionIds),
+      markbookCategoryId: paper.markbookCategoryId,
+      attachmentPaths: List.of(paper.attachmentPaths),
+      kind: paper.kind,
+      sittingMode: paper.sittingMode,
+      schoolId: paper.schoolId,
+    );
+  }
+
   Future<ExamAttempt> startAttempt({
     required String paperId,
     required String studentName,
@@ -266,10 +296,21 @@ class ExamService extends ChangeNotifier {
     final existing = attemptFor(paperId: paperId, studentName: studentName);
     if (existing != null) return existing;
     final paper = paperById(paperId);
-    if (paper != null && !paper.isOnlineSit) {
+    if (paper == null) {
+      throw StateError('Exam paper not found.');
+    }
+    if (!paper.isOnlineSit) {
       throw StateError(
         'This paper is offline / lockdown. Staff print or attach files; '
         'students do not sit it in the portal.',
+      );
+    }
+    if (paper.status == ExamPaperStatus.closed) {
+      throw StateError('This paper is closed.');
+    }
+    if (!paper.isOpenAt(DateTime.now())) {
+      throw StateError(
+        'This paper is not open. Publish it and check the sitting window.',
       );
     }
     final now = DateTime.now();

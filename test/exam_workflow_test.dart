@@ -255,6 +255,10 @@ void main() {
         markbookCategoryId: 'quiz',
         schoolId: schoolId,
       );
+      await ExamService.instance.setPaperStatus(
+        paper.id,
+        ExamPaperStatus.published,
+      );
       final attempt = await ExamService.instance.startAttempt(
         paperId: paper.id,
         studentName: student,
