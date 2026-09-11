@@ -197,7 +197,8 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
             '${plan.isPublished ? 'Published' : 'Draft'}'
             '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${_reviewLabel(plan.reviewStatus)}'}'
             '${plan.hasLinks ? ' · linked work' : ''}'
-            '${plan.attachmentPaths.isEmpty ? '' : ' · ${plan.attachmentPaths.length} file(s)'}',
+            '${plan.attachmentPaths.isEmpty ? '' : ' · ${plan.attachmentPaths.length} file(s)'}'
+            '${plan.hasOnlineSession ? (plan.onlineSessionIsLive ? ' · live class' : ' · recorded class') : ''}',
           ),
           trailing: _canManage
               ? Wrap(
@@ -271,6 +272,8 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
   late final TextEditingController _title;
   late final TextEditingController _objectives;
   late final TextEditingController _activities;
+  late final TextEditingController _onlineUrl;
+  late final TextEditingController _onlineLabel;
   late String _className;
   late String _subject;
   late DateTime _weekStart;
@@ -279,6 +282,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
   late Set<String> _materials;
   late List<String> _attachments;
   String? _unitId;
+  late bool _onlineLive;
 
   @override
   void initState() {
@@ -298,6 +302,9 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     _materials = {...?p?.learningMaterialIds};
     _attachments = List<String>.from(p?.attachmentPaths ?? const []);
     _unitId = p?.curriculumUnitId;
+    _onlineUrl = TextEditingController(text: p?.onlineSessionUrl ?? '');
+    _onlineLabel = TextEditingController(text: p?.onlineSessionLabel ?? '');
+    _onlineLive = p?.onlineSessionIsLive ?? false;
   }
 
   @override
@@ -305,6 +312,8 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     _title.dispose();
     _objectives.dispose();
     _activities.dispose();
+    _onlineUrl.dispose();
+    _onlineLabel.dispose();
     super.dispose();
   }
 
@@ -363,6 +372,9 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         learningMaterialIds: _materials.toList(),
         attachmentPaths: _attachments,
         curriculumUnitId: _unitId,
+        onlineSessionUrl: _onlineUrl.text,
+        onlineSessionLabel: _onlineLabel.text,
+        onlineSessionIsLive: _onlineLive,
       );
     } else {
       plan = (await LessonPlanService.instance.updatePlan(
@@ -379,6 +391,10 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         attachmentPaths: _attachments,
         curriculumUnitId: _unitId,
         clearCurriculumUnit: _unitId == null,
+        onlineSessionUrl: _onlineUrl.text,
+        onlineSessionLabel: _onlineLabel.text,
+        onlineSessionIsLive: _onlineLive,
+        clearOnlineSession: _onlineUrl.text.trim().isEmpty,
       ))!;
     }
     if (_unitId != null) {
@@ -472,6 +488,28 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
                 controller: _activities,
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Activities'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _onlineUrl,
+                decoration: const InputDecoration(
+                  labelText: 'Live or recorded class link',
+                  hintText: 'https://…',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _onlineLabel,
+                decoration: const InputDecoration(
+                  labelText: 'Link label (optional)',
+                  hintText: 'Join Grade 4 Science',
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('This is a live class'),
+                value: _onlineLive,
+                onChanged: (v) => setState(() => _onlineLive = v),
               ),
               const SizedBox(height: 12),
               CourseAttachmentPicker(

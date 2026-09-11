@@ -1755,6 +1755,49 @@ class SchoolDataService {
     }
   }
 
+  String ensureNamedGroupConversation({
+    required String groupName,
+    required List<String> parentNames,
+    required List<String> staffIds,
+  }) {
+    final title = groupName.trim();
+    if (title.isEmpty) {
+      final id = openOrCreateGroupConversation(
+        parentNames: parentNames,
+        staffIds: staffIds,
+      );
+      _persistConversation(id);
+      return id;
+    }
+    for (final conversation in _conversations) {
+      if (conversation.isGroup &&
+          conversation.name.trim().toLowerCase() == title.toLowerCase()) {
+        return conversation.id;
+      }
+    }
+    final sortedParents = [...parentNames]
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final sortedStaffIds = [...staffIds]
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final slug = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final id = 'group-$slug';
+    _conversations.insert(
+      0,
+      Conversation(
+        id: id,
+        name: title,
+        role: 'Group',
+        isGroup: true,
+        groupParentNames: sortedParents,
+        groupStaffIds: sortedStaffIds,
+        messages: [],
+        usesCustomGroupName: true,
+      ),
+    );
+    _persistConversation(id);
+    return id;
+  }
+
   bool _sameIdList(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
@@ -3345,6 +3388,7 @@ class SchoolDataService {
     required String teacherId,
     String? subjectId,
     String? teachingSlotId,
+    DateTime? dueDate,
     List<String> attachmentPaths = const [],
   }) {
     final canonicalClass = _canonicalClassName(className);
@@ -3360,6 +3404,7 @@ class SchoolDataService {
         postedAt: DateTime.now(),
         subjectId: subjectId,
         teachingSlotId: teachingSlotId,
+        dueDate: dueDate,
         attachmentPaths: List.from(attachmentPaths),
       ),
     );
@@ -3379,10 +3424,17 @@ class SchoolDataService {
     required String id,
     required String description,
     List<String>? attachmentPaths,
+    DateTime? dueDate,
+    bool clearDueDate = false,
   }) {
     try {
       final item = _homework.firstWhere((hw) => hw.id == id);
       item.description = description.trim();
+      if (clearDueDate) {
+        item.dueDate = null;
+      } else if (dueDate != null) {
+        item.dueDate = dueDate;
+      }
       if (attachmentPaths != null) {
         item.attachmentPaths
           ..clear()

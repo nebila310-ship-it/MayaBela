@@ -115,6 +115,12 @@ const List<WebErpNavItem> _allNavItems = [
       section: 'Academics',
     ),
     WebErpNavItem(
+      id: 'lms',
+      label: 'LMS',
+      icon: Icons.school_outlined,
+      section: 'Academics',
+    ),
+    WebErpNavItem(
       id: 'lesson_plans',
       label: 'Lesson plans',
       icon: Icons.event_note_outlined,
