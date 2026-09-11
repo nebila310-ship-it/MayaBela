@@ -50,7 +50,7 @@ class _WebTransfersPageState extends State<WebTransfersPage> {
               const SizedBox(height: 4),
               Text(
                 'Internal moves need academic approval. External '
-                'leave/transfer-out needs the school owner. '
+                'transfer-out or withdrawal needs the school owner. '
                 'Promotion rolls a whole class forward.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -72,7 +72,7 @@ class _WebTransfersPageState extends State<WebTransfersPage> {
                       OutlinedButton.icon(
                         onPressed: () => _showCreateExternal(context),
                         icon: const Icon(Icons.logout),
-                        label: const Text('External / Leave'),
+                        label: const Text('Transfer out / Withdrawal'),
                       ),
                     ],
                     if (TransferPermissions.canPromoteStudents)
@@ -202,7 +202,7 @@ class _WebTransfersPageState extends State<WebTransfersPage> {
   String _changeLabel(TransferRequest r) {
     if (r.kind == TransferRequestKind.external) {
       return r.externalOutcome == ExternalTransferOutcome.left
-          ? 'Leave school'
+          ? 'Withdrawal'
           : 'Transferred out';
     }
     if (r.internalTarget == InternalTransferTarget.campus) {
@@ -452,7 +452,7 @@ class _WebTransfersPageState extends State<WebTransfersPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('External Transfer / Leave'),
+          title: const Text('Transfer out / Withdrawal'),
           content: SizedBox(
             width: 420,
             child: Column(
@@ -491,7 +491,7 @@ class _WebTransfersPageState extends State<WebTransfersPage> {
                     ),
                     DropdownMenuItem(
                       value: ExternalTransferOutcome.left,
-                      child: Text('Left the school'),
+                      child: Text('Withdrawal (left the school)'),
                     ),
                   ],
                   onChanged: (v) =>

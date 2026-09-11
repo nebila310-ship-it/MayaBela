@@ -160,7 +160,10 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 items: const [
                   DropdownMenuItem(value: 'active', child: Text('Active')),
                   DropdownMenuItem(value: 'graduated', child: Text('Alumni')),
-                  DropdownMenuItem(value: 'left', child: Text('Left / transferred')),
+                  DropdownMenuItem(
+                    value: 'left',
+                    child: Text('Withdrawn / transferred'),
+                  ),
                   DropdownMenuItem(value: 'all', child: Text('All statuses')),
                 ],
                 onChanged: (v) => setState(() {

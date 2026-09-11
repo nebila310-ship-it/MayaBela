@@ -11,6 +11,7 @@ import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
+import 'package:mayabela/widgets/student_medical_form_fields.dart';
 import 'package:mayabela/widgets/transport_driver_field.dart';
 
 /// Opens a full student edit dialog matching the add-student enrollment form.
@@ -43,6 +44,13 @@ Future<bool?> showAdminStudentEditDialog(
   final academicYearCtrl =
       TextEditingController(text: student.academicYear ?? '2025/2026');
   final houseCtrl = TextEditingController(text: student.house ?? '');
+  final medicalDetailsCtrl = TextEditingController(
+    text: student.medicalConditionDetails ?? '',
+  );
+  final otherMedicalCtrl = TextEditingController(
+    text: student.otherMedicalInfo ?? '',
+  );
+  var hasMedicalCondition = student.hasMedicalCondition;
   final homeroomTeacherIdCtrl =
       TextEditingController(text: student.homeroomTeacherId ?? '');
   final transportIdCtrl = TextEditingController(text: student.transportId ?? '');
@@ -435,6 +443,22 @@ Future<bool?> showAdminStudentEditDialog(
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  s.studentMedicalSection,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              StudentMedicalFormFields(
+                hasMedicalCondition: hasMedicalCondition,
+                onHasMedicalChanged: (v) =>
+                    setDialogState(() => hasMedicalCondition = v),
+                detailsController: medicalDetailsCtrl,
+                otherController: otherMedicalCtrl,
+                accent: theme.secondary,
+              ),
+              const SizedBox(height: 8),
               adminDialogField(
                 TextField(
                   controller: dobCtrl,
@@ -690,6 +714,11 @@ Future<bool?> showAdminStudentEditDialog(
       campus: selectedCampus,
       academicYear: academicYearCtrl.text.trim(),
       house: houseCtrl.text.trim().isEmpty ? null : houseCtrl.text.trim(),
+      hasMedicalCondition: hasMedicalCondition,
+      medicalConditionDetails: hasMedicalCondition
+          ? medicalDetailsCtrl.text.trim()
+          : '',
+      otherMedicalInfo: otherMedicalCtrl.text.trim(),
       homeroomTeacherId: homeroomTeacherId,
       transportEnabled: transportEnabled,
       transportId: transportEnabled && transportIdRaw.isNotEmpty
