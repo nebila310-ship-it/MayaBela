@@ -16,11 +16,13 @@ class AttendanceScreen extends StatefulWidget {
     this.readOnly = false,
     this.childName,
     this.initialClass,
+    this.embedded = false,
   });
 
   final bool readOnly;
   final String? childName;
   final String? initialClass;
+  final bool embedded;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -184,23 +186,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ? s.childAttendanceTitle(widget.childName ?? s.parentLabel)
             : s.takeAttendance;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFCFDBEA),
-          appBar: AppBar(
-            backgroundColor: TeacherTheme.primaryDark,
-            title: Text(title),
-            actions: [
-              if (!widget.readOnly)
-                IconButton(
-                  icon: Icon(_showHistory ? Icons.edit : Icons.history),
-                  onPressed: () => setState(() => _showHistory = !_showHistory),
-                  tooltip: _showHistory
-                      ? s.takeAttendanceTooltip
-                      : s.viewHistoryTooltip,
-                ),
-            ],
-          ),
-          body: WarmScreenBody(
+        final body = WarmScreenBody(
             accentColor: TeacherTheme.primaryDark,
             child: _showHistory && !widget.readOnly
                 ? _HistoryView(
@@ -346,7 +332,55 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ),
                   ],
                 ),
+        );
+
+        if (widget.embedded) {
+          return Column(
+            children: [
+              if (!widget.readOnly)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(_showHistory ? Icons.edit : Icons.history),
+                        onPressed: () =>
+                            setState(() => _showHistory = !_showHistory),
+                        tooltip: _showHistory
+                            ? s.takeAttendanceTooltip
+                            : s.viewHistoryTooltip,
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(child: body),
+            ],
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFCFDBEA),
+          appBar: AppBar(
+            backgroundColor: TeacherTheme.primaryDark,
+            title: Text(title),
+            actions: [
+              if (!widget.readOnly)
+                IconButton(
+                  icon: Icon(_showHistory ? Icons.edit : Icons.history),
+                  onPressed: () => setState(() => _showHistory = !_showHistory),
+                  tooltip: _showHistory
+                      ? s.takeAttendanceTooltip
+                      : s.viewHistoryTooltip,
+                ),
+            ],
           ),
+          body: body,
         );
       },
     );

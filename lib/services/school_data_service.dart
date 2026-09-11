@@ -15,6 +15,7 @@ import 'package:mayabela/models/fee_record.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/models/school_class.dart';
 import 'package:mayabela/models/student_conduct.dart';
+import 'package:mayabela/models/attendance_intelligence_models.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/admin_registry_service.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -3927,6 +3928,10 @@ class SchoolDataService {
     bool notifyParents = true,
   }) {
     final existing = getAttendanceSession(className, date);
+    final previousByName = {
+      for (final entry in existing?.entries ?? const <StudentAttendanceEntry>[])
+        entry.studentName: entry.status,
+    };
     if (existing != null) {
       _attendanceSessions.remove(existing);
     }
@@ -3948,16 +3953,93 @@ class SchoolDataService {
     );
 
     if (notifyParents) {
-      _notifyParentsInClass(
+      _notifyParentsOfAttendanceChanges(
         className: className,
-        title: 'Attendance recorded',
-        body: '$conductedBy saved attendance for $className.',
+        conductedBy: conductedBy,
+        entries: entries,
+        previousByName: previousByName,
+      );
+    }
+    _alertStaffWhenAbsenceStreakStarts(
+      className: className,
+      conductedBy: conductedBy,
+      entries: entries,
+    );
+    _persistSchoolContent();
+  }
+
+  void _notifyParentsOfAttendanceChanges({
+    required String className,
+    required String conductedBy,
+    required List<StudentAttendanceEntry> entries,
+    required Map<String, AttendanceStatus> previousByName,
+  }) {
+    for (final entry in entries) {
+      if (entry.status != AttendanceStatus.absent &&
+          entry.status != AttendanceStatus.late) {
+        continue;
+      }
+      if (previousByName[entry.studentName] == entry.status) continue;
+
+      final student = StudentRegistryService.instance.lookupByName(
+        entry.studentName,
+      );
+      final late = entry.status == AttendanceStatus.late;
+      NotificationService.instance.push(
+        title: late ? 'Late arrival recorded' : 'Absence recorded',
+        body: late
+            ? '$conductedBy marked ${entry.studentName} late in $className.'
+            : '$conductedBy marked ${entry.studentName} absent in $className.',
         type: NotificationType.attendance,
         fromRole: AuthService.roleTeacher,
         fromName: conductedBy,
+        recipientRole: AuthService.roleParent,
+        targetStudentId: student?.studentId,
+        targetClassName: className,
       );
     }
-    _persistSchoolContent();
+  }
+
+  void _alertStaffWhenAbsenceStreakStarts({
+    required String className,
+    required String conductedBy,
+    required List<StudentAttendanceEntry> entries,
+  }) {
+    const threshold =
+        AttendanceIntelligenceThresholds.consecutiveAbsenceThreshold;
+    for (final entry in entries) {
+      if (entry.status != AttendanceStatus.absent) continue;
+      final streak = _consecutiveAbsences(entry.studentName, className);
+      if (streak != threshold) continue;
+      NotificationService.instance.push(
+        title: 'Absence pattern detected',
+        body:
+            '${entry.studentName} in $className has $streak consecutive absences.',
+        type: NotificationType.attendance,
+        fromRole: AuthService.roleTeacher,
+        fromName: conductedBy,
+        recipientRole: AuthService.roleAdmin,
+        targetClassName: className,
+        showOnMessagesBadge: false,
+      );
+    }
+  }
+
+  int _consecutiveAbsences(String studentName, String className) {
+    var streak = 0;
+    for (final session in getAttendanceHistory(className)) {
+      StudentAttendanceEntry? match;
+      for (final entry in session.entries) {
+        if (entry.studentName == studentName) {
+          match = entry;
+          break;
+        }
+      }
+      if (match == null) continue;
+      if (match.status != AttendanceStatus.absent) break;
+      streak++;
+    }
+    return streak;
   }
 
   bool updateSubjectGrade({

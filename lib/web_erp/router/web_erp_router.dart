@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
-import 'package:mayabela/screens/admin_attendance_screens.dart';
+import 'package:mayabela/web_erp/pages/web_attendance_hub_page.dart';
 import 'package:mayabela/screens/admin_classes_screens.dart';
 import 'package:mayabela/screens/admin_enrollment_screens.dart';
 import 'package:mayabela/screens/admin_grade_overview_screen.dart';
@@ -150,7 +150,7 @@ class WebErpRouter {
       case 'transport':
         return WebTransportDashboardPage(onNavigate: onNavigate);
       case 'attendance':
-        return const AdminAttendanceReportsScreen();
+        return WebAttendanceHubPage(onNavigate: onNavigate);
       case 'homework':
         return const WebHomeworkPage();
       case 'at_risk':

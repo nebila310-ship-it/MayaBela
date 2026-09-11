@@ -154,6 +154,10 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
         ),
       );
     }
+    final attendance = {
+      for (final row in GradeAnalyticsService.instance.gradeAttendanceRows())
+        '${row.className}\u0000${row.studentName}': row,
+    };
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -167,8 +171,11 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                   child: ListTile(
                     title: Text(student.studentName),
                     subtitle: Text(
-                      '${section.className} · average '
-                      '${student.average.toStringAsFixed(0)}%',
+                      _lowMarkSubtitle(
+                        section.className,
+                        student.average,
+                        attendance['${section.className}\u0000${student.studentName}'],
+                      ),
                     ),
                   ),
                 ),
@@ -177,8 +184,20 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
     );
   }
 
+  String _lowMarkSubtitle(
+    String className,
+    double average,
+    GradeAttendanceRow? attendance,
+  ) {
+    final marks =
+        '$className · average ${average.toStringAsFixed(0)}%';
+    if (attendance == null || attendance.sessions == 0) return marks;
+    return '$marks · attendance ${(attendance.attendanceRate * 100).round()}%';
+  }
+
   Widget _breakdownTab() {
     final categories = GradeAnalyticsService.instance.categoryAverages();
+    final joined = GradeAnalyticsService.instance.gradeAttendanceRows();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -200,6 +219,29 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                   subtitle: Text(
                     '${row.average.toStringAsFixed(1)}% · ${row.count} mark'
                     '${row.count == 1 ? '' : 's'}',
+                  ),
+                ),
+              ),
+            ),
+        const SizedBox(height: 20),
+        const Text(
+          'Marks next to the live attendance register — the same sessions '
+          'teachers save, not a second store.',
+        ),
+        const SizedBox(height: 12),
+        if (joined.isEmpty)
+          const Text('No graded students to compare with attendance yet.')
+        else
+          for (final row in joined.take(20))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: WebErpTheme.cardDecoration(context),
+                child: ListTile(
+                  title: Text(row.studentName),
+                  subtitle: Text(
+                    '${row.className} · marks ${row.gradeAverage.toStringAsFixed(0)}%'
+                    '${row.sessions == 0 ? '' : ' · attendance ${(row.attendanceRate * 100).round()}%'}',
                   ),
                 ),
               ),
