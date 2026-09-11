@@ -9,12 +9,17 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
+import 'package:mayabela/widgets/maya_floating_chat.dart';
 
 class WebStudentsTablePage extends StatefulWidget {
   const WebStudentsTablePage({super.key, this.onNavigate});
 
   final ValueChanged<String>? onNavigate;
+
+  /// Wide enough for the checkbox, identity, family, transport, and actions.
+  static const double directoryMinTableWidth = 1280;
 
   @override
   State<WebStudentsTablePage> createState() => _WebStudentsTablePageState();
@@ -64,21 +69,24 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
     var students = StudentRegistryService.instance.registrySnapshot().toList();
     if (schoolId != null) {
       final sid = schoolId.toUpperCase();
-      students =
-          students.where((s) => s.schoolId.toUpperCase() == sid).toList();
+      students = students
+          .where((s) => s.schoolId.toUpperCase() == sid)
+          .toList();
     }
     students = switch (_lifecycleFilter) {
       'active' => students.where((s) => s.isActive).toList(),
-      'graduated' => students
-          .where((s) => s.lifecycleStatus == StudentLifecycleStatus.graduated)
-          .toList(),
-      'left' => students
-          .where(
-            (s) =>
-                s.lifecycleStatus == StudentLifecycleStatus.left ||
-                s.lifecycleStatus == StudentLifecycleStatus.transferred,
-          )
-          .toList(),
+      'graduated' =>
+        students
+            .where((s) => s.lifecycleStatus == StudentLifecycleStatus.graduated)
+            .toList(),
+      'left' =>
+        students
+            .where(
+              (s) =>
+                  s.lifecycleStatus == StudentLifecycleStatus.left ||
+                  s.lifecycleStatus == StudentLifecycleStatus.transferred,
+            )
+            .toList(),
       _ => students,
     };
 
@@ -145,7 +153,10 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 value: _gradeFilter,
                 hint: const Text('Grade'),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('All grades')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('All grades'),
+                  ),
                   for (final g in grades)
                     DropdownMenuItem(value: g, child: Text(g)),
                 ],
@@ -195,9 +206,9 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 onPressed: students.isEmpty
                     ? null
                     : () => showStudentQrPrintPreview(
-                          context,
-                          students: students,
-                        ),
+                        context,
+                        students: students,
+                      ),
                 icon: const Icon(Icons.qr_code_2),
                 label: Text(AppLocale.instance.strings.studentQrCodes),
               ),
@@ -212,164 +223,180 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                 onPressed: students.isEmpty
                     ? null
                     : () => showStudentQrPrintPreview(
-                          context,
-                          students: students,
-                        ),
+                        context,
+                        students: students,
+                      ),
                 icon: const Icon(Icons.print_outlined),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: Container(
-              decoration: WebErpTheme.cardDecoration(context),
-              child: students.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.school_outlined,
-                            size: 48,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text('No students registered yet.'),
-                          if (_canManage) ...[
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: _openAdd,
-                              icon: const Icon(Icons.person_add_alt_1_outlined),
-                              label: const Text('Add Student'),
+            child: SizedBox(
+              width: double.infinity,
+              child: Container(
+                width: double.infinity,
+                clipBehavior: Clip.hardEdge,
+                decoration: WebErpTheme.cardDecoration(context),
+                child: students.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.school_outlined,
+                              size: 48,
+                              color: Colors.grey.shade400,
                             ),
-                          ],
-                        ],
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        sortColumnIndex: 2,
-                        columns: [
-                          const DataColumn(label: Text('Photo')),
-                          const DataColumn(label: Text('Student ID')),
-                          const DataColumn(label: Text('Name')),
-                          const DataColumn(label: Text('Grade')),
-                          const DataColumn(label: Text('Section')),
-                          if (multiCampus)
-                            const DataColumn(label: Text('Campus')),
-                          const DataColumn(label: Text('Parent')),
-                          const DataColumn(label: Text('Transport')),
-                          const DataColumn(label: Text('Status')),
-                          const DataColumn(label: Text('Actions')),
-                        ],
-                        rows: [
-                          for (final s in slice)
-                            DataRow(
-                              onSelectChanged: (_) =>
-                                  showWebStudentProfileDialog(
-                                context,
-                                studentId: s.studentId,
-                                onUpdated: () => setState(() {}),
-                              ),
-                              cells: [
-                                DataCell(
-                                  CircleAvatar(
-                                    child: Text(
-                                      s.fullName.isEmpty
-                                          ? '?'
-                                          : s.fullName[0],
-                                    ),
-                                  ),
+                            const SizedBox(height: 12),
+                            const Text('No students registered yet.'),
+                            if (_canManage) ...[
+                              const SizedBox(height: 16),
+                              FilledButton.icon(
+                                onPressed: _openAdd,
+                                icon: const Icon(
+                                  Icons.person_add_alt_1_outlined,
                                 ),
-                                DataCell(Text(s.studentId)),
-                                DataCell(
-                                  InkWell(
-                                    onTap: () => showWebStudentProfileDialog(
+                                label: const Text('Add Student'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      )
+                    : WebErpHScroll(
+                        minChildWidth:
+                            WebStudentsTablePage.directoryMinTableWidth,
+                        child: DataTable(
+                          sortColumnIndex: 2,
+                          columns: [
+                            const DataColumn(label: Text('Photo')),
+                            const DataColumn(label: Text('Student ID')),
+                            const DataColumn(label: Text('Name')),
+                            const DataColumn(label: Text('Grade')),
+                            const DataColumn(label: Text('Section')),
+                            if (multiCampus)
+                              const DataColumn(label: Text('Campus')),
+                            const DataColumn(label: Text('Parent')),
+                            const DataColumn(label: Text('Transport')),
+                            const DataColumn(label: Text('Status')),
+                            const DataColumn(label: Text('Actions')),
+                          ],
+                          rows: [
+                            for (final s in slice)
+                              DataRow(
+                                onSelectChanged: (_) =>
+                                    showWebStudentProfileDialog(
                                       context,
                                       studentId: s.studentId,
                                       onUpdated: () => setState(() {}),
                                     ),
-                                    child: Text(
-                                      s.fullName,
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        fontWeight: FontWeight.w600,
+                                cells: [
+                                  DataCell(
+                                    CircleAvatar(
+                                      child: Text(
+                                        s.fullName.isEmpty
+                                            ? '?'
+                                            : s.fullName[0],
                                       ),
                                     ),
                                   ),
-                                ),
-                                DataCell(Text(s.grade)),
-                                DataCell(Text(s.className)),
-                                if (multiCampus) DataCell(Text(s.campus)),
-                                DataCell(
-                                  Text(s.fatherName ?? s.guardianName ?? '—'),
-                                ),
-                                DataCell(
-                                  Icon(
-                                    s.transportEnabled
-                                        ? Icons.directions_bus
-                                        : Icons.remove,
-                                    size: 18,
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(s.lifecycleStatus.label),
-                                ),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        tooltip: AppLocale
-                                            .instance.strings.generateStudentQr,
-                                        icon: const Icon(Icons.qr_code_2),
-                                        onPressed: () =>
-                                            showAdminStudentQrSheet(
-                                          context,
-                                          student: s,
+                                  DataCell(Text(s.studentId)),
+                                  DataCell(
+                                    InkWell(
+                                      onTap: () => showWebStudentProfileDialog(
+                                        context,
+                                        studentId: s.studentId,
+                                        onUpdated: () => setState(() {}),
+                                      ),
+                                      child: Text(
+                                        s.fullName,
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.visibility_outlined,
-                                        ),
-                                        onPressed: () =>
-                                            showWebStudentProfileDialog(
-                                          context,
-                                          studentId: s.studentId,
-                                          onUpdated: () => setState(() {}),
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                        ],
+                                  DataCell(Text(s.grade)),
+                                  DataCell(Text(s.className)),
+                                  if (multiCampus) DataCell(Text(s.campus)),
+                                  DataCell(
+                                    Text(s.fatherName ?? s.guardianName ?? '—'),
+                                  ),
+                                  DataCell(
+                                    Icon(
+                                      s.transportEnabled
+                                          ? Icons.directions_bus
+                                          : Icons.remove,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  DataCell(Text(s.lifecycleStatus.label)),
+                                  DataCell(
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          tooltip: AppLocale
+                                              .instance
+                                              .strings
+                                              .generateStudentQr,
+                                          icon: const Icon(Icons.qr_code_2),
+                                          onPressed: () =>
+                                              showAdminStudentQrSheet(
+                                                context,
+                                                student: s,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.visibility_outlined,
+                                          ),
+                                          onPressed: () =>
+                                              showWebStudentProfileDialog(
+                                                context,
+                                                studentId: s.studentId,
+                                                onUpdated: () =>
+                                                    setState(() {}),
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text('${students.length} students'),
-              const Spacer(),
-              IconButton(
-                onPressed: _page > 0 ? () => setState(() => _page--) : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Text('Page ${_page + 1} of ${pageCount == 0 ? 1 : pageCount}'),
-              IconButton(
-                onPressed: _page + 1 < pageCount
-                    ? () => setState(() => _page++)
-                    : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
+          Padding(
+            key: const ValueKey('students-pagination'),
+            padding: const EdgeInsets.only(
+              top: 8,
+              right: MayaFloatingChat.pageEndClearance,
+              bottom: 8,
+            ),
+            child: Row(
+              children: [
+                Text('${students.length} students'),
+                const Spacer(),
+                IconButton(
+                  onPressed: _page > 0 ? () => setState(() => _page--) : null,
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Text('Page ${_page + 1} of ${pageCount == 0 ? 1 : pageCount}'),
+                IconButton(
+                  onPressed: _page + 1 < pageCount
+                      ? () => setState(() => _page++)
+                      : null,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
           ),
         ],
       ),
