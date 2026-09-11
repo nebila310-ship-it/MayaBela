@@ -7,6 +7,7 @@ import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/school_report_export_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -588,16 +589,32 @@ class _AdmissionDetail extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 12),
+            if (canManage &&
+                (app.stage == AdmissionStage.offered ||
+                    app.stage == AdmissionStage.accepted))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: FilledButton.icon(
+                  onPressed: () => _enrollDialog(context, app),
+                  icon: const Icon(Icons.how_to_reg_outlined),
+                  label: const Text('Enroll into class'),
+                ),
+              ),
             if (canManage && next.isNotEmpty)
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   for (final stage in next)
-                    FilledButton.tonal(
-                      onPressed: () => _advance(context, app, stage),
-                      child: Text(AdmissionApplication.stageLabelOf(stage)),
-                    ),
+                    if (stage != AdmissionStage.enrolled)
+                      FilledButton.tonal(
+                        onPressed: () => _advance(context, app, stage),
+                        child: Text(
+                          stage == AdmissionStage.accepted
+                              ? 'Accept offer'
+                              : AdmissionApplication.stageLabelOf(stage),
+                        ),
+                      ),
                 ],
               ),
           ],
@@ -613,6 +630,12 @@ class _AdmissionDetail extends StatelessWidget {
   ) async {
     if (stage == AdmissionStage.enrolled) {
       await _enrollDialog(context, app);
+      return;
+    }
+    if (stage == AdmissionStage.accepted) {
+      await AdmissionService.instance.moveTo(app.id, stage);
+      final latest = AdmissionService.instance.byId(app.id) ?? app;
+      if (context.mounted) await _enrollDialog(context, latest);
       return;
     }
     if (stage == AdmissionStage.waitlist) {
@@ -754,23 +777,43 @@ class _AdmissionDetail extends StatelessWidget {
       },
     );
     if (ok != true) return;
+    if (grade.trim().isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a grade before enrolling.')),
+      );
+      return;
+    }
+    await ClassStructureService.instance.ensureSectionForGrade(grade, section);
     final className =
         ClassStructureService.instance.classNameFor(grade, section);
-    final student = await AdmissionService.instance.enroll(
-      app.id,
-      className: className,
-      grade: grade,
-      campus: app.campus,
-    );
+    AdminStudentRecord? student;
+    try {
+      student = await AdmissionService.instance.enroll(
+        app.id,
+        className: className,
+        grade: grade,
+        campus: app.campus,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not enroll: $e')),
+      );
+      return;
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           student == null
-              ? 'Could not enroll. Accept the offer first.'
-              : 'Enrolled as ${student.studentId}',
+              ? 'Could not enroll. Send or accept the offer first.'
+              : 'Enrolled as ${student.studentId} in $className',
         ),
       ),
     );
+    if (student != null) {
+      Navigator.of(context).pop();
+    }
   }
 }

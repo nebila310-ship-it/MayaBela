@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/admission_application.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
+import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
@@ -340,14 +342,33 @@ class AdmissionService extends ChangeNotifier {
       return null;
     }
     if (app.enrolledStudentId != null && app.enrolledStudentId!.isNotEmpty) {
-      return StudentRegistryService.instance.lookupById(app.enrolledStudentId!);
+      final existing =
+          StudentRegistryService.instance.lookupById(app.enrolledStudentId!);
+      if (existing != null) {
+        SchoolDataService.instance.syncChildFromRegistry(existing.studentId);
+        return existing;
+      }
     }
 
+    final resolvedGrade = (grade ?? app.gradeApplying).trim();
+    final resolvedClass = className.trim();
+    final parts = StudentRegistryService.parseClassNameParts(resolvedClass);
+    await ClassStructureService.instance.ensureSectionForGrade(
+      resolvedGrade.isNotEmpty
+          ? resolvedGrade
+          : (parts?.grade ?? resolvedGrade),
+      parts?.section ?? 'A',
+    );
+
+    final schoolId = app.schoolId.trim().isEmpty
+        ? (AuthService.activeSchoolId ?? '').trim().toUpperCase()
+        : app.schoolId.trim().toUpperCase();
+
     final student = StudentRegistryService.instance.addStudent(
-      schoolId: app.schoolId,
+      schoolId: schoolId,
       fullName: app.fullName,
-      grade: (grade ?? app.gradeApplying).trim(),
-      className: className.trim(),
+      grade: resolvedGrade.isEmpty ? (parts?.grade ?? '') : resolvedGrade,
+      className: resolvedClass,
       dateOfBirth: app.dateOfBirth ?? DateTime(2015, 1, 1),
       gender: app.gender,
       guardianName: app.guardianName,
@@ -355,9 +376,15 @@ class AdmissionService extends ChangeNotifier {
       campus: campus ?? app.campus,
       emergencyContact: app.guardianPhone,
     );
-    await StudentPersistenceService.instance.saveRegistryFromService(
-      syncStudentId: student.studentId,
-    );
+    SchoolDataService.instance.syncChildFromRegistry(student.studentId);
+    try {
+      await StudentPersistenceService.instance.saveRegistryFromService(
+        syncStudentId: student.studentId,
+        requireCloudSuccess: false,
+      );
+    } catch (_) {
+      // Local registry + class roster already have the student.
+    }
     await update(
       id,
       (a) => a.copyWith(

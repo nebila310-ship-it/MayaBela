@@ -123,6 +123,38 @@ void main() {
       StudentRegistryService.instance.lookupById(student.studentId)?.fullName,
       'Marta Hailu',
     );
+    expect(
+      StudentRegistryService.instance
+          .studentsForClass('Grade 4A', schoolId: 'LIA-001')
+          .map((s) => s.studentId),
+      contains(student.studentId),
+    );
+    expect(current.stageLabel, 'Enrolled');
+  });
+
+  test('enroll from an offer puts the student on the class list', () async {
+    final created = await AdmissionService.instance.createInquiry(
+      fullName: 'Yonas Lemma',
+      gradeApplying: 'Grade 5',
+      schoolId: 'LIA-001',
+      stage: AdmissionStage.offered,
+    );
+    final student = await AdmissionService.instance.enroll(
+      created.id,
+      className: 'Grade 5B',
+      grade: 'Grade 5',
+    );
+    expect(student, isNotNull);
+    expect(
+      AdmissionService.instance.byId(created.id)!.stage,
+      AdmissionStage.enrolled,
+    );
+    expect(
+      StudentRegistryService.instance
+          .studentsForClass('Grade 5B', schoolId: 'LIA-001')
+          .map((s) => s.fullName),
+      contains('Yonas Lemma'),
+    );
   });
 
   test('cannot skip document verification', () async {
