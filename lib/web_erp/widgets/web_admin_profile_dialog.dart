@@ -592,7 +592,10 @@ class _StudentSisSections extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.balance_outlined, size: 20),
                   title: Text(c.title),
-                  subtitle: Text('${c.kind.name} · ${c.status.name}'),
+                  subtitle: Text(
+                    '${c.kind.name} · ${c.status.name}'
+                    '${c.conductCode.isEmpty ? '' : ' · ${c.conductCode}'}',
+                  ),
                 ),
           ],
         ),
