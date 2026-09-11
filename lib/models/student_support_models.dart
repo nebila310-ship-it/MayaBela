@@ -18,6 +18,135 @@ abstract final class HealthVaccineHints {
   ];
 }
 
+/// International-school care vocabulary used on the existing desks.
+/// Labels only — values stay as strings on the current care stores.
+abstract final class StudentSupportPlaybook {
+  static const dispositions = <(String, String)>[
+    ('returnToClass', 'Return to class'),
+    ('sendHome', 'Send home'),
+    ('observeClinic', 'Observe in clinic'),
+    ('referExternal', 'Refer to external clinician'),
+  ];
+
+  static const parentContactMethods = <(String, String)>[
+    ('phone', 'Phone'),
+    ('inPerson', 'In person'),
+    ('sms', 'SMS'),
+    ('email', 'Email'),
+  ];
+
+  static const medRoutes = <(String, String)>[
+    ('oral', 'Oral'),
+    ('topical', 'Topical'),
+    ('inhaled', 'Inhaled'),
+    ('injection', 'Injection'),
+    ('other', 'Other'),
+  ];
+
+  static const vaultCategories = <(String, String)>[
+    ('psychoEd', 'Psycho-educational report'),
+    ('medicalLetter', 'Medical / IHCP letter'),
+    ('accessArrangement', 'Access-arrangement evidence'),
+    ('legal', 'Legal / court'),
+    ('identity', 'Identity'),
+    ('transcript', 'Transcript'),
+    ('other', 'Other'),
+  ];
+
+  static const confidentiality = <(String, String)>[
+    ('staff', 'Care staff'),
+    ('restricted', 'Restricted (LST / clinic)'),
+    ('leadership', 'Leadership only'),
+  ];
+
+  static const counselingFormats = <(String, String)>[
+    ('individual', 'Individual'),
+    ('group', 'Group'),
+    ('crisis', 'Crisis / same-day'),
+  ];
+
+  static const riskWatch = <(String, String)>[
+    ('none', 'No extra watch'),
+    ('monitor', 'Monitor on this desk'),
+  ];
+
+  static const accessArrangements = <(String, String)>[
+    ('extraTime', 'Extra time'),
+    ('scribe', 'Scribe'),
+    ('reader', 'Reader'),
+    ('separateRoom', 'Separate room'),
+    ('bilingualDict', 'Bilingual dictionary'),
+  ];
+
+  static const reviewCycles = <(String, String)>[
+    ('termly', 'Termly'),
+    ('biannual', 'Biannual'),
+    ('annual', 'Annual'),
+  ];
+
+  static const applicationSystems = <(String, String)>[
+    ('ucas', 'UCAS'),
+    ('commonApp', 'Common App'),
+    ('both', 'UCAS + Common App'),
+    ('other', 'Other / national'),
+  ];
+
+  static const requestPriorities = <(String, String)>[
+    ('urgent', 'Urgent'),
+    ('high', 'High'),
+    ('normal', 'Normal'),
+    ('low', 'Low'),
+  ];
+
+  static const safeguardingCategories = <(String, String)>[
+    ('physical', 'Physical harm'),
+    ('emotional', 'Emotional / wellbeing'),
+    ('neglect', 'Neglect'),
+    ('online', 'Online safety'),
+    ('other', 'Other concern'),
+  ];
+
+  static const banners = <String, String>{
+    'health':
+        'Clinic log follows an international-school infirmary: complaint, '
+        'treatment, disposition (return / send home / refer), vitals, and '
+        'how the parent was reached. Emergency stays on this register.',
+    'meds':
+        'Medication Administration Record: original labelled pack, parent '
+        'consent, route, prescriber, batch/expiry, and a witness for '
+        'controlled drugs. Clinic shelf only — not the school store.',
+    'vault':
+        'Confidential student file: psycho-ed, medical/IHCP, and exam-access '
+        'letters with review and expiry. Leadership-only files stay off the '
+        'parent tile. Admission checklists stay on Admissions.',
+    'counseling':
+        'Short-term individual, group, or crisis work. Confidentiality holds '
+        'unless child protection. Risk-watch stays here — it does not open a '
+        'safeguarding case. Intensive therapy is an external referral.',
+    'iep':
+        'MTSS / learning-support plan: Tier 1 classroom, Tier 2 intervention, '
+        'Tier 3 IEP with SMART goals, IB/Cambridge access arrangements, and '
+        'a termly or biannual review with parent and teacher.',
+    'college':
+        'University guidance: UCAS / Common App track, testing plan, counselor, '
+        'destination country, essays, recommendations, and deadlines.',
+    'requests':
+        'Parent and student intake queue with priority, assignee, due date, '
+        'and last action. Counseling, IEP agreement, and college bookings '
+        'share this tracker.',
+    'safeguarding':
+        'DSL / DDSL chronology. Category, agency referral, and next review '
+        'stay on this desk. Never put case narrative in parent chat.',
+  };
+
+  static String label(List<(String, String)> pairs, String key) {
+    for (final pair in pairs) {
+      if (pair.$1 == key) return pair.$2;
+    }
+    return key;
+  }
+}
+
 class HealthClinicSummary {
   const HealthClinicSummary({
     required this.day,
@@ -47,6 +176,7 @@ class MedicationStockMovement {
     this.note = '',
     this.createdBy,
     this.quantityAfter,
+    this.witnessedBy = '',
   });
 
   final String id;
@@ -57,6 +187,7 @@ class MedicationStockMovement {
   final String note;
   final String? createdBy;
   final double? quantityAfter;
+  final String witnessedBy;
   final DateTime createdAt;
 
   Map<String, dynamic> toMap() => {
@@ -68,6 +199,7 @@ class MedicationStockMovement {
         'note': note,
         if (createdBy != null) 'createdBy': createdBy,
         if (quantityAfter != null) 'quantityAfter': quantityAfter,
+        if (witnessedBy.isNotEmpty) 'witnessedBy': witnessedBy,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -81,6 +213,38 @@ class MedicationStockMovement {
       note: map['note'] as String? ?? '',
       createdBy: map['createdBy'] as String?,
       quantityAfter: (map['quantityAfter'] as num?)?.toDouble(),
+      witnessedBy: map['witnessedBy'] as String? ?? '',
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
+class SafeguardingChronologyEntry {
+  SafeguardingChronologyEntry({
+    required this.id,
+    required this.createdAt,
+    this.note = '',
+    this.author = '',
+  });
+
+  final String id;
+  String note;
+  String author;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'note': note,
+        'author': author,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory SafeguardingChronologyEntry.fromMap(Map<String, dynamic> map) {
+    return SafeguardingChronologyEntry(
+      id: map['id'] as String? ?? '',
+      note: map['note'] as String? ?? '',
+      author: map['author'] as String? ?? '',
       createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
           DateTime.now(),
     );
@@ -129,6 +293,10 @@ class HealthRecord {
     this.unit = '',
     this.parentNotifiedAt,
     this.parentNotifiedBy,
+    this.disposition = '',
+    this.followUpAt,
+    this.vitalNotes = '',
+    this.parentContactMethod = '',
   });
 
   final String id;
@@ -151,6 +319,10 @@ class HealthRecord {
   String unit;
   DateTime? parentNotifiedAt;
   String? parentNotifiedBy;
+  String disposition;
+  DateTime? followUpAt;
+  String vitalNotes;
+  String parentContactMethod;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -182,6 +354,11 @@ class HealthRecord {
         if (parentNotifiedAt != null)
           'parentNotifiedAt': parentNotifiedAt!.toIso8601String(),
         if (parentNotifiedBy != null) 'parentNotifiedBy': parentNotifiedBy,
+        if (disposition.isNotEmpty) 'disposition': disposition,
+        if (followUpAt != null) 'followUpAt': followUpAt!.toIso8601String(),
+        if (vitalNotes.isNotEmpty) 'vitalNotes': vitalNotes,
+        if (parentContactMethod.isNotEmpty)
+          'parentContactMethod': parentContactMethod,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -217,6 +394,12 @@ class HealthRecord {
           ? DateTime.tryParse(map['parentNotifiedAt'] as String)
           : null,
       parentNotifiedBy: map['parentNotifiedBy'] as String?,
+      disposition: map['disposition'] as String? ?? '',
+      followUpAt: map['followUpAt'] != null
+          ? DateTime.tryParse(map['followUpAt'] as String)
+          : null,
+      vitalNotes: map['vitalNotes'] as String? ?? '',
+      parentContactMethod: map['parentContactMethod'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -241,6 +424,11 @@ class CounselingRecord {
     this.referralTo,
     this.startsAt,
     this.createdBy,
+    this.format = 'individual',
+    this.durationMinutes,
+    this.followUpAt,
+    this.confidentialityLimit = 'confidentialUnlessSafeguarding',
+    this.riskWatch = 'none',
   });
 
   final String id;
@@ -255,6 +443,11 @@ class CounselingRecord {
   String? referralTo;
   DateTime? startsAt;
   String? createdBy;
+  String format;
+  int? durationMinutes;
+  DateTime? followUpAt;
+  String confidentialityLimit;
+  String riskWatch;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -271,6 +464,12 @@ class CounselingRecord {
         if (referralTo != null) 'referralTo': referralTo,
         if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
         if (createdBy != null) 'createdBy': createdBy,
+        if (format.isNotEmpty) 'format': format,
+        if (durationMinutes != null) 'durationMinutes': durationMinutes,
+        if (followUpAt != null) 'followUpAt': followUpAt!.toIso8601String(),
+        if (confidentialityLimit.isNotEmpty)
+          'confidentialityLimit': confidentialityLimit,
+        if (riskWatch.isNotEmpty) 'riskWatch': riskWatch,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -294,6 +493,14 @@ class CounselingRecord {
           ? DateTime.tryParse(map['startsAt'] as String)
           : null,
       createdBy: map['createdBy'] as String?,
+      format: map['format'] as String? ?? 'individual',
+      durationMinutes: (map['durationMinutes'] as num?)?.toInt(),
+      followUpAt: map['followUpAt'] != null
+          ? DateTime.tryParse(map['followUpAt'] as String)
+          : null,
+      confidentialityLimit: map['confidentialityLimit'] as String? ??
+          'confidentialUnlessSafeguarding',
+      riskWatch: map['riskWatch'] as String? ?? 'none',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -321,6 +528,10 @@ class IepPlan {
     this.nextReviewAt,
     this.createdBy,
     this.trainingSessions = const [],
+    this.mtssTier = 1,
+    this.accessArrangements = const [],
+    this.reviewCycle = 'termly',
+    this.externalReportRef = '',
   });
 
   final String id;
@@ -338,6 +549,10 @@ class IepPlan {
   DateTime? nextReviewAt;
   String? createdBy;
   List<IepTrainingSession> trainingSessions;
+  int mtssTier;
+  List<String> accessArrangements;
+  String reviewCycle;
+  String externalReportRef;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -362,6 +577,11 @@ class IepPlan {
         if (createdBy != null) 'createdBy': createdBy,
         'trainingSessions':
             trainingSessions.map((row) => row.toMap()).toList(),
+        'mtssTier': mtssTier,
+        'accessArrangements': accessArrangements,
+        if (reviewCycle.isNotEmpty) 'reviewCycle': reviewCycle,
+        if (externalReportRef.isNotEmpty)
+          'externalReportRef': externalReportRef,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -398,6 +618,14 @@ class IepPlan {
               )
               .toList() ??
           const [],
+      mtssTier: (map['mtssTier'] as num?)?.toInt() ?? 1,
+      accessArrangements: (map['accessArrangements'] as List?)
+              ?.map((item) => '$item')
+              .where((item) => item.trim().isNotEmpty)
+              .toList() ??
+          const [],
+      reviewCycle: map['reviewCycle'] as String? ?? 'termly',
+      externalReportRef: map['externalReportRef'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -458,6 +686,10 @@ class CollegeGuidancePlan {
     this.nextAppointmentAt,
     this.createdBy,
     this.artifacts = const [],
+    this.applicationSystem = '',
+    this.testingPlan = '',
+    this.counselorName = '',
+    this.destinationCountry = '',
   });
 
   final String id;
@@ -472,6 +704,10 @@ class CollegeGuidancePlan {
   DateTime? nextAppointmentAt;
   String? createdBy;
   List<CollegeArtifact> artifacts;
+  String applicationSystem;
+  String testingPlan;
+  String counselorName;
+  String destinationCountry;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -489,6 +725,12 @@ class CollegeGuidancePlan {
           'nextAppointmentAt': nextAppointmentAt!.toIso8601String(),
         if (createdBy != null) 'createdBy': createdBy,
         'artifacts': artifacts.map((row) => row.toMap()).toList(),
+        if (applicationSystem.isNotEmpty)
+          'applicationSystem': applicationSystem,
+        if (testingPlan.isNotEmpty) 'testingPlan': testingPlan,
+        if (counselorName.isNotEmpty) 'counselorName': counselorName,
+        if (destinationCountry.isNotEmpty)
+          'destinationCountry': destinationCountry,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -519,6 +761,10 @@ class CollegeGuidancePlan {
               )
               .toList() ??
           const [],
+      applicationSystem: map['applicationSystem'] as String? ?? '',
+      testingPlan: map['testingPlan'] as String? ?? '',
+      counselorName: map['counselorName'] as String? ?? '',
+      destinationCountry: map['destinationCountry'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -589,6 +835,10 @@ class SupportRequest {
     this.status = SupportRequestStatus.open,
     this.authorRole,
     this.relatedPlanId,
+    this.priority = 'normal',
+    this.assignedTo = '',
+    this.dueAt,
+    this.lastActionNote = '',
   });
 
   final String id;
@@ -602,6 +852,10 @@ class SupportRequest {
   final String authorUsername;
   String? authorRole;
   String? relatedPlanId;
+  String priority;
+  String assignedTo;
+  DateTime? dueAt;
+  String lastActionNote;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -617,6 +871,10 @@ class SupportRequest {
         'authorUsername': authorUsername,
         if (authorRole != null) 'authorRole': authorRole,
         if (relatedPlanId != null) 'relatedPlanId': relatedPlanId,
+        if (priority.isNotEmpty) 'priority': priority,
+        if (assignedTo.isNotEmpty) 'assignedTo': assignedTo,
+        if (dueAt != null) 'dueAt': dueAt!.toIso8601String(),
+        if (lastActionNote.isNotEmpty) 'lastActionNote': lastActionNote,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -640,6 +898,12 @@ class SupportRequest {
       authorUsername: map['authorUsername'] as String? ?? '',
       authorRole: map['authorRole'] as String?,
       relatedPlanId: map['relatedPlanId'] as String?,
+      priority: map['priority'] as String? ?? 'normal',
+      assignedTo: map['assignedTo'] as String? ?? '',
+      dueAt: map['dueAt'] != null
+          ? DateTime.tryParse(map['dueAt'] as String)
+          : null,
+      lastActionNote: map['lastActionNote'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -663,6 +927,11 @@ class SafeguardingCase {
     this.severity = 'standard',
     this.reporterUsername,
     this.assignedRole,
+    this.category = 'other',
+    this.dslName = '',
+    this.nextReviewAt,
+    this.agencyReferred = '',
+    this.chronology = const [],
   });
 
   final String id;
@@ -676,6 +945,11 @@ class SafeguardingCase {
   String severity;
   String? reporterUsername;
   String? assignedRole;
+  String category;
+  String dslName;
+  DateTime? nextReviewAt;
+  String agencyReferred;
+  List<SafeguardingChronologyEntry> chronology;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -696,6 +970,12 @@ class SafeguardingCase {
         'severity': severity,
         if (reporterUsername != null) 'reporterUsername': reporterUsername,
         if (assignedRole != null) 'assignedRole': assignedRole,
+        if (category.isNotEmpty) 'category': category,
+        if (dslName.isNotEmpty) 'dslName': dslName,
+        if (nextReviewAt != null)
+          'nextReviewAt': nextReviewAt!.toIso8601String(),
+        if (agencyReferred.isNotEmpty) 'agencyReferred': agencyReferred,
+        'chronology': chronology.map((row) => row.toMap()).toList(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -716,6 +996,21 @@ class SafeguardingCase {
       severity: map['severity'] as String? ?? 'standard',
       reporterUsername: map['reporterUsername'] as String?,
       assignedRole: map['assignedRole'] as String?,
+      category: map['category'] as String? ?? 'other',
+      dslName: map['dslName'] as String? ?? '',
+      nextReviewAt: map['nextReviewAt'] != null
+          ? DateTime.tryParse(map['nextReviewAt'] as String)
+          : null,
+      agencyReferred: map['agencyReferred'] as String? ?? '',
+      chronology: (map['chronology'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (row) => SafeguardingChronologyEntry.fromMap(
+                  Map<String, dynamic>.from(row),
+                ),
+              )
+              .toList() ??
+          const [],
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -738,6 +1033,10 @@ class StudentDocument {
     this.filePath,
     this.notes = '',
     this.uploadedBy,
+    this.confidentiality = 'staff',
+    this.expiresAt,
+    this.reviewAt,
+    this.source = '',
   });
 
   final String id;
@@ -750,6 +1049,10 @@ class StudentDocument {
   String? filePath;
   String notes;
   String? uploadedBy;
+  String confidentiality;
+  DateTime? expiresAt;
+  DateTime? reviewAt;
+  String source;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -764,6 +1067,10 @@ class StudentDocument {
         if (filePath != null) 'filePath': filePath,
         'notes': notes,
         if (uploadedBy != null) 'uploadedBy': uploadedBy,
+        if (confidentiality.isNotEmpty) 'confidentiality': confidentiality,
+        if (expiresAt != null) 'expiresAt': expiresAt!.toIso8601String(),
+        if (reviewAt != null) 'reviewAt': reviewAt!.toIso8601String(),
+        if (source.isNotEmpty) 'source': source,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -780,6 +1087,14 @@ class StudentDocument {
       filePath: map['filePath'] as String?,
       notes: map['notes'] as String? ?? '',
       uploadedBy: map['uploadedBy'] as String?,
+      confidentiality: map['confidentiality'] as String? ?? 'staff',
+      expiresAt: map['expiresAt'] != null
+          ? DateTime.tryParse(map['expiresAt'] as String)
+          : null,
+      reviewAt: map['reviewAt'] != null
+          ? DateTime.tryParse(map['reviewAt'] as String)
+          : null,
+      source: map['source'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -804,6 +1119,10 @@ class MedicationStockItem {
     this.batchNumber = '',
     this.expiresAt,
     this.movements = const [],
+    this.controlledDrug = false,
+    this.route = 'oral',
+    this.parentConsentOnFile = false,
+    this.prescriber = '',
   });
 
   final String id;
@@ -817,6 +1136,10 @@ class MedicationStockItem {
   String batchNumber;
   DateTime? expiresAt;
   List<MedicationStockMovement> movements;
+  bool controlledDrug;
+  String route;
+  bool parentConsentOnFile;
+  String prescriber;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -835,6 +1158,10 @@ class MedicationStockItem {
         if (batchNumber.isNotEmpty) 'batchNumber': batchNumber,
         if (expiresAt != null) 'expiresAt': expiresAt!.toIso8601String(),
         'movements': movements.map((row) => row.toMap()).toList(),
+        'controlledDrug': controlledDrug,
+        if (route.isNotEmpty) 'route': route,
+        'parentConsentOnFile': parentConsentOnFile,
+        if (prescriber.isNotEmpty) 'prescriber': prescriber,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -862,6 +1189,10 @@ class MedicationStockItem {
               )
               .toList() ??
           const [],
+      controlledDrug: map['controlledDrug'] as bool? ?? false,
+      route: map['route'] as String? ?? 'oral',
+      parentConsentOnFile: map['parentConsentOnFile'] as bool? ?? false,
+      prescriber: map['prescriber'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:

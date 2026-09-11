@@ -191,7 +191,13 @@ class StudentSupportService extends ChangeNotifier {
   List<StudentDocument> documentsForSchool([String? schoolId]) {
     var list = _schoolFilter(_documents, schoolId);
     if (_isPublicReader) {
-      list = list.where((row) => _ownsStudent(row.studentId)).toList();
+      list = list
+          .where(
+            (row) =>
+                _ownsStudent(row.studentId) &&
+                row.confidentiality != 'leadership',
+          )
+          .toList();
     }
     return list..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
@@ -242,6 +248,10 @@ class StudentSupportService extends ChangeNotifier {
     double? quantity,
     String unit = '',
     bool notifyParent = false,
+    String disposition = '',
+    DateTime? followUpAt,
+    String vitalNotes = '',
+    String parentContactMethod = '',
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -265,6 +275,10 @@ class StudentSupportService extends ChangeNotifier {
       medicationStockItemId: medicationStockItemId,
       quantity: quantity,
       unit: unit.trim(),
+      disposition: disposition.trim(),
+      followUpAt: followUpAt,
+      vitalNotes: vitalNotes.trim(),
+      parentContactMethod: parentContactMethod.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -329,6 +343,10 @@ class StudentSupportService extends ChangeNotifier {
         'Severity',
         'Qty',
         'Unit',
+        'Disposition',
+        'Follow-up',
+        'Vitals',
+        'Parent contact',
         'Recorded by',
         'Parent notified',
       ],
@@ -346,11 +364,96 @@ class StudentSupportService extends ChangeNotifier {
           row.severity,
           row.quantity?.toString() ?? '',
           row.unit,
+          row.disposition,
+          row.followUpAt?.toIso8601String().split('T').first ?? '',
+          row.vitalNotes,
+          row.parentContactMethod,
           row.createdBy ?? '',
           row.parentNotifiedAt?.toIso8601String() ?? '',
         ],
     ];
   }
+
+  List<HealthRecord> healthFollowUpsDue({
+    int withinDays = 14,
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final until = today.add(Duration(days: withinDays));
+    return healthForSchool(schoolId).where((row) {
+      final due = row.followUpAt;
+      if (due == null) return false;
+      return !due.isAfter(until);
+    }).toList()
+      ..sort((a, b) => a.followUpAt!.compareTo(b.followUpAt!));
+  }
+
+  List<CounselingRecord> counselingFollowUpsDue({
+    int withinDays = 14,
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final until = today.add(Duration(days: withinDays));
+    return counselingForSchool(schoolId).where((row) {
+      final due = row.followUpAt;
+      if (due == null) return false;
+      return !due.isAfter(until);
+    }).toList()
+      ..sort((a, b) => a.followUpAt!.compareTo(b.followUpAt!));
+  }
+
+  List<StudentDocument> vaultReviewsDue({
+    int withinDays = 30,
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final until = today.add(Duration(days: withinDays));
+    return documentsForSchool(schoolId).where((row) {
+      final due = row.reviewAt ?? row.expiresAt;
+      if (due == null) return false;
+      return !due.isAfter(until);
+    }).toList()
+      ..sort((a, b) {
+        final aDue = a.reviewAt ?? a.expiresAt!;
+        final bDue = b.reviewAt ?? b.expiresAt!;
+        return aDue.compareTo(bDue);
+      });
+  }
+
+  List<SupportRequest> overdueSupportRequests({
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    return pendingRequests(schoolId).where((row) {
+      final due = row.dueAt;
+      if (due == null) return false;
+      return due.isBefore(today);
+    }).toList();
+  }
+
+  List<SafeguardingCase> safeguardingReviewsDue({
+    int withinDays = 14,
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final until = today.add(Duration(days: withinDays));
+    return openSafeguarding(schoolId).where((row) {
+      final due = row.nextReviewAt;
+      if (due == null) return false;
+      return !due.isAfter(until);
+    }).toList()
+      ..sort((a, b) => a.nextReviewAt!.compareTo(b.nextReviewAt!));
+  }
+
+  List<MedicationStockItem> controlledMedicationStock([String? schoolId]) =>
+      medicationStockForSchool(schoolId)
+          .where((row) => row.controlledDrug)
+          .toList();
 
   void _pushHealthParentNotification(HealthRecord row) {
     final kind = switch (row.type) {
@@ -392,6 +495,11 @@ class StudentSupportService extends ChangeNotifier {
     String? referralTo,
     DateTime? startsAt,
     String? schoolId,
+    String format = 'individual',
+    int? durationMinutes,
+    DateTime? followUpAt,
+    String confidentialityLimit = 'confidentialUnlessSafeguarding',
+    String riskWatch = 'none',
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -409,6 +517,13 @@ class StudentSupportService extends ChangeNotifier {
       referralTo: referralTo?.trim(),
       startsAt: startsAt,
       createdBy: _username,
+      format: format.trim().isEmpty ? 'individual' : format.trim(),
+      durationMinutes: durationMinutes,
+      followUpAt: followUpAt,
+      confidentialityLimit: confidentialityLimit.trim().isEmpty
+          ? 'confidentialUnlessSafeguarding'
+          : confidentialityLimit.trim(),
+      riskWatch: riskWatch == 'monitor' ? 'monitor' : 'none',
       createdAt: now,
       updatedAt: now,
     );
@@ -426,6 +541,10 @@ class StudentSupportService extends ChangeNotifier {
     IepStage stage = IepStage.intake,
     DateTime? nextReviewAt,
     String? schoolId,
+    int mtssTier = 1,
+    List<String> accessArrangements = const [],
+    String reviewCycle = 'termly',
+    String externalReportRef = '',
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -443,6 +562,10 @@ class StudentSupportService extends ChangeNotifier {
       parentAgreementText: parentAgreementText.trim(),
       nextReviewAt: nextReviewAt,
       createdBy: _username,
+      mtssTier: mtssTier.clamp(1, 3),
+      accessArrangements: List.of(accessArrangements),
+      reviewCycle: reviewCycle.trim().isEmpty ? 'termly' : reviewCycle.trim(),
+      externalReportRef: externalReportRef.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -461,6 +584,38 @@ class StudentSupportService extends ChangeNotifier {
       throw StateError('IEP plan not found.');
     }
     plan.stage = stage;
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
+  Future<IepPlan> updateIepAccess({
+    required String id,
+    int? mtssTier,
+    List<String>? accessArrangements,
+    String? reviewCycle,
+    String? externalReportRef,
+    DateTime? nextReviewAt,
+  }) async {
+    _requireStaffDesk();
+    final plan = _iep.cast<IepPlan?>().firstWhere(
+          (row) => row?.id == id,
+          orElse: () => null,
+        );
+    if (plan == null) {
+      throw StateError('IEP plan not found.');
+    }
+    if (mtssTier != null) plan.mtssTier = mtssTier.clamp(1, 3);
+    if (accessArrangements != null) {
+      plan.accessArrangements = List.of(accessArrangements);
+    }
+    if (reviewCycle != null && reviewCycle.trim().isNotEmpty) {
+      plan.reviewCycle = reviewCycle.trim();
+    }
+    if (externalReportRef != null) {
+      plan.externalReportRef = externalReportRef.trim();
+    }
+    if (nextReviewAt != null) plan.nextReviewAt = nextReviewAt;
     plan.updatedAt = DateTime.now();
     await _persist();
     return plan;
@@ -516,6 +671,10 @@ class StudentSupportService extends ChangeNotifier {
     DateTime? nextAppointmentAt,
     List<CollegeArtifact>? artifacts,
     String? schoolId,
+    String? applicationSystem,
+    String? testingPlan,
+    String? counselorName,
+    String? destinationCountry,
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -533,6 +692,14 @@ class StudentSupportService extends ChangeNotifier {
       existing.notes = notes.trim();
       existing.nextAppointmentAt = nextAppointmentAt;
       if (artifacts != null) existing.artifacts = List.of(artifacts);
+      if (applicationSystem != null) {
+        existing.applicationSystem = applicationSystem.trim();
+      }
+      if (testingPlan != null) existing.testingPlan = testingPlan.trim();
+      if (counselorName != null) existing.counselorName = counselorName.trim();
+      if (destinationCountry != null) {
+        existing.destinationCountry = destinationCountry.trim();
+      }
       existing.updatedAt = now;
       await _persist();
       return existing;
@@ -549,6 +716,10 @@ class StudentSupportService extends ChangeNotifier {
       notes: notes.trim(),
       nextAppointmentAt: nextAppointmentAt,
       artifacts: List.of(artifacts ?? const []),
+      applicationSystem: applicationSystem?.trim() ?? '',
+      testingPlan: testingPlan?.trim() ?? '',
+      counselorName: counselorName?.trim() ?? '',
+      destinationCountry: destinationCountry?.trim() ?? '',
       createdBy: _username,
       createdAt: now,
       updatedAt: now,
@@ -643,6 +814,10 @@ class StudentSupportService extends ChangeNotifier {
     String? filePath,
     String notes = '',
     String? schoolId,
+    String confidentiality = 'staff',
+    DateTime? expiresAt,
+    DateTime? reviewAt,
+    String source = '',
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -658,6 +833,11 @@ class StudentSupportService extends ChangeNotifier {
       filePath: filePath,
       notes: notes.trim(),
       uploadedBy: _username,
+      confidentiality:
+          confidentiality.trim().isEmpty ? 'staff' : confidentiality.trim(),
+      expiresAt: expiresAt,
+      reviewAt: reviewAt,
+      source: source.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -676,6 +856,10 @@ class StudentSupportService extends ChangeNotifier {
     String? schoolId,
     String batchNumber = '',
     DateTime? expiresAt,
+    bool? controlledDrug,
+    String? route,
+    bool? parentConsentOnFile,
+    String? prescriber,
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -692,6 +876,14 @@ class StudentSupportService extends ChangeNotifier {
         existing.notes = notes.trim();
         existing.batchNumber = batchNumber.trim();
         existing.expiresAt = expiresAt;
+        if (controlledDrug != null) existing.controlledDrug = controlledDrug;
+        if (route != null && route.trim().isNotEmpty) {
+          existing.route = route.trim();
+        }
+        if (parentConsentOnFile != null) {
+          existing.parentConsentOnFile = parentConsentOnFile;
+        }
+        if (prescriber != null) existing.prescriber = prescriber.trim();
         existing.updatedAt = now;
         await _persist();
         return existing;
@@ -708,6 +900,10 @@ class StudentSupportService extends ChangeNotifier {
       createdBy: _username,
       batchNumber: batchNumber.trim(),
       expiresAt: expiresAt,
+      controlledDrug: controlledDrug ?? false,
+      route: (route ?? 'oral').trim().isEmpty ? 'oral' : (route ?? 'oral').trim(),
+      parentConsentOnFile: parentConsentOnFile ?? false,
+      prescriber: prescriber?.trim() ?? '',
       movements: [
         if (quantityOnHand != 0)
           MedicationStockMovement(
@@ -733,6 +929,7 @@ class StudentSupportService extends ChangeNotifier {
     String? studentId,
     String note = '',
     String reason = '',
+    String witnessedBy = '',
   }) async {
     _requireStaffDesk();
     final row = _meds.cast<MedicationStockItem?>().firstWhere(
@@ -762,6 +959,7 @@ class StudentSupportService extends ChangeNotifier {
         note: note.trim(),
         createdBy: _username,
         quantityAfter: row.quantityOnHand,
+        witnessedBy: witnessedBy.trim(),
         createdAt: now,
       ),
     ];
@@ -820,6 +1018,9 @@ class StudentSupportService extends ChangeNotifier {
     String body = '',
     String? relatedPlanId,
     String? schoolId,
+    String priority = 'normal',
+    String assignedTo = '',
+    DateTime? dueAt,
   }) async {
     if (!_isParent && !_isStudent && !canManageDesk) {
       throw StateError('You cannot submit a student-support request.');
@@ -848,10 +1049,39 @@ class StudentSupportService extends ChangeNotifier {
       authorUsername: _username,
       authorRole: AuthService.currentUser?.roleKey,
       relatedPlanId: relatedPlanId,
+      priority: priority.trim().isEmpty ? 'normal' : priority.trim(),
+      assignedTo: assignedTo.trim(),
+      dueAt: dueAt,
       createdAt: now,
       updatedAt: now,
     );
     _requests.add(request);
+    await _persist();
+    return request;
+  }
+
+  Future<SupportRequest> assignSupportRequest({
+    required String id,
+    String assignedTo = '',
+    String priority = '',
+    DateTime? dueAt,
+    String lastActionNote = '',
+  }) async {
+    _requireStaffDesk();
+    final request = _requests.cast<SupportRequest?>().firstWhere(
+          (row) => row?.id == id,
+          orElse: () => null,
+        );
+    if (request == null) {
+      throw StateError('Support request not found.');
+    }
+    if (assignedTo.trim().isNotEmpty) request.assignedTo = assignedTo.trim();
+    if (priority.trim().isNotEmpty) request.priority = priority.trim();
+    if (dueAt != null) request.dueAt = dueAt;
+    if (lastActionNote.trim().isNotEmpty) {
+      request.lastActionNote = lastActionNote.trim();
+    }
+    request.updatedAt = DateTime.now();
     await _persist();
     return request;
   }
@@ -887,6 +1117,10 @@ class StudentSupportService extends ChangeNotifier {
     String details = '',
     String severity = 'standard',
     String? schoolId,
+    String category = 'other',
+    String dslName = '',
+    DateTime? nextReviewAt,
+    String agencyReferred = '',
   }) async {
     _requireSafeguarding();
     final now = DateTime.now();
@@ -902,6 +1136,18 @@ class StudentSupportService extends ChangeNotifier {
       severity: severity.trim().isEmpty ? 'standard' : severity.trim(),
       reporterUsername: _username,
       assignedRole: 'student_affairs',
+      category: category.trim().isEmpty ? 'other' : category.trim(),
+      dslName: dslName.trim(),
+      nextReviewAt: nextReviewAt,
+      agencyReferred: agencyReferred.trim(),
+      chronology: [
+        SafeguardingChronologyEntry(
+          id: 'sc-${now.millisecondsSinceEpoch}',
+          note: 'Case opened.',
+          author: _username,
+          createdAt: now,
+        ),
+      ],
       createdAt: now,
       updatedAt: now,
     );
@@ -924,6 +1170,51 @@ class StudentSupportService extends ChangeNotifier {
     }
     file.status = status;
     file.updatedAt = DateTime.now();
+    file.chronology = [
+      ...file.chronology,
+      SafeguardingChronologyEntry(
+        id: 'sc-${file.updatedAt.millisecondsSinceEpoch}',
+        note: 'Status set to ${status.name}.',
+        author: _username,
+        createdAt: file.updatedAt,
+      ),
+    ];
+    await _persist();
+    return file;
+  }
+
+  Future<SafeguardingCase> addSafeguardingChronology({
+    required String id,
+    required String note,
+    String agencyReferred = '',
+    DateTime? nextReviewAt,
+  }) async {
+    _requireSafeguarding();
+    final file = _safeguarding.cast<SafeguardingCase?>().firstWhere(
+          (row) => row?.id == id,
+          orElse: () => null,
+        );
+    if (file == null) {
+      throw StateError('Safeguarding case not found.');
+    }
+    if (note.trim().isEmpty) {
+      throw StateError('Write a chronology note first.');
+    }
+    final now = DateTime.now();
+    file.chronology = [
+      ...file.chronology,
+      SafeguardingChronologyEntry(
+        id: _id('SC', file.chronology.map((row) => row.id)),
+        note: note.trim(),
+        author: _username,
+        createdAt: now,
+      ),
+    ];
+    if (agencyReferred.trim().isNotEmpty) {
+      file.agencyReferred = agencyReferred.trim();
+    }
+    if (nextReviewAt != null) file.nextReviewAt = nextReviewAt;
+    file.updatedAt = now;
     await _persist();
     return file;
   }
@@ -1101,6 +1392,9 @@ class StudentSupportService extends ChangeNotifier {
         unit: row.unit,
         parentNotifiedAt: row.parentNotifiedAt,
         parentNotifiedBy: row.parentNotifiedBy,
+        disposition: row.disposition,
+        followUpAt: row.followUpAt,
+        parentContactMethod: row.parentContactMethod,
       );
 
   CounselingRecord _publicCounseling(CounselingRecord row) => CounselingRecord(
@@ -1118,6 +1412,9 @@ class StudentSupportService extends ChangeNotifier {
         referralTo: row.referralTo,
         startsAt: row.startsAt,
         createdBy: row.createdBy,
+        format: row.format,
+        durationMinutes: row.durationMinutes,
+        followUpAt: row.followUpAt,
       );
 
   IepPlan _publicIep(IepPlan row) => IepPlan(
@@ -1138,6 +1435,10 @@ class StudentSupportService extends ChangeNotifier {
         nextReviewAt: row.nextReviewAt,
         createdBy: row.createdBy,
         trainingSessions: List.of(row.trainingSessions),
+        mtssTier: row.mtssTier,
+        accessArrangements: List.of(row.accessArrangements),
+        reviewCycle: row.reviewCycle,
+        externalReportRef: row.externalReportRef,
       );
 
   CollegeGuidancePlan _publicCollege(CollegeGuidancePlan row) =>
@@ -1156,6 +1457,10 @@ class StudentSupportService extends ChangeNotifier {
         nextAppointmentAt: row.nextAppointmentAt,
         createdBy: row.createdBy,
         artifacts: List.of(row.artifacts),
+        applicationSystem: row.applicationSystem,
+        testingPlan: row.testingPlan,
+        counselorName: row.counselorName,
+        destinationCountry: row.destinationCountry,
       );
 
   ({String name, String? className}) _studentMeta(String studentId) {

@@ -32,6 +32,11 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   final _svc = StudentSupportService.instance;
   String _healthFilter = 'today';
   DateTime _clinicDay = DateTime.now();
+  String _vaultFilter = 'all';
+  String _counselFilter = 'all';
+  String _iepFilter = 'all';
+  String _requestFilter = 'all';
+  String _sgFilter = 'all';
   String? _exporting;
 
   bool get _canManage => ModuleAccess.canManage('student_affairs');
@@ -110,10 +115,11 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     widget.safeguardingOnly
                         ? 'Child-protection case files stay on this desk. '
                             'Do not put case narrative in parent chat.'
-                        : 'Clinic log, vaccinations, emergency alerts, and '
-                            'clinic medication stock on the existing care '
-                            'register. Child-protection files stay on Safeguarding. '
-                            'This does not enter grades.',
+                        : 'International-school care desk: clinic disposition, '
+                            'MAR medication, confidential vault, counseling, '
+                            'MTSS/IEP, college applications, and a tracked '
+                            'request queue. Child-protection files stay on '
+                            'Safeguarding. This does not enter grades.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -176,6 +182,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     final all = _svc.healthForSchool(_schoolId);
     final summary = _svc.clinicSummaryForDate(_clinicDay, _schoolId);
     final due = _svc.vaccinesDueSoon(schoolId: _schoolId);
+    final followUps = _svc.healthFollowUpsDue(schoolId: _schoolId);
     final items = switch (_healthFilter) {
       'today' => _svc.clinicLogForDate(_clinicDay, _schoolId),
       'clinic' => all.where((r) => r.type == HealthRecordType.clinicVisit).toList(),
@@ -184,10 +191,12 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       'alert' =>
         all.where((r) => r.type == HealthRecordType.emergencyAlert).toList(),
       'due' => due,
+      'followup' => followUps,
       _ => all,
     };
     return _listTab(
       action: null,
+      banner: StudentSupportPlaybook.banners['health'],
       empty: 'No clinic notes in this view.',
       children: [
         Wrap(
@@ -223,7 +232,8 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           '${summary.vaccinations} vaccines · '
           '${summary.medications} meds · '
           '${summary.alerts} alerts'
-          '${due.isEmpty ? '' : ' · ${due.length} vaccine(s) due'}',
+          '${due.isEmpty ? '' : ' · ${due.length} vaccine(s) due'}'
+          '${followUps.isEmpty ? '' : ' · ${followUps.length} follow-up(s)'}',
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -235,6 +245,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               ('clinic', 'Clinic'),
               ('vaccine', 'Vaccines'),
               ('due', 'Due soon'),
+              ('followup', 'Follow-up'),
               ('meds', 'Medication'),
               ('alert', 'Emergencies'),
             ])
@@ -258,10 +269,17 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 if (row.className != null && row.className!.isNotEmpty)
                   row.className!,
                 if (row.isUrgent) 'URGENT',
+                if (row.disposition.isNotEmpty)
+                  StudentSupportPlaybook.label(
+                    StudentSupportPlaybook.dispositions,
+                    row.disposition,
+                  ),
                 row.recordedAt.toIso8601String().split('T').first,
               ].join(' · '),
               body: [
                 if (row.details.trim().isNotEmpty) Text(row.details),
+                if (row.vitalNotes.trim().isNotEmpty)
+                  Text('Vitals: ${row.vitalNotes}'),
                 if (row.vaccineName.isNotEmpty)
                   Text(
                     'Vaccine ${row.vaccineName}'
@@ -270,6 +288,14 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                   ),
                 if (row.quantity != null)
                   Text('Given ${row.quantity} ${row.unit}'),
+                if (row.followUpAt != null)
+                  Text(
+                    'Clinic follow-up ${_dateLabel(row.followUpAt!)}',
+                  ),
+                if (row.parentContactMethod.isNotEmpty)
+                  Text(
+                    'Parent reached via ${StudentSupportPlaybook.label(StudentSupportPlaybook.parentContactMethods, row.parentContactMethod)}',
+                  ),
                 if (row.createdBy != null && row.createdBy!.isNotEmpty)
                   Text('Recorded by ${row.createdBy}'),
                 if (row.parentNotifiedAt != null)
@@ -293,6 +319,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               label: const Text('Add medication'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['meds'],
       empty: 'No clinic medication stock yet. This is not the school store.',
       children: [
         for (final row in items)
@@ -300,6 +327,12 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
             title:
                 '${row.name} · ${row.quantityOnHand.toStringAsFixed(0)} ${row.unit}',
             subtitle: [
+              if (row.controlledDrug) 'CONTROLLED',
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.medRoutes,
+                row.route,
+              ),
+              if (row.parentConsentOnFile) 'parent consent on file',
               if (row.needsReorder)
                 'Reorder at ${row.reorderLevel.toStringAsFixed(0)}'
               else
@@ -309,14 +342,19 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 'exp ${row.expiresAt!.toIso8601String().split('T').first}',
             ].join(' · '),
             body: [
+              if (row.prescriber.trim().isNotEmpty)
+                Text('Prescriber: ${row.prescriber}'),
               if (row.notes.trim().isNotEmpty) Text(row.notes),
               if (row.movements.isNotEmpty)
                 Text(
-                  'Ledger: ${row.movements.reversed.take(4).map((m) {
+                  'MAR ledger: ${row.movements.reversed.take(4).map((m) {
                     final who = m.studentName == null || m.studentName!.isEmpty
                         ? m.reason
                         : '${m.reason} ${m.studentName}';
-                    return '${m.delta > 0 ? '+' : ''}${m.delta} $who';
+                    final witness = m.witnessedBy.isEmpty
+                        ? ''
+                        : ' (witness ${m.witnessedBy})';
+                    return '${m.delta > 0 ? '+' : ''}${m.delta} $who$witness';
                   }).join(' · ')}',
                 ),
               if (_canManage)
@@ -345,7 +383,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   }
 
   Widget _vaultTab() {
-    final items = _svc.documentsForSchool(_schoolId);
+    final all = _svc.documentsForSchool(_schoolId);
+    final reviews = _svc.vaultReviewsDue(schoolId: _schoolId);
+    final items = _vaultFilter == 'review' ? reviews : all;
     return _listTab(
       action: _canManage
           ? FilledButton.icon(
@@ -354,15 +394,51 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               label: const Text('Add student file'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['vault'],
       empty: 'No per-student files yet. Admission checklists stay on Admissions.',
       children: [
+        Wrap(
+          spacing: 8,
+          children: [
+            ChoiceChip(
+              label: Text('All files (${all.length})'),
+              selected: _vaultFilter == 'all',
+              onSelected: (_) => setState(() => _vaultFilter = 'all'),
+            ),
+            ChoiceChip(
+              label: Text('Review / expiry (${reviews.length})'),
+              selected: _vaultFilter == 'review',
+              onSelected: (_) => setState(() => _vaultFilter = 'review'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         for (final row in items)
           _card(
-            title: row.title.isEmpty ? row.category : row.title,
-            subtitle:
-                '${row.studentName} · ${row.category}'
-                '${row.filePath == null ? '' : ' · attached'}',
+            title: row.title.isEmpty
+                ? StudentSupportPlaybook.label(
+                    StudentSupportPlaybook.vaultCategories,
+                    row.category,
+                  )
+                : row.title,
+            subtitle: [
+              row.studentName,
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.vaultCategories,
+                row.category,
+              ),
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.confidentiality,
+                row.confidentiality,
+              ),
+              if (row.filePath != null) 'attached',
+            ].join(' · '),
             body: [
+              if (row.source.trim().isNotEmpty) Text('Source: ${row.source}'),
+              if (row.reviewAt != null)
+                Text('Review ${_dateLabel(row.reviewAt!)}'),
+              if (row.expiresAt != null)
+                Text('Expires ${_dateLabel(row.expiresAt!)}'),
               if (row.notes.trim().isNotEmpty) Text(row.notes),
               _parentBtn(row.studentId),
             ],
@@ -397,7 +473,14 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   }
 
   Widget _counselingTab() {
-    final items = _svc.counselingForSchool(_schoolId);
+    final all = _svc.counselingForSchool(_schoolId);
+    final followUps = _svc.counselingFollowUpsDue(schoolId: _schoolId);
+    final items = switch (_counselFilter) {
+      'followup' => followUps,
+      'crisis' => all.where((row) => row.format == 'crisis').toList(),
+      'monitor' => all.where((row) => row.riskWatch == 'monitor').toList(),
+      _ => all,
+    };
     return _listTab(
       action: _canManage
           ? FilledButton.icon(
@@ -406,19 +489,53 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               label: const Text('Session / appointment / referral'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['counseling'],
       empty: 'No counseling sessions or appointments yet.',
       children: [
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final (value, label) in [
+              ('all', 'All (${all.length})'),
+              ('followup', 'Follow-up (${followUps.length})'),
+              ('crisis', 'Crisis'),
+              ('monitor', 'Risk watch'),
+            ])
+              ChoiceChip(
+                label: Text(label),
+                selected: _counselFilter == value,
+                onSelected: (_) => setState(() => _counselFilter = value),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         for (final row in items)
           _card(
             title: row.title.isEmpty ? row.kind.name : row.title,
-            subtitle: '${row.studentName} · ${row.kind.name}',
+            subtitle: [
+              row.studentName,
+              row.kind.name,
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.counselingFormats,
+                row.format,
+              ),
+              if (row.durationMinutes != null) '${row.durationMinutes} min',
+              if (row.riskWatch == 'monitor') 'MONITOR',
+            ].join(' · '),
             body: [
               if (row.parentSummary.trim().isNotEmpty)
                 Text('Parent summary: ${row.parentSummary}'),
               if (row.staffNotes.trim().isNotEmpty)
                 Text('Staff notes: ${row.staffNotes}'),
               if (row.referralTo != null && row.referralTo!.trim().isNotEmpty)
-                Text('Referral: ${row.referralTo}'),
+                Text('External referral: ${row.referralTo}'),
+              if (row.followUpAt != null)
+                Text('Follow-up ${_dateLabel(row.followUpAt!)}'),
+              Text(
+                'Confidential unless DSL override. Risk-watch does not open a '
+                'safeguarding case.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               _parentBtn(row.studentId),
             ],
           ),
@@ -427,27 +544,63 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   }
 
   Widget _iepTab() {
-    final items = _svc.iepForSchool(_schoolId);
+    final all = _svc.iepForSchool(_schoolId);
+    final items = switch (_iepFilter) {
+      'tier3' => all.where((row) => row.mtssTier >= 3).toList(),
+      'unsigned' => all.where((row) => !row.parentAgreed).toList(),
+      _ => all,
+    };
     return _listTab(
       action: _canManage
           ? FilledButton.icon(
               onPressed: _addIep,
               icon: const Icon(Icons.add),
-              label: const Text('New IEP'),
+              label: const Text('New IEP / MTSS plan'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['iep'],
       empty: 'No special-needs plans yet.',
       children: [
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final (value, label) in [
+              ('all', 'All (${all.length})'),
+              ('tier3', 'Tier 3'),
+              ('unsigned', 'Awaiting parent'),
+            ])
+              ChoiceChip(
+                label: Text(label),
+                selected: _iepFilter == value,
+                onSelected: (_) => setState(() => _iepFilter = value),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         for (final row in items)
           _card(
-            title: '${row.studentName} · ${row.stage.name}',
-            subtitle: row.parentAgreed
-                ? 'Parent signed ${row.parentSignedAt}'
-                : 'Awaiting parent agreement',
+            title: '${row.studentName} · Tier ${row.mtssTier} · ${row.stage.name}',
+            subtitle: [
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.reviewCycles,
+                row.reviewCycle,
+              ),
+              if (row.nextReviewAt != null)
+                'review ${_dateLabel(row.nextReviewAt!)}',
+              row.parentAgreed
+                  ? 'Parent signed ${row.parentSignedAt}'
+                  : 'Awaiting parent agreement',
+            ].join(' · '),
             body: [
-              if (row.goals.trim().isNotEmpty) Text('Goals: ${row.goals}'),
+              if (row.goals.trim().isNotEmpty) Text('SMART goals: ${row.goals}'),
               if (row.accommodations.trim().isNotEmpty)
-                Text('Accommodations: ${row.accommodations}'),
+                Text('Classroom accommodations: ${row.accommodations}'),
+              if (row.accessArrangements.isNotEmpty)
+                Text(
+                  'Exam access: ${row.accessArrangements.map((code) => StudentSupportPlaybook.label(StudentSupportPlaybook.accessArrangements, code)).join(', ')}',
+                ),
+              if (row.externalReportRef.trim().isNotEmpty)
+                Text('External report: ${row.externalReportRef}'),
               if (row.staffNotes.trim().isNotEmpty)
                 Text('Staff notes: ${row.staffNotes}'),
               if (row.trainingSessions.isNotEmpty)
@@ -463,6 +616,18 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                         onPressed: () => _svc.updateIepStage(row.id, stage),
                         child: Text(stage.name),
                       ),
+                    for (final tier in const [1, 2, 3])
+                      TextButton(
+                        onPressed: () => _svc.updateIepAccess(
+                          id: row.id,
+                          mtssTier: tier,
+                        ),
+                        child: Text('Tier $tier'),
+                      ),
+                    TextButton(
+                      onPressed: () => _editIepAccess(row),
+                      child: const Text('Access arrangements'),
+                    ),
                     TextButton(
                       onPressed: () => _addIepTraining(row.id),
                       child: const Text('Log teacher training'),
@@ -486,13 +651,25 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               label: const Text('College plan'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['college'],
       empty: 'No college-guidance plans yet.',
       children: [
         for (final row in items)
           _card(
             title: '${row.studentName} · ${row.stage.name}',
-            subtitle: row.targets.trim().isEmpty ? 'No targets yet' : row.targets,
+            subtitle: [
+              if (row.applicationSystem.isNotEmpty)
+                StudentSupportPlaybook.label(
+                  StudentSupportPlaybook.applicationSystems,
+                  row.applicationSystem,
+                ),
+              if (row.destinationCountry.isNotEmpty) row.destinationCountry,
+              if (row.counselorName.isNotEmpty) row.counselorName,
+              row.targets.trim().isEmpty ? 'No targets yet' : row.targets,
+            ].join(' · '),
             body: [
+              if (row.testingPlan.trim().isNotEmpty)
+                Text('Testing plan: ${row.testingPlan}'),
               if (row.portfolio.trim().isNotEmpty)
                 Text('Portfolio: ${row.portfolio}'),
               if (row.notes.trim().isNotEmpty) Text('Notes: ${row.notes}'),
@@ -525,20 +702,64 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   }
 
   Widget _requestsTab() {
-    final items = _svc.requestsForSchool(_schoolId);
+    final all = _svc.requestsForSchool(_schoolId);
+    final overdue = _svc.overdueSupportRequests(schoolId: _schoolId);
+    final items = switch (_requestFilter) {
+      'urgent' => all
+          .where((row) => row.priority == 'urgent' || row.priority == 'high')
+          .toList(),
+      'overdue' => overdue,
+      'open' => all
+          .where((row) => row.status != SupportRequestStatus.completed)
+          .toList(),
+      _ => all,
+    };
     return _listTab(
+      banner: StudentSupportPlaybook.banners['requests'],
       empty: 'No parent or student support requests.',
       children: [
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final (value, label) in [
+              ('all', 'All (${all.length})'),
+              ('open', 'Open'),
+              ('urgent', 'Urgent / high'),
+              ('overdue', 'Overdue (${overdue.length})'),
+            ])
+              ChoiceChip(
+                label: Text(label),
+                selected: _requestFilter == value,
+                onSelected: (_) => setState(() => _requestFilter = value),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         for (final row in items)
           _card(
             title: '${row.studentName} · ${row.kind.name}',
-            subtitle: '${row.status.name} · ${row.authorUsername}',
+            subtitle: [
+              row.status.name,
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.requestPriorities,
+                row.priority,
+              ),
+              row.authorUsername,
+              if (row.assignedTo.isNotEmpty) 'assigned ${row.assignedTo}',
+              if (row.dueAt != null) 'due ${_dateLabel(row.dueAt!)}',
+            ].join(' · '),
             body: [
               if (row.body.trim().isNotEmpty) Text(row.body),
+              if (row.lastActionNote.trim().isNotEmpty)
+                Text('Last action: ${row.lastActionNote}'),
               if (_canManage && row.status != SupportRequestStatus.completed)
                 Wrap(
                   spacing: 8,
                   children: [
+                    TextButton(
+                      onPressed: () => _assignRequest(row),
+                      child: const Text('Assign / note'),
+                    ),
                     if (row.status == SupportRequestStatus.open)
                       TextButton(
                         onPressed: () => _svc.acknowledgeSupportRequest(row.id),
@@ -560,7 +781,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     if (!_canViewCp) {
       return const Center(child: Text('Safeguarding files are restricted.'));
     }
-    final items = _svc.safeguardingForSchool(_schoolId);
+    final all = _svc.safeguardingForSchool(_schoolId);
+    final reviews = _svc.safeguardingReviewsDue(schoolId: _schoolId);
+    final items = _sgFilter == 'review' ? reviews : all;
     return _listTab(
       action: _canManageCp
           ? FilledButton.icon(
@@ -569,15 +792,48 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               label: const Text('Open case file'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['safeguarding'],
       empty: 'No safeguarding case files.',
       children: [
+        Wrap(
+          spacing: 8,
+          children: [
+            ChoiceChip(
+              label: Text('All cases (${all.length})'),
+              selected: _sgFilter == 'all',
+              onSelected: (_) => setState(() => _sgFilter = 'all'),
+            ),
+            ChoiceChip(
+              label: Text('Review due (${reviews.length})'),
+              selected: _sgFilter == 'review',
+              onSelected: (_) => setState(() => _sgFilter = 'review'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         for (final row in items)
           _card(
             title: row.title.isEmpty ? row.studentName : row.title,
-            subtitle:
-                '${row.studentName} · ${row.status.name} · ${row.severity}',
+            subtitle: [
+              row.studentName,
+              row.status.name,
+              row.severity,
+              StudentSupportPlaybook.label(
+                StudentSupportPlaybook.safeguardingCategories,
+                row.category,
+              ),
+              if (row.dslName.isNotEmpty) 'DSL ${row.dslName}',
+            ].join(' · '),
             body: [
               if (row.details.trim().isNotEmpty) Text(row.details),
+              if (row.agencyReferred.isNotEmpty)
+                Text('Agency referred: ${row.agencyReferred}'),
+              if (row.nextReviewAt != null)
+                Text('Next DSL review ${_dateLabel(row.nextReviewAt!)}'),
+              if (row.chronology.isNotEmpty)
+                Text(
+                  'Chronology: ${row.chronology.reversed.take(5).map((entry) => '${_dateLabel(entry.createdAt)} ${entry.author}: ${entry.note}').join(' · ')}',
+                ),
               if (_canManageCp)
                 Wrap(
                   spacing: 8,
@@ -588,6 +844,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                             _svc.updateSafeguardingStatus(row.id, status),
                         child: Text(status.name),
                       ),
+                    TextButton(
+                      onPressed: () => _addSafeguardingNote(row.id),
+                      child: const Text('Log chronology'),
+                    ),
                   ],
                 ),
             ],
@@ -598,12 +858,17 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
 
   Widget _listTab({
     Widget? action,
+    String? banner,
     required String empty,
     required List<Widget> children,
   }) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (banner != null && banner.isNotEmpty) ...[
+          _playbookBanner(banner),
+          const SizedBox(height: 12),
+        ],
         if (action != null) ...[
           Align(alignment: Alignment.centerLeft, child: action),
           const SizedBox(height: 12),
@@ -612,6 +877,22 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       ],
     );
   }
+
+  Widget _playbookBanner(String text) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text(text),
+      ),
+    );
+  }
+
+  String _dateLabel(DateTime value) =>
+      value.toIso8601String().split('T').first;
 
   Widget _card({
     required String title,
@@ -731,12 +1012,16 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     var type = HealthRecordType.clinicVisit;
     var severity = 'routine';
     var vaccineName = '';
+    var disposition = 'returnToClass';
+    var contactMethod = 'phone';
     var occurredAt = DateTime.now();
     DateTime? nextDue;
+    DateTime? followUp;
     final title = TextEditingController();
     final details = TextEditingController();
     final notes = TextEditingController();
     final dose = TextEditingController();
+    final vitals = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -785,6 +1070,38 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     onChanged: (v) =>
                         setDialogState(() => severity = v ?? severity),
                   ),
+                  DropdownButtonFormField<String>(
+                    initialValue: disposition,
+                    decoration: const InputDecoration(
+                      labelText: 'Disposition',
+                    ),
+                    items: [
+                      for (final pair in StudentSupportPlaybook.dispositions)
+                        DropdownMenuItem(
+                          value: pair.$1,
+                          child: Text(pair.$2),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => disposition = v ?? disposition),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: contactMethod,
+                    decoration: const InputDecoration(
+                      labelText: 'Parent contact method',
+                    ),
+                    items: [
+                      for (final pair
+                          in StudentSupportPlaybook.parentContactMethods)
+                        DropdownMenuItem(
+                          value: pair.$1,
+                          child: Text(pair.$2),
+                        ),
+                    ],
+                    onChanged: (v) => setDialogState(
+                      () => contactMethod = v ?? contactMethod,
+                    ),
+                  ),
                   TextButton(
                     onPressed: () async {
                       final picked = await showDatePicker(
@@ -814,6 +1131,32 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     maxLines: 3,
                     decoration: const InputDecoration(
                       labelText: 'Treatment / details',
+                    ),
+                  ),
+                  TextField(
+                    controller: vitals,
+                    decoration: const InputDecoration(
+                      labelText: 'Vitals / observations',
+                      hintText: 'Temp, pulse, notes for the infirmary log',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: followUp ??
+                            DateTime.now().add(const Duration(days: 2)),
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => followUp = picked);
+                      }
+                    },
+                    child: Text(
+                      followUp == null
+                          ? 'Set clinic follow-up'
+                          : 'Follow-up ${_dateLabel(followUp!)}',
                     ),
                   ),
                   if (type == HealthRecordType.vaccination) ...[
@@ -897,6 +1240,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       nextDueAt: nextDue,
       notifyParent: type == HealthRecordType.emergencyAlert ||
           severity == 'urgent',
+      disposition: disposition,
+      followUpAt: followUp,
+      vitalNotes: vitals.text,
+      parentContactMethod: contactMethod,
     );
   }
 
@@ -904,9 +1251,14 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
     var kind = CounselingKind.appointment;
+    var format = 'individual';
+    var riskWatch = 'none';
+    DateTime? followUp;
     final title = TextEditingController();
     final summary = TextEditingController();
     final notes = TextEditingController();
+    final referral = TextEditingController();
+    final duration = TextEditingController(text: '30');
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -931,15 +1283,76 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     onChanged: (v) =>
                         setDialogState(() => kind = v ?? kind),
                   ),
+                  DropdownButtonFormField<String>(
+                    initialValue: format,
+                    decoration: const InputDecoration(labelText: 'Format'),
+                    items: [
+                      for (final pair
+                          in StudentSupportPlaybook.counselingFormats)
+                        DropdownMenuItem(
+                          value: pair.$1,
+                          child: Text(pair.$2),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => format = v ?? format),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: riskWatch,
+                    decoration: const InputDecoration(
+                      labelText: 'Risk watch (does not open a CP case)',
+                    ),
+                    items: [
+                      for (final pair in StudentSupportPlaybook.riskWatch)
+                        DropdownMenuItem(
+                          value: pair.$1,
+                          child: Text(pair.$2),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => riskWatch = v ?? riskWatch),
+                  ),
                   TextField(
                     controller: title,
                     decoration: const InputDecoration(labelText: 'Title'),
+                  ),
+                  TextField(
+                    controller: duration,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Duration (minutes)',
+                    ),
                   ),
                   TextField(
                     controller: summary,
                     maxLines: 2,
                     decoration: const InputDecoration(
                       labelText: 'Parent summary',
+                    ),
+                  ),
+                  TextField(
+                    controller: referral,
+                    decoration: const InputDecoration(
+                      labelText: 'External referral (if needed)',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: followUp ??
+                            DateTime.now().add(const Duration(days: 7)),
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => followUp = picked);
+                      }
+                    },
+                    child: Text(
+                      followUp == null
+                          ? 'Set counselor follow-up'
+                          : 'Follow-up ${_dateLabel(followUp!)}',
                     ),
                   ),
                   TextField(
@@ -973,42 +1386,133 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       title: title.text,
       parentSummary: summary.text,
       staffNotes: notes.text,
+      referralTo: referral.text,
+      format: format,
+      durationMinutes: int.tryParse(duration.text),
+      followUpAt: followUp,
+      riskWatch: riskWatch,
     );
   }
 
   Future<void> _addIep() async {
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
+    var tier = 2;
+    var reviewCycle = 'termly';
+    var arrangements = <String>{};
+    DateTime? nextReview;
     final goals = TextEditingController();
     final accommodations = TextEditingController();
     final notes = TextEditingController();
     final agreement = TextEditingController();
+    final reportRef = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('IEP / special needs'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+        title: const Text('IEP / MTSS learning-support plan'),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                DropdownButtonFormField<int>(
+                  initialValue: tier,
+                  decoration: const InputDecoration(
+                    labelText: 'MTSS tier',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 1,
+                      child: Text('Tier 1 — classroom'),
+                    ),
+                    DropdownMenuItem(
+                      value: 2,
+                      child: Text('Tier 2 — documented intervention'),
+                    ),
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text('Tier 3 — IEP'),
+                    ),
+                  ],
+                  onChanged: (v) => setDialogState(() => tier = v ?? tier),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: reviewCycle,
+                  decoration: const InputDecoration(labelText: 'Review cycle'),
+                  items: [
+                    for (final pair in StudentSupportPlaybook.reviewCycles)
+                      DropdownMenuItem(
+                        value: pair.$1,
+                        child: Text(pair.$2),
+                      ),
+                  ],
+                  onChanged: (v) =>
+                      setDialogState(() => reviewCycle = v ?? reviewCycle),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final pair
+                        in StudentSupportPlaybook.accessArrangements)
+                      FilterChip(
+                        label: Text(pair.$2),
+                        selected: arrangements.contains(pair.$1),
+                        onSelected: (on) => setDialogState(() {
+                          if (on) {
+                            arrangements.add(pair.$1);
+                          } else {
+                            arrangements.remove(pair.$1);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
                 TextField(
                   controller: goals,
                   maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Goals'),
+                  decoration: const InputDecoration(
+                    labelText: 'SMART goals',
+                  ),
                 ),
                 TextField(
                   controller: accommodations,
                   maxLines: 3,
                   decoration:
-                      const InputDecoration(labelText: 'Accommodations'),
+                      const InputDecoration(labelText: 'Classroom accommodations'),
+                ),
+                TextField(
+                  controller: reportRef,
+                  decoration: const InputDecoration(
+                    labelText: 'External EP / psycho-ed report ref',
+                  ),
                 ),
                 TextField(
                   controller: agreement,
                   maxLines: 2,
                   decoration:
                       const InputDecoration(labelText: 'Parent agreement text'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: nextReview ??
+                          DateTime.now().add(const Duration(days: 90)),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => nextReview = picked);
+                    }
+                  },
+                  child: Text(
+                    nextReview == null
+                        ? 'Set next review'
+                        : 'Review ${_dateLabel(nextReview!)}',
+                  ),
                 ),
                 TextField(
                   controller: notes,
@@ -1032,6 +1536,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           ),
         ],
       ),
+        ),
     );
     if (ok != true) return;
     await _svc.addIepPlan(
@@ -1041,6 +1546,11 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       parentAgreementText: agreement.text,
       staffNotes: notes.text,
       stage: IepStage.draftPlan,
+      mtssTier: tier,
+      accessArrangements: arrangements.toList(),
+      reviewCycle: reviewCycle,
+      externalReportRef: reportRef.text,
+      nextReviewAt: nextReview,
     );
   }
 
@@ -1048,9 +1558,13 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
     var stage = CollegeStage.exploring;
+    var applicationSystem = 'ucas';
     final targets = TextEditingController();
     final portfolio = TextEditingController();
     final notes = TextEditingController();
+    final testing = TextEditingController();
+    final counselor = TextEditingController();
+    final country = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1075,9 +1589,46 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     onChanged: (v) =>
                         setDialogState(() => stage = v ?? stage),
                   ),
+                  DropdownButtonFormField<String>(
+                    initialValue: applicationSystem,
+                    decoration: const InputDecoration(
+                      labelText: 'Application system',
+                    ),
+                    items: [
+                      for (final pair
+                          in StudentSupportPlaybook.applicationSystems)
+                        DropdownMenuItem(
+                          value: pair.$1,
+                          child: Text(pair.$2),
+                        ),
+                    ],
+                    onChanged: (v) => setDialogState(
+                      () => applicationSystem = v ?? applicationSystem,
+                    ),
+                  ),
                   TextField(
                     controller: targets,
-                    decoration: const InputDecoration(labelText: 'Targets'),
+                    decoration: const InputDecoration(
+                      labelText: 'Target universities',
+                    ),
+                  ),
+                  TextField(
+                    controller: testing,
+                    decoration: const InputDecoration(
+                      labelText: 'Testing plan (SAT / IELTS / …)',
+                    ),
+                  ),
+                  TextField(
+                    controller: counselor,
+                    decoration: const InputDecoration(
+                      labelText: 'College counselor',
+                    ),
+                  ),
+                  TextField(
+                    controller: country,
+                    decoration: const InputDecoration(
+                      labelText: 'Destination country',
+                    ),
                   ),
                   TextField(
                     controller: portfolio,
@@ -1113,26 +1664,81 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       targets: targets.text,
       portfolio: portfolio.text,
       notes: notes.text,
+      applicationSystem: applicationSystem,
+      testingPlan: testing.text,
+      counselorName: counselor.text,
+      destinationCountry: country.text,
     );
   }
 
   Future<void> _addSafeguarding() async {
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
+    var category = 'other';
+    DateTime? nextReview;
     final title = TextEditingController();
     final details = TextEditingController();
+    final dsl = TextEditingController();
+    final agency = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         title: const Text('Safeguarding case file'),
         content: SizedBox(
           width: 420,
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: [
+                  for (final pair
+                      in StudentSupportPlaybook.safeguardingCategories)
+                    DropdownMenuItem(
+                      value: pair.$1,
+                      child: Text(pair.$2),
+                    ),
+                ],
+                onChanged: (v) =>
+                    setDialogState(() => category = v ?? category),
+              ),
               TextField(
                 controller: title,
                 decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: dsl,
+                decoration: const InputDecoration(
+                  labelText: 'DSL / DDSL name',
+                ),
+              ),
+              TextField(
+                controller: agency,
+                decoration: const InputDecoration(
+                  labelText: 'Agency referred (if any)',
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: nextReview ??
+                        DateTime.now().add(const Duration(days: 7)),
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2035),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => nextReview = picked);
+                  }
+                },
+                child: Text(
+                  nextReview == null
+                      ? 'Set next DSL review'
+                      : 'Review ${_dateLabel(nextReview!)}',
+                ),
               ),
               TextField(
                 controller: details,
@@ -1142,6 +1748,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 ),
               ),
             ],
+          ),
           ),
         ),
         actions: [
@@ -1155,12 +1762,17 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           ),
         ],
       ),
+        ),
     );
     if (ok != true) return;
     await _svc.openSafeguardingCase(
       studentId: studentId,
       title: title.text,
       details: details.text,
+      category: category,
+      dslName: dsl.text,
+      nextReviewAt: nextReview,
+      agencyReferred: agency.text,
     );
   }
 
@@ -1208,18 +1820,25 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   }
 
   Future<void> _addMedStock() async {
+    var route = 'oral';
+    var controlled = false;
+    var consent = false;
+    DateTime? expires;
     final name = TextEditingController();
     final qty = TextEditingController(text: '0');
     final reorder = TextEditingController(text: '5');
     final unit = TextEditingController(text: 'unit');
     final batch = TextEditingController();
+    final prescriber = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         title: const Text('Clinic medication stock'),
         content: SizedBox(
           width: 400,
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
@@ -1229,6 +1848,18 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               TextField(
                 controller: unit,
                 decoration: const InputDecoration(labelText: 'Unit'),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: route,
+                decoration: const InputDecoration(labelText: 'Route'),
+                items: [
+                  for (final pair in StudentSupportPlaybook.medRoutes)
+                    DropdownMenuItem(
+                      value: pair.$1,
+                      child: Text(pair.$2),
+                    ),
+                ],
+                onChanged: (v) => setDialogState(() => route = v ?? route),
               ),
               TextField(
                 controller: qty,
@@ -1244,7 +1875,45 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 controller: batch,
                 decoration: const InputDecoration(labelText: 'Batch number'),
               ),
+              TextField(
+                controller: prescriber,
+                decoration: const InputDecoration(labelText: 'Prescriber'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: expires ?? DateTime.now().add(
+                      const Duration(days: 365),
+                    ),
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2038),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => expires = picked);
+                  }
+                },
+                child: Text(
+                  expires == null
+                      ? 'Set expiry'
+                      : 'Expires ${_dateLabel(expires!)}',
+                ),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: controlled,
+                onChanged: (v) =>
+                    setDialogState(() => controlled = v ?? false),
+                title: const Text('Controlled drug (witness on dispense)'),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: consent,
+                onChanged: (v) => setDialogState(() => consent = v ?? false),
+                title: const Text('Parent consent on file'),
+              ),
             ],
+          ),
           ),
         ),
         actions: [
@@ -1258,6 +1927,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           ),
         ],
       ),
+        ),
     );
     if (ok != true) return;
     await _svc.upsertMedicationStock(
@@ -1266,6 +1936,11 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       quantityOnHand: double.tryParse(qty.text) ?? 0,
       reorderLevel: double.tryParse(reorder.text) ?? 0,
       batchNumber: batch.text,
+      expiresAt: expires,
+      controlledDrug: controlled,
+      route: route,
+      parentConsentOnFile: consent,
+      prescriber: prescriber.text,
     );
   }
 
@@ -1274,6 +1949,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     if (studentId == null || !mounted) return;
     final qty = TextEditingController(text: '1');
     final note = TextEditingController();
+    final witness = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1281,6 +1957,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (row.controlledDrug)
+              const Text(
+                'Controlled drug — record a second-staff witness.',
+              ),
             TextField(
               controller: qty,
               keyboardType: TextInputType.number,
@@ -1289,6 +1969,14 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
             TextField(
               controller: note,
               decoration: const InputDecoration(labelText: 'Dose / note'),
+            ),
+            TextField(
+              controller: witness,
+              decoration: InputDecoration(
+                labelText: row.controlledDrug
+                    ? 'Witness (required)'
+                    : 'Witness (optional)',
+              ),
             ),
           ],
         ),
@@ -1312,14 +2000,19 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       studentId: studentId,
       note: note.text,
       reason: 'dispense',
+      witnessedBy: witness.text,
     );
   }
 
   Future<void> _addVaultDoc() async {
     final studentId = await _pickStudent();
     if (studentId == null || !mounted) return;
+    var category = 'psychoEd';
+    var confidentiality = 'restricted';
+    DateTime? reviewAt;
+    DateTime? expiresAt;
     final title = TextEditingController();
-    final category = TextEditingController(text: 'identity');
+    final source = TextEditingController();
     var paths = <String>[];
     final ok = await showDialog<bool>(
       context: context,
@@ -1328,18 +2021,84 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           title: const Text('Student document vault'),
           content: SizedBox(
             width: 420,
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: title,
                   decoration: const InputDecoration(labelText: 'Title'),
                 ),
+                DropdownButtonFormField<String>(
+                  initialValue: category,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: [
+                    for (final pair in StudentSupportPlaybook.vaultCategories)
+                      DropdownMenuItem(
+                        value: pair.$1,
+                        child: Text(pair.$2),
+                      ),
+                  ],
+                  onChanged: (v) =>
+                      setDialogState(() => category = v ?? category),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: confidentiality,
+                  decoration:
+                      const InputDecoration(labelText: 'Confidentiality'),
+                  items: [
+                    for (final pair in StudentSupportPlaybook.confidentiality)
+                      DropdownMenuItem(
+                        value: pair.$1,
+                        child: Text(pair.$2),
+                      ),
+                  ],
+                  onChanged: (v) => setDialogState(
+                    () => confidentiality = v ?? confidentiality,
+                  ),
+                ),
                 TextField(
-                  controller: category,
+                  controller: source,
                   decoration: const InputDecoration(
-                    labelText: 'Category',
-                    hintText: 'identity, medical, transcript…',
+                    labelText: 'Source (EP / clinic / exam board)',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: reviewAt ??
+                          DateTime.now().add(const Duration(days: 180)),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2038),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => reviewAt = picked);
+                    }
+                  },
+                  child: Text(
+                    reviewAt == null
+                        ? 'Set review date'
+                        : 'Review ${_dateLabel(reviewAt!)}',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: expiresAt ??
+                          DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2038),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => expiresAt = picked);
+                    }
+                  },
+                  child: Text(
+                    expiresAt == null
+                        ? 'Set expiry'
+                        : 'Expires ${_dateLabel(expiresAt!)}',
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1350,6 +2109,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                   onChanged: (next) => setDialogState(() => paths = next),
                 ),
               ],
+            ),
             ),
           ),
           actions: [
@@ -1369,8 +2129,12 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     await _svc.addStudentDocument(
       studentId: studentId,
       title: title.text,
-      category: category.text,
+      category: category,
       filePath: paths.isEmpty ? null : paths.first,
+      confidentiality: confidentiality,
+      expiresAt: expiresAt,
+      reviewAt: reviewAt,
+      source: source.text,
     );
   }
 
@@ -1549,6 +2313,205 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       title: title.text,
       kind: kind,
       filePath: paths.isEmpty ? null : paths.first,
+    );
+  }
+
+  Future<void> _editIepAccess(IepPlan plan) async {
+    var selected = {...plan.accessArrangements};
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('IB / Cambridge access arrangements'),
+          content: Wrap(
+            spacing: 6,
+            children: [
+              for (final pair in StudentSupportPlaybook.accessArrangements)
+                FilterChip(
+                  label: Text(pair.$2),
+                  selected: selected.contains(pair.$1),
+                  onSelected: (on) => setDialogState(() {
+                    if (on) {
+                      selected.add(pair.$1);
+                    } else {
+                      selected.remove(pair.$1);
+                    }
+                  }),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    await _svc.updateIepAccess(
+      id: plan.id,
+      accessArrangements: selected.toList(),
+    );
+  }
+
+  Future<void> _assignRequest(SupportRequest row) async {
+    var priority = row.priority;
+    DateTime? dueAt = row.dueAt;
+    final assignee = TextEditingController(text: row.assignedTo);
+    final note = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Assign support request'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: priority,
+                  decoration: const InputDecoration(labelText: 'Priority'),
+                  items: [
+                    for (final pair in StudentSupportPlaybook.requestPriorities)
+                      DropdownMenuItem(
+                        value: pair.$1,
+                        child: Text(pair.$2),
+                      ),
+                  ],
+                  onChanged: (v) =>
+                      setDialogState(() => priority = v ?? priority),
+                ),
+                TextField(
+                  controller: assignee,
+                  decoration: const InputDecoration(
+                    labelText: 'Assigned counselor / LST',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: dueAt ??
+                          DateTime.now().add(const Duration(days: 3)),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => dueAt = picked);
+                    }
+                  },
+                  child: Text(
+                    dueAt == null ? 'Set due date' : 'Due ${_dateLabel(dueAt!)}',
+                  ),
+                ),
+                TextField(
+                  controller: note,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Last action note',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    await _svc.assignSupportRequest(
+      id: row.id,
+      assignedTo: assignee.text,
+      priority: priority,
+      dueAt: dueAt,
+      lastActionNote: note.text,
+    );
+  }
+
+  Future<void> _addSafeguardingNote(String id) async {
+    DateTime? nextReview;
+    final note = TextEditingController();
+    final agency = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Safeguarding chronology'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: note,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Chronology note (DSL desk only)',
+                  ),
+                ),
+                TextField(
+                  controller: agency,
+                  decoration: const InputDecoration(
+                    labelText: 'Agency referred (optional)',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: nextReview ??
+                          DateTime.now().add(const Duration(days: 7)),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => nextReview = picked);
+                    }
+                  },
+                  child: Text(
+                    nextReview == null
+                        ? 'Set next review'
+                        : 'Review ${_dateLabel(nextReview!)}',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Log'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    await _svc.addSafeguardingChronology(
+      id: id,
+      note: note.text,
+      agencyReferred: agency.text,
+      nextReviewAt: nextReview,
     );
   }
 }
