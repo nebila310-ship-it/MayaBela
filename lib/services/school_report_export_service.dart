@@ -6,6 +6,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
+import 'package:mayabela/models/admission_application.dart';
+import 'package:mayabela/services/admission_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -21,6 +23,7 @@ enum SchoolReportKind {
   transport,
   teachers,
   inventory,
+  admissions,
 }
 
 /// Web-safe school report exporter (CSV / Excel via in-memory bytes + share).
@@ -91,6 +94,7 @@ class SchoolReportExportService {
         SchoolReportKind.transport => 'Transport Reports',
         SchoolReportKind.teachers => 'Teacher Reports',
         SchoolReportKind.inventory => 'Inventory Reports',
+        SchoolReportKind.admissions => 'Admissions Reports',
       };
 
   Future<void> _shareBytes({
@@ -315,6 +319,37 @@ class SchoolReportExportService {
             'Open Inventory → Reports section for stock detail, '
                 'or export Students/Finance for related ledgers.',
           ],
+        ];
+      case SchoolReportKind.admissions:
+        final apps = AdmissionService.instance.forSchool(schoolId);
+        return [
+          [
+            'Application ID',
+            'Name',
+            'Stage',
+            'Source',
+            'Grade',
+            'Previous school',
+            'Last grade',
+            'Prior average',
+            'Exam score',
+            'Waitlist rank',
+            'Enrolled student',
+          ],
+          for (final a in apps)
+            [
+              a.id,
+              a.fullName,
+              a.stageLabel,
+              a.source.name,
+              a.gradeApplying,
+              a.previousSchool,
+              a.lastGradeCompleted,
+              a.previousAverage?.toString() ?? '',
+              a.examScore?.toString() ?? '',
+              a.waitlistRank?.toString() ?? '',
+              a.enrolledStudentId ?? '',
+            ],
         ];
     }
   }

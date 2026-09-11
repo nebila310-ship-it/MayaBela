@@ -2,10 +2,34 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/admission_application.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
+import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
+
+/// Funnel + source mix for the admissions reporting dashboard.
+class AdmissionAnalytics {
+  const AdmissionAnalytics({
+    required this.funnel,
+    required this.sources,
+    required this.open,
+    required this.waitlist,
+    required this.enrolledThisYear,
+    required this.expiredOffers,
+    required this.conversionPercent,
+  });
+
+  final Map<AdmissionStage, int> funnel;
+  final Map<AdmissionSource, int> sources;
+  final int open;
+  final int waitlist;
+  final int enrolledThisYear;
+  final int expiredOffers;
+  final double conversionPercent;
+}
 
 /// Admissions desk: inquiry through enrollment, plus funnel analytics.
 class AdmissionService extends ChangeNotifier {
@@ -52,6 +76,8 @@ class AdmissionService extends ChangeNotifier {
     String guardianPhone = '',
     String guardianEmail = '',
     String previousSchool = '',
+    String lastGradeCompleted = '',
+    double? previousAverage,
     String notes = '',
     AdmissionSource source = AdmissionSource.staff,
     AdmissionStage stage = AdmissionStage.inquiry,
@@ -76,6 +102,8 @@ class AdmissionService extends ChangeNotifier {
       guardianPhone: guardianPhone.trim(),
       guardianEmail: guardianEmail.trim(),
       previousSchool: previousSchool.trim(),
+      lastGradeCompleted: lastGradeCompleted.trim(),
+      previousAverage: previousAverage,
       notes: notes.trim(),
       documents: AdmissionApplication.defaultDocuments(),
       createdById: user?.username ?? '',
@@ -129,7 +157,7 @@ class AdmissionService extends ChangeNotifier {
         !current.documentsComplete) {
       return current;
     }
-    return update(id, (a) {
+    final updated = await update(id, (a) {
       var nextApp = a.copyWith(stage: next, decisionReason: reason);
       if (next == AdmissionStage.offered) {
         nextApp = nextApp.copyWith(
@@ -139,6 +167,13 @@ class AdmissionService extends ChangeNotifier {
       }
       return nextApp;
     });
+    if (next == AdmissionStage.declined) {
+      await promoteNextWaitlisted(
+        schoolId: current.schoolId,
+        gradeApplying: current.gradeApplying,
+      );
+    }
+    return updated;
   }
 
   Future<AdmissionApplication?> setDocument(
@@ -199,17 +234,98 @@ class AdmissionService extends ChangeNotifier {
         examNotes: notes.trim().isEmpty ? a.examNotes : notes.trim(),
         stage: stage,
       );
+    }).then((app) async {
+      if (app != null && score != null) {
+        await rerankWaitlist(app.schoolId);
+      }
+      return byId(id) ?? app;
     });
   }
 
-  Future<AdmissionApplication?> placeOnWaitlist(String id, {int? rank}) {
-    return update(
+  Future<AdmissionApplication?> placeOnWaitlist(String id, {int? rank}) async {
+    final updated = await update(
       id,
       (a) => a.copyWith(
         stage: AdmissionStage.waitlist,
         waitlistRank: rank ?? a.waitlistRank ?? _nextWaitlistRank(a.schoolId),
       ),
     );
+    if (updated != null) {
+      await rerankWaitlist(updated.schoolId);
+    }
+    return byId(id) ?? updated;
+  }
+
+  /// Re-order the waitlist: higher exam score first, then earlier application.
+  Future<void> rerankWaitlist(String? schoolId) async {
+    final waiting = forSchool(schoolId)
+        .where((a) => a.stage == AdmissionStage.waitlist)
+        .toList()
+      ..sort((a, b) {
+        final scoreA = a.examScore ?? -1;
+        final scoreB = b.examScore ?? -1;
+        if (scoreA != scoreB) return scoreB.compareTo(scoreA);
+        return a.createdAt.compareTo(b.createdAt);
+      });
+    for (var i = 0; i < waiting.length; i++) {
+      final app = waiting[i];
+      if (app.waitlistRank == i + 1) continue;
+      await update(app.id, (a) => a.copyWith(waitlistRank: i + 1));
+    }
+  }
+
+  /// Offer the next waitlisted applicant for the same grade (lowest rank).
+  Future<AdmissionApplication?> promoteNextWaitlisted({
+    String? schoolId,
+    String gradeApplying = '',
+  }) async {
+    final grade = gradeApplying.trim().toLowerCase();
+    final waiting = forSchool(schoolId)
+        .where((a) => a.stage == AdmissionStage.waitlist)
+        .where(
+          (a) =>
+              grade.isEmpty ||
+              a.gradeApplying.trim().toLowerCase() == grade,
+        )
+        .toList()
+      ..sort((a, b) {
+        final rankA = a.waitlistRank ?? 1 << 20;
+        final rankB = b.waitlistRank ?? 1 << 20;
+        if (rankA != rankB) return rankA.compareTo(rankB);
+        final scoreA = a.examScore ?? -1;
+        final scoreB = b.examScore ?? -1;
+        return scoreB.compareTo(scoreA);
+      });
+    if (waiting.isEmpty) return null;
+    return moveTo(waiting.first.id, AdmissionStage.offered);
+  }
+
+  /// Decline offers past their expiry and promote the next waitlisted seat.
+  Future<int> expireStaleOffers({String? schoolId, DateTime? now}) async {
+    final at = now ?? DateTime.now();
+    final expired = forSchool(schoolId)
+        .where(
+          (a) =>
+              a.stage == AdmissionStage.offered &&
+              a.offerExpiresAt != null &&
+              !a.offerExpiresAt!.isAfter(at),
+        )
+        .toList();
+    for (final app in expired) {
+      await update(
+        app.id,
+        (a) => a.copyWith(
+          stage: AdmissionStage.declined,
+          decisionReason:
+              a.decisionReason.isEmpty ? 'Offer expired' : a.decisionReason,
+        ),
+      );
+      await promoteNextWaitlisted(
+        schoolId: app.schoolId,
+        gradeApplying: app.gradeApplying,
+      );
+    }
+    return expired.length;
   }
 
   /// Convert an accepted (or offered) application into a student registry row.
@@ -226,14 +342,33 @@ class AdmissionService extends ChangeNotifier {
       return null;
     }
     if (app.enrolledStudentId != null && app.enrolledStudentId!.isNotEmpty) {
-      return StudentRegistryService.instance.lookupById(app.enrolledStudentId!);
+      final existing =
+          StudentRegistryService.instance.lookupById(app.enrolledStudentId!);
+      if (existing != null) {
+        SchoolDataService.instance.syncChildFromRegistry(existing.studentId);
+        return existing;
+      }
     }
 
+    final resolvedGrade = (grade ?? app.gradeApplying).trim();
+    final resolvedClass = className.trim();
+    final parts = StudentRegistryService.parseClassNameParts(resolvedClass);
+    await ClassStructureService.instance.ensureSectionForGrade(
+      resolvedGrade.isNotEmpty
+          ? resolvedGrade
+          : (parts?.grade ?? resolvedGrade),
+      parts?.section ?? 'A',
+    );
+
+    final schoolId = app.schoolId.trim().isEmpty
+        ? (AuthService.activeSchoolId ?? '').trim().toUpperCase()
+        : app.schoolId.trim().toUpperCase();
+
     final student = StudentRegistryService.instance.addStudent(
-      schoolId: app.schoolId,
+      schoolId: schoolId,
       fullName: app.fullName,
-      grade: (grade ?? app.gradeApplying).trim(),
-      className: className.trim(),
+      grade: resolvedGrade.isEmpty ? (parts?.grade ?? '') : resolvedGrade,
+      className: resolvedClass,
       dateOfBirth: app.dateOfBirth ?? DateTime(2015, 1, 1),
       gender: app.gender,
       guardianName: app.guardianName,
@@ -241,9 +376,15 @@ class AdmissionService extends ChangeNotifier {
       campus: campus ?? app.campus,
       emergencyContact: app.guardianPhone,
     );
-    await StudentPersistenceService.instance.saveRegistryFromService(
-      syncStudentId: student.studentId,
-    );
+    SchoolDataService.instance.syncChildFromRegistry(student.studentId);
+    try {
+      await StudentPersistenceService.instance.saveRegistryFromService(
+        syncStudentId: student.studentId,
+        requireCloudSuccess: false,
+      );
+    } catch (_) {
+      // Local registry + class roster already have the student.
+    }
     await update(
       id,
       (a) => a.copyWith(
@@ -253,7 +394,32 @@ class AdmissionService extends ChangeNotifier {
         enrolledAt: DateTime.now(),
       ),
     );
+    await _copyAcademicDocumentsToVault(app, student.studentId);
     return student;
+  }
+
+  Future<void> _copyAcademicDocumentsToVault(
+    AdmissionApplication app,
+    String studentId,
+  ) async {
+    for (final doc in app.documents) {
+      final path = doc.filePath?.trim() ?? '';
+      if (path.isEmpty) continue;
+      try {
+        await StudentSupportService.instance.addStudentDocument(
+          studentId: studentId,
+          title: doc.label,
+          category: doc.label.toLowerCase().contains('report')
+              ? 'transcript'
+              : 'identity',
+          filePath: path,
+          schoolId: app.schoolId,
+        );
+      } catch (_) {
+        // Registrar may not hold the care-desk role; the file stays on the
+        // application academic record either way.
+      }
+    }
   }
 
   Map<AdmissionStage, int> funnelCounts(String? schoolId) {
@@ -278,6 +444,31 @@ class AdmissionService extends ChangeNotifier {
       final at = a.enrolledAt ?? a.updatedAt;
       return at.year == year;
     }).length;
+  }
+
+  AdmissionAnalytics analytics(String? schoolId, {DateTime? now}) {
+    final at = now ?? DateTime.now();
+    final items = forSchool(schoolId);
+    final sources = {for (final source in AdmissionSource.values) source: 0};
+    for (final item in items) {
+      sources[item.source] = (sources[item.source] ?? 0) + 1;
+    }
+    final closed = items.where((a) => a.isTerminal).length;
+    final enrolled = items.where((a) => a.stage == AdmissionStage.enrolled).length;
+    final expired = items.where((a) {
+      if (a.stage != AdmissionStage.offered) return false;
+      final expires = a.offerExpiresAt;
+      return expires != null && !expires.isAfter(at);
+    }).length;
+    return AdmissionAnalytics(
+      funnel: funnelCounts(schoolId),
+      sources: sources,
+      open: openCount(schoolId),
+      waitlist: waitlistCount(schoolId),
+      enrolledThisYear: enrolledThisYear(schoolId),
+      expiredOffers: expired,
+      conversionPercent: closed == 0 ? 0 : (enrolled / closed) * 100,
+    );
   }
 
   void applyPersistedData(
