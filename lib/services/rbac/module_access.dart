@@ -324,6 +324,7 @@ abstract final class ModuleAccess {
     'exam_bank': 'examinations',
     'exam_papers': 'examinations',
     'exam_desk': 'examinations',
+    'lms': 'academic',
     'lesson_plans': 'academic',
     'lessons': 'academic',
     'curriculum': 'academic',

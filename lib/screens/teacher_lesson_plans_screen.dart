@@ -107,7 +107,8 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                                 title: Text(plan.title),
                                 subtitle: Text(
                                   '${plan.subject} · ${plan.isPublished ? 'Published' : 'Draft'}'
-                                  '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${plan.reviewStatus.name}'}',
+                                  '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${plan.reviewStatus.name}'}'
+                                  '${plan.hasOnlineSession ? (plan.onlineSessionIsLive ? ' · live class' : ' · recorded class') : ''}',
                                 ),
                                 trailing: TextButton(
                                   onPressed: () => _plans.setStatus(

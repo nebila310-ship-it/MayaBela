@@ -22,6 +22,7 @@ import 'package:mayabela/web_erp/pages/web_markbook_page.dart';
 import 'package:mayabela/web_erp/pages/web_report_cards_page.dart';
 import 'package:mayabela/web_erp/pages/web_exam_desk_page.dart';
 import 'package:mayabela/web_erp/pages/web_lesson_plans_page.dart';
+import 'package:mayabela/web_erp/pages/web_lms_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
 import 'package:mayabela/web_erp/pages/web_attendance_intelligence_page.dart';
 import 'package:mayabela/web_erp/pages/web_academic_analytics_page.dart';
@@ -244,6 +245,8 @@ class WebErpRouter {
         return const AdminGradeWorkflowSettingsScreen();
       case 'timetable':
         return const AdminTimetablesScreen();
+      case 'lms':
+        return WebLmsHubPage(onNavigate: onNavigate);
       case 'lesson_plans':
       case 'lessons':
         return WebLessonPlansPage(onNavigate: onNavigate);

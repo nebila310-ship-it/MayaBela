@@ -25,6 +25,9 @@ class LessonPlan {
     this.latestReviewId,
     this.createdBy,
     this.publishedAt,
+    this.onlineSessionUrl,
+    this.onlineSessionLabel,
+    this.onlineSessionIsLive = false,
   });
 
   final String id;
@@ -47,8 +50,14 @@ class LessonPlan {
   final DateTime createdAt;
   DateTime updatedAt;
   DateTime? publishedAt;
+  String? onlineSessionUrl;
+  String? onlineSessionLabel;
+  bool onlineSessionIsLive;
 
   bool get isPublished => status == LessonPlanStatus.published;
+
+  bool get hasOnlineSession =>
+      (onlineSessionUrl ?? '').trim().isNotEmpty;
 
   bool get hasLinks =>
       homeworkIds.isNotEmpty ||
@@ -83,6 +92,10 @@ class LessonPlan {
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
         if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
+        if (onlineSessionUrl != null) 'onlineSessionUrl': onlineSessionUrl,
+        if (onlineSessionLabel != null)
+          'onlineSessionLabel': onlineSessionLabel,
+        'onlineSessionIsLive': onlineSessionIsLive,
       };
 
   factory LessonPlan.fromMap(Map<String, dynamic> map) {
@@ -119,6 +132,9 @@ class LessonPlan {
       publishedAt: map['publishedAt'] != null
           ? DateTime.tryParse(map['publishedAt'] as String)
           : null,
+      onlineSessionUrl: map['onlineSessionUrl'] as String?,
+      onlineSessionLabel: map['onlineSessionLabel'] as String?,
+      onlineSessionIsLive: map['onlineSessionIsLive'] as bool? ?? false,
     );
   }
 

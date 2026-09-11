@@ -171,6 +171,7 @@ class HomeworkItem {
     required this.postedAt,
     this.subjectId,
     this.teachingSlotId,
+    this.dueDate,
     List<String>? attachmentPaths,
     Map<String, List<String>>? studentWorksheetPaths,
   })  : attachmentPaths = attachmentPaths ?? [],
@@ -185,8 +186,13 @@ class HomeworkItem {
   final DateTime postedAt;
   final String? subjectId;
   final String? teachingSlotId;
+  DateTime? dueDate;
   List<String> attachmentPaths;
   Map<String, List<String>> studentWorksheetPaths;
+
+  int get submittedStudentCount => studentWorksheetPaths.values
+      .where((paths) => paths.isNotEmpty)
+      .length;
 
   List<String> worksheetsForStudent(String studentId) {
     final key = studentId.trim().toUpperCase();
@@ -205,6 +211,7 @@ extension HomeworkItemPersistence on HomeworkItem {
         'postedAt': postedAt.toIso8601String(),
         if (subjectId != null) 'subjectId': subjectId,
         if (teachingSlotId != null) 'teachingSlotId': teachingSlotId,
+        if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
         'attachmentPaths': attachmentPaths,
         'studentWorksheetPaths': studentWorksheetPaths.map(
           (key, value) => MapEntry(key, value),
@@ -231,6 +238,9 @@ extension HomeworkItemPersistence on HomeworkItem {
       postedAt: DateTime.parse(map['postedAt'] as String),
       subjectId: map['subjectId'] as String?,
       teachingSlotId: map['teachingSlotId'] as String?,
+      dueDate: map['dueDate'] == null
+          ? null
+          : DateTime.tryParse(map['dueDate'] as String),
       attachmentPaths: List<String>.from(map['attachmentPaths'] as List? ?? []),
       studentWorksheetPaths: worksheets,
     );

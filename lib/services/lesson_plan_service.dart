@@ -91,6 +91,9 @@ class LessonPlanService extends ChangeNotifier {
     List<String> attachmentPaths = const [],
     String? curriculumUnitId,
     String? schoolId,
+    String? onlineSessionUrl,
+    String? onlineSessionLabel,
+    bool onlineSessionIsLive = false,
   }) async {
     final now = DateTime.now();
     final plan = LessonPlan(
@@ -111,6 +114,13 @@ class LessonPlanService extends ChangeNotifier {
       learningMaterialIds: List.of(learningMaterialIds),
       attachmentPaths: List.of(attachmentPaths),
       curriculumUnitId: curriculumUnitId,
+      onlineSessionUrl: onlineSessionUrl?.trim().isEmpty == true
+          ? null
+          : onlineSessionUrl?.trim(),
+      onlineSessionLabel: onlineSessionLabel?.trim().isEmpty == true
+          ? null
+          : onlineSessionLabel?.trim(),
+      onlineSessionIsLive: onlineSessionIsLive,
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -134,6 +144,10 @@ class LessonPlanService extends ChangeNotifier {
     List<String>? attachmentPaths,
     String? curriculumUnitId,
     bool clearCurriculumUnit = false,
+    String? onlineSessionUrl,
+    String? onlineSessionLabel,
+    bool? onlineSessionIsLive,
+    bool clearOnlineSession = false,
   }) async {
     final plan = planById(id);
     if (plan == null) return null;
@@ -155,6 +169,25 @@ class LessonPlanService extends ChangeNotifier {
       plan.curriculumUnitId = null;
     } else if (curriculumUnitId != null) {
       plan.curriculumUnitId = curriculumUnitId;
+    }
+    if (clearOnlineSession) {
+      plan.onlineSessionUrl = null;
+      plan.onlineSessionLabel = null;
+      plan.onlineSessionIsLive = false;
+    } else {
+      if (onlineSessionUrl != null) {
+        plan.onlineSessionUrl = onlineSessionUrl.trim().isEmpty
+            ? null
+            : onlineSessionUrl.trim();
+      }
+      if (onlineSessionLabel != null) {
+        plan.onlineSessionLabel = onlineSessionLabel.trim().isEmpty
+            ? null
+            : onlineSessionLabel.trim();
+      }
+      if (onlineSessionIsLive != null) {
+        plan.onlineSessionIsLive = onlineSessionIsLive;
+      }
     }
     plan.updatedAt = DateTime.now();
     await _persist();

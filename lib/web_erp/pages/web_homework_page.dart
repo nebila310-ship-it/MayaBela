@@ -112,6 +112,9 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
   Widget _card(HomeworkItem item) {
     final posted =
         '${item.postedAt.day}/${item.postedAt.month}/${item.postedAt.year}';
+    final due = item.dueDate == null
+        ? ''
+        : ' · due ${item.dueDate!.day}/${item.dueDate!.month}/${item.dueDate!.year}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DecoratedBox(
@@ -119,7 +122,8 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
         child: ListTile(
           title: Text('${item.subject} · ${item.className}'),
           subtitle: Text(
-            '${item.description}\n${item.teacherName} · $posted',
+            '${item.description}\n${item.teacherName} · $posted$due'
+            ' · ${item.submittedStudentCount} submission${item.submittedStudentCount == 1 ? '' : 's'}',
           ),
           isThreeLine: true,
         ),
