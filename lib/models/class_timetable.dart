@@ -7,24 +7,33 @@ class TimetableSlot {
     required this.id,
     required this.kind,
     this.subject,
+    this.teacherId,
+    this.teacherName,
     this.durationMinutes = 40,
   });
 
   final String id;
   final TimetableSlotKind kind;
   final String? subject;
+  final String? teacherId;
+  final String? teacherName;
   final int durationMinutes;
 
   TimetableSlot copyWith({
     String? id,
     TimetableSlotKind? kind,
     String? subject,
+    String? teacherId,
+    String? teacherName,
     int? durationMinutes,
+    bool clearTeacher = false,
   }) {
     return TimetableSlot(
       id: id ?? this.id,
       kind: kind ?? this.kind,
       subject: subject ?? this.subject,
+      teacherId: clearTeacher ? null : (teacherId ?? this.teacherId),
+      teacherName: clearTeacher ? null : (teacherName ?? this.teacherName),
       durationMinutes: durationMinutes ?? this.durationMinutes,
     );
   }
@@ -40,9 +49,10 @@ abstract class AppStringsLike {
 extension TimetableSlotLabels on TimetableSlot {
   String displayLabel(AppStringsLike s) {
     return switch (kind) {
-      TimetableSlotKind.lesson => subject?.trim().isNotEmpty == true
-          ? subject!.trim()
-          : s.timetableUntitledLesson,
+      TimetableSlotKind.lesson =>
+        subject?.trim().isNotEmpty == true
+            ? subject!.trim()
+            : s.timetableUntitledLesson,
       TimetableSlotKind.breakTime => s.timetableBreak,
       TimetableSlotKind.lunch => s.timetableLunch,
     };

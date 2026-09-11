@@ -2179,6 +2179,35 @@ class AppStrings implements AppStringsLike {
       );
   String timetableHomeroomBy(String name) =>
       t('Homeroom: $name', 'ክፍል መምህር፡ $name');
+  String get timetableGenerateFromAllocations => t(
+        'Generate from allocations',
+        'ከምደባ ፍጠር',
+      );
+  String get timetableGenerated => t(
+        'Timetable filled from class and subject allocations',
+        'የጊዜ ሰሌዳው ከክፍልና ትምህርት ምደባ ተሞልቷል',
+      );
+  String get timetableGenerateEmpty => t(
+        'Assign subject teachers to this class first',
+        'መጀመሪያ ለዚህ ክፍል የትምህርት መምህሮችን ይመድቡ',
+      );
+  String get timetableConflictsTitle => t(
+        'Teacher conflicts',
+        'የመምህር ግጭቶች',
+      );
+  String timetableConflictLine({
+    required String teacher,
+    required String day,
+    required String time,
+    required String classA,
+    required String classB,
+  }) =>
+      t(
+        '$teacher · $day $time · $classA and $classB',
+        '$teacher · $day $time · $classA እና $classB',
+      );
+  String timetableTaughtBy(String name) =>
+      t('Teacher: $name', 'መምህር፡ $name');
   String timetableMinutes(int minutes) =>
       t('$minutes min', '$minutes ደቂቃ');
 

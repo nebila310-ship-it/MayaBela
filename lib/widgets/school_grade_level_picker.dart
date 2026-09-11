@@ -1,24 +1,85 @@
 import 'package:flutter/material.dart';
 
+/// KG / Primary / Middle / High School bands used across Academic Management.
+enum SchoolLevel { kindergarten, primary, middle, highSchool, other }
+
 /// Standard grade catalog for school onboarding / profile.
 abstract final class SchoolGradeCatalog {
   static const kindergarten = ['PreKG', 'LKG', 'UKG'];
-  static const primarySecondary = [
+  static const primary = [
     'Grade 1',
     'Grade 2',
     'Grade 3',
     'Grade 4',
     'Grade 5',
     'Grade 6',
-    'Grade 7',
-    'Grade 8',
-    'Grade 9',
-    'Grade 10',
-    'Grade 11',
-    'Grade 12',
   ];
+  static const middle = ['Grade 7', 'Grade 8'];
+  static const highSchool = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+
+  static const primarySecondary = [...primary, ...middle, ...highSchool];
 
   static const all = [...kindergarten, ...primarySecondary];
+
+  static const levelOrder = [
+    SchoolLevel.kindergarten,
+    SchoolLevel.primary,
+    SchoolLevel.middle,
+    SchoolLevel.highSchool,
+    SchoolLevel.other,
+  ];
+
+  static String labelFor(SchoolLevel level) {
+    return switch (level) {
+      SchoolLevel.kindergarten => 'Kindergarten',
+      SchoolLevel.primary => 'Primary',
+      SchoolLevel.middle => 'Middle School',
+      SchoolLevel.highSchool => 'High School',
+      SchoolLevel.other => 'Other levels',
+    };
+  }
+
+  static List<String> gradesFor(SchoolLevel level) {
+    return switch (level) {
+      SchoolLevel.kindergarten => kindergarten,
+      SchoolLevel.primary => primary,
+      SchoolLevel.middle => middle,
+      SchoolLevel.highSchool => highSchool,
+      SchoolLevel.other => const [],
+    };
+  }
+
+  static SchoolLevel levelForGrade(String raw) {
+    final compact = raw.toLowerCase().replaceAll(RegExp(r'[\s_\-]+'), '');
+    if (compact.contains('kg') ||
+        compact.contains('kindergarten') ||
+        compact == 'prekg' ||
+        compact == 'lkg' ||
+        compact == 'ukg') {
+      return SchoolLevel.kindergarten;
+    }
+    final number = _gradeNumber(raw);
+    if (number == null) return SchoolLevel.other;
+    if (number <= 6) return SchoolLevel.primary;
+    if (number <= 8) return SchoolLevel.middle;
+    return SchoolLevel.highSchool;
+  }
+
+  static Map<SchoolLevel, List<String>> group(Iterable<String> grades) {
+    final grouped = {for (final level in levelOrder) level: <String>[]};
+    for (final grade in grades) {
+      grouped[levelForGrade(grade)]!.add(grade);
+    }
+    return grouped;
+  }
+
+  static int? _gradeNumber(String raw) {
+    final match = RegExp(r'(\d{1,2})').firstMatch(raw);
+    if (match == null) return null;
+    final value = int.tryParse(match.group(1)!);
+    if (value == null || value < 1 || value > 12) return null;
+    return value;
+  }
 }
 
 /// Tick-box grade selection (Kindergarten + Grade 1–12).
@@ -92,33 +153,27 @@ class SchoolGradeLevelPicker extends StatelessWidget {
             style: TextStyle(color: hintColor, fontSize: 11),
           ),
           const SizedBox(height: 12),
-          _groupHeader(
-            title: 'Kindergarten',
-            grades: SchoolGradeCatalog.kindergarten,
-            color: hintColor,
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: SchoolGradeCatalog.kindergarten
-                .map((g) => _chip(g))
-                .toList(),
-          ),
-          const SizedBox(height: 14),
-          _groupHeader(
-            title: 'Grade 1 – 12',
-            grades: SchoolGradeCatalog.primarySecondary,
-            color: hintColor,
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: SchoolGradeCatalog.primarySecondary
-                .map((g) => _chip(g))
-                .toList(),
-          ),
+          for (final level in [
+            SchoolLevel.kindergarten,
+            SchoolLevel.primary,
+            SchoolLevel.middle,
+            SchoolLevel.highSchool,
+          ]) ...[
+            _groupHeader(
+              title: SchoolGradeCatalog.labelFor(level),
+              grades: SchoolGradeCatalog.gradesFor(level),
+              color: hintColor,
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: SchoolGradeCatalog.gradesFor(
+                level,
+              ).map((g) => _chip(g)).toList(),
+            ),
+            const SizedBox(height: 14),
+          ],
           if (selected.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
@@ -162,7 +217,10 @@ class SchoolGradeLevelPicker extends StatelessWidget {
             visualDensity: VisualDensity.compact,
             padding: const EdgeInsets.symmetric(horizontal: 8),
           ),
-          child: Text(allOn ? 'Clear' : 'Select all', style: const TextStyle(fontSize: 12)),
+          child: Text(
+            allOn ? 'Clear' : 'Select all',
+            style: const TextStyle(fontSize: 12),
+          ),
         ),
       ],
     );
@@ -187,11 +245,11 @@ class SchoolGradeLevelPicker extends StatelessWidget {
       side: BorderSide(
         color: on
             ? Colors.tealAccent.withValues(alpha: 0.7)
-            : (dark
-                ? Colors.white24
-                : Colors.black26),
+            : (dark ? Colors.white24 : Colors.black26),
       ),
-      backgroundColor: dark ? Colors.white.withValues(alpha: 0.04) : Colors.white,
+      backgroundColor: dark
+          ? Colors.white.withValues(alpha: 0.04)
+          : Colors.white,
     );
   }
 }
