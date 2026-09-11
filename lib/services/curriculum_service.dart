@@ -10,6 +10,25 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
+/// Published-plan coverage against curriculum units. Not a grade.
+class CurriculumAlignmentSnapshot {
+  const CurriculumAlignmentSnapshot({
+    required this.publishedPlanCount,
+    required this.linkedPublishedPlanCount,
+    required this.unlinkedPublishedPlans,
+    required this.unitCount,
+    required this.unitsWithStandards,
+  });
+
+  final int publishedPlanCount;
+  final int linkedPublishedPlanCount;
+  final List<LessonPlan> unlinkedPublishedPlans;
+  final int unitCount;
+  final int unitsWithStandards;
+
+  int get unlinkedPublishedPlanCount => unlinkedPublishedPlans.length;
+}
+
 /// Curriculum office, feedback, DH reviews, academic evaluations, meetings.
 /// Does not write grades, exam scores, or admissions fields.
 class CurriculumService extends ChangeNotifier {
@@ -193,6 +212,19 @@ class CurriculumService extends ChangeNotifier {
   ) async {
     final unit = unitById(id);
     if (unit == null) return null;
+    unit.versions = [
+      ...unit.versions,
+      CurriculumUnitVersion(
+        version: unit.version,
+        snapshot: unit.toMap(includeHistory: false),
+        changedBy: _username,
+        changedAt: DateTime.now(),
+        note: status == CurriculumUnitStatus.published
+            ? 'Published'
+            : 'Status: ${status.name}',
+      ),
+    ];
+    unit.version += 1;
     unit.status = status;
     unit.updatedAt = DateTime.now();
     unit.publishedAt =
@@ -329,7 +361,102 @@ class CurriculumService extends ChangeNotifier {
     final unit = unitById(unitId);
     if (unit == null || planId.trim().isEmpty) return;
     if (unit.lessonPlanIds.contains(planId)) return;
-    await updateUnit(unitId, lessonPlanIds: [...unit.lessonPlanIds, planId]);
+    await updateUnit(
+      unitId,
+      lessonPlanIds: [...unit.lessonPlanIds, planId],
+      note: 'Linked lesson plan',
+    );
+  }
+
+  Future<void> detachLessonPlan(String unitId, String planId) async {
+    final unit = unitById(unitId);
+    if (unit == null || !unit.lessonPlanIds.contains(planId)) return;
+    await updateUnit(
+      unitId,
+      lessonPlanIds: unit.lessonPlanIds.where((id) => id != planId).toList(),
+      note: 'Unlinked lesson plan',
+    );
+  }
+
+  Future<void> syncLessonPlanUnit({
+    required String planId,
+    String? previousUnitId,
+    String? nextUnitId,
+  }) async {
+    final prev = (previousUnitId ?? '').trim();
+    final next = (nextUnitId ?? '').trim();
+    if (prev.isNotEmpty && prev != next) {
+      await detachLessonPlan(prev, planId);
+    }
+    if (next.isNotEmpty) {
+      await attachLessonPlan(next, planId);
+    }
+  }
+
+  List<LessonPlan> plansForUnit(String unitId) {
+    final ids = <String>{
+      ...?unitById(unitId)?.lessonPlanIds,
+    };
+    for (final plan in LessonPlanService.instance.plans) {
+      if (plan.curriculumUnitId == unitId) ids.add(plan.id);
+    }
+    return [
+      for (final id in ids)
+        if (LessonPlanService.instance.planById(id) != null)
+          LessonPlanService.instance.planById(id)!,
+    ];
+  }
+
+  CurriculumAlignmentSnapshot alignmentForSchool([String? schoolId]) {
+    final plans = LessonPlanService.instance
+        .forSchool(schoolId)
+        .where((p) => p.isPublished)
+        .toList();
+    final unlinked = plans
+        .where((p) => (p.curriculumUnitId ?? '').trim().isEmpty)
+        .toList();
+    final units = unitsForSchool(schoolId);
+    return CurriculumAlignmentSnapshot(
+      publishedPlanCount: plans.length,
+      linkedPublishedPlanCount: plans.length - unlinked.length,
+      unlinkedPublishedPlans: unlinked,
+      unitCount: units.length,
+      unitsWithStandards: units.where((u) => u.standardCodes.isNotEmpty).length,
+    );
+  }
+
+  Future<CurriculumUnit?> restoreUnitVersion(String id, int version) async {
+    final unit = unitById(id);
+    if (unit == null) return null;
+    CurriculumUnitVersion? entry;
+    for (final item in unit.versions) {
+      if (item.version == version) entry = item;
+    }
+    if (entry == null) return null;
+    final snap = CurriculumUnit.fromMap({
+      ...entry.snapshot,
+      'id': unit.id,
+      'schoolId': unit.schoolId,
+      'createdAt': unit.createdAt.toIso8601String(),
+      'updatedAt': unit.updatedAt.toIso8601String(),
+    });
+    return updateUnit(
+      id,
+      title: snap.title,
+      subject: snap.subject,
+      gradeLevel: snap.gradeLevel ?? '',
+      className: snap.className ?? '',
+      strand: snap.strand,
+      description: snap.description,
+      objectives: snap.objectives,
+      framework: snap.framework,
+      standardCodes: snap.standardCodes,
+      examPaperIds: snap.examPaperIds,
+      homeworkIds: snap.homeworkIds,
+      lessonPlanIds: snap.lessonPlanIds,
+      attachmentPaths: snap.attachmentPaths,
+      note: 'Restored from v$version',
+    );
   }
 
   Future<TeacherEvaluation> recordEvaluation({

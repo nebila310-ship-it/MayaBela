@@ -447,3 +447,23 @@ class AcademicMeeting {
     );
   }
 }
+
+/// Suggested codes only — still stored as free-text [CurriculumUnit.standardCodes].
+abstract final class CurriculumStandardHints {
+  static List<String> codesFor(CurriculumFramework framework) {
+    switch (framework) {
+      case CurriculumFramework.national:
+        return const ['MoE-KG', 'MoE-PRI', 'MoE-MID', 'MoE-SEC', 'ESLCE'];
+      case CurriculumFramework.international:
+        return const [
+          'IB-PYP',
+          'IB-MYP',
+          'Cambridge-Primary',
+          'Cambridge-IGCSE',
+          'Cambridge-AS/A',
+        ];
+      case CurriculumFramework.school:
+        return const ['SCH-CORE', 'SCH-ENRICH'];
+    }
+  }
+}

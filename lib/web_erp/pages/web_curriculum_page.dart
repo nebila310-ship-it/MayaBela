@@ -7,6 +7,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -60,6 +61,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
     _curriculum.ensureLoaded();
     _plans.ensureLoaded();
     ExamService.instance.ensureLoaded();
+    QaMonitorService.instance.ensureLoaded();
   }
 
   @override
@@ -72,7 +74,12 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
   Widget build(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([_curriculum, _plans, ExamService.instance]),
+          listenable: Listenable.merge([
+            _curriculum,
+            _plans,
+            ExamService.instance,
+            QaMonitorService.instance,
+          ]),
       builder: (context, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -128,6 +135,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
 
   Widget _unitsTab() {
     final items = _curriculum.unitsForSchool(_schoolId);
+    final alignment = _curriculum.alignmentForSchool(_schoolId);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -152,6 +160,14 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
           ],
         ),
         const SizedBox(height: 12),
+        Text(
+          'Alignment: ${alignment.linkedPublishedPlanCount}/'
+          '${alignment.publishedPlanCount} published lesson plans linked · '
+          '${alignment.unitsWithStandards}/${alignment.unitCount} units have '
+          'standard codes'
+          '${alignment.unlinkedPublishedPlanCount == 0 ? '' : ' · ${alignment.unlinkedPublishedPlanCount} unlinked'}',
+        ),
+        const SizedBox(height: 12),
         if (items.isEmpty)
           _empty('No curriculum units yet. Map a strand to national or international standards.')
         else
@@ -161,6 +177,11 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
   }
 
   Widget _unitCard(CurriculumUnit unit) {
+    final linkedPlans = _curriculum.plansForUnit(unit.id);
+    final audit = QaMonitorService.instance.latestAuditForUnit(
+      unit.id,
+      schoolId: _schoolId,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DecoratedBox(
@@ -183,11 +204,18 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
             ],
             const SizedBox(height: 8),
             Text(
-              'Linked: ${unit.lessonPlanIds.length} plans · '
+              'Linked: ${linkedPlans.length} plans · '
               '${unit.examPaperIds.length} papers · '
               '${unit.homeworkIds.length} homework'
               '${unit.attachmentPaths.isEmpty ? '' : ' · ${unit.attachmentPaths.length} file(s)'}',
             ),
+            if (audit != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'QA audit: ${audit.verdict.name}'
+                '${audit.notes.trim().isEmpty ? '' : ' — ${audit.notes}'}',
+              ),
+            ],
             if (unit.attachmentPaths.isNotEmpty) ...[
               const SizedBox(height: 8),
               CourseAttachmentPicker(
@@ -205,10 +233,22 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               for (final v in unit.versions.reversed.take(8))
-                Text(
-                  'v${v.version} · ${v.changedBy} · '
-                  '${v.changedAt.day}/${v.changedAt.month}'
-                  '${v.note == null || v.note!.isEmpty ? '' : ' — ${v.note}'}',
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'v${v.version} · ${v.changedBy} · '
+                        '${v.changedAt.day}/${v.changedAt.month}'
+                        '${v.note == null || v.note!.isEmpty ? '' : ' — ${v.note}'}',
+                      ),
+                    ),
+                    if (_canLead)
+                      TextButton(
+                        onPressed: () =>
+                            _curriculum.restoreUnitVersion(unit.id, v.version),
+                        child: const Text('Restore'),
+                      ),
+                  ],
                 ),
             ],
             if (_canLead)
@@ -268,6 +308,14 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
           _empty('No published plans waiting for review.')
         else
           for (final plan in pending) _reviewPlanCard(plan),
+        if (_curriculum.alignmentForSchool(_schoolId).unlinkedPublishedPlanCount >
+            0) ...[
+          const SizedBox(height: 12),
+          Text(
+            '${_curriculum.alignmentForSchool(_schoolId).unlinkedPublishedPlanCount} '
+            'published plans are not linked to a curriculum unit.',
+          ),
+        ],
         if (done.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text('Recent decisions', style: Theme.of(context).textTheme.titleSmall),
@@ -300,7 +348,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
           title: Text(plan.title),
           subtitle: Text(
             '${plan.className} · ${plan.subject} · ${plan.reviewStatus.name}'
-            '${unit == null ? '' : ' · ${unit.title}'}',
+            '${unit == null ? ' · not linked to a unit' : ' · ${unit.title}'}',
           ),
           trailing: _canLead
               ? TextButton(
@@ -388,13 +436,27 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
                   subtitle: Text(
                     '${_curriculum.unitById(item.curriculumUnitId)?.title ?? item.curriculumUnitId}\n${item.body}',
                   ),
-                  trailing: _canLead && item.status == CurriculumFeedbackStatus.open
-                      ? TextButton(
-                          onPressed: () => _curriculum.setFeedbackStatus(
-                            item.id,
-                            CurriculumFeedbackStatus.acknowledged,
-                          ),
-                          child: const Text('Acknowledge'),
+                  trailing: _canLead &&
+                          item.status != CurriculumFeedbackStatus.resolved
+                      ? Wrap(
+                          spacing: 4,
+                          children: [
+                            if (item.status == CurriculumFeedbackStatus.open)
+                              TextButton(
+                                onPressed: () => _curriculum.setFeedbackStatus(
+                                  item.id,
+                                  CurriculumFeedbackStatus.acknowledged,
+                                ),
+                                child: const Text('Acknowledge'),
+                              ),
+                            TextButton(
+                              onPressed: () => _curriculum.setFeedbackStatus(
+                                item.id,
+                                CurriculumFeedbackStatus.resolved,
+                              ),
+                              child: const Text('Resolve'),
+                            ),
+                          ],
                         )
                       : Text(item.status.name),
                 ),
@@ -887,7 +949,27 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
                 controller: _standards,
                 decoration: const InputDecoration(
                   labelText: 'Standard codes (comma-separated)',
+                  hintText: 'MoE-PRI, IB-MYP',
                 ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final code
+                      in CurriculumStandardHints.codesFor(_framework))
+                    ActionChip(
+                      label: Text(code),
+                      onPressed: () {
+                        final current = _standardList;
+                        if (current.contains(code)) return;
+                        setState(() {
+                          _standards.text = [...current, code].join(', ');
+                        });
+                      },
+                    ),
+                ],
               ),
               TextField(
                 controller: _objectives,
