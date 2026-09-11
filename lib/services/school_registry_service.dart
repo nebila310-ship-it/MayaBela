@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/academic_term.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/school_lifecycle.dart';
 import 'package:mayabela/models/school_logo_style.dart';
@@ -47,6 +48,7 @@ class SchoolRecord {
     this.gradeWorkflow = const GradeWorkflowSettings(),
     this.markbookSettings = MarkbookSettings.liaDefaults,
     this.allowSelfApproval = false,
+    this.academicTerms = const [],
   });
 
   final String id;
@@ -80,6 +82,7 @@ class SchoolRecord {
   /// Mirrored to `data.settings.allowSelfApproval`, which the SQL
   /// write-guard reads via school_setting_bool().
   bool allowSelfApproval;
+  final List<AcademicTerm> academicTerms;
 
   SchoolAccessBlock? get accessBlock {
     if (status == SchoolLifecycleStatus.inactive) {
@@ -123,6 +126,7 @@ class SchoolRecord {
     GradeWorkflowSettings? gradeWorkflow,
     MarkbookSettings? markbookSettings,
     bool? allowSelfApproval,
+    List<AcademicTerm>? academicTerms,
   }) {
     return SchoolRecord(
       id: id,
@@ -145,7 +149,8 @@ class SchoolRecord {
       logoUrl: logoUrl ?? this.logoUrl,
       logoStyle: logoStyle ?? this.logoStyle,
       contractedSeats: contractedSeats ?? this.contractedSeats,
-      ratePerStudentMonthEtb: ratePerStudentMonthEtb ?? this.ratePerStudentMonthEtb,
+      ratePerStudentMonthEtb:
+          ratePerStudentMonthEtb ?? this.ratePerStudentMonthEtb,
       minimumMonthlyEtb: minimumMonthlyEtb ?? this.minimumMonthlyEtb,
       adminInitialPassword: adminInitialPassword ?? this.adminInitialPassword,
       adminFullName: adminFullName ?? this.adminFullName,
@@ -153,38 +158,40 @@ class SchoolRecord {
       gradeWorkflow: gradeWorkflow ?? this.gradeWorkflow,
       markbookSettings: markbookSettings ?? this.markbookSettings,
       allowSelfApproval: allowSelfApproval ?? this.allowSelfApproval,
+      academicTerms: academicTerms ?? List.from(this.academicTerms),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'city': city,
-        'academicYear': academicYear,
-        'gradeLevels': gradeLevels,
-        'sections': sections,
-        'campuses': campuses,
-        'registeredAt': registeredAt?.toIso8601String(),
-        'status': status.name,
-        'subscriptionExpiresAt': subscriptionExpiresAt?.toIso8601String(),
-        'notes': notes,
-        'adminContactPhone': adminContactPhone,
-        'address': address,
-        'officePhone': officePhone,
-        'logoPath': logoPath,
-        'logoUrl': logoUrl,
-        'logoStyle': logoStyle.name,
-        'contractedSeats': contractedSeats,
-        'ratePerStudentMonthEtb': ratePerStudentMonthEtb,
-        'minimumMonthlyEtb': minimumMonthlyEtb,
-        'adminInitialPassword': adminInitialPassword,
-        'adminFullName': adminFullName,
-        'studentPortal': studentPortal.toMap(),
-        'gradeWorkflow': gradeWorkflow.toMap(),
-        'markbookSettings': markbookSettings.toMap(),
-        // The SQL write-guard reads data->settings->allowSelfApproval.
-        'settings': {'allowSelfApproval': allowSelfApproval},
-      };
+    'id': id,
+    'name': name,
+    'city': city,
+    'academicYear': academicYear,
+    'gradeLevels': gradeLevels,
+    'sections': sections,
+    'campuses': campuses,
+    'registeredAt': registeredAt?.toIso8601String(),
+    'status': status.name,
+    'subscriptionExpiresAt': subscriptionExpiresAt?.toIso8601String(),
+    'notes': notes,
+    'adminContactPhone': adminContactPhone,
+    'address': address,
+    'officePhone': officePhone,
+    'logoPath': logoPath,
+    'logoUrl': logoUrl,
+    'logoStyle': logoStyle.name,
+    'contractedSeats': contractedSeats,
+    'ratePerStudentMonthEtb': ratePerStudentMonthEtb,
+    'minimumMonthlyEtb': minimumMonthlyEtb,
+    'adminInitialPassword': adminInitialPassword,
+    'adminFullName': adminFullName,
+    'studentPortal': studentPortal.toMap(),
+    'gradeWorkflow': gradeWorkflow.toMap(),
+    'markbookSettings': markbookSettings.toMap(),
+    'academicTerms': academicTerms.map((term) => term.toJson()).toList(),
+    // The SQL write-guard reads data->settings->allowSelfApproval.
+    'settings': {'allowSelfApproval': allowSelfApproval},
+  };
 
   factory SchoolRecord.fromJson(Map<String, dynamic> json) {
     return SchoolRecord(
@@ -192,15 +199,18 @@ class SchoolRecord {
       name: json['name'] as String? ?? '',
       city: json['city'] as String?,
       academicYear: json['academicYear'] as String?,
-      gradeLevels: (json['gradeLevels'] as List<dynamic>?)
+      gradeLevels:
+          (json['gradeLevels'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      sections: (json['sections'] as List<dynamic>?)
+      sections:
+          (json['sections'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      campuses: (json['campuses'] as List<dynamic>?)
+      campuses:
+          (json['campuses'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const ['Main Campus'],
@@ -234,8 +244,17 @@ class SchoolRecord {
       ),
       allowSelfApproval:
           ((json['settings'] as Map<String, dynamic>?)?['allowSelfApproval']
-                  as bool?) ??
-              false,
+              as bool?) ??
+          false,
+      academicTerms:
+          (json['academicTerms'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map(
+                (item) =>
+                    AcademicTerm.fromJson(Map<String, dynamic>.from(item)),
+              )
+              .toList() ??
+          const [],
     );
   }
 }
@@ -286,7 +305,13 @@ class SchoolRegistryService {
         name: 'Maya School',
         city: 'Addis Ababa',
         academicYear: '2025/2026',
-        gradeLevels: ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 4', 'Grade 5'],
+        gradeLevels: [
+          'Kindergarten',
+          'Grade 1',
+          'Grade 2',
+          'Grade 4',
+          'Grade 5',
+        ],
         sections: ['Grade 1A', 'Grade 2C', 'Grade 4A', 'Grade 4B', 'Grade 5B'],
         campuses: ['Main Campus', 'Bole Campus'],
         registeredAt: DateTime(2024, 9, 1),
@@ -401,8 +426,11 @@ class SchoolRegistryService {
     current[idx] = target;
     await updateSchool(school.copyWith(campuses: current));
 
-    StudentRegistryService.instance
-        .reassignCampusForSchool(schoolId, from: from, to: target);
+    StudentRegistryService.instance.reassignCampusForSchool(
+      schoolId,
+      from: from,
+      to: target,
+    );
     final teachersChanged = TeacherRegistryService.instance
         .reassignCampusForSchool(schoolId, from: from, to: target);
     if (teachersChanged > 0) {
@@ -439,10 +467,12 @@ class SchoolRegistryService {
   }
 
   String generateSchoolId(String schoolName) {
-    final letters =
-        schoolName.replaceAll(RegExp(r'[^a-zA-Z]'), '').toUpperCase();
-    final prefix =
-        letters.length >= 3 ? letters.substring(0, 3) : (letters.padRight(3, 'X'));
+    final letters = schoolName
+        .replaceAll(RegExp(r'[^a-zA-Z]'), '')
+        .toUpperCase();
+    final prefix = letters.length >= 3
+        ? letters.substring(0, 3)
+        : (letters.padRight(3, 'X'));
     final suffix = 100 + Random().nextInt(900);
     var candidate = '$prefix$suffix';
     while (_schools.any((s) => s.id.toUpperCase() == candidate)) {
@@ -482,12 +512,15 @@ class SchoolRegistryService {
       notes: notes,
       adminContactPhone: adminContactPhone ?? adminUsername.trim(),
       address: address?.trim().isEmpty ?? true ? null : address!.trim(),
-      officePhone: officePhone?.trim().isEmpty ?? true ? null : officePhone!.trim(),
+      officePhone: officePhone?.trim().isEmpty ?? true
+          ? null
+          : officePhone!.trim(),
       ratePerStudentMonthEtb: ratePerStudentMonthEtb ?? 8,
       minimumMonthlyEtb: minimumMonthlyEtb ?? 500,
       adminInitialPassword: adminInitialPassword,
-      adminFullName:
-          adminFullName?.trim().isEmpty ?? true ? null : adminFullName!.trim(),
+      adminFullName: adminFullName?.trim().isEmpty ?? true
+          ? null
+          : adminFullName!.trim(),
     );
   }
 
@@ -566,7 +599,8 @@ class SchoolRegistryService {
     bool preferPlatformEdge = false,
   }) async {
     final pin = PlatformOwnerService.instance.sessionOwnerPin;
-    final usePlatform = preferPlatformEdge ||
+    final usePlatform =
+        preferPlatformEdge ||
         (pin != null && pin.trim().length >= PlatformOwnerService.minPinLength);
     if (usePlatform) {
       return PlatformSchoolsCloudService.instance.updateSchoolInCloud(
@@ -819,8 +853,7 @@ class SchoolRegistryService {
   List<String> sectionLabelsForGrade(String? schoolId, String grade) {
     if (schoolId == null) return [];
     final g = grade.trim();
-    return lookup(schoolId)
-            ?.sections
+    return lookup(schoolId)?.sections
             .where((className) => className.startsWith(g))
             .map((className) => _sectionLabel(className, g))
             .toList() ??

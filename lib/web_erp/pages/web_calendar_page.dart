@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/models/academic_term.dart';
 import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/widgets/calendar_event_editor.dart';
@@ -54,6 +56,34 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
     });
   }
 
+  Widget _academicTermsStrip() {
+    final schoolId = AuthService.activeSchoolId;
+    final terms = schoolId == null
+        ? const <AcademicTerm>[]
+        : (SchoolRegistryService.instance.lookup(schoolId)?.academicTerms ??
+              const []);
+    if (terms.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.teal.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.teal.shade100),
+        ),
+        child: Text(
+          'Academic terms: ${terms.map((term) {
+            final window = '${term.startDate.day}/${term.startDate.month}–${term.endDate.day}/${term.endDate.month}';
+            return '${term.name} ($window)';
+          }).join(' · ')}',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
   Widget _upcomingHolidayBanner(AppStrings s) {
     final upcoming = _data
         .getUpcomingEvents(days: 45)
@@ -68,8 +98,11 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
           final next = upcoming.first;
           setState(() {
             _focusedMonth = DateTime(next.date.year, next.date.month);
-            _selectedDay =
-                DateTime(next.date.year, next.date.month, next.date.day);
+            _selectedDay = DateTime(
+              next.date.year,
+              next.date.month,
+              next.date.day,
+            );
           });
         },
         borderRadius: BorderRadius.circular(10),
@@ -187,9 +220,9 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
     if (ok != true || !mounted) return;
     _data.deleteCalendarEvent(event.id);
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.eventDeleted)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.eventDeleted)));
   }
 
   @override
@@ -219,6 +252,7 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
                 ],
               ),
               const SizedBox(height: 12),
+              _academicTermsStrip(),
               if (UserPreferencesService.instance.showEthiopianHolidays)
                 _upcomingHolidayBanner(s),
               if (UserPreferencesService.instance.showEthiopianHolidays)
@@ -280,27 +314,31 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
                                 physics: const NeverScrollableScrollPhysics(),
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 7,
-                                  mainAxisSpacing: 2,
-                                  crossAxisSpacing: 2,
-                                  childAspectRatio: 1.65,
-                                ),
+                                      crossAxisCount: 7,
+                                      mainAxisSpacing: 2,
+                                      crossAxisSpacing: 2,
+                                      childAspectRatio: 1.65,
+                                    ),
                                 itemCount: _daysInMonthGrid().length,
                                 itemBuilder: (context, index) {
                                   final day = _daysInMonthGrid()[index];
                                   final inMonth =
                                       day.month == _focusedMonth.month;
-                                  final isSelected =
-                                      _isSameDay(day, _selectedDay);
-                                  final isToday =
-                                      _isSameDay(day, DateTime.now());
+                                  final isSelected = _isSameDay(
+                                    day,
+                                    _selectedDay,
+                                  );
+                                  final isToday = _isSameDay(
+                                    day,
+                                    DateTime.now(),
+                                  );
                                   final hasEvents =
                                       inMonth && _eventsForDay(day).isNotEmpty;
 
                                   return InkWell(
                                     onTap: inMonth
                                         ? () =>
-                                            setState(() => _selectedDay = day)
+                                              setState(() => _selectedDay = day)
                                         : null,
                                     borderRadius: BorderRadius.circular(6),
                                     child: Container(
@@ -308,9 +346,10 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
                                         color: isSelected
                                             ? Colors.deepPurple
                                             : isToday
-                                                ? Colors.deepPurple
-                                                    .withValues(alpha: 0.12)
-                                                : null,
+                                            ? Colors.deepPurple.withValues(
+                                                alpha: 0.12,
+                                              )
+                                            : null,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Column(
@@ -324,8 +363,8 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
                                               color: isSelected
                                                   ? Colors.white
                                                   : inMonth
-                                                      ? Colors.black
-                                                      : Colors.grey,
+                                                  ? Colors.black
+                                                  : Colors.grey,
                                               fontWeight: isToday
                                                   ? FontWeight.bold
                                                   : null,
@@ -405,8 +444,8 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    trailing: _canManage &&
-                                            !e.isEthiopianHoliday
+                                    trailing:
+                                        _canManage && !e.isEthiopianHoliday
                                         ? PopupMenuButton<String>(
                                             onSelected: (value) {
                                               if (value == 'edit') {

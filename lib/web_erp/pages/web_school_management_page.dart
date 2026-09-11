@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/models/academic_term.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/widgets/academic_terms_editor.dart';
+import 'package:mayabela/widgets/school_grade_level_picker.dart';
 
 /// School profile / academic year / contact — replaces the old placeholder.
 class WebSchoolManagementPage extends StatefulWidget {
@@ -23,6 +26,8 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
   final _notes = TextEditingController();
   bool _saving = false;
   String? _error;
+  final Set<String> _gradeLevels = {};
+  List<AcademicTerm> _terms = const [];
 
   SchoolRecord? get _school {
     final id = AuthService.activeSchoolId;
@@ -46,6 +51,10 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
     _officePhone.text = school.officePhone ?? '';
     _adminPhone.text = school.adminContactPhone ?? '';
     _notes.text = school.notes ?? '';
+    _gradeLevels
+      ..clear()
+      ..addAll(school.gradeLevels);
+    _terms = List.from(school.academicTerms);
   }
 
   @override
@@ -83,18 +92,27 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
             ? null
             : _academicYear.text.trim(),
         address: _address.text.trim().isEmpty ? null : _address.text.trim(),
-        officePhone:
-            _officePhone.text.trim().isEmpty ? null : _officePhone.text.trim(),
-        adminContactPhone:
-            _adminPhone.text.trim().isEmpty ? null : _adminPhone.text.trim(),
+        officePhone: _officePhone.text.trim().isEmpty
+            ? null
+            : _officePhone.text.trim(),
+        adminContactPhone: _adminPhone.text.trim().isEmpty
+            ? null
+            : _adminPhone.text.trim(),
         notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        gradeLevels: SchoolGradeCatalog.all
+            .where(_gradeLevels.contains)
+            .followedBy(
+              _gradeLevels.where((g) => !SchoolGradeCatalog.all.contains(g)),
+            )
+            .toList(),
+        academicTerms: List.from(_terms),
       ),
     );
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('School profile saved')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('School profile saved')));
   }
 
   @override
@@ -112,8 +130,8 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
                 ? 'No school loaded for this session.'
                 : 'School ID ${school.id} · ${school.campuses.length} campus(es) · ${school.gradeLevels.length} grade levels',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 20),
           if (school == null)
@@ -204,10 +222,20 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
                     'Campuses: ${school.campuses.join(", ")}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Grade levels: ${school.gradeLevels.join(", ")}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 12),
+                  SchoolGradeLevelPicker(
+                    selected: _gradeLevels,
+                    dark: false,
+                    onChanged: (next) => setState(() {
+                      _gradeLevels
+                        ..clear()
+                        ..addAll(next);
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  AcademicTermsEditor(
+                    terms: _terms,
+                    onChanged: (next) => setState(() => _terms = next),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
