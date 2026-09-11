@@ -134,8 +134,12 @@ class StudentSupportService extends ChangeNotifier {
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
-  List<HealthRecord> healthForStudent(String studentId) =>
-      healthForSchool().where((row) => row.studentId == studentId).toList();
+  List<HealthRecord> healthForStudent(String studentId) {
+    final id = studentId.trim().toUpperCase();
+    return healthForSchool()
+        .where((row) => row.studentId.toUpperCase() == id)
+        .toList();
+  }
 
   List<CounselingRecord> counselingForStudent(String studentId) =>
       counselingForSchool().where((row) => row.studentId == studentId).toList();
@@ -190,8 +194,12 @@ class StudentSupportService extends ChangeNotifier {
     return list..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
-  List<StudentDocument> documentsForStudent(String studentId) =>
-      documentsForSchool().where((row) => row.studentId == studentId).toList();
+  List<StudentDocument> documentsForStudent(String studentId) {
+    final id = studentId.trim().toUpperCase();
+    return documentsForSchool()
+        .where((row) => row.studentId.toUpperCase() == id)
+        .toList();
+  }
 
   List<MedicationStockItem> medicationStockForSchool([String? schoolId]) {
     if (_isPublicReader) return const [];

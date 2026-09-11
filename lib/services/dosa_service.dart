@@ -132,6 +132,21 @@ class DosaService extends ChangeNotifier {
   List<ClubMembership> membershipsForClub(String clubId) =>
       membershipsForSchool().where((row) => row.clubId == clubId).toList();
 
+  List<ClubMembership> membershipsForStudent(String studentId) {
+    final id = studentId.trim().toUpperCase();
+    return membershipsForSchool()
+        .where((row) => row.studentId == id)
+        .toList();
+  }
+
+  List<String> clubNamesForStudent(String studentId) {
+    final clubs = {for (final club in clubsForSchool()) club.id: club.name};
+    return membershipsForStudent(studentId)
+        .where((row) => row.status != MembershipStatus.withdrawn)
+        .map((row) => clubs[row.clubId] ?? row.clubId)
+        .toList();
+  }
+
   int openGrievanceCount([String? schoolId]) => grievancesForSchool(schoolId)
       .where((row) => row.status == GrievanceStatus.open)
       .length;

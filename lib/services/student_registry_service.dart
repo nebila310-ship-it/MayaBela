@@ -906,6 +906,9 @@ class StudentRegistryService {
     String? academicYear,
     String? house,
     String? campus,
+    bool hasMedicalCondition = false,
+    String? medicalConditionDetails,
+    String? otherMedicalInfo,
   }) {
     final contact = _trimOrNull(emergencyContact) ??
         _phoneOrNull(fatherPhone) ??
@@ -940,6 +943,11 @@ class StudentRegistryService {
       academicYear: _trimOrNull(academicYear),
       house: _trimOrNull(house),
       campus: _trimOrNull(campus) ?? 'Main Campus',
+      hasMedicalCondition: hasMedicalCondition,
+      medicalConditionDetails: hasMedicalCondition
+          ? _trimOrNull(medicalConditionDetails)
+          : null,
+      otherMedicalInfo: _trimOrNull(otherMedicalInfo),
     );
     _students.add(record);
     return record;

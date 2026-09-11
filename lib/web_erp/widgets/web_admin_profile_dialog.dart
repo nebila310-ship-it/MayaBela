@@ -1,13 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/models/student_conduct.dart';
+import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/screens/admin_people_screens.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/discipline_service.dart';
+import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
+import 'package:mayabela/services/persistence/transfer_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/student_sis_profile.dart';
+import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
@@ -15,6 +24,7 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/admin_staff_ui.dart';
 import 'package:mayabela/widgets/admin_student_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
+import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/student_qr_card.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
@@ -68,6 +78,22 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
       StudentRegistryService.instance.lookupById(widget.studentId);
 
   bool get _canManage => ModuleAccess.canManage('students');
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_hydrateSis());
+  }
+
+  Future<void> _hydrateSis() async {
+    await Future.wait([
+      StudentSupportService.instance.ensureLoaded(),
+      DisciplineService.instance.ensureLoaded(),
+      DosaService.instance.ensureLoaded(),
+      TransferPersistenceService.instance.loadIntoService(),
+    ]);
+    if (mounted) setState(() {});
+  }
 
   Future<void> _edit(AdminStudentRecord student) async {
     final saved = await showAdminStudentEditDialog(context, student: student);
@@ -127,7 +153,7 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 760),
+        constraints: const BoxConstraints(maxWidth: 640, maxHeight: 820),
         child: student == null
             ? Padding(
                 padding: const EdgeInsets.all(24),
@@ -223,6 +249,32 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                           label: s.transportEnabled,
                           value: student.transportEnabled ? 'Yes' : 'No',
                           color: const Color(0xFF455A64),
+                        ),
+                        StaffInfoTile(
+                          icon: Icons.flag_outlined,
+                          label: 'Lifecycle',
+                          value: student.lifecycleStatus.label,
+                          color: StaffPalette.students.primary,
+                        ),
+                        StaffInfoTile(
+                          icon: Icons.home_outlined,
+                          label: 'House / grouping',
+                          value: StudentSisProfile.load(student.studentId)
+                                  ?.groupingSummary ??
+                              student.className,
+                          color: StaffPalette.students.secondary,
+                        ),
+                        const SizedBox(height: 12),
+                        StudentMedicalInfoPanel(
+                          hasMedicalCondition: student.hasMedicalCondition,
+                          medicalConditionDetails:
+                              student.medicalConditionDetails,
+                          otherMedicalInfo: student.otherMedicalInfo,
+                          compact: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _StudentSisSections(
+                          snapshot: StudentSisProfile.load(student.studentId),
                         ),
                         const SizedBox(height: 12),
                         StudentQrCard(
@@ -461,6 +513,175 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                   ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+class _StudentSisSections extends StatelessWidget {
+  const _StudentSisSections({this.snapshot});
+
+  final StudentSisSnapshot? snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final sis = snapshot;
+    if (sis == null) return const SizedBox.shrink();
+
+    final conductLabel = switch (sis.conduct) {
+      StudentConductRating.excellent =>
+        AppLocale.instance.strings.conductExcellent,
+      StudentConductRating.satisfactory =>
+        AppLocale.instance.strings.conductSatisfactory,
+      StudentConductRating.needsAttention =>
+        AppLocale.instance.strings.conductNeedsAttention,
+      null => 'No classroom conduct rating yet',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sisBlock(
+          title: 'Academic history',
+          empty: sis.academicHistory.isEmpty
+              ? 'No published grade reports yet. Marks stay in Gradebook.'
+              : null,
+          children: [
+            for (final report in sis.academicHistory)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.menu_book_outlined, size: 20),
+                title: Text(
+                  [
+                    if ((report.academicYear ?? '').isNotEmpty)
+                      report.academicYear!,
+                    report.term,
+                    report.className,
+                  ].join(' · '),
+                ),
+                subtitle: Text(
+                  report.subjects.isEmpty
+                      ? 'No subject scores'
+                      : 'Average ${report.average.toStringAsFixed(1)} · '
+                          '${report.subjects.length} subjects',
+                ),
+              ),
+          ],
+        ),
+        _sisBlock(
+          title: 'Behavioral profile',
+          empty: null,
+          children: [
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.favorite_outline, size: 20),
+              title: Text(conductLabel),
+            ),
+            if (sis.disciplineCases.isEmpty)
+              const ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text('No Student Affairs cases on file.'),
+              )
+            else
+              for (final c in sis.disciplineCases.take(5))
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.balance_outlined, size: 20),
+                  title: Text(c.title),
+                  subtitle: Text('${c.kind.name} · ${c.status.name}'),
+                ),
+          ],
+        ),
+        _sisBlock(
+          title: 'Health records',
+          empty: sis.healthRecords.isEmpty
+              ? 'Clinic visits and vaccinations are stored in Student support.'
+              : null,
+          children: [
+            for (final row in sis.healthRecords.take(5))
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.health_and_safety_outlined, size: 20),
+                title: Text(row.title.isEmpty ? row.type.name : row.title),
+                subtitle: Text(row.details.isEmpty ? row.type.name : row.details),
+              ),
+          ],
+        ),
+        _sisBlock(
+          title: 'Digital documents',
+          empty: sis.documents.isEmpty
+              ? 'Identity and transcript files live in the student vault.'
+              : null,
+          children: [
+            for (final doc in sis.documents.take(6))
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.attach_file, size: 20),
+                title: Text(doc.title.isEmpty ? doc.category : doc.title),
+                subtitle: Text(doc.category),
+              ),
+          ],
+        ),
+        _sisBlock(
+          title: 'Promotion, transfer, withdrawal',
+          empty: sis.movements.isEmpty
+              ? 'No transfer, promotion, or withdrawal requests yet.'
+              : null,
+          children: [
+            for (final move in sis.movements.take(6))
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.swap_horiz, size: 20),
+                title: Text(move.summary),
+                subtitle: Text(move.status.name),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _sisBlock({
+    required String title,
+    required String? empty,
+    required List<Widget> children,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              if (empty != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    empty,
+                    style: TextStyle(color: Colors.grey.shade700, height: 1.35),
+                  ),
+                )
+              else
+                ...children,
+            ],
+          ),
+        ),
       ),
     );
   }

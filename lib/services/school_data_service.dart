@@ -5667,18 +5667,27 @@ class SchoolDataService {
       List.unmodifiable(_gradeReports);
 
   StudentGradeReport? getGradeReportForStudentId(String studentId) {
+    final reports = gradeReportsForStudent(studentId);
+    return reports.isEmpty ? null : reports.first;
+  }
+
+  /// All term / year reports for one student (academic history).
+  List<StudentGradeReport> gradeReportsForStudent(String studentId) {
     final normalized = studentId.trim().toUpperCase();
-    try {
-      return _gradeReports.firstWhere(
-        (r) => r.studentId?.toUpperCase() == normalized,
-      );
-    } catch (_) {
-      final record = StudentRegistryService.instance.lookupById(studentId);
-      if (record != null) {
-        return getGradeReportForStudent(record.fullName);
-      }
-      return null;
+    final record = StudentRegistryService.instance.lookupById(studentId);
+    final seen = <String>{};
+    final out = <StudentGradeReport>[];
+    for (final report in _gradeReports) {
+      final matchId = report.studentId?.toUpperCase() == normalized;
+      final matchName =
+          record != null && report.studentName == record.fullName;
+      if (!matchId && !matchName) continue;
+      final key =
+          '${report.academicYear}|${report.term}|${report.className}|${report.studentName}';
+      if (!seen.add(key)) continue;
+      out.add(report);
     }
+    return out;
   }
 
   StudentGradeReport? getGradeReportForStudent(String studentName) {

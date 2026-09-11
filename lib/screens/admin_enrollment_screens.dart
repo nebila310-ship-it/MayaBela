@@ -29,6 +29,7 @@ import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/student_medical_form_fields.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
@@ -1079,7 +1080,10 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
   final _homeroomTeacherId = TextEditingController();
   final _academicYear = TextEditingController(text: '2025/2026');
   final _house = TextEditingController();
+  final _medicalDetails = TextEditingController();
+  final _otherMedical = TextEditingController();
   final _transportId = TextEditingController();
+  bool _hasMedicalCondition = false;
   bool _transport = false;
   String? _selectedGender;
   Uint8List? _pickedPhotoBytes;
@@ -1113,6 +1117,8 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
     _homeroomTeacherId.dispose();
     _academicYear.dispose();
     _house.dispose();
+    _medicalDetails.dispose();
+    _otherMedical.dispose();
     _transportId.dispose();
     super.dispose();
   }
@@ -1355,6 +1361,9 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       homeroomTeacherId: homeroomTeacherId,
       academicYear: _academicYear.text.trim(),
       house: _house.text.trim(),
+      hasMedicalCondition: _hasMedicalCondition,
+      medicalConditionDetails: _medicalDetails.text,
+      otherMedicalInfo: _otherMedical.text,
       transportEnabled: _transport,
       transportId: transportIdRaw.isEmpty ? null : transportIdRaw,
       campus: _selectedCampus,
@@ -1726,6 +1735,21 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
                     accent: theme.secondary,
                   ),
                 ),
+                const SizedBox(height: 12),
+                Text(
+                  s.studentMedicalSection,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                StudentMedicalFormFields(
+                  hasMedicalCondition: _hasMedicalCondition,
+                  onHasMedicalChanged: (v) =>
+                      setState(() => _hasMedicalCondition = v),
+                  detailsController: _medicalDetails,
+                  otherController: _otherMedical,
+                  accent: theme.secondary,
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _dob,
                   keyboardType: TextInputType.number,
