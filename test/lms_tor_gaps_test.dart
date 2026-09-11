@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,6 +13,7 @@ import 'package:mayabela/services/lms_classroom_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
+import 'package:mayabela/web_erp/pages/web_lms_hub_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +23,12 @@ void main() {
     LessonPlanService.resetForTests();
     ExamService.resetForTests();
     AuthService.currentUser = null;
+    AuthService.sessionSchoolId = null;
   });
 
   tearDown(() {
     AuthService.currentUser = null;
+    AuthService.sessionSchoolId = null;
   });
 
   test('LessonPlan serializes live and recorded class links', () {
@@ -204,5 +208,43 @@ void main() {
     final ids = webErpNavItemsForCurrentUser().map((e) => e.id).toSet();
     expect(ids, contains('lms'));
     expect(ids, contains('lesson_plans'));
+  });
+
+  testWidgets('LMS hub shows course engagement and class discussion',
+      (tester) async {
+    AuthService.sessionSchoolId = 'TB-LMS';
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.lms',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-LMS',
+      fullName: 'Ms Hana',
+    );
+    final plan = await LessonPlanService.instance.createPlan(
+      title: 'Spoken English',
+      className: 'AAA LMS 4A',
+      subject: 'English',
+      schoolId: 'TB-LMS',
+      onlineSessionUrl: 'https://meet.example.com/hub',
+      onlineSessionIsLive: true,
+    );
+    await LessonPlanService.instance.setStatus(
+      plan.id,
+      LessonPlanStatus.published,
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(width: 800, height: 1200, child: WebLmsHubPage()),
+        ),
+      ),
+    );
+
+    expect(find.text('Learning Management'), findsOneWidget);
+    expect(find.text('AAA LMS 4A · English'), findsOneWidget);
+    expect(find.text('Join live class'), findsOneWidget);
+    expect(find.text('Class discussion'), findsWidgets);
+    expect(find.textContaining('Engagement:'), findsWidgets);
   });
 }
