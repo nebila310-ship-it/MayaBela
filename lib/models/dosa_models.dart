@@ -236,6 +236,9 @@ class Grievance {
     this.status = GrievanceStatus.open,
     this.resolution = '',
     this.authorRole,
+    this.category = 'other',
+    this.assignedTo = '',
+    this.dueAt,
   });
 
   final String id;
@@ -249,6 +252,9 @@ class Grievance {
   String resolution;
   final String authorUsername;
   String? authorRole;
+  String category;
+  String assignedTo;
+  DateTime? dueAt;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -264,6 +270,9 @@ class Grievance {
         'resolution': resolution,
         'authorUsername': authorUsername,
         if (authorRole != null) 'authorRole': authorRole,
+        if (category.isNotEmpty) 'category': category,
+        if (assignedTo.isNotEmpty) 'assignedTo': assignedTo,
+        if (dueAt != null) 'dueAt': dueAt!.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -284,6 +293,11 @@ class Grievance {
       resolution: map['resolution'] as String? ?? '',
       authorUsername: map['authorUsername'] as String? ?? '',
       authorRole: map['authorRole'] as String?,
+      category: map['category'] as String? ?? 'other',
+      assignedTo: map['assignedTo'] as String? ?? '',
+      dueAt: map['dueAt'] != null
+          ? DateTime.tryParse(map['dueAt'] as String)
+          : null,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -308,6 +322,9 @@ class Internship {
     this.startsAt,
     this.endsAt,
     this.createdBy,
+    this.careerField = '',
+    this.supervisor = '',
+    this.hoursLogged = 0,
   });
 
   final String id;
@@ -322,6 +339,9 @@ class Internship {
   DateTime? startsAt;
   DateTime? endsAt;
   String? createdBy;
+  String careerField;
+  String supervisor;
+  double hoursLogged;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -338,6 +358,9 @@ class Internship {
         if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
         if (endsAt != null) 'endsAt': endsAt!.toIso8601String(),
         if (createdBy != null) 'createdBy': createdBy,
+        if (careerField.isNotEmpty) 'careerField': careerField,
+        if (supervisor.isNotEmpty) 'supervisor': supervisor,
+        if (hoursLogged != 0) 'hoursLogged': hoursLogged,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -363,6 +386,9 @@ class Internship {
           ? DateTime.tryParse(map['endsAt'] as String)
           : null,
       createdBy: map['createdBy'] as String?,
+      careerField: map['careerField'] as String? ?? '',
+      supervisor: map['supervisor'] as String? ?? '',
+      hoursLogged: (map['hoursLogged'] as num?)?.toDouble() ?? 0,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -439,6 +465,9 @@ class DosaMeeting {
     this.calendarEventId,
     this.tasks = const [],
     this.createdBy,
+    this.venue = '',
+    this.transportRoute = '',
+    this.transportNote = '',
   });
 
   final String id;
@@ -451,6 +480,9 @@ class DosaMeeting {
   String? calendarEventId;
   List<DosaTask> tasks;
   String? createdBy;
+  String venue;
+  String transportRoute;
+  String transportNote;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -465,6 +497,9 @@ class DosaMeeting {
         if (calendarEventId != null) 'calendarEventId': calendarEventId,
         'tasks': tasks.map((t) => t.toMap()).toList(),
         if (createdBy != null) 'createdBy': createdBy,
+        if (venue.isNotEmpty) 'venue': venue,
+        if (transportRoute.isNotEmpty) 'transportRoute': transportRoute,
+        if (transportNote.isNotEmpty) 'transportNote': transportNote,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -491,6 +526,9 @@ class DosaMeeting {
               .toList()
           : const [],
       createdBy: map['createdBy'] as String?,
+      venue: map['venue'] as String? ?? '',
+      transportRoute: map['transportRoute'] as String? ?? '',
+      transportNote: map['transportNote'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:

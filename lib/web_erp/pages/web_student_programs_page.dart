@@ -20,7 +20,7 @@ class WebStudentProgramsPage extends StatefulWidget {
 
 class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 6, vsync: this);
+  late final TabController _tabs = TabController(length: 7, vsync: this);
   final _svc = DosaService.instance;
 
   bool get _canManage => ModuleAccess.canManage('student_affairs');
@@ -77,9 +77,9 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                   const SizedBox(height: 4),
                   Text(
                     'Clubs and Gojo, merit scholarships (reads the markbook, '
-                    'never writes grades), grievances, internships, '
-                    'leadership meetings, and open leadership tasks. Minutes stay '
-                    'on the meeting — chat is only for coordination.',
+                    'never writes grades), grievances, internships / career hours, '
+                    'attendance and transport oversight (reads only), and '
+                    'graduation / event logistics. Minutes stay on the meeting.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -113,6 +113,10 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                         text:
                             'Tasks (${_svc.openLeadershipTaskCount(_schoolId)})',
                       ),
+                      Tab(
+                        text:
+                            'Oversight (${_svc.attendanceOversight(_schoolId).length})',
+                      ),
                     ],
                   ),
                 ],
@@ -128,6 +132,7 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                   _internshipsTab(),
                   _meetingsTab(),
                   _tasksTab(),
+                  _oversightTab(),
                 ],
               ),
             ),
@@ -209,13 +214,18 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
           _card(
             title: '${row.studentName} · ${row.title}',
             subtitle:
-                '${row.status.name} · avg ${row.snapshotAverage?.toStringAsFixed(1) ?? '—'} / ${row.minAverage}',
+                '${row.status.name} · avg ${row.snapshotAverage?.toStringAsFixed(1) ?? '—'} / ${row.minAverage}'
+                '${row.meetsThreshold ? ' · meets threshold' : ''}',
             body: [
               if (row.note.trim().isNotEmpty) Text(row.note),
               if (_canManage)
                 Wrap(
                   spacing: 8,
                   children: [
+                    TextButton(
+                      onPressed: () => _svc.refreshScholarshipAverage(row.id),
+                      child: const Text('Refresh markbook avg'),
+                    ),
                     TextButton(
                       onPressed: () => _svc.reviewScholarship(
                         row.id,
@@ -246,7 +256,14 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
         for (final row in items)
           _card(
             title: row.title.isEmpty ? row.studentName : row.title,
-            subtitle: '${row.studentName} · ${row.status.name}',
+            subtitle: [
+              row.studentName,
+              row.status.name,
+              row.category,
+              if (row.assignedTo.isNotEmpty) 'assigned ${row.assignedTo}',
+              if (row.dueAt != null)
+                'due ${row.dueAt!.toIso8601String().split('T').first}',
+            ].join(' · '),
             body: [
               if (row.details.trim().isNotEmpty) Text(row.details),
               if (row.resolution.trim().isNotEmpty)
@@ -255,6 +272,10 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                 Wrap(
                   spacing: 8,
                   children: [
+                    TextButton(
+                      onPressed: () => _assignGrievance(row),
+                      child: const Text('Assign'),
+                    ),
                     TextButton(
                       onPressed: () => _svc.reviewGrievance(
                         row.id,
@@ -289,8 +310,16 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
         for (final row in items)
           _card(
             title: '${row.studentName} · ${row.host}',
-            subtitle: '${row.role} · ${row.status.name}',
+            subtitle: [
+              row.role,
+              row.status.name,
+              if (row.careerField.isNotEmpty) row.careerField,
+              if (row.hoursLogged > 0)
+                '${row.hoursLogged.toStringAsFixed(0)}h logged',
+            ].join(' · '),
             body: [
+              if (row.supervisor.trim().isNotEmpty)
+                Text('Supervisor: ${row.supervisor}'),
               if (row.notes.trim().isNotEmpty) Text(row.notes),
               if (_canManage)
                 Wrap(
@@ -302,6 +331,10 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                             _svc.updateInternshipStatus(row.id, status),
                         child: Text(status.name),
                       ),
+                    TextButton(
+                      onPressed: () => _svc.logInternshipHours(row.id, 1),
+                      child: const Text('+1 career hour'),
+                    ),
                   ],
                 ),
             ],
@@ -363,11 +396,20 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
             title: '${row.title} · ${row.kind.name}',
             subtitle: [
               row.startsAt.toLocal().toString(),
+              if (row.venue.isNotEmpty) row.venue,
               if (row.calendarEventId != null) 'On calendar',
             ].join(' · '),
             body: [
               if (row.agenda.trim().isNotEmpty) Text(row.agenda),
               if (row.notes.trim().isNotEmpty) Text(row.notes),
+              if (row.transportRoute.isNotEmpty || row.transportNote.isNotEmpty)
+                Text(
+                  [
+                    if (row.transportRoute.isNotEmpty)
+                      'Bus / route ${row.transportRoute}',
+                    if (row.transportNote.isNotEmpty) row.transportNote,
+                  ].join(' · '),
+                ),
               for (final task in row.tasks)
                 CheckboxListTile(
                   dense: true,
@@ -378,8 +420,79 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                       ? (_) => _svc.toggleTask(row.id, task.id)
                       : null,
                 ),
+              if (_canManage && row.kind != DosaMeetingKind.leadership)
+                TextButton(
+                  onPressed: () => _editMeetingLogistics(row),
+                  child: const Text('Venue / transport'),
+                ),
             ],
           ),
+      ],
+    );
+  }
+
+  Widget _oversightTab() {
+    final flags = _svc.attendanceOversight(_schoolId);
+    final buses = _svc.transportCoordination(_schoolId);
+    final trips = _svc.academicTransportEvents(_schoolId);
+    return _list(
+      empty: 'No attendance flags or academic transport notes.',
+      children: [
+        const Text(
+          'Attendance oversight reads the live register. Transport lists the '
+          'existing bus register for graduation / field-trip coordination. '
+          'Neither writes attendance or GPS.',
+        ),
+        const SizedBox(height: 12),
+        Text(
+          flags.isEmpty
+              ? 'No at-risk attendance flags.'
+              : 'At-risk attendance: ${flags.length}',
+        ),
+        for (final row in flags)
+          _card(
+            title: '${row.studentName} · ${row.className}',
+            subtitle:
+                '${row.level.name} · present ${row.attendanceRate.toStringAsFixed(0)}% · '
+                '${row.consecutiveAbsences} consecutive absences',
+            body: [
+              if (row.patterns.isNotEmpty)
+                Text(row.patterns.map((p) => p.label).join(' · ')),
+            ],
+          ),
+        const SizedBox(height: 8),
+        Text(
+          buses.isEmpty
+              ? 'No published buses on the transport register.'
+              : 'Academic transport routes: ${buses.length}',
+        ),
+        for (final bus in buses)
+          _card(
+            title: '${bus.busNumber} · ${bus.routeName}',
+            subtitle: [
+              bus.busId,
+              if (bus.plateNumber.isNotEmpty) bus.plateNumber,
+              'cap ${bus.capacity}',
+            ].join(' · '),
+            body: [
+              if ((bus.notes ?? '').trim().isNotEmpty) Text(bus.notes!),
+            ],
+          ),
+        if (trips.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('Graduation / event transport notes'),
+          for (final row in trips)
+            _card(
+              title: '${row.title} · ${row.kind.name}',
+              subtitle: [
+                if (row.venue.isNotEmpty) row.venue,
+                if (row.transportRoute.isNotEmpty) row.transportRoute,
+              ].join(' · '),
+              body: [
+                if (row.transportNote.isNotEmpty) Text(row.transportNote),
+              ],
+            ),
+        ],
       ],
     );
   }
@@ -619,10 +732,12 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     if (studentId == null) return;
     final host = TextEditingController();
     final role = TextEditingController();
+    final field = TextEditingController();
+    final supervisor = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Internship'),
+        title: const Text('Internship / career placement'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -633,6 +748,14 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
             TextField(
               controller: role,
               decoration: const InputDecoration(labelText: 'Role'),
+            ),
+            TextField(
+              controller: field,
+              decoration: const InputDecoration(labelText: 'Career field'),
+            ),
+            TextField(
+              controller: supervisor,
+              decoration: const InputDecoration(labelText: 'Supervisor'),
             ),
           ],
         ),
@@ -653,6 +776,8 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
       studentId: studentId,
       host: host.text,
       role: role.text,
+      careerField: field.text,
+      supervisor: supervisor.text,
     );
   }
 
@@ -705,6 +830,9 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     var kind = DosaMeetingKind.leadership;
     final title = TextEditingController();
     final agenda = TextEditingController();
+    final venue = TextEditingController();
+    final route = TextEditingController();
+    final transport = TextEditingController();
     final task = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -732,6 +860,22 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                 decoration: const InputDecoration(labelText: 'Agenda'),
               ),
               TextField(
+                controller: venue,
+                decoration: const InputDecoration(labelText: 'Venue'),
+              ),
+              TextField(
+                controller: route,
+                decoration: const InputDecoration(
+                  labelText: 'Bus / route (academic coordination)',
+                ),
+              ),
+              TextField(
+                controller: transport,
+                decoration: const InputDecoration(
+                  labelText: 'Transport note',
+                ),
+              ),
+              TextField(
                 controller: task,
                 decoration: const InputDecoration(labelText: 'First task'),
               ),
@@ -756,11 +900,138 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
       startsAt: DateTime.now().add(const Duration(days: 1)),
       kind: kind,
       agenda: agenda.text,
+      venue: venue.text,
+      transportRoute: route.text,
+      transportNote: transport.text,
       tasks: task.text.trim().isEmpty
           ? const []
           : [
               DosaTask(id: 'T-0001', title: task.text.trim()),
             ],
+    );
+  }
+
+  Future<void> _assignGrievance(Grievance row) async {
+    final assignee = TextEditingController(text: row.assignedTo);
+    var category = row.category;
+    DateTime? dueAt = row.dueAt;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Assign grievance'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: const [
+                  DropdownMenuItem(value: 'academic', child: Text('Academic')),
+                  DropdownMenuItem(
+                    value: 'transport',
+                    child: Text('Transport'),
+                  ),
+                  DropdownMenuItem(value: 'welfare', child: Text('Welfare')),
+                  DropdownMenuItem(
+                    value: 'facilities',
+                    child: Text('Facilities'),
+                  ),
+                  DropdownMenuItem(value: 'other', child: Text('Other')),
+                ],
+                onChanged: (v) =>
+                    setDialogState(() => category = v ?? category),
+              ),
+              TextField(
+                controller: assignee,
+                decoration: const InputDecoration(labelText: 'Assignee'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: dueAt ?? DateTime.now(),
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2035),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => dueAt = picked);
+                  }
+                },
+                child: Text(
+                  dueAt == null
+                      ? 'Set due date'
+                      : 'Due ${dueAt!.toIso8601String().split('T').first}',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    await _svc.reviewGrievance(
+      row.id,
+      row.status,
+      assignedTo: assignee.text,
+      dueAt: dueAt,
+      category: category,
+    );
+  }
+
+  Future<void> _editMeetingLogistics(DosaMeeting row) async {
+    final venue = TextEditingController(text: row.venue);
+    final route = TextEditingController(text: row.transportRoute);
+    final note = TextEditingController(text: row.transportNote);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Venue / academic transport'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: venue,
+              decoration: const InputDecoration(labelText: 'Venue'),
+            ),
+            TextField(
+              controller: route,
+              decoration: const InputDecoration(labelText: 'Bus / route'),
+            ),
+            TextField(
+              controller: note,
+              decoration: const InputDecoration(labelText: 'Transport note'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _svc.updateMeetingLogistics(
+      id: row.id,
+      venue: venue.text,
+      transportRoute: route.text,
+      transportNote: note.text,
     );
   }
 
