@@ -190,6 +190,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       'meds' => all.where((r) => r.type == HealthRecordType.medication).toList(),
       'alert' =>
         all.where((r) => r.type == HealthRecordType.emergencyAlert).toList(),
+      'checkup' =>
+        all.where((r) => r.type == HealthRecordType.medicalCheckup).toList(),
+      'accident' =>
+        all.where((r) => r.type == HealthRecordType.accident).toList(),
       'due' => due,
       'followup' => followUps,
       _ => all,
@@ -231,7 +235,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           'Today’s log: ${summary.visits} visits · '
           '${summary.vaccinations} vaccines · '
           '${summary.medications} meds · '
-          '${summary.alerts} alerts'
+          '${summary.alerts} alerts · '
+          '${summary.checkups} check-ups · '
+          '${summary.accidents} accidents'
           '${due.isEmpty ? '' : ' · ${due.length} vaccine(s) due'}'
           '${followUps.isEmpty ? '' : ' · ${followUps.length} follow-up(s)'}',
         ),
@@ -247,6 +253,8 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               ('due', 'Due soon'),
               ('followup', 'Follow-up'),
               ('meds', 'Medication'),
+              ('checkup', 'Check-ups'),
+              ('accident', 'Accidents'),
               ('alert', 'Emergencies'),
             ])
               ChoiceChip(
@@ -449,6 +457,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
 
   Widget _selTab() {
     final items = _svc.selForSchool(_schoolId);
+    final analytics = _svc.selAnalytics(_schoolId);
     return _listTab(
       action: _canManage
           ? FilledButton.icon(
@@ -457,8 +466,19 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               label: const Text('SEL observation (1–5)'),
             )
           : null,
+      banner: StudentSupportPlaybook.banners['sel'],
       empty: 'No SEL scores yet. These are staff ratings, not predictive ML.',
       children: [
+        if (analytics.observations > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Analytics: ${analytics.observations} notes · '
+              '${analytics.studentsCovered} student(s) · overall '
+              '${analytics.overall?.toStringAsFixed(1) ?? '—'} / 5'
+              '${analytics.domainAverages.isEmpty ? '' : ' · ${analytics.domainAverages.entries.map((e) => '${e.key.name} ${e.value.toStringAsFixed(1)}').join(' · ')}'}',
+            ),
+          ),
         for (final row in items)
           _card(
             title: '${row.studentName} · ${row.domain.name} · ${row.rating}/5',
@@ -475,8 +495,11 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   Widget _counselingTab() {
     final all = _svc.counselingForSchool(_schoolId);
     final followUps = _svc.counselingFollowUpsDue(schoolId: _schoolId);
+    final appointments =
+        _svc.upcomingCounselingAppointments(schoolId: _schoolId);
     final items = switch (_counselFilter) {
       'followup' => followUps,
+      'appointments' => appointments,
       'crisis' => all.where((row) => row.format == 'crisis').toList(),
       'monitor' => all.where((row) => row.riskWatch == 'monitor').toList(),
       _ => all,
@@ -497,6 +520,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           children: [
             for (final (value, label) in [
               ('all', 'All (${all.length})'),
+              ('appointments', 'Appointments (${appointments.length})'),
               ('followup', 'Follow-up (${followUps.length})'),
               ('crisis', 'Crisis'),
               ('monitor', 'Risk watch'),
@@ -520,6 +544,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 row.format,
               ),
               if (row.durationMinutes != null) '${row.durationMinutes} min',
+              if (row.startsAt != null) 'at ${_dateLabel(row.startsAt!)}',
               if (row.riskWatch == 'monitor') 'MONITOR',
             ].join(' · '),
             body: [
@@ -592,6 +617,8 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                   : 'Awaiting parent agreement',
             ].join(' · '),
             body: [
+              if (row.intakeAssessment.trim().isNotEmpty)
+                Text('Intake assessment: ${row.intakeAssessment}'),
               if (row.goals.trim().isNotEmpty) Text('SMART goals: ${row.goals}'),
               if (row.accommodations.trim().isNotEmpty)
                 Text('Classroom accommodations: ${row.accommodations}'),
@@ -601,11 +628,17 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                 ),
               if (row.externalReportRef.trim().isNotEmpty)
                 Text('External report: ${row.externalReportRef}'),
+              if (row.evaluationNotes.trim().isNotEmpty)
+                Text(
+                  'Evaluation'
+                  '${row.lastEvaluatedAt == null ? '' : ' ${_dateLabel(row.lastEvaluatedAt!)}'}'
+                  ': ${row.evaluationNotes}',
+                ),
               if (row.staffNotes.trim().isNotEmpty)
                 Text('Staff notes: ${row.staffNotes}'),
               if (row.trainingSessions.isNotEmpty)
                 Text(
-                  'Teacher training: ${row.trainingSessions.map((t) => t.topic).join(', ')}',
+                  'Training: ${row.trainingSessions.map((t) => '${t.audience} · ${t.topic}').join(', ')}',
                 ),
               if (_canManage)
                 Wrap(
@@ -629,8 +662,26 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                       child: const Text('Access arrangements'),
                     ),
                     TextButton(
+                      onPressed: () => _addIepEvaluation(row.id),
+                      child: const Text('Log evaluation'),
+                    ),
+                    TextButton(
                       onPressed: () => _addIepTraining(row.id),
-                      child: const Text('Log teacher training'),
+                      child: const Text('Log teacher / student training'),
+                    ),
+                    TextButton(
+                      onPressed: () => _logIepHealth(
+                        row.studentId,
+                        HealthRecordType.medicalCheckup,
+                      ),
+                      child: const Text('Medical check-up'),
+                    ),
+                    TextButton(
+                      onPressed: () => _logIepHealth(
+                        row.studentId,
+                        HealthRecordType.accident,
+                      ),
+                      child: const Text('Accident / incident'),
                     ),
                   ],
                 ),
@@ -643,6 +694,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
 
   Widget _collegeTab() {
     final items = _svc.collegeForSchool(_schoolId);
+    final events = _svc.collegeGuidanceEvents();
+    final appointments =
+        _svc.upcomingCollegeAppointments(schoolId: _schoolId);
     return _listTab(
       action: _canManage
           ? FilledButton.icon(
@@ -654,9 +708,34 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       banner: StudentSupportPlaybook.banners['college'],
       empty: 'No college-guidance plans yet.',
       children: [
+        if (_canManage)
+          Wrap(
+            spacing: 8,
+            children: [
+              TextButton.icon(
+                onPressed: _addCollegeEvent,
+                icon: const Icon(Icons.event_outlined),
+                label: const Text('College event (calendar)'),
+              ),
+            ],
+          ),
+        if (events.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Upcoming events: ${events.map((e) => '${e.title} ${_dateLabel(e.date)}').join(' · ')}',
+          ),
+        ],
+        if (appointments.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Upcoming sessions: ${appointments.map((row) => '${row.studentName} ${_dateLabel(row.nextAppointmentAt!)}').join(' · ')}',
+          ),
+        ],
+        const SizedBox(height: 12),
         for (final row in items)
           _card(
-            title: '${row.studentName} · ${row.stage.name}',
+            title:
+                '${row.studentName} · ${StudentSupportPlaybook.collegeLifecycle(row.stage)} · ${row.stage.name}',
             subtitle: [
               if (row.applicationSystem.isNotEmpty)
                 StudentSupportPlaybook.label(
@@ -673,6 +752,10 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               if (row.portfolio.trim().isNotEmpty)
                 Text('Portfolio: ${row.portfolio}'),
               if (row.notes.trim().isNotEmpty) Text('Notes: ${row.notes}'),
+              if (row.nextAppointmentAt != null)
+                Text(
+                  'Next session ${_dateLabel(row.nextAppointmentAt!)}',
+                ),
               for (final art in row.artifacts)
                 CheckboxListTile(
                   dense: true,
@@ -690,9 +773,19 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                       : null,
                 ),
               if (_canManage)
-                TextButton(
-                  onPressed: () => _addCollegeArtifact(row.studentId),
-                  child: const Text('Add essay / rec / deadline'),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () => _addCollegeArtifact(row.studentId),
+                      child: const Text('Add essay / rec / event / deadline'),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          _scheduleCollegeAppointment(row.studentId),
+                      child: const Text('Set session'),
+                    ),
+                  ],
                 ),
               _parentBtn(row.studentId),
             ],
@@ -1055,6 +1148,14 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                         value: HealthRecordType.emergencyAlert,
                         child: Text('Emergency alert'),
                       ),
+                      DropdownMenuItem(
+                        value: HealthRecordType.medicalCheckup,
+                        child: Text('Medical check-up'),
+                      ),
+                      DropdownMenuItem(
+                        value: HealthRecordType.accident,
+                        child: Text('Accident / incident'),
+                      ),
                     ],
                     onChanged: (v) =>
                         setDialogState(() => type = v ?? type),
@@ -1239,6 +1340,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       doseNumber: int.tryParse(dose.text),
       nextDueAt: nextDue,
       notifyParent: type == HealthRecordType.emergencyAlert ||
+          type == HealthRecordType.accident ||
           severity == 'urgent',
       disposition: disposition,
       followUpAt: followUp,
@@ -1254,6 +1356,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     var format = 'individual';
     var riskWatch = 'none';
     DateTime? followUp;
+    DateTime? startsAt;
     final title = TextEditingController();
     final summary = TextEditingController();
     final notes = TextEditingController();
@@ -1321,6 +1424,24 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Duration (minutes)',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: startsAt ?? DateTime.now(),
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => startsAt = picked);
+                      }
+                    },
+                    child: Text(
+                      startsAt == null
+                          ? 'Set appointment date'
+                          : 'Appointment ${_dateLabel(startsAt!)}',
                     ),
                   ),
                   TextField(
@@ -1391,6 +1512,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       durationMinutes: int.tryParse(duration.text),
       followUpAt: followUp,
       riskWatch: riskWatch,
+      startsAt: startsAt,
     );
   }
 
@@ -1406,6 +1528,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
     final notes = TextEditingController();
     final agreement = TextEditingController();
     final reportRef = TextEditingController();
+    final intake = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1469,6 +1592,13 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                         }),
                       ),
                   ],
+                ),
+                TextField(
+                  controller: intake,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Intake assessment',
+                  ),
                 ),
                 TextField(
                   controller: goals,
@@ -1551,6 +1681,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       reviewCycle: reviewCycle,
       externalReportRef: reportRef.text,
       nextReviewAt: nextReview,
+      intakeAssessment: intake.text,
     );
   }
 
@@ -2206,18 +2337,30 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
   }
 
   Future<void> _addIepTraining(String planId) async {
+    var audience = 'teacher';
     final topic = TextEditingController();
     final trainer = TextEditingController();
     final notes = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('IEP teacher training'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+        title: const Text('IEP training (teachers or students)'),
         content: SizedBox(
           width: 400,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              DropdownButtonFormField<String>(
+                initialValue: audience,
+                decoration: const InputDecoration(labelText: 'Audience'),
+                items: const [
+                  DropdownMenuItem(value: 'teacher', child: Text('Teachers')),
+                  DropdownMenuItem(value: 'student', child: Text('Students')),
+                ],
+                onChanged: (v) =>
+                    setDialogState(() => audience = v ?? audience),
+              ),
               TextField(
                 controller: topic,
                 decoration: const InputDecoration(labelText: 'Topic'),
@@ -2244,6 +2387,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           ),
         ],
       ),
+        ),
     );
     if (ok != true) return;
     await _svc.addIepTraining(
@@ -2252,6 +2396,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       trainer: trainer.text,
       notes: notes.text,
       trainedAt: DateTime.now(),
+      audience: audience,
     );
   }
 
@@ -2513,5 +2658,163 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
       agencyReferred: agency.text,
       nextReviewAt: nextReview,
     );
+  }
+
+  Future<void> _addIepEvaluation(String planId) async {
+    final notes = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('IEP evaluation / progress report'),
+        content: TextField(
+          controller: notes,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Evaluation notes',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _svc.addIepEvaluation(id: planId, notes: notes.text);
+  }
+
+  Future<void> _logIepHealth(
+    String studentId,
+    HealthRecordType type,
+  ) async {
+    final title = TextEditingController(
+      text: type == HealthRecordType.accident
+          ? 'SEN accident / incident'
+          : 'SEN medical check-up',
+    );
+    final details = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          type == HealthRecordType.accident
+              ? 'Accident / incident (clinic register)'
+              : 'Medical check-up (clinic register)',
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: title,
+              decoration: const InputDecoration(labelText: 'Title'),
+            ),
+            TextField(
+              controller: details,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Details'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log on health'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _svc.addHealthRecord(
+      studentId: studentId,
+      type: type,
+      title: title.text,
+      details: details.text,
+      notifyParent: type == HealthRecordType.accident,
+    );
+  }
+
+  Future<void> _scheduleCollegeAppointment(String studentId) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2035),
+    );
+    if (picked == null) return;
+    await _svc.scheduleCollegeAppointment(
+      studentId: studentId,
+      when: picked,
+    );
+  }
+
+  Future<void> _addCollegeEvent() async {
+    final title = TextEditingController();
+    final details = TextEditingController();
+    var date = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('College guidance event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: title,
+                decoration: const InputDecoration(
+                  labelText: 'Fair / workshop / visit',
+                ),
+              ),
+              TextField(
+                controller: details,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Details'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: date,
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2035),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => date = picked);
+                  }
+                },
+                child: Text('Date ${_dateLabel(date)}'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Add to calendar'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || title.text.trim().isEmpty) return;
+    _svc.scheduleCollegeGuidanceEvent(
+      title: title.text,
+      description: details.text,
+      date: date,
+    );
+    setState(() {});
   }
 }

@@ -2,7 +2,14 @@
 // Sensitive. Child-protection files never go to parents, students, or
 // classroom teachers. Not a grade store and not a second SIS.
 
-enum HealthRecordType { clinicVisit, vaccination, medication, emergencyAlert }
+enum HealthRecordType {
+  clinicVisit,
+  vaccination,
+  medication,
+  emergencyAlert,
+  medicalCheckup,
+  accident,
+}
 
 /// Suggested vaccine names — stored as free text on [HealthRecord.vaccineName].
 abstract final class HealthVaccineHints {
@@ -137,7 +144,20 @@ abstract final class StudentSupportPlaybook {
     'safeguarding':
         'DSL / DDSL chronology. Category, agency referral, and next review '
         'stay on this desk. Never put case narrative in parent chat.',
+    'sel':
+        'CASEL-style staff ratings (1–5) by domain. Averages are descriptive '
+        'analytics for the care desk — not predictive scoring or ML.',
   };
+
+  static String collegeLifecycle(CollegeStage stage) => switch (stage) {
+        CollegeStage.exploring => 'Direction',
+        CollegeStage.readiness => 'Readiness',
+        CollegeStage.applying => 'Application',
+        CollegeStage.accepted ||
+        CollegeStage.enrolled ||
+        CollegeStage.deferred =>
+          'Decision',
+      };
 
   static String label(List<(String, String)> pairs, String key) {
     for (final pair in pairs) {
@@ -154,6 +174,8 @@ class HealthClinicSummary {
     required this.vaccinations,
     required this.medications,
     required this.alerts,
+    this.checkups = 0,
+    this.accidents = 0,
   });
 
   final DateTime day;
@@ -161,8 +183,11 @@ class HealthClinicSummary {
   final int vaccinations;
   final int medications;
   final int alerts;
+  final int checkups;
+  final int accidents;
 
-  int get total => visits + vaccinations + medications + alerts;
+  int get total =>
+      visits + vaccinations + medications + alerts + checkups + accidents;
 }
 
 class MedicationStockMovement {
@@ -255,9 +280,16 @@ enum CounselingKind { session, appointment, referral }
 
 enum IepStage { intake, draftPlan, parentAgreement, review }
 
-enum CollegeStage { exploring, applying, accepted, enrolled, deferred }
+enum CollegeStage {
+  exploring,
+  readiness,
+  applying,
+  accepted,
+  enrolled,
+  deferred,
+}
 
-enum CollegeArtifactKind { essay, recLetter, transcript, deadline, other }
+enum CollegeArtifactKind { essay, recLetter, transcript, deadline, event, other }
 
 enum SupportRequestKind {
   counselingAppointment,
@@ -532,6 +564,9 @@ class IepPlan {
     this.accessArrangements = const [],
     this.reviewCycle = 'termly',
     this.externalReportRef = '',
+    this.intakeAssessment = '',
+    this.evaluationNotes = '',
+    this.lastEvaluatedAt,
   });
 
   final String id;
@@ -553,6 +588,9 @@ class IepPlan {
   List<String> accessArrangements;
   String reviewCycle;
   String externalReportRef;
+  String intakeAssessment;
+  String evaluationNotes;
+  DateTime? lastEvaluatedAt;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -582,6 +620,10 @@ class IepPlan {
         if (reviewCycle.isNotEmpty) 'reviewCycle': reviewCycle,
         if (externalReportRef.isNotEmpty)
           'externalReportRef': externalReportRef,
+        if (intakeAssessment.isNotEmpty) 'intakeAssessment': intakeAssessment,
+        if (evaluationNotes.isNotEmpty) 'evaluationNotes': evaluationNotes,
+        if (lastEvaluatedAt != null)
+          'lastEvaluatedAt': lastEvaluatedAt!.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -626,6 +668,11 @@ class IepPlan {
           const [],
       reviewCycle: map['reviewCycle'] as String? ?? 'termly',
       externalReportRef: map['externalReportRef'] as String? ?? '',
+      intakeAssessment: map['intakeAssessment'] as String? ?? '',
+      evaluationNotes: map['evaluationNotes'] as String? ?? '',
+      lastEvaluatedAt: map['lastEvaluatedAt'] != null
+          ? DateTime.tryParse(map['lastEvaluatedAt'] as String)
+          : null,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -641,6 +688,7 @@ class IepTrainingSession {
     this.trainedAt,
     this.trainer = '',
     this.notes = '',
+    this.audience = 'teacher',
   });
 
   final String id;
@@ -648,6 +696,7 @@ class IepTrainingSession {
   DateTime? trainedAt;
   String trainer;
   String notes;
+  String audience;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -655,6 +704,7 @@ class IepTrainingSession {
         if (trainedAt != null) 'trainedAt': trainedAt!.toIso8601String(),
         'trainer': trainer,
         'notes': notes,
+        if (audience.isNotEmpty) 'audience': audience,
       };
 
   factory IepTrainingSession.fromMap(Map<String, dynamic> map) {
@@ -666,6 +716,7 @@ class IepTrainingSession {
           : null,
       trainer: map['trainer'] as String? ?? '',
       notes: map['notes'] as String? ?? '',
+      audience: map['audience'] as String? ?? 'teacher',
     );
   }
 }
@@ -1199,6 +1250,20 @@ class MedicationStockItem {
           DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
+}
+
+class SelAnalytics {
+  const SelAnalytics({
+    required this.observations,
+    required this.studentsCovered,
+    required this.domainAverages,
+    this.overall,
+  });
+
+  final int observations;
+  final int studentsCovered;
+  final Map<SelDomain, double> domainAverages;
+  final double? overall;
 }
 
 enum SelDomain {

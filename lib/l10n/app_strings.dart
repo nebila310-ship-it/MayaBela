@@ -958,6 +958,11 @@ class AppStrings implements AppStringsLike {
       'meeting' => t('Meeting', 'ስብሰባ', 'Walgahii'),
       'sports' => t('Sports', 'ስፖርት', 'Ispoortii'),
       'classEvent' => t('Class event', 'የክፍል ክስተት', 'Taatee kutaa'),
+      'collegeGuidance' => t(
+          'College guidance',
+          'የኮሌጅ መመሪያ',
+          'Qajeelcha kolleejjii',
+        ),
       _ => t('Other', 'ሌላ', 'Kan biroo'),
     };
   }

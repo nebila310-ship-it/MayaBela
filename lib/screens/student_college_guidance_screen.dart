@@ -59,7 +59,9 @@ class _StudentCollegeGuidanceScreenState
               if (plan != null)
                 Card(
                   child: ListTile(
-                    title: Text('Stage · ${plan.stage.name}'),
+                    title: Text(
+                      'Stage · ${StudentSupportPlaybook.collegeLifecycle(plan.stage)} · ${plan.stage.name}',
+                    ),
                     subtitle: Text(
                       [
                         if (plan.targets.trim().isNotEmpty) plan.targets,

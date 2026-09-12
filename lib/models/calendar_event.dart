@@ -1,4 +1,12 @@
-enum CalendarEventType { exam, holiday, meeting, sports, classEvent, other }
+enum CalendarEventType {
+  exam,
+  holiday,
+  meeting,
+  sports,
+  classEvent,
+  collegeGuidance,
+  other,
+}
 
 class CalendarEvent {
   CalendarEvent({

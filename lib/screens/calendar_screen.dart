@@ -126,6 +126,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return Colors.green;
       case CalendarEventType.classEvent:
         return Colors.blue;
+      case CalendarEventType.collegeGuidance:
+        return Colors.teal;
       case CalendarEventType.other:
         return Colors.grey;
     }
@@ -143,6 +145,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return Icons.sports_soccer;
       case CalendarEventType.classEvent:
         return Icons.class_;
+      case CalendarEventType.collegeGuidance:
+        return Icons.school_outlined;
       case CalendarEventType.other:
         return Icons.event;
     }
