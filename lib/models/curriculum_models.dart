@@ -207,6 +207,8 @@ class CurriculumFeedback {
   final DateTime createdAt;
   DateTime updatedAt;
 
+  bool get isSchoolWide => curriculumUnitId.trim().isEmpty;
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'schoolId': schoolId,
@@ -445,6 +447,24 @@ class AcademicMeeting {
       updatedAt:
           DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
     );
+  }
+}
+
+/// Academic meeting invitees — stored as role keys on [AcademicMeeting].
+abstract final class AcademicMeetingRoles {
+  static const choices = <(String, String)>[
+    ('vice_president', 'Vice Principal'),
+    ('section_director', 'Section Director'),
+    ('quality_assurance', 'Quality Assurance'),
+    ('principal', 'Principal'),
+    ('teachers', 'Teachers'),
+  ];
+
+  static String label(String key) {
+    for (final item in choices) {
+      if (item.$1 == key) return item.$2;
+    }
+    return key;
   }
 }
 

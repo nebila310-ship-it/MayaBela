@@ -225,6 +225,22 @@ class LessonPlanService extends ChangeNotifier {
     plan.updatedAt = DateTime.now();
     plan.publishedAt =
         status == LessonPlanStatus.published ? plan.updatedAt : null;
+    if (status == LessonPlanStatus.published &&
+        plan.reviewStatus == LessonPlanReviewStatus.none) {
+      plan.reviewStatus = LessonPlanReviewStatus.pending;
+    }
+    await _persist();
+    return plan;
+  }
+
+  /// Publish and queue department-head review. Does not write grades.
+  Future<LessonPlan?> submitForReview(String id) async {
+    final plan = planById(id);
+    if (plan == null) return null;
+    plan.status = LessonPlanStatus.published;
+    plan.reviewStatus = LessonPlanReviewStatus.pending;
+    plan.updatedAt = DateTime.now();
+    plan.publishedAt = plan.updatedAt;
     await _persist();
     return plan;
   }

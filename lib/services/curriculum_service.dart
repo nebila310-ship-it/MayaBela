@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/curriculum_models.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
@@ -18,6 +22,7 @@ class CurriculumAlignmentSnapshot {
     required this.unlinkedPublishedPlans,
     required this.unitCount,
     required this.unitsWithStandards,
+    this.unlinkedBySubject = const {},
   });
 
   final int publishedPlanCount;
@@ -25,6 +30,7 @@ class CurriculumAlignmentSnapshot {
   final List<LessonPlan> unlinkedPublishedPlans;
   final int unitCount;
   final int unitsWithStandards;
+  final Map<String, int> unlinkedBySubject;
 
   int get unlinkedPublishedPlanCount => unlinkedPublishedPlans.length;
 }
@@ -318,8 +324,32 @@ class CurriculumService extends ChangeNotifier {
           : LessonPlanReviewStatus.changesRequested,
       latestReviewId: review.id,
     );
+    _notifyTeacherOfReview(review);
     await _persist();
     return review;
+  }
+
+  void _notifyTeacherOfReview(LessonPlanReview review) {
+    final plan = LessonPlanService.instance.planById(review.lessonPlanId);
+    final teacher = (plan?.createdBy ?? '').trim();
+    if (teacher.isEmpty) return;
+    final approved = review.decision == LessonPlanReviewDecision.approved;
+    NotificationService.instance.push(
+      title: approved
+          ? 'Lesson plan approved'
+          : 'Lesson plan needs changes',
+      body: approved
+          ? '${plan?.title ?? 'A lesson plan'} was approved by academic leadership.'
+          : '${plan?.title ?? 'A lesson plan'} needs changes'
+              '${review.notes.isEmpty ? '.' : ': ${review.notes}'}',
+      type: NotificationType.general,
+      fromRole: AuthService.roleAdmin,
+      fromName: AuthService.currentUser?.fullName ?? 'Academic leadership',
+      recipientRole: AuthService.roleTeacher,
+      recipientUsername: teacher,
+      targetClassName: plan?.className,
+      showOnMessagesBadge: false,
+    );
   }
 
   List<LessonPlanReview> reviewsForSchool([String? schoolId]) {
@@ -416,12 +446,19 @@ class CurriculumService extends ChangeNotifier {
         .where((p) => (p.curriculumUnitId ?? '').trim().isEmpty)
         .toList();
     final units = unitsForSchool(schoolId);
+    final unlinkedBySubject = <String, int>{};
+    for (final plan in unlinked) {
+      final subject =
+          plan.subject.trim().isEmpty ? 'Unassigned' : plan.subject.trim();
+      unlinkedBySubject[subject] = (unlinkedBySubject[subject] ?? 0) + 1;
+    }
     return CurriculumAlignmentSnapshot(
       publishedPlanCount: plans.length,
       linkedPublishedPlanCount: plans.length - unlinked.length,
       unlinkedPublishedPlans: unlinked,
       unitCount: units.length,
       unitsWithStandards: units.where((u) => u.standardCodes.isNotEmpty).length,
+      unlinkedBySubject: unlinkedBySubject,
     );
   }
 
@@ -503,6 +540,13 @@ class CurriculumService extends ChangeNotifier {
           ..sort((a, b) => b.startsAt.compareTo(a.startsAt));
   }
 
+  AcademicMeeting? meetingById(String id) {
+    for (final m in _meetings) {
+      if (m.id == id) return m;
+    }
+    return null;
+  }
+
   Future<AcademicMeeting> recordMeeting({
     required String title,
     required DateTime startsAt,
@@ -510,25 +554,83 @@ class CurriculumService extends ChangeNotifier {
     String agenda = '',
     String notes = '',
     List<String> attendeeRoles = const [],
+    bool publishToCalendar = false,
     String? schoolId,
   }) async {
     final now = DateTime.now();
+    String? calendarEventId;
+    if (publishToCalendar) {
+      calendarEventId = _scheduleStaffMeeting(
+        title: title.trim(),
+        agenda: agenda.trim(),
+        startsAt: startsAt,
+      );
+    }
     final item = AcademicMeeting(
       id: _id('AM', _meetings.map((m) => m.id)),
       schoolId: (schoolId ?? _schoolId).toUpperCase(),
       title: title.trim(),
       startsAt: startsAt,
-      endsAt: endsAt,
+      endsAt: endsAt ?? startsAt.add(const Duration(hours: 1)),
       agenda: agenda.trim(),
       notes: notes.trim(),
       attendeeRoles: List.of(attendeeRoles),
       createdBy: _username,
+      calendarEventId: calendarEventId,
       createdAt: now,
       updatedAt: now,
     );
     _meetings.add(item);
     await _persist();
     return item;
+  }
+
+  Future<AcademicMeeting?> updateMeeting(
+    String id, {
+    String? title,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    String? agenda,
+    String? notes,
+    List<String>? attendeeRoles,
+    bool? publishToCalendar,
+  }) async {
+    final item = meetingById(id);
+    if (item == null) return null;
+    if (title != null) item.title = title.trim();
+    if (startsAt != null) item.startsAt = startsAt;
+    if (endsAt != null) item.endsAt = endsAt;
+    if (agenda != null) item.agenda = agenda.trim();
+    if (notes != null) item.notes = notes.trim();
+    if (attendeeRoles != null) item.attendeeRoles = List.of(attendeeRoles);
+    if (publishToCalendar == true && (item.calendarEventId ?? '').isEmpty) {
+      item.calendarEventId = _scheduleStaffMeeting(
+        title: item.title,
+        agenda: item.agenda,
+        startsAt: item.startsAt,
+      );
+    }
+    item.updatedAt = DateTime.now();
+    await _persist();
+    return item;
+  }
+
+  String _scheduleStaffMeeting({
+    required String title,
+    required String agenda,
+    required DateTime startsAt,
+  }) {
+    final event = SchoolDataService.instance.scheduleCalendarEvent(
+      title: title,
+      description: agenda.isEmpty ? title : agenda,
+      date: startsAt,
+      type: CalendarEventType.meeting,
+      audience: 'staff',
+      autoAnnounce: false,
+      time:
+          '${startsAt.hour.toString().padLeft(2, '0')}:${startsAt.minute.toString().padLeft(2, '0')}',
+    );
+    return event.id;
   }
 
   void applyPersistedData({

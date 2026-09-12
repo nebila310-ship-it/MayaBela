@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/curriculum_models.dart';
+import 'package:mayabela/models/qa_monitor_models.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -46,12 +48,17 @@ class _CurriculumPortalScreenState extends State<CurriculumPortalScreen> {
     _curriculum.ensureLoaded();
     LessonPlanService.instance.ensureLoaded();
     ExamService.instance.ensureLoaded();
+    QaMonitorService.instance.ensureLoaded();
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_curriculum, AppLocale.instance]),
+      listenable: Listenable.merge([
+        _curriculum,
+        QaMonitorService.instance,
+        AppLocale.instance,
+      ]),
       builder: (context, _) {
         final className = _className;
         final units = widget.mode == CurriculumPortalMode.teacher
@@ -62,21 +69,22 @@ class _CurriculumPortalScreenState extends State<CurriculumPortalScreen> {
         final evals = widget.mode == CurriculumPortalMode.teacher
             ? _curriculum.evaluationsForSchool()
             : const <TeacherEvaluation>[];
+        final observations = widget.mode == CurriculumPortalMode.teacher
+            ? QaMonitorService.instance.observationsForSchool()
+            : const <TeachingObservation>[];
         return Scaffold(
           backgroundColor: const Color(0xFFCFDBEA),
           appBar: AppBar(
             backgroundColor: _accent,
             title: Text(AppLocale.instance.strings.dashboardTitle('curriculum')),
           ),
-          floatingActionButton: units.isEmpty
-              ? null
-              : FloatingActionButton.extended(
+          floatingActionButton: FloatingActionButton.extended(
                   onPressed: () => showCurriculumFeedbackDialog(context),
                   backgroundColor: _accent,
                   icon: const Icon(Icons.comment_outlined),
                   label: const Text('Feedback'),
                 ),
-          body: units.isEmpty && evals.isEmpty
+          body: units.isEmpty && evals.isEmpty && observations.isEmpty
               ? const Center(child: Text('No published curriculum units yet.'))
               : ListView(
                   padding: listPagePadding(context),
@@ -96,7 +104,32 @@ class _CurriculumPortalScreenState extends State<CurriculumPortalScreen> {
                             subtitle: Text(
                               'Fidelity ${item.curriculumFidelity}/5 · '
                               'Planning ${item.planningQuality}/5 · '
-                              'Alignment ${item.assessmentAlignment}/5',
+                              'Alignment ${item.assessmentAlignment}/5'
+                              '${item.lessonPlanReviewIds.isEmpty ? '' : ' · ${item.lessonPlanReviewIds.length} review(s)'}',
+                            ),
+                          ),
+                        ),
+                    ],
+                    if (observations.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Shared teaching observations',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      for (final item in observations)
+                        Card(
+                          child: ListTile(
+                            title: Text(
+                              item.subject.trim().isEmpty
+                                  ? item.className
+                                  : '${item.subject} · ${item.className}',
+                            ),
+                            subtitle: Text(
+                              'Planning ${item.planning}/5 · '
+                              'Instruction ${item.instruction}/5 · '
+                              'Engagement ${item.engagement}/5 · '
+                              'Assessment ${item.assessment}/5',
                             ),
                           ),
                         ),

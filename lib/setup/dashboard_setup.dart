@@ -29,6 +29,7 @@ import 'package:mayabela/screens/curriculum_portal_screen.dart';
 import 'package:mayabela/screens/qa_surveys_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
+import 'package:mayabela/screens/parent_feedback_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
 import 'package:mayabela/screens/parent_student_support_screen.dart';
 import 'package:mayabela/screens/student_college_guidance_screen.dart';
@@ -956,6 +957,22 @@ List<DashboardEntry> _parentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const QaSurveysScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'feedback',
+      icon: Icons.forum_outlined,
+      color: const Color(0xFF6D4C41),
+      builder: (context) => DashboardCard(
+        icon: Icons.forum_outlined,
+        title: _t('feedback', role),
+        color: const Color(0xFF6D4C41),
+        onTap: () => _openTile('feedback', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ParentFeedbackScreen()),
           );
         }),
       ),
@@ -2560,7 +2577,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My children',
           icon: Icons.child_care,
-          entryIds: ['children', 'attendance', 'homework', 'lesson_plans', 'curriculum', 'qa_surveys', 'learning_materials', 'grades', 'timetable'],
+          entryIds: ['children', 'attendance', 'homework', 'lesson_plans', 'curriculum', 'qa_surveys', 'feedback', 'learning_materials', 'grades', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'School updates',
