@@ -170,7 +170,8 @@ void main() {
       // Reports opened for VP oversight (export read-only).
       expect(ModuleAccess.canView('reports'), isTrue);
       expect(ModuleAccess.canManage('reports'), isFalse);
-      expect(ModuleAccess.canView('audit_log'), isFalse);
+      expect(ModuleAccess.canView('audit_log'), isTrue);
+      expect(ModuleAccess.canManage('audit_log'), isFalse);
     });
 
     test('does not see owner-only system chrome', () {
@@ -260,6 +261,19 @@ void main() {
       expect(ModuleAccess.canView('support'), isTrue);
       // Child-protection files are not a classroom or department-head desk.
       expect(ModuleAccess.canView('safeguarding'), isFalse);
+      expect(ModuleAccess.canView('reports'), isTrue);
+      expect(ModuleAccess.canManage('reports'), isFalse);
+    });
+  });
+
+  group('Quality Assurance', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.qualityAssurance]));
+
+    test('opens reports and the audit log read-only', () {
+      expect(ModuleAccess.canView('quality_assurance'), isTrue);
+      expect(ModuleAccess.canView('reports'), isTrue);
+      expect(ModuleAccess.canView('audit_log'), isTrue);
+      expect(ModuleAccess.canManage('audit_log'), isFalse);
     });
   });
 

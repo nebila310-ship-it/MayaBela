@@ -68,9 +68,27 @@ abstract final class TrainingManuals {
           body:
               'Go-live → Backups writes a school snapshot (counts and a student '
               'directory without passwords or authenticator secrets).\n\n'
+              'The desk reminds you when the last snapshot is older than 24 '
+              'hours. That is a checklist, not a scheduled backup product.\n\n'
               'Platform-owner registry restore is a separate drill '
               '(tools/restore_drill_staging.mjs). This button does not replace '
               'that owner tool.',
+        ),
+        const TrainingArticle(
+          id: 'admin-analytics',
+          audience: 'admin',
+          title: 'Reports instead of Excel grading',
+          summary: 'Markbook, analytics, and spreadsheet exports.',
+          body:
+              'Teachers enter marks in Markbook. Academic analytics reads those '
+              'same rows plus the live attendance register. A student is '
+              'at-risk only when low marks combine with high absence — there '
+              'is no machine-learning score.\n\n'
+              'Reports → Academic / Attendance / Grade analytics workbook '
+              'exports the same stores as CSV or Excel. Do not keep a second '
+              'grade spreadsheet.\n\n'
+              'Parents see published grades on the parent portal or mobile app '
+              'after the school approves and publishes them.',
         ),
         const TrainingArticle(
           id: 'teacher-class',

@@ -245,6 +245,7 @@ void main() {
     expect(find.text('AAA LMS 4A · English'), findsOneWidget);
     expect(find.text('Join live class'), findsOneWidget);
     expect(find.text('Class discussion'), findsWidgets);
+    expect(find.text('SIS roster'), findsWidgets);
     expect(find.textContaining('Engagement:'), findsWidgets);
   });
 }
