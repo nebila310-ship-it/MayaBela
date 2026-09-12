@@ -22,6 +22,7 @@ class StudentSisSnapshot {
     required this.documents,
     required this.clubNames,
     required this.movements,
+    this.gojoHours = 0,
     this.conduct,
   });
 
@@ -32,6 +33,7 @@ class StudentSisSnapshot {
   final List<HealthRecord> healthRecords;
   final List<StudentDocument> documents;
   final List<String> clubNames;
+  final int gojoHours;
   final List<TransferRequest> movements;
 
   String get groupingSummary {
@@ -39,6 +41,7 @@ class StudentSisSnapshot {
       student.className,
       if ((student.house ?? '').trim().isNotEmpty) 'House ${student.house}',
       ...clubNames,
+      if (gojoHours > 0) '$gojoHours Gojo hours',
     ];
     return parts.join(' · ');
   }
@@ -64,6 +67,7 @@ class StudentSisProfile {
       healthRecords: StudentSupportService.instance.healthForStudent(id),
       documents: StudentSupportService.instance.documentsForStudent(id),
       clubNames: DosaService.instance.clubNamesForStudent(id),
+      gojoHours: DosaService.instance.gojoHoursForStudent(id),
       movements: TransferWorkflowService.instance.requestsForStudent(id),
     );
   }

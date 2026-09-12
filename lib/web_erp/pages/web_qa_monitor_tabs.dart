@@ -78,47 +78,110 @@ class _ObservationsTab extends StatelessWidget {
     final subject = TextEditingController();
     final notes = TextEditingController();
     var planning = 3;
+    var instruction = 3;
+    var engagement = 3;
+    var assessment = 3;
+    final units = CurriculumService.instance.unitsForSchool();
+    String? unitId;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Teaching observation'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (teachers.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  key: ValueKey(teacherId),
-                  initialValue: teacherId,
-                  items: [
-                    for (final t in teachers)
-                      DropdownMenuItem(
-                        value: t.teacherId,
-                        child: Text(t.fullName),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (teachers.isNotEmpty)
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(teacherId),
+                    initialValue: teacherId,
+                    items: [
+                      for (final t in teachers)
+                        DropdownMenuItem(
+                          value: t.teacherId,
+                          child: Text(t.fullName),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => teacherId = v ?? teacherId),
+                  ),
+                TextField(
+                  controller: subject,
+                  decoration: const InputDecoration(labelText: 'Subject'),
+                ),
+                if (units.isNotEmpty)
+                  DropdownButtonFormField<String?>(
+                    initialValue: unitId,
+                    decoration: const InputDecoration(
+                      labelText: 'Curriculum unit (optional)',
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('None'),
                       ),
+                      for (final unit in units)
+                        DropdownMenuItem(
+                          value: unit.id,
+                          child: Text(unit.title),
+                        ),
+                    ],
+                    onChanged: (v) => setDialogState(() => unitId = v),
+                  ),
+                DropdownButtonFormField<int>(
+                  key: ValueKey('plan-$planning'),
+                  initialValue: planning,
+                  decoration: const InputDecoration(labelText: 'Planning (1–5)'),
+                  items: [
+                    for (var i = 1; i <= 5; i++)
+                      DropdownMenuItem(value: i, child: Text('$i')),
                   ],
                   onChanged: (v) =>
-                      setDialogState(() => teacherId = v ?? teacherId),
+                      setDialogState(() => planning = v ?? planning),
                 ),
-              TextField(
-                controller: subject,
-                decoration: const InputDecoration(labelText: 'Subject'),
-              ),
-              DropdownButtonFormField<int>(
-                key: ValueKey(planning),
-                initialValue: planning,
-                decoration: const InputDecoration(labelText: 'Planning (1–5)'),
-                items: [
-                  for (var i = 1; i <= 5; i++)
-                    DropdownMenuItem(value: i, child: Text('$i')),
-                ],
-                onChanged: (v) => setDialogState(() => planning = v ?? planning),
-              ),
-              TextField(
-                controller: notes,
-                decoration: const InputDecoration(labelText: 'Notes'),
-              ),
-            ],
+                DropdownButtonFormField<int>(
+                  key: ValueKey('ins-$instruction'),
+                  initialValue: instruction,
+                  decoration:
+                      const InputDecoration(labelText: 'Instruction (1–5)'),
+                  items: [
+                    for (var i = 1; i <= 5; i++)
+                      DropdownMenuItem(value: i, child: Text('$i')),
+                  ],
+                  onChanged: (v) =>
+                      setDialogState(() => instruction = v ?? instruction),
+                ),
+                DropdownButtonFormField<int>(
+                  key: ValueKey('eng-$engagement'),
+                  initialValue: engagement,
+                  decoration:
+                      const InputDecoration(labelText: 'Engagement (1–5)'),
+                  items: [
+                    for (var i = 1; i <= 5; i++)
+                      DropdownMenuItem(value: i, child: Text('$i')),
+                  ],
+                  onChanged: (v) =>
+                      setDialogState(() => engagement = v ?? engagement),
+                ),
+                DropdownButtonFormField<int>(
+                  key: ValueKey('ass-$assessment'),
+                  initialValue: assessment,
+                  decoration:
+                      const InputDecoration(labelText: 'Assessment (1–5)'),
+                  items: [
+                    for (var i = 1; i <= 5; i++)
+                      DropdownMenuItem(value: i, child: Text('$i')),
+                  ],
+                  onChanged: (v) =>
+                      setDialogState(() => assessment = v ?? assessment),
+                ),
+                TextField(
+                  controller: notes,
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -144,10 +207,11 @@ class _ObservationsTab extends StatelessWidget {
       teacherId: teacherId.isEmpty ? null : teacherId,
       className: teacher?.assignedClass ?? '',
       subject: subject.text,
+      curriculumUnitId: unitId,
       planning: planning,
-      instruction: planning,
-      engagement: planning,
-      assessment: planning,
+      instruction: instruction,
+      engagement: engagement,
+      assessment: assessment,
       notes: notes.text,
     );
   }
@@ -189,6 +253,14 @@ class _AuditsTab extends StatelessWidget {
                 body: [
                   if (row.notes.isNotEmpty) Text(row.notes),
                   Text(row.status.name),
+                  if (canManage && row.status != AuditStatus.completed)
+                    TextButton(
+                      onPressed: () => svc.updateAudit(
+                        id: row.id,
+                        status: AuditStatus.completed,
+                      ),
+                      child: const Text('Mark completed'),
+                    ),
                 ],
               ),
           ],
@@ -257,6 +329,7 @@ class _AuditsTab extends StatelessWidget {
     await QaMonitorService.instance.recordAudit(
       curriculumUnitId: unitId,
       verdict: verdict,
+      status: AuditStatus.inProgress,
       notes: notes.text,
     );
   }
@@ -395,14 +468,20 @@ class _ResearchTab extends StatelessWidget {
                 title: '${row.title} · ${row.status.name}',
                 subtitle: row.inquiry,
                 body: [
+                  if (row.method.isNotEmpty) Text('Method: ${row.method}'),
                   if (row.findings.isNotEmpty) Text(row.findings),
-                  if (canManage && row.status != ActionResearchStatus.complete)
+                  if (row.nextSteps.isNotEmpty) Text('Next: ${row.nextSteps}'),
+                  if (canManage && row.status == ActionResearchStatus.planned)
                     TextButton(
                       onPressed: () => svc.updateResearchStatus(
                         row.id,
-                        ActionResearchStatus.complete,
-                        findings: row.findings,
+                        ActionResearchStatus.active,
                       ),
+                      child: const Text('Start'),
+                    ),
+                  if (canManage && row.status != ActionResearchStatus.complete)
+                    TextButton(
+                      onPressed: () => _completeResearch(context, row),
                       child: const Text('Complete'),
                     ),
                 ],
@@ -413,9 +492,51 @@ class _ResearchTab extends StatelessWidget {
     );
   }
 
+  Future<void> _completeResearch(BuildContext context, ActionResearch row) async {
+    final findings = TextEditingController(text: row.findings);
+    final next = TextEditingController(text: row.nextSteps);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Complete cycle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: findings,
+              decoration: const InputDecoration(labelText: 'Findings'),
+            ),
+            TextField(
+              controller: next,
+              decoration: const InputDecoration(labelText: 'Next steps'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await QaMonitorService.instance.updateResearchStatus(
+      row.id,
+      ActionResearchStatus.complete,
+      findings: findings.text,
+      nextSteps: next.text,
+    );
+  }
+
   Future<void> _addResearch(BuildContext context) async {
     final title = TextEditingController();
     final inquiry = TextEditingController();
+    final method = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -430,6 +551,10 @@ class _ResearchTab extends StatelessWidget {
             TextField(
               controller: inquiry,
               decoration: const InputDecoration(labelText: 'Inquiry'),
+            ),
+            TextField(
+              controller: method,
+              decoration: const InputDecoration(labelText: 'Method'),
             ),
           ],
         ),
@@ -449,6 +574,7 @@ class _ResearchTab extends StatelessWidget {
     await QaMonitorService.instance.recordResearch(
       title: title.text,
       inquiry: inquiry.text,
+      method: method.text,
     );
   }
 }
@@ -458,7 +584,9 @@ class _AnalyticsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final snap = QaMonitorService.instance.analyticsForSchool();
+    final svc = QaMonitorService.instance;
+    final snap = svc.analyticsForSchool();
+    final flagged = svc.flaggedProfilesForSchool();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -483,6 +611,21 @@ class _AnalyticsTab extends StatelessWidget {
             ),
           ],
         ),
+        if (flagged.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Flagged students',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          for (final row in flagged.take(20))
+            ListTile(
+              dense: true,
+              title: Text('${row.studentName} · ${row.className}'),
+              subtitle: Text(
+                '${row.level.name} · present ${row.attendanceRate.toStringAsFixed(0)}%',
+              ),
+            ),
+        ],
       ],
     );
   }

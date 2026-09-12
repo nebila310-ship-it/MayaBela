@@ -93,6 +93,8 @@ class ClubMembership {
     this.role = 'member',
     this.status = MembershipStatus.pending,
     this.gojoHours = 0,
+    this.engagementRating,
+    this.evaluationNotes = '',
     this.createdBy,
   });
 
@@ -105,6 +107,8 @@ class ClubMembership {
   String role;
   MembershipStatus status;
   int gojoHours;
+  int? engagementRating;
+  String evaluationNotes;
   String? createdBy;
   final DateTime createdAt;
   DateTime updatedAt;
@@ -119,6 +123,8 @@ class ClubMembership {
         'role': role,
         'status': status.name,
         'gojoHours': gojoHours,
+        if (engagementRating != null) 'engagementRating': engagementRating,
+        if (evaluationNotes.isNotEmpty) 'evaluationNotes': evaluationNotes,
         if (createdBy != null) 'createdBy': createdBy,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -138,6 +144,8 @@ class ClubMembership {
         orElse: () => MembershipStatus.pending,
       ),
       gojoHours: (map['gojoHours'] as num?)?.toInt() ?? 0,
+      engagementRating: (map['engagementRating'] as num?)?.toInt(),
+      evaluationNotes: map['evaluationNotes'] as String? ?? '',
       createdBy: map['createdBy'] as String?,
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
@@ -438,6 +446,8 @@ class DosaEngagementSnapshot {
     required this.openGrievances,
     required this.internships,
     required this.upcomingMeetings,
+    this.activeByClub = const {},
+    this.evaluatedMembers = 0,
   });
 
   final int publishedClubs;
@@ -449,6 +459,8 @@ class DosaEngagementSnapshot {
   final int openGrievances;
   final int internships;
   final int upcomingMeetings;
+  final Map<String, int> activeByClub;
+  final int evaluatedMembers;
 }
 
 class DosaMeeting {

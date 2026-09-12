@@ -1691,6 +1691,9 @@ class SchoolDataService {
     if (conversation.groupParentNames.isNotEmpty) {
       roles.add(AuthService.roleParent);
     }
+    if (conversation.linkedStudentIds.isNotEmpty) {
+      roles.add(AuthService.roleStudent);
+    }
     for (final staffId in conversation.groupStaffIds) {
       final member = StaffMemberOption.resolve(staffId);
       if (member != null) roles.add(member.roleKey);
@@ -1760,6 +1763,7 @@ class SchoolDataService {
     required String groupName,
     required List<String> parentNames,
     required List<String> staffIds,
+    List<String>? linkedStudentIds,
   }) {
     final title = groupName.trim();
     if (title.isEmpty) {
@@ -1773,6 +1777,31 @@ class SchoolDataService {
     for (final conversation in _conversations) {
       if (conversation.isGroup &&
           conversation.name.trim().toLowerCase() == title.toLowerCase()) {
+        var changed = false;
+        for (final id in staffIds) {
+          if (id.trim().isEmpty) continue;
+          if (!conversation.groupStaffIds.contains(id)) {
+            conversation.groupStaffIds.add(id);
+            changed = true;
+          }
+        }
+        for (final id in parentNames) {
+          if (id.trim().isEmpty) continue;
+          if (!conversation.groupParentNames.contains(id)) {
+            conversation.groupParentNames.add(id);
+            changed = true;
+          }
+        }
+        for (final id in linkedStudentIds ?? const <String>[]) {
+          final studentId = id.trim().toUpperCase();
+          if (studentId.isEmpty) continue;
+          if (!conversation.linkedStudentIds
+              .any((existing) => existing.toUpperCase() == studentId)) {
+            conversation.linkedStudentIds.add(studentId);
+            changed = true;
+          }
+        }
+        if (changed) _persistConversation(conversation.id);
         return conversation.id;
       }
     }
@@ -1791,6 +1820,7 @@ class SchoolDataService {
         isGroup: true,
         groupParentNames: sortedParents,
         groupStaffIds: sortedStaffIds,
+        linkedStudentIds: linkedStudentIds,
         messages: [],
         usesCustomGroupName: true,
       ),
@@ -2176,6 +2206,8 @@ class SchoolDataService {
         return {AuthService.roleParent};
       case AnnouncementAudiences.teachers:
         return {AuthService.roleTeacher};
+      case AnnouncementAudiences.students:
+        return {AuthService.roleStudent};
       case AnnouncementAudiences.transport:
         return {AuthService.roleDriver};
       case AnnouncementAudiences.admin:
@@ -2187,6 +2219,7 @@ class SchoolDataService {
           AuthService.roleTeacher,
           AuthService.roleAdmin,
           AuthService.roleDriver,
+          AuthService.roleStudent,
         };
     }
   }

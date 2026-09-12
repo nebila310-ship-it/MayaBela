@@ -86,6 +86,7 @@ class LmsClassroomService {
       groupName: title,
       parentNames: parentNames.toList()..sort(),
       staffIds: staffIds.toList()..sort(),
+      linkedStudentIds: students.map((s) => s.studentId).toList(),
     );
   }
 
