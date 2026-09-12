@@ -173,6 +173,20 @@ class QaMonitorService extends ChangeNotifier {
     );
   }
 
+  /// Read-only flagged students from Phase F. Never writes grades.
+  List<StudentRiskProfile> flaggedProfilesForSchool() {
+    if (_isPublicReader) return const [];
+    return AttendanceIntelligenceService.instance
+        .profiles()
+        .where(
+          (row) =>
+              row.level == RiskLevel.atRisk ||
+              row.level == RiskLevel.academicWatch ||
+              row.level == RiskLevel.attendanceWatch,
+        )
+        .toList();
+  }
+
   Future<TeachingObservation> recordObservation({
     required String teacherName,
     String teacherUsername = '',
@@ -258,6 +272,28 @@ class QaMonitorService extends ChangeNotifier {
       updatedAt: now,
     );
     _audits.add(row);
+    await _persist();
+    return row;
+  }
+
+  Future<AcademicAudit> updateAudit({
+    required String id,
+    AuditVerdict? verdict,
+    AuditStatus? status,
+    String? notes,
+  }) async {
+    _requireStaffDesk();
+    final row = _audits.cast<AcademicAudit?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Audit not found.');
+    }
+    if (verdict != null) row.verdict = verdict;
+    if (status != null) row.status = status;
+    if (notes != null) row.notes = notes.trim();
+    row.updatedAt = DateTime.now();
     await _persist();
     return row;
   }
@@ -399,6 +435,30 @@ class QaMonitorService extends ChangeNotifier {
     row.status = status;
     if (findings.trim().isNotEmpty) row.findings = findings.trim();
     if (nextSteps.trim().isNotEmpty) row.nextSteps = nextSteps.trim();
+    row.updatedAt = DateTime.now();
+    await _persist();
+    return row;
+  }
+
+  Future<ActionResearch> updateResearch({
+    required String id,
+    String? method,
+    String? findings,
+    String? nextSteps,
+    ActionResearchStatus? status,
+  }) async {
+    _requireStaffDesk();
+    final row = _research.cast<ActionResearch?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Action research not found.');
+    }
+    if (method != null) row.method = method.trim();
+    if (findings != null) row.findings = findings.trim();
+    if (nextSteps != null) row.nextSteps = nextSteps.trim();
+    if (status != null) row.status = status;
     row.updatedAt = DateTime.now();
     await _persist();
     return row;

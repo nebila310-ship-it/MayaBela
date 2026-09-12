@@ -4,13 +4,16 @@ import 'package:mayabela/models/attendance_intelligence_models.dart';
 import 'package:mayabela/models/bus_record.dart';
 import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/dosa_models.dart';
+import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/attendance_intelligence_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
 /// Phase H DoSA desk. Clubs/Gojo, scholarships, grievances, internships,
@@ -181,11 +184,18 @@ class DosaService extends ChangeNotifier {
   DosaEngagementSnapshot engagementForSchool([String? schoolId]) {
     final memberships = membershipsForSchool(schoolId);
     final scholarships = scholarshipsForSchool(schoolId);
+    final active = memberships
+        .where((row) => row.status == MembershipStatus.active)
+        .toList();
+    final byClub = <String, int>{};
+    for (final row in active) {
+      final club = clubById(row.clubId);
+      final name = club?.name ?? row.clubId;
+      byClub[name] = (byClub[name] ?? 0) + 1;
+    }
     return DosaEngagementSnapshot(
       publishedClubs: activeClubCount(schoolId),
-      activeMembers: memberships
-          .where((row) => row.status == MembershipStatus.active)
-          .length,
+      activeMembers: active.length,
       pendingMembers: memberships
           .where((row) => row.status == MembershipStatus.pending)
           .length,
@@ -197,7 +207,23 @@ class DosaService extends ChangeNotifier {
       openGrievances: openGrievanceCount(schoolId),
       internships: internshipsForSchool(schoolId).length,
       upcomingMeetings: upcomingMeetingCount(schoolId),
+      activeByClub: byClub,
+      evaluatedMembers: memberships
+          .where((row) => row.engagementRating != null)
+          .length,
     );
+  }
+
+  ExtracurricularClub? clubById(String id) {
+    for (final club in _clubs) {
+      if (club.id == id) return club;
+    }
+    return null;
+  }
+
+  int gojoHoursForStudent(String studentId) {
+    return membershipsForStudent(studentId)
+        .fold<int>(0, (sum, row) => sum + row.gojoHours);
   }
 
   /// Read-only attendance watch. Does not write attendance_sessions.
@@ -244,10 +270,26 @@ class DosaService extends ChangeNotifier {
     String advisorName = '',
     String meetingDay = '',
     bool published = true,
+    bool publishToCalendar = false,
     String? schoolId,
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
+    String? calendarEventId;
+    if (publishToCalendar) {
+      calendarEventId = SchoolDataService.instance
+          .scheduleCalendarEvent(
+            title: name.trim(),
+            description: description.trim().isEmpty
+                ? '${kind.name} · ${meetingDay.trim()}'.trim()
+                : description.trim(),
+            date: now,
+            type: CalendarEventType.classEvent,
+            audience: 'students',
+            autoAnnounce: false,
+          )
+          .id;
+    }
     final club = ExtracurricularClub(
       id: _id('CLB', _clubs.map((row) => row.id)),
       schoolId: (schoolId ?? _schoolId).toUpperCase(),
@@ -257,6 +299,7 @@ class DosaService extends ChangeNotifier {
       advisorName: advisorName.trim(),
       meetingDay: meetingDay.trim(),
       published: published,
+      calendarEventId: calendarEventId,
       createdBy: _username,
       createdAt: now,
       updatedAt: now,
@@ -341,6 +384,30 @@ class DosaService extends ChangeNotifier {
       throw StateError('Membership not found.');
     }
     row.gojoHours = (row.gojoHours + hours).clamp(0, 9999);
+    row.updatedAt = DateTime.now();
+    await _persist();
+    return row;
+  }
+
+  Future<ClubMembership> evaluateMembership({
+    required String id,
+    int? engagementRating,
+    String? evaluationNotes,
+  }) async {
+    _requireStaffDesk();
+    final row = _memberships.cast<ClubMembership?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Membership not found.');
+    }
+    if (engagementRating != null) {
+      row.engagementRating = engagementRating.clamp(1, 5);
+    }
+    if (evaluationNotes != null) {
+      row.evaluationNotes = evaluationNotes.trim();
+    }
     row.updatedAt = DateTime.now();
     await _persist();
     return row;
@@ -592,15 +659,27 @@ class DosaService extends ChangeNotifier {
     final now = DateTime.now();
     String? calendarEventId;
     if (kind == DosaMeetingKind.graduation || kind == DosaMeetingKind.event) {
-      final event = SchoolDataService.instance.scheduleCalendarEvent(
-        title: title.trim(),
-        description: agenda.trim().isEmpty ? title.trim() : agenda.trim(),
-        date: startsAt,
-        type: CalendarEventType.meeting,
-        audience: 'All',
-        autoAnnounce: false,
-      );
-      calendarEventId = event.id;
+      calendarEventId = SchoolDataService.instance
+          .scheduleCalendarEvent(
+            title: title.trim(),
+            description: agenda.trim().isEmpty ? title.trim() : agenda.trim(),
+            date: startsAt,
+            type: CalendarEventType.meeting,
+            audience: 'All',
+            autoAnnounce: false,
+          )
+          .id;
+    } else {
+      calendarEventId = SchoolDataService.instance
+          .scheduleCalendarEvent(
+            title: title.trim(),
+            description: agenda.trim().isEmpty ? title.trim() : agenda.trim(),
+            date: startsAt,
+            type: CalendarEventType.meeting,
+            audience: 'staff',
+            autoAnnounce: false,
+          )
+          .id;
     }
     final row = DosaMeeting(
       id: _id('DOS', _meetings.map((item) => item.id)),
@@ -630,10 +709,65 @@ class DosaService extends ChangeNotifier {
     if (_username.trim().isEmpty) {
       throw StateError('Sign in to open the leadership chat.');
     }
-    return SchoolDataService.instance.openOrCreateGroupConversation(
-      parentNames: const [],
-      staffIds: [_username],
+    return SchoolDataService.instance.ensureNamedGroupConversation(
       groupName: 'DoSA leadership',
+      parentNames: const [],
+      staffIds: _leadershipStaffIds(),
+    );
+  }
+
+  List<String> _leadershipStaffIds() {
+    const leadRoles = {
+      StaffRoles.vicePresident,
+      StaffRoles.studentAffairs,
+      StaffRoles.sectionDirector,
+      StaffRoles.principal,
+    };
+    final ids = <String>{};
+    if (_username.trim().isNotEmpty) ids.add(_username.trim());
+    for (final teacher
+        in TeacherRegistryService.instance.teachersForSchool(_schoolId)) {
+      final roles = teacher.staffRoles.toSet();
+      if (roles.intersection(leadRoles).isEmpty) continue;
+      final username = (teacher.loginUsername ?? '').trim();
+      if (username.isNotEmpty) ids.add(username);
+      ids.add(StaffMemberOption.teacherKey(teacher.teacherId));
+    }
+    return ids.toList()..sort();
+  }
+
+  /// Club / Gojo discussion reuses conversations. Not a second forum store.
+  String ensureClubDiscussion(String clubId) {
+    _requireStaffDesk();
+    final club = clubById(clubId);
+    if (club == null) {
+      throw StateError('Club not found.');
+    }
+    final members = membershipsForClub(clubId)
+        .where((row) => row.status == MembershipStatus.active)
+        .toList();
+    final parentNames = <String>{};
+    final studentIds = <String>{};
+    for (final member in members) {
+      studentIds.add(member.studentId);
+      final student =
+          StudentRegistryService.instance.lookupById(member.studentId);
+      if (student == null) continue;
+      for (final name in [
+        student.fatherName,
+        student.motherName,
+        student.guardianName,
+      ]) {
+        if (name != null && name.trim().isNotEmpty) {
+          parentNames.add(name.trim());
+        }
+      }
+    }
+    return SchoolDataService.instance.ensureNamedGroupConversation(
+      groupName: '${club.name} club discussion',
+      parentNames: parentNames.toList(),
+      staffIds: _leadershipStaffIds(),
+      linkedStudentIds: studentIds.toList(),
     );
   }
 
@@ -654,6 +788,62 @@ class DosaService extends ChangeNotifier {
     if (venue != null) meeting.venue = venue.trim();
     if (transportRoute != null) meeting.transportRoute = transportRoute.trim();
     if (transportNote != null) meeting.transportNote = transportNote.trim();
+    meeting.updatedAt = DateTime.now();
+    await _persist();
+    return meeting;
+  }
+
+  Future<DosaMeeting> updateMeeting({
+    required String id,
+    String? title,
+    DateTime? startsAt,
+    String? agenda,
+    String? notes,
+    String? venue,
+    String? transportRoute,
+    String? transportNote,
+  }) async {
+    _requireStaffDesk();
+    final meeting = _meetings.cast<DosaMeeting?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (meeting == null) {
+      throw StateError('Meeting not found.');
+    }
+    if (title != null) meeting.title = title.trim();
+    if (startsAt != null) meeting.startsAt = startsAt;
+    if (agenda != null) meeting.agenda = agenda.trim();
+    if (notes != null) meeting.notes = notes.trim();
+    if (venue != null) meeting.venue = venue.trim();
+    if (transportRoute != null) meeting.transportRoute = transportRoute.trim();
+    if (transportNote != null) meeting.transportNote = transportNote.trim();
+    meeting.updatedAt = DateTime.now();
+    await _persist();
+    return meeting;
+  }
+
+  Future<DosaMeeting> addMeetingTask({
+    required String meetingId,
+    required String title,
+    String assignee = '',
+  }) async {
+    _requireStaffDesk();
+    final meeting = _meetings.cast<DosaMeeting?>().firstWhere(
+          (item) => item?.id == meetingId,
+          orElse: () => null,
+        );
+    if (meeting == null) {
+      throw StateError('Meeting not found.');
+    }
+    meeting.tasks = [
+      ...meeting.tasks,
+      DosaTask(
+        id: _id('T', meeting.tasks.map((t) => t.id)),
+        title: title.trim(),
+        assignee: assignee.trim(),
+      ),
+    ];
     meeting.updatedAt = DateTime.now();
     await _persist();
     return meeting;
@@ -764,7 +954,13 @@ class DosaService extends ChangeNotifier {
       if (_isPublicReader) {
         mergeList(
           _meetings,
-          meetings.where((row) => row.kind == DosaMeetingKind.graduation).toList(),
+          meetings
+              .where(
+                (row) =>
+                    row.kind == DosaMeetingKind.graduation ||
+                    row.kind == DosaMeetingKind.event,
+              )
+              .toList(),
           (row) => row.id,
         );
       } else {

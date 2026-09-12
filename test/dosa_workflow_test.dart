@@ -103,8 +103,19 @@ void main() {
       kind: DosaMeetingKind.graduation,
       schoolId: 'TB-001',
     );
-    expect(briefing.calendarEventId, isNull);
+    expect(briefing.calendarEventId, isNotNull);
     expect(graduation.calendarEventId, isNotNull);
+    final briefingEvent = SchoolDataService.instance
+        .getCalendarEvents()
+        .firstWhere((event) => event.id == briefing.calendarEventId);
+    expect(briefingEvent.audience, 'staff');
+    expect(
+      SchoolDataService.instance.calendarEventVisibleToRole(
+        briefingEvent,
+        AuthService.roleParent,
+      ),
+      isFalse,
+    );
     expect(DosaService.instance.meetingsForSchool('TB-001'), hasLength(2));
     expect(
       SchoolDataService.instance

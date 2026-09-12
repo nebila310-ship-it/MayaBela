@@ -168,7 +168,11 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                 ListTile(
                   dense: true,
                   title: Text('${m.studentName} · ${m.status.name}'),
-                  subtitle: Text('Gojo hours: ${m.gojoHours}'),
+                  subtitle: Text(
+                    'Gojo hours: ${m.gojoHours}'
+                    '${m.engagementRating == null ? '' : ' · ${m.engagementRating}/5'}'
+                    '${m.evaluationNotes.isEmpty ? '' : '\n${m.evaluationNotes}'}',
+                  ),
                   trailing: _canManage
                       ? Wrap(
                           children: [
@@ -183,14 +187,34 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                               onPressed: () => _svc.addGojoHours(m.id, 1),
                               child: const Text('+1h'),
                             ),
+                            TextButton(
+                              onPressed: () => _evaluateMember(m),
+                              child: const Text('Evaluate'),
+                            ),
+                            if (m.status != MembershipStatus.withdrawn)
+                              TextButton(
+                                onPressed: () => _svc.setMembershipStatus(
+                                  m.id,
+                                  MembershipStatus.withdrawn,
+                                ),
+                                child: const Text('Withdraw'),
+                              ),
                           ],
                         )
                       : null,
                 ),
               if (_canManage)
-                TextButton(
-                  onPressed: () => _enrollStudent(club.id),
-                  child: const Text('Add member'),
+                Wrap(
+                  children: [
+                    TextButton(
+                      onPressed: () => _enrollStudent(club.id),
+                      child: const Text('Add member'),
+                    ),
+                    TextButton(
+                      onPressed: () => _openClubDiscussion(club.id),
+                      child: const Text('Club discussion'),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -364,6 +388,9 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
         chip('Open grievances', snap.openGrievances),
         chip('Internships', snap.internships),
         chip('Upcoming events', snap.upcomingMeetings),
+        chip('Evaluated', snap.evaluatedMembers),
+        for (final entry in snap.activeByClub.entries)
+          chip(entry.key, entry.value),
       ],
     );
   }
@@ -420,10 +447,23 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
                       ? (_) => _svc.toggleTask(row.id, task.id)
                       : null,
                 ),
-              if (_canManage && row.kind != DosaMeetingKind.leadership)
-                TextButton(
-                  onPressed: () => _editMeetingLogistics(row),
-                  child: const Text('Venue / transport'),
+              if (_canManage)
+                Wrap(
+                  children: [
+                    TextButton(
+                      onPressed: () => _addMeetingTask(row),
+                      child: const Text('Add task'),
+                    ),
+                    TextButton(
+                      onPressed: () => _updateMeetingNotes(row),
+                      child: const Text('Update notes'),
+                    ),
+                    if (row.kind != DosaMeetingKind.leadership)
+                      TextButton(
+                        onPressed: () => _editMeetingLogistics(row),
+                        child: const Text('Venue / transport'),
+                      ),
+                  ],
                 ),
             ],
           ),
@@ -785,9 +825,11 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     final title = TextEditingController();
     final assignee = TextEditingController();
     final notes = TextEditingController();
+    DateTime? dueAt;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         title: const Text('Leadership task'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -804,6 +846,22 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
               controller: notes,
               decoration: const InputDecoration(labelText: 'Notes'),
             ),
+            TextButton(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: ctx,
+                  initialDate: dueAt ?? DateTime.now(),
+                  firstDate: DateTime(2024),
+                  lastDate: DateTime(2035),
+                );
+                if (picked != null) setDialogState(() => dueAt = picked);
+              },
+              child: Text(
+                dueAt == null
+                    ? 'Set due date'
+                    : 'Due ${dueAt!.toIso8601String().split('T').first}',
+              ),
+            ),
           ],
         ),
         actions: [
@@ -817,12 +875,14 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
           ),
         ],
       ),
+      ),
     );
     if (ok != true) return;
     await _svc.addLeadershipTask(
       title: title.text,
       assignee: assignee.text,
       notes: notes.text,
+      dueAt: dueAt,
     );
   }
 
@@ -834,12 +894,14 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     final route = TextEditingController();
     final transport = TextEditingController();
     final task = TextEditingController();
+    var starts = DateTime.now().add(const Duration(days: 1));
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Leadership / event'),
-          content: Column(
+          content: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<DosaMeetingKind>(
@@ -858,6 +920,29 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
               TextField(
                 controller: agenda,
                 decoration: const InputDecoration(labelText: 'Agenda'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final day = await showDatePicker(
+                    context: ctx,
+                    initialDate: starts,
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2035),
+                  );
+                  if (day == null) return;
+                  setDialogState(() {
+                    starts = DateTime(
+                      day.year,
+                      day.month,
+                      day.day,
+                      starts.hour,
+                      starts.minute,
+                    );
+                  });
+                },
+                child: Text(
+                  'Starts ${starts.toIso8601String().split('T').first}',
+                ),
               ),
               TextField(
                 controller: venue,
@@ -881,6 +966,7 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
               ),
             ],
           ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -897,7 +983,7 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
     if (ok != true || title.text.trim().isEmpty) return;
     await _svc.recordMeeting(
       title: title.text,
-      startsAt: DateTime.now().add(const Duration(days: 1)),
+      startsAt: starts,
       kind: kind,
       agenda: agenda.text,
       venue: venue.text,
@@ -1032,6 +1118,138 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
       venue: venue.text,
       transportRoute: route.text,
       transportNote: note.text,
+    );
+  }
+
+  Future<void> _evaluateMember(ClubMembership row) async {
+    var rating = row.engagementRating ?? 3;
+    final notes = TextEditingController(text: row.evaluationNotes);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Evaluate ${row.studentName}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: rating,
+                decoration: const InputDecoration(labelText: 'Engagement (1–5)'),
+                items: [
+                  for (var i = 1; i <= 5; i++)
+                    DropdownMenuItem(value: i, child: Text('$i')),
+                ],
+                onChanged: (v) => setDialogState(() => rating = v ?? rating),
+              ),
+              TextField(
+                controller: notes,
+                decoration: const InputDecoration(labelText: 'Notes'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    await _svc.evaluateMembership(
+      id: row.id,
+      engagementRating: rating,
+      evaluationNotes: notes.text,
+    );
+  }
+
+  Future<void> _openClubDiscussion(String clubId) async {
+    try {
+      _svc.ensureClubDiscussion(clubId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Club discussion is ready in Messages.'),
+        ),
+      );
+      widget.onNavigate?.call('support');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
+  }
+
+  Future<void> _addMeetingTask(DosaMeeting row) async {
+    final title = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Meeting task'),
+        content: TextField(
+          controller: title,
+          decoration: const InputDecoration(labelText: 'Task'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || title.text.trim().isEmpty) return;
+    await _svc.addMeetingTask(meetingId: row.id, title: title.text);
+  }
+
+  Future<void> _updateMeetingNotes(DosaMeeting row) async {
+    final notes = TextEditingController(text: row.notes);
+    final agenda = TextEditingController(text: row.agenda);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Update meeting'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: agenda,
+              decoration: const InputDecoration(labelText: 'Agenda'),
+            ),
+            TextField(
+              controller: notes,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Notes'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _svc.updateMeeting(
+      id: row.id,
+      agenda: agenda.text,
+      notes: notes.text,
     );
   }
 
