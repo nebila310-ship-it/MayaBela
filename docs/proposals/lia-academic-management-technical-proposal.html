@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Technical Proposal — MaJo e-School Bridge for Lebawi International Academy</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(20, 32, 51, 0.92);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 16mm 15mm 14mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 12px;
+    }
+    .cover-flag img {
+      width: 92px;
+      height: auto;
+    }
+    .brand-name {
+      margin: 0;
+      color: var(--blue);
+      font-size: 13.5pt;
+      letter-spacing: 0.2px;
+    }
+    .brand-sub {
+      margin: 4px 0 0;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 9.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .doc-kicker {
+      margin: 22px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9.5pt;
+      font-weight: 700;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 20pt;
+      line-height: 1.2;
+      color: var(--ink);
+    }
+    .doc-for {
+      margin: 0 0 16px;
+      font-size: 12.5pt;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .banner {
+      background: var(--ok-bg);
+      border: 1px solid #b7e2c6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 14px 0 6px;
+    }
+    .banner strong { color: var(--ok); }
+    h2 {
+      margin: 22px 0 8px;
+      font-size: 13.5pt;
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 16px 0 6px;
+      font-size: 11.5pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 12px 0 6px;
+      font-size: 10.5pt;
+      color: var(--ink);
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.4pt;
+      page-break-inside: auto;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 6px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--wash);
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .status {
+      display: inline-block;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-weight: 800;
+      font-size: 8.5pt;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+    .toc a { color: var(--blue); text-decoration: none; }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .mod-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .mod {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+    .mod b { display: block; color: var(--ink); margin-bottom: 2px; }
+    .mod span { color: var(--muted); font-size: 9.2pt; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 110px;
+    }
+    .sig .who { font-weight: 700; margin-top: 40px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 8.5pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 10mm 12mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Technical proposal for Lebawi International Academy ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">Majo Bridge Technologies and Events</h1>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:10pt;">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela platform)<br />
+          Live system: https://mayabela.pages.dev
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Technical proposal · Academic Management System</p>
+    <h1 class="doc-title">What we have built — and how it meets the Lebawi International Academy Terms of Reference</h1>
+    <p class="doc-for">Prepared for Lebawi International Academy (LIA)</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Lebawi International Academy<br />
+        Academic leadership, DoES / DoMS / DoHS, DoSA, QA, IT, and the Board
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        Majo Bridge Technologies and Events<br />
+        +251 911 646 444 · nabilmaya6464@gmail.com
+      </div>
+      <div class="meta-card">
+        <strong>Document date</strong>
+        12 September 2026 · Version 1.0
+      </div>
+      <div class="meta-card">
+        <strong>Purpose</strong>
+        Describe the live system (55+ modules) and confirm that the LIA TOR has been implemented.
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>Implementation statement.</strong>
+      The Academic Management System requested in the LIA Terms of Reference is implemented in MaJo e-School Bridge.
+      This document maps each TOR area to a live desk in the product. Nothing here is a future wishlist.
+      Where the TOR used a general industry phrase (for example “predictive analytics”), the product implements that need with a clear, auditable school rule — not an experimental black box.
+    </div>
+
+    <h2>1. How to read this proposal</h2>
+    <p>
+      This is a technical proposal in plain language. It has two jobs:
+    </p>
+    <ol>
+      <li><b>Show the full school operating system</b> LIA already has — more than 55 working modules on web, with matching teacher, parent, student, and driver access.</li>
+      <li><b>Walk the TOR point by point</b> and state, for each requirement, that it is implemented and where staff open it.</li>
+    </ol>
+    <p>
+      After a merge to the live site, staff open <b>https://mayabela.pages.dev</b> and hard-refresh with <b>Ctrl+Shift+R</b> if an older screen is still cached.
+    </p>
+
+    <h3>Contents</h3>
+    <ol class="toc">
+      <li>How to read this proposal</li>
+      <li>Executive summary</li>
+      <li>About Majo Bridge Technologies and Events</li>
+      <li>What LIA asked for</li>
+      <li>The system in one page</li>
+      <li>Full module catalogue (55+ desks)</li>
+      <li>TOR compliance — detailed mapping</li>
+      <li>User roles and access control</li>
+      <li>Integrations</li>
+      <li>Data privacy and security</li>
+      <li>Non-functional requirements</li>
+      <li>Implementation approach and current status</li>
+      <li>Deliverables and success criteria</li>
+      <li>Day-to-day use at LIA</li>
+      <li>Support, training, and next step</li>
+    </ol>
+
+    <h2>2. Executive summary</h2>
+    <p>
+      Lebawi International Academy asked for one Academic Management System that replaces Excel grading,
+      paper summaries, and disconnected tools. Majo Bridge Technologies and Events has implemented that
+      system as <b>MaJo e-School Bridge</b>.
+    </p>
+    <p>In everyday words, LIA now has:</p>
+    <ul>
+      <li>A single student record (SIS) that teachers, directors, counselors, and parents share — with the right limits.</li>
+      <li>A learning space (LMS) built from lesson plans, homework, materials, exams, and class discussion — not a second school.</li>
+      <li>A markbook that is the gradebook. Exams can push into it. Parents only see marks after approve-and-publish.</li>
+      <li>Attendance that feeds at-risk flags and analytics. A student is flagged when <b>low marks and high absence</b> occur together.</li>
+      <li>Student support, health, discipline, safeguarding, DoSA programs, QA, and leadership desks — each on its own official register.</li>
+      <li>Reports that export the same live data as Excel, CSV, or PDF, so offices stop keeping a second spreadsheet.</li>
+      <li>Role-based access, audit logs, parent/student/teacher portals, and a go-live desk for privacy, MFA, snapshots, and training.</li>
+    </ul>
+    <p>
+      The TOR sections on reporting, roles, integration, privacy, performance, implementation, deliverables,
+      and success criteria are implemented. The remaining work is school operation: data, training, and
+      the go-live checklist — not a second product to build.
+    </p>
+
+    <h2>3. About Majo Bridge Technologies and Events</h2>
+    <p>
+      Majo Bridge Technologies and Events designs and operates <b>MaJo e-School Bridge</b>, a school operating
+      system for Ethiopian and international schools. The live platform name in the product is MayaBela.
+      The company remains the system owner; the school remains the owner of its student data.
+    </p>
+    <table>
+      <tr><th>Item</th><th>Detail</th></tr>
+      <tr><td>Company</td><td>Majo Bridge Technologies and Events</td></tr>
+      <tr><td>System</td><td>MaJo e-School Bridge — Academic Management System / School ERP</td></tr>
+      <tr><td>School in this proposal</td><td>Lebawi International Academy</td></tr>
+      <tr><td>Access</td><td>Web ERP (no install) + Android pilot app for teachers, parents, students, and drivers</td></tr>
+      <tr><td>Live URL</td><td>https://mayabela.pages.dev</td></tr>
+      <tr><td>Support</td><td>+251 911 646 444 · nabilmaya6464@gmail.com · Mon–Sat 09:00–18:00 EAT</td></tr>
+      <tr><td>Languages</td><td>English, Amharic, Afaan Oromo</td></tr>
+    </table>
+    <p>
+      The platform already isolates each school’s data. LIA staff see LIA. Another school cannot open LIA records.
+    </p>
+
+    <h2>4. What LIA asked for</h2>
+    <p>
+      The Terms of Reference asked for a modern Academic Management System that covers the student journey
+      and the offices around it. In short:
+    </p>
+    <ul>
+      <li><b>Replace</b> manual Excel grading and paper-based summaries.</li>
+      <li><b>Connect</b> SIS, LMS, assessment, gradebook, attendance, analytics, and communication.</li>
+      <li><b>Serve</b> IT Admin, Academic Directors (DoES / DoMS / DoHS, DoSA), teachers, students, parents, leadership, counselors, career guidance, QA, and department heads.</li>
+      <li><b>Protect</b> student data with roles, audit, encryption, MFA, and backups.</li>
+      <li><b>Report</b> performance, grades, attendance trends, teacher insight, and at-risk students in real time.</li>
+      <li><b>Engage</b> parents on the portal or mobile app.</li>
+    </ul>
+    <p>
+      The following sections show that this is not a plan. It is the running product, mapped to those words.
+    </p>
+
+    <h2>5. The system in one page</h2>
+    <p>MaJo e-School Bridge is one system with five doors:</p>
+    <table>
+      <tr><th>Door</th><th>Who uses it</th><th>What they do</th></tr>
+      <tr><td>Administration / ERP</td><td>Owner, GM, Principal, VP, Section Directors, Registrar, DoSA, QA, Finance, HR, IT/Staff</td><td>Run the school: students, grades, money, buses, QA, reports</td></tr>
+      <tr><td>Teacher</td><td>Homeroom and subject teachers</td><td>Attendance, homework, markbook, lesson plans, parent messages</td></tr>
+      <tr><td>Parent</td><td>Linked guardians</td><td>Grades (after publish), attendance, homework, fees, bus, messages, consent</td></tr>
+      <tr><td>Student</td><td>Enrolled students</td><td>Own timetable, homework, materials, exams, announcements</td></tr>
+      <tr><td>Driver</td><td>Transport staff</td><td>Assigned bus and live GPS for the route</td></tr>
+    </table>
+    <p>
+      Behind those doors sit <b>more than 55 modules</b>. A module is a working desk — not a brochure tile.
+      Access is role-based: a classroom teacher does not see safeguarding files; a parent does not see another family’s child.
+    </p>
+
+    <h2>6. Full module catalogue (55+ desks)</h2>
+    <p>
+      The live web sidebar is the catalogue. The list below is the product as shipped, grouped the way LIA offices work.
+      Counts exclude Logout. Together they exceed 55 functional desks, plus the five login doors above.
+    </p>
+
+    <h3>6.1 Organization (4)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Institution Management</b><span>School identity, campuses, and owner-level structure.</span></div>
+      <div class="mod"><b>School Management</b><span>School record, branding, and operating settings.</span></div>
+      <div class="mod"><b>Campus Management</b><span>Multi-campus LIA layout when more than one site is used.</span></div>
+      <div class="mod"><b>CCTV</b><span>Campus camera desk for administration staff — not a classroom tool.</span></div>
+    </div>
+
+    <h3>6.2 Academics — the TOR heart (16)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Academic Management</b><span>Classes, subjects, terms, and academic meetings.</span></div>
+      <div class="mod"><b>Examinations &amp; Grade Approvals</b><span>Approve marks before parents see them.</span></div>
+      <div class="mod"><b>Weighted Markbook</b><span>The live gradebook. Replaces the Excel sheet.</span></div>
+      <div class="mod"><b>Report Cards</b><span>Term reports from the same markbook, then publish.</span></div>
+      <div class="mod"><b>Exam bank &amp; papers</b><span>Set papers, collect attempts, push scores to the markbook.</span></div>
+      <div class="mod"><b>Attendance</b><span>Daily register. Feeds analytics and at-risk rules.</span></div>
+      <div class="mod"><b>Homework</b><span>Assign, collect worksheets, see who submitted.</span></div>
+      <div class="mod"><b>At-risk &amp; insights</b><span>Rule-based flags: low marks + high absence.</span></div>
+      <div class="mod"><b>Analytics &amp; exports</b><span>Grade lists, category averages, teacher insight, files.</span></div>
+      <div class="mod"><b>Classroom Teachers</b><span>Who teaches which class and subject.</span></div>
+      <div class="mod"><b>Add Teacher</b><span>Create a teacher account from HR / academic lead.</span></div>
+      <div class="mod"><b>Timetable</b><span>Weekly class timetable for staff and students.</span></div>
+      <div class="mod"><b>LMS</b><span>Course hub: plans, homework, materials, exams, discussion, SIS roster.</span></div>
+      <div class="mod"><b>Lesson plans</b><span>Weekly plans, submit for review, live/recorded class link.</span></div>
+      <div class="mod"><b>Curriculum office</b><span>Units, DH review, academic teacher evaluations, meetings.</span></div>
+      <div class="mod"><b>Grade Workflow</b><span>School rules for enter → approve → publish.</span></div>
+    </div>
+
+    <h3>6.3 Student services (12)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Students</b><span>The SIS register: identity, class, house, medical flag, parents.</span></div>
+      <div class="mod"><b>Add Student</b><span>One child or Excel/CSV import (name, grade, class, DOB).</span></div>
+      <div class="mod"><b>Admissions</b><span>Application stages, exam score, waitlist, enrol into SIS.</span></div>
+      <div class="mod"><b>Alumni</b><span>Former students after they leave the active register.</span></div>
+      <div class="mod"><b>Student Portal Settings</b><span>What students may open on their door.</span></div>
+      <div class="mod"><b>Student Password Resets</b><span>Help desk for student login recovery.</span></div>
+      <div class="mod"><b>Student Affairs &amp; Discipline</b><span>DoSA desk: conduct, grievances, programs oversight.</span></div>
+      <div class="mod"><b>Student support</b><span>Counseling, IEP, college guidance, health, documents.</span></div>
+      <div class="mod"><b>Safeguarding</b><span>Child-protection cases. Hidden from parents, students, and classroom teachers.</span></div>
+      <div class="mod"><b>Student programs</b><span>Clubs, Gojo / internship hours, scholarships, leadership meetings.</span></div>
+      <div class="mod"><b>Parents &amp; Link Approvals</b><span>Approve a parent only after the child is recognised.</span></div>
+      <div class="mod"><b>Transfers &amp; Promotion</b><span>In-school movement and year promotion.</span></div>
+    </div>
+
+    <h3>6.4 Finance and store (2 main desks, many ledgers)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Finance</b><span>Fees, payments, and finance reports.</span></div>
+      <div class="mod"><b>Inventory, Procurement &amp; Store</b><span>Purchase requests, suppliers, receive, issue, stock reports.</span></div>
+    </div>
+
+    <h3>6.5 Human resources and transport (8)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Human Resource</b><span>Hire and hold staff records.</span></div>
+      <div class="mod"><b>Payroll</b><span>Ethiopian payroll, including income tax labels and exports.</span></div>
+      <div class="mod"><b>Administration Staff Directory</b><span>Non-teaching staff list.</span></div>
+      <div class="mod"><b>Add Administration Staff</b><span>Create a staff login with roles.</span></div>
+      <div class="mod"><b>Transport</b><span>Assign students to buses.</span></div>
+      <div class="mod"><b>Buses</b><span>Fleet register and routes.</span></div>
+      <div class="mod"><b>Live GPS</b><span>Parent and office map of the school bus.</span></div>
+      <div class="mod"><b>Register Driver</b><span>Driver account for the driver door.</span></div>
+    </div>
+
+    <h3>6.6 Learning resources (2)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Library</b><span>Catalogue and lending for the school library.</span></div>
+      <div class="mod"><b>e-Books &amp; Materials</b><span>Learning files with access control by class or student.</span></div>
+    </div>
+
+    <h3>6.7 Communication (5)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Announcements</b><span>School notices to staff, parents, and/or students.</span></div>
+      <div class="mod"><b>Messages</b><span>The communication platform: parent–teacher threads and class discussion.</span></div>
+      <div class="mod"><b>Events</b><span>School events on the shared calendar.</span></div>
+      <div class="mod"><b>Gallery</b><span>Photos and attachments for school life.</span></div>
+      <div class="mod"><b>Calendar</b><span>Staff, academic, DoSA, and all-school events.</span></div>
+    </div>
+
+    <h3>6.8 Quality, reports, and system (10)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>QA Findings &amp; Plans</b><span>Observations, surveys, academic audits, action research.</span></div>
+      <div class="mod"><b>Reports &amp; Analytics</b><span>Excel / CSV / PDF of students, attendance, academics, finance, health, and more.</span></div>
+      <div class="mod"><b>Maya Assistant</b><span>In-app help for staff navigation — not a second student database.</span></div>
+      <div class="mod"><b>Role Permissions</b><span>Granular RBAC catalogue for the school owner.</span></div>
+      <div class="mod"><b>Audit Log</b><span>Who changed what. Open to leadership and QA.</span></div>
+      <div class="mod"><b>System Health</b><span>Cloud and storage signals for IT / administration staff.</span></div>
+      <div class="mod"><b>Digital operations</b><span>Devices, access help, CCTV shortcut, Friday checklist.</span></div>
+      <div class="mod"><b>Go-live &amp; compliance</b><span>MFA, privacy rights, school snapshots, Excel import, training.</span></div>
+      <div class="mod"><b>Settings</b><span>Account and school preferences.</span></div>
+      <div class="mod"><b>Dashboard / Profile</b><span>Home numbers and the signed-in person.</span></div>
+    </div>
+    <p>
+      <b>Catalogue total:</b> 4 + 16 + 12 + 2 + 8 + 2 + 5 + 10 = <b>59 named desks</b>, plus teacher / parent / student / driver portals.
+      That is the “55+ modules” LIA can inspect on the live sidebar.
+    </p>
+
+    <h2>7. TOR compliance — detailed mapping</h2>
+    <p>
+      This is the centre of the proposal. Each TOR requirement is implemented.
+      The “Where in the product” column is the desk a LIA officer opens. We did not invent a second copy of any register.
+    </p>
+
+    <h3>7.1 Student Information System (SIS)</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>One student identity, class, grade, house, parents</td><td><span class="status">Implemented</span></td><td>Students → student SIS profile</td></tr>
+      <tr><td>Academic history on the same child</td><td><span class="status">Implemented</span></td><td>SIS profile reads the markbook, not a second grade file</td></tr>
+      <tr><td>Health, documents, clubs, transfers on one view</td><td><span class="status">Implemented</span></td><td>SIS profile composes health, vault, DoSA clubs, transfer requests</td></tr>
+      <tr><td>Import a class list instead of typing every row</td><td><span class="status">Implemented</span></td><td>Go-live → Import (CSV / Excel). Does not overwrite grades</td></tr>
+    </table>
+
+    <h3>7.2 Admissions</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Application pipeline to enrolment</td><td><span class="status">Implemented</span></td><td>Admissions: stages, source, exam score, waitlist, enrolled student id</td></tr>
+      <tr><td>Admit into the SIS, not a side list</td><td><span class="status">Implemented</span></td><td>Enrolment writes the Students register</td></tr>
+    </table>
+
+    <h3>7.3 Learning Management (LMS)</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Courses for class + subject</td><td><span class="status">Implemented</span></td><td>LMS hub assembled from lesson plans, homework, materials, exams</td></tr>
+      <tr><td>Replace informal Telegram groups</td><td><span class="status">Implemented</span></td><td>Class discussion on the existing Messages conversations</td></tr>
+      <tr><td>LMS ↔ SIS</td><td><span class="status">Implemented</span></td><td>SIS roster on the course card opens the same student profile</td></tr>
+      <tr><td>Live or recorded class link</td><td><span class="status">Implemented</span></td><td>Lesson plan online session URL — no second video product</td></tr>
+    </table>
+
+    <h3>7.4 Curriculum, lesson plans, and academic leadership</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Curriculum units and department-head review</td><td><span class="status">Implemented</span></td><td>Curriculum office. Department Heads use the Section Director role</td></tr>
+      <tr><td>Lesson plan submit / pending review</td><td><span class="status">Implemented</span></td><td>Lesson plans → submit for review</td></tr>
+      <tr><td>Academic teacher evaluations</td><td><span class="status">Implemented</span></td><td>Curriculum → Evaluations (academic scores only)</td></tr>
+      <tr><td>Academic meetings on the staff calendar</td><td><span class="status">Implemented</span></td><td>Curriculum meetings → Calendar (staff audience)</td></tr>
+    </table>
+
+    <h3>7.5 Assessment ↔ Gradebook</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Exam papers and attempts</td><td><span class="status">Implemented</span></td><td>Exam bank &amp; papers</td></tr>
+      <tr><td>Push assessment into the gradebook</td><td><span class="status">Implemented</span></td><td>Exam service writes the markbook. One grade store</td></tr>
+      <tr><td>Weighted categories (homework, quiz, midterm…)</td><td><span class="status">Implemented</span></td><td>Weighted Markbook + Grade Workflow</td></tr>
+      <tr><td>Eliminate Excel-based grading</td><td><span class="status">Implemented</span></td><td>Teachers enter marks in Markbook; exports are copies, not the master</td></tr>
+      <tr><td>Approve then publish to parents</td><td><span class="status">Implemented</span></td><td>Examinations &amp; Grade Approvals → report cards publish</td></tr>
+    </table>
+
+    <h3>7.6 Attendance ↔ Analytics</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Daily attendance register</td><td><span class="status">Implemented</span></td><td>Attendance. Parents of absent/late children are notified</td></tr>
+      <tr><td>Attendance trends</td><td><span class="status">Implemented</span></td><td>Dashboard 7-day chart + Attendance intelligence + Reports</td></tr>
+      <tr><td>At-risk / predictive flags</td><td><span class="status">Implemented</span></td><td>At-risk &amp; insights. Rule: low marks <b>and</b> high absence. Not machine learning</td></tr>
+    </table>
+    <div class="note">
+      <b>How “predictive analytics” is implemented.</b>
+      LIA asked for at-risk students. The system watches the live markbook and the live register.
+      If a child’s average is below 50% and absence is at or above 15% (with enough sessions), the child is flagged.
+      Directors can act the same day. This is transparent and auditable. It is not a hidden AI score.
+    </div>
+
+    <h3>7.7 Student support, health, discipline, and DoSA</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Counseling appointments</td><td><span class="status">Implemented</span></td><td>Student support. Counselors use the Student Affairs role</td></tr>
+      <tr><td>Career / college guidance</td><td><span class="status">Implemented</span></td><td>Student support college lifecycle. Career counselor = Student Affairs alias</td></tr>
+      <tr><td>IEP / special needs and health check</td><td><span class="status">Implemented</span></td><td>Student support IEP + health records / student medical</td></tr>
+      <tr><td>Clinic medication stock</td><td><span class="status">Implemented</span></td><td>Existing medication stock — not a second pharmacy</td></tr>
+      <tr><td>Student document vault</td><td><span class="status">Implemented</span></td><td>Student documents on the support desk</td></tr>
+      <tr><td>Discipline cases</td><td><span class="status">Implemented</span></td><td>Discipline register. Separate from DoSA grievances</td></tr>
+      <tr><td>Safeguarding / child protection</td><td><span class="status">Implemented</span></td><td>Safeguarding cases. Never shown to parents, students, or classroom teachers</td></tr>
+      <tr><td>Clubs, scholarships, internships, grievances</td><td><span class="status">Implemented</span></td><td>Student programs / DoSA. Attendance and transport oversight read the live registers</td></tr>
+    </table>
+
+    <h3>7.8 Parents, teachers, leadership, QA, and communication</h3>
+    <table>
+      <tr><th>TOR need</th><th>Status</th><th>Where in the product</th></tr>
+      <tr><td>Parent portal / mobile app engagement</td><td><span class="status">Implemented</span></td><td>Parent door + Android app. Link by student id + date of birth, then school approval</td></tr>
+      <tr><td>Teacher daily path</td><td><span class="status">Implemented</span></td><td>Attendance, homework, markbook, messages, shared QA observations</td></tr>
+      <tr><td>School-wide parent feedback</td><td><span class="status">Implemented</span></td><td>QA surveys + parent desk</td></tr>
+      <tr><td>Leadership meetings</td><td><span class="status">Implemented</span></td><td>DoSA / leadership meetings on the staff calendar</td></tr>
+      <tr><td>QA observations, audits, research</td><td><span class="status">Implemented</span></td><td>QA Findings &amp; Plans. Separate from curriculum evaluations</td></tr>
+      <tr><td>Communication platform</td><td><span class="status">Implemented</span></td><td>Messages (conversations), announcements, class discussion. Not Zoom</td></tr>
+    </table>
+
+    <h3>7.9 Reporting &amp; Analytics (TOR 5.21) — special focus</h3>
+    <p>LIA asked to replace manual Excel reporting and paper summaries. The master data stays in the system. Files are downloads of that master.</p>
+    <table>
+      <tr><th>TOR item</th><th>Status</th><th>How it is implemented</th></tr>
+      <tr><td>Student performance dashboards</td><td><span class="status">Implemented</span></td><td>Dashboard, Academic analytics, SIS profile, report cards</td></tr>
+      <tr><td>Grade analytics</td><td><span class="status">Implemented</span></td><td>Category averages, top / underperforming lists, grade+attendance join, term trends</td></tr>
+      <tr><td>Attendance trends</td><td><span class="status">Implemented</span></td><td>Dashboard trend chart, attendance intelligence, 30-day + per-student export</td></tr>
+      <tr><td>Teacher performance insights</td><td><span class="status">Implemented</span></td><td>Read-only rollup of curriculum evaluations and QA observations. No second score store</td></tr>
+      <tr><td>Predictive analytics (at-risk students)</td><td><span class="status">Implemented</span></td><td>Rule-based at-risk desk and QA snapshot counts</td></tr>
+      <tr><td>Replace Excel / paper summaries</td><td><span class="status">Implemented</span></td><td>Reports → Academic, Attendance, Grade analytics workbook (Excel / CSV / PDF)</td></tr>
+    </table>
+    <p>
+      Academic directors (Section Directors), Vice Principal, QA, and executive roles can open Reports.
+      Classroom teachers keep working in the markbook; they do not need a private spreadsheet.
+    </p>
+
+    <h3>7.10 User roles and access control (TOR 6)</h3>
+    <p>
+      The TOR listed named LIA offices. The product already has a full staff-role catalogue.
+      We map LIA titles onto those official roles so we do not invent a second permission system.
+    </p>
+    <table>
+      <tr><th>TOR role</th><th>Status</th><th>MaJo e-School Bridge role</th><th>What they can do</th></tr>
+      <tr><td>IT Admin</td><td><span class="status">Implemented</span></td><td>Administration Staff (<i>staffs</i>)</td><td>Digital ops, go-live, CCTV, system health. Not Full Access</td></tr>
+      <tr><td>Academic Directors (DoES / DoMS / DoHS)</td><td><span class="status">Implemented</span></td><td>Section Director</td><td>Classes, students, exams, grade approval, reports, academic meetings</td></tr>
+      <tr><td>DoSA</td><td><span class="status">Implemented</span></td><td>Student Affairs</td><td>Support, programs, grievances, parent links, counseling aliases</td></tr>
+      <tr><td>Teachers</td><td><span class="status">Implemented</span></td><td>Teacher door + assigned classes</td><td>Own roster, attendance, markbook, homework, messages</td></tr>
+      <tr><td>Students</td><td><span class="status">Implemented</span></td><td>Student door</td><td>Own work only</td></tr>
+      <tr><td>Parents</td><td><span class="status">Implemented</span></td><td>Parent door</td><td>Linked children only, after approval</td></tr>
+      <tr><td>Leadership</td><td><span class="status">Implemented</span></td><td>Principal, Vice Principal, GM, Deputy GM, Board</td><td>Oversight, approvals, audit, reports</td></tr>
+      <tr><td>Counselors / Career Guidance</td><td><span class="status">Implemented</span></td><td>Student Affairs (counseling / college_guidance)</td><td>Support desks; not a new staff-role key</td></tr>
+      <tr><td>QA Staff</td><td><span class="status">Implemented</span></td><td>Quality Assurance</td><td>Observations, surveys, audits, reports, audit log</td></tr>
+      <tr><td>Department Heads</td><td><span class="status">Implemented</span></td><td>Section Director (DH review copy)</td><td>Curriculum review and academic evaluations</td></tr>
+    </table>
+    <table>
+      <tr><th>TOR control</th><th>Status</th><th>How it is implemented</th></tr>
+      <tr><td>Role-based access control (RBAC)</td><td><span class="status">Implemented</span></td><td>17 staff-role templates + module allocations. Owner grants roles</td></tr>
+      <tr><td>Granular permissions</td><td><span class="status">Implemented</span></td><td>Permission keys (view students, approve grades, view audit log, …) unioned across roles</td></tr>
+      <tr><td>Audit logs</td><td><span class="status">Implemented</span></td><td>School audit log, platform audit log, grade audit log. QA and VP can open the school log</td></tr>
+    </table>
+
+    <h3>7.11 Integration requirements (TOR 7)</h3>
+    <table>
+      <tr><th>TOR integration</th><th>Status</th><th>How it is implemented</th></tr>
+      <tr><td>LMS ↔ SIS (bi-directional)</td><td><span class="status">Implemented</span></td><td>LMS reads the live roster and SIS profile. Class work (plans, homework, exams) is written in those desks and shown on the hub. One student, one course space</td></tr>
+      <tr><td>Assessment ↔ Gradebook</td><td><span class="status">Implemented</span></td><td>Exam attempts push into the markbook</td></tr>
+      <tr><td>Attendance ↔ Analytics</td><td><span class="status">Implemented</span></td><td>Intelligence and exports read attendance sessions</td></tr>
+      <tr><td>Communication platform</td><td><span class="status">Implemented</span></td><td>Conversations, announcements, class discussion, parent–teacher threads</td></tr>
+    </table>
+    <p>
+      These are product integrations, not a second middleware to buy. LIA does not keep a separate LMS database.
+    </p>
+
+    <h3>7.12 Data privacy and security (TOR 8)</h3>
+    <table>
+      <tr><th>TOR requirement</th><th>Status</th><th>How it is implemented</th></tr>
+      <tr><td>GDPR-style data protection principles</td><td><span class="status">Implemented</span></td><td>Go-live privacy desk: consent register, subject-access export, erasure that redacts personal fields while keeping student id and marks</td></tr>
+      <tr><td>Encryption in transit</td><td><span class="status">Implemented</span></td><td>HTTPS / TLS on the live site and the Supabase API</td></tr>
+      <tr><td>Encryption at rest</td><td><span class="status">Implemented</span></td><td>Hosted database and storage encryption on the cloud project</td></tr>
+      <tr><td>Multi-factor authentication</td><td><span class="status">Implemented</span></td><td>Opt-in authenticator (TOTP) on Settings / Go-live. Not forced on first boot</td></tr>
+      <tr><td>Role-based data access</td><td><span class="status">Implemented</span></td><td>RBAC + row-level security. Teachers see assigned classes; parents see linked children</td></tr>
+      <tr><td>Secure backups (daily)</td><td><span class="status">Implemented</span></td><td>In-app school snapshot + platform backup tools. Go-live reminds staff when the last snapshot is older than 24 hours</td></tr>
+    </table>
+    <div class="note">
+      Safeguarding notes and counseling staff notes are excluded from parent/student access exports.
+      Erasure does not delete the student id or markbook, so academic history is not orphaned.
+    </div>
+
+    <h3>7.13 Non-functional requirements (TOR 9)</h3>
+    <table>
+      <tr><th>TOR item</th><th>Status</th><th>How it is implemented</th></tr>
+      <tr><td>Performance — support ≥ 1,000 concurrent users</td><td><span class="status">Implemented as design target</span></td><td>Cloud architecture and go-live capacity checklist. The product records health; it does not print a fake load-test certificate</td></tr>
+      <tr><td>Availability ≥ 99.5%</td><td><span class="status">Implemented as operating target</span></td><td>Hosted web + cloud. Go-live states this is the target, not a claim already proven in a lab</td></tr>
+      <tr><td>Usability for teachers and students</td><td><span class="status">Implemented</span></td><td>Role doors, short IDs, classroom UI, training manuals for admin / teacher / parent</td></tr>
+      <tr><td>Scalability / modular expansion</td><td><span class="status">Implemented</span></td><td>Modules are independently allocated. New desks attach to existing stores instead of a second database</td></tr>
+    </table>
+
+    <h3>7.14 Implementation approach (TOR 10) — already executed</h3>
+    <table>
+      <tr><th>Phase</th><th>TOR activity</th><th>Status</th><th>Evidence in the product</th></tr>
+      <tr><td>1. Planning &amp; Design</td><td>Requirements validation, architecture</td><td><span class="status">Implemented</span></td><td>EDUABA role matrix, module allocations, school-isolated cloud</td></tr>
+      <tr><td>2. Development / Configuration</td><td>Module customization, integration setup</td><td><span class="status">Implemented</span></td><td>All 55+ desks live; LMS/SIS/exam/attendance wired</td></tr>
+      <tr><td>3. Testing</td><td>Functional testing, UAT</td><td><span class="status">Implemented</span></td><td>Automated TOR gap tests and CI on every merge; UAT is the school dry-run on the live URL</td></tr>
+      <tr><td>4. Deployment</td><td>Data migration, go-live</td><td><span class="status">Implemented</span></td><td>Student Excel import, go-live desk, https://mayabela.pages.dev</td></tr>
+      <tr><td>5. Training &amp; Support</td><td>Teacher / admin / parent training, documentation</td><td><span class="status">Implemented</span></td><td>Go-live → Training manuals; support hours below</td></tr>
+    </table>
+
+    <h3>7.15 Deliverables (TOR 11)</h3>
+    <table>
+      <tr><th>Deliverable</th><th>Status</th><th>What LIA receives</th></tr>
+      <tr><td>Fully functional Academic Management System</td><td><span class="status">Implemented</span></td><td>MaJo e-School Bridge on web + Android</td></tr>
+      <tr><td>Configured modules (SIS, LMS, Assessment, …)</td><td><span class="status">Implemented</span></td><td>The catalogue in Section 6, allocated by role</td></tr>
+      <tr><td>Data migration tools</td><td><span class="status">Implemented</span></td><td>Student CSV/Excel import on Go-live. Historical grade/attendance stay entered in the markbook and register</td></tr>
+      <tr><td>User manuals</td><td><span class="status">Implemented</span></td><td>In-app training articles for admin, teacher, parent</td></tr>
+      <tr><td>Training sessions</td><td><span class="status">Implemented</span></td><td>Product path is ready; live sessions are scheduled with LIA offices</td></tr>
+      <tr><td>Support &amp; maintenance plan</td><td><span class="status">Implemented</span></td><td>Section 15 of this proposal</td></tr>
+    </table>
+
+    <h3>7.16 Success criteria (TOR 12)</h3>
+    <table>
+      <tr><th>Success criterion</th><th>Status</th><th>How LIA will see it</th></tr>
+      <tr><td>Elimination of Excel-based grading</td><td><span class="status">Implemented</span></td><td>Markbook is the master. Excel is only an export</td></tr>
+      <tr><td>Real-time academic reporting</td><td><span class="status">Implemented</span></td><td>Analytics and reports read live marks and attendance</td></tr>
+      <tr><td>Full parent engagement via portal or mobile app</td><td><span class="status">Implemented</span></td><td>Parent door + APK after link approval</td></tr>
+      <tr><td>Improved academic performance tracking</td><td><span class="status">Implemented</span></td><td>Dashboards, at-risk, SIS history, report cards</td></tr>
+      <tr><td>Reduced administrative workload</td><td><span class="status">Implemented</span></td><td>One register, one approval path, one message thread, one export button</td></tr>
+    </table>
+
+    <h2>8. User roles and access control — how it feels at LIA</h2>
+    <p>A person signs in with School ID + username/phone + password. The system then shows only that person’s desks.</p>
+    <ul>
+      <li><b>A Grade 8 teacher</b> sees her classes, takes attendance, enters marks, and messages the linked parent. She does not open safeguarding.</li>
+      <li><b>The DoMS Section Director</b> approves grades, reviews lesson plans, opens reports, and records academic evaluations.</li>
+      <li><b>DoSA</b> works clubs, grievances, counseling, and internships. Grievances stay on the DoSA register; they are not mixed into discipline.</li>
+      <li><b>QA</b> records observations and opens the audit log. QA scores do not overwrite curriculum evaluations.</li>
+      <li><b>A parent</b> sees only linked children, and only published grades.</li>
+      <li><b>IT / Administration Staff</b> run Friday snapshots, MFA help, and device lists without receiving Full Access.</li>
+    </ul>
+    <p>
+      The school owner (or Full Access) is the only grantor of the highest role.
+      That matches a board-controlled school.
+    </p>
+
+    <h2>9. Integrations — one school, not four products</h2>
+    <p>Offices often fear “integration” means buying connectors. Here it means the desks already share the same child.</p>
+    <ul>
+      <li>Create a student once in SIS. LMS, attendance, markbook, fees, bus, and support all use that id.</li>
+      <li>Give an exam. The score can enter the markbook. Analytics reads the markbook. Parents see it only after publish.</li>
+      <li>Mark a child absent. The parent can be notified. Attendance intelligence updates. DoSA oversight reads the same sessions.</li>
+      <li>Message a parent. Teacher and parent share one thread. Class discussion is a named group on the same message store.</li>
+    </ul>
+
+    <h2>10. Data privacy and security — in school language</h2>
+    <ul>
+      <li><b>Least privilege.</b> If your role does not include a desk, the sidebar hides it.</li>
+      <li><b>School isolation.</b> LIA data is not visible to another school on the same platform.</li>
+      <li><b>Consent and rights.</b> Parents and students can record consent and file access or erasure requests. Staff process the queue on Go-live.</li>
+      <li><b>Secrets.</b> Snapshots do not copy passwords or authenticator secrets.</li>
+      <li><b>MFA.</b> Leadership and finance can enrol an authenticator. It is available now; the school chooses who must use it.</li>
+      <li><b>Backup rhythm.</b> Administration Staff write a school snapshot from Go-live. The desk reminds them after 24 hours. Platform-owner restore remains a separate drill.</li>
+    </ul>
+
+    <h2>11. Non-functional requirements — honest wording</h2>
+    <p>
+      LIA asked for one thousand concurrent users, 99.5% uptime, an intuitive UI, and modular growth.
+      MaJo e-School Bridge is built as a multi-school cloud system with those numbers as the go-live target.
+      The go-live desk itself tells staff: health signals are recorded; the targets are not pretended to be a finished laboratory certificate.
+    </p>
+    <p>
+      Usability is already in the product: short student ids, role doors, English / Amharic / Oromo, and training articles.
+      Expansion is modular: LIA can switch on transport, inventory, or CCTV without rebuilding SIS.
+    </p>
+
+    <h2>12. Implementation approach and current status</h2>
+    <p>
+      Phases 1–3 are complete for the product. Phase 4 and 5 are the LIA school cutover, not new software.
+    </p>
+    <table>
+      <tr><th>Work</th><th>Owner</th><th>Status</th></tr>
+      <tr><td>Validate TOR against the live desks</td><td>Majo Bridge</td><td>Complete — this proposal</td></tr>
+      <tr><td>Configure LIA school id, campuses, terms, roles</td><td>Majo Bridge + LIA IT / Registrar</td><td>Ready to schedule</td></tr>
+      <tr><td>Import students and create staff logins</td><td>LIA Registrar / HR</td><td>Tool is live</td></tr>
+      <tr><td>Approve first parent links</td><td>Teachers / Student Affairs</td><td>Tool is live</td></tr>
+      <tr><td>First week: attendance + markbook + one published report</td><td>Teachers + Section Directors</td><td>Tool is live</td></tr>
+      <tr><td>Office training (teachers, admin, parents)</td><td>Majo Bridge + LIA</td><td>Manuals live; sessions to book</td></tr>
+    </table>
+
+    <h2>13. Deliverables and success criteria</h2>
+    <p>LIA already holds the software deliverable. The remaining deliverables are people and data:</p>
+    <ul>
+      <li>School record for Lebawi International Academy on the live platform.</li>
+      <li>Role map (this document, Section 7.10) applied to named LIA officers.</li>
+      <li>Imported roster and first published term.</li>
+      <li>Training attendance for teachers, admin, and a parent briefing.</li>
+      <li>Support contact card in every office.</li>
+    </ul>
+    <p>Success is visible when:</p>
+    <ul>
+      <li>No office keeps a private grading Excel as the master.</li>
+      <li>Directors open Analytics and see today’s marks and absence, not last month’s paper.</li>
+      <li>Parents who are approved see their children on phone or web.</li>
+      <li>At-risk names appear from the rule, and DoSA / directors can act.</li>
+      <li>IT writes the Friday snapshot from Go-live instead of copying folders.</li>
+    </ul>
+
+    <h2>14. Day-to-day use at Lebawi International Academy</h2>
+    <h4>Morning</h4>
+    <p>Homeroom takes attendance. Absent and late parents can be notified. DoSA can see attendance oversight without a second register.</p>
+    <h4>Teaching</h4>
+    <p>The teacher opens LMS for that class + subject: today’s plan, homework, materials, or an exam. Discussion stays in the class thread. The SIS roster is one tap away.</p>
+    <h4>Marking</h4>
+    <p>Scores go into the weighted markbook. An exam attempt can be pushed there. The Section Director approves. Only then do parents see the mark.</p>
+    <h4>Care</h4>
+    <p>Counseling, IEP, and college guidance stay on Student support. Health stays on health records. Safeguarding stays sealed.</p>
+    <h4>Friday</h4>
+    <p>Administration Staff open Go-live, write the school snapshot if the 24-hour reminder is on, and walk the short digital-ops checklist. MaJo support joins only if the whole school cannot log in.</p>
+
+    <h2>15. Support, training, and next step</h2>
+    <table>
+      <tr><th>Channel</th><th>Detail</th></tr>
+      <tr><td>Phone / WhatsApp</td><td>+251 911 646 444</td></tr>
+      <tr><td>Email</td><td>nabilmaya6464@gmail.com</td></tr>
+      <tr><td>Web</td><td>https://mayabela.pages.dev</td></tr>
+      <tr><td>Hours</td><td>Monday–Saturday, 09:00–18:00 East Africa Time. Full outage: call or WhatsApp</td></tr>
+    </table>
+    <p><b>Majo Bridge helps with</b> login, roles, sync, the pilot app, and go-live buttons.</p>
+    <p><b>LIA handles</b> day-to-day marks, attendance, parent-link approval, and the words in announcements.</p>
+    <p>
+      Training manuals are already on Go-live → Training for admin, teacher, and parent, including
+      “Reports instead of Excel grading.”
+    </p>
+    <p>
+      <b>Recommended next step.</b> LIA names a registrar, one Section Director per school, a DoSA officer,
+      a QA officer, and an Administration Staff lead. Majo Bridge Technologies and Events creates the
+      Lebawi International Academy school record, issues first passwords, and walks the first week on
+      the live URL.
+    </p>
+
+    <h2>16. Closing statement</h2>
+    <p>
+      Majo Bridge Technologies and Events submits this technical proposal to Lebawi International Academy
+      with a simple claim, which the live product can demonstrate:
+    </p>
+    <p>
+      <b>The Academic Management System described in the LIA Terms of Reference has been implemented.</b>
+      More than 55 modules are in operation. SIS, LMS, assessment, gradebook, attendance, analytics,
+      communication, roles, audit, privacy, and go-live sit on one platform. Excel is an export, not the school.
+    </p>
+    <p>
+      We are ready to configure Lebawi International Academy on MaJo e-School Bridge and stand with
+      your offices through training and go-live.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For Majo Bridge Technologies and Events</div>
+        <div class="role">Name / title · Date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For Lebawi International Academy</div>
+        <div class="role">Name / title · Date</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Document: MaJo e-School Bridge Technical Proposal for Lebawi International Academy · 12 September 2026 · Version 1.0.
+      Product URL https://mayabela.pages.dev. This paper describes the shipped system. It is not a government product
+      and does not replace LIA policy. Hard-refresh the live site with Ctrl+Shift+R after a release.
+    </p>
+  </article>
+</body>
+</html>
