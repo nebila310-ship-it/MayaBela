@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
@@ -232,6 +233,90 @@ class StudentSupportService extends ChangeNotifier {
     return rows.fold<int>(0, (sum, row) => sum + row.rating) / rows.length;
   }
 
+  SelAnalytics selAnalytics([String? schoolId]) {
+    final rows = selForSchool(schoolId);
+    if (rows.isEmpty) {
+      return const SelAnalytics(
+        observations: 0,
+        studentsCovered: 0,
+        domainAverages: {},
+      );
+    }
+    final domainAverages = <SelDomain, double>{};
+    for (final domain in SelDomain.values) {
+      final subset = rows.where((row) => row.domain == domain).toList();
+      if (subset.isEmpty) continue;
+      domainAverages[domain] =
+          subset.fold<int>(0, (sum, row) => sum + row.rating) / subset.length;
+    }
+    return SelAnalytics(
+      observations: rows.length,
+      studentsCovered: rows.map((row) => row.studentId).toSet().length,
+      domainAverages: domainAverages,
+      overall:
+          rows.fold<int>(0, (sum, row) => sum + row.rating) / rows.length,
+    );
+  }
+
+  List<CounselingRecord> upcomingCounselingAppointments({
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+    return counselingForSchool(schoolId).where((row) {
+      if (row.kind != CounselingKind.appointment || row.startsAt == null) {
+        return false;
+      }
+      return !row.startsAt!.isBefore(start);
+    }).toList()
+      ..sort((a, b) => a.startsAt!.compareTo(b.startsAt!));
+  }
+
+  List<CollegeGuidancePlan> upcomingCollegeAppointments({
+    String? schoolId,
+    DateTime? now,
+  }) {
+    final today = now ?? DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+    return collegeForSchool(schoolId).where((row) {
+      final at = row.nextAppointmentAt;
+      if (at == null) return false;
+      return !at.isBefore(start);
+    }).toList()
+      ..sort((a, b) => a.nextAppointmentAt!.compareTo(b.nextAppointmentAt!));
+  }
+
+  List<CalendarEvent> collegeGuidanceEvents({DateTime? now}) {
+    final today = now ?? DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+    return SchoolDataService.instance
+        .getVisibleCalendarEvents()
+        .where((event) => event.type == CalendarEventType.collegeGuidance)
+        .where((event) => !event.date.isBefore(start))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  CalendarEvent scheduleCollegeGuidanceEvent({
+    required String title,
+    String description = '',
+    required DateTime date,
+    String? time,
+    String audience = 'College',
+  }) {
+    _requireStaffDesk();
+    return SchoolDataService.instance.scheduleCalendarEvent(
+      title: title.trim(),
+      description: description.trim(),
+      date: date,
+      type: CalendarEventType.collegeGuidance,
+      audience: audience,
+      autoAnnounce: false,
+      time: time,
+    );
+  }
+
   Future<HealthRecord> addHealthRecord({
     required String studentId,
     required HealthRecordType type,
@@ -308,6 +393,10 @@ class StudentSupportService extends ChangeNotifier {
           rows.where((r) => r.type == HealthRecordType.medication).length,
       alerts:
           rows.where((r) => r.type == HealthRecordType.emergencyAlert).length,
+      checkups:
+          rows.where((r) => r.type == HealthRecordType.medicalCheckup).length,
+      accidents:
+          rows.where((r) => r.type == HealthRecordType.accident).length,
     );
   }
 
@@ -461,6 +550,8 @@ class StudentSupportService extends ChangeNotifier {
       HealthRecordType.vaccination => 'Vaccination recorded',
       HealthRecordType.medication => 'Medication given',
       HealthRecordType.clinicVisit => 'Clinic visit',
+      HealthRecordType.medicalCheckup => 'Medical check-up',
+      HealthRecordType.accident => 'Accident / incident report',
     };
     NotificationService.instance.push(
       title: '$kind — ${row.studentName}',
@@ -545,6 +636,7 @@ class StudentSupportService extends ChangeNotifier {
     List<String> accessArrangements = const [],
     String reviewCycle = 'termly',
     String externalReportRef = '',
+    String intakeAssessment = '',
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -566,6 +658,7 @@ class StudentSupportService extends ChangeNotifier {
       accessArrangements: List.of(accessArrangements),
       reviewCycle: reviewCycle.trim().isEmpty ? 'termly' : reviewCycle.trim(),
       externalReportRef: externalReportRef.trim(),
+      intakeAssessment: intakeAssessment.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -729,6 +822,28 @@ class StudentSupportService extends ChangeNotifier {
     return plan;
   }
 
+  Future<CollegeGuidancePlan> scheduleCollegeAppointment({
+    required String studentId,
+    required DateTime when,
+    String? schoolId,
+  }) async {
+    final existing = collegeForStudent(studentId);
+    return upsertCollegePlan(
+      studentId: studentId,
+      stage: existing?.stage ?? CollegeStage.exploring,
+      targets: existing?.targets ?? '',
+      portfolio: existing?.portfolio ?? '',
+      notes: existing?.notes ?? '',
+      nextAppointmentAt: when,
+      artifacts: existing?.artifacts,
+      schoolId: schoolId,
+      applicationSystem: existing?.applicationSystem,
+      testingPlan: existing?.testingPlan,
+      counselorName: existing?.counselorName,
+      destinationCountry: existing?.destinationCountry,
+    );
+  }
+
   Future<CollegeGuidancePlan> addCollegeArtifact({
     required String studentId,
     required String title,
@@ -777,12 +892,34 @@ class StudentSupportService extends ChangeNotifier {
     return plan;
   }
 
+  Future<IepPlan> addIepEvaluation({
+    required String id,
+    required String notes,
+    DateTime? evaluatedAt,
+  }) async {
+    _requireStaffDesk();
+    final plan = _iep.cast<IepPlan?>().firstWhere(
+          (row) => row?.id == id,
+          orElse: () => null,
+        );
+    if (plan == null) {
+      throw StateError('IEP plan not found.');
+    }
+    plan.evaluationNotes = notes.trim();
+    plan.lastEvaluatedAt = evaluatedAt ?? DateTime.now();
+    plan.stage = IepStage.review;
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
   Future<IepPlan> addIepTraining({
     required String planId,
     required String topic,
     DateTime? trainedAt,
     String trainer = '',
     String notes = '',
+    String audience = 'teacher',
   }) async {
     _requireStaffDesk();
     final plan = _iep.cast<IepPlan?>().firstWhere(
@@ -800,6 +937,7 @@ class StudentSupportService extends ChangeNotifier {
         trainedAt: trainedAt,
         trainer: trainer.trim(),
         notes: notes.trim(),
+        audience: audience.trim().isEmpty ? 'teacher' : audience.trim(),
       ),
     ];
     plan.updatedAt = DateTime.now();
@@ -1439,6 +1577,9 @@ class StudentSupportService extends ChangeNotifier {
         accessArrangements: List.of(row.accessArrangements),
         reviewCycle: row.reviewCycle,
         externalReportRef: row.externalReportRef,
+        intakeAssessment: row.intakeAssessment,
+        evaluationNotes: row.evaluationNotes,
+        lastEvaluatedAt: row.lastEvaluatedAt,
       );
 
   CollegeGuidancePlan _publicCollege(CollegeGuidancePlan row) =>
