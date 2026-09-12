@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/attendance_intelligence_models.dart';
+import 'package:mayabela/models/bus_record.dart';
 import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/dosa_models.dart';
+import 'package:mayabela/services/attendance_intelligence_service.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -110,7 +114,11 @@ class DosaService extends ChangeNotifier {
     var list = _schoolFilter(_meetings, schoolId);
     if (_isPublicReader) {
       list = list
-          .where((row) => row.kind == DosaMeetingKind.graduation)
+          .where(
+            (row) =>
+                row.kind == DosaMeetingKind.graduation ||
+                row.kind == DosaMeetingKind.event,
+          )
           .toList();
     }
     return list..sort((a, b) => b.startsAt.compareTo(a.startsAt));
@@ -190,6 +198,35 @@ class DosaService extends ChangeNotifier {
       internships: internshipsForSchool(schoolId).length,
       upcomingMeetings: upcomingMeetingCount(schoolId),
     );
+  }
+
+  /// Read-only attendance watch. Does not write attendance_sessions.
+  List<StudentRiskProfile> attendanceOversight([String? schoolId]) {
+    if (_isPublicReader || !canViewDesk) return const [];
+    return AttendanceIntelligenceService.instance
+        .profiles()
+        .where(
+          (row) =>
+              row.level == RiskLevel.atRisk ||
+              row.level == RiskLevel.attendanceWatch,
+        )
+        .toList();
+  }
+
+  /// Read-only bus register for academic trip / graduation coordination.
+  List<BusRecord> transportCoordination([String? schoolId]) {
+    if (_isPublicReader || !canViewDesk) return const [];
+    return BusRegistryService.instance.busesForSchool(schoolId ?? _schoolId);
+  }
+
+  List<DosaMeeting> academicTransportEvents([String? schoolId]) {
+    return meetingsForSchool(schoolId)
+        .where(
+          (row) =>
+              row.kind != DosaMeetingKind.leadership &&
+              (row.transportRoute.isNotEmpty || row.transportNote.isNotEmpty),
+        )
+        .toList();
   }
 
   /// Read-only Phase B average. Never writes the markbook.
@@ -368,11 +405,33 @@ class DosaService extends ChangeNotifier {
     return row;
   }
 
+  Future<ScholarshipRecord> refreshScholarshipAverage(String id) async {
+    _requireStaffDesk();
+    final row = _scholarships.cast<ScholarshipRecord?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Scholarship not found.');
+    }
+    row.snapshotAverage = markbookAverageFor(row.studentId);
+    if (row.status == ScholarshipStatus.applied ||
+        row.status == ScholarshipStatus.eligible) {
+      row.status = row.meetsThreshold
+          ? ScholarshipStatus.eligible
+          : ScholarshipStatus.applied;
+    }
+    row.updatedAt = DateTime.now();
+    await _persist();
+    return row;
+  }
+
   Future<Grievance> fileGrievance({
     required String title,
     String details = '',
     String studentId = '',
     String? schoolId,
+    String category = 'other',
   }) async {
     if (!_isParent && !_isStudent && !canManageDesk) {
       throw StateError('You cannot file a grievance.');
@@ -397,6 +456,7 @@ class DosaService extends ChangeNotifier {
       details: details.trim(),
       authorUsername: _username,
       authorRole: AuthService.currentUser?.roleKey,
+      category: category.trim().isEmpty ? 'other' : category.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -409,6 +469,9 @@ class DosaService extends ChangeNotifier {
     String id,
     GrievanceStatus status, {
     String resolution = '',
+    String assignedTo = '',
+    DateTime? dueAt,
+    String category = '',
   }) async {
     _requireStaffDesk();
     final row = _grievances.cast<Grievance?>().firstWhere(
@@ -420,6 +483,9 @@ class DosaService extends ChangeNotifier {
     }
     row.status = status;
     if (resolution.trim().isNotEmpty) row.resolution = resolution.trim();
+    if (assignedTo.trim().isNotEmpty) row.assignedTo = assignedTo.trim();
+    if (dueAt != null) row.dueAt = dueAt;
+    if (category.trim().isNotEmpty) row.category = category.trim();
     row.updatedAt = DateTime.now();
     await _persist();
     return row;
@@ -434,6 +500,9 @@ class DosaService extends ChangeNotifier {
     DateTime? startsAt,
     DateTime? endsAt,
     String? schoolId,
+    String careerField = '',
+    String supervisor = '',
+    double hoursLogged = 0,
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -451,6 +520,9 @@ class DosaService extends ChangeNotifier {
       startsAt: startsAt,
       endsAt: endsAt,
       createdBy: _username,
+      careerField: careerField.trim(),
+      supervisor: supervisor.trim(),
+      hoursLogged: hoursLogged,
       createdAt: now,
       updatedAt: now,
     );
@@ -484,6 +556,26 @@ class DosaService extends ChangeNotifier {
     return row;
   }
 
+  Future<Internship> logInternshipHours(String id, double hours) async {
+    if (!canManageDesk && !_isStudent) {
+      throw StateError('Only the DoSA desk or the intern can log hours.');
+    }
+    final row = _internships.cast<Internship?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (row == null) {
+      throw StateError('Internship not found.');
+    }
+    if (_isStudent && !_ownsStudent(row.studentId)) {
+      throw StateError('You can only log hours on your own internship.');
+    }
+    row.hoursLogged = (row.hoursLogged + hours).clamp(0, 9999);
+    row.updatedAt = DateTime.now();
+    await _persist();
+    return row;
+  }
+
   Future<DosaMeeting> recordMeeting({
     required String title,
     required DateTime startsAt,
@@ -492,6 +584,9 @@ class DosaService extends ChangeNotifier {
     String notes = '',
     List<DosaTask> tasks = const [],
     String? schoolId,
+    String venue = '',
+    String transportRoute = '',
+    String transportNote = '',
   }) async {
     _requireStaffDesk();
     final now = DateTime.now();
@@ -518,6 +613,9 @@ class DosaService extends ChangeNotifier {
       calendarEventId: calendarEventId,
       tasks: List.of(tasks),
       createdBy: _username,
+      venue: venue.trim(),
+      transportRoute: transportRoute.trim(),
+      transportNote: transportNote.trim(),
       createdAt: now,
       updatedAt: now,
     );
@@ -537,6 +635,28 @@ class DosaService extends ChangeNotifier {
       staffIds: [_username],
       groupName: 'DoSA leadership',
     );
+  }
+
+  Future<DosaMeeting> updateMeetingLogistics({
+    required String id,
+    String? venue,
+    String? transportRoute,
+    String? transportNote,
+  }) async {
+    _requireStaffDesk();
+    final meeting = _meetings.cast<DosaMeeting?>().firstWhere(
+          (item) => item?.id == id,
+          orElse: () => null,
+        );
+    if (meeting == null) {
+      throw StateError('Meeting not found.');
+    }
+    if (venue != null) meeting.venue = venue.trim();
+    if (transportRoute != null) meeting.transportRoute = transportRoute.trim();
+    if (transportNote != null) meeting.transportNote = transportNote.trim();
+    meeting.updatedAt = DateTime.now();
+    await _persist();
+    return meeting;
   }
 
   Future<DosaMeeting> toggleTask(String meetingId, String taskId) async {
