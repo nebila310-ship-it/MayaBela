@@ -167,6 +167,12 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
           'standard codes'
           '${alignment.unlinkedPublishedPlanCount == 0 ? '' : ' · ${alignment.unlinkedPublishedPlanCount} unlinked'}',
         ),
+        if (alignment.unlinkedBySubject.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Unlinked by subject: ${alignment.unlinkedBySubject.entries.map((e) => '${e.key} (${e.value})').join(' · ')}',
+          ),
+        ],
         const SizedBox(height: 12),
         if (items.isEmpty)
           _empty('No curriculum units yet. Map a strand to national or international standards.')
@@ -397,6 +403,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
                     'Planning ${item.planningQuality}/5 · '
                     'Alignment ${item.assessmentAlignment}/5 · '
                     'avg ${item.average.toStringAsFixed(1)}'
+                    '${item.lessonPlanReviewIds.isEmpty ? '' : ' · ${item.lessonPlanReviewIds.length} plan review(s)'}'
                     '${item.notes.isEmpty ? '' : '\n${item.notes}'}',
                   ),
                 ),
@@ -434,7 +441,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
                     '${item.rating == null ? '' : ' · ${item.rating}/5'}',
                   ),
                   subtitle: Text(
-                    '${_curriculum.unitById(item.curriculumUnitId)?.title ?? item.curriculumUnitId}\n${item.body}',
+                    '${item.isSchoolWide ? 'School-wide' : (_curriculum.unitById(item.curriculumUnitId)?.title ?? item.curriculumUnitId)}\n${item.body}',
                   ),
                   trailing: _canLead &&
                           item.status != CurriculumFeedbackStatus.resolved
@@ -475,9 +482,9 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
           Align(
             alignment: Alignment.centerLeft,
             child: FilledButton.icon(
-              onPressed: _recordMeeting,
+              onPressed: () => _recordMeeting(),
               icon: const Icon(Icons.event_outlined),
-              label: const Text('Add meeting notes'),
+              label: const Text('Schedule meeting'),
             ),
           ),
         const SizedBox(height: 12),
@@ -493,9 +500,17 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
                   title: Text(item.title),
                   subtitle: Text(
                     '${item.startsAt.day}/${item.startsAt.month}/${item.startsAt.year}'
+                    '${item.calendarEventId == null ? '' : ' · On staff calendar'}'
+                    '${item.attendeeRoles.isEmpty ? '' : ' · ${item.attendeeRoles.map(AcademicMeetingRoles.label).join(', ')}'}'
                     '${item.agenda.isEmpty ? '' : ' · ${item.agenda}'}'
                     '${item.notes.isEmpty ? '' : '\n${item.notes}'}',
                   ),
+                  trailing: _canLead
+                      ? TextButton(
+                          onPressed: () => _recordMeeting(existing: item),
+                          child: const Text('Update'),
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -581,6 +596,8 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
     var alignment = 3;
     final period = TextEditingController(text: 'Term 1');
     final notes = TextEditingController();
+    final recentReviews = _curriculum.reviewsForSchool(_schoolId).take(12).toList();
+    final linkedReviews = <String>{};
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -623,6 +640,29 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
                     maxLines: 3,
                     decoration: const InputDecoration(labelText: 'Notes'),
                   ),
+                  if (recentReviews.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Link lesson-plan reviews'),
+                    ),
+                    for (final review in recentReviews)
+                      CheckboxListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        value: linkedReviews.contains(review.id),
+                        title: Text(
+                          '${review.decision == LessonPlanReviewDecision.approved ? 'Approved' : 'Changes'} · ${review.lessonPlanId}',
+                        ),
+                        onChanged: (v) => setLocal(() {
+                          if (v == true) {
+                            linkedReviews.add(review.id);
+                          } else {
+                            linkedReviews.remove(review.id);
+                          }
+                        }),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -655,6 +695,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
       planningQuality: planning,
       assessmentAlignment: alignment,
       notes: notesText,
+      lessonPlanReviewIds: linkedReviews.toList(),
     );
   }
 
@@ -674,67 +715,100 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
     );
   }
 
-  Future<void> _recordMeeting() async {
-    final title = TextEditingController();
-    final agenda = TextEditingController();
-    final notes = TextEditingController();
-    var starts = DateTime.now();
+  Future<void> _recordMeeting({AcademicMeeting? existing}) async {
+    final title = TextEditingController(text: existing?.title ?? '');
+    final agenda = TextEditingController(text: existing?.agenda ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    var starts = existing?.startsAt ?? DateTime.now();
+    var publishToCalendar = existing?.calendarEventId != null;
+    final attendees = {...?existing?.attendeeRoles};
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
-          title: const Text('Academic meeting'),
+          title: Text(existing == null ? 'Academic meeting' : 'Update meeting'),
           content: SizedBox(
             width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: title,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Starts'),
-                  subtitle: Text(
-                    '${starts.day}/${starts.month}/${starts.year} ${starts.hour}:${starts.minute.toString().padLeft(2, '0')}',
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: title,
+                    decoration: const InputDecoration(labelText: 'Title'),
                   ),
-                  trailing: TextButton(
-                    onPressed: () async {
-                      final day = await showDatePicker(
-                        context: context,
-                        initialDate: starts,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2035),
-                      );
-                      if (day == null || !context.mounted) return;
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(starts),
-                      );
-                      setLocal(() {
-                        starts = DateTime(
-                          day.year,
-                          day.month,
-                          day.day,
-                          time?.hour ?? starts.hour,
-                          time?.minute ?? starts.minute,
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Starts'),
+                    subtitle: Text(
+                      '${starts.day}/${starts.month}/${starts.year} ${starts.hour}:${starts.minute.toString().padLeft(2, '0')}',
+                    ),
+                    trailing: TextButton(
+                      onPressed: () async {
+                        final day = await showDatePicker(
+                          context: context,
+                          initialDate: starts,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
                         );
-                      });
-                    },
-                    child: const Text('Change'),
+                        if (day == null || !context.mounted) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(starts),
+                        );
+                        setLocal(() {
+                          starts = DateTime(
+                            day.year,
+                            day.month,
+                            day.day,
+                            time?.hour ?? starts.hour,
+                            time?.minute ?? starts.minute,
+                          );
+                        });
+                      },
+                      child: const Text('Change'),
+                    ),
                   ),
-                ),
-                TextField(
-                  controller: agenda,
-                  decoration: const InputDecoration(labelText: 'Agenda'),
-                ),
-                TextField(
-                  controller: notes,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                ),
-              ],
+                  TextField(
+                    controller: agenda,
+                    decoration: const InputDecoration(labelText: 'Agenda'),
+                  ),
+                  TextField(
+                    controller: notes,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'Notes'),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (final choice in AcademicMeetingRoles.choices)
+                        FilterChip(
+                          label: Text(choice.$2),
+                          selected: attendees.contains(choice.$1),
+                          onSelected: (v) => setLocal(() {
+                            if (v) {
+                              attendees.add(choice.$1);
+                            } else {
+                              attendees.remove(choice.$1);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: publishToCalendar,
+                    title: const Text('Add to staff calendar'),
+                    subtitle: const Text(
+                      'Teachers see it. Parents and students do not.',
+                    ),
+                    onChanged: existing?.calendarEventId != null
+                        ? null
+                        : (v) => setLocal(() => publishToCalendar = v ?? false),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -757,11 +831,25 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
     agenda.dispose();
     notes.dispose();
     if (ok != true || titleText.trim().isEmpty) return;
+    if (existing != null) {
+      await _curriculum.updateMeeting(
+        existing.id,
+        title: titleText,
+        startsAt: starts,
+        agenda: agendaText,
+        notes: notesText,
+        attendeeRoles: attendees.toList(),
+        publishToCalendar: publishToCalendar,
+      );
+      return;
+    }
     await _curriculum.recordMeeting(
       title: titleText,
       startsAt: starts,
       agenda: agendaText,
       notes: notesText,
+      attendeeRoles: attendees.toList(),
+      publishToCalendar: publishToCalendar,
     );
   }
 }
@@ -1049,14 +1137,10 @@ Future<void> showCurriculumFeedbackDialog(
       .unitsForSchool()
       .where((u) => u.isPublished || ModuleAccess.canManage('curriculum'))
       .toList();
-  if (units.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Publish a curriculum unit before adding feedback.')),
-    );
-    return;
+  var selected = unitId ?? (units.isEmpty ? '' : units.first.id);
+  if (selected.isNotEmpty && !units.any((u) => u.id == selected)) {
+    selected = units.isEmpty ? '' : units.first.id;
   }
-  var selected = unitId ?? units.first.id;
-  if (!units.any((u) => u.id == selected)) selected = units.first.id;
   final body = TextEditingController();
   var rating = 4;
   final ok = await showDialog<bool>(
@@ -1072,8 +1156,12 @@ Future<void> showCurriculumFeedbackDialog(
               DropdownButtonFormField<String>(
                 key: ValueKey('cf-$selected'),
                 initialValue: selected,
-                decoration: const InputDecoration(labelText: 'Unit'),
+                decoration: const InputDecoration(labelText: 'Topic'),
                 items: [
+                  const DropdownMenuItem(
+                    value: '',
+                    child: Text('School-wide comment'),
+                  ),
                   for (final u in units)
                     DropdownMenuItem(value: u.id, child: Text(u.title)),
                 ],

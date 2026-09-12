@@ -148,7 +148,7 @@ void main() {
       LessonPlanStatus.published,
     );
     expect(plan.status, LessonPlanStatus.published);
-    expect(plan.reviewStatus, LessonPlanReviewStatus.none);
+    expect(plan.reviewStatus, LessonPlanReviewStatus.pending);
 
     await CurriculumService.instance.reviewLessonPlan(
       lessonPlanId: plan.id,

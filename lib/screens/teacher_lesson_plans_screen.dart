@@ -107,18 +107,31 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                                 title: Text(plan.title),
                                 subtitle: Text(
                                   '${plan.subject} · ${plan.isPublished ? 'Published' : 'Draft'}'
-                                  '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${plan.reviewStatus.name}'}'
+                                  '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${_reviewLabel(plan.reviewStatus)}'}'
                                   '${plan.hasOnlineSession ? (plan.onlineSessionIsLive ? ' · live class' : ' · recorded class') : ''}',
                                 ),
                                 trailing: TextButton(
-                                  onPressed: () => _plans.setStatus(
-                                    plan.id,
-                                    plan.isPublished
-                                        ? LessonPlanStatus.draft
-                                        : LessonPlanStatus.published,
-                                  ),
+                                  onPressed: () {
+                                    if (plan.isPublished &&
+                                        plan.reviewStatus !=
+                                            LessonPlanReviewStatus
+                                                .changesRequested) {
+                                      _plans.setStatus(
+                                        plan.id,
+                                        LessonPlanStatus.draft,
+                                      );
+                                      return;
+                                    }
+                                    _plans.submitForReview(plan.id);
+                                  },
                                   child: Text(
-                                    plan.isPublished ? 'Unpublish' : 'Publish',
+                                    plan.reviewStatus ==
+                                            LessonPlanReviewStatus
+                                                .changesRequested
+                                        ? 'Resubmit'
+                                        : plan.isPublished
+                                            ? 'Unpublish'
+                                            : 'Submit',
                                   ),
                                 ),
                                 onTap: () => _openEditor(plan),
@@ -144,4 +157,11 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
       ),
     );
   }
+
+  static String _reviewLabel(LessonPlanReviewStatus status) => switch (status) {
+        LessonPlanReviewStatus.none => '',
+        LessonPlanReviewStatus.pending => 'Review pending',
+        LessonPlanReviewStatus.approved => 'DH approved',
+        LessonPlanReviewStatus.changesRequested => 'Changes requested',
+      };
 }
