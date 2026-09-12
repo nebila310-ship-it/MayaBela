@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/lms_classroom_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/widgets/online_class_link_button.dart';
 
 /// Course hub built from existing lesson plans, homework, materials, and exams.
@@ -11,6 +13,51 @@ class WebLmsHubPage extends StatelessWidget {
   const WebLmsHubPage({super.key, this.onNavigate});
 
   final ValueChanged<String>? onNavigate;
+
+  void _openSisRoster(BuildContext context, String className) {
+    final schoolId = AuthService.activeSchoolId;
+    final students = StudentRegistryService.instance.studentsForClass(
+      className,
+      schoolId: schoolId,
+    );
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('$className SIS roster'),
+        content: SizedBox(
+          width: 420,
+          child: students.isEmpty
+              ? const Text(
+                  'No registry students in this class. The SIS profile is the '
+                  'same student record used by Students — this is not a second roster.',
+                )
+              : ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final student in students)
+                      ListTile(
+                        title: Text(student.fullName),
+                        subtitle: Text(student.studentId),
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          showWebStudentProfileDialog(
+                            context,
+                            studentId: student.studentId,
+                          );
+                        },
+                      ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +175,12 @@ class WebLmsHubPage extends StatelessWidget {
                             },
                             icon: const Icon(Icons.forum_outlined),
                             label: const Text('Class discussion'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () =>
+                                _openSisRoster(context, course.className),
+                            icon: const Icon(Icons.badge_outlined),
+                            label: const Text('SIS roster'),
                           ),
                         ],
                       ),

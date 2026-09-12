@@ -335,6 +335,7 @@ class GoLiveCapacitySnapshot {
     required this.cloudReady,
     required this.storageReady,
     required this.lastBackupAt,
+    this.snapshotDue = true,
     required this.mfaEnrolled,
     required this.openDataRights,
   });
@@ -342,6 +343,7 @@ class GoLiveCapacitySnapshot {
   final bool cloudReady;
   final bool storageReady;
   final DateTime? lastBackupAt;
+  final bool snapshotDue;
   final int mfaEnrolled;
   final int openDataRights;
 }

@@ -651,20 +651,25 @@ abstract final class ModuleAccess {
       },
       manageBy: {StaffRoles.qualityAssurance, StaffRoles.vicePresident},
     ),
-    // Oversight executives + VP/QA can open reports (export is read-only).
+    // Oversight executives + VP/QA/section directors can open reports
+    // (export is read-only). Academic directors use the Section Director role.
     'reports': ModuleRoleAllocation(
       visibleTo: {
         ..._executiveOversight,
         StaffRoles.vicePresident,
         StaffRoles.qualityAssurance,
+        StaffRoles.sectionDirector,
       },
       manageBy: <String>{},
     ),
+    // QA already holds view_audit_log; VP is leadership oversight.
     'audit_log': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.schoolBoard,
         StaffRoles.generalManager,
         StaffRoles.deputyGeneralManager,
+        StaffRoles.qualityAssurance,
+        StaffRoles.vicePresident,
       },
       manageBy: <String>{},
     ),

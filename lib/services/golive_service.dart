@@ -147,6 +147,16 @@ class GoliveService extends ChangeNotifier {
     return rows.isEmpty ? null : rows.first.createdAt;
   }
 
+  /// Reminder only — this is not an automated backup product.
+  bool snapshotDue({
+    String? schoolId,
+    Duration maxAge = const Duration(hours: 24),
+  }) {
+    final last = lastBackupAt(schoolId);
+    if (last == null) return true;
+    return DateTime.now().difference(last) >= maxAge;
+  }
+
   int openDataRightsCount([String? schoolId]) => rightsForSchool(schoolId)
       .where(
         (row) =>
@@ -162,6 +172,7 @@ class GoliveService extends ChangeNotifier {
           !SupabaseStorageBootstrap.deferred &&
           SupabaseBootstrap.isInitialized,
       lastBackupAt: lastBackupAt(),
+      snapshotDue: snapshotDue(),
       mfaEnrolled: mfaEnrolledCount(),
       openDataRights: openDataRightsCount(),
     );

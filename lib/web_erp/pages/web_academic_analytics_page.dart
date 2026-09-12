@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/attendance_intelligence_models.dart';
 import 'package:mayabela/services/attendance_intelligence_service.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
+import 'package:mayabela/services/grade_report_export_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_report_export_service.dart';
+import 'package:mayabela/services/teacher_performance_insights.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/web_erp/widgets/web_chart_widgets.dart';
 
 /// In-app analytics desk: at-risk rules, grade lists, spreadsheet exports.
 /// Not a BI suite and not predictive ML.
@@ -22,7 +27,7 @@ class WebAcademicAnalyticsPage extends StatefulWidget {
 
 class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 4, vsync: this);
+  late final TabController _tabs = TabController(length: 5, vsync: this);
   String? _busy;
 
   bool get _canView => ModuleAccess.canView('analytics');
@@ -88,6 +93,8 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                 ],
               ),
               const SizedBox(height: 12),
+              _qaSnapshotStrip(context),
+              const SizedBox(height: 12),
               TabBar(
                 controller: _tabs,
                 isScrollable: true,
@@ -95,6 +102,10 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                   Tab(text: 'At-risk (${atRisk.length})'),
                   Tab(text: 'Low marks ($lowMarkCount)'),
                   const Tab(text: 'Breakdown'),
+                  Tab(
+                    text:
+                        'Teachers (${TeacherPerformanceInsights.instance.rows().length})',
+                  ),
                   const Tab(text: 'Exports'),
                 ],
               ),
@@ -108,11 +119,38 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
               _riskTab(atRisk),
               _gradesTab(grades),
               _breakdownTab(),
+              _teachersTab(),
               _exportTab(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _qaSnapshotStrip(BuildContext context) {
+    final snap = QaMonitorService.instance.analyticsForSchool();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _chip(context, 'At-risk', '${snap.atRisk}'),
+        _chip(context, 'Academic watch', '${snap.academicWatch}'),
+        _chip(context, 'Attendance watch', '${snap.attendanceWatch}'),
+        _chip(
+          context,
+          'Avg absence',
+          '${(snap.averageAbsenceRate * 100).round()}%',
+        ),
+      ],
+    );
+  }
+
+  Widget _chip(BuildContext context, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: WebErpTheme.cardDecoration(context),
+      child: Text('$label · $value'),
     );
   }
 
@@ -206,6 +244,15 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
           'This is not a new grade store.',
         ),
         const SizedBox(height: 12),
+        if (categories.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: WebLineChartPanel(
+              title: 'Category averages (%)',
+              values: [for (final row in categories) row.average],
+              ySuffix: '%',
+            ),
+          ),
         if (categories.isEmpty)
           const Text('No category marks entered yet.')
         else
@@ -250,6 +297,49 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
     );
   }
 
+  Widget _teachersTab() {
+    final rows = TeacherPerformanceInsights.instance.rows();
+    if (rows.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No curriculum evaluations or QA observations yet. '
+          'Those records stay on their existing desks.',
+        ),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Read-only averages from teacher_evaluations and teaching_observations. '
+          'This is not a second evaluation store.',
+        ),
+        const SizedBox(height: 12),
+        for (final row in rows)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: DecoratedBox(
+              decoration: WebErpTheme.cardDecoration(context),
+              child: ListTile(
+                title: Text(row.teacherName),
+                subtitle: Text(
+                  [
+                    if (row.evaluationCount > 0)
+                      'evals ${row.evaluationAverage!.toStringAsFixed(1)} '
+                          '(${row.evaluationCount})',
+                    if (row.observationCount > 0)
+                      'observations ${row.observationAverage!.toStringAsFixed(1)} '
+                          '(${row.observationCount})',
+                  ].join(' · '),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _exportTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -259,6 +349,7 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
           'for staff review — they are not a live BI dashboard.',
         ),
         const SizedBox(height: 16),
+        _gradeWorkbookButton(),
         _exportButton(
           'Academic CSV',
           SchoolReportKind.academic,
@@ -280,6 +371,40 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
           'csv',
         ),
       ],
+    );
+  }
+
+  Widget _gradeWorkbookButton() {
+    const key = 'grade-workbook';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton.tonalIcon(
+          onPressed: _busy != null
+              ? null
+              : () async {
+                  setState(() => _busy = key);
+                  try {
+                    await GradeReportExportService.instance.exportAndShare(
+                      labels: GradeReportExportLabels.fromStrings(
+                        AppStrings('en'),
+                      ),
+                    );
+                  } finally {
+                    if (mounted) setState(() => _busy = null);
+                  }
+                },
+          icon: _busy == key
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.insights_outlined),
+          label: const Text('Grade analytics Excel'),
+        ),
+      ),
     );
   }
 

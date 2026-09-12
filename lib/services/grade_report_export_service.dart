@@ -180,6 +180,51 @@ class GradeReportExportService {
     );
   }
 
+  /// Workbook bytes for web share and tests. Same sheets as [buildExcelExport].
+  List<int> buildExcelBytes({
+    required GradeReportExportLabels labels,
+    Iterable<String>? classNames,
+  }) {
+    final snapshot = _analytics.buildSnapshot(classNames: classNames);
+    final bytes = _buildWorkbook(snapshot, labels);
+    if (bytes == null || bytes.isEmpty) {
+      throw StateError('Failed to build grade report workbook');
+    }
+    return bytes;
+  }
+
+  /// Share the existing markbook analytics workbook. Web uses in-memory bytes
+  /// so this is not mobile-only.
+  Future<void> exportAndShare({
+    required GradeReportExportLabels labels,
+    Iterable<String>? classNames,
+  }) async {
+    if (kIsWeb) {
+      final bytes = buildExcelBytes(labels: labels, classNames: classNames);
+      final stamp = DateTime.now();
+      final fileName =
+          'grade_report_${stamp.year}-${stamp.month.toString().padLeft(2, '0')}-${stamp.day.toString().padLeft(2, '0')}.xlsx';
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            Uint8List.fromList(bytes),
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            name: fileName,
+          ),
+        ],
+        text: labels.reportTitle,
+        subject: '${labels.reportTitle} · ${formatDate(stamp)}',
+      );
+      return;
+    }
+    final export = await buildExcelExport(
+      labels: labels,
+      classNames: classNames,
+    );
+    await shareExport(export);
+  }
+
   Future<void> shareExport(GradeReportExportResult export) async {
     final xFile = XFile(
       export.file.path,

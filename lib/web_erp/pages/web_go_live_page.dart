@@ -153,6 +153,10 @@ class _OverviewTab extends StatelessWidget {
           label: 'At least one school snapshot',
           ok: cap.lastBackupAt != null,
         ),
+        _CheckRow(
+          label: 'Daily snapshot reminder (last 24 hours)',
+          ok: !cap.snapshotDue,
+        ),
         const _CheckRow(label: 'Authenticator available (opt-in)', ok: true),
         const _CheckRow(
           label:
@@ -448,6 +452,15 @@ class _BackupTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Text(
+          svc.snapshotDue()
+              ? 'Daily reminder: no school snapshot in the last 24 hours. '
+                  'Write one before a term cutover. This is a checklist, not '
+                  'an automated backup product.'
+              : 'A school snapshot was written in the last 24 hours. This '
+                  'desk does not schedule backups automatically.',
+        ),
+        const SizedBox(height: 12),
         const Text(
           'School snapshots record counts and a student directory without '
           'passwords or authenticator secrets. Platform-owner registry restore '

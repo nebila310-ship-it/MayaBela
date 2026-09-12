@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/grade_report_export_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_report_export_service.dart';
@@ -35,6 +37,13 @@ class _WebReportsPageState extends State<WebReportsPage> {
       Icons.school_outlined,
       kind: SchoolReportKind.academic,
       viewModules: ['academic', 'examinations'],
+    ),
+    _ReportTile(
+      'Grade analytics workbook',
+      Icons.insights_outlined,
+      kind: SchoolReportKind.academic,
+      viewModules: ['academic', 'examinations', 'attendance'],
+      gradeWorkbook: true,
     ),
     _ReportTile(
       'Financial Reports',
@@ -85,10 +94,16 @@ class _WebReportsPageState extends State<WebReportsPage> {
     setState(() => _busyKey = key);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await SchoolReportExportService.instance.export(
-        kind: report.kind,
-        format: format,
-      );
+      if (report.gradeWorkbook) {
+        await GradeReportExportService.instance.exportAndShare(
+          labels: GradeReportExportLabels.fromStrings(AppStrings('en')),
+        );
+      } else {
+        await SchoolReportExportService.instance.export(
+          kind: report.kind,
+          format: format,
+        );
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text('${report.title} · $format ready to share')),
@@ -177,12 +192,14 @@ class _WebReportsPageState extends State<WebReportsPage> {
                           Wrap(
                             spacing: 6,
                             children: [
-                              for (final label in const [
-                                'Excel',
-                                'CSV',
-                                'PDF',
-                                'Print',
-                              ])
+                              for (final label in report.gradeWorkbook
+                                  ? const ['Excel']
+                                  : const [
+                                      'Excel',
+                                      'CSV',
+                                      'PDF',
+                                      'Print',
+                                    ])
                                 _exportChip(report, label),
                             ],
                           ),
@@ -220,6 +237,7 @@ class _ReportTile {
     this.viewModules = const [],
     this.requireAny = const [],
     this.inventorySection,
+    this.gradeWorkbook = false,
   });
 
   final String title;
@@ -228,6 +246,7 @@ class _ReportTile {
   final List<String> viewModules;
   final List<String> requireAny;
   final int? inventorySection;
+  final bool gradeWorkbook;
 
   bool get isVisibleToCurrentUser {
     if (requireAny.isNotEmpty && AuthService.hasAnyPermission(requireAny)) {
