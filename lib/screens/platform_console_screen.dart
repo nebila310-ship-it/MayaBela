@@ -20,8 +20,10 @@ import 'package:mayabela/services/school_admin_credentials_service.dart';
 import 'package:mayabela/services/school_enrollment_metrics_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_platform_insight.dart';
+import 'package:mayabela/services/rbac/school_module_catalog.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/web_erp/models/web_erp_nav_item.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -905,6 +907,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
   Uint8List? _logoBytes;
   String _snapshot = '';
   bool _editing = false;
+  Set<String>? _draftEnabled;
+  bool _savingModules = false;
 
   @override
   void initState() {
@@ -974,6 +978,9 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
         ..clear()
         ..addAll(record.gradeLevels);
       _snapshot = _formSnapshot();
+      _draftEnabled = record.enabledModules == null
+          ? null
+          : Set<String>.from(record.enabledModules!);
     }
     setState(() {});
     _loadLogo();
@@ -1095,6 +1102,61 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     _snapshot = _formSnapshot();
     setState(() => _editing = false);
     _toast('Profile saved to cloud');
+  }
+
+  bool _sameModulePack(Set<String>? a, Set<String>? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.length == b.length && a.containsAll(b);
+  }
+
+  Set<String> get _onModules =>
+      _draftEnabled ?? SchoolModuleCatalog.togglableNavIds();
+
+  bool get _modulesDirty =>
+      _school != null && !_sameModulePack(_school!.enabledModules, _draftEnabled);
+
+  void _setModuleEnabled(String id, bool on) {
+    final next = Set<String>.from(_onModules);
+    if (on) {
+      next.add(id);
+    } else {
+      next.remove(id);
+    }
+    setState(() {
+      _draftEnabled = SchoolModuleCatalog.packForPersistence(next);
+    });
+  }
+
+  Future<void> _saveModulePack() async {
+    final school = _school;
+    if (school == null || _savingModules) return;
+    setState(() => _savingModules = true);
+    final pack = SchoolModuleCatalog.packForPersistence(_onModules);
+    final cloud = await SchoolRegistryService.instance.setEnabledModules(
+      school.id,
+      pack,
+      preferPlatformCloud: true,
+    );
+    if (!mounted) return;
+    setState(() => _savingModules = false);
+    if (!cloud.ok) {
+      _toast(
+        cloud.errorMessage?.trim().isNotEmpty == true
+            ? cloud.errorMessage!
+            : 'Module pack saved on this device only — cloud update failed.',
+        isError: true,
+      );
+      return;
+    }
+    _school = SchoolRegistryService.instance.lookup(school.id) ?? school;
+    _draftEnabled = pack == null ? null : Set<String>.from(pack);
+    setState(() {});
+    _toast(
+      pack == null
+          ? 'All modules on for this school'
+          : 'Saved ${pack.length} modules for this school',
+    );
   }
 
   Future<void> _setStatus(SchoolLifecycleStatus status) async {
@@ -1468,6 +1530,140 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
             const SizedBox(height: 2),
             Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 12)),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModulePackCard(SchoolRecord school) {
+    final items = SchoolModuleCatalog.togglableNavItems();
+    final sections = <String, List<WebErpNavItem>>{};
+    for (final item in items) {
+      (sections[item.section ?? 'General'] ??= []).add(item);
+    }
+    final on = _onModules;
+    final onCount = items.where((item) => on.contains(item.id)).length;
+    final allOn = _draftEnabled == null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _modulesDirty
+              ? Colors.tealAccent.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tune, color: Colors.tealAccent, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Modules for this school',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Text(
+                allOn ? 'All on' : '$onCount / ${items.length}',
+                style: TextStyle(
+                  color: allOn ? Colors.tealAccent : Colors.white70,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'You control this from the owner console. Turn a module off and nobody at the school sees it — including the school admin. Role permissions still apply inside modules that stay on. Dashboard, profile, settings, and logout stay available.',
+            style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: _savingModules
+                    ? null
+                    : () => setState(() => _draftEnabled = null),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+                child: const Text('All on'),
+              ),
+              OutlinedButton(
+                onPressed: _savingModules
+                    ? null
+                    : () => setState(() => _draftEnabled = <String>{}),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+                child: const Text('None'),
+              ),
+              FilledButton.icon(
+                onPressed: !_modulesDirty || _savingModules
+                    ? null
+                    : _saveModulePack,
+                icon: _savingModules
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined, size: 16),
+                label: Text(_savingModules ? 'Saving…' : 'Save modules'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.teal.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...sections.entries.map((entry) {
+            final sectionOn =
+                entry.value.where((item) => on.contains(item.id)).length;
+            return Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                iconColor: Colors.white54,
+                collapsedIconColor: Colors.white38,
+                title: Text(
+                  '${entry.key}  ·  $sectionOn/${entry.value.length}',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                children: [
+                  for (final item in entry.value)
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeThumbColor: Colors.tealAccent,
+                      title: Text(
+                        item.label,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      value: on.contains(item.id),
+                      onChanged: _savingModules
+                          ? null
+                          : (value) => _setModuleEnabled(item.id, value),
+                    ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -1967,6 +2163,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       body: ListView(
         padding: listPagePadding(context, top: 16, bottom: 24),
         children: [
+          _buildModulePackCard(school),
+          const SizedBox(height: 16),
           if (_editing)
             _buildEditProfile(school)
           else

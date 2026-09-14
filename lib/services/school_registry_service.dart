@@ -20,6 +20,8 @@ import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
+const _keepEnabledModules = Object();
+
 class SchoolRecord {
   SchoolRecord({
     required this.id,
@@ -48,6 +50,7 @@ class SchoolRecord {
     this.gradeWorkflow = const GradeWorkflowSettings(),
     this.markbookSettings = MarkbookSettings.liaDefaults,
     this.allowSelfApproval = false,
+    this.enabledModules,
     this.academicTerms = const [],
   });
 
@@ -82,6 +85,10 @@ class SchoolRecord {
   /// Mirrored to `data.settings.allowSelfApproval`, which the SQL
   /// write-guard reads via school_setting_bool().
   bool allowSelfApproval;
+
+  /// Nav module ids this school may use. `null` = all modules on.
+  /// Owned by the platform owner console; school JWT updates cannot change it.
+  Set<String>? enabledModules;
   final List<AcademicTerm> academicTerms;
 
   SchoolAccessBlock? get accessBlock {
@@ -126,6 +133,7 @@ class SchoolRecord {
     GradeWorkflowSettings? gradeWorkflow,
     MarkbookSettings? markbookSettings,
     bool? allowSelfApproval,
+    Object? enabledModules = _keepEnabledModules,
     List<AcademicTerm>? academicTerms,
   }) {
     return SchoolRecord(
@@ -158,6 +166,11 @@ class SchoolRecord {
       gradeWorkflow: gradeWorkflow ?? this.gradeWorkflow,
       markbookSettings: markbookSettings ?? this.markbookSettings,
       allowSelfApproval: allowSelfApproval ?? this.allowSelfApproval,
+      enabledModules: identical(enabledModules, _keepEnabledModules)
+          ? (this.enabledModules == null
+                ? null
+                : Set<String>.from(this.enabledModules!))
+          : (enabledModules as Set<String>?),
       academicTerms: academicTerms ?? List.from(this.academicTerms),
     );
   }
@@ -190,10 +203,20 @@ class SchoolRecord {
     'markbookSettings': markbookSettings.toMap(),
     'academicTerms': academicTerms.map((term) => term.toJson()).toList(),
     // The SQL write-guard reads data->settings->allowSelfApproval.
-    'settings': {'allowSelfApproval': allowSelfApproval},
+    // enabledModules: null means all on (key is sent so the owner can clear a pack).
+    'settings': {
+      'allowSelfApproval': allowSelfApproval,
+      'enabledModules': enabledModules == null
+          ? null
+          : (enabledModules!.toList()..sort()),
+    },
   };
 
   factory SchoolRecord.fromJson(Map<String, dynamic> json) {
+    final settingsRaw = json['settings'];
+    final settings = settingsRaw is Map
+        ? Map<String, dynamic>.from(settingsRaw)
+        : null;
     return SchoolRecord(
       id: json['id'] as String,
       name: json['name'] as String? ?? '',
@@ -242,10 +265,8 @@ class SchoolRecord {
       markbookSettings: MarkbookSettings.fromMap(
         json['markbookSettings'] as Map<String, dynamic>?,
       ),
-      allowSelfApproval:
-          ((json['settings'] as Map<String, dynamic>?)?['allowSelfApproval']
-              as bool?) ??
-          false,
+      allowSelfApproval: (settings?['allowSelfApproval'] as bool?) ?? false,
+      enabledModules: _enabledModulesFromSettings(settings),
       academicTerms:
           (json['academicTerms'] as List<dynamic>?)
               ?.whereType<Map>()
@@ -256,6 +277,16 @@ class SchoolRecord {
               .toList() ??
           const [],
     );
+  }
+
+  static Set<String>? _enabledModulesFromSettings(Map<String, dynamic>? settings) {
+    if (settings == null || !settings.containsKey('enabledModules')) {
+      return null;
+    }
+    final raw = settings['enabledModules'];
+    if (raw == null) return null;
+    if (raw is! List) return null;
+    return raw.map((item) => item.toString()).toSet();
   }
 }
 
@@ -654,6 +685,40 @@ class SchoolRegistryService {
         action: 'school_updated',
         schoolId: updated.id,
         schoolName: updated.name,
+      );
+    } catch (_) {}
+    return cloud;
+  }
+
+  /// Platform-owner module pack for one school. `null` turns every module on.
+  Future<PlatformSchoolCloudResult> setEnabledModules(
+    String schoolId,
+    Set<String>? modules, {
+    bool preferPlatformCloud = false,
+  }) async {
+    final record = lookup(schoolId);
+    if (record == null) {
+      return const PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'not_found',
+        errorMessage: 'School not found locally.',
+      );
+    }
+    final updated = record.copyWith(enabledModules: modules);
+    final cloud = await updateSchool(
+      updated,
+      preferPlatformCloud: preferPlatformCloud,
+    );
+    try {
+      await PlatformAuditLogService.instance.log(
+        action: 'module_pack_changed',
+        schoolId: record.id,
+        schoolName: record.name,
+        detail: modules == null
+            ? 'all modules on'
+            : modules.isEmpty
+            ? 'no optional modules'
+            : '${modules.length} modules on',
       );
     } catch (_) {}
     return cloud;

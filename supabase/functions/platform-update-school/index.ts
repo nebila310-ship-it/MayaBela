@@ -59,6 +59,29 @@ Deno.serve(async (req) => {
       id: schoolId,
       updatedAt: now,
     };
+    const existingSettings =
+      existing.settings &&
+        typeof existing.settings === "object" &&
+        !Array.isArray(existing.settings)
+        ? existing.settings as Record<string, unknown>
+        : {};
+    const patchSettings =
+      patch.settings &&
+        typeof patch.settings === "object" &&
+        !Array.isArray(patch.settings)
+        ? patch.settings as Record<string, unknown>
+        : null;
+    if (patchSettings) {
+      const settings = { ...existingSettings, ...patchSettings };
+      if (
+        Object.prototype.hasOwnProperty.call(patchSettings, "enabledModules") &&
+        (patchSettings.enabledModules === null ||
+          patchSettings.enabledModules === undefined)
+      ) {
+        delete settings.enabledModules;
+      }
+      merged.settings = settings;
+    }
     const name = String(merged.name || "").trim();
     if (!name) {
       return errorResponse("School name is required.", 400, "invalid");

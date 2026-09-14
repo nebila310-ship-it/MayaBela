@@ -1,4 +1,6 @@
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/rbac/module_id_aliases.dart';
+import 'package:mayabela/services/rbac/school_module_catalog.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 
 /// Per-module access rule used by the shared ERP sidebar/router (web and APK).
@@ -300,72 +302,6 @@ abstract final class ModuleAccess {
     // available to everyone in the shell. School-level settings are gated
     // separately via manage_school_settings inside their own pages.
     'settings': ModuleRule(open: true),
-  };
-
-  /// Route ids that reuse another module's rule.
-  static const Map<String, String> _aliases = {
-    'staff': 'hr',
-    'employees': 'hr',
-    'payroll': 'hr',
-    'add_teacher': 'hr',
-    'add_staff': 'teachers',
-    'grades': 'examinations',
-    'grade_approvals': 'examinations',
-    'transport_buses': 'transport',
-    'transport_live_gps': 'transport',
-    'add_driver': 'transport',
-    'add_student': 'students',
-    'timetable': 'academic',
-    'student_portal_settings': 'school',
-    'student_password_resets': 'students',
-    'grade_workflow_settings': 'examinations',
-    'markbook': 'examinations',
-    'report_cards': 'examinations',
-    'exam_bank': 'examinations',
-    'exam_papers': 'examinations',
-    'exam_desk': 'examinations',
-    'lms': 'academic',
-    'lesson_plans': 'academic',
-    'lessons': 'academic',
-    'curriculum': 'academic',
-    'academic_meetings': 'academic',
-    'at_risk': 'attendance',
-    'attendance_insights': 'attendance',
-    'health': 'student_affairs',
-    'counseling': 'student_affairs',
-    'iep': 'student_affairs',
-    'special_needs': 'student_affairs',
-    'college_guidance': 'student_affairs',
-    'student_support': 'student_affairs',
-    'clubs': 'student_affairs',
-    'gojo': 'student_affairs',
-    'scholarships': 'student_affairs',
-    'grievances': 'student_affairs',
-    'internships': 'student_affairs',
-    'leadership_meetings': 'student_affairs',
-    'leadership_tasks': 'student_affairs',
-    'student_programs': 'student_affairs',
-    'dosa': 'student_affairs',
-    'analytics': 'attendance',
-    'academic_analytics': 'attendance',
-    'surveys': 'quality_assurance',
-    'qa_surveys': 'quality_assurance',
-    'observations': 'quality_assurance',
-    'academic_audits': 'quality_assurance',
-    'action_research': 'quality_assurance',
-    'academic_monitoring': 'quality_assurance',
-    'go_live': 'go_live',
-    'golive': 'go_live',
-    'compliance': 'go_live',
-    'privacy': 'go_live',
-    'privacy_rights': 'go_live',
-    'data_rights': 'go_live',
-    'backups': 'go_live',
-    'training_manuals': 'go_live',
-    'mfa': 'go_live',
-    'ict': 'digital_ops',
-    'devices': 'digital_ops',
-    'gallery': 'events',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).
@@ -705,7 +641,7 @@ abstract final class ModuleAccess {
     ),
   };
 
-  static String normalize(String moduleId) => _aliases[moduleId] ?? moduleId;
+  static String normalize(String moduleId) => normalizeModuleId(moduleId);
 
   static ModuleRule? ruleFor(String moduleId) => rules[normalize(moduleId)];
 
@@ -714,6 +650,7 @@ abstract final class ModuleAccess {
 
   /// Whether the signed-in user may open [moduleId] at all.
   static bool canView(String moduleId) {
+    if (!SchoolModuleCatalog.isEnabled(moduleId)) return false;
     if (_isAdmin) return true;
     final id = normalize(moduleId);
     final rule = ruleFor(moduleId);
@@ -759,6 +696,7 @@ abstract final class ModuleAccess {
 
   /// Whether the signed-in user may perform mutations inside [moduleId].
   static bool canManage(String moduleId) {
+    if (!SchoolModuleCatalog.isEnabled(moduleId)) return false;
     if (_isAdmin) return true;
     final id = normalize(moduleId);
     final rule = ruleFor(moduleId);
