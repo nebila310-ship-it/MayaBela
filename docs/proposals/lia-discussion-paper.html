@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Discussion Paper — MaJo e-School Bridge × Lebawi International Academy</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(20, 32, 51, 0.92);
+      color: #fff;
+      font-size: 13px;
+    }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 16mm 15mm 14mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 12px;
+    }
+    .cover-flag img { width: 88px; height: auto; }
+    .brand-name { margin: 0; color: var(--blue); font-size: 13.5pt; }
+    .brand-sub {
+      margin: 0 0 4px;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 9.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .doc-kicker {
+      margin: 20px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9.5pt;
+      font-weight: 700;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 18.5pt;
+      line-height: 1.2;
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12pt;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .banner {
+      background: var(--ok-bg);
+      border: 1px solid #b7e2c6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .banner strong { color: var(--ok); }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .say {
+      background: #eef4ff;
+      border-left: 4px solid var(--blue);
+      padding: 8px 12px;
+      margin: 8px 0 12px;
+      font-style: italic;
+    }
+    h2 {
+      margin: 20px 0 8px;
+      font-size: 13pt;
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px;
+      font-size: 11.2pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 6px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--wash); color: var(--blue); }
+    .q {
+      margin: 0 0 6px;
+      font-weight: 700;
+    }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 24px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 100px;
+    }
+    .sig .who { font-weight: 700; margin-top: 36px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8.5pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 10mm 12mm; }
+    }
+    @page { size: A4; margin: 12mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">Discussion paper for Lebawi International Academy · sit this next to the technical proposal PDF</div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Discussion paper · meeting use</p>
+        <h1 class="brand-name">Majo Bridge Technologies and Events</h1>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:10pt;">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela)<br />
+          Companion to the 12 September 2026 technical proposal
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">For the table · not a second specification</p>
+    <h1 class="doc-title">A discussion with Lebawi International Academy</h1>
+    <p class="doc-for">How we talk through the Terms of Reference, what is already live, and what LIA still decides</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Lebawi International Academy — Academic Directors, DoSA, QA, IT, leadership, and the Board
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        Majo Bridge Technologies and Events<br />
+        +251 911 646 444 · nabilmaya6464@gmail.com
+      </div>
+      <div class="meta-card">
+        <strong>Date</strong>
+        14 September 2026 · Discussion paper v1.0
+      </div>
+      <div class="meta-card">
+        <strong>Bring to the room</strong>
+        This paper + the technical proposal PDF + a laptop on https://mayabela.pages.dev
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>One sentence for the opening.</strong>
+      The Academic Management System LIA asked for in the TOR is already built.
+      This meeting is not to invent software. It is to agree how LIA will use it, who sits in which role, and the first go-live week.
+    </div>
+
+    <h2>1. Purpose of this discussion</h2>
+    <p>Use this paper in a 45–60 minute roundtable. The long specification is the technical proposal. This paper is the conversation.</p>
+    <ol>
+      <li>Confirm we understood the TOR in LIA’s own offices — DoES, DoMS, DoHS, DoSA, QA, teachers, parents.</li>
+      <li>Show that those needs sit on live desks, not on a roadmap slide.</li>
+      <li>Leave the room with named people, a first-week plan, and open questions written down.</li>
+    </ol>
+    <div class="say">
+      “Thank you for the time. We prepared a full technical proposal. Today we will not read fifty pages.
+      We will walk the TOR in school language, open the live system if you wish, and end with decisions LIA owns.”
+    </div>
+
+    <h2>2. Suggested agenda (60 minutes)</h2>
+    <table>
+      <tr><th>Mins</th><th>Topic</th><th>Owner in the room</th></tr>
+      <tr><td>5</td><td>Opening and what “implemented” means</td><td>Majo Bridge</td></tr>
+      <tr><td>10</td><td>What LIA asked for, in five sentences</td><td>Both</td></tr>
+      <tr><td>15</td><td>Live walk: markbook, attendance, parent, at-risk, reports</td><td>Majo Bridge + one LIA teacher/director</td></tr>
+      <tr><td>10</td><td>Roles: who at LIA maps to which desk</td><td>LIA leadership</td></tr>
+      <tr><td>10</td><td>Privacy, MFA, Friday snapshot, what we do not claim</td><td>IT + Majo Bridge</td></tr>
+      <tr><td>10</td><td>Decisions, first week, support</td><td>Both — write names below</td></tr>
+    </table>
+
+    <h2>3. What we are saying — and what we are not</h2>
+    <table>
+      <tr><th>We are saying</th><th>We are not saying</th></tr>
+      <tr><td>The TOR functional work is implemented in MaJo e-School Bridge.</td><td>LIA data is already fully migrated. People and rosters are still LIA’s cutover.</td></tr>
+      <tr><td>55+ modules are live. Excel is an export, not the master gradebook.</td><td>Teachers may never download Excel. They can. They must not keep it as the official mark.</td></tr>
+      <tr><td>At-risk students are flagged by a school rule: low marks and high absence together.</td><td>There is a secret AI that predicts the child’s future.</td></tr>
+      <tr><td>Parents see published grades on web or the Android app after the school approves the link.</td><td>Every parent is already online. Linking is a LIA process.</td></tr>
+      <tr><td>1,000 concurrent users and 99.5% uptime are the go-live operating targets.</td><td>We printed a laboratory SLA certificate. The go-live desk is honest about this.</td></tr>
+    </table>
+    <div class="say">
+      “Most school systems help the registrar type. This one helps the director see the same child the teacher, the counselor, and the parent see — with the right limits.”
+    </div>
+
+    <h2>4. Five sentences that cover the TOR</h2>
+    <p>If the room only remembers five lines, use these.</p>
+    <ol>
+      <li><b>One child.</b> SIS is the student. LMS, attendance, markbook, fees, bus, and support all use that id.</li>
+      <li><b>One gradebook.</b> Teachers enter marks in the weighted markbook. Exams can push into it. Parents see marks only after approve-and-publish.</li>
+      <li><b>One attendance story.</b> The daily register feeds trends, parent notices, DoSA oversight, and at-risk flags.</li>
+      <li><b>One conversation.</b> Parent–teacher messages and class discussion live in the communication platform. Not a Telegram group as the official record.</li>
+      <li><b>One door per person.</b> Roles hide desks. Safeguarding never appears to parents, students, or classroom teachers.</li>
+    </ol>
+
+    <h2>5. Discussion by TOR area</h2>
+    <p>Each block is a prompt. Read the question, let LIA talk, then point at the desk. Do not debate whether the module exists. Debate how LIA will run it.</p>
+
+    <h3>5.1 Replacing Excel and paper summaries</h3>
+    <p class="q">Question for the room: which office still keeps a private grading spreadsheet today, and who will stop treating it as the master after go-live?</p>
+    <ul>
+      <li><b>Live answer:</b> Markbook is the master. Reports → Academic / Grade analytics workbook downloads a copy.</li>
+      <li><b>LIA action:</b> Name the Section Director who approves marks before parents see them.</li>
+    </ul>
+
+    <h3>5.2 Student performance, grades, attendance, at-risk</h3>
+    <p class="q">Question: when a Grade 8 child is slipping, who at LIA should see the name first — homeroom, DoMS, counselor, or QA?</p>
+    <ul>
+      <li><b>Live answer:</b> At-risk &amp; insights flags the child only when average is below 50% and absence is high enough. Analytics and QA snapshots read the same stores.</li>
+      <li><b>LIA action:</b> Agree the follow-up path. The software flags. People still counsel.</li>
+    </ul>
+    <div class="note">
+      If someone asks for “predictive AI,” say: “We implemented the TOR need — finding at-risk students — with a rule you can audit. We did not hide a model you cannot explain to a parent.”
+    </div>
+
+    <h3>5.3 LMS, assessment, and the gradebook</h3>
+    <p class="q">Question: should LIA keep a separate learning app, or is class + subject on the LMS hub enough for this year?</p>
+    <ul>
+      <li><b>Live answer:</b> LMS hub is lesson plans, homework, materials, exams, class discussion, and the SIS roster. Exam attempts can push into the markbook.</li>
+      <li><b>LIA action:</b> Pick one class for the first live week so teachers are not asked to move every subject on day one.</li>
+    </ul>
+
+    <h3>5.4 Parents and the mobile app</h3>
+    <p class="q">Question: who at LIA will approve parent-link requests in the first two weeks — homeroom, registrar, or Student Affairs?</p>
+    <ul>
+      <li><b>Live answer:</b> Parent signs in with School ID and the phone on file, links with student id + date of birth, then waits for approval. They then see published grades, attendance, homework, fees, bus, messages.</li>
+      <li><b>LIA action:</b> Write that approver’s name in Section 8.</li>
+    </ul>
+
+    <h3>5.5 DoSA, counseling, career guidance, safeguarding</h3>
+    <p class="q">Question: is LIA comfortable that counselors and career guidance sit on the Student Affairs role, and that safeguarding is a sealed desk?</p>
+    <ul>
+      <li><b>Live answer:</b> We did not invent extra staff-role keys. DoSA, counseling, and college guidance use Student Affairs. Safeguarding cases never go to parents, students, or classroom teachers. Grievances stay on DoSA; they are not mixed into discipline.</li>
+      <li><b>LIA action:</b> Name DoSA and the safeguarding officer. Confirm they accept this mapping.</li>
+    </ul>
+
+    <h3>5.6 Academic Directors and department heads</h3>
+    <p class="q">Question: will DoES, DoMS, and DoHS each hold a Section Director login, and will department heads share that academic-lead desk?</p>
+    <ul>
+      <li><b>Live answer:</b> Section Director is the Academic Director / department-head mapping: classes, students, exam approval, reports, curriculum review, academic evaluations.</li>
+      <li><b>LIA action:</b> One named director per school (elementary / middle / high), plus any department head who must review plans.</li>
+    </ul>
+
+    <h3>5.7 QA, leadership, audit</h3>
+    <p class="q">Question: should QA be read-only on academics and write-only on observations, audits, and the audit log?</p>
+    <ul>
+      <li><b>Live answer:</b> QA observations are not teacher_evaluations. Curriculum evaluations stay on the curriculum desk. QA and Vice Principal can open the audit log. Leadership meetings sit on the staff calendar.</li>
+      <li><b>LIA action:</b> Name the QA lead and whether the Vice Principal also watches the log.</li>
+    </ul>
+
+    <h3>5.8 IT, privacy, MFA, daily snapshot</h3>
+    <p class="q">Question: who is LIA’s Administration Staff (IT Admin) for Friday snapshots and MFA help — without giving them Full Access?</p>
+    <ul>
+      <li><b>Live answer:</b> IT Admin maps to Administration Staff: digital ops, go-live, CCTV, system health. MFA is an authenticator people can enrol. Go-live reminds the school when the last snapshot is older than 24 hours. That is a checklist, not a second backup product.</li>
+      <li><b>LIA action:</b> Name the Friday owner. Decide who must enrol MFA (recommend: finance, registrar, owner).</li>
+    </ul>
+
+    <h2>6. Live demonstration (if a projector is available)</h2>
+    <p>Open <b>https://mayabela.pages.dev</b>. If the screen looks old, hard-refresh with <b>Ctrl+Shift+R</b>.</p>
+    <ol>
+      <li>Sign in as administration / director — show the sidebar length. “These are the 55+ desks.”</li>
+      <li>Students — open one SIS profile. “Health, marks, clubs, documents are this child, not four files.”</li>
+      <li>Markbook — “This replaced Excel.”</li>
+      <li>Attendance intelligence — “At-risk is a rule, not magic.”</li>
+      <li>Reports — Academic Excel / Grade analytics workbook.</li>
+      <li>Go-live — Training, snapshot reminder, privacy queue.</li>
+      <li>Optional: parent door on a phone.</li>
+    </ol>
+    <p>If GitHub or a PDF link fails with a 503, that is a public website cache, not the school system. Use the copy already in <i>docs/proposals</i> or the jsDelivr mirror.</p>
+
+    <h2>7. What LIA still owns after this meeting</h2>
+    <table>
+      <tr><th>Work</th><th>Who</th><th>Tool already in the product</th></tr>
+      <tr><td>School id, campuses, terms, classes</td><td>Registrar + Majo Bridge</td><td>School / Academic Management</td></tr>
+      <tr><td>Import students (name, grade, class, date of birth)</td><td>Registrar</td><td>Go-live → Import</td></tr>
+      <tr><td>Create teachers and staff; hand temp passwords once</td><td>HR + IT</td><td>Add Teacher / Add Administration Staff</td></tr>
+      <tr><td>Approve parent links</td><td>Named approver</td><td>Parents &amp; Link Approvals</td></tr>
+      <tr><td>First week of live attendance and markbook</td><td>Teachers + Section Director</td><td>Attendance, Markbook, Grade Approvals</td></tr>
+      <tr><td>Friday snapshot</td><td>Administration Staff</td><td>Go-live → Backups</td></tr>
+    </table>
+    <div class="say">
+      “We built the school operating system. You still run the school. Our job after today is configuration, training, and standing next to you in week one.”
+    </div>
+
+    <h2>8. Decisions to write before we leave</h2>
+    <p>Fill this table in the room. Empty cells mean the discussion is not finished.</p>
+    <table>
+      <tr><th>Decision</th><th>LIA name / note</th></tr>
+      <tr><td>Pilot start date (recommend one campus or one grade first)</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Registrar</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Section Director — DoES</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Section Director — DoMS</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Section Director — DoHS</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>DoSA / counseling / career guidance lead</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>QA lead</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>IT / Administration Staff (Friday snapshot)</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Parent-link approver</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Who must enrol authenticator (MFA)</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>First class/subject for LMS week one</td><td>&nbsp;<br /><br /></td></tr>
+      <tr><td>Open questions for a follow-up</td><td>&nbsp;<br /><br /></td></tr>
+    </table>
+
+    <h2>9. Support after the discussion</h2>
+    <table>
+      <tr><th>Channel</th><th>Detail</th></tr>
+      <tr><td>Phone / WhatsApp</td><td>+251 911 646 444</td></tr>
+      <tr><td>Email</td><td>nabilmaya6464@gmail.com</td></tr>
+      <tr><td>Live system</td><td>https://mayabela.pages.dev</td></tr>
+      <tr><td>Hours</td><td>Monday–Saturday, 09:00–18:00 East Africa Time. Full outage: call or WhatsApp</td></tr>
+    </table>
+    <p>Majo Bridge helps with login, roles, sync, the app, and go-live buttons. LIA enters marks, attendance, announcements, and parent approvals.</p>
+
+    <h2>10. Close</h2>
+    <div class="say">
+      “The Terms of Reference have been implemented in MaJo e-School Bridge.
+      If LIA agrees the role names and the first week, we configure Lebawi International Academy next and train the offices that will actually click the buttons.
+      Thank you.”
+    </div>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">Discussion lead — Majo Bridge Technologies and Events</div>
+        <div class="role">Name / date</div>
+      </div>
+      <div class="sig">
+        <div class="who">Discussion chair — Lebawi International Academy</div>
+        <div class="role">Name / date</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Discussion paper v1.0 · 14 September 2026 · Companion to MaJo_Bridge_LIA_Technical_Proposal.pdf.
+      Product: MaJo e-School Bridge. Live URL https://mayabela.pages.dev. Not a government product.
+    </p>
+  </article>
+</body>
+</html>
