@@ -2,6 +2,7 @@ import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/rbac/school_module_catalog.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
@@ -164,6 +165,7 @@ class TeacherAccessService {
   bool get hasFullDashboardAccess => hasAnyHomeroomClass;
 
   bool canAccessTeacherDashboardTile(String tileId) {
+    if (!SchoolModuleCatalog.isEnabled(tileId)) return false;
     if (hasFullDashboardAccess) return true;
     return _subjectTeacherDashboardTiles.contains(tileId);
   }
