@@ -36,6 +36,8 @@ npx supabase functions deploy school-upsert-account
 npx supabase functions deploy school-upsert-registry
 npx supabase functions deploy school-delete-account
 npx supabase functions deploy school-register-parent
+npx supabase functions deploy school-send-otp
+npx supabase functions deploy school-reset-password-otp
 npx supabase functions deploy school-refresh-claims
 npx supabase functions deploy platform-owner-pin
 npx supabase functions deploy platform-list-schools
@@ -49,6 +51,14 @@ Optional secret for Maya AI:
 
 ```bash
 npx supabase secrets set MAYA_AI_API_KEY=your_gemini_key
+```
+
+Paid SMS OTP (password reset) — Africa’s Talking or Twilio. Full steps: [`docs/SMS_OTP_GATEWAY.md`](docs/SMS_OTP_GATEWAY.md).
+
+```bash
+npx supabase secrets set SMS_PROVIDER=africas_talking
+npx supabase secrets set AT_USERNAME=your_at_username
+npx supabase secrets set AT_API_KEY=your_at_api_key
 ```
 
 ## 5. Migrate Firebase data (read-only on Firebase)

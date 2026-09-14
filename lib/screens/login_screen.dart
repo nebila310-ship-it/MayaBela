@@ -1244,7 +1244,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 builder: (_) => selectedRole ==
                                         AuthService.roleStudent
                                     ? const StudentForgotPasswordScreen()
-                                    : const ForgotPasswordScreen(),
+                                    : ForgotPasswordScreen(
+                                        initialSchoolId: schoolId.text.trim(),
+                                      ),
                               ),
                             );
                           },
@@ -1571,7 +1573,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           MaterialPageRoute(
                             builder: (_) => selectedRole == AuthService.roleStudent
                                 ? const StudentForgotPasswordScreen()
-                                : const ForgotPasswordScreen(),
+                                : ForgotPasswordScreen(
+                                    initialSchoolId: schoolId.text.trim(),
+                                  ),
                           ),
                         );
                       },

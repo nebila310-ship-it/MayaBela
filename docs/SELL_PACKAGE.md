@@ -64,13 +64,14 @@ Annual option (optional quote): **10 months prepaid = 2 months courtesy** on the
 - Reports (Excel / CSV / PDF), announcements, messaging, Maya Assistant  
 - Platform Console: create school, seats, rate, subscription expiry  
 - Unique temp passwords; forced first-login change (**no OTP** for password change)  
+- Forgot-password SMS OTP via a paid gateway (Africa’s Talking or Twilio)  
 - Onboarding checklist in Platform Console  
 
 ### Not included (unless separately contracted)
 
 - Custom development / new modules  
 - On-site hardware (biometric devices, school servers)  
-- SMS / voice gateway fees (carrier or third-party)  
+- SMS / voice gateway **usage fees** (Africa’s Talking or Twilio credit — you buy this separately; Supabase Pro does not send SMS)  
 - Google Play / App Store developer account fees  
 - Data migration from a third-party SIS beyond the agreed pilot scope  
 - 24/7 phone SLA (see support hours below)

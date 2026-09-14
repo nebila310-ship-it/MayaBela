@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
-import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/otp_verification_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/ethiopian_phone_field.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({super.key, this.initialSchoolId});
+
+  final String? initialSchoolId;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  late final TextEditingController _schoolId;
   final _identifier = TextEditingController();
   final _otp = TextEditingController();
   final _newPassword = TextEditingController();
@@ -23,13 +25,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _step = 0;
   bool _sending = false;
   String message = '';
-  OtpDeliveryChannel? _deliveryChannel;
   OtpDeliveryMode? _otpMode;
 
   AppStrings get s => AppLocale.instance.strings;
 
   @override
+  void initState() {
+    super.initState();
+    final seed = (widget.initialSchoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
+    _schoolId = TextEditingController(text: seed);
+  }
+
+  @override
   void dispose() {
+    _schoolId.dispose();
     _identifier.dispose();
     _otp.dispose();
     _newPassword.dispose();
@@ -37,63 +48,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  Future<void> _pickChannelAndSendOtp() async {
+  String get _phoneInput {
+    final local = EthiopianPhoneField.localFromInput(_identifier.text);
+    return local.isEmpty ? _identifier.text.trim() : local;
+  }
+
+  Future<void> _sendOtp() async {
     setState(() => message = '');
+    if (_schoolId.text.trim().isEmpty) {
+      setState(() => message = s.invalidSchoolId);
+      return;
+    }
     if (_identifier.text.trim().isEmpty) {
       setState(() => message = s.invalidPhone);
       return;
     }
 
-    final channel = await showModalBottomSheet<OtpDeliveryChannel>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                s.chooseOtpChannel,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.sms_outlined, color: Colors.teal),
-                title: Text(s.sendViaSms),
-                subtitle: const Text('Preferred'),
-                onTap: () => Navigator.pop(context, OtpDeliveryChannel.sms),
-              ),
-              ListTile(
-                leading: const Icon(Icons.chat, color: Colors.green),
-                title: Text(s.sendViaWhatsApp),
-                onTap: () => Navigator.pop(context, OtpDeliveryChannel.whatsApp),
-              ),
-              ListTile(
-                leading: const Icon(Icons.send, color: Colors.lightBlue),
-                title: Text(s.sendViaTelegram),
-                subtitle: const Text('Still available'),
-                onTap: () => Navigator.pop(context, OtpDeliveryChannel.telegram),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (channel == null || !mounted) return;
-
     setState(() => _sending = true);
     final result = await _otpService.sendOtp(
-      EthiopianPhoneField.localFromInput(_identifier.text).isEmpty
-          ? _identifier.text.trim()
-          : EthiopianPhoneField.localFromInput(_identifier.text),
+      _phoneInput,
+      schoolId: _schoolId.text.trim().toUpperCase(),
     );
 
     if (!mounted) return;
@@ -109,45 +83,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    _otpMode = result.mode;
-
-    var delivered = false;
-    if (result.mode == OtpDeliveryMode.demoInApp && result.demoOtp != null) {
-      delivered = await OtpDeliveryService.instance.deliver(
-        phone: _identifier.text.trim(),
-        otp: result.demoOtp!,
-        channel: channel,
-      );
-    }
-
-    if (!mounted) return;
-
-    final channelLabel = switch (channel) {
-      OtpDeliveryChannel.sms => s.sendViaSms,
-      OtpDeliveryChannel.whatsApp => s.sendViaWhatsApp,
-      OtpDeliveryChannel.telegram => s.sendViaTelegram,
-    };
-
-    final setupFallback =
-        OtpVerificationService.isFirebaseSetupError(result.error) ||
-            OtpVerificationService.isBillingError(result.error);
-    final setupNote = setupFallback
-        ? (OtpVerificationService.isBillingError(result.error)
-            ? '${s.otpBillingNotEnabled}\n\n'
-            : '${s.otpFirebaseSha1Setup}\n\n')
-        : '';
-
     setState(() {
       _sending = false;
-      _deliveryChannel = channel;
+      _otpMode = result.mode;
       _step = 1;
-      message = result.mode == OtpDeliveryMode.firebaseSms
+      message = result.mode == OtpDeliveryMode.gatewaySms
           ? (result.e164Phone != null
               ? '${s.otpSentViaSms} ${result.e164Phone}'
               : s.otpSentViaSms)
-          : delivered
-              ? '$setupNote${s.otpDeliveredVia(channelLabel)}\n${s.demoOtpNote}\n${result.demoOtp}'
-              : '$setupNote${s.otpDeliveryFailed}\n${s.demoOtpNote}\n${result.demoOtp}';
+          : '${s.otpFirebaseFallback}\n${s.demoOtpNote}\n${result.demoOtp}';
     });
   }
 
@@ -165,6 +109,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final ok = await _otpService.verifyAndResetPassword(
       code: _otp.text,
       newPassword: _newPassword.text,
+      phone: _phoneInput,
+      schoolId: _schoolId.text.trim().toUpperCase(),
     );
     if (!ok) {
       setState(() => message = s.invalidOtp);
@@ -205,6 +151,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_step == 0) ...[
+                  TextField(
+                    controller: _schoolId,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      labelText: s.schoolId,
+                      hintText: 'TB-001',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   EthiopianPhoneField(
                     controller: _identifier,
                     label: s.enterEmailOrPhone,
@@ -213,9 +169,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       border: OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.otpSmsGatewayHint,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _sending ? null : _pickChannelAndSendOtp,
+                    onPressed: _sending ? null : _sendOtp,
                     child: _sending
                         ? const SizedBox(
                             width: 22,
@@ -225,29 +186,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         : Text(s.sendOtp),
                   ),
                 ] else ...[
-                  if (_deliveryChannel != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Chip(
-                        avatar: Icon(
-                          switch (_deliveryChannel!) {
-                            OtpDeliveryChannel.sms => Icons.sms_outlined,
-                            OtpDeliveryChannel.whatsApp => Icons.chat,
-                            OtpDeliveryChannel.telegram => Icons.send,
-                          },
-                          size: 18,
-                        ),
-                        label: Text(
-                          _otpMode == OtpDeliveryMode.firebaseSms
-                              ? s.otpSentViaSms
-                              : switch (_deliveryChannel!) {
-                                  OtpDeliveryChannel.sms => s.sendViaSms,
-                                  OtpDeliveryChannel.whatsApp => s.sendViaWhatsApp,
-                                  OtpDeliveryChannel.telegram => s.sendViaTelegram,
-                                },
-                        ),
-                      ),
+                  Chip(
+                    avatar: const Icon(Icons.sms_outlined, size: 18),
+                    label: Text(
+                      _otpMode == OtpDeliveryMode.gatewaySms
+                          ? s.otpSentViaSms
+                          : s.otpFirebaseFallback,
                     ),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _otp,
                     decoration: InputDecoration(
