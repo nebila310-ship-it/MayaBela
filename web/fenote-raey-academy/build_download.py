@@ -65,6 +65,22 @@ def build(out_dir: Path) -> None:
     print(f"Wrote {inlined_path} ({inlined_path.stat().st_size} bytes)")
     print(f"Wrote {zip_path} ({zip_path.stat().st_size} bytes)")
 
+    proposal_dir = ROOT.parent.parent / "docs" / "proposals"
+    pdf = proposal_dir / "MaJo_Bridge_Fenote_Raey_Technical_Proposal.pdf"
+    html = proposal_dir / "fenote-raey-academy-technical-proposal.html"
+    logo = proposal_dir / "assets" / "majo_bridge_logo.png"
+    if pdf.is_file():
+        dest_pdf = out_dir / pdf.name
+        dest_pdf.write_bytes(pdf.read_bytes())
+        print(f"Wrote {dest_pdf} ({dest_pdf.stat().st_size} bytes)")
+    if html.is_file() and logo.is_file():
+        assets = out_dir / "assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        (assets / logo.name).write_bytes(logo.read_bytes())
+        dest_html = out_dir / "technical-proposal.htm"
+        dest_html.write_text(html.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"Wrote {dest_html} ({dest_html.stat().st_size} bytes)")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
