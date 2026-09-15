@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Technical Proposal — MaJo e-School Bridge for Fenote Raey Academy</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --gold: #b8943a;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.8pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(20, 32, 51, 0.92);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 16mm 36mm 22mm 16mm;
+      position: relative;
+    }
+    .page-stamp {
+      position: absolute;
+      top: 8mm;
+      right: 6mm;
+      width: 30mm;
+      height: 30mm;
+      z-index: 8;
+      filter: drop-shadow(0 2px 6px rgba(16, 52, 102, 0.28));
+    }
+    .page-stamp img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .page-footer-bar {
+      display: none;
+    }
+    .cover-flag {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 3px solid var(--blue);
+      box-shadow: 0 3px 0 var(--gold);
+      padding: 0 0 14px 0;
+    }
+    .cover-flag .brand-mark {
+      width: 82px;
+      height: auto;
+      flex: 0 0 auto;
+    }
+    .brand-name {
+      margin: 0;
+      color: var(--blue);
+      font-size: 13.2pt;
+      letter-spacing: 0.2px;
+    }
+    .brand-sub {
+      margin: 4px 0 0;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .contact-line {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 9.4pt;
+      line-height: 1.45;
+    }
+    .contact-line a { color: var(--blue); text-decoration: none; font-weight: 700; }
+    .doc-kicker {
+      margin: 18px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9pt;
+      font-weight: 700;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 18.5pt;
+      line-height: 1.22;
+      color: var(--ink);
+      padding-right: 0;
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12.2pt;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .amharic {
+      font-size: 10.5pt;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 8.2pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .banner {
+      background: var(--ok-bg);
+      border: 1px solid #b7e2c6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 12px 0 6px;
+    }
+    .banner strong { color: var(--ok); }
+    h2 {
+      margin: 20px 0 8px;
+      font-size: 13pt;
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h2.signature-page { page-break-before: always; }
+    h3 {
+      margin: 14px 0 6px;
+      font-size: 11.2pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 11px 0 5px;
+      font-size: 10.4pt;
+      color: var(--ink);
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.1pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 5px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--wash);
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .status {
+      display: inline-block;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-weight: 800;
+      font-size: 8.2pt;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+    .toc {
+      list-style: none;
+      padding-left: 0;
+    }
+    .toc li { padding-left: 0; }
+    .toc a { color: var(--blue); text-decoration: none; }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .mod-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .mod {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+    .mod b { display: block; color: var(--ink); margin-bottom: 2px; }
+    .mod span { color: var(--muted); font-size: 8.9pt; }
+    .school-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 0 0 10px;
+      background: linear-gradient(180deg, #f7fafc 0%, #fff 70%);
+      page-break-inside: avoid;
+    }
+    .school-card h3 { margin-top: 0; border: 0; padding-left: 0; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 22px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 78px;
+    }
+    .sig .who { font-weight: 700; margin-top: 28px; }
+    .sig .role { color: var(--muted); font-size: 9.3pt; }
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8.2pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    @media print {
+      html, body { background: #fff !important; }
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet {
+        box-shadow: none;
+        margin: 0;
+        width: auto;
+        min-height: auto;
+        padding: 0;
+      }
+      /* Stamp and contact bar are burned onto every PDF page after print
+         so they sit in the page margin and never cover body text. */
+      .page-stamp, .page-footer-bar { display: none !important; }
+      a { color: inherit; text-decoration: none; }
+      .cover-flag, .sig, .mod, .school-card, table, .banner, .note { break-inside: avoid; }
+      .cover-flag, .banner, .status, .meta-card {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    /* Right gutter holds the official stamp; bottom gutter holds contact + page no. */
+    @page { size: A4; margin: 14mm 32mm 20mm 15mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Technical proposal for Fenote Raey Academy ·
+    Print with <b>Ctrl+P → Save as PDF</b> ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+    <div class="page-stamp" aria-hidden="true">
+      <img src="assets/majo_official_stamp.png" alt="MaJo Bridge official stamp" />
+    </div>
+    <div class="page-footer-bar">
+      MaJo Bridge Technology and Events PLC · +251 911 646 444 · majobridgetech@gmail.com ·
+      Technical proposal for Fenote Raey Academy · Confidential
+    </div>
+
+    <header class="cover-flag">
+      <img class="brand-mark" src="assets/maya_brand.png" alt="MaJo e-School Bridge logo" />
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">MaJo Bridge Technology and Events PLC</h1>
+        <p class="contact-line">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela platform)<br />
+          Live system: <a href="https://mayabela.pages.dev">https://mayabela.pages.dev</a><br />
+          Email: <a href="mailto:majobridgetech@gmail.com">majobridgetech@gmail.com</a><br />
+          Phone / WhatsApp: <b>+251 911 646 444</b>
+        </p>
+      </div>
+    </header>
+
+    <p class="doc-kicker">Technical proposal · School operating system</p>
+    <h1 class="doc-title">A complete school system Fenote Raey Academy can run, adapt, and grow — not a rigid one-size product</h1>
+    <p class="doc-for">Prepared for Fenote Raey Academy <span class="amharic">· ፍኖተ ራእይ አካዳሚ</span></p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Fenote Raey Academy<br />
+        Owner, Directors, Principal, Academic leadership, Registrar, Finance, HR, and IT
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        MaJo Bridge Technology and Events PLC<br />
+        Represented by Nebil Ahmed, General Manager<br />
+        +251 911 646 444 · majobridgetech@gmail.com
+      </div>
+      <div class="meta-card">
+        <strong>Document date</strong>
+        15 September 2026 · Version 1.0
+      </div>
+      <div class="meta-card">
+        <strong>Purpose</strong>
+        Set out the live 59-module system, how Fenote Raey can switch modules on or off, and how we customise from two schools already on the same platform.
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>What this paper offers.</strong>
+      Fenote Raey Academy receives a working school operating system — administration, teachers, parents, students, and drivers — with fifty-nine named desks plus four role doors.
+      Every school does not need every desk. The platform owner turns modules on or off per school. Inside an enabled module, Fenote Raey maps its own titles, branding, grade rules, fees, buses, and reports.
+      New desks attach to the same student record. We do not ask the Academy to buy a second product when a new office appears.
+    </div>
+
+    <h2>1. How to read this proposal</h2>
+    <p>This is a technical proposal in plain language. It has four jobs:</p>
+    <ol>
+      <li><b>Show the full system</b> Fenote Raey can inspect today at <b>https://mayabela.pages.dev</b>.</li>
+      <li><b>List every module</b> so leadership can tick what this Academy needs in year one, and what can wait.</li>
+      <li><b>State the customization model</b> — adapt existing desks, and add new modules without rebuilding the school.</li>
+      <li><b>Show experience</b> from two schools already configured on the same platform: Lebawi International Academy and Feleg Raye School.</li>
+    </ol>
+    <p>Commercial price is not in this paper. Terms are agreed separately with Fenote Raey management. After a live-site update, hard-refresh with <b>Ctrl+Shift+R</b>.</p>
+
+    <h3>Contents</h3>
+    <ol class="toc">
+      <li>1. How to read this proposal</li>
+      <li>2. Executive summary</li>
+      <li>3. About MaJo Bridge Technology and Events PLC</li>
+      <li>4. Experience in two schools</li>
+      <li>5. What Fenote Raey Academy needs — and how we answer</li>
+      <li>6. The system in one page</li>
+      <li>7. Full module catalogue (59 desks)</li>
+      <li>8. Customization: adapt existing modules and add new ones</li>
+      <li>9. Roles, isolation, and day-to-day use</li>
+      <li>10. Implementation, training, and support</li>
+      <li>11. Closing and signatures</li>
+      <li>12. Acceptance and signatures</li>
+    </ol>
+
+    <h2>2. Executive summary</h2>
+    <p>
+      Fenote Raey Academy is not starting from a blank drawing. MaJo Bridge Technology and Events PLC already operates
+      <b>MaJo e-School Bridge</b> as a multi-school cloud system. Each school has its own isolated records. Staff sign in with
+      School ID + phone/username + password. Parents see only their children. Another school cannot open Fenote Raey data.
+    </p>
+    <p>In everyday words, Fenote Raey can have:</p>
+    <ul>
+      <li>One student record used by the office, the teacher, the parent, and the bus — not four spreadsheets.</li>
+      <li>Teacher enters marks → leadership approves → then the parent sees. Draft marks never leak.</li>
+      <li>Attendance, homework, timetable, gallery, messages, fees, inventory, HR payroll (Ethiopian income tax and pension), live bus GPS, and Admin CCTV for cameras already on campus.</li>
+      <li>English, Amharic, and Afaan Oromo in the product.</li>
+      <li>A module pack: Fenote Raey can run all 59 desks, or a smaller set. Later desks turn on without a migration.</li>
+    </ul>
+    <p>
+      We have already configured this platform for <b>Lebawi International Academy</b> (full academic operating system, TOR-mapped)
+      and <b>Feleg Raye School</b> (school OS, branding, roles, fees, transport, and a strong customization package).
+      Fenote Raey is the next school on the same product — with its own name, logo, classes, and module mix.
+    </p>
+
+    <h2>3. About MaJo Bridge Technology and Events PLC</h2>
+    <p>
+      The company designs, implements, and supports MaJo e-School Bridge. The live product name in the app is MayaBela.
+      The company remains the system owner. <b>The school remains the owner of its student data.</b>
+    </p>
+    <table>
+      <tr><th>Item</th><th>Detail</th></tr>
+      <tr><td>Legal name</td><td>MaJo Bridge Technology and Events PLC (official company stamp on every page of this proposal)</td></tr>
+      <tr><td>Trading name</td><td>Majo Bridge Technologies and Events</td></tr>
+      <tr><td>General Manager</td><td>Nebil Ahmed</td></tr>
+      <tr><td>System</td><td>MaJo e-School Bridge — school ERP / academic management system</td></tr>
+      <tr><td>School in this proposal</td><td>Fenote Raey Academy (ፍኖተ ራእይ አካዳሚ)</td></tr>
+      <tr><td>Access</td><td>Web (no install) + Android app for teachers, parents, students, and drivers</td></tr>
+      <tr><td>Live URL</td><td>https://mayabela.pages.dev</td></tr>
+      <tr><td>Email</td><td>majobridgetech@gmail.com</td></tr>
+      <tr><td>Phone / WhatsApp</td><td>+251 911 646 444</td></tr>
+      <tr><td>Support hours</td><td>Monday–Saturday, 09:00–18:00 East Africa Time. Full outage: call or WhatsApp</td></tr>
+      <tr><td>Languages</td><td>English, Amharic, Afaan Oromo</td></tr>
+    </table>
+
+    <h2>4. Experience in two schools</h2>
+    <p>
+      Fenote Raey is not a first experiment. The same product is already in use and configuration for two schools with different sizes and office cultures.
+      That is the proof that the system is modular: one platform, two packs, two brands.
+    </p>
+
+    <div class="school-card">
+      <h3>4.1 Lebawi International Academy</h3>
+      <p>
+        LIA required a full Academic Management System: SIS, LMS, weighted markbook, exam bank, attendance intelligence,
+        student support, safeguarding, DoSA programs, QA, report cards, and parent publish-after-approve.
+        We mapped their Terms of Reference onto the live desks — not a second database.
+        Result: more than 55 academic and student-service desks on the same student identity, with Excel as an export, not the master.
+      </p>
+      <ul>
+        <li>International-school academic offices (Section Directors, DoSA, QA, counselors) mapped onto existing staff roles.</li>
+        <li>Grade workflow: enter → approve → publish. Parents never see a draft mark.</li>
+        <li>At-risk flags from live marks and live absence (clear school rule, not a hidden score).</li>
+        <li>Go-live desk: snapshots, training manuals, privacy requests, MFA.</li>
+      </ul>
+    </div>
+
+    <div class="school-card">
+      <h3>4.2 Feleg Raye School</h3>
+      <p>
+        Feleg Raye required a School Operating System across five doors (administration, teacher, student, parent, driver),
+        with a written customization commitment: branding, campus and class naming, role mapping, fee categories, transport routes,
+        and report preferences. Included implementation hours cover configuration and Feleg-specific adjustments so the school is not forced onto a rigid default.
+      </p>
+      <ul>
+        <li>School logo and identity on the tenant the parents and staff actually open.</li>
+        <li>Ethiopian payroll labels (income tax and pension) on the HR desk.</li>
+        <li>Bus routes, driver accounts, and live GPS only while the driver is sharing.</li>
+        <li>Kickoff, provisioning, training, UAT, go-live, and a hypercare window after go-live.</li>
+      </ul>
+    </div>
+
+    <p>
+      <b>What this means for Fenote Raey.</b>
+      LIA showed the platform can carry a dense academic TOR. Feleg Raye showed it can be branded and workflow-fitted for a local school OS.
+      Fenote Raey gets both strengths: the full catalogue if you want it, and the same customization levers (module pack, roles, logo, fees, buses, reports).
+    </p>
+
+    <h2>5. What Fenote Raey Academy needs — and how we answer</h2>
+    <table>
+      <tr><th>Fenote Raey need</th><th>How MaJo e-School Bridge answers</th></tr>
+      <tr><td>One system for owner, directors, teachers, parents, students, drivers</td><td>Five doors, one School ID. The sidebar changes with the person’s role.</td></tr>
+      <tr><td>Not every school uses every office</td><td>Owner console module pack: each desk on or off for this Academy only.</td></tr>
+      <tr><td>Teacher work must not jump to parents too early</td><td>Approve-and-publish grades. Linked parents see published work only.</td></tr>
+      <tr><td>Parents must not see another family’s child</td><td>Link by student ID + date of birth, then school approval.</td></tr>
+      <tr><td>Cameras already on campus</td><td>Admin CCTV desk for existing cameras / NVR — staff only, not a classroom toy.</td></tr>
+      <tr><td>Buses Fenote already runs</td><td>Fleet, passenger lists, driver QR scan, live map while sharing.</td></tr>
+      <tr><td>Ethiopian payroll</td><td>HR payroll with income-tax and pension labels and exports.</td></tr>
+      <tr><td>Amharic-speaking offices and families</td><td>Product strings in English, Amharic, and Afaan Oromo.</td></tr>
+      <tr><td>Start small, grow later</td><td>Pilot one campus or grade band 30–60 days, then turn on more modules.</td></tr>
+    </table>
+
+    <h2>6. The system in one page</h2>
+    <table>
+      <tr><th>Door</th><th>Who uses it</th><th>What they do</th></tr>
+      <tr><td>Administration / ERP</td><td>Owner, directors, principal, registrar, QA, finance, HR, IT</td><td>Students, grades, money, buses, CCTV, reports, roles</td></tr>
+      <tr><td>Teacher</td><td>Homeroom and subject teachers</td><td>Attendance, homework, markbook, lesson plans, parent messages</td></tr>
+      <tr><td>Parent</td><td>Linked guardians</td><td>Published grades, attendance, homework, fees, bus, behaviour, messages</td></tr>
+      <tr><td>Student</td><td>Enrolled students</td><td>Own timetable, homework, materials, exams, announcements</td></tr>
+      <tr><td>Driver</td><td>Transport staff</td><td>Assigned bus, passenger list, QR scan, live GPS</td></tr>
+    </table>
+    <p>
+      Behind those doors sit <b>59 named desks</b> (the live sidebar, excluding Logout). A module is a working desk — not a brochure tile.
+      Fenote Raey does not have to switch all 59 on on day one.
+    </p>
+
+    <h2>7. Full module catalogue (59 desks)</h2>
+    <p>
+      This is the product Fenote Raey can inspect on the live sidebar. Each item can be included or excluded in the Academy’s module pack.
+      Counts exclude Logout. Teacher / parent / student / driver doors sit on top of these desks.
+    </p>
+
+    <h3>7.1 Organization (4)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Institution Management</b><span>Owner-level identity and structure. How Fenote Raey sits as one institution on the platform.</span></div>
+      <div class="mod"><b>School Management</b><span>School record, academic year, grades, terms, contact, and operating settings. Branding and logo live here.</span></div>
+      <div class="mod"><b>Campus Management</b><span>Main campus plus any second site. Students and teachers carry a campus so lists stay honest.</span></div>
+      <div class="mod"><b>CCTV</b><span>Administration camera desk for cameras Fenote already owns. Not shown to parents or students as a toy.</span></div>
+    </div>
+
+    <h3>7.2 Academics (16)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Academic Management</b><span>Classes, subjects, terms, and academic meetings. The backbone of the timetable and LMS.</span></div>
+      <div class="mod"><b>Examinations &amp; Grade Approvals</b><span>Leadership approves marks. Until then, parents and students do not see the number.</span></div>
+      <div class="mod"><b>Weighted Markbook</b><span>The live gradebook. Homework, quiz, midterm, exam weights that Fenote Raey can set. Replaces Excel as master.</span></div>
+      <div class="mod"><b>Report Cards</b><span>Term reports from the same markbook, then publish. No second report file.</span></div>
+      <div class="mod"><b>Exam bank &amp; papers</b><span>Set papers, collect attempts, push scores into the markbook.</span></div>
+      <div class="mod"><b>Attendance</b><span>Daily register. Absent and late parents can be notified. Feeds at-risk and reports.</span></div>
+      <div class="mod"><b>Homework</b><span>Assign, collect, see who submitted. Parents see posted homework, not a draft.</span></div>
+      <div class="mod"><b>At-risk &amp; insights</b><span>Flags when low marks and high absence occur together. A clear rule directors can explain.</span></div>
+      <div class="mod"><b>Analytics &amp; exports</b><span>Grade lists, category averages, teacher insight, Excel / CSV / PDF. Export is a copy, not the master.</span></div>
+      <div class="mod"><b>Classroom Teachers</b><span>Who teaches which class and subject. Section Directors assign; HR hires.</span></div>
+      <div class="mod"><b>Add Teacher</b><span>Create a classroom-teacher account from HR or academic lead.</span></div>
+      <div class="mod"><b>Timetable</b><span>Weekly class timetable for staff, students, and parents.</span></div>
+      <div class="mod"><b>LMS</b><span>Course hub for a class + subject: plans, homework, materials, exams, discussion, SIS roster.</span></div>
+      <div class="mod"><b>Lesson plans</b><span>Weekly plans, submit for review, optional live/recorded class link.</span></div>
+      <div class="mod"><b>Curriculum office</b><span>Units, department-head review, academic teacher evaluations, meetings.</span></div>
+      <div class="mod"><b>Grade Workflow</b><span>Fenote Raey’s own enter → approve → publish rules. Not a fixed foreign template.</span></div>
+    </div>
+
+    <h3>7.3 Student services (12)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Students</b><span>The SIS: identity, class, house, medical flag, parents. One child, one id across the school.</span></div>
+      <div class="mod"><b>Add Student</b><span>One child at a time or Excel/CSV import (name, grade, class, date of birth).</span></div>
+      <div class="mod"><b>Admissions</b><span>Application stages, exam score, waitlist, enrol into the SIS — not a side list.</span></div>
+      <div class="mod"><b>Alumni</b><span>Former students after they leave the active register.</span></div>
+      <div class="mod"><b>Student Portal Settings</b><span>What Fenote students may open on their door (grades, materials, exams…).</span></div>
+      <div class="mod"><b>Student Password Resets</b><span>Help desk when a student cannot sign in.</span></div>
+      <div class="mod"><b>Student Affairs &amp; Discipline</b><span>Conduct cases, leave, grievances oversight. Separate from child-protection files.</span></div>
+      <div class="mod"><b>Student support</b><span>Counseling, IEP / special needs, college guidance, health records, student documents.</span></div>
+      <div class="mod"><b>Safeguarding</b><span>Child-protection cases. Hidden from parents, students, and classroom teachers.</span></div>
+      <div class="mod"><b>Student programs</b><span>Clubs, internships / service hours, scholarships, leadership meetings.</span></div>
+      <div class="mod"><b>Parents &amp; Link Approvals</b><span>A parent links with student ID + date of birth. The school approves before the door opens.</span></div>
+      <div class="mod"><b>Transfers &amp; Promotion</b><span>In-school movement and year promotion, with approval where Fenote requires it.</span></div>
+    </div>
+
+    <h3>7.4 Finance and store (2)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Finance</b><span>Fee categories, payments, and finance reports. Parents see their child’s fees, not the whole school ledger.</span></div>
+      <div class="mod"><b>Inventory, Procurement &amp; Store</b><span>Purchase requests, suppliers, receive, issue, stock reports. Separation of duties unless the owner allows self-approval.</span></div>
+    </div>
+
+    <h3>7.5 Human resources and transport (8)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Human Resource</b><span>Hire and hold staff records. Teachers and administration staff in one HR branch.</span></div>
+      <div class="mod"><b>Payroll</b><span>Ethiopian payroll, including income tax and pension labels, tables, and exports.</span></div>
+      <div class="mod"><b>Administration Staff Directory</b><span>Non-teaching staff list for VP / HR.</span></div>
+      <div class="mod"><b>Add Administration Staff</b><span>Create a staff login and attach roles (registrar, accountant, QA…).</span></div>
+      <div class="mod"><b>Transport</b><span>Assign students to buses. Parents see their child’s bus, not every route.</span></div>
+      <div class="mod"><b>Buses</b><span>Fleet register and routes Fenote already runs.</span></div>
+      <div class="mod"><b>Live GPS</b><span>Office and parent map. Shows “live” only while the driver is sharing.</span></div>
+      <div class="mod"><b>Register Driver</b><span>Driver account for the driver door: route, passengers, QR scan.</span></div>
+    </div>
+
+    <h3>7.6 Learning resources (2)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Library</b><span>Catalogue and lending for the school library.</span></div>
+      <div class="mod"><b>e-Books &amp; Materials</b><span>Learning files with access by class or named student. Teachers post; students and parents receive.</span></div>
+    </div>
+
+    <h3>7.7 Communication (5)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>Announcements</b><span>One school notice to staff, parents, and/or students — not four WhatsApp groups.</span></div>
+      <div class="mod"><b>Messages</b><span>Parent–teacher threads and class discussion on one store. Teacher and parent share the same conversation.</span></div>
+      <div class="mod"><b>Events</b><span>School events on the shared calendar.</span></div>
+      <div class="mod"><b>Gallery</b><span>Photos and attachments for school life, with class posting rules.</span></div>
+      <div class="mod"><b>Calendar</b><span>Staff, academic, student-affairs, and all-school events. Ethiopian calendar awareness where the product already supports it.</span></div>
+    </div>
+
+    <h3>7.8 Quality, reports, and system (10)</h3>
+    <div class="mod-grid">
+      <div class="mod"><b>QA Findings &amp; Plans</b><span>Observations, surveys, academic audits, action research. Duty owner closes; directors see overdue items.</span></div>
+      <div class="mod"><b>Reports &amp; Analytics</b><span>Excel / CSV / PDF of students, attendance, academics, finance, health, and more.</span></div>
+      <div class="mod"><b>Maya Assistant</b><span>In-app help for staff navigation. Not a second student database.</span></div>
+      <div class="mod"><b>Role Permissions</b><span>School-owner checkboxes: which Fenote title may open which desk.</span></div>
+      <div class="mod"><b>Audit Log</b><span>Who changed what. Open to leadership and QA.</span></div>
+      <div class="mod"><b>System Health</b><span>Cloud and storage signals for IT / administration staff.</span></div>
+      <div class="mod"><b>Digital operations</b><span>Devices, access help, CCTV shortcut, Friday checklist.</span></div>
+      <div class="mod"><b>Go-live &amp; compliance</b><span>MFA, privacy rights, school snapshots, Excel import, training manuals.</span></div>
+      <div class="mod"><b>Settings</b><span>Language, security, appearance for the signed-in person.</span></div>
+      <div class="mod"><b>Dashboard / Profile</b><span>Home numbers and the signed-in person. Always available — cannot be turned off.</span></div>
+    </div>
+    <p>
+      <b>Catalogue total:</b> 4 + 16 + 12 + 2 + 8 + 2 + 5 + 10 = <b>59 named desks</b>, plus teacher, parent, student, and driver portals.
+      Student QR (class attendance, bus board/discharge, scan-to-open profile) is part of the student and transport path, not a separate brochure product.
+    </p>
+
+    <h2>8. Customization: adapt existing modules and add new ones</h2>
+    <p>
+      This is the section Fenote Raey asked us to state clearly. The platform is not a locked foreign template.
+      Customization happens on three layers, so the Academy is never told “wait for a new product.”
+    </p>
+
+    <h3>8.1 Layer 1 — Module pack (what exists for this school)</h3>
+    <p>
+      From the <b>platform owner console</b> (MaJo Bridge, PIN-protected — not the school admin), each of the 59 desks has an on/off switch for Fenote Raey.
+      Dashboard, profile, settings, and logout stay on so people can still sign in.
+    </p>
+    <ul>
+      <li><b>All on</b> — Fenote Raey receives the full catalogue. New desks we ship later stay on.</li>
+      <li><b>A chosen subset</b> — for example year-one academics, students, messages, and finance only. Transport and inventory wait. Those desks are hidden from everyone at Fenote Raey, including the school admin.</li>
+      <li>Turning a module on later is a switch, not a data migration. The student record is already there.</li>
+    </ul>
+    <p>
+      This is how two schools already differ on the same platform: LIA runs a dense academic pack; Feleg Raye is configured as a school OS with branding and operations. Fenote Raey chooses its own mix.
+    </p>
+
+    <h3>8.2 Layer 2 — Fit the desks Fenote already turned on</h3>
+    <p>Inside an enabled module we configure, we do not rewrite the school around the software:</p>
+    <table>
+      <tr><th>Customization</th><th>What Fenote Raey can change</th></tr>
+      <tr><td>School branding</td><td>Academy name, logo (banner or circular), contact, and how the login and shell present Fenote Raey.</td></tr>
+      <tr><td>Organization</td><td>Campuses, grade levels, sections, academic year and terms, class naming.</td></tr>
+      <tr><td>Roles and titles</td><td>Map Director, Principal, VP, Registrar, QA, accountant, homeroom teacher onto the official role catalogue. Granular permission ticks inside Role Permissions.</td></tr>
+      <tr><td>Grade rules</td><td>Category weights, who approves, when parents see a mark, report-card layout from the same markbook.</td></tr>
+      <tr><td>Student portal</td><td>Which student tiles are visible (exams, materials, attendance…).</td></tr>
+      <tr><td>Fees and store</td><td>Fee categories and terms; procurement self-approval on or off (owner-controlled).</td></tr>
+      <tr><td>Transport</td><td>Routes, buses, which students ride, driver accounts, GPS sharing rules.</td></tr>
+      <tr><td>CCTV</td><td>Point the admin desk at cameras / NVR Fenote already installed.</td></tr>
+      <tr><td>Language</td><td>English / Amharic / Afaan Oromo per user.</td></tr>
+      <tr><td>Reports</td><td>Which lists export, and reasonable layout preference from discovery — Excel, CSV, or PDF of the live registers.</td></tr>
+    </table>
+    <div class="note">
+      <b>Included implementation customization.</b>
+      Kickoff workshop, role map, branding, class structure, fee and bus setup, guided import, and training are part of going live.
+      School-requested in-platform changes during implementation are scheduled in weekly sprints and are not unreasonably refused when they fit the product.
+      A net-new desk that does not yet exist is scoped as a written change order (what, days, fee) and built onto the same student identity — see Layer 3.
+    </div>
+
+    <h3>8.3 Layer 3 — Ability to adapt new modules</h3>
+    <p>When Fenote Raey grows a new office, we do not start a second school system. The rule is:</p>
+    <ol>
+      <li><b>Reuse the student (and staff) identity.</b> A new desk reads the same SIS. No second “Fenote student id.”</li>
+      <li><b>Attach to an existing family</b> where we can (for example a new exam report still writes the markbook).</li>
+      <li><b>Give it a sidebar id and a role allocation</b> so only the right Fenote titles see it.</li>
+      <li><b>Put it on the module pack.</b> Fenote Raey can leave it off until the office is ready.</li>
+      <li><b>Keep one cloud tenant.</b> Parents still open the same login. They simply gain a new tile if that module is on and they are allowed to see it.</li>
+    </ol>
+    <p>Examples of new-module paths we already used on this platform (so Fenote Raey can trust the pattern):</p>
+    <ul>
+      <li>Exam bank pushing into the existing markbook instead of a parallel grade file.</li>
+      <li>LMS hub assembling lesson plans, homework, materials, and exams that already existed.</li>
+      <li>Admin CCTV as a staff desk over cameras the school already owned.</li>
+      <li>Go-live / privacy / MFA as a compliance desk on the same school record.</li>
+      <li>Per-school module toggles so a new desk can ship “off” until Fenote asks for it.</li>
+    </ul>
+    <p>
+      If Fenote Raey later needs a desk that is not in Section 7, MaJo Bridge writes a short change order, builds it on the live stores, and trains the named office.
+      That is how the catalogue grew past 55 desks without splitting LIA or Feleg Raye into two products.
+    </p>
+
+    <h2>9. Roles, isolation, and day-to-day use</h2>
+    <h3>9.1 How a Fenote morning feels</h3>
+    <h4>Morning</h4>
+    <p>Homeroom takes attendance. Absent and late parents can be notified. Directors see the same register — not a paper copy.</p>
+    <h4>Teaching</h4>
+    <p>The teacher opens LMS for that class: today’s plan, homework, materials, or an exam. Discussion stays in the class thread.</p>
+    <h4>Marking</h4>
+    <p>Scores go into the weighted markbook. Leadership approves. Only then do parents see the mark.</p>
+    <h4>Gate and bus</h4>
+    <p>The same student QR can mark class attendance and bus board/discharge. Parents see the bus as live only while the driver shares GPS.</p>
+    <h4>Friday</h4>
+    <p>IT / Administration Staff open Go-live, write the school snapshot, and walk a short digital-ops checklist. MaJo support joins if the whole school cannot log in.</p>
+
+    <h3>9.2 Who sees what</h3>
+    <ul>
+      <li><b>A Grade 4 teacher</b> sees her classes. She does not open safeguarding or the whole finance ledger.</li>
+      <li><b>The Principal / VP</b> sees dashboards, grade approvals, reports, and overdue QA items.</li>
+      <li><b>Registrar</b> owns the student register, admissions, and parent-link queue.</li>
+      <li><b>A parent</b> sees only approved children, and only published grades.</li>
+      <li><b>A student</b> sees own work. Never another child’s mark, never a draft.</li>
+      <li><b>A driver</b> sees the assigned bus and passengers only.</li>
+    </ul>
+    <p>Fenote Raey data is not visible to Lebawi International Academy or Feleg Raye School. Cross-school access is prohibited.</p>
+
+    <h3>9.3 Security in school language</h3>
+    <ul>
+      <li><b>Least privilege.</b> If a desk is off in the pack, or the role does not include it, the sidebar hides it.</li>
+      <li><b>Encryption.</b> HTTPS in transit; hosted database and storage encryption at rest.</li>
+      <li><b>MFA.</b> Opt-in authenticator for leadership and finance. The Academy chooses who must use it.</li>
+      <li><b>Backups.</b> In-app school snapshot plus platform backup. Friday reminder when the last snapshot is older than 24 hours. Also keep a JSON copy on a school PC if Fenote policy requires it.</li>
+      <li><b>Audit.</b> Leadership and QA can open who changed what.</li>
+    </ul>
+
+    <h2>10. Implementation, training, and support</h2>
+    <table>
+      <tr><th>Phase</th><th>What happens for Fenote Raey</th></tr>
+      <tr><td>1. Kickoff &amp; discovery</td><td>Workshop: which modules on in year one, role map, class list, fee and bus facts, logo.</td></tr>
+      <tr><td>2. Provisioning</td><td>Fenote Raey school record on the live platform. Admin passwords. Module pack applied.</td></tr>
+      <tr><td>3. Configuration &amp; data</td><td>Branding, grades, terms, import students, create teachers and staff, parent-link rules.</td></tr>
+      <tr><td>4. Training</td><td>Directors, teachers, registrar, finance/HR, a parent briefing. Manuals already sit on Go-live → Training.</td></tr>
+      <tr><td>5. UAT &amp; go-live</td><td>One campus or grade band, 30–60 day pilot if Fenote prefers, then expand the pack.</td></tr>
+      <tr><td>6. Hypercare</td><td>Intensive support after go-live so the first term is not carried by WhatsApp.</td></tr>
+    </table>
+    <p><b>Fenote Raey provides</b> a project owner, accurate class lists, and lawful parent consent. <b>MaJo Bridge provides</b> the tenant, the pack, the training, and the support line.</p>
+    <table>
+      <tr><th>Channel</th><th>Detail</th></tr>
+      <tr><td>Company</td><td>MaJo Bridge Technology and Events PLC</td></tr>
+      <tr><td>Email</td><td>majobridgetech@gmail.com</td></tr>
+      <tr><td>Phone / WhatsApp</td><td>+251 911 646 444</td></tr>
+      <tr><td>Web</td><td>https://mayabela.pages.dev</td></tr>
+      <tr><td>Hours</td><td>Monday–Saturday, 09:00–18:00 East Africa Time. Full outage: call or WhatsApp</td></tr>
+    </table>
+    <p>
+      <b>Recommended next step.</b> Fenote Raey names a registrar, one academic lead, a finance/HR contact, and an IT / Administration Staff lead.
+      We create the Academy school record, set the module pack, issue first passwords, and walk the first week on the live URL.
+    </p>
+
+    <h2>11. Closing statement</h2>
+    <p>
+      MaJo Bridge Technology and Events PLC submits this technical proposal to Fenote Raey Academy with a claim the live product can demonstrate the same day:
+    </p>
+    <p>
+      <b>The school operating system is already built.</b>
+      Fifty-nine modules are in the catalogue. Five doors cover the people Fenote Raey actually employs and serves.
+      Customization is not a promise of a future rewrite: it is a module pack, a role map, branding, and a written path to add new desks onto the same student.
+      We have already done that work for Lebawi International Academy and Feleg Raye School.
+    </p>
+    <p>
+      We are ready to configure Fenote Raey Academy on MaJo e-School Bridge, stamp the tenant with your identity, and stand with your offices through training and go-live.
+    </p>
+
+    <h2 class="signature-page">12. Acceptance and signatures</h2>
+    <p>
+      This page is for Fenote Raey Academy to confirm that it has received this technical proposal.
+      A signature here records receipt and intent to proceed to a live demonstration and a separate commercial agreement.
+      It is not itself a price contract.
+    </p>
+    <p>
+      MaJo Bridge Technology and Events PLC stands behind the system described in this paper:
+      the live 59-module catalogue, the three customization layers, and the same platform already configured for
+      Lebawi International Academy and Feleg Raye School.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For MaJo Bridge Technology and Events PLC</div>
+        <div class="role">Nebil Ahmed, General Manager · Date · Official stamp as shown on this document</div>
+      </div>
+      <div class="sig">
+        <div class="who">For Fenote Raey Academy · ፍኖተ ራእይ አካዳሚ</div>
+        <div class="role">Name / title · Date</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Document: MaJo e-School Bridge Technical Proposal for Fenote Raey Academy · 15 September 2026 · Version 1.0.
+      MaJo Bridge Technology and Events PLC · majobridgetech@gmail.com · +251 911 646 444 · https://mayabela.pages.dev.
+      The official company stamp appears on every page. This paper describes the shipped system. It is not a government product and does not replace Academy policy.
+      Commercial terms are agreed separately. Hard-refresh the live site with Ctrl+Shift+R after a release.
+    </p>
+  </article>
+</body>
+</html>
