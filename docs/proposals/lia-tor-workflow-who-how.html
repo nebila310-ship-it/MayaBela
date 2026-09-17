@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LIA TOR workflow — who uses each module and how</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --gold: #b8943a;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.4pt;
+      line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(20, 32, 51, 0.92); color: #fff; font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .toolbar .dl {
+      background: #1f8a4c; color: #fff !important; font-weight: 800;
+      padding: 8px 16px; border-radius: 8px; text-decoration: none;
+    }
+    .sheet {
+      width: 210mm; max-width: 100%;
+      margin: 18px auto; background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 14mm 14mm 16mm;
+    }
+    .cover-flag {
+      display: flex; align-items: center; gap: 16px;
+      border-bottom: 3px solid var(--blue);
+      box-shadow: 0 3px 0 var(--gold);
+      padding: 0 0 12px;
+    }
+    .cover-flag img { width: 42mm; height: auto; flex: 0 0 auto; }
+    .brand-sub {
+      margin: 0 0 4px; color: var(--green); font-weight: 700;
+      font-size: 8.8pt; text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .contact-line { margin: 5px 0 0; color: var(--muted); font-size: 8.9pt; line-height: 1.45; }
+    .contact-line a { color: var(--blue); text-decoration: none; font-weight: 700; }
+    .doc-kicker {
+      margin: 16px 0 6px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 1.1px; font-size: 8.6pt; font-weight: 700;
+    }
+    .doc-title { margin: 0 0 6px; font-size: 16.5pt; line-height: 1.22; color: var(--ink); }
+    .doc-for { margin: 0 0 12px; font-size: 11.5pt; color: var(--blue); font-weight: 700; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 8px; }
+    .meta-card {
+      background: var(--wash); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    }
+    .meta-card strong {
+      display: block; color: var(--blue); font-size: 7.8pt; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 3px;
+    }
+    .banner {
+      background: var(--ok-bg); border: 1px solid #b7e2c6; border-radius: 8px;
+      padding: 9px 11px; margin: 10px 0 8px;
+    }
+    .banner strong { color: var(--ok); }
+    .note {
+      background: #fff8e8; border: 1px solid #f0d48a; border-radius: 8px;
+      padding: 9px 11px; margin: 8px 0 10px;
+    }
+    h2 {
+      margin: 16px 0 7px; font-size: 12.4pt; color: var(--blue);
+      border-bottom: 2px solid var(--line); padding-bottom: 3px; page-break-after: avoid;
+    }
+    h3 {
+      margin: 12px 0 5px; font-size: 10.6pt; color: var(--blue);
+      border-left: 4px solid var(--green); padding-left: 8px; page-break-after: avoid;
+    }
+    p { margin: 0 0 7px; }
+    ul, ol { margin: 0 0 8px; padding-left: 18px; }
+    li { margin-bottom: 3px; }
+    p, li { orphans: 3; widows: 3; }
+    .toc { list-style: none; padding-left: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 8.5pt; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; text-align: left; }
+    th { background: var(--wash); color: var(--blue); font-weight: 700; }
+    .mod {
+      border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 8px;
+      background: #fff; page-break-inside: avoid;
+    }
+    .mod h4 { margin: 0 0 4px; font-size: 10.3pt; color: var(--ink); }
+    .mod .tor { color: var(--muted); font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .who { color: var(--blue); font-weight: 700; }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px;
+    }
+    .chip {
+      background: var(--wash); border: 1px solid var(--line); border-radius: 999px;
+      padding: 4px 10px; font-size: 8pt; font-weight: 700; color: var(--blue);
+    }
+    .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 20px; page-break-inside: avoid; }
+    .sig { border-top: 1px solid var(--ink); padding-top: 8px; min-height: 72px; }
+    .sig .who-line { font-weight: 700; margin-top: 26px; }
+    .sig .role { color: var(--muted); font-size: 9pt; }
+    .footer-note {
+      margin-top: 16px; color: var(--muted); font-size: 7.8pt;
+      border-top: 1px solid var(--line); padding-top: 8px;
+    }
+    @media print {
+      html, body { background: #fff !important; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+      a { color: inherit; text-decoration: none; }
+      .cover-flag, .mod, table, .banner, .note { break-inside: avoid; }
+      .cover-flag, .banner, .meta-card, .chip, th {
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+    }
+    @page { size: A4; margin: 13mm 14mm 17mm 14mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a class="dl" href="MaJo_Bridge_LIA_TOR_Workflow_Who_How.pdf" download="MaJo_Bridge_LIA_TOR_Workflow_Who_How.pdf">Download PDF</a>
+    LIA TOR V3 workflow · who uses each module and how ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+    <header class="cover-flag">
+      <img src="assets/majo_bridge_logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+      <div>
+        <p class="brand-sub">Prepared by MaJo-Bridge Technology and Events PLC</p>
+        <p class="contact-line">
+          Product: <b>MaJo Bridge e-School OS</b> (MayaBela) · <a href="https://mayabela.pages.dev">https://mayabela.pages.dev</a><br />
+          <a href="mailto:majobridgetech@gmail.com">majobridgetech@gmail.com</a>
+          · <a href="mailto:nabilmaya6464@gmail.com">nabilmaya6464@gmail.com</a><br />
+          Phone / WhatsApp: <b>+251 911 646 444</b> · <b>+251 911 133 548</b>
+        </p>
+      </div>
+    </header>
+
+    <p class="doc-kicker">Companion paper · LIA Terms of Reference V3 · Academic Operations Management System</p>
+    <h1 class="doc-title">Who uses each TOR module, how they use it, and how LIA customizes the workflow</h1>
+    <p class="doc-for">Prepared for Lebawi International Academy (LIA) · Based on <i>LIA TERMS OF REFERENCE V3</i></p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Source TOR</strong>
+        LIA Terms of Reference V3 — Academic Operations Management System (SIS, LMS, assessment, analytics). Academic scope only.
+      </div>
+      <div class="meta-card">
+        <strong>This paper</strong>
+        17 September 2026 · Version 1.0. Companion to the LIA technical proposal. Does not replace the module catalogue; it states the <b>workflow</b>.
+      </div>
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Academic leadership, DoES / DoMS / DoHS, DoSA, QA, Department Heads, IT, teachers, counselors, and the Board
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        MaJo-Bridge Technology and Events PLC<br />
+        +251 911 646 444 · +251 911 133 548
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>What LIA asked for in this paper.</strong>
+      For every module in TOR V3: who uses it, how they use it, and that the flow can be fitted to LIA’s own school workflow — not a locked foreign template.
+      Finance, procurement, inventory, and HR are out of this TOR (Section 3.2) and are not described here.
+    </div>
+
+    <h2>1. How to read this paper</h2>
+    <p>Keep the technical proposal for the 55+ desks and TOR mapping. Use this paper when a director asks: “Who opens this, what do they do, and can we change the steps?”</p>
+    <ol class="toc">
+      <li>1. How to read this paper</li>
+      <li>2. The school year in one line (TOR student lifecycle)</li>
+      <li>3. A normal LIA day</li>
+      <li>4. Each TOR module — who, how, customize</li>
+      <li>5. Roles (TOR 6)</li>
+      <li>6. How the modules connect (TOR 7)</li>
+      <li>7. Implementation steps (TOR 10) — who does what</li>
+      <li>8. Closing</li>
+    </ol>
+    <div class="note">
+      <b>Customization rule (every module below).</b>
+      LIA names the titles, the approval chain, the weights, the calendar, the houses, and which parent sees what.
+      MaJo-Bridge maps that onto the live desk. We do not ask LIA to abandon its academic structure to fit the software.
+    </div>
+
+    <h2>2. The school year in one line</h2>
+    <p>TOR 5.1 asked for one student lifecycle. That is the spine. Every module below hangs on it.</p>
+    <div class="flow">
+      <span class="chip">1. Inquiry</span>
+      <span class="chip">2. Application</span>
+      <span class="chip">3. Admission exam</span>
+      <span class="chip">4. Offer / waitlist</span>
+      <span class="chip">5. Enrollment</span>
+      <span class="chip">6. Teach · attend · assess · support</span>
+      <span class="chip">7. Promote / transfer</span>
+      <span class="chip">8. Graduate</span>
+      <span class="chip">9. Alumni</span>
+    </div>
+    <p>
+      One child, one id. Admissions writes the first card. SIS holds it. LMS, markbook, attendance, DoSA, counseling, and the parent door all use that id.
+      Excel is an export, not the master.
+    </p>
+
+    <h2>3. A normal LIA day</h2>
+    <table>
+      <tr><th>When</th><th>Who</th><th>What they do in the system</th></tr>
+      <tr><td>Morning</td><td>Homeroom teacher</td><td>Opens Attendance for the class. Marks present / late / absent. Linked parents can be notified. DoSA can see the same register.</td></tr>
+      <tr><td>Teaching</td><td>Subject teacher</td><td>Opens LMS for that class + subject: today’s lesson plan, homework, notes, or a recorded/live class link. Discussion stays in the class thread — not Telegram.</td></tr>
+      <tr><td>Assessment</td><td>Teacher, then DH / Section Director</td><td>Sets or gives a quiz/exam from the exam bank or paper. Score goes into the weighted markbook. Leadership approves. Then the parent may see it.</td></tr>
+      <tr><td>Care</td><td>Counselor, DoSA, clinic, career guidance</td><td>Write on their own register (support, discipline, health, college). Safeguarding stays sealed.</td></tr>
+      <tr><td>Home</td><td>Parent / student</td><td>Parent sees only approved children and published grades. Student sees own homework, materials, timetable.</td></tr>
+      <tr><td>Friday / term</td><td>QA, Directors, IT</td><td>QA findings, analytics, report cards, school snapshot. Manuals on Go-live → Training.</td></tr>
+    </table>
+
+    <h2>4. Each TOR module — who uses it, how, and how LIA customizes it</h2>
+    <p>Numbers match TOR V3 Section 5. The live product name is in italics.</p>
+
+    <div class="mod">
+      <p class="tor">TOR 5.1</p>
+      <h4>Student Information System (SIS) — <i>Students, Add Student, Transfers &amp; Promotion, Alumni</i></h4>
+      <p><span class="who">Who:</span> Registrar (master). Section Directors and DoSA (oversight). Teachers (own class list). Counselors (profile they are allowed to see). Parents/students (own published view only).</p>
+      <p><b>How:</b> Registrar creates the child (one record or Excel/CSV). Profile holds class, house, medical flag, parents, documents. Promotion, transfer, and withdrawal run as an approval path LIA names. After graduation the same id becomes alumni — not a side spreadsheet.</p>
+      <p><b>Customize:</b> Grade names, houses, campuses (KG / Primary / Middle / High), required documents, who may promote a year.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.2</p>
+      <h4>Admissions Management — <i>Admissions</i></h4>
+      <p><span class="who">Who:</span> Admissions / Registrar. Academic directors (exam score / offer). Leadership (analytics).</p>
+      <p><b>How:</b> Family applies. Staff move the file through LIA stages (inquiry → application → exam → waitlist → offer → enrol). Documents are checked on the file. Entrance exam score sits on the same card. When enrolled, the child becomes an SIS student — not a second list.</p>
+      <p><b>Customize:</b> Application stages, exam paper, waitlist rule, who may issue an offer, what analytics the admissions board sees.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.3</p>
+      <h4>Academic Management — <i>Academic Management, Timetable, Classroom Teachers</i></h4>
+      <p><span class="who">Who:</span> DoES / DoMS / DoHS, Department Heads, Registrar. Teachers read their timetable. Students/parents see the published week.</p>
+      <p><b>How:</b> Leadership sets the year, terms, classes, and subjects. Teachers are allocated to class + subject. The timetable is the weekly grid. Conflicts are caught when two things occupy the same slot.</p>
+      <p><b>Customize:</b> LIA’s three (or more) school levels, term dates, period lengths, how homeroom vs subject teachers are named.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.4</p>
+      <h4>Learning Management System (LMS) — <i>LMS, Homework, Lesson plans, e-Books &amp; Materials</i></h4>
+      <p><span class="who">Who:</span> Subject teacher (writes). Students (receive and submit). Parents (see posted work). DH / Section Director (review plans).</p>
+      <p><b>How:</b> Teacher opens the hub for that class + subject: plan, notes, worksheets, exams, live or recorded class link, discussion. Students submit homework there. This is the replacement for Telegram teaching and scattered files.</p>
+      <p><b>Customize:</b> What a student may open, whether a plan must be approved before class, file types, who hosts the live-class link.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.5</p>
+      <h4>Curriculum Management — <i>Curriculum office, Lesson plans</i></h4>
+      <p><span class="who">Who:</span> Department Heads, curriculum lead, QA (read alignment), teachers (teach the unit).</p>
+      <p><b>How:</b> Units live on the curriculum desk with version history. Lesson plans attach to those units. DH reviews. Feedback from teachers, parents, or QA can sit on the same office — not a side Word file.</p>
+      <p><b>Customize:</b> National vs international map LIA uses, who must sign a unit change, how often plans are reviewed.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.6</p>
+      <h4>Assessment &amp; Examination — <i>Exam bank &amp; papers, Examinations &amp; Grade Approvals</i></h4>
+      <p><span class="who">Who:</span> Teachers (set and mark). DH / Section Directors (approve). Exam office (schedule, templates, archive). Students (sit the paper they are given).</p>
+      <p><b>How:</b> Teacher or exam office schedules a paper (online or in class). Question bank and templates hold LIA’s standard and national/model papers. Attempts can push a score into the markbook. Historical papers stay in the bank.</p>
+      <p><b>Customize:</b> Exam calendar, template, who may open the bank, secure handling rules (who prints, who sees before the sitting).</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.7</p>
+      <h4>Grading &amp; Markbook — <i>Weighted Markbook, Grade Workflow, Report Cards, Analytics</i></h4>
+      <p><span class="who">Who:</span> Teacher (enters). DH / Section Director (moderates and approves). Leadership (locks / reports). Parent and student (published card only).</p>
+      <p><b>How:</b> This is the Excel replacement. Homework, quiz, assignment, exam sit as components with LIA weights. The system calculates. DH reviews. Grade is locked with an audit trail. Report card is printed from the same book. Trends by subject and assessment type sit on analytics — not a second sheet.</p>
+      <p><b>Customize:</b> Category weights, continuous vs term vs final, scale (letters or numbers), who must approve before parents see a mark, report-card layout.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.8</p>
+      <h4>Attendance — <i>Attendance, At-risk &amp; insights</i></h4>
+      <p><span class="who">Who:</span> Homeroom / subject teacher (takes). DoSA and Section Directors (oversight). Parents (notified). Analytics (patterns).</p>
+      <p><b>How:</b> Daily register. Late and absent can notify the linked parent. Absence patterns feed at-risk (with marks). DoSA does not keep a second paper list.</p>
+      <p><b>Customize:</b> Homeroom vs period attendance, how many minutes is “late,” who receives the SMS/app notice, the at-risk rule (for example low marks + high absence).</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.9</p>
+      <h4>Behavior &amp; Discipline — <i>Student Affairs &amp; Discipline</i></h4>
+      <p><span class="who">Who:</span> DoSA / discipline officers. Teachers (log an incident they saw). Section Directors (escalation). Parents (notified when LIA says so). Not classroom teachers for the full file.</p>
+      <p><b>How:</b> Incident is logged, linked to the student, escalated on LIA’s ladder, parent notified. Code-of-conduct categories are LIA’s words. Separate from safeguarding.</p>
+      <p><b>Customize:</b> Incident types, who may escalate, when a parent is told, what a teacher may log vs what stays on DoSA only.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.10</p>
+      <h4>Student Health — <i>Student support (health records)</i></h4>
+      <p><span class="who">Who:</span> Clinic / nurse. Registrar (medical flag on SIS). Leadership (health report, not the full note). Parents (as LIA policy allows).</p>
+      <p><b>How:</b> Clinic log, vaccinations, emergency note, medication. The SIS only shows a flag so a teacher knows to send the child to clinic — not the whole file. Inventory of clinic stock if LIA keeps it here (academic TOR; not the school store).</p>
+      <p><b>Customize:</b> Who may open a health note, which allergies show on the class list, emergency contact order.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.11</p>
+      <h4>Counseling &amp; Student Support — <i>Student support, Safeguarding</i></h4>
+      <p><span class="who">Who:</span> Counselors (sessions, appointments, SEL). Safeguarding officer (CP cases — sealed). Parents (secure message when the counselor opens it). Referrals to other offices.</p>
+      <p><b>How:</b> Appointment, session note, case track. Child-protection files are hidden from parents, students, and classroom teachers. Referrals stay on the same student id.</p>
+      <p><b>Customize:</b> Who is the named CP officer, retention of notes, which parent messages are allowed, SEL fields LIA wants to see.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.12</p>
+      <h4>College Guidance — <i>Student support (college), Events, Calendar</i></h4>
+      <p><span class="who">Who:</span> Career / college counselor. Upper-school students. Parents (events and published portfolio items). DoSA (internships overlap).</p>
+      <p><b>How:</b> Direction → readiness → application → decision on the student’s file. Portfolio, appointments, college events on the calendar. Not a parallel Excel of universities.</p>
+      <p><b>Customize:</b> Grade when college guidance starts, which documents sit in the portfolio, event types.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.13</p>
+      <h4>Special Needs &amp; Inclusive Education — <i>Student support (IEP)</i></h4>
+      <p><span class="who">Who:</span> SEN / inclusion lead, assigned teachers, counselor. Parents (commitment agreement and reviews). Clinic (check-up forms if linked).</p>
+      <p><b>How:</b> Intake assessment, IEP, parent agreement, incident/accident if related, evaluation. Training articles for teachers sit on Go-live / LMS — not a public student file.</p>
+      <p><b>Customize:</b> IEP template, review cycle, which teachers see the IEP, parent-sign step.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.14</p>
+      <h4>Student Affairs (DoSA) — <i>Student programs, Student Affairs, Attendance oversight</i></h4>
+      <p><span class="who">Who:</span> DoSA. Scholarship desk. Internship/career. Transport coordinator (academic coordination only). Event leads.</p>
+      <p><b>How:</b> Scholarships against live academic performance. Grievances on a DoSA register (not mixed into discipline unless LIA says so). Internships / Gojo hours. Attendance oversight of the same register teachers already take. Graduation and school events. Transport coordination uses the student list — this TOR does not include a full fleet ERP.</p>
+      <p><b>Customize:</b> Scholarship rule, grievance steps, which clubs DoSA owns vs Section Directors, how internships are counted.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.15</p>
+      <h4>Parent Portal — <i>Parents &amp; Link Approvals, parent door, Messages, Calendar</i></h4>
+      <p><span class="who">Who:</span> Linked guardians (after school approval). Teachers (message). Registrar (approve the link).</p>
+      <p><b>How:</b> Parent links with student id + date of birth. School approves. Then: published grades, attendance, behavior the school released, teacher thread, events. Replaces Telegram groups, communication books, and printed reports as the daily channel. Draft marks never appear.</p>
+      <p><b>Customize:</b> What a parent may see, who must approve a new link, language (English / Amharic / Afaan Oromo), whether behavior incidents go to the parent automatically.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.16</p>
+      <h4>Teacher Management (academic) — <i>Lesson plans, Markbook, LMS, Classroom Teachers</i></h4>
+      <p><span class="who">Who:</span> Classroom teachers. DH (review). HR only creates the login — this TOR is academic performance, not payroll.</p>
+      <p><b>How:</b> Teacher submits plans, designs assessments, enters grades, runs the class hub. Academic tracking is the markbook and DH evaluation — not an HR appraisal form.</p>
+      <p><b>Customize:</b> Plan deadline, whether a substitute may enter marks, which classes a teacher sees.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.17</p>
+      <h4>Department Head &amp; Academic Leadership — <i>Curriculum office, Examinations &amp; Grade Approvals, lesson-plan review</i></h4>
+      <p><span class="who">Who:</span> Department Heads, DoES / DoMS / DoHS, Principal / VP as LIA maps them.</p>
+      <p><b>How:</b> Review lesson plans. Approve or return marks. Watch curriculum alignment. Record academic teacher evaluations. Meetings and minutes on the academic desk.</p>
+      <p><b>Customize:</b> Who is DH for each department, two-step vs one-step grade approval, meeting types.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.18</p>
+      <h4>Leadership &amp; Special Programs — <i>Student programs, Calendar, Messages, Reports</i></h4>
+      <p><span class="who">Who:</span> Leadership team, club sponsors, Gojo / extracurricular leads, DoSA.</p>
+      <p><b>How:</b> Leadership meetings on the shared calendar. Secure group thread for the leadership set. Tasks and club registers. Participation and engagement reports that read SIS — not a side club Excel.</p>
+      <p><b>Customize:</b> Which titles sit in the leadership chat, club list, how participation is scored, who signs a Gojo hour.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.19</p>
+      <h4>Quality Assurance — <i>QA Findings &amp; Plans, Audit Log, Analytics</i></h4>
+      <p><span class="who">Who:</span> QA staff. Directors (overdue actions). Teachers (survey / observation they are assigned). DH evaluations stay on curriculum — QA does not overwrite them.</p>
+      <p><b>How:</b> Academic audits, teaching observations, surveys, action research, student-performance analytics. Duty owner closes the finding. Audit log shows who changed a mark or a role.</p>
+      <p><b>Customize:</b> Observation form, survey audience, who owns an action, when an item is “overdue.”</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.20</p>
+      <h4>Communication &amp; Collaboration — <i>Messages, Announcements, Notifications, LMS discussion</i></h4>
+      <p><span class="who">Who:</span> Teachers, parents, students (class thread), leadership (announcements), DoSA.</p>
+      <p><b>How:</b> One parent–teacher thread (not four Telegram groups). School announcement to a named audience. Class discussion on the LMS hub. Notifications follow the event (absent, published grade, new homework).</p>
+      <p><b>Customize:</b> Who may announce school-wide, whether students message teachers, quiet hours, which events trigger a parent notice.</p>
+    </div>
+
+    <div class="mod">
+      <p class="tor">TOR 5.21</p>
+      <h4>Reporting &amp; Analytics — <i>Analytics &amp; exports, At-risk &amp; insights, Reports, Report Cards</i></h4>
+      <p><span class="who">Who:</span> Section Directors, QA, DoSA, Principal. Teachers (own class insight). Board (exports). Parents (the published report card only).</p>
+      <p><b>How:</b> Dashboards read live marks and attendance. At-risk is a clear rule (not a hidden score). Excel / CSV / PDF are copies of the live register — they replace manual Excel reporting and paper summaries. Predictive “at-risk” in TOR language is this rule plus trend, auditable by a director.</p>
+      <p><b>Customize:</b> Which charts a role sees, the at-risk formula LIA will stand behind, report-card and export layouts from discovery.</p>
+    </div>
+
+    <h2>5. Roles — who may open what (TOR 6)</h2>
+    <p>A person signs in with School ID + phone/username + password. The sidebar then shows only that person’s desks. Granular ticks and the audit log are on Role Permissions and Audit Log.</p>
+    <table>
+      <tr><th>TOR role</th><th>How they typically use the system</th></tr>
+      <tr><td>IT Admin / Administration Staff</td><td>Logins, MFA help, snapshots, devices. Not Full Access unless the owner grants it.</td></tr>
+      <tr><td>Academic Directors (DoES / DoMS / DoHS)</td><td>Approvals, analytics, curriculum watch, their school’s teachers and classes.</td></tr>
+      <tr><td>DoSA</td><td>Discipline, programs, grievances, attendance oversight, scholarships — not the whole markbook unless LIA adds it.</td></tr>
+      <tr><td>Department Heads</td><td>Lesson-plan review, moderation of marks, department meetings.</td></tr>
+      <tr><td>Teachers</td><td>Own classes: attendance, LMS, markbook entry. No safeguarding file.</td></tr>
+      <tr><td>Counselors / Career guidance</td><td>Support and college desks. CP only if named.</td></tr>
+      <tr><td>QA Staff</td><td>Findings, surveys, audit log, analytics. Does not overwrite DH evaluations.</td></tr>
+      <tr><td>Leadership</td><td>Dashboards, meetings, special programs, overdue QA.</td></tr>
+      <tr><td>Students</td><td>Own timetable, homework, materials, exams, announcements.</td></tr>
+      <tr><td>Parents</td><td>Approved children only; published grades only.</td></tr>
+    </table>
+    <p><b>Customize:</b> LIA maps real titles onto this catalogue. Extra ticks per person. The owner (or Full Access) is the only grantor of the highest role.</p>
+
+    <h2>6. How the modules connect (TOR 7)</h2>
+    <table>
+      <tr><th>TOR integration</th><th>What staff actually see</th></tr>
+      <tr><td>LMS ↔ SIS</td><td>The LMS roster is the SIS class list. Add a child once.</td></tr>
+      <tr><td>Assessment ↔ Gradebook</td><td>An exam attempt can write the markbook. No parallel grade file.</td></tr>
+      <tr><td>Attendance ↔ Analytics</td><td>Today’s register feeds at-risk and director dashboards.</td></tr>
+      <tr><td>Communication platform</td><td>The same student id is the parent thread, the announcement audience, and the class discussion.</td></tr>
+    </table>
+    <p>Architecture (TOR 4): web + Android, role-based, modular. Cloud, hybrid, or campus-first placement is a hosting choice (see the hybrid addendum if LIA uses a school server for sensitive records). The workflow above does not change.</p>
+
+    <h2>7. Implementation steps (TOR 10) — who does what</h2>
+    <p>The product desks exist. These steps are LIA cutover, with customization at each phase.</p>
+    <table>
+      <tr><th>TOR phase</th><th>Who</th><th>How it is used / what happens</th></tr>
+      <tr><td>1. Planning &amp; Design</td><td>MaJo-Bridge + LIA Directors, Registrar, DoSA, QA, IT</td><td>Validate this TOR against the live desks. Write LIA’s workflow: weights, approval chain, houses, parent-visible items. Confirm cloud vs hybrid hosting.</td></tr>
+      <tr><td>2. Development / Configuration</td><td>MaJo-Bridge (configure). LIA names the rules.</td><td>Turn on the academic pack. Map roles. Set grade workflow, calendar, classes. Integrations in Section 6 are already the same student id — we confirm them on LIA data.</td></tr>
+      <tr><td>3. Testing</td><td>Teachers, DH, one parent test account, QA</td><td>Functional pass on the live URL. UAT: take attendance, enter a mark, approve, confirm the test parent does <i>not</i> see the draft. Sign the UAT sheet.</td></tr>
+      <tr><td>4. Deployment</td><td>Registrar (import). HR/academic (teacher logins). MaJo-Bridge (go-live).</td><td>Student CSV/Excel into SIS. First parent-link approvals. Go-live on https://mayabela.pages.dev. Hard-refresh Ctrl+Shift+R after a release.</td></tr>
+      <tr><td>5. Training &amp; Support</td><td>MaJo-Bridge + LIA office leads</td><td>Teachers, admin, parents. Manuals on Go-live → Training. Support Mon–Sat 09:00–18:00 EAT, +251 911 646 444 / +251 911 133 548. Full outage: call or WhatsApp.</td></tr>
+    </table>
+    <p>
+      <b>Deliverables (TOR 11) in workflow language:</b> the academic system; configured SIS/LMS/assessment desks; import tool; in-app manuals; scheduled training; this paper plus the technical proposal as the support map.
+      <b>Success (TOR 12):</b> no private grading Excel as master; directors see today’s marks and absence; approved parents use portal or app; at-risk names appear from LIA’s rule; offices stop retyping the same child.
+    </p>
+    <div class="note">
+      <b>Customization during implementation.</b>
+      Kickoff workshop, role map, branding, class structure, grade weights, parent-link rules, and reasonable in-platform changes are part of going live.
+      A net-new desk not in TOR V3 is a written change order and is built on the same student id.
+    </div>
+
+    <h2>8. Closing</h2>
+    <p>
+      MaJo-Bridge Technology and Events PLC submits this workflow paper against <b>LIA Terms of Reference V3</b>.
+      Every academic module in Section 5 has a named user, a daily action, and a customization lever so the Academy keeps its own process.
+      The software is the live MaJo Bridge e-School OS. The remaining work is LIA data, LIA titles, and the five implementation phases above.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who-line">For MaJo-Bridge Technology and Events PLC</div>
+        <div class="role">Name / title · Date · Signature</div>
+      </div>
+      <div class="sig">
+        <div class="who-line">For Lebawi International Academy</div>
+        <div class="role">Name / title · Date · Signature</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Document: MaJo Bridge e-School OS — LIA TOR V3 workflow (who / how / customize) · 17 September 2026 · Version 1.0.
+      Based on LIA TERMS OF REFERENCE V3. Companion to the LIA technical proposal.
+      MaJo-Bridge Technology and Events PLC · majobridgetech@gmail.com · nabilmaya6464@gmail.com · +251 911 646 444 · +251 911 133 548 · https://mayabela.pages.dev.
+      Finance, procurement, inventory, and HR are outside this TOR. This paper is not a government product and does not replace LIA policy.
+      Commercial terms are agreed separately.
+    </p>
+  </article>
+</body>
+</html>
