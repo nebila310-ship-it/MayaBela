@@ -1,5 +1,15 @@
 # Proposals
 
+## Combined TOR + complete platform (download this)
+
+- **Download PDF:** [LIA_Combined_TOR_and_Complete_Financial_Proposal.pdf](LIA_Combined_TOR_and_Complete_Financial_Proposal.pdf)
+
+Option 1 TOR: 2,430,000 + 500,000 customization = **2,930,000** before VAT.  
+Option 2 complete: 2,430,000 + leftover 1,690,000 + 500,000 = **4,620,000** before VAT.  
+Customization 500,000 applies to both.
+
+Document **MBT-LIA-FIN-2026-07**.
+
 ## Lebawi International Academy — TOR V3 financial proposal (download this)
 
 Prepared by **Majo Bridge Technologies and Events** for **Lebawi International Academy**.

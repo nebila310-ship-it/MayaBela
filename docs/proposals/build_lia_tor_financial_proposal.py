@@ -14,6 +14,11 @@ import pymupdf
 ROOT = Path(__file__).resolve().parent
 JOBS = (
     {
+        "html": ROOT / "lia-combined-tor-complete-financial.html",
+        "pdf": ROOT / "LIA_Combined_TOR_and_Complete_Financial_Proposal.pdf",
+        "footer": "MBT-LIA-FIN-2026-07  ·  Confidential  ·  TOR or complete  ·  VAT 15% included",
+    },
+    {
         "html": ROOT / "lia-tor-v3-modules-financial-proposal.html",
         "pdf": ROOT / "LIA_TOR_V3_Financial_Proposal.pdf",
         "footer": "MBT-LIA-FIN-2026-06  ·  Confidential  ·  TOR V3  ·  VAT 15% included",
