@@ -116,8 +116,8 @@ def build_one(html: Path, pdf: Path, footer: str) -> None:
 
 
 def main() -> None:
-    for job in JOBS:
-        build_one(job["html"], job["pdf"], job["footer"])
+    job = JOBS[0]
+    build_one(job["html"], job["pdf"], job["footer"])
 
 
 if __name__ == "__main__":
