@@ -14,7 +14,7 @@ import pymupdf
 ROOT = Path(__file__).resolve().parent
 HTML = ROOT / "lia-tor-financial-proposal.html"
 PDF = ROOT / "MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf"
-FOOTER = "MBT-LIA-FIN-2026-04  ·  Confidential  ·  One-time sale  ·  VAT 15% included"
+FOOTER = "MBT-LIA-FIN-2026-05  ·  Confidential  ·  One-time sale  ·  VAT 15% included"
 
 
 def chrome_bin() -> str:
