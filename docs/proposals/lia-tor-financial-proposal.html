@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financial Proposal — MaJo e-School Bridge for Lebawi International Academy (TOR V3)</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+      --gold: #8a6d12;
+      --gold-bg: #fff8e8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.6pt;
+      line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(20, 32, 51, 0.94);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a {
+      color: #fff;
+      font-weight: 700;
+      background: var(--green);
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 14mm 14mm 12mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 10px;
+    }
+    .cover-flag img {
+      width: 96px;
+      height: auto;
+    }
+    .brand-name {
+      margin: 0;
+      color: var(--blue);
+      font-size: 13.2pt;
+      letter-spacing: 0.2px;
+    }
+    .brand-sub {
+      margin: 0 0 4px;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .doc-kicker {
+      margin: 18px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      font-size: 9pt;
+      font-weight: 700;
+    }
+    .doc-title {
+      margin: 0 0 6px;
+      font-size: 17pt;
+      line-height: 1.18;
+      color: var(--ink);
+    }
+    .doc-for {
+      margin: 0 0 12px;
+      font-size: 12pt;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+    .banner {
+      background: var(--ok-bg);
+      border: 1px solid #b7e2c6;
+      border-radius: 8px;
+      padding: 9px 11px;
+      margin: 10px 0 6px;
+    }
+    .banner strong { color: var(--ok); }
+    .note {
+      background: var(--gold-bg);
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 9px 11px;
+      margin: 10px 0;
+    }
+    .note strong { color: var(--gold); }
+    .totals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0 6px;
+    }
+    .total-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--wash);
+    }
+    .total-card.pay {
+      background: #14315a;
+      color: #fff;
+      border-color: #14315a;
+    }
+    .total-card .lbl {
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      opacity: 0.8;
+      margin-bottom: 4px;
+    }
+    .total-card .amt {
+      font-size: 16pt;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .total-card .sub {
+      margin-top: 4px;
+      font-size: 8.6pt;
+      opacity: 0.9;
+    }
+    h2 {
+      margin: 16px 0 6px;
+      font-size: 12.6pt;
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 12px 0 5px;
+      font-size: 10.6pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 7px; }
+    ul, ol { margin: 0 0 8px; padding-left: 18px; }
+    li { margin-bottom: 3px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 10px;
+      font-size: 8.7pt;
+      page-break-inside: auto;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 4px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--wash);
+      color: var(--blue);
+      font-weight: 700;
+    }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    td.cat { white-space: nowrap; font-weight: 700; color: var(--muted); font-size: 7.8pt; }
+    .group-row th {
+      background: #e8eef8;
+      color: var(--ink);
+      font-size: 8.2pt;
+      letter-spacing: 0.3px;
+    }
+    .sum-row td {
+      background: var(--wash);
+      font-weight: 700;
+    }
+    .pay-row td {
+      background: #14315a;
+      color: #fff;
+      font-weight: 800;
+    }
+    .out td { color: #6b7280; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 12px;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 6px;
+      min-height: 58px;
+    }
+    .sig .who { font-weight: 700; margin-top: 20px; }
+    .sig .role { color: var(--muted); font-size: 9pt; }
+    .footer-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 8pt;
+      border-top: 1px solid var(--line);
+      padding-top: 6px;
+    }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 8mm 10mm 10mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 11mm 11mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    TOR-scoped financial proposal for Lebawi International Academy
+    <a href="MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">Majo Bridge Technologies and Events</h1>
+        <p style="margin:5px 0 0;color:var(--muted);font-size:9.6pt;">
+          Product: <b>MaJo e-School Bridge</b><br />
+          majobridgetech@gmail.com · nabilmaya6464@gmail.com<br />
+          +251 911 646 444 · +251 911 133 548
+        </p>
+      </div>
+      <img src="assets/majo_bridge_logo.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Financial proposal · One-time module licence</p>
+    <h1 class="doc-title">LIA TOR V3 academic pack with VAT</h1>
+    <p class="doc-for">Prepared for Lebawi International Academy (LIA), Addis Ababa</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Document</strong>
+        MBT-LIA-FIN-2026-05 · 23 September 2026<br />
+        45 TOR modules at published unit prices. Customization fee excluded. No 5,000 ETB deduction.
+      </div>
+      <div class="meta-card">
+        <strong>Source papers</strong>
+        LIA Terms of Reference V3-1 (academic only)<br />
+        MaJo e-School Bridge Financial Proposal 2 (MBT-LIA-FIN-2026-01, 14 September 2026)
+      </div>
+      <div class="meta-card">
+        <strong>What is priced here</strong>
+        45 TOR academic modules at published unit prices, plus VAT 15%. Customization is not charged.
+      </div>
+      <div class="meta-card">
+        <strong>Validity</strong>
+        90 days from the date of this proposal. Contract currency: Ethiopian Birr.
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>This paper answers the TOR financial request.</strong>
+      LIA asked for a financial proposal on the attached Terms of Reference. Schedule A keeps the 45 academic modules that deliver TOR sections 5.1–5.21, roles (§6), privacy/go-live (§8, §10, §11), and the administration desks needed to operate that academic system. Unit prices are taken from Financial Proposal 2 with no deduction. The 500,000 ETB customization / go-live fee is excluded. VAT 15% is added in Schedule B.
+    </div>
+
+    <div class="totals">
+      <div class="total-card">
+        <div class="lbl">45 TOR modules (VAT exclusive)</div>
+        <div class="amt">3,155,000 ETB</div>
+        <div class="sub">Published unit prices. No 5,000 ETB deduction</div>
+      </div>
+      <div class="total-card">
+        <div class="lbl">Customization and go-live</div>
+        <div class="amt">Excluded</div>
+        <div class="sub">500,000 ETB is not charged on this offer</div>
+      </div>
+      <div class="total-card">
+        <div class="lbl">Sub-total · VAT exclusive</div>
+        <div class="amt">3,155,000 ETB</div>
+        <div class="sub">VAT 15% = 473,250 ETB</div>
+      </div>
+      <div class="total-card pay">
+        <div class="lbl">Total payable · including VAT 15%</div>
+        <div class="amt">3,628,250 ETB</div>
+        <div class="sub">One-time sale. No customization fee. No subscription</div>
+      </div>
+    </div>
+
+    <h2>1. Purpose and scope</h2>
+    <p>
+      This financial proposal is a one-time commercial offer of <b>MaJo e-School Bridge</b> to Lebawi International Academy, filtered to the academic scope in <b>LIA Terms of Reference V3-1</b>. The Academy purchases a licence to the 45 modules listed in Schedule A. Unit prices are copied from <b>MaJo e-School Bridge Financial Proposal 2</b> (document MBT-LIA-FIN-2026-01).
+    </p>
+    <p>
+      The 45 TOR modules add to <b>3,155,000 ETB</b> at those published unit prices. There is no 5,000 ETB deduction. The <b>500,000 ETB</b> customization and go-live fee is excluded. VAT at 15% is then added.
+    </p>
+
+    <h2>2. What this proposal covers</h2>
+    <ul>
+      <li>One-time licence to each of the 45 TOR academic modules listed in Schedule A, at the published unit price.</li>
+      <li>Four login portals included with this pack: Administration/ERP, Teacher, Parent, and Student. They are not sold as modules.</li>
+      <li>The right to operate the selected modules on web and mobile app for Lebawi International Academy.</li>
+    </ul>
+
+    <h2>3. What this proposal does not cover</h2>
+    <ul>
+      <li>Finance and billing, procurement, inventory/store, and human resource management — TOR §3.2.</li>
+      <li>Payroll, live GPS, full transport operations, buses, driver register, CCTV, digital-operations desk, library, gallery, Maya Assistant, and system health — not required by TOR academic sections 5.1–5.21.</li>
+      <li>Subscription or SaaS fees; annual support retainers; recurring hosting, SMS, or payment-gateway charges.</li>
+      <li>Hardware, cameras, GPS devices, or school-owned equipment.</li>
+      <li>The Driver portal. It is offered only with a later transport pack, not with this academic TOR order.</li>
+      <li>The 500,000 ETB customization and go-live fee from Financial Proposal 2. It is excluded from this offer.</li>
+    </ul>
+    <p class="note">
+      <strong>Recurring charges stay separate.</strong> Subscription, annual support, and hosting retainers are not in this document. They will be issued in a separate financial proposal, as stated in Financial Proposal 2.
+    </p>
+
+    <h2>4. Commercial conditions</h2>
+    <ol>
+      <li>Minimum order remains 25 modules. This TOR pack is 45 modules and therefore qualifies.</li>
+      <li>Each selected module is charged at its published unit price from Financial Proposal 2. There is no 5,000 ETB deduction.</li>
+      <li>Four academic login portals are included. They are not sold as modules.</li>
+      <li>The 500,000 ETB customization and go-live fee is excluded from this offer.</li>
+      <li>This offer is valid for 90 days from 23 September 2026. Unit prices are VAT exclusive. VAT at 15% is added in Schedule B.</li>
+    </ol>
+
+    <h2>5. Price categories</h2>
+    <p>Every module belongs to one published price category from Financial Proposal 2. Category names describe the commercial band, not a ranking of the school’s offices.</p>
+    <table>
+      <tr>
+        <th>Category</th>
+        <th>Unit price (VAT exclusive)</th>
+        <th>In this TOR pack</th>
+        <th class="num">Line total (ETB)</th>
+      </tr>
+      <tr>
+        <td>PREMIUM</td>
+        <td>95,000 ETB per module</td>
+        <td>10 modules — markbook, SIS, LMS, exams, attendance, safeguarding, reports, go-live, roles</td>
+        <td class="num">950,000</td>
+      </tr>
+      <tr>
+        <td>HIGH</td>
+        <td>75,000 ETB per module</td>
+        <td>14 modules — curriculum, admissions, support, messages, audit, and related workflows</td>
+        <td class="num">1,050,000</td>
+      </tr>
+      <tr>
+        <td>MID</td>
+        <td>65,000 ETB per module</td>
+        <td>11 modules — defined academic desks, calendar, events, QA, school setup</td>
+        <td class="num">715,000</td>
+      </tr>
+      <tr>
+        <td>STANDARD</td>
+        <td>50,000 ETB per module</td>
+        <td>6 modules — alumni, campus, teacher and administration staff lists</td>
+        <td class="num">300,000</td>
+      </tr>
+      <tr>
+        <td>LITE</td>
+        <td>35,000 ETB per module</td>
+        <td>4 modules — portal preferences, password help, settings, home view</td>
+        <td class="num">140,000</td>
+      </tr>
+      <tr class="sum-row">
+        <td colspan="3">Schedule A · 45 TOR modules</td>
+        <td class="num">3,155,000</td>
+      </tr>
+    </table>
+
+    <h2>6. Payment</h2>
+    <ul>
+      <li>40% on signing of the agreement — 1,451,300 ETB including VAT.</li>
+      <li>40% on delivery of the selected modules for user-acceptance review — 1,451,300 ETB including VAT.</li>
+      <li>20% on go-live — 725,650 ETB including VAT.</li>
+      <li>The contract currency is Ethiopian Birr. VAT at 15% is included in the instalments above (they split the Schedule B total of 3,628,250 ETB).</li>
+    </ul>
+
+    <h2>7. How the TOR was filtered</h2>
+    <p>
+      Financial Proposal 2 listed every shipped MaJo e-School Bridge module so a school could pick 25 or more. LIA’s TOR is academic only. This paper therefore keeps a module only when it delivers a numbered TOR requirement, or when the academic system cannot be operated without it (roles, audit, school setup, staff lists, portal settings).
+    </p>
+    <table>
+      <tr><th>TOR reference</th><th>Kept in Schedule A</th></tr>
+      <tr><td>5.1 Student Information System</td><td>Students (SIS), Add Student, Transfers &amp; Promotion, Alumni, Campus Management</td></tr>
+      <tr><td>5.2 Admissions Management</td><td>Admissions</td></tr>
+      <tr><td>5.3 Academic Management</td><td>Academic Management, Timetable, School Management, Calendar</td></tr>
+      <tr><td>5.4 Learning Management System</td><td>LMS, Homework, Lesson plans, e-Books &amp; Materials</td></tr>
+      <tr><td>5.5 Curriculum Management</td><td>Curriculum office</td></tr>
+      <tr><td>5.6 Assessment &amp; Examination</td><td>Examinations &amp; Grade Approvals, Exam bank &amp; papers</td></tr>
+      <tr><td>5.7 Grading &amp; Markbook</td><td>Weighted Markbook, Grade Workflow, Report Cards</td></tr>
+      <tr><td>5.8 Attendance</td><td>Attendance</td></tr>
+      <tr><td>5.9 Behaviour &amp; Discipline</td><td>Student Affairs &amp; Discipline</td></tr>
+      <tr><td>5.10–5.13 Health, counselling, college, inclusion</td><td>Student support, Safeguarding, At-risk &amp; insights, Student programs</td></tr>
+      <tr><td>5.14 Student Affairs (DoSA)</td><td>Student Affairs &amp; Discipline, Student programs, Events (academic coordination only; not a transport fleet)</td></tr>
+      <tr><td>5.15 Parent Portal</td><td>Parents &amp; Link Approvals, Student Portal Settings; Parent portal itself is included, not sold</td></tr>
+      <tr><td>5.16–5.18 Teachers, heads, leadership programmes</td><td>Classroom Teachers, Add Teacher, Academic Management, Events, Messages</td></tr>
+      <tr><td>5.19 Quality Assurance</td><td>QA Findings &amp; Plans, Go-live &amp; compliance</td></tr>
+      <tr><td>5.20 Communication</td><td>Messages, Announcements</td></tr>
+      <tr><td>5.21 Reporting &amp; Analytics</td><td>Reports &amp; Analytics, Analytics &amp; exports, Dashboard / Profile</td></tr>
+      <tr><td>§6 Roles and audit</td><td>Role Permissions, Audit Log, Administration Staff Directory, Add Administration Staff</td></tr>
+      <tr><td>§8 / §10 / §11 Privacy, deploy, training</td><td>Go-live &amp; compliance, Settings, Student Password Resets, Institution Management</td></tr>
+      <tr><td>§3.2 Explicit exclusions</td><td>Finance, Payroll, Inventory/Procurement/Store, Human Resource — omitted</td></tr>
+    </table>
+
+    <h2>Schedule A · TOR academic module price list</h2>
+    <p>
+      All unit prices are VAT exclusive and are identical to Financial Proposal 2. There is no 5,000 ETB deduction. Login portals are included and are not listed as priced modules.
+    </p>
+
+    <table>
+      <tr>
+        <th>No.</th>
+        <th>Module</th>
+        <th>TOR</th>
+        <th>Category</th>
+        <th class="num">Unit price (ETB)</th>
+      </tr>
+      <tr class="group-row"><th colspan="5">Academic and assessment · TOR 5.3–5.7</th></tr>
+      <tr><td>1</td><td>Weighted Markbook</td><td>5.7</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>2</td><td>LMS</td><td>5.4</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>3</td><td>Grade Workflow</td><td>5.7</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>4</td><td>Examinations &amp; Grade Approvals</td><td>5.6 / 5.7</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>5</td><td>Exam bank &amp; papers</td><td>5.6</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>6</td><td>Academic Management</td><td>5.3 / 5.17</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>7</td><td>Curriculum office</td><td>5.5</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>8</td><td>Homework</td><td>5.4</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>9</td><td>Lesson plans</td><td>5.4 / 5.16</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>10</td><td>Report Cards</td><td>5.7</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>11</td><td>Timetable</td><td>5.3</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>12</td><td>Analytics &amp; exports</td><td>5.21</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>13</td><td>e-Books &amp; Materials</td><td>5.4</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+
+      <tr class="group-row"><th colspan="5">Student information, admissions, care, and DoSA · TOR 5.1–5.2, 5.8–5.15</th></tr>
+      <tr><td>14</td><td>Students (SIS)</td><td>5.1</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>15</td><td>Attendance</td><td>5.8</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>16</td><td>Admissions</td><td>5.2</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>17</td><td>Transfers &amp; Promotion</td><td>5.1</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>18</td><td>At-risk &amp; insights</td><td>5.13 / 5.21</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>19</td><td>Student support</td><td>5.10–5.13</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>20</td><td>Parents &amp; Link Approvals</td><td>5.15</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>21</td><td>Add Student</td><td>5.1</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>22</td><td>Student Affairs &amp; Discipline</td><td>5.9 / 5.14</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>23</td><td>Student programs</td><td>5.12 / 5.14 / 5.18</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>24</td><td>Alumni</td><td>5.1</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+
+      <tr class="group-row"><th colspan="5">Safeguarding, quality, and compliance · TOR 5.11, 5.19, 5.21, §6, §8</th></tr>
+      <tr><td>25</td><td>Safeguarding</td><td>5.11</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>26</td><td>Reports &amp; Analytics</td><td>5.21</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>27</td><td>Go-live &amp; compliance</td><td>§8 / §10 / §11</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>28</td><td>Audit Log</td><td>§6</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>29</td><td>QA Findings &amp; Plans</td><td>5.19</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+
+      <tr class="group-row"><th colspan="5">Communication and school life · TOR 5.15, 5.18, 5.20</th></tr>
+      <tr><td>30</td><td>Messages</td><td>5.20</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr><td>31</td><td>Calendar</td><td>5.3 / 5.15 / 5.18</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>32</td><td>Announcements</td><td>5.20</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>33</td><td>Events</td><td>5.12 / 5.14 / 5.18</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+
+      <tr class="group-row"><th colspan="5">Administration and access · TOR 5.16, §6, operate the academic system</th></tr>
+      <tr><td>34</td><td>Role Permissions</td><td>§6</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr><td>35</td><td>Institution Management</td><td>§6</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>36</td><td>School Management</td><td>5.3</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr><td>37</td><td>Campus Management</td><td>5.1</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr><td>38</td><td>Classroom Teachers</td><td>5.16</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr><td>39</td><td>Add Teacher</td><td>5.16</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr><td>40</td><td>Administration Staff Directory</td><td>§6</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr><td>41</td><td>Add Administration Staff</td><td>§6</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr><td>42</td><td>Student Portal Settings</td><td>5.15</td><td class="cat">LITE</td><td class="num">35,000</td></tr>
+      <tr><td>43</td><td>Student Password Resets</td><td>Operate</td><td class="cat">LITE</td><td class="num">35,000</td></tr>
+      <tr><td>44</td><td>Settings</td><td>Operate</td><td class="cat">LITE</td><td class="num">35,000</td></tr>
+      <tr><td>45</td><td>Dashboard / Profile</td><td>5.21</td><td class="cat">LITE</td><td class="num">35,000</td></tr>
+      <tr class="sum-row">
+        <td colspan="4">45 modules · VAT exclusive</td>
+        <td class="num">3,155,000</td>
+      </tr>
+    </table>
+
+    <h3>Included login portals · no module charge</h3>
+    <table>
+      <tr><th>Portal</th><th>Status</th><th>Who uses it under this TOR pack</th></tr>
+      <tr><td>P1. Administration / ERP</td><td>Included</td><td>Owner, principal, directors, registrar, QA, DoSA, and IT</td></tr>
+      <tr><td>P2. Teacher</td><td>Included</td><td>Homeroom and subject teachers: attendance, homework, marks, parent messages</td></tr>
+      <tr><td>P3. Parent</td><td>Included</td><td>Linked guardians: published grades, attendance, homework, behaviour, and messages</td></tr>
+      <tr><td>P4. Student</td><td>Included</td><td>Enrolled students: timetable, homework, materials, examinations, and announcements</td></tr>
+    </table>
+    <p>The Driver portal from Financial Proposal 2 is not part of this academic TOR pack.</p>
+
+    <h3>Modules from Financial Proposal 2 that are omitted (TOR filter)</h3>
+    <p>These lines keep their published prices if LIA later adds them. They are not in the 3,628,250 ETB TOR total.</p>
+    <table>
+      <tr>
+        <th>Module</th>
+        <th>Why omitted</th>
+        <th>Category</th>
+        <th class="num">Unit price (ETB)</th>
+      </tr>
+      <tr class="out"><td>Finance</td><td>TOR §3.2 — Finance and Billing</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr class="out"><td>Payroll</td><td>TOR §3.2 — Human Resource / payroll</td><td class="cat">PREMIUM</td><td class="num">95,000</td></tr>
+      <tr class="out"><td>Inventory, Procurement &amp; Store</td><td>TOR §3.2 — Procurement and Inventory</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr class="out"><td>Human Resource</td><td>TOR §3.2 — Human Resource Management</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr class="out"><td>Live GPS</td><td>Not in TOR 5.1–5.21 academic scope</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr class="out"><td>Transport</td><td>DoSA 5.14 is academic coordination only, not a fleet desk</td><td class="cat">HIGH</td><td class="num">75,000</td></tr>
+      <tr class="out"><td>Buses</td><td>Not in TOR academic scope</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr class="out"><td>Digital operations</td><td>Campus ops desk, not a TOR academic module</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr class="out"><td>Library</td><td>Not listed in TOR 5.1–5.21</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr class="out"><td>Gallery</td><td>Not listed in TOR 5.1–5.21</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr class="out"><td>Maya Assistant</td><td>Not listed in TOR 5.1–5.21</td><td class="cat">MID</td><td class="num">65,000</td></tr>
+      <tr class="out"><td>CCTV</td><td>Not in TOR academic scope</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr class="out"><td>Register Driver</td><td>Transport staff desk</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+      <tr class="out"><td>System Health</td><td>Platform operations, not a TOR academic module</td><td class="cat">STANDARD</td><td class="num">50,000</td></tr>
+    </table>
+
+    <h2>Schedule B · One-time investment including VAT 15%</h2>
+    <p>
+      Published unit prices are VAT exclusive. There is no 5,000 ETB deduction. The 500,000 ETB customization fee is excluded. VAT at 15% is added on 3,155,000 ETB.
+    </p>
+    <table>
+      <tr><th>Line</th><th class="num">Amount (ETB)</th></tr>
+      <tr><td>45 TOR academic modules at published unit prices</td><td class="num">3,155,000</td></tr>
+      <tr><td>Customization and go-live · excluded</td><td class="num">0</td></tr>
+      <tr class="sum-row"><td>Sub-total · VAT exclusive</td><td class="num">3,155,000</td></tr>
+      <tr><td>VAT 15% on 3,155,000</td><td class="num">473,250</td></tr>
+      <tr class="pay-row"><td>Total payable · including VAT 15%</td><td class="num">3,628,250</td></tr>
+    </table>
+    <table>
+      <tr><th>Instalment (including VAT)</th><th>When</th><th class="num">Amount (ETB)</th></tr>
+      <tr><td>40%</td><td>Signing of the agreement</td><td class="num">1,451,300</td></tr>
+      <tr><td>40%</td><td>Delivery for user-acceptance review</td><td class="num">1,451,300</td></tr>
+      <tr><td>20%</td><td>Go-live</td><td class="num">725,650</td></tr>
+      <tr class="sum-row"><td colspan="2">Total payable</td><td class="num">3,628,250</td></tr>
+    </table>
+    <p>
+      By signing, Lebawi International Academy accepts this one-time TOR academic pack, agrees the conditions in section 4, and confirms that subscription and recurring support will be proposed separately.
+    </p>
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For Majo Bridge Technologies and Events</div>
+        <div class="role">Authorised signature · Name / title · Date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For Lebawi International Academy</div>
+        <div class="role">Authorised signature · Name / title · Date</div>
+      </div>
+    </div>
+  </article>
+</body>
+</html>
