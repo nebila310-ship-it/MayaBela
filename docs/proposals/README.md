@@ -1,19 +1,25 @@
 # Proposals
 
-## Lebawi International Academy — TOR V3 financial proposal
+## Lebawi International Academy — TOR V3 financial proposal (download this)
 
 Prepared by **Majo Bridge Technologies and Events** for **Lebawi International Academy**.
 
-This paper filters Financial Proposal 2 to the academic-only LIA Terms of Reference V3, keeps the 45-module list at published unit prices, excludes the 500,000 ETB customization fee, and adds VAT 15%. There is no 5,000 ETB deduction.
+This paper lists TOR V3 sections **5.1–5.21 in the TOR’s own wording**, marks each module **Implemented**, and uses one **average unit price**. The pack does **not exceed 2,930,000 ETB** before VAT.
 
-- PDF (download): [MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf](MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf)
-- Printable HTML: [lia-tor-financial-proposal.html](lia-tor-financial-proposal.html)
-- Rebuild: `python3 docs/proposals/build_lia_tor_financial_proposal.py`
+- **Download PDF:** [LIA_TOR_V3_Financial_Proposal.pdf](LIA_TOR_V3_Financial_Proposal.pdf)
+- Download page: [download-lia-tor-v3-financial.html](download-lia-tor-v3-financial.html)
+- Printable HTML: [lia-tor-v3-modules-financial-proposal.html](lia-tor-v3-modules-financial-proposal.html)
 
-**TOR pack total payable, including VAT 15%: 3,628,250 ETB**
-(45 modules 3,155,000 VAT exclusive; customization excluded; VAT 473,250).
+**Pack before VAT: 2,930,000 ETB · VAT 15%: 439,500 ETB · Total payable: 3,369,500 ETB**
 
-Document **MBT-LIA-FIN-2026-05** · 23 September 2026.
+Document **MBT-LIA-FIN-2026-06** · 23 September 2026.
+
+Rebuild: `python3 docs/proposals/build_lia_tor_financial_proposal.py`
+
+## Earlier catalogue-priced draft
+
+- [MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf](MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf)
+- [lia-tor-financial-proposal.html](lia-tor-financial-proposal.html)
 
 ## Lebawi International Academy — technical proposal
 

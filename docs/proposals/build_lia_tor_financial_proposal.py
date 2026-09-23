@@ -12,9 +12,18 @@ from pathlib import Path
 import pymupdf
 
 ROOT = Path(__file__).resolve().parent
-HTML = ROOT / "lia-tor-financial-proposal.html"
-PDF = ROOT / "MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf"
-FOOTER = "MBT-LIA-FIN-2026-05  ·  Confidential  ·  One-time sale  ·  VAT 15% included"
+JOBS = (
+    {
+        "html": ROOT / "lia-tor-v3-modules-financial-proposal.html",
+        "pdf": ROOT / "LIA_TOR_V3_Financial_Proposal.pdf",
+        "footer": "MBT-LIA-FIN-2026-06  ·  Confidential  ·  TOR V3  ·  VAT 15% included",
+    },
+    {
+        "html": ROOT / "lia-tor-financial-proposal.html",
+        "pdf": ROOT / "MaJo_eSchool_Bridge_LIA_TOR_Financial_Proposal.pdf",
+        "footer": "MBT-LIA-FIN-2026-05  ·  Confidential  ·  One-time sale  ·  VAT 15% included",
+    },
+)
 
 
 def chrome_bin() -> str:
@@ -69,7 +78,7 @@ def print_html(src: Path, dest: Path) -> None:
             proc.kill()
 
 
-def stamp(pdf_path: Path) -> None:
+def stamp(pdf_path: Path, footer: str) -> None:
     doc = pymupdf.open(pdf_path)
     total = doc.page_count
     for i, page in enumerate(doc):
@@ -78,7 +87,7 @@ def stamp(pdf_path: Path) -> None:
         page.draw_rect(pymupdf.Rect(36, y - 10, box.width - 36, y + 12), color=(1, 1, 1), fill=(1, 1, 1))
         page.insert_text(
             pymupdf.Point(40, y + 4),
-            FOOTER,
+            footer,
             fontsize=7.5,
             fontname="helv",
             color=(0.35, 0.40, 0.48),
@@ -95,15 +104,20 @@ def stamp(pdf_path: Path) -> None:
     doc.close()
 
 
-def main() -> None:
-    if not HTML.exists():
-        raise SystemExit(f"Missing {HTML}")
+def build_one(html: Path, pdf: Path, footer: str) -> None:
+    if not html.exists():
+        raise SystemExit(f"Missing {html}")
     with tempfile.TemporaryDirectory() as tmp:
         raw = Path(tmp) / "raw.pdf"
-        print_html(HTML, raw)
-        shutil.copy2(raw, PDF)
-    stamp(PDF)
-    print(f"Wrote {PDF} ({PDF.stat().st_size} bytes)")
+        print_html(html, raw)
+        shutil.copy2(raw, pdf)
+    stamp(pdf, footer)
+    print(f"Wrote {pdf} ({pdf.stat().st_size} bytes)")
+
+
+def main() -> None:
+    for job in JOBS:
+        build_one(job["html"], job["pdf"], job["footer"])
 
 
 if __name__ == "__main__":
