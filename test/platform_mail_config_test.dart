@@ -27,4 +27,15 @@ void main() {
     expect(status.configured, isFalse);
     expect(status.hasResend, isFalse);
   });
+
+  test('Failed to fetch from Gmail SMTP is explained as Resend-needed', () {
+    expect(
+      PlatformMailCloudService.gmailSmtpBlocked.toLowerCase(),
+      contains('resend'),
+    );
+    expect(
+      PlatformMailCloudService.gmailSmtpBlocked.toLowerCase(),
+      contains('failed to fetch'),
+    );
+  });
 }

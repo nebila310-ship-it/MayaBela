@@ -43,6 +43,8 @@ void main() {
     expect(mailer, contains('generateLink'));
     expect(mailer, contains('email_not_authorized'));
     expect(mailer, contains('Your MayaBela password reset code is'));
+    expect(mailer, contains('smtp_blocked'));
+    expect(mailer, contains('secrets.resendApiKey'));
   });
 
   test('reset copy tells the user to check spam', () {

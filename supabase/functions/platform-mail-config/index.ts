@@ -12,7 +12,11 @@ import {
   mailStatusPublic,
   mergeMailSecrets,
   sendPlainEmail,
+  smtpHostBlocked,
 } from "../_shared/mailer.ts";
+
+const GMAIL_SMTP_MSG =
+  "Gmail SMTP cannot be used from MayaBela cloud (the browser then shows Failed to fetch). Create a free Resend API key at resend.com and paste it above. From: MayaBela <onboarding@resend.dev> delivers to the Gmail you used at resend.com.";
 
 function trim(value: unknown): string {
   return String(value ?? "").trim();
@@ -53,6 +57,9 @@ Deno.serve(async (req) => {
           400,
           "invalid",
         );
+      }
+      if (smtpHostBlocked(merged.smtpHost) && !merged.resendApiKey) {
+        return errorResponse(GMAIL_SMTP_MSG, 400, "smtp_blocked");
       }
       if (!isMailReady(merged)) {
         return errorResponse(
@@ -101,6 +108,10 @@ Deno.serve(async (req) => {
         }, existing);
       } catch (sendErr) {
         console.error("mail test failed", sendErr);
+        const sendMsg = String((sendErr as Error)?.message || sendErr);
+        if (sendMsg.includes("smtp_blocked") || sendMsg.includes("smtp_timeout")) {
+          return errorResponse(GMAIL_SMTP_MSG, 400, "smtp_blocked");
+        }
         return errorResponse(
           "Could not send. Check the From address and API key / SMTP.",
           502,
@@ -122,6 +133,9 @@ Deno.serve(async (req) => {
     }
     if (msg.includes("owner_pin")) {
       return errorResponse("Owner PIN required.", 401, "unauthorized");
+    }
+    if (msg.includes("smtp_blocked") || msg.includes("smtp_timeout")) {
+      return errorResponse(GMAIL_SMTP_MSG, 400, "smtp_blocked");
     }
     console.error(e);
     return errorResponse(msg, 500, "invalid");
