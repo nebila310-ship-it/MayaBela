@@ -12,7 +12,7 @@ class PlatformMailSettingsScreen extends StatefulWidget {
 }
 
 class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen> {
-  final _from = TextEditingController(text: 'MayaBela <onboarding@resend.dev>');
+  final _from = TextEditingController(text: 'MayaBela <you@gmail.com>');
   final _resendKey = TextEditingController();
   final _smtpHost = TextEditingController();
   final _smtpPort = TextEditingController(text: '587');
@@ -59,7 +59,7 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
       if (status.from.trim().isNotEmpty) {
         _from.text = status.from;
       }
-      _showSmtp = status.hasSmtp;
+      _showSmtp = status.hasSmtp || !status.configured;
       if (!status.ok && status.errorMessage != null) {
         _message = status.errorMessage!;
         _messageOk = false;
@@ -77,7 +77,7 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
   Future<void> _save() async {
     if (!EmailUtils.isValidFromHeader(_from.text)) {
       _toast(
-        'From must be an email, e.g. MayaBela <onboarding@resend.dev>',
+          'From must be an email, e.g. MayaBela <you@gmail.com>',
         ok: false,
       );
       return;
@@ -148,16 +148,21 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
                 _statusCard(status),
                 const SizedBox(height: 16),
                 const Text(
-                  'The reset-password page emails a 6-digit code. It needs a sender: a free Resend API key (recommended) or SMTP.',
+                  'Reset Password emails a 6-digit MayaBela code. Supabase’s built-in mailer does not reach most Gmail inboxes (spam, or org-members only). Add a sender here.',
                   style: TextStyle(color: Colors.white70, height: 1.4),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Resend test sender onboarding@resend.dev only delivers to the email you used to sign up at resend.com until you verify a domain.',
+                  'Fastest: Gmail App Password. Google Account → Security → 2-Step Verification → App passwords → generate. Then turn on “Use SMTP”, host smtp.gmail.com, port 587, user your Gmail, password the 16-character app password. From: MayaBela <yourgmail@gmail.com>.',
+                  style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Or Resend: paste an API key. onboarding@resend.dev only delivers to the email you used at resend.com until a domain is verified.',
                   style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: 16),
-                _field('From address', _from, hint: 'MayaBela <onboarding@resend.dev>'),
+                _field('From address', _from, hint: 'MayaBela <you@gmail.com>'),
                 _field(
                   'Resend API key',
                   _resendKey,
@@ -180,8 +185,8 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
                 if (_showSmtp) ...[
                   _field('SMTP host', _smtpHost, hint: 'smtp.gmail.com'),
                   _field('SMTP port', _smtpPort, keyboard: TextInputType.number),
-                  _field('SMTP user', _smtpUser),
-                  _field('SMTP password', _smtpPass, obscure: true),
+                  _field('SMTP user', _smtpUser, hint: 'you@gmail.com'),
+                  _field('SMTP password', _smtpPass, hint: 'Gmail App Password', obscure: true),
                 ],
                 const SizedBox(height: 8),
                 FilledButton.icon(

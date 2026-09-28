@@ -11,6 +11,7 @@ export type MailPayload = {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 };
 
 export type MailSecrets = {
@@ -114,6 +115,26 @@ export function assertMailConfigured(secrets: MailSecrets = mailSecretsFromEnv()
   if (!isMailReady(secrets)) throw new Error("mail_not_configured");
 }
 
+function resetEmailText(opts: {
+  schoolId: string;
+  code: string;
+}): string {
+  return (
+    `Your MayaBela password reset code is ${opts.code}.\n\n` +
+    `School ID: ${opts.schoolId}\n` +
+    `This code expires in 15 minutes. If you did not request it, ignore this email.`
+  );
+}
+
+function resetEmailHtml(opts: { schoolId: string; code: string }): string {
+  return (
+    `<p>Your MayaBela password reset code is:</p>` +
+    `<p style="font-size:28px;letter-spacing:4px;font-weight:700">${opts.code}</p>` +
+    `<p>School ID: ${opts.schoolId}<br/>This code expires in 15 minutes.</p>` +
+    `<p>If you did not request it, ignore this email.</p>`
+  );
+}
+
 export async function sendPlainEmail(
   payload: MailPayload,
   secrets: MailSecrets = mailSecretsFromEnv(),
@@ -143,20 +164,44 @@ export async function sendPasswordResetEmail(
     code: string;
     mail: MailSecrets;
   },
-): Promise<void> {
+): Promise<"mail" | "auth"> {
   if (isMailReady(opts.mail)) {
     await sendPlainEmail({
       to: opts.to,
       subject: "MayaBela password reset code",
-      text:
-        `Your MayaBela password reset code is ${opts.code}.\n\n` +
-        `School ID: ${opts.schoolId}\n` +
-        `This code expires in 15 minutes. If you did not request it, ignore this email.`,
+      text: resetEmailText(opts),
+      html: resetEmailHtml(opts),
     }, opts.mail);
-    return;
+    return "mail";
   }
+  // Built-in Auth SMTP (after 26 Sep 2026) only delivers to Supabase org
+  // members, and Gmail often junks supabase.io. Still try it so the owner
+  // inbox has a chance, then tell the client it may land in Spam.
   const sent = await sendViaGoTrueMailer(sb, opts);
   if (!sent) throw new Error("mail_not_configured");
+  return "auth";
+}
+
+function goTrueMailOutcome(status: number, body: string): "ok" | "retry" | "fail" {
+  const lower = `${body} ${status}`.toLowerCase();
+  if (
+    status === 429 ||
+    lower.includes("rate_limit") ||
+    lower.includes("over_email_send") ||
+    lower.includes("security purposes")
+  ) {
+    // A reset mail was already handed to the provider for this address.
+    return "ok";
+  }
+  if (
+    lower.includes("not authorized") ||
+    lower.includes("email_address_not_authorized") ||
+    lower.includes("email_not_authorized")
+  ) {
+    return "fail";
+  }
+  if (status >= 200 && status < 300) return "ok";
+  return "retry";
 }
 
 async function sendViaGoTrueMailer(
@@ -189,46 +234,68 @@ async function sendViaGoTrueMailer(
   }
 
   try {
+    const redirectTo = "https://mayabela.pages.dev";
+    const { error: linkErr } = await sb.auth.admin.generateLink({
+      type: "recovery",
+      email: opts.to,
+      options: { redirectTo },
+    });
+    if (!linkErr) return true;
+    const linkMsg = String(linkErr.message || linkErr);
+    console.error("gotrue generateLink failed", linkMsg);
+    const fromLink = goTrueMailOutcome(0, linkMsg);
+    if (fromLink === "ok") return true;
+    if (fromLink === "fail") {
+      await restoreLoginEmail(sb, userId, original, opts.to);
+      return false;
+    }
+
     const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
-    const anon = Deno.env.get("SUPABASE_ANON_KEY") ||
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+      Deno.env.get("SUPABASE_ANON_KEY") ||
       "";
-    if (!url || !anon) {
+    if (!url || !key) {
       await restoreLoginEmail(sb, userId, original, opts.to);
       return false;
     }
 
     const headers = {
-      apikey: anon,
-      Authorization: `Bearer ${anon}`,
+      apikey: key,
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     };
-    const redirectTo = "https://mayabela.pages.dev";
-    let res = await fetch(`${url}/auth/v1/otp`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        email: opts.to,
-        create_user: false,
-        options: { emailRedirectTo: redirectTo },
-      }),
-    });
-    if (!res.ok) {
-      const otpBody = await res.text();
-      console.error("gotrue otp failed", res.status, otpBody);
-      res = await fetch(`${url}/auth/v1/recover`, {
+    const attempts: Array<{ path: string; body: Record<string, unknown> }> = [
+      {
+        path: "/auth/v1/recover",
+        body: { email: opts.to, gotrue_meta_security: {} },
+      },
+      {
+        path: "/auth/v1/otp",
+        body: {
+          email: opts.to,
+          create_user: false,
+          options: { emailRedirectTo: redirectTo },
+        },
+      },
+    ];
+    for (const attempt of attempts) {
+      const res = await fetch(`${url}${attempt.path}`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ email: opts.to, gotrue_meta_security: {} }),
+        body: JSON.stringify(attempt.body),
       });
-      if (!res.ok) {
-        console.error("gotrue recover failed", res.status, await res.text());
+      const text = await res.text();
+      const outcome = goTrueMailOutcome(res.status, text);
+      if (outcome === "ok") return true;
+      if (outcome === "fail") {
+        console.error("gotrue send not authorized", attempt.path, res.status, text);
         await restoreLoginEmail(sb, userId, original, opts.to);
         return false;
       }
+      console.error("gotrue send failed", attempt.path, res.status, text);
     }
-    // Leave the real mailbox on the Auth user so the emailed OTP still verifies.
-    return true;
+    await restoreLoginEmail(sb, userId, original, opts.to);
+    return false;
   } catch (e) {
     console.error("gotrue reset send failed", e);
     await restoreLoginEmail(sb, userId, original, opts.to);
@@ -269,6 +336,7 @@ async function sendViaResend(
       to: [payload.to],
       subject: payload.subject,
       text: payload.text,
+      html: payload.html || payload.text.replace(/\n/g, "<br/>"),
     }),
   });
   if (!res.ok) {
@@ -313,6 +381,7 @@ async function sendViaSmtp(
       to: payload.to,
       subject: payload.subject,
       content: payload.text,
+      html: payload.html || payload.text.replace(/\n/g, "<br/>"),
     });
   } finally {
     try {

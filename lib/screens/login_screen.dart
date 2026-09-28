@@ -81,7 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return ForgotPasswordScreen(
       initialSchoolId: schoolId.text,
       initialEmail: EmailUtils.normalize(username.text),
-      roleKey: AuthService.apiRoleKeyForLogin(selectedRole),
     );
   }
 
