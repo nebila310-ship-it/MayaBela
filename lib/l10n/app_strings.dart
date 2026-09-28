@@ -93,6 +93,26 @@ class AppStrings implements AppStringsLike {
   }
   String get password => t('Password', 'የይለፍ ቃል');
   String get rememberMe => t('Remember me', 'አስታውሰኝ');
+  String get studentDemoHint => t(
+        'Demo: School TB-001 · demo.student · Welcome12!',
+        'ሙከራ: School TB-001 · demo.student · Welcome12!',
+        'Demo: School TB-001 · demo.student · Welcome12!',
+      );
+  String get useStudentDemo => t(
+        'Use student demo',
+        'የተማሪ ሙከራ ተጠቀም',
+        'Demo barataa fayyadami',
+      );
+  String get transportDemoHint => t(
+        'Demo: School TB-001 · 0911667788 · Welcome12!',
+        'ሙከራ: School TB-001 · 0911667788 · Welcome12!',
+        'Demo: School TB-001 · 0911667788 · Welcome12!',
+      );
+  String get useTransportDemo => t(
+        'Use transport demo',
+        'የትራንስፖርት ሙከራ ተጠቀም',
+        'Demo geejjibaa fayyadami',
+      );
   String get login => t('Login', 'ግባ');
   String get signUp => t('Sign up', 'ተመዝገብ');
   String get forgotPassword => t('Forgot password?', 'የይለፍ ቃል ረሳሽ?');
@@ -434,6 +454,11 @@ class AppStrings implements AppStringsLike {
 
   String teacherPortalTitle(String school) =>
       t('$school Classroom', '$school ክፍል');
+  String get classroomHome => t('Home', 'መነሻ');
+  String get openClassroomMenu => t('Open menu', 'ምናሌ ክፈት');
+  String get closeClassroomMenu => t('Close menu', 'ምናሌ ዝጋ');
+  String get expandClassroomSidebar => t('Open sidebar', 'የጎን ምናሌ ክፈት');
+  String get collapseClassroomSidebar => t('Close sidebar', 'የጎን ምናሌ ዝጋ');
   String staffPortalTitle(String school) => t(
         '$school Staff Portal',
         '$school · ሰራተኛ',
@@ -458,9 +483,17 @@ class AppStrings implements AppStringsLike {
       return switch (id) {
         'classes' => 'ክፍሎቼ',
         'attendance' => 'መገኘት',
+        'at_risk' => 'አደጋ ላይ ያሉ ተማሪዎች',
+        'analytics' => 'ትንታኔ እና ሪፖርት',
+        'attendance_insights' => 'የመገኘት ግንዛቤ',
         'messages' => 'መልዕክቶች',
         'announcements' => 'ማስታወቂያዎች',
         'homework' => 'የቤት ስራ',
+        'exams' => 'ፈተናዎች',
+        'lesson_plans' => 'የትምህርት ዕቅዶች',
+        'lessons' => 'የትምህርት ዕቅዶች',
+        'curriculum' => 'የሥርዓተ ትምህርት ቢሮ',
+        'academic_meetings' => 'የትምህርት ስብሰባዎች',
         'learning_materials' => 'መጽሐፍትና መማሪያ መረጃ',
         'gallery' => 'ጋለሪ',
         'grades' => 'የደረጃ ሪፖርት',
@@ -486,6 +519,7 @@ class AppStrings implements AppStringsLike {
         'parent_approvals' => 'የወላጅ ጥያቄዎች',
         'transfer' => 'አዛወር',
         'campus' => 'ካምፐስ',
+        'cctv' => 'ሲሲቲቪ',
         'inventory' => 'እቃ መጋዘን',
         'library' => 'ቤተ መጻሕፍት',
         'learning_materials_admin' => 'የመማሪያ ቁሳቁስ አስተዳደር',
@@ -495,7 +529,20 @@ class AppStrings implements AppStringsLike {
         'system_health' => 'የስርዓት ጤንነት',
         'student_affairs' =>
           roleKey == 'parent' ? 'ጠባይ እና ፈቃድ' : 'የተማሪ ጉዳዮች',
+        'student_support' =>
+          roleKey == 'student' ? 'የኮሌጅ መመሪያ' : 'የተማሪ ድጋፍ',
+        'college_guidance' => 'የኮሌጅ መመሪያ',
+        'safeguarding' => 'ሕፃናት ጥበቃ',
+        'student_programs' => 'የተማሪ ፕሮግራሞች',
+        'clubs' => 'ክለቦች',
+        'scholarships' => 'ስኮላርሺፕ',
         'quality_assurance' => 'ጥራት ማረጋገጫ',
+        'qa_surveys' => 'የጥራት ጥናቶች',
+        'feedback' => 'ግብረ መልስ',
+        'go_live' => 'ዝግጅት እና ተገዢነት',
+        'digital_ops' => 'ዲጂታል ስራዎች',
+        'privacy_rights' => 'ግላዊነት',
+        'training_manuals' => 'ስልጠና',
         'maya_assistant' => 'ማያ ረዳት',
         _ => id,
       };
@@ -506,9 +553,17 @@ class AppStrings implements AppStringsLike {
       return switch (id) {
         'classes' => 'Kutaalee Koo',
         'attendance' => 'Argama',
+        'at_risk' => 'Barattoota balaa keessa',
+        'analytics' => 'Xiinxala fi gabaasa',
+        'attendance_insights' => 'Hubannoo argamaa',
         'messages' => 'Ergaawwan',
         'announcements' => 'Beeksisa',
         'homework' => 'Hojii Manaa',
+        'exams' => 'Qormaata',
+        'lesson_plans' => 'Sagantaa barnootaa',
+        'lessons' => 'Sagantaa barnootaa',
+        'curriculum' => 'Waajjira karoora barnootaa',
+        'academic_meetings' => 'Walgahiiwwan barnootaa',
         'learning_materials' => 'Kitaabota fi Meeshaalee Barnootaa',
         'gallery' => 'Galarii',
         'grades' => 'Gabaasa Qabxii',
@@ -534,6 +589,7 @@ class AppStrings implements AppStringsLike {
         'parent_approvals' => 'Mirkaneessa Maatii',
         'transfer' => 'Dabarsuu',
         'campus' => 'Kaampasii',
+        'cctv' => 'CCTV',
         'inventory' => 'Kuusaa Meeshaa',
         'library' => 'Mana Kitaabaa',
         'learning_materials_admin' => 'Bulchiinsa Meeshaalee Barnootaa',
@@ -543,7 +599,20 @@ class AppStrings implements AppStringsLike {
         'system_health' => 'Fayyaa Sirnaa',
         'student_affairs' =>
           roleKey == 'parent' ? 'Amala fi Hayyama' : 'Dhimma Barattootaa',
+        'student_support' =>
+          roleKey == 'student' ? 'Qajeelfama kolleejjii' : 'Deeggarsa barataa',
+        'college_guidance' => 'Qajeelfama kolleejjii',
+        'safeguarding' => 'Eegumsa daa\'immanii',
+        'student_programs' => 'Sagantaalee barataa',
+        'clubs' => 'Kilaboota',
+        'scholarships' => 'Gargaarsa barnootaa',
         'quality_assurance' => 'Mirkaneessa Qulqullina',
+        'qa_surveys' => 'Qorannoo qulqullinaa',
+        'feedback' => 'Deebii',
+        'go_live' => 'Goolaivii fi heera',
+        'digital_ops' => 'Hojii dijitaalaa',
+        'privacy_rights' => 'Dhuunfaa',
+        'training_manuals' => 'Leenjii',
         'maya_assistant' => 'Gargaaraa Maya',
         _ => id,
       };
@@ -553,9 +622,17 @@ class AppStrings implements AppStringsLike {
     return switch (id) {
       'classes' => 'My Classes',
       'attendance' => 'Attendance',
+      'at_risk' => 'At-risk students',
+      'analytics' => 'Analytics & exports',
+      'attendance_insights' => 'Attendance insights',
       'messages' => 'Messages',
       'announcements' => 'Announcements',
       'homework' => 'Homework',
+      'exams' => 'Exams',
+      'lesson_plans' => 'Lesson plans',
+      'lessons' => 'Lesson plans',
+      'curriculum' => 'Curriculum office',
+      'academic_meetings' => 'Academic meetings',
       'learning_materials' => 'e-Book and Material',
       'gallery' => 'Gallery',
       'grades' => 'Grade Reports',
@@ -581,6 +658,7 @@ class AppStrings implements AppStringsLike {
       'parent_approvals' => 'Parent Approvals',
       'transfer' => 'Transfer',
       'campus' => 'Campus',
+      'cctv' => 'CCTV',
       'inventory' => 'Inventory',
       'library' => 'Library',
       'learning_materials_admin' => 'e-Book and Material',
@@ -590,7 +668,20 @@ class AppStrings implements AppStringsLike {
       'system_health' => 'System Health',
       'student_affairs' =>
         roleKey == 'parent' ? 'Behaviour & Leave' : 'Student Affairs',
+      'student_support' =>
+        roleKey == 'student' ? 'College guidance' : 'Student support',
+      'college_guidance' => 'College guidance',
+      'safeguarding' => 'Safeguarding',
+      'student_programs' => 'Student programs',
+      'clubs' => 'Clubs & Gojo',
+      'scholarships' => 'Scholarships',
       'quality_assurance' => 'Quality Assurance',
+      'qa_surveys' => 'QA surveys',
+      'feedback' => 'Feedback',
+      'go_live' => 'Go-live & compliance',
+      'digital_ops' => 'Digital operations',
+      'privacy_rights' => 'Privacy & data rights',
+      'training_manuals' => 'Training manuals',
       'grade_approvals' => 'Grade approvals',
       'grade_workflow_settings' => 'Grade workflow',
       'profile' => 'My Profile',
@@ -891,6 +982,11 @@ class AppStrings implements AppStringsLike {
       'meeting' => t('Meeting', 'ስብሰባ', 'Walgahii'),
       'sports' => t('Sports', 'ስፖርት', 'Ispoortii'),
       'classEvent' => t('Class event', 'የክፍል ክስተት', 'Taatee kutaa'),
+      'collegeGuidance' => t(
+          'College guidance',
+          'የኮሌጅ መመሪያ',
+          'Qajeelcha kolleejjii',
+        ),
       _ => t('Other', 'ሌላ', 'Kan biroo'),
     };
   }
@@ -905,6 +1001,41 @@ class AppStrings implements AppStringsLike {
   String get noGalleryPosts =>
       t('No gallery posts yet', 'ጋለሪ ልጥፎች የሉም');
   String get galleryPosted => t('Posted — parents in this class can view it', 'ተለጠፈ — ወላጆች ሊያዩት ይችላሉ');
+  String get galleryNeedContent => t(
+        'Add a title, photo, video, or attachment before uploading.',
+        'ከመስቀልዎ በፊት አርእስት፣ ፎቶ፣ ቪዲዮ ወይም ፋይል ያክሉ።',
+        'Mata duree, suuraa, viidiyoo ykn maxxansa dabali osoo hin ol-fe\'in dura.',
+      );
+  String galleryFileTooLarge(int maxMb) => t(
+        'That file is too large. Use a file under $maxMb MB.',
+        'ፋይሉ በጣም ትልቅ ነው። ከ$maxMb MB በታች የሆነ ፋይል ይጠቀሙ።',
+        'Faayilii sun baay\'ee guddaadha. MB $maxMb gadi fayyadami.',
+      );
+  String get gallerySizeHint => t(
+        'Photos up to 8 MB, videos up to 25 MB, other files up to 10 MB.',
+        'ፎቶ እስከ 8 MB፣ ቪዲዮ እስከ 25 MB፣ ሌላ ፋይል እስከ 10 MB።',
+        'Suuraan MB 8, viidiyoon MB 25, faayileen biroo MB 10.',
+      );
+  String get galleryPhotoOpenFailed => t(
+        'Could not show this photo.',
+        'ይህን ፎቶ ማሳየት አልተቻለም።',
+        'Suuraa kana agarsiisuu hin dandeenye.',
+      );
+  String get galleryMediaPickFailed => t(
+        'Could not add that photo or video. Try another file.',
+        'ፎቶ ወይም ቪዲዮ መጨመር አልተቻለም። ሌላ ፋይል ይሞክሩ።',
+        'Suuraa ykn viidiyoo dabaluun hin dandeenye. Faayilii biraa yaali.',
+      );
+  String get schoolGalleryHint => t(
+        'Share class photos, videos, notes, and file attachments. Photos up to 8 MB, videos up to 25 MB, other files up to 10 MB. Parents see posts for their children.',
+        'ፎቶ፣ ቪዲዮ፣ ማስታወሻ እና ፋይሎችን ለክፍል ያጋሩ። ወላጆች የልጆቻቸውን ልጥፎች ያያሉ።',
+        'Suuraa, viidiyoo, yaadannoo fi faayilii kutaaf qoodi. Maatii maxxansa ijoollee isaanii argu.',
+      );
+  String get attachmentOpened => t(
+        'Attachment opened',
+        'attachment ተከፍቷል',
+        'Maxxansi baneera',
+      );
   String get share => t('Share', 'አጋራ');
   String get download => t('Download', 'አውርድ');
   String attachmentDownloaded(String file) =>
@@ -1098,8 +1229,14 @@ class AppStrings implements AppStringsLike {
   String get schoolAdministration =>
       t('School administration', 'የትምህርት ቤት አስተዳደር');
   String get messageSendFailed => t(
-        'Could not send message. Try again.',
-        'መልዕክት መላክ አልተቻለም። እንደገና ይሞክሩ።',
+        'Could not save the message to the school cloud. Stay signed in and send again.',
+        'መልዕክቱን ወደ የትምህርት ቤት ክላውድ ማስቀመጥ አልተቻለም። ተፈርመው ይቆዩ እና እንደገና ይላኩ።',
+        'Ergaa gara duumessa mana barumsaa kuusuu hin dandeenye. Seenaa turuu, irra deebi\'aa ergaa.',
+      );
+  String get messageParentNotInClasses => t(
+        'Could not start a new chat. Check that this parent is in your classes.',
+        'አዲስ ውይይት መጀመር አልተቻለም። ይህ ወላጅ በክፍልዎ ውስጥ መሆኑን ያረጋግጡ።',
+        'Haasaa haaraa jalqabuu hin dandeenye. Maatiin kun kutaa keessan keessa akka jiru mirkaneessaa.',
       );
   String get parentFeesComingSoonSubtitle => t(
         'Online fee payments for parents',
@@ -1225,9 +1362,9 @@ class AppStrings implements AppStringsLike {
         'Akkaawuntii yaalii kana keessaa tokkotti kaffalaa, ergaa ragaa ergaa',
       );
   String get bookPaymentSendReceiptHint => t(
-        'Send payment receipt via Telegram (@nabilmaya) or WhatsApp, then tap below.',
-        'የክፍያ ደረሰኝ በቴሌግራም (@nabilmaya) ወይም በዋትስአፕ ይላኩ፣ ከዚያ ከታች ይጫኑ።',
-        'Ragaa kaffaltii Telegram (@nabilmaya) ykn WhatsApp tiin ergaa, sana booda gadi tuqi.',
+        'Send the payment receipt by SMS or WhatsApp first. Telegram (@nabilmaya) is still available if those are not.',
+        'የክፍያ ደረሰኝ በመጀመሪያ በኤስኤምኤስ ወይም በዋትስአፕ ይላኩ። ቴሌግራም (@nabilmaya) አማራጭ ነው።',
+        'Ragaa kaffaltii duraan SMS ykn WhatsApp tiin ergaa. Telegram (@nabilmaya) filannootti jira.',
       );
   String get iSentReceipt => t(
         'I’ve sent the receipt',
@@ -1326,6 +1463,121 @@ class AppStrings implements AppStringsLike {
         'ለንባብ ብቻ — ሚናዎ ይህን ክፍል ማየት ይችላል፣ ለውጥ ማድረግ ግን አይችልም።',
         'Ilaalcha dubbisuu qofa — gaheen keessan kutaa kana ilaaluu danda\'a, '
         'garuu jijjiirraa gochuu hin danda\'u.',
+      );
+  String get cloudSyncingBanner => t(
+        'Syncing…',
+        'ወደ ክላውድ በመላክ ላይ…',
+        'Gara clouditti ergaa jira…',
+      );
+  String cloudWaitingChangesBanner(int count) => t(
+        count == 1
+            ? '1 change waiting to sync'
+            : '$count changes waiting to sync',
+        count == 1
+            ? '1 ለውጥ ወደ ክላውድ ይጠብቃል'
+            : '$count ለውጦች ወደ ክላውድ ይጠብቃሉ',
+        count == 1
+            ? 'Jijjiirraan 1 sync eegaa jira'
+            : 'Jijjiirraan $count sync eegaa jiru',
+      );
+  String get savedWaitingToSync => t(
+        'Saved on this device. Waiting to sync to cloud.',
+        'በዚህ መሣሪያ ተቀምጧል። ወደ ክላውድ መላክ ይጠብቃል።',
+        'Meeshaa kana irratti olkaa\'ame. Gara clouditti erguu eegaa jira.',
+      );
+  String get savedSyncingToCloud => t(
+        'Saved on this device. Syncing to cloud…',
+        'በዚህ መሣሪያ ተቀምጧል። ወደ ክላውድ በመላክ ላይ…',
+        'Meeshaa kana irratti olkaa\'ame. Gara clouditti ergaa jira…',
+      );
+  String get cctvTitle => t('CCTV', 'ሲሲቲቪ', 'CCTV');
+  String get cctvCameraSites => t(
+        'Camera sites',
+        'Camera sites',
+        'Bakkeewwan kaameeraa',
+      );
+  String get cctvHeaderSubtitle => t(
+        'Campus cameras stay on the school recorder. Live picture opens from the NVR — MayaBela does not store footage.',
+        'Campus cameras stay on the school recorder. Live picture opens from the NVR — MayaBela does not store footage.',
+        'Kaameerri kampaasii waraabbii mana barumsaa irratti hafe. Fakkii jireenyaa NVR irraa bana — MayaBela viidiyoo hin kuusne.',
+      );
+  String get cctvLocalOnlyBanner => t(
+        'Video stays on the school NVR. MayaBela does not upload CCTV to the school cloud.',
+        'Video stays on the school NVR. MayaBela does not upload CCTV to the school cloud.',
+        'Viidiyoon NVR mana barumsaa irratti hafe. MayaBela CCTV gara cloud mana barumsaa hin ergu.',
+      );
+  String get cctvNotInCloudChip => t(
+        'Not in MayaBela cloud',
+        'Not in MayaBela cloud',
+        'Cloud MayaBela keessa hin jiru',
+      );
+  String get cctvStaffOnly => t('Staff only', 'Staff only', 'Hojjettoota qofa');
+  String get cctvReadyToConnect => t(
+        'Ready to connect',
+        'Ready to connect',
+        'Qunnamuuf qophaa\'e',
+      );
+  String cctvSitesMapped(int count) => t(
+        '$count sites mapped',
+        '$count sites mapped',
+        'Bakkeewwan $count galmaa\'aniiru',
+      );
+  String cctvWiredOnDevice(int count) => t(
+        '$count wired on this device',
+        '$count wired on this device',
+        '$count meeshaa kana irratti hidhameera',
+      );
+  String get cctvWiredOnThisDevice => t(
+        'Wired on this device',
+        'Wired on this device',
+        'Meeshaa kana irratti hidhameera',
+      );
+  String get cctvHowConnectTitle => t(
+        'How live feed connects',
+        'How live feed connects',
+        'Fakkii jireenyaa akkamitti wal qunnamu',
+      );
+  String get cctvHowConnectBody => t(
+        'The school keeps its current cameras and NVR. MayaBela only opens the views for signed-in admin and leadership. Paste a Hik-Connect, RTSP, or HLS link from the recorder — that link stays on this device and is never synced to the school cloud.',
+        'The school keeps its current cameras and NVR. MayaBela only opens the views for signed-in admin and leadership. Paste a Hik-Connect, RTSP, or HLS link from the recorder — that link stays on this device and is never synced to the school cloud.',
+        'Mani barumsaa kaameeraa fi NVR ammaa isaa qaba. MayaBela ilaalcha bulchaa fi hoogganaa seene qofaaf bana. Hidhaa Hik-Connect, RTSP, yookiin HLS waraabbii irraa maxxansaa — hidhaan kun meeshaa kana irratti hafe, gara cloud mana barumsaa hin ergamu.',
+      );
+  String get cctvHookHik => t(
+        'Hik-Connect (school NVR)',
+        'Hik-Connect (school NVR)',
+        'Hik-Connect (NVR mana barumsaa)',
+      );
+  String get cctvHookRtsp => t('RTSP', 'RTSP', 'RTSP');
+  String get cctvHookHls => t('HLS', 'HLS', 'HLS');
+  String get cctvLinkNvrTitle => t(
+        'Link school NVR',
+        'Link school NVR',
+        'NVR mana barumsaa hidhi',
+      );
+  String get cctvLinkNvrHint => t(
+        'Paste the recorder URL. It is saved on this device only and is not uploaded to MayaBela cloud.',
+        'Paste the recorder URL. It is saved on this device only and is not uploaded to MayaBela cloud.',
+        'URL waraabbii maxxansaa. Meeshaa kana qofa irratti olkaa\'ama, gara cloud MayaBela hin ergamu.',
+      );
+  String get cctvStreamUrlLabel => t(
+        'NVR / HLS / RTSP URL',
+        'NVR / HLS / RTSP URL',
+        'URL NVR / HLS / RTSP',
+      );
+  String get cctvLinkNvrAction => t(
+        'Link NVR on this device',
+        'Link NVR on this device',
+        'NVR meeshaa kana irratti hidhi',
+      );
+  String get cctvOpenNvrLink => t(
+        'Open recorder link',
+        'Open recorder link',
+        'Hidhaa waraabbii bani',
+      );
+  String get cctvSavedLocalOnly => t(
+        'Saved on this device. CCTV is not uploaded to the school cloud.',
+        'Saved on this device. CCTV is not uploaded to the school cloud.',
+        'Meeshaa kana irratti olkaa\'ame. CCTV gara cloud mana barumsaa hin ergamne.',
       );
   String get moduleAccessDeniedTitle =>
       t('No access', 'መዳረሻ የለም', 'Seensi hin jiru');
@@ -1815,7 +2067,7 @@ class AppStrings implements AppStringsLike {
   String get dueDate => t('Due date', 'የመጨረሻ ጊዜ');
   String get homeworkPosted => t('Homework posted', 'የቤት ስራ ተለጠፈ');
   String get selectClass => t('Select class', 'ክፍል ይምረጡ');
-  String get allClasses => t('All classes', 'ሁሉም ክፍሎች');
+  String get allClasses => t('All classes', 'ሁሉም ክፍሎች', 'Kutaalee hunda');
   String get readOnly => t('Read only', 'ለማንበብ ብቻ');
   String get historyTab => t('History', 'ታሪክ');
   String get markPresent => t('Present', 'ተገኝቷል');
@@ -1956,6 +2208,35 @@ class AppStrings implements AppStringsLike {
       );
   String timetableHomeroomBy(String name) =>
       t('Homeroom: $name', 'ክፍል መምህር፡ $name');
+  String get timetableGenerateFromAllocations => t(
+        'Generate from allocations',
+        'ከምደባ ፍጠር',
+      );
+  String get timetableGenerated => t(
+        'Timetable filled from class and subject allocations',
+        'የጊዜ ሰሌዳው ከክፍልና ትምህርት ምደባ ተሞልቷል',
+      );
+  String get timetableGenerateEmpty => t(
+        'Assign subject teachers to this class first',
+        'መጀመሪያ ለዚህ ክፍል የትምህርት መምህሮችን ይመድቡ',
+      );
+  String get timetableConflictsTitle => t(
+        'Teacher conflicts',
+        'የመምህር ግጭቶች',
+      );
+  String timetableConflictLine({
+    required String teacher,
+    required String day,
+    required String time,
+    required String classA,
+    required String classB,
+  }) =>
+      t(
+        '$teacher · $day $time · $classA and $classB',
+        '$teacher · $day $time · $classA እና $classB',
+      );
+  String timetableTaughtBy(String name) =>
+      t('Teacher: $name', 'መምህር፡ $name');
   String timetableMinutes(int minutes) =>
       t('$minutes min', '$minutes ደቂቃ');
 
@@ -2551,13 +2832,17 @@ class AppStrings implements AppStringsLike {
   String get cashAtSchool =>
       t('Cash at School', 'በትምህርት ቤት ጥሬ ገንዘብ');
   String paymentSuccessVia(String method) => t('Payment successful via $method', 'ክፍያ በ $method ተሳክቷል');
+  String get feeRecordedOnThisDevice => t(
+        'Payment recorded on this device. The office still needs to confirm it.',
+        'ክፍያ በዚህ መሣሪያ ተመዝግቧል። ጽሕፈት ቤቱ ማረጋገጥ አለበት።',
+      );
   String get paymentFailed =>
       t('Payment failed. Please try again.', 'ክፍያ አልተሳካም። እንደገና ይሞክሩ።');
   String overdueItems(int count) => t('$count items', '$count ያለፉ');
 
   // —— Bus Tracking ——
   String get myRoute => t('My Route', 'መስመሬ');
-  String get googleMap => t('Google Map', 'Google ካርታ');
+  String get googleMap => t('Live map', 'ቀጥታ ካርታ');
   String get trackBusFor =>
       t('Track bus for', 'አውቶቡስን ለ');
   String driverLabel(String name) =>
@@ -3091,9 +3376,9 @@ class AppStrings implements AppStringsLike {
         'ID kana maatii waliin qoodaa yeroo hordoffii autobusii waliin wal qunnamtisan.',
       );
   String get schoolTransportIdAutoHint => t(
-        'A unique School Transport ID (e.g. DRV-1004) is created automatically when you save.',
+        'A unique School Transport ID (e.g. DRV-0001) is created automatically when you save.',
         'ልዩ የትምህርት ቤት ትራንስፖርት መለያ (ለምሳ. DRV-1004) በሚቀምጡበት ጊዜ በራስ-ሰር ይፈጠራል።',
-        'ID geejjiba mana barumsaa addaa (fkn. DRV-1004) yeroo kuusitan ofiin uumama.',
+        'ID geejjiba mana barumsaa addaa (fkn. DRV-0001) yeroo kuusitan ofiin uumama.',
       );
   String get schoolTransportIdStudentHint => t(
         'e.g. DRV-1001',
@@ -3331,6 +3616,26 @@ class AppStrings implements AppStringsLike {
   String get alreadyLinkedStudent => t('You already have a link request for this student', 'ከዚህ ተማሪ ጋር ቀድሞ ተገናኝተዋል');
   String get registrationFailed =>
       t('Registration failed', 'መዝገብ አልተሳካም');
+  String get parentCloudRegisterFailed => t(
+        'Could not save this parent account to the school cloud. Check internet and School ID, then try again.',
+        'ይህን የወላጅ መለያ ወደ ትምህርት ቤቱ ክላውድ ማስቀመጥ አልተቻለም። ኢንተርኔት እና School ID ያረጋግጡ፣ ከዚያ እንደገና ይሞክሩ።',
+        'Herrega kana gara duumessa mana barumsaa kuusuu hin dandeenye. Interneetii fi ID mana barumsaa mirkaneessi, irra deebi\'ii yaali.',
+      );
+  String parentRegisterError(String code) {
+    return switch (code) {
+      'exists' => phoneAlreadyRegistered,
+      'phone_used_by_staff' => phoneUsedByStaff,
+      'invalid_phone' => invalidPhone,
+      'invalid_email' => emailRequired,
+      'already_linked' => alreadyLinkedStudent,
+      'student_mismatch' => studentVerifyFailed,
+      'school_blocked' => schoolAccessInactive,
+      'no_children' => addAtLeastOneChild,
+      'password_too_short' => passwordTooShort,
+      'cloud_required' || 'invalid' => parentCloudRegisterFailed,
+      _ => parentCloudRegisterFailed,
+    };
+  }
   String get invalidDateFormat => t('Use date format DD/MM/YYYY', 'ቀን DD/MM/YYYY በሚሆን መልክ ያስገቡ');
   String get staffSignupClosed => t(
         'Administration staff are created by your school admin — not through public signup.',

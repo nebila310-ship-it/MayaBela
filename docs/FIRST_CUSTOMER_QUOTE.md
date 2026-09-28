@@ -11,7 +11,7 @@ To: Maya School (School ID: TB-001)
 Re: MayaBela school management — Pilot
 
 Access: Web ERP (https://mayabela.pages.dev)
-        Android APK when toolchain build is unblocked
+        Android sideload APK via build-pilot-apk.cmd
 
 Billing: 8 ETB / active student / month
          Minimum 500 ETB / month

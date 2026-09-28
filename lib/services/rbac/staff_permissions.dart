@@ -88,6 +88,10 @@ abstract final class SchoolPermissions {
   static const manageSchoolSettings = 'manage_school_settings';
   static const manageCampuses = 'manage_campuses';
 
+  /// Administration Staff digital-ops desk (devices, access help, go-live
+  /// buttons, campus systems, Friday checklist). Not Full Access.
+  static const manageDigitalOps = 'manage_digital_ops';
+
   static const Set<String> all = {
     viewStudents,
     manageStudents,
@@ -134,6 +138,7 @@ abstract final class SchoolPermissions {
     manageQaFindings,
     manageSchoolSettings,
     manageCampuses,
+    manageDigitalOps,
   };
 }
 
@@ -265,6 +270,7 @@ abstract final class StaffRoles {
         SchoolPermissions.accessSupport,
         SchoolPermissions.messageParents,
         SchoolPermissions.manageStaffAccounts,
+        SchoolPermissions.manageDigitalOps,
       }),
     ),
     StaffRole(
@@ -312,6 +318,7 @@ abstract final class StaffRoles {
         SchoolPermissions.messageParents,
         SchoolPermissions.accessSupport,
         SchoolPermissions.viewTransport,
+        SchoolPermissions.manageDigitalOps,
       }),
     ),
     StaffRole(
@@ -357,6 +364,16 @@ abstract final class StaffRoles {
         SchoolPermissions.messageParents,
         SchoolPermissions.assignTeachers,
         SchoolPermissions.manageClasses,
+        SchoolPermissions.manageStudents,
+        SchoolPermissions.manageParentLinks,
+        SchoolPermissions.manageFees,
+        SchoolPermissions.recordPayments,
+        SchoolPermissions.manageStaffAccounts,
+        SchoolPermissions.manageBuses,
+        SchoolPermissions.manageDrivers,
+        SchoolPermissions.assignStudentTransport,
+        SchoolPermissions.manageQaFindings,
+        SchoolPermissions.manageDigitalOps,
       }),
     ),
     StaffRole(
@@ -384,6 +401,7 @@ abstract final class StaffRoles {
         SchoolPermissions.manageParentLinks,
         SchoolPermissions.accessSupport,
         SchoolPermissions.messageParents,
+        SchoolPermissions.sendAnnouncements,
       }),
     ),
     StaffRole(
@@ -415,6 +433,7 @@ abstract final class StaffRoles {
         SchoolPermissions.promoteStudents,
         SchoolPermissions.messageParents,
         SchoolPermissions.accessSupport,
+        SchoolPermissions.manageDigitalOps,
       }),
     ),
     StaffRole(
@@ -514,6 +533,7 @@ abstract final class StaffRoles {
       permissions: _withBaseline({
         SchoolPermissions.viewStaff,
         SchoolPermissions.accessSupport,
+        SchoolPermissions.manageDigitalOps,
       }),
     ),
   ];

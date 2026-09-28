@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/class_timetable.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/timetable_conflict_service.dart';
 import 'package:mayabela/services/timetable_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -42,9 +44,8 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
     return switch (widget.mode) {
       TimetableViewMode.parent => _service.parentClassNames(),
       TimetableViewMode.student => _service.studentClassNames(),
-      TimetableViewMode.adminDetail => widget.initialClass != null
-          ? [widget.initialClass!]
-          : const [],
+      TimetableViewMode.adminDetail =>
+        widget.initialClass != null ? [widget.initialClass!] : const [],
       TimetableViewMode.teacher => _service.readableClassNamesForTeacher(),
     };
   }
@@ -62,7 +63,10 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
   void initState() {
     super.initState();
     SchoolContentSyncService.instance.addListener(_onCloudTimetableChanged);
-    _tabController = TabController(length: kTimetableWeekdayKeys.length, vsync: this);
+    _tabController = TabController(
+      length: kTimetableWeekdayKeys.length,
+      vsync: this,
+    );
     final options = _classOptions;
     if (options.isNotEmpty) {
       _selectedClass = widget.initialClass ?? options.first;
@@ -103,14 +107,14 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
   Future<bool> _confirmDiscardChanges() async {
     final s = AppLocale.instance.strings;
     return showAdminConfirmDialog(
-          context: context,
-          title: s.timetableDiscardChangesTitle,
-          message: s.timetableDiscardChangesMessage,
-          accent: TeacherTheme.primaryDark,
-          icon: Icons.warning_amber_rounded,
-          confirmLabel: s.timetableDiscardConfirm,
-          destructive: true,
-        );
+      context: context,
+      title: s.timetableDiscardChangesTitle,
+      message: s.timetableDiscardChangesMessage,
+      accent: TeacherTheme.primaryDark,
+      icon: Icons.warning_amber_rounded,
+      confirmLabel: s.timetableDiscardConfirm,
+      destructive: true,
+    );
   }
 
   Future<bool> _onAttemptLeave() async {
@@ -128,7 +132,10 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
   void _saveChanges() {
     final timetable = _timetable;
     final className = _selectedClass;
-    if (timetable == null || className == null || !_canEdit || !_hasUnsavedChanges) {
+    if (timetable == null ||
+        className == null ||
+        !_canEdit ||
+        !_hasUnsavedChanges) {
       return;
     }
     _service.saveTimetable(timetable);
@@ -221,8 +228,9 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
   }) async {
     final s = AppLocale.instance.strings;
     final subjectController = TextEditingController(text: slot.subject ?? '');
-    final durationController =
-        TextEditingController(text: '${slot.durationMinutes}');
+    final durationController = TextEditingController(
+      text: '${slot.durationMinutes}',
+    );
     var kind = slot.kind;
 
     final saved = await showAdminFormDialog(
@@ -270,7 +278,9 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
             TextField(
               controller: durationController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: s.timetableDurationMinutes),
+              decoration: InputDecoration(
+                labelText: s.timetableDurationMinutes,
+              ),
             ),
           ),
         ],
@@ -302,7 +312,10 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
   }
 
   Future<void> _addSlot() async {
-    final newSlot = TimetableSlot(id: _newSlotId(), kind: TimetableSlotKind.lesson);
+    final newSlot = TimetableSlot(
+      id: _newSlotId(),
+      kind: TimetableSlotKind.lesson,
+    );
     await _editSlot(
       slot: newSlot,
       onApply: (updated) {
@@ -379,8 +392,10 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
               ),
             ),
           ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 6,
+            ),
             leading: CircleAvatar(
               backgroundColor: color.withValues(alpha: 0.12),
               child: Icon(_slotIcon(slot.kind), color: color, size: 20),
@@ -390,7 +405,12 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
-              '${formatTimeOfDay(start)} – ${formatTimeOfDay(end)} · ${s.timetableMinutes(slot.durationMinutes)}',
+              [
+                '${formatTimeOfDay(start)} – ${formatTimeOfDay(end)}',
+                s.timetableMinutes(slot.durationMinutes),
+                if (slot.teacherName?.trim().isNotEmpty == true)
+                  s.timetableTaughtBy(slot.teacherName!.trim()),
+              ].join(' · '),
             ),
             trailing: _canEdit
                 ? Row(
@@ -430,8 +450,11 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            size: 20, color: Colors.red.shade400),
+                        icon: Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                          color: Colors.red.shade400,
+                        ),
                         onPressed: () {
                           final next = [...slots]..removeAt(index);
                           _updateDay(day.copyWith(slots: next));
@@ -487,7 +510,8 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
     final accent = TeacherTheme.primaryDark;
     final timetable = _timetable;
     final showClassPicker =
-        widget.mode != TimetableViewMode.adminDetail && _classOptions.length > 1;
+        widget.mode != TimetableViewMode.adminDetail &&
+        _classOptions.length > 1;
 
     return PopScope(
       canPop: !_hasUnsavedChanges || !_canEdit,
@@ -498,198 +522,230 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
         }
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFFCFDBEA),
-      appBar: AppBar(
-        backgroundColor: accent,
-        foregroundColor: Colors.white,
-        title: Text(s.timetableTitle),
-        actions: [
-          if (_canEdit && _hasUnsavedChanges)
-            TextButton.icon(
-              onPressed: _saveChanges,
-              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-              label: Text(
-                s.timetableSaveChanges,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-              ),
-            ),
-          if (_canEdit)
-            IconButton(
-              icon: const Icon(Icons.schedule_outlined),
-              tooltip: s.timetableDayStart,
-              onPressed: _editDayStart,
-            ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          onTap: _onDayTabSelected,
-          tabs: [
-            for (final key in kTimetableWeekdayKeys)
-              Tab(text: _dayLabel(key, s)),
-          ],
-        ),
-      ),
-      floatingActionButton: _canEdit
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (_hasUnsavedChanges)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: FloatingActionButton.extended(
-                      heroTag: 'timetable_save',
-                      onPressed: _saveChanges,
-                      backgroundColor: const Color(0xFF2E7D32),
-                      icon: const Icon(Icons.publish_outlined),
-                      label: Text(s.timetableSaveChanges),
-                    ),
-                  ),
-                FloatingActionButton.extended(
-                  heroTag: 'timetable_add',
-                  onPressed: _addSlot,
-                  backgroundColor: accent,
-                  icon: const Icon(Icons.add),
-                  label: Text(s.timetableAddSlot),
+        backgroundColor: const Color(0xFFCFDBEA),
+        appBar: AppBar(
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
+          title: Text(s.timetableTitle),
+          actions: [
+            if (_canEdit && _hasUnsavedChanges)
+              TextButton.icon(
+                onPressed: _saveChanges,
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
                 ),
-              ],
-            )
-          : null,
-      body: WarmScreenBody(
-        accentColor: accent,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (showClassPicker)
-              ClassPickerBar(
-                label: s.className,
-                options: _classOptions,
-                selected: _selectedClass,
-                accent: accent,
-                onSelected: _selectClass,
+                label: Text(
+                  s.timetableSaveChanges,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            if (timetable != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_canEdit && _hasUnsavedChanges)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Material(
-                          color: const Color(0xFFFFF3E0),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.edit_note,
-                                  color: Colors.orange.shade800,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    s.timetableUnsavedChanges,
-                                    style: TextStyle(
-                                      color: Colors.orange.shade900,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.35,
+            if (_canEdit)
+              IconButton(
+                icon: const Icon(Icons.auto_fix_high_outlined),
+                tooltip: s.timetableGenerateFromAllocations,
+                onPressed: () {
+                  final className = _selectedClass;
+                  if (className == null) return;
+                  final generated = TimetableService.instance
+                      .generateFromAllocations(className);
+                  if (generated == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(s.timetableGenerateEmpty)),
+                    );
+                    return;
+                  }
+                  _loadTimetable();
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(s.timetableGenerated)));
+                },
+              ),
+            if (_canEdit)
+              IconButton(
+                icon: const Icon(Icons.schedule_outlined),
+                tooltip: s.timetableDayStart,
+                onPressed: _editDayStart,
+              ),
+          ],
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            onTap: _onDayTabSelected,
+            tabs: [
+              for (final key in kTimetableWeekdayKeys)
+                Tab(text: _dayLabel(key, s)),
+            ],
+          ),
+        ),
+        floatingActionButton: _canEdit
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (_hasUnsavedChanges)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FloatingActionButton.extended(
+                        heroTag: 'timetable_save',
+                        onPressed: _saveChanges,
+                        backgroundColor: const Color(0xFF2E7D32),
+                        icon: const Icon(Icons.publish_outlined),
+                        label: Text(s.timetableSaveChanges),
+                      ),
+                    ),
+                  FloatingActionButton.extended(
+                    heroTag: 'timetable_add',
+                    onPressed: _addSlot,
+                    backgroundColor: accent,
+                    icon: const Icon(Icons.add),
+                    label: Text(s.timetableAddSlot),
+                  ),
+                ],
+              )
+            : null,
+        body: WarmScreenBody(
+          accentColor: accent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (showClassPicker)
+                ClassPickerBar(
+                  label: s.className,
+                  options: _classOptions,
+                  selected: _selectedClass,
+                  accent: accent,
+                  onSelected: _selectClass,
+                ),
+              if (timetable != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_canEdit && _hasUnsavedChanges)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Material(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.edit_note,
+                                    color: Colors.orange.shade800,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      s.timetableUnsavedChanges,
+                                      style: TextStyle(
+                                        color: Colors.orange.shade900,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.35,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    Card(
-                      elevation: 0,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(color: accent.withValues(alpha: 0.15)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              timetable.className,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: accent,
+                      Card(
+                        elevation: 0,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: accent.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                timetable.className,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: accent,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              s.timetableHomeroomBy(timetable.homeroomTeacherName),
-                              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                            ),
-                            if (_lastPublishedAt != null) ...[
                               const SizedBox(height: 4),
                               Text(
-                                s.timetableLastUpdated(
-                                  _formatUpdatedAt(_lastPublishedAt!),
+                                s.timetableHomeroomBy(
+                                  timetable.homeroomTeacherName,
                                 ),
                                 style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 12,
+                                  color: Colors.grey.shade700,
+                                  fontSize: 13,
                                 ),
                               ),
+                              if (_lastPublishedAt != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  s.timetableLastUpdated(
+                                    _formatUpdatedAt(_lastPublishedAt!),
+                                  ),
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                              if (_canEdit && !_hasUnsavedChanges)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    s.timetableSaveHint,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              if (!_canEdit)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    s.timetableReadOnlyHint,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
                             ],
-                            if (_canEdit && !_hasUnsavedChanges)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  s.timetableSaveHint,
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                            if (!_canEdit)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  s.timetableReadOnlyHint,
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              Expanded(
+                child: _buildDayView(kTimetableWeekdayKeys[_visibleDayIndex]),
               ),
-            Expanded(
-              child: _buildDayView(
-                kTimetableWeekdayKeys[_visibleDayIndex],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }
@@ -709,9 +765,8 @@ class AdminTimetablesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: SchoolContentSyncService.instance,
-      builder: (context, _) => _AdminTimetablesBody(
-        formatUpdatedAt: _formatUpdatedAt,
-      ),
+      builder: (context, _) =>
+          _AdminTimetablesBody(formatUpdatedAt: _formatUpdatedAt),
     );
   }
 }
@@ -725,6 +780,8 @@ class _AdminTimetablesBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
     final timetables = TimetableService.instance.allTimetables();
+    final conflicts = TimetableConflictService.detect(timetables);
+    final canGenerate = ModuleAccess.canManage('timetable');
     const accent = Color(0xFF4527A0);
 
     return Scaffold(
@@ -738,55 +795,122 @@ class _AdminTimetablesBody extends StatelessWidget {
         accentColor: accent,
         child: timetables.isEmpty
             ? Center(child: Text(s.timetableNoClass))
-            : ListView.separated(
+            : ListView(
                 padding: listPagePadding(context),
-                itemCount: timetables.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final item = timetables[index];
-                  return Card(
-                    elevation: 0,
-                    color: Colors.white.withValues(alpha: 0.95),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: accent.withValues(alpha: 0.12)),
-                    ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: accent.withValues(alpha: 0.12),
-                        child: Icon(Icons.calendar_view_week, color: accent),
+                children: [
+                  if (conflicts.isNotEmpty) ...[
+                    Card(
+                      color: Colors.orange.shade50,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.orange.shade200),
                       ),
-                      title: Text(
-                        item.className,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(s.timetableHomeroomBy(item.homeroomTeacherName)),
-                          Text(
-                            s.timetableLastUpdated(formatUpdatedAt(item.updatedAt)),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.timetableConflictsTitle,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            for (final conflict in conflicts.take(8))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  s.timetableConflictLine(
+                                    teacher: conflict.teacherName,
+                                    day: conflict.dayLabel,
+                                    time: conflict.timeLabel,
+                                    classA: conflict.classA,
+                                    classB: conflict.classB,
+                                  ),
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ClassTimetableScreen(
-                            mode: TimetableViewMode.adminDetail,
-                            initialClass: item.className,
-                            readOnly: true,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  for (final item in timetables) ...[
+                    Card(
+                      elevation: 0,
+                      color: Colors.white.withValues(alpha: 0.95),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: accent.withValues(alpha: 0.12)),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: accent.withValues(alpha: 0.12),
+                          child: Icon(Icons.calendar_view_week, color: accent),
+                        ),
+                        title: Text(
+                          item.className,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.timetableHomeroomBy(item.homeroomTeacherName),
+                            ),
+                            Text(
+                              s.timetableLastUpdated(
+                                formatUpdatedAt(item.updatedAt),
+                              ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (canGenerate)
+                              IconButton(
+                                tooltip: s.timetableGenerateFromAllocations,
+                                icon: const Icon(Icons.auto_fix_high_outlined),
+                                onPressed: () {
+                                  final generated = TimetableService.instance
+                                      .generateFromAllocations(item.className);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        generated == null
+                                            ? s.timetableGenerateEmpty
+                                            : s.timetableGenerated,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ClassTimetableScreen(
+                              mode: TimetableViewMode.adminDetail,
+                              initialClass: item.className,
+                              readOnly: true,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 10),
+                  ],
+                ],
               ),
       ),
     );

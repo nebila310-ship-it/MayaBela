@@ -1,8 +1,10 @@
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/rbac/module_id_aliases.dart';
+import 'package:mayabela/services/rbac/school_module_catalog.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 
-/// Per-module access rule used by the web ERP sidebar/router and the mobile
-/// staff dashboard. Module ids match the web ERP route ids.
+/// Per-module access rule used by the shared ERP sidebar/router (web and APK).
+/// Module ids match the ERP route ids.
 class ModuleRule {
   const ModuleRule({
     this.view = const [],
@@ -69,6 +71,17 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.manageCampuses],
       manage: [SchoolPermissions.manageCampuses],
     ),
+    'cctv': ModuleRule(
+      view: [
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
+      manage: [
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
+      departmental: false,
+    ),
 
     // Academics
     'academic': ModuleRule(
@@ -95,6 +108,14 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.manageStudents],
     ),
+    'admissions': ModuleRule(
+      view: [SchoolPermissions.viewStudents],
+      manage: [SchoolPermissions.manageStudents],
+    ),
+    'alumni': ModuleRule(
+      view: [SchoolPermissions.viewStudents],
+      manage: [SchoolPermissions.manageStudents],
+    ),
     'transfers': ModuleRule(
       view: [
         SchoolPermissions.createTransfers,
@@ -117,13 +138,24 @@ abstract final class ModuleAccess {
       view: [SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.manageStudents],
     ),
+    // Child-protection files. Allocation (not view_all_school_data) decides
+    // who sees this desk — QA and classroom teachers stay out.
+    'safeguarding': ModuleRule(
+      view: [],
+      manage: [],
+      departmental: false,
+    ),
     // Owner ERP accounts (VP, Student Affairs, HR itself, …).
     'teachers': ModuleRule(
       view: [
         SchoolPermissions.viewStaff,
         SchoolPermissions.assignRoles,
+        SchoolPermissions.manageStaffAccounts,
       ],
-      manage: [SchoolPermissions.assignRoles],
+      manage: [
+        SchoolPermissions.manageStaffAccounts,
+        SchoolPermissions.assignRoles,
+      ],
     ),
     // Classroom teachers directory (VP / HR / Section Director).
     'classroom_teachers': ModuleRule(
@@ -165,6 +197,13 @@ abstract final class ModuleAccess {
     'attendance': ModuleRule(
       view: [SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.manageStudents],
+    ),
+    'homework': ModuleRule(
+      view: [
+        SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewStudents,
+      ],
+      manage: [],
     ),
 
     // Resources
@@ -240,28 +279,29 @@ abstract final class ModuleAccess {
       manage: [],
       departmental: false,
     ),
+    'go_live': ModuleRule(
+      view: [
+        SchoolPermissions.viewSystemHealth,
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
+      manage: [
+        SchoolPermissions.manageSchoolSettings,
+        SchoolPermissions.manageDigitalOps,
+      ],
+      departmental: false,
+    ),
+    'digital_ops': ModuleRule(
+      view: [SchoolPermissions.manageDigitalOps],
+      manage: [SchoolPermissions.manageDigitalOps],
+      departmental: false,
+    ),
     // School owner configures role → module checkboxes.
     'staff_roles': ModuleRule(adminOnly: true),
     // Personal app settings (language, security, appearance) — shared screen,
     // available to everyone in the shell. School-level settings are gated
     // separately via manage_school_settings inside their own pages.
     'settings': ModuleRule(open: true),
-  };
-
-  /// Route ids that reuse another module's rule.
-  static const Map<String, String> _aliases = {
-    'staff': 'hr',
-    'employees': 'hr',
-    'add_teacher': 'hr',
-    'add_staff': 'teachers',
-    'grades': 'examinations',
-    'grade_approvals': 'examinations',
-    'transport_buses': 'transport',
-    'add_student': 'students',
-    'timetable': 'academic',
-    'grade_workflow_settings': 'examinations',
-    'student_portal_settings': 'school',
-    'student_password_resets': 'students',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).
@@ -302,12 +342,14 @@ abstract final class ModuleAccess {
   /// 7 Classroom teachers → VP + HR + SD. 8 Finance → Finance Manager + VP.
   /// 9 Transport & buses → VP + HR (+ Transport Head, the unit operator).
   /// 10 Attendance → VP + SD, QA read-only. 11 Parent link approvals → VP +
-  /// SD (+ homeroom teachers on their own dashboard). 12 Inventory →
-  /// Procurement + VP (+ Store Keeper, the counter side). 13–14 Library &
-  /// e-books → VP + SD (+ Librarian); teachers/students/parents use their
-  /// own dashboard tiles. 15 Announcements → all roles. 16 Events & calendar
-  /// → SD (staff side). 17 QA findings → QA + VP. 18 Messages → all roles.
-  /// 19–20 Settings & profile → everyone (open chrome).
+  /// SD + Student Affairs (+ homeroom teachers on their own dashboard).
+  /// 12 Inventory → Procurement + VP (+ Store Keeper, the counter side).
+  /// 13–14 Library & e-books → VP + SD (+ Librarian); teachers/students/parents
+  /// use their own dashboard tiles. 15 Announcements → all roles. 16 Events &
+  /// calendar → SD manages; VP + executives read-only. 17 QA findings → QA +
+  /// VP. 18 Messages → all roles. 19–20 Settings & profile → everyone (open
+  /// chrome). Homework on the ERP is office read-only; teachers still post
+  /// from teacher tiles.
   static const Map<String, ModuleRoleAllocation> roleAllocations = {
     'examinations': ModuleRoleAllocation(
       visibleTo: {
@@ -335,6 +377,30 @@ abstract final class ModuleAccess {
       },
       manageBy: {StaffRoles.registrar, StaffRoles.sectionDirector},
     ),
+    'admissions': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.registrar,
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        StaffRoles.studentAffairs,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.registrar,
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+      },
+    ),
+    'alumni': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.registrar,
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        StaffRoles.studentAffairs,
+        ..._executiveOversight,
+      },
+      manageBy: {StaffRoles.registrar},
+    ),
     'student_affairs': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.studentAffairs,
@@ -342,6 +408,18 @@ abstract final class ModuleAccess {
         ..._executiveOversight,
       },
       manageBy: {StaffRoles.studentAffairs, StaffRoles.vicePresident},
+    ),
+    'safeguarding': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.studentAffairs,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.studentAffairs,
+        StaffRoles.vicePresident,
+        StaffRoles.principal,
+      },
     ),
     'transfers': ModuleRoleAllocation(
       visibleTo: {
@@ -401,6 +479,19 @@ abstract final class ModuleAccess {
         StaffRoles.transportAdmin,
       },
     ),
+    'cctv': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.staffs,
+        StaffRoles.humanResource,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.staffs,
+        StaffRoles.generalManager,
+        StaffRoles.principal,
+      },
+    ),
     'attendance': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.vicePresident,
@@ -410,13 +501,27 @@ abstract final class ModuleAccess {
       },
       manageBy: {StaffRoles.vicePresident, StaffRoles.sectionDirector},
     ),
+    'homework': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.vicePresident,
+        StaffRoles.sectionDirector,
+        StaffRoles.qualityAssurance,
+        ..._executiveOversight,
+      },
+      manageBy: <String>{},
+    ),
     'parents': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.vicePresident,
         StaffRoles.sectionDirector,
+        StaffRoles.studentAffairs,
         ..._executiveOversight,
       },
-      manageBy: {StaffRoles.vicePresident, StaffRoles.sectionDirector},
+      manageBy: {
+        StaffRoles.vicePresident,
+        StaffRoles.sectionDirector,
+        StaffRoles.studentAffairs,
+      },
     ),
     'inventory': ModuleRoleAllocation(
       visibleTo: {
@@ -459,11 +564,19 @@ abstract final class ModuleAccess {
     ),
     'announcements': ModuleRoleAllocation(visibleTo: _everyStaffRole),
     'events': ModuleRoleAllocation(
-      visibleTo: {StaffRoles.sectionDirector, ..._executiveOversight},
+      visibleTo: {
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
       manageBy: {StaffRoles.sectionDirector},
     ),
     'calendar': ModuleRoleAllocation(
-      visibleTo: {StaffRoles.sectionDirector, ..._executiveOversight},
+      visibleTo: {
+        StaffRoles.sectionDirector,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
       manageBy: {StaffRoles.sectionDirector},
     ),
     'quality_assurance': ModuleRoleAllocation(
@@ -474,27 +587,61 @@ abstract final class ModuleAccess {
       },
       manageBy: {StaffRoles.qualityAssurance, StaffRoles.vicePresident},
     ),
-    // Oversight executives + VP/QA can open reports (export is read-only).
+    // Oversight executives + VP/QA/section directors can open reports
+    // (export is read-only). Academic directors use the Section Director role.
     'reports': ModuleRoleAllocation(
       visibleTo: {
         ..._executiveOversight,
         StaffRoles.vicePresident,
         StaffRoles.qualityAssurance,
+        StaffRoles.sectionDirector,
       },
       manageBy: <String>{},
     ),
+    // QA already holds view_audit_log; VP is leadership oversight.
     'audit_log': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.schoolBoard,
         StaffRoles.generalManager,
         StaffRoles.deputyGeneralManager,
+        StaffRoles.qualityAssurance,
+        StaffRoles.vicePresident,
       },
       manageBy: <String>{},
     ),
-    'system_health': ModuleRoleAllocation(visibleTo: <String>{}),
+    'system_health': ModuleRoleAllocation(
+      visibleTo: {StaffRoles.staffs},
+    ),
+    'go_live': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.staffs,
+        StaffRoles.vicePresident,
+        StaffRoles.registrar,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.staffs,
+        StaffRoles.principal,
+        StaffRoles.vicePresident,
+        StaffRoles.registrar,
+        StaffRoles.generalManager,
+      },
+    ),
+    'digital_ops': ModuleRoleAllocation(
+      visibleTo: {
+        StaffRoles.staffs,
+        StaffRoles.humanResource,
+        StaffRoles.vicePresident,
+        ..._executiveOversight,
+      },
+      manageBy: {
+        StaffRoles.staffs,
+        StaffRoles.principal,
+      },
+    ),
   };
 
-  static String normalize(String moduleId) => _aliases[moduleId] ?? moduleId;
+  static String normalize(String moduleId) => normalizeModuleId(moduleId);
 
   static ModuleRule? ruleFor(String moduleId) => rules[normalize(moduleId)];
 
@@ -503,6 +650,7 @@ abstract final class ModuleAccess {
 
   /// Whether the signed-in user may open [moduleId] at all.
   static bool canView(String moduleId) {
+    if (!SchoolModuleCatalog.isEnabled(moduleId)) return false;
     if (_isAdmin) return true;
     final id = normalize(moduleId);
     final rule = ruleFor(moduleId);
@@ -548,6 +696,7 @@ abstract final class ModuleAccess {
 
   /// Whether the signed-in user may perform mutations inside [moduleId].
   static bool canManage(String moduleId) {
+    if (!SchoolModuleCatalog.isEnabled(moduleId)) return false;
     if (_isAdmin) return true;
     final id = normalize(moduleId);
     final rule = ruleFor(moduleId);
@@ -564,7 +713,12 @@ abstract final class ModuleAccess {
           if (myRoles.intersection(allocation.visibleTo).isEmpty) return false;
           final managers = allocation.manageBy;
           if (managers != null) {
-            return myRoles.intersection(managers).isNotEmpty;
+            if (myRoles.intersection(managers).isEmpty) return false;
+            // Allocation-only desks (empty manage list) stay role-gated.
+            // Otherwise JWT must hold a matching write permission so RLS
+            // and the sidebar agree.
+            if (rule.manage.isEmpty) return true;
+            return AuthService.hasAnyPermission(rule.manage);
           }
           return AuthService.hasAnyPermission(rule.manage);
         }
@@ -572,6 +726,25 @@ abstract final class ModuleAccess {
     }
     if (rule.open) return true;
     return AuthService.hasAnyPermission(rule.manage);
+  }
+
+  /// True when [heldPermissions] cover every allocated manage desk for [roleKey].
+  /// Empty-manage desks (homework, reports) stay allocation-only.
+  static bool allocationJwtManageIsCovered(
+    String roleKey,
+    Set<String> heldPermissions,
+  ) {
+    final role = StaffRoles.canonicalize(roleKey);
+    for (final entry in roleAllocations.entries) {
+      final allocation = entry.value;
+      final managers = allocation.manageBy;
+      if (managers == null || !managers.contains(role)) continue;
+      if (!allocation.visibleTo.contains(role)) continue;
+      final rule = rules[entry.key];
+      if (rule == null || rule.manage.isEmpty) continue;
+      if (!rule.manage.any(heldPermissions.contains)) return false;
+    }
+    return true;
   }
 
   /// Signed-in staff roles, canonicalized (legacy keys → current catalog).

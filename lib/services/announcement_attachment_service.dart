@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:open_file/open_file.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
@@ -11,11 +12,15 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/utils/attachment_size_limit.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
 
 class AnnouncementAttachmentService {
   AnnouncementAttachmentService._();
   static final instance = AnnouncementAttachmentService._();
+
+  String? lastPickError;
+  int? lastRejectedMaxMb;
 
   Future<List<AnnouncementAttachment>> pickAndSaveFiles({
     String subdir = 'announcement_attachments',
@@ -32,8 +37,17 @@ class AnnouncementAttachmentService {
     );
     if (result == null || result.files.isEmpty) return [];
 
+    lastPickError = null;
+    lastRejectedMaxMb = null;
     final saved = <AnnouncementAttachment>[];
     for (final file in result.files) {
+      final size = file.size > 0 ? file.size : (file.bytes?.length ?? 0);
+      if (AttachmentSizeLimit.exceeds(file.name, size)) {
+        lastRejectedMaxMb = AttachmentSizeLimit.maxMbForFileName(file.name);
+        lastPickError =
+            'That file is too large. Use a file under $lastRejectedMaxMb MB.';
+        continue;
+      }
       final attachment = await _savePlatformFile(file, subdir: subdir);
       if (attachment != null) saved.add(attachment);
     }
@@ -68,7 +82,7 @@ class AnnouncementAttachmentService {
     if (local == null) return null;
 
     // Prefer a cloud URL so other roles / devices can open the file.
-    final cloud = await _uploadToCloud(
+    final cloud = await uploadSavedAttachment(
       fileName: file.name,
       bytes: bytes,
       localPath: local.filePath,
@@ -76,6 +90,9 @@ class AnnouncementAttachmentService {
       attachmentId: local.id,
     );
     if (cloud != null) {
+      if (bytes != null && bytes.isNotEmpty) {
+        WebAttachmentCache.instance.remember(cloud, bytes);
+      }
       return AnnouncementAttachment(
         id: local.id,
         fileName: local.fileName,
@@ -84,6 +101,26 @@ class AnnouncementAttachmentService {
       );
     }
     return local;
+  }
+
+  Future<String?> uploadSavedAttachment({
+    required String fileName,
+    required List<int>? bytes,
+    required String localPath,
+    required String subdir,
+    required String attachmentId,
+  }) async {
+    try {
+      return await _uploadToCloud(
+        fileName: fileName,
+        bytes: bytes,
+        localPath: localPath,
+        subdir: subdir,
+        attachmentId: attachmentId,
+      ).timeout(const Duration(seconds: 12), onTimeout: () => null);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String?> _uploadToCloud({
@@ -95,7 +132,10 @@ class AnnouncementAttachmentService {
   }) async {
     if (!SupabaseBootstrap.isInitialized) return null;
     if (SupabaseStorageBootstrap.deferred) return null;
-    final ready = await SupabaseStorageBootstrap.ensureReady();
+    final ready = await SupabaseStorageBootstrap.ensureReady().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => false,
+    );
     if (!ready) return null;
 
     try {
@@ -189,18 +229,26 @@ class AnnouncementAttachmentService {
     }
     final path = attachment.filePath;
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      await WebFileUtils.openOrDownload(
-        filePath: path,
-        fileName: attachment.fileName,
-      );
-      return OpenResult(type: ResultType.done);
+      if (kIsWeb) {
+        final opened = await WebFileUtils.openOrDownload(
+          filePath: path,
+          fileName: attachment.fileName,
+        );
+        return OpenResult(type: opened ? ResultType.done : ResultType.error);
+      }
+      final uri = Uri.tryParse(path);
+      if (uri != null &&
+          await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        return OpenResult(type: ResultType.done);
+      }
+      return OpenResult(type: ResultType.noAppToOpen);
     }
     if (kIsWeb || WebAttachmentCache.instance.isWebPath(path)) {
-      await WebFileUtils.openOrDownload(
+      final opened = await WebFileUtils.openOrDownload(
         filePath: path,
         fileName: attachment.fileName,
       );
-      return OpenResult(type: ResultType.done);
+      return OpenResult(type: opened ? ResultType.done : ResultType.error);
     }
     return OpenFile.open(path);
   }

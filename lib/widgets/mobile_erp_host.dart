@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/widgets/admin_educational_background.dart';
+
 /// Hosts a web-ERP page inside a mobile-friendly Scaffold with AppBar + back.
 ///
 /// Keeps one feature surface for web and mobile: same page widget, same
@@ -21,13 +24,17 @@ class MobileErpHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: backgroundColor ?? WebErpTheme.paperBackdrop,
       appBar: AppBar(
         title: Text(title),
         actions: actions,
       ),
-      body: SafeArea(
-        child: child,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const AdminEducationalBackground(accentColor: WebErpTheme.primary),
+          SafeArea(child: child),
+        ],
       ),
     );
   }

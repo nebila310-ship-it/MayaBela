@@ -47,6 +47,16 @@ class SchoolRoleCatalogService {
             SchoolPermissions.manageMaterialAccess,
             SchoolPermissions.accessSupport,
             SchoolPermissions.messageParents,
+            SchoolPermissions.manageStudents,
+            SchoolPermissions.manageParentLinks,
+            SchoolPermissions.manageFees,
+            SchoolPermissions.recordPayments,
+            SchoolPermissions.manageStaffAccounts,
+            SchoolPermissions.manageBuses,
+            SchoolPermissions.manageDrivers,
+            SchoolPermissions.assignStudentTransport,
+            SchoolPermissions.manageQaFindings,
+            SchoolPermissions.manageDigitalOps,
           },
         ) ||
         changed;
@@ -77,13 +87,23 @@ class SchoolRoleCatalogService {
             SchoolPermissions.viewAllGrades,
             SchoolPermissions.viewAllSchoolData,
             SchoolPermissions.approveGrades,
+            SchoolPermissions.sendAnnouncements,
           },
         ) ||
         changed;
     changed = _mergeOverrideExtras(
           catalog,
           StaffRoles.principal,
-          const {SchoolPermissions.viewAllSchoolData},
+          const {
+            SchoolPermissions.viewAllSchoolData,
+            SchoolPermissions.manageDigitalOps,
+          },
+        ) ||
+        changed;
+    changed = _mergeOverrideExtras(
+          catalog,
+          StaffRoles.generalManager,
+          const {SchoolPermissions.manageDigitalOps},
         ) ||
         changed;
     changed = _mergeOverrideExtras(
@@ -95,7 +115,10 @@ class SchoolRoleCatalogService {
     changed = _mergeOverrideExtras(
           catalog,
           StaffRoles.registrar,
-          const {SchoolPermissions.viewAllSchoolData},
+          const {
+            SchoolPermissions.viewAllSchoolData,
+            SchoolPermissions.manageDigitalOps,
+          },
         ) ||
         changed;
     changed = _mergeOverrideExtras(

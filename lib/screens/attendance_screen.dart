@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -14,11 +16,13 @@ class AttendanceScreen extends StatefulWidget {
     this.readOnly = false,
     this.childName,
     this.initialClass,
+    this.embedded = false,
   });
 
   final bool readOnly;
   final String? childName;
   final String? initialClass;
+  final bool embedded;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -124,7 +128,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
   }
 
-  void _saveAttendance() {
+  Future<void> _saveAttendance() async {
     final s = AppLocale.instance.strings;
     final conductor = AuthService.displayNameForRole(AuthService.roleTeacher);
     _data.saveAttendanceSession(
@@ -134,11 +138,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       entries: entries,
     );
     conductedBy = conductor;
+    final outcome = await CloudSaveHonesty.settle(
+      persist: SchoolContentPersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(s.attendanceSavedFor(selectedClass, conductor)),
-        backgroundColor: Colors.green,
+      CloudSaveHonesty.snackBar(
+        savedOk: s.attendanceSavedFor(selectedClass, conductor),
+        outcome: outcome,
+        strings: s,
       ),
     );
   }
@@ -177,23 +186,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ? s.childAttendanceTitle(widget.childName ?? s.parentLabel)
             : s.takeAttendance;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFCFDBEA),
-          appBar: AppBar(
-            backgroundColor: TeacherTheme.primaryDark,
-            title: Text(title),
-            actions: [
-              if (!widget.readOnly)
-                IconButton(
-                  icon: Icon(_showHistory ? Icons.edit : Icons.history),
-                  onPressed: () => setState(() => _showHistory = !_showHistory),
-                  tooltip: _showHistory
-                      ? s.takeAttendanceTooltip
-                      : s.viewHistoryTooltip,
-                ),
-            ],
-          ),
-          body: WarmScreenBody(
+        final body = WarmScreenBody(
             accentColor: TeacherTheme.primaryDark,
             child: _showHistory && !widget.readOnly
                 ? _HistoryView(
@@ -339,7 +332,55 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ),
                   ],
                 ),
+        );
+
+        if (widget.embedded) {
+          return Column(
+            children: [
+              if (!widget.readOnly)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(_showHistory ? Icons.edit : Icons.history),
+                        onPressed: () =>
+                            setState(() => _showHistory = !_showHistory),
+                        tooltip: _showHistory
+                            ? s.takeAttendanceTooltip
+                            : s.viewHistoryTooltip,
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(child: body),
+            ],
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFCFDBEA),
+          appBar: AppBar(
+            backgroundColor: TeacherTheme.primaryDark,
+            title: Text(title),
+            actions: [
+              if (!widget.readOnly)
+                IconButton(
+                  icon: Icon(_showHistory ? Icons.edit : Icons.history),
+                  onPressed: () => setState(() => _showHistory = !_showHistory),
+                  tooltip: _showHistory
+                      ? s.takeAttendanceTooltip
+                      : s.viewHistoryTooltip,
+                ),
+            ],
           ),
+          body: body,
         );
       },
     );

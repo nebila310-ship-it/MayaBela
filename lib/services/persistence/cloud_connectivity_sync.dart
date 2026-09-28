@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/cloud_idle_sync.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
@@ -129,11 +130,13 @@ class CloudConnectivityLifecycleObserver with WidgetsBindingObserver {
     if (!CloudSyncFlags.enabled) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        CloudSyncEngine.resume();
+        CloudIdleSync.onAppResumed();
         unawaited(CloudConnectivitySync.onAppResumed());
-      case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
+        CloudIdleSync.onAppHidden();
+      case AppLifecycleState.inactive:
+        // Dialogs / focus loss — pause the 5s poll only.
         CloudSyncEngine.pause();
       case AppLifecycleState.detached:
         break;

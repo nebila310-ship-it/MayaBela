@@ -3,6 +3,8 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
+    // Required on AGP 8.x (built-in Kotlin is AGP 9+). Apply before the Flutter plugin.
+    id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
 }
@@ -64,8 +66,11 @@ android {
                 // Local/dev fallback only — create android/key.properties for store builds.
                 signingConfigs.getByName("debug")
             }
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Pilot sideload APKs: R8/minify has broken school-login on device
+            // while the same credentials work on web. Keep release unminified
+            // until a Play Store signing pipeline is in place.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

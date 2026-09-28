@@ -214,11 +214,16 @@ class WebLoginWatermark extends StatelessWidget {
   }
 }
 
-/// Dark navy login card with left speech-bubble notch.
+/// Dark navy login card with optional left speech-bubble notch.
 class WebLoginCard extends StatelessWidget {
-  const WebLoginCard({super.key, required this.child});
+  const WebLoginCard({
+    super.key,
+    required this.child,
+    this.showNotch = true,
+  });
 
   final Widget child;
+  final bool showNotch;
 
   static const cardColor = Color(0xFF162236);
   static const accentOrange = Color(0xFFFFB020);
@@ -242,17 +247,18 @@ class WebLoginCard extends StatelessWidget {
           ),
           child: child,
         ),
-        Positioned(
-          left: -13,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: CustomPaint(
-              size: const Size(14, 24),
-              painter: _LeftNotchPainter(),
+        if (showNotch)
+          Positioned(
+            left: -13,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: CustomPaint(
+                size: const Size(14, 24),
+                painter: _LeftNotchPainter(),
+              ),
             ),
           ),
-        ),
       ],
     );
   }

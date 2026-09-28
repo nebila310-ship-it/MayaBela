@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -28,24 +29,31 @@ class DocumentStore {
   }
 
   Map<String, dynamic> _withSchoolScope(Map<String, dynamic> data) {
-    final existing = data['schoolId'];
+    final existing = data['schoolId'] ?? data['school_id'];
     if (existing is String && existing.trim().isNotEmpty) {
       data['schoolId'] = existing.trim().toUpperCase();
       return data;
     }
-    final sid = AuthService.activeSchoolId?.trim();
+    final sid = _resolvedSchoolId();
     if (sid == null || sid.isEmpty) return data;
-    return {...data, 'schoolId': sid.toUpperCase()};
+    return {...data, 'schoolId': sid};
   }
 
   /// Column value for RLS. Must match `jwt_school_id()` (uppercased).
   String? _schoolIdOf(Map<String, dynamic> data) {
-    final v = data['schoolId'];
+    final v = data['schoolId'] ?? data['school_id'];
     if (v is String && v.trim().isNotEmpty) return v.trim().toUpperCase();
+    return _resolvedSchoolId();
+  }
+
+  String? _resolvedSchoolId() {
     final active = AuthService.activeSchoolId?.trim();
     if (active != null && active.isNotEmpty) return active.toUpperCase();
-    final jwt = _db?.auth.currentUser?.appMetadata['schoolId'];
-    if (jwt is String && jwt.trim().isNotEmpty) return jwt.trim().toUpperCase();
+    final fromUser = AuthService.currentUser?.schoolId?.trim();
+    if (fromUser != null && fromUser.isNotEmpty) return fromUser.toUpperCase();
+    final meta = _db?.auth.currentUser?.appMetadata;
+    final fromMeta = '${meta?['schoolId'] ?? meta?['school_id'] ?? ''}'.trim();
+    if (fromMeta.isNotEmpty) return fromMeta.toUpperCase();
     return null;
   }
 
@@ -73,12 +81,53 @@ class DocumentStore {
     return int.tryParse('$v') ?? 0;
   }
 
+  static const _payloadEquality = DeepCollectionEquality();
+
   static bool _isVersioned(String collection) =>
       versionedCollections.contains(collection);
 
+  /// True when two documents match aside from sync timestamps / local ids.
+  /// Used so republishing an unchanged directory does not bump `updated_at`
+  /// and wake every other signed-in client.
+  @visibleForTesting
+  static bool sameDocumentPayload(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    return _payloadEquality.equals(_stripVolatile(a), _stripVolatile(b));
+  }
+
+  static Map<String, dynamic> _stripVolatile(Map<String, dynamic> data) {
+    final copy = Map<String, dynamic>.from(data);
+    copy.remove('_docId');
+    copy.remove('updatedAt');
+    copy.remove('updated_at');
+    copy.remove('rowVersion');
+    return copy;
+  }
+
+  /// Optimistic-concurrency reject from `app_documents_reject_stale`.
+  @visibleForTesting
+  static bool isStaleWrite(Object e) {
+    final s = '$e'.toLowerCase();
+    return s.contains('stale_write') || s.contains('updated elsewhere');
+  }
+
   static bool _isGuardError(Object e) {
     final s = '$e'.toLowerCase();
-    return s.contains('stale_write') || s.contains('write_denied');
+    return isStaleWrite(e) || s.contains('write_denied');
+  }
+
+  /// Version the server expects: the value last stored, not a local 0 default.
+  @visibleForTesting
+  static int writeRowVersion({
+    required String collection,
+    Map<String, dynamic>? existing,
+    required Map<String, dynamic> incoming,
+  }) {
+    if (!_isVersioned(collection)) return clientRowVersion(incoming);
+    if (existing != null) return clientRowVersion(existing);
+    return clientRowVersion(incoming);
   }
 
   static StateError _guardError(String collection, Object e) {
@@ -91,11 +140,6 @@ class DocumentStore {
     return StateError('Not allowed to save this $collection record.');
   }
 
-  void _stampRowVersion(String collection, Map<String, dynamic> payload) {
-    if (!_isVersioned(collection)) return;
-    payload['rowVersion'] = clientRowVersion(payload);
-  }
-
   Future<void> createOrUpdate({
     required String collection,
     required String docId,
@@ -106,15 +150,42 @@ class DocumentStore {
     scoped.remove('_docId');
 
     Map<String, dynamic> payload = scoped;
+    Map<String, dynamic>? existing;
+    var existingReadFailed = false;
     if (merge) {
-      final existing = await readDoc(collection: collection, docId: docId);
-      if (existing != null) {
-        payload = {...existing, ...scoped};
-        payload.remove('_docId');
+      try {
+        existing = await readDoc(collection: collection, docId: docId);
+        if (existing != null) {
+          payload = {...existing, ...scoped};
+          payload.remove('_docId');
+        }
+      } catch (_) {
+        existingReadFailed = true;
       }
     }
+    if (_isVersioned(collection) && existingReadFailed) {
+      await CloudOutboxService.instance.enqueue(
+        collection: collection,
+        docId: docId,
+        op: 'upsert',
+        schoolId: _schoolIdOf(payload),
+        data: payload,
+        reason: 'could not read current rowVersion',
+      );
+      return;
+    }
+    if (existing != null && sameDocumentPayload(existing, payload)) {
+      await CloudOutboxService.instance.ack(collection, docId);
+      return;
+    }
     payload['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-    _stampRowVersion(collection, payload);
+    if (_isVersioned(collection)) {
+      payload['rowVersion'] = writeRowVersion(
+        collection: collection,
+        existing: existing,
+        incoming: payload,
+      );
+    }
 
     final schoolId = _schoolIdOf(payload);
     if (schoolId == null || schoolId.isEmpty) {
@@ -133,6 +204,33 @@ class DocumentStore {
         reason: 'cloud unavailable',
       );
       return;
+    }
+
+    if (collection == 'conversations') {
+      try {
+        await db.rpc(
+          'upsert_school_conversation',
+          params: {
+            'p_doc_id': docId,
+            'p_data': payload,
+          },
+        );
+        await CloudOutboxService.instance.ack(collection, docId);
+        return;
+      } catch (e) {
+        final s = '$e'.toLowerCase();
+        final rpcMissing = s.contains('upsert_school_conversation') ||
+            s.contains('pgrst202') ||
+            s.contains('does not exist') ||
+            s.contains('42883') ||
+            s.contains('404');
+        if (!rpcMissing && _isGuardError(e)) {
+          throw _guardError(collection, e);
+        }
+        if (!rpcMissing && kDebugMode) {
+          debugPrint('upsert_school_conversation fallback: $e');
+        }
+      }
     }
 
     try {
@@ -228,12 +326,16 @@ class DocumentStore {
     required String docId,
   }) async {
     if (!available) return null;
-    final row = await db
+    var q = db
         .from('app_documents')
         .select()
         .eq('collection', collection)
-        .eq('doc_id', docId)
-        .maybeSingle();
+        .eq('doc_id', docId);
+    final sid = _resolvedSchoolId();
+    if (sid != null && sid.isNotEmpty) {
+      q = q.eq('school_id', sid);
+    }
+    final row = await q.maybeSingle();
     if (row == null) return null;
     return _rowToDoc(Map<String, dynamic>.from(row));
   }
@@ -309,12 +411,41 @@ class DocumentStore {
     }
   }
 
+  Future<({Map<String, Map<String, dynamic>> byId, bool loadFailed})>
+      _existingDocsById(String collection) async {
+    try {
+      final existing = await readBySchool(
+        collection,
+        schoolId: _resolvedSchoolId(),
+      );
+      return (
+        byId: {
+          for (final doc in existing) '${doc['_docId']}': doc,
+        },
+        loadFailed: false,
+      );
+    } catch (_) {
+      return (byId: const <String, Map<String, dynamic>>{}, loadFailed: true);
+    }
+  }
+
   Future<void> writeBatch({
     required String collection,
     required List<Map<String, dynamic>> items,
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
+    final loaded = await _existingDocsById(collection);
+    if (_isVersioned(collection) && loaded.loadFailed) {
+      if (kDebugMode) {
+        debugPrint(
+          '[DocumentStore] skip $collection writeBatch — '
+          'could not read current rowVersion',
+        );
+      }
+      return;
+    }
+    final existingById = loaded.byId;
     const chunkSize = 200;
     for (var start = 0; start < items.length; start += chunkSize) {
       final end = start + chunkSize > items.length
@@ -326,9 +457,17 @@ class DocumentStore {
         final id = docIdFor(item);
         final scoped = _withSchoolScope(Map<String, dynamic>.from(item));
         scoped.remove('_docId');
+        final existing = existingById[id];
+        if (existing != null && sameDocumentPayload(existing, scoped)) {
+          continue;
+        }
         scoped['updatedAt'] = DateTime.now().toUtc().toIso8601String();
         if (_isVersioned(collection)) {
-          scoped['rowVersion'] = clientRowVersion(scoped);
+          scoped['rowVersion'] = writeRowVersion(
+            collection: collection,
+            existing: existing,
+            incoming: scoped,
+          );
         }
         rows.add({
           'collection': collection,
@@ -338,6 +477,7 @@ class DocumentStore {
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         });
       }
+      if (rows.isEmpty) continue;
       await db.from('app_documents').upsert(
         rows,
         onConflict: 'collection,school_id,doc_id',

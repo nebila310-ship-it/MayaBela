@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/screens/notifications_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
+import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
-class DashboardScaffold extends StatelessWidget {
+class DashboardScaffold extends StatefulWidget {
   const DashboardScaffold({
     super.key,
     required this.title,
@@ -45,6 +49,9 @@ class DashboardScaffold extends StatelessWidget {
   final Widget? header;
   final bool hideWelcomeBanner;
   final bool hideBrandingBanner;
+
+  @override
+  State<DashboardScaffold> createState() => _DashboardScaffoldState();
 
   void _openAccountMenu(BuildContext context) {
     showDashboardAccountMenu(
@@ -209,6 +216,11 @@ class DashboardScaffold extends StatelessWidget {
     );
   }
 
+}
+
+class _DashboardScaffoldState extends State<DashboardScaffold> {
+  int _selectedIndex = 0;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -216,25 +228,61 @@ class DashboardScaffold extends StatelessWidget {
         AppLocale.instance,
         NotificationService.instance,
         DashboardBadgeService.instance,
+        SchoolContentSyncService.instance,
+        ConversationRealtimeSync.instance,
         UserPreferencesService.instance,
       ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
         final unread = NotificationService.instance.unreadCount();
         final compact = UserPreferencesService.instance.compactDashboard;
-        final crossAxis = compact ? 3 : 2;
-        final themeColor = gradientColors.first;
-        final sectionList = sections;
-        final cardList = cards;
+        final width = MediaQuery.sizeOf(context).width;
+        final crossAxis = compact && width >= 520 ? 3 : 2;
+        final themeColor = widget.gradientColors.first;
+        final sectionList = widget.sections;
+        final cardList = widget.cards;
+        final destinations = classroomNavDestinations(
+          roleKey: widget.roleKey,
+          s: s,
+        );
 
         return Scaffold(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? Theme.of(context).colorScheme.surface
               : const Color(0xFFCFDBEA),
+          drawer: ClassroomSidebar(
+            title: widget.title,
+            accent: themeColor,
+            destinations: destinations,
+            selectedIndex: _selectedIndex.clamp(0, destinations.length - 1),
+            collapsed: false,
+            inDrawer: true,
+            onToggle: () => Navigator.of(context).maybePop(),
+            onSelect: (index) {
+              setState(() => _selectedIndex = index);
+              selectClassroomDestination(
+                index: index,
+                roleKey: widget.roleKey,
+                destinations: destinations,
+                onIndex: (i) => _selectedIndex = i,
+              );
+              Navigator.of(context).maybePop();
+            },
+          ),
           appBar: AppBar(
             backgroundColor: themeColor,
             foregroundColor: Colors.white,
-            title: Text(title),
+            leading: Builder(
+              builder: (context) {
+                return IconButton(
+                  key: const Key('classroom-open-menu'),
+                  tooltip: s.openClassroomMenu,
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  icon: const Icon(Icons.menu_rounded),
+                );
+              },
+            ),
+            title: Text(widget.title),
             actions: [
               IconButton(
                 onPressed: () {
@@ -252,7 +300,7 @@ class DashboardScaffold extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => _openAccountMenu(context),
+                onPressed: () => widget._openAccountMenu(context),
                 tooltip: s.profile,
                 icon: CircleAvatar(
                   radius: 16,
@@ -266,52 +314,69 @@ class DashboardScaffold extends StatelessWidget {
               ),
             ],
           ),
-          body: Stack(
-            fit: StackFit.expand,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AdminEducationalBackground(accentColor: themeColor),
-              SingleChildScrollView(
-                padding: listPagePadding(context),
-                child: Column(
+              const WebCloudSyncBar(horizontalPadding: 16),
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    if (!hideBrandingBanner &&
-                        AuthService.activeSchoolId != null &&
-                        SchoolRegistryService.instance
-                                .lookup(AuthService.activeSchoolId) !=
-                            null)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: themeColor.withValues(alpha: 0.12),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: themeColor.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                    AdminEducationalBackground(accentColor: themeColor),
+                    SingleChildScrollView(
+                      padding: listPagePadding(context),
+                      child: Column(
+                        children: [
+                          if (!widget.hideBrandingBanner &&
+                              AuthService.activeSchoolId != null &&
+                              SchoolRegistryService.instance
+                                      .lookup(AuthService.activeSchoolId) !=
+                                  null)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: themeColor.withValues(alpha: 0.12),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: themeColor.withValues(alpha: 0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: SchoolBrandingHeader(
+                                schoolId: AuthService.activeSchoolId,
+                                compact: true,
+                              ),
                             ),
+                          if (!widget.hideWelcomeBanner)
+                            widget._buildWelcomeBanner(s),
+                          if (widget.header != null) ...[
+                            const SizedBox(height: 16),
+                            widget.header!,
                           ],
-                        ),
-                        child: SchoolBrandingHeader(
-                          schoolId: AuthService.activeSchoolId,
-                          compact: true,
-                        ),
+                          const SizedBox(height: 20),
+                          if (sectionList != null && sectionList.isNotEmpty)
+                            widget._buildSectionedCards(
+                              sectionList,
+                              crossAxis,
+                              compact,
+                            )
+                          else
+                            widget._buildCardGrid(
+                              cardList,
+                              crossAxis,
+                              compact,
+                            ),
+                        ],
                       ),
-                    if (!hideWelcomeBanner) _buildWelcomeBanner(s),
-                    if (header != null) ...[
-                      const SizedBox(height: 16),
-                      header!,
-                    ],
-                    const SizedBox(height: 20),
-                    if (sectionList != null && sectionList.isNotEmpty)
-                      _buildSectionedCards(sectionList, crossAxis, compact)
-                    else
-                      _buildCardGrid(cardList, crossAxis, compact),
+                    ),
                   ],
                 ),
               ),

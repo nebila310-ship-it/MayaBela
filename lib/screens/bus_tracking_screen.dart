@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/bus_route.dart';
 import 'package:mayabela/services/bus_live_location_service.dart';
@@ -34,7 +35,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   Timer? _timer;
   late String _selectedChild;
   bool _driverSharingStarted = false;
-  GoogleMapController? _mapController;
+  MapController? _mapController;
   LatLng? _lastCameraTarget;
 
   @override
@@ -90,7 +91,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -102,7 +102,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       if (latDiff < 0.00005 && lngDiff < 0.00005) return;
     }
     _lastCameraTarget = target;
-    _mapController!.animateCamera(CameraUpdate.newLatLng(target));
+    _mapController!.move(target, _mapController!.camera.zoom);
   }
 
   ChildBusAssignment? get _assignment {
@@ -177,8 +177,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                       _maybeMoveCamera(liveLatLng);
                     }
                   },
-                  onLivePosition:
-                      liveLatLng != null ? _maybeMoveCamera : null,
                 ),
                 const SizedBox(height: 16),
                 _routeMap(route, s),

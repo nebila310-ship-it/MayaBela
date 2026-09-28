@@ -386,6 +386,7 @@ Future<void> showAdminSuccessDialog({
   required IconData icon,
   required List<AdminDialogSummaryItem> items,
   String? footnote,
+  Widget? extra,
   List<AdminDialogAction>? actions,
   bool barrierDismissible = true,
 }) {
@@ -434,6 +435,10 @@ Future<void> showAdminSuccessDialog({
               value: item.value,
               color: accent,
             ),
+          if (extra != null) ...[
+            const SizedBox(height: 12),
+            extra,
+          ],
           if (footnote != null && footnote.isNotEmpty) ...[
             const SizedBox(height: 4),
             Container(

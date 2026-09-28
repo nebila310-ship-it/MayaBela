@@ -1,5 +1,6 @@
-import 'package:mayabela/models/grade_workflow.dart';
+import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/persistence/grade_audit_persistence_service.dart';
 
 
@@ -21,6 +22,13 @@ class GradeAuditService {
   int _nextId = 1;
 
   bool _loaded = false;
+
+  @visibleForTesting
+  static void resetForTests() {
+    instance._entries.clear();
+    instance._nextId = 1;
+    instance._loaded = true;
+  }
 
 
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
@@ -21,6 +22,7 @@ class StudentDashboardSummary extends StatelessWidget {
       listenable: Listenable.merge([
         StudentPortalSyncService.instance,
         NotificationService.instance,
+        SchoolContentSyncService.instance,
       ]),
       builder: (context, _) {
         final profile = StudentProfileService.profileForCurrentUser();

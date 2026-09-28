@@ -10,9 +10,31 @@ import 'package:mayabela/services/cloud/transport_realtime_sync.dart';
 /// Optional realtime acceleration — [CloudSyncEngine] remains the 5s source of truth.
 abstract final class RealtimeMessagingBootstrap {
   static Future<void> onSessionStarted() async {
+    if (AuthService.currentUser == null) return;
+    final generation = AuthService.sessionGeneration;
     await FcmService.instance.registerForCurrentUser();
+    if (!AuthService.isLiveGeneration(generation)) return;
     if (!CloudSyncFlags.enabled) return;
+    _startLiveChannels();
+  }
 
+  /// Drop live sockets so an idle / hidden tab stops billing PostgREST.
+  static void pauseLive() {
+    ConversationRealtimeSync.instance.stop();
+    StaffContentRealtimeSync.stop();
+    StudentRealtimeSync.stop();
+    TransportRealtimeSync.stop();
+    InventoryRealtimeSync.stop();
+  }
+
+  /// Re-open role channels after the user comes back. Does not re-register FCM.
+  static void resumeLive() {
+    if (AuthService.currentUser == null) return;
+    if (!CloudSyncFlags.enabled) return;
+    _startLiveChannels();
+  }
+
+  static void _startLiveChannels() {
     final role = AuthService.currentUser?.roleKey;
     ConversationRealtimeSync.instance.start();
     StaffContentRealtimeSync.start();
@@ -20,10 +42,8 @@ abstract final class RealtimeMessagingBootstrap {
     if (role == AuthService.roleStudent) {
       StudentRealtimeSync.start();
     }
-    if (role == AuthService.roleDriver ||
-        role == AuthService.roleParent ||
-        role == AuthService.roleAdmin ||
-        role == AuthService.roleTeacher) {
+    // Messages / GPS / notifications / passenger status apply locally.
+    if (role != null) {
       TransportRealtimeSync.start();
     }
     if (role == AuthService.roleAdmin || role == AuthService.roleTeacher) {
@@ -32,11 +52,13 @@ abstract final class RealtimeMessagingBootstrap {
   }
 
   static Future<void> onSessionEnded() async {
+    final generation = AuthService.sessionGeneration;
     ConversationRealtimeSync.instance.stop();
     StaffContentRealtimeSync.stop();
     StudentRealtimeSync.stop();
     TransportRealtimeSync.stop();
     InventoryRealtimeSync.stop();
+    if (!AuthService.isCurrentGeneration(generation)) return;
     await FcmService.instance.clearTokenForCurrentUser();
   }
 

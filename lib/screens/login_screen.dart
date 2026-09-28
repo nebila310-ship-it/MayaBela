@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/utils/critical_bootstrap_gate.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/app_lock_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
-import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
+import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/persistence/cloud_app_store.dart';
+import 'package:mayabela/widgets/mfa_challenge_dialog.dart';
 import 'package:mayabela/services/cloud_sync_progress_service.dart';
 import 'package:mayabela/services/session_prefs_service.dart';
 import 'package:mayabela/theme/login_role_theme.dart';
@@ -18,6 +21,7 @@ import 'package:mayabela/utils/auth_navigation.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/email_utils.dart';
+import 'package:mayabela/screens/public_admission_apply_screen.dart';
 import 'package:mayabela/screens/enrollment_screens.dart';
 import 'package:mayabela/screens/platform_console_screen.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
@@ -30,6 +34,7 @@ import 'package:mayabela/widgets/ethiopian_phone_field.dart';
 import 'package:mayabela/widgets/dom_backed_text_field.dart';
 import 'package:mayabela/web_erp/login/web_login_shell.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/app_version.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -187,6 +192,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _onLocaleChanged() => setState(() {});
 
+  String _apkCloudLoginError() {
+    final detail = SupabaseBootstrap.lastInitError?.trim();
+    if (detail != null && detail.isNotEmpty) {
+      return 'Cloud login failed on this APK. $detail';
+    }
+    return 'Cloud login failed on this APK. Check mobile data/Wi-Fi, '
+        'uninstall the old MayaBela app, then install App $kMayaBelaVersion.';
+  }
+
   Future<void> login() async {
     setState(() {
       message = '';
@@ -222,12 +236,18 @@ class _LoginScreenState extends State<LoginScreen> {
           'account_inactive' => 'This student account is not active. Contact your school admin.',
           'portal_disabled' => 'Student portal is disabled for this school.',
           'cloud_required' =>
-            'Cloud login could not connect to Supabase. Check your internet and try again. If it keeps failing, the school-login function may be down.',
+            kIsWeb
+                ? 'Cloud login could not connect to Supabase. Check your internet and try again. If it keeps failing, the school-login function may be down.'
+                : _apkCloudLoginError(),
           'password_too_short' => s.passwordTooShort,
           'rate_limited' =>
             'Too many login attempts. Please wait a few minutes and try again.',
           'school_inactive' => s.schoolAccessMessage('school_inactive'),
-          _ => s.invalidCredentials,
+          _ => (!kIsWeb &&
+                  (AuthService.lastCloudLoginDetail?.trim().isNotEmpty ??
+                      false))
+              ? AuthService.lastCloudLoginDetail!.trim()
+              : s.invalidCredentials,
         };
       });
       return;
@@ -240,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _loggingIn = false;
         message = s.schoolAccessMessage(schoolError);
       });
-      AuthService.clearSession();
+      await AuthService.clearSession();
       return;
     }
 
@@ -252,8 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message =
             'This account is Administration Staff. Sign in as Administration Staff.';
       });
-      AuthService.clearSession();
-      unawaited(SchoolAuthCloudService.instance.signOutCloud());
+      await AuthService.clearSession();
       return;
     }
     if (selectedRole == AuthService.roleStaff &&
@@ -263,8 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message =
             'This account is a classroom Teacher. Sign in as Teacher.';
       });
-      AuthService.clearSession();
-      unawaited(SchoolAuthCloudService.instance.signOutCloud());
+      await AuthService.clearSession();
       return;
     }
 
@@ -282,9 +300,39 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
 
+    await GoliveService.instance.ensureLoaded();
+    try {
+      await CloudAppStore.instance
+          .pullGoLive()
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {}
+    final mfaUser = AuthService.currentUser?.username ?? _loginIdentifierValue();
+    if (GoliveService.instance.isEnabledFor(mfaUser)) {
+      if (!mounted) {
+        await AuthService.clearSession();
+        return;
+      }
+      final passed = await showMfaChallengeDialog(context, username: mfaUser);
+      if (!passed) {
+        await AuthService.clearSession();
+        if (!mounted) return;
+        setState(() {
+          _loggingIn = false;
+          message = 'Authenticator code required.';
+        });
+        return;
+      }
+    }
+
     final savedIdentifier = _loginIdentifierValue();
 
     AppLockService.instance.handleLoginSuccess();
+
+    try {
+      await SessionPrefsService.instance
+          .saveActiveSession()
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {}
 
     if (!mounted) return;
 
@@ -486,7 +534,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  static const _webFieldTextStyle = TextStyle(color: Colors.white);
+  static const _webFieldTextStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 16,
+  );
 
   Widget _buildWebRoleTile(String roleKey) {
     final selected = selectedRole == roleKey;
@@ -712,6 +763,66 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _fillStudentDemo() {
+    setState(() {
+      selectedRole = AuthService.roleStudent;
+      schoolId.text = AuthService.demoStudentSchoolId;
+      username.text = AuthService.demoStudentUsername;
+      password.text = AuthService.demoStudentPassword;
+      _schoolIdEditing = false;
+    });
+  }
+
+  void _fillTransportDemo() {
+    setState(() {
+      selectedRole = AuthService.roleDriver;
+      schoolId.text = AuthService.demoDriverSchoolId;
+      username.text = '911667788';
+      password.text = AuthService.demoDriverPassword;
+      _schoolIdEditing = false;
+    });
+  }
+
+  Widget _buildDemoBanner({
+    required String hint,
+    required String actionLabel,
+    required Key actionKey,
+    required VoidCallback onFill,
+  }) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                hint,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              key: actionKey,
+              onPressed: onFill,
+              child: Text(
+                actionLabel,
+                style: const TextStyle(
+                  color: Color(0xFFFFB74D),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBackgroundDecor(LoginRoleTheme theme) {
     return Stack(
       children: [
@@ -768,7 +879,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
-              fontSize: 14,
+              fontSize: 16,
             ),
             iconEnabledColor: Colors.white70,
             decoration: _fieldDecoration(
@@ -814,6 +925,24 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         const SizedBox(height: 20),
         _buildSchoolIdField(),
+        if (selectedRole == AuthService.roleStudent) ...[
+          const SizedBox(height: 10),
+          _buildDemoBanner(
+            hint: s.studentDemoHint,
+            actionLabel: s.useStudentDemo,
+            actionKey: const Key('login-student-demo'),
+            onFill: _fillStudentDemo,
+          ),
+        ],
+        if (selectedRole == AuthService.roleDriver) ...[
+          const SizedBox(height: 10),
+          _buildDemoBanner(
+            hint: s.transportDemoHint,
+            actionLabel: s.useTransportDemo,
+            actionKey: const Key('login-transport-demo'),
+            onFill: _fillTransportDemo,
+          ),
+        ],
         const SizedBox(height: 12),
         DomBackedTextField(
           controller: username,
@@ -1003,7 +1132,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final compact = WebViewport.isNarrow(context);
     final phone = WebViewport.isCompactPhone(context);
-    final cardMaxWidth = width < 480 ? width - 24 : 440.0;
+    final cardMaxWidth = phone
+        ? width - 32
+        : width < 480
+            ? width - 24
+            : 440.0;
 
     final loginCard = ConstrainedBox(
       constraints: BoxConstraints(
@@ -1012,10 +1145,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          vertical: compact ? 12 : 28,
-          horizontal: compact ? 12 : 20,
+          vertical: phone ? 0 : (compact ? 12 : 28),
+          horizontal: phone ? 0 : (compact ? 12 : 20),
         ),
         child: WebLoginCard(
+          showNotch: !phone,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               compact ? 20 : 28,
@@ -1051,13 +1185,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(width: 14),
-                        const Text(
-                          'SIGN IN',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2,
+                        const Expanded(
+                          child: Text(
+                            'SIGN IN',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                            ),
                           ),
                         ),
                       ],
@@ -1076,25 +1214,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   _buildLoginFormFields(_theme),
                   const SizedBox(height: 16),
                   Center(
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => _forgotPasswordScreen(),
+                    child: Column(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const PublicAdmissionApplyScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Apply for admission',
+                            style: TextStyle(color: Colors.white70),
                           ),
-                        );
-                      },
-                      child: Text(
-                        s.forgotPassword,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => _forgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            s.forgotPassword,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'v1.0.3',
+                      'v1.0.4-bus',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.35),
                         fontSize: 11,
@@ -1115,51 +1272,97 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           const WebLoginBackground(),
           if (!phone) const WebLoginWatermark(),
-          SafeArea(
-            child: compact
-                ? SingleChildScrollView(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: loginCard,
-                    ),
-                  )
-                : Row(
-                    children: [
-                      const Spacer(flex: 3),
-                      loginCard,
-                      const Spacer(flex: 2),
-                    ],
-                  ),
-          ),
-          Positioned(
-            top: 16,
-            right: compact ? 12 : 24,
-            child: SafeArea(child: _buildTopBar(_theme)),
-          ),
-          Positioned(
-            bottom: compact ? 12 : 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ParentSignUpScreen(),
+          if (phone)
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 28,
+                      ),
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: _buildTopBar(_theme),
+                          ),
+                          const SizedBox(height: 12),
+                          loginCard,
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ParentSignUpScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              s.registerAsParent,
+                              style: const TextStyle(
+                                color: Color(0xFF0D47A1),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
-                child: Text(
-                  s.registerAsParent,
-                  style: const TextStyle(
-                    color: Color(0xFF0D47A1),
-                    fontWeight: FontWeight.w600,
+              ),
+            )
+          else
+            SafeArea(
+              child: compact
+                  ? SingleChildScrollView(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: loginCard,
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        const Spacer(flex: 3),
+                        loginCard,
+                        const Spacer(flex: 2),
+                      ],
+                    ),
+            ),
+          if (!phone) ...[
+            Positioned(
+              top: 16,
+              right: compact ? 12 : 24,
+              child: SafeArea(child: _buildTopBar(_theme)),
+            ),
+            Positioned(
+              bottom: compact ? 12 : 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ParentSignUpScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    s.registerAsParent,
+                    style: const TextStyle(
+                      color: Color(0xFF0D47A1),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1213,7 +1416,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: _buildTopBar(theme),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+                    Text(
+                      'App $kMayaBelaVersion',
+                      key: const ValueKey('apk-app-version'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: theme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     LoginBrandHeader(
                       schoolId: schoolId.text,
                       onSecretTap: _onLogoTap,
@@ -1328,6 +1542,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
+                            builder: (_) => const PublicAdmissionApplyScreen(
+                              initialSchoolId: null,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Apply for admission',
+                        style: TextStyle(
+                          color: theme.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
                             builder: (_) => _forgotPasswordScreen(),
                           ),
                         );
@@ -1358,6 +1591,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w600,
                         color: theme.onPrimary.withValues(alpha: 0.92),
                         height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'App $kMayaBelaVersion',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.onPrimary.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 12),

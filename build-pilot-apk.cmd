@@ -16,8 +16,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM Prefer .env.local Supabase defines when present (same pattern as web deploy).
-set "DART_DEFINES="
+REM Same live Supabase project as https://mayabela.pages.dev
+set "SUPABASE_URL=https://hwkiihonthueadbhcvfi.supabase.co"
+set "SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3a2lpaG9udGh1ZWFkYmhjdmZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNjI4MzcsImV4cCI6MjEwMDczODgzN30.eD6RjusSvYm-3vm4QDiiRtEAihmFvznf5ZkeumJDGdY"
 if exist ".env.local" (
   for /f "usebackq tokens=1,* delims==" %%A in (".env.local") do (
     if /i "%%A"=="SUPABASE_URL" set "SUPABASE_URL=%%B"
@@ -25,18 +26,15 @@ if exist ".env.local" (
   )
 )
 
-if defined SUPABASE_URL if defined SUPABASE_ANON_KEY (
-  echo Using SUPABASE_URL from environment / .env.local
-  set "DART_DEFINES=--dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY% --dart-define=SUPABASE_CONFIGURED=true"
-) else (
-  echo Using compiled-in supabase_options.dart fallbacks
-)
+echo Using SUPABASE_URL from APK build (same cloud as the web app)
+set "DART_DEFINES=--dart-define=SUPABASE_CONFIGURED=true --dart-define=SUPABASE_URL=%SUPABASE_URL% --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY% --dart-define=MAYABELA_VERSION=1.0.6+7"
 
 echo.
 echo === flutter build apk --release ===
-echo NOTE: If this fails on Flutter 3.44 + AGP 9 (afterEvaluate),
-echo       pilot the school on https://mayabela.pages.dev instead.
-echo       See docs\SELL_PACKAGE.md section 4.
+echo Android is pinned to AGP 8.12 / Gradle 8.14.3 (see android\settings.gradle.kts).
+echo Do not pass empty SUPABASE dart-defines — that wipes compiled login defaults.
+echo If assembleRelease fails, use web: https://mayabela.pages.dev
+echo See docs\SELL_PACKAGE.md section 4.
 echo.
 REM Prefer real user Gradle cache (Cursor may inject a sandbox GRADLE_USER_HOME).
 if not defined GRADLE_USER_HOME set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"

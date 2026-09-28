@@ -10,7 +10,11 @@ import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 
-/// Live listeners for teacher, admin, and parent school content.
+/// Live listeners for time-sensitive staff queues only.
+///
+/// Homework, grades, LIA desks, and the rest ride the 5s/30s poll. Watching
+/// ~40 `app_documents` collections and then downloading the whole school on
+/// any change is what melted the free-plan PostgREST CPU.
 abstract final class StaffContentRealtimeSync {
   static final List<StreamSubscription<dynamic>> _subscriptions = [];
   static Timer? _debounce;
@@ -28,6 +32,16 @@ abstract final class StaffContentRealtimeSync {
     AuthService.roleParent,
   };
 
+  /// Parent-link approvals need to land while a teacher is on the queue.
+  /// Messages, notifications, and GPS have their own listeners.
+  static const _liveCollections = [
+    AppCollections.parentLinkRequests,
+  ];
+
+  @visibleForTesting
+  static List<String> get watchedCollections =>
+      List<String>.unmodifiable(_liveCollections);
+
   static void start() {
     if (!SupabaseBootstrap.isInitialized) return;
     final role = AuthService.currentUser?.roleKey;
@@ -35,24 +49,7 @@ abstract final class StaffContentRealtimeSync {
     if (_active) return;
     _active = true;
 
-    final collections = <String>[
-      AppCollections.homework,
-      AppCollections.learningMaterials,
-      AppCollections.gradeReports,
-      AppCollections.schoolRegistry,
-      AppCollections.gradeAuditLog,
-      AppCollections.classTimetables,
-      AppCollections.appNotifications,
-      AppCollections.announcements,
-      AppCollections.calendarEvents,
-      AppCollections.dailyActivities,
-      AppCollections.attendanceSessions,
-      AppCollections.conversations,
-      AppCollections.fees,
-      AppCollections.galleryPosts,
-    ];
-
-    for (final collection in collections) {
+    for (final collection in _liveCollections) {
       _subscriptions.add(
         _crud.watchAll(collection).listen(_onCloudChange, onError: _logError),
       );
@@ -73,24 +70,20 @@ abstract final class StaffContentRealtimeSync {
   static void _onCloudChange(dynamic _) {
     if (_deferRefresh) return;
     _debounce?.cancel();
+    final generation = AuthService.sessionGeneration;
     _debounce = Timer(const Duration(milliseconds: 900), () {
-      unawaited(_refreshStaffData());
+      if (!AuthService.isLiveGeneration(generation)) return;
+      unawaited(_refreshLiveQueue());
     });
   }
 
-  static Future<void> _refreshStaffData() async {
+  static Future<void> _refreshLiveQueue() async {
+    final generation = AuthService.sessionGeneration;
     final role = AuthService.currentUser?.roleKey;
     if (role == null || !_staffRoles.contains(role)) return;
     try {
-      final store = CloudAppStore.instance;
-      switch (role) {
-        case AuthService.roleTeacher:
-          await store.pullForTeacherSession();
-        case AuthService.roleAdmin:
-          await store.pullForAdminSession();
-        case AuthService.roleParent:
-          await store.pullForParentSession();
-      }
+      await CloudAppStore.instance.pullMappedCollections(_liveCollections);
+      if (!AuthService.isLiveGeneration(generation)) return;
       SchoolContentSyncService.instance.markDataChanged();
       NotificationService.instance.refreshBadges();
     } catch (error) {

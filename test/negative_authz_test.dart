@@ -73,4 +73,32 @@ void main() {
     expect(ModuleAccess.canManage('examinations'), isFalse);
     expect(ModuleAccess.canManage('finance'), isFalse);
   });
+
+  test('classroom teacher cannot open the Administration Staff digital-ops desk', () {
+    signIn(roleKey: AuthService.roleTeacher, staffRoles: const []);
+    expect(ModuleAccess.canView('digital_ops'), isFalse);
+    expect(ModuleAccess.canManage('digital_ops'), isFalse);
+    expect(ModuleAccess.canView('go_live'), isFalse);
+    expect(ModuleAccess.canView('cctv'), isFalse);
+  });
+
+  test('Staff role runs digital ops but not finance, exams, or parent approve', () {
+    signIn(
+      roleKey: AuthService.roleTeacher,
+      staffRoles: const [StaffRoles.staffs],
+    );
+    expect(ModuleAccess.canView('digital_ops'), isTrue);
+    expect(ModuleAccess.canManage('digital_ops'), isTrue);
+    expect(ModuleAccess.canView('go_live'), isTrue);
+    expect(ModuleAccess.canManage('go_live'), isTrue);
+    expect(ModuleAccess.canView('cctv'), isTrue);
+    expect(ModuleAccess.canView('system_health'), isTrue);
+    expect(ModuleAccess.canManage('finance'), isFalse);
+    expect(ModuleAccess.canManage('examinations'), isFalse);
+    expect(ModuleAccess.canManage('parents'), isFalse);
+    expect(
+      AuthService.hasPermission(SchoolPermissions.manageParentLinks),
+      isFalse,
+    );
+  });
 }

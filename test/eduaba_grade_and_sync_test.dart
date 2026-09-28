@@ -35,8 +35,8 @@ void main() {
       className: 'Grade 7A',
       dateOfBirth: DateTime(2012, 2, 2),
     );
-    expect(first.studentId, matches(RegExp(r'^STU-\d{4,6}$')));
-    expect(second.studentId, matches(RegExp(r'^STU-\d{4,6}$')));
+    expect(first.studentId, matches(RegExp(r'^STU-\d{4}$')));
+    expect(second.studentId, matches(RegExp(r'^STU-\d{4}$')));
     final n1 = int.parse(first.studentId.substring(4));
     final n2 = int.parse(second.studentId.substring(4));
     expect(n2, n1 + 1);
@@ -70,9 +70,9 @@ void main() {
     final hr = add('hr1', const [StaffRoles.humanResource]);
     final teacher = add('tch1', const []);
 
-    expect(qa1.teacherId, 'QA-1001');
-    expect(qa2.teacherId, 'QA-1002');
-    expect(hr.teacherId, 'HR-1001');
+    expect(qa1.teacherId, 'QA-0001');
+    expect(qa2.teacherId, 'QA-0002');
+    expect(hr.teacherId, 'HR-0001');
     expect(qa1.staffRoles, contains(StaffRoles.qualityAssurance));
     // Demo teachers occupy TCH-1001..1004, so classroom staff continue there.
     expect(teacher.teacherId, matches(RegExp(r'^TCH-\d{4}$')));
@@ -218,6 +218,46 @@ void main() {
       contains(SchoolPermissions.manageQaFindings),
     );
     expect(CloudSyncEngine.standardPriority, contains('qa_findings'));
+    expect(
+      CloudSyncEngine.standardPriority,
+      contains('admission_applications'),
+    );
+    expect(
+      CloudSyncEngine.standardPriority,
+      containsAll(['exam_questions', 'exam_papers', 'exam_attempts']),
+    );
+    expect(CloudSyncEngine.standardPriority, contains('lesson_plans'));
+    expect(
+      CloudSyncEngine.standardPriority,
+      containsAll([
+        'curriculum_units',
+        'curriculum_feedback',
+        'lesson_plan_reviews',
+        'teacher_evaluations',
+        'academic_meetings',
+        'health_records',
+        'counseling_records',
+        'iep_plans',
+        'college_guidance',
+        'support_requests',
+        'safeguarding_cases',
+        'extracurricular_clubs',
+        'club_memberships',
+        'scholarships',
+        'grievances',
+        'internships',
+        'dosa_meetings',
+        'teaching_observations',
+        'academic_audits',
+        'qa_surveys',
+        'qa_survey_responses',
+        'action_research',
+        'mfa_enrollments',
+        'privacy_consents',
+        'data_rights_requests',
+        'school_backups',
+      ]),
+    );
   });
 
   test('QaFinding serializes round-trip with plan + metrics fields', () {

@@ -9,6 +9,7 @@ import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/material_access_service.dart';
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/persistence/auth_persistence_service.dart';
+import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
@@ -75,6 +76,15 @@ class AuthService {
   static const demoPassword = '1234';
   /// Legacy shared temp — prefer [generateTempPassword] for new accounts.
   static const tempPassword = 'Welcome12!';
+  /// Public sandbox student login (local seed only, never pushed to cloud).
+  static const demoStudentUsername = 'demo.student';
+  static const demoStudentSchoolId = 'TB-001';
+  static const demoStudentPassword = tempPassword;
+  /// Public sandbox transport-driver login (local seed only).
+  static const demoDriverUsername = 'demo.driver';
+  static const demoDriverPhone = '0911667788';
+  static const demoDriverSchoolId = demoStudentSchoolId;
+  static const demoDriverPassword = tempPassword;
   static const minPasswordLength = 10;
 
   static String? _requireEmail(String? email) {
@@ -103,6 +113,9 @@ class AuthService {
   }
   static const supportPhone = '+251911646444';
   static const supportEmail = 'nebila310@gmail.com';
+
+  /// Last cloud-login detail for the APK error banner (web keeps short codes).
+  static String? lastCloudLoginDetail;
 
   static const roleTeacher = 'teacher';
   static const roleParent = 'parent';
@@ -166,6 +179,45 @@ class AuthService {
   }
 
   static final Map<String, RegisteredUser> _users = {
+    demoStudentUsername: RegisteredUser(
+      username: demoStudentUsername,
+      password: demoStudentPassword,
+      roleKey: roleStudent,
+      email: 'demo.student@mayaschool.et',
+      fullName: 'Sara Bekele',
+      schoolId: demoStudentSchoolId,
+      linkedStudentId: 'STU-1001',
+    ),
+    demoDriverPhone: RegisteredUser(
+      username: demoDriverPhone,
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
+    ),
+    demoDriverUsername: RegisteredUser(
+      username: demoDriverUsername,
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
+    ),
+    'transport': RegisteredUser(
+      username: 'transport',
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
+    ),
     if (kDebugMode) ...{
       'teacher': RegisteredUser(
         username: 'teacher',
@@ -205,6 +257,15 @@ class AuthService {
         fullName: 'Alemayehu T.',
         schoolId: 'TB-001',
         linkedDriverId: 'DRV-1001',
+      ),
+      'student': RegisteredUser(
+        username: 'student',
+        password: demoPassword,
+        roleKey: roleStudent,
+        email: 'student@mayaschool.et',
+        fullName: 'Sara Bekele',
+        schoolId: 'TB-001',
+        linkedStudentId: 'STU-1001',
       ),
     },
   };
@@ -263,6 +324,18 @@ class AuthService {
           linkedDriverId: demoDriver.linkedDriverId,
         );
       }
+
+      final sara = StudentRegistryService.instance.lookupAnyById('STU-1001');
+      if (sara != null &&
+          !StudentAccountService.instance.hasPortalAccount(sara)) {
+        StudentRegistryService.instance.updateStudent(
+          sara.copyWith(
+            loginUsername: 'student',
+            portalAccountStatus: StudentAccountStatus.active,
+            firstLoginCompleted: true,
+          ),
+        );
+      }
     }
   }
 
@@ -272,6 +345,10 @@ class AuthService {
     'admin',
     'driver',
     'transport',
+    'student',
+    demoStudentUsername,
+    demoDriverUsername,
+    demoDriverPhone,
   };
 
   /// Rebuilds phone logins from staff registries, saves locally, and pushes to Firestore.
@@ -326,14 +403,27 @@ class AuthService {
     cloudAssignedClassNames = const [];
   }
 
-  /// Class names the signed-in parent/teacher may sync from Firestore.
+  /// Mirrors `public.jwt_can_read_all_school_data()` so office desks that
+  /// authenticate as cloud `teacher` still pull school-wide rows.
+  /// Classroom teachers and Staff (no school-wide permission) stay class-scoped.
+  static bool get mayReadAllSchoolData {
+    final user = currentUser;
+    if (user == null) return false;
+    if (user.roleKey == roleAdmin) return true;
+    if (user.staffRoles.contains(StaffRoles.fullAccess)) return true;
+    return hasPermission(SchoolPermissions.viewAllSchoolData) ||
+        hasPermission(SchoolPermissions.viewAllDepartments);
+  }
+
+  /// Class names the signed-in parent/teacher/student may sync from cloud.
   static List<String> accessClassNamesForSync() {
     final user = currentUser;
     if (user == null) return const [];
     if (user.roleKey == roleParent) {
       final fromKids = <String>{};
       for (final id in activeLinkedStudentIds()) {
-        final student = StudentRegistryService.instance.lookupById(id);
+        final student = StudentRegistryService.instance.lookupById(id) ??
+            StudentRegistryService.instance.lookupAnyById(id);
         final className = student?.className.trim();
         if (className != null && className.isNotEmpty) {
           fromKids.add(className);
@@ -341,6 +431,18 @@ class AuthService {
       }
       if (fromKids.isNotEmpty) return fromKids.toList();
       return List<String>.from(cloudLinkedClassNames);
+    }
+    if (user.roleKey == roleStudent) {
+      final student = StudentRegistryService.instance.lookupAnyById(
+            (user.linkedStudentId ?? '').trim(),
+          ) ??
+          StudentRegistryService.instance.lookupByLoginUsername(user.username);
+      final className = student?.className.trim();
+      if (className != null && className.isNotEmpty) return [className];
+      if (cloudLinkedClassNames.isNotEmpty) {
+        return List<String>.from(cloudLinkedClassNames);
+      }
+      return const [];
     }
     if (user.roleKey == roleTeacher) {
       final fromRegistry = <String>{};
@@ -359,7 +461,16 @@ class AuthService {
     return const [];
   }
 
+  /// Compact and `Grade N` spellings of [accessClassNamesForSync] for cloud
+  /// `className` `whereIn` queries (capped).
+  static List<String> cloudClassNameQueryValues() {
+    return StudentRegistryService.expandClassNameQueryValues(
+      accessClassNamesForSync(),
+    );
+  }
+
   static bool get usesScopedCloudReads {
+    if (mayReadAllSchoolData) return false;
     final role = currentUser?.roleKey;
     return role == roleParent || role == roleTeacher || role == roleStudent;
   }
@@ -449,7 +560,24 @@ class AuthService {
 
   static final ValueNotifier<int> sessionListenable = ValueNotifier<int>(0);
 
+  /// Bumped on each [setSession] and [clearSession] so in-flight sync from an
+  /// old login cannot start work for a newer session.
+  static int _sessionGeneration = 0;
+
+  static int get sessionGeneration => _sessionGeneration;
+
+  static bool isCurrentGeneration(int generation) =>
+      generation == _sessionGeneration;
+
+  static bool isLiveGeneration(int generation) =>
+      isCurrentGeneration(generation) && currentUser != null;
+
+  static int _bumpSessionGeneration() => ++_sessionGeneration;
+
+  static const _sessionCleanupTimeout = Duration(seconds: 4);
+
   static void setSession(RegisteredUser user) {
+    _bumpSessionGeneration();
     currentUser = user;
     sessionListenable.value++;
   }
@@ -525,9 +653,96 @@ class AuthService {
     };
   }
 
+  static bool isPublicDemoStudentLogin({
+    required String roleKey,
+    required String username,
+    required String password,
+    String? schoolId,
+  }) {
+    return roleKey == roleStudent &&
+        username.trim().toLowerCase() == demoStudentUsername &&
+        password == demoStudentPassword &&
+        (schoolId ?? '').trim().toUpperCase() == demoStudentSchoolId;
+  }
+
+  static bool get isPublicDemoStudentSession {
+    final user = currentUser;
+    if (user == null || user.roleKey != roleStudent) return false;
+    return user.username.toLowerCase() == demoStudentUsername &&
+        (user.schoolId ?? '').toUpperCase() == demoStudentSchoolId;
+  }
+
+  static void preparePublicDemoStudentSession() {
+    SchoolRegistryService.instance.ensureLocalDemoSchool();
+    StudentRegistryService.instance.ensureLocalDemoStudent();
+  }
+
+  static bool isPublicDemoDriverLogin({
+    required String roleKey,
+    required String username,
+    required String password,
+    String? schoolId,
+  }) {
+    if (roleKey != roleDriver) return false;
+    if (password != demoDriverPassword) return false;
+    if ((schoolId ?? '').trim().toUpperCase() != demoDriverSchoolId) {
+      return false;
+    }
+    final raw = username.trim().toLowerCase();
+    final phone = PhoneUtils.normalizeLocal(username) ?? PhoneUtils.loginKey(username);
+    return raw == demoDriverUsername ||
+        raw == 'transport' ||
+        phone == demoDriverPhone;
+  }
+
+  static bool get isPublicDemoDriverSession {
+    final user = currentUser;
+    if (user == null || user.roleKey != roleDriver) return false;
+    if ((user.schoolId ?? '').toUpperCase() != demoDriverSchoolId) return false;
+    final name = user.username.toLowerCase();
+    return name == demoDriverUsername ||
+        name == 'transport' ||
+        name == demoDriverPhone ||
+        PhoneUtils.matches(user.phone, demoDriverPhone);
+  }
+
+  static void preparePublicDemoDriverSession() {
+    SchoolRegistryService.instance.ensureLocalDemoSchool();
+    DriverRegistryService.instance.ensureLocalDemoDriver();
+    _ensurePublicDemoDriverUsers();
+  }
+
+  static void _ensurePublicDemoDriverUsers() {
+    RegisteredUser make(String username) => RegisteredUser(
+          username: username,
+          password: demoDriverPassword,
+          roleKey: roleDriver,
+          email: 'demo.driver@mayaschool.et',
+          phone: demoDriverPhone,
+          fullName: 'Alemayehu T.',
+          schoolId: demoDriverSchoolId,
+          linkedDriverId: 'DRV-1001',
+        );
+    _users[demoDriverPhone] = make(demoDriverPhone);
+    _users[demoDriverUsername] = make(demoDriverUsername);
+    _users['transport'] = make('transport');
+  }
+
   static bool restoreSession(String username, {String? schoolId}) {
     final user = _findUser(username);
     if (user == null) return false;
+
+    if (user.username.toLowerCase() == demoStudentUsername) {
+      preparePublicDemoStudentSession();
+    }
+    if (user.roleKey == roleDriver &&
+        (user.schoolId ?? schoolId ?? '').toUpperCase() == demoDriverSchoolId &&
+        (user.username.toLowerCase() == demoDriverUsername ||
+            user.username.toLowerCase() == 'transport' ||
+            user.username == demoDriverPhone ||
+            PhoneUtils.matches(user.phone, demoDriverPhone))) {
+      preparePublicDemoDriverSession();
+    }
 
     setSession(user);
     applySchoolContext(schoolId ?? user.schoolId ?? '');
@@ -535,7 +750,6 @@ class AuthService {
       currentUser = null;
       sessionSchoolId = null;
       sessionListenable.value++;
-      unawaited(SessionPrefsService.instance.clearActiveSession());
       return false;
     }
 
@@ -545,18 +759,38 @@ class AuthService {
     return true;
   }
 
-  static void clearSession() {
+  /// Invalidates the session generation immediately, then stops live sync and
+  /// awaits cloud/realtime cleanup (with a short timeout) so an old Future
+  /// cannot restart services for the next user.
+  static Future<void> clearSession() async {
+    final logoutGeneration = _bumpSessionGeneration();
     RoleCloudLiveSync.stop();
-    unawaited(RealtimeMessagingBootstrap.onSessionEnded());
     currentUser = null;
     sessionSchoolId = null;
     clearCloudAccessScope();
     MaterialAccessService.instance.reset();
-    unawaited(SessionPrefsService.instance.clearActiveSession());
-    unawaited(SchoolAuthCloudService.instance.signOutCloud());
     AppLockService.instance.handleLogout();
     CloudSyncProgressService.instance.reset();
     sessionListenable.value++;
+
+    try {
+      await RealtimeMessagingBootstrap.onSessionEnded()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
+    if (!isCurrentGeneration(logoutGeneration)) return;
+
+    try {
+      await SchoolAuthCloudService.instance
+          .signOutCloud()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
+    if (!isCurrentGeneration(logoutGeneration)) return;
+
+    try {
+      await SessionPrefsService.instance
+          .clearActiveSession()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
   }
 
   static List<String> activeLinkedStudentIds() {
@@ -580,25 +814,39 @@ class AuthService {
     final user = currentUser;
     if (user == null || user.roleKey != roleParent) return true;
     EnrollmentService.instance.ensureSeeded();
-    return EnrollmentService.instance.hasApprovedAccess(user.username);
+    if (EnrollmentService.instance.hasApprovedAccess(user.username)) {
+      return true;
+    }
+    // New phone/browser: enrollment rows may not be local yet, but school-login
+    // already stamped approved student IDs on the JWT / profile.
+    return user.linkedStudentIds.any((id) => id.trim().isNotEmpty);
   }
 
   static bool isParentPendingApproval() {
+    if (isParentAccessApproved()) return false;
     final user = currentUser;
     if (user == null || user.roleKey != roleParent) return false;
     EnrollmentService.instance.ensureSeeded();
     return EnrollmentService.instance.hasPendingOnly(user.username) ||
-        (!EnrollmentService.instance.hasApprovedAccess(user.username) &&
-            EnrollmentService.instance.linksForParent(user.username).any(
+        EnrollmentService.instance.linksForParent(user.username).any(
               (l) => l.status == ParentLinkStatus.pending,
-            ));
+            );
   }
 
   static void updateParentLinks(String username, List<String> studentIds) {
+    final ids = studentIds
+        .map((id) => id.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
+        .toList();
     final user = _users[username.toLowerCase()];
     if (user != null) {
-      user.linkedStudentIds = List.from(studentIds);
+      user.linkedStudentIds = List.from(ids);
       unawaited(_persistUser(user));
+    }
+    if (currentUser != null &&
+        currentUser!.username.toLowerCase() == username.toLowerCase()) {
+      currentUser!.linkedStudentIds = List.from(ids);
+      sessionListenable.value++;
     }
   }
 
@@ -766,8 +1014,45 @@ class AuthService {
     required String password,
     String? schoolId,
   }) async {
+    lastCloudLoginDetail = null;
     if (username.trim().isEmpty || password.isEmpty) {
       return 'empty';
+    }
+
+    if (isPublicDemoStudentLogin(
+      roleKey: roleKey,
+      username: username,
+      password: password,
+      schoolId: schoolId,
+    )) {
+      preparePublicDemoStudentSession();
+      final localError = validateLogin(
+        roleKey: roleKey,
+        username: username,
+        password: password,
+      );
+      if (localError == null) {
+        await SessionPrefsService.instance.saveActiveSession();
+      }
+      return localError;
+    }
+
+    if (isPublicDemoDriverLogin(
+      roleKey: roleKey,
+      username: username,
+      password: password,
+      schoolId: schoolId,
+    )) {
+      preparePublicDemoDriverSession();
+      final localError = validateLogin(
+        roleKey: roleKey,
+        username: username,
+        password: password,
+      );
+      if (localError == null) {
+        await SessionPrefsService.instance.saveActiveSession();
+      }
+      return localError;
     }
 
     var cloudUsername = username.trim();
@@ -782,15 +1067,23 @@ class AuthService {
       if (phone != null) cloudUsername = phone;
     }
 
-    if (SupabaseBootstrap.isInitialized ||
-        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true)) {
+    var cloudReady = SupabaseBootstrap.isInitialized ||
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+    if (!cloudReady && !kIsWeb) {
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      cloudReady =
+          await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+    }
+    if (cloudReady) {
       final cloud = await SchoolAuthCloudService.instance.login(
         roleKey: roleKey,
         username: cloudUsername,
         password: password,
         schoolId: schoolId,
       );
+      lastCloudLoginDetail = cloud.errorMessage;
       if (cloud.ok) {
+        lastCloudLoginDetail = null;
         alignTeacherSessionWithRegistry();
         alignDriverSessionWithRegistry();
         EnrollmentService.instance.ensureSeeded();
@@ -805,7 +1098,8 @@ class AuthService {
             ),
           );
         }
-        unawaited(SessionPrefsService.instance.saveActiveSession());
+        await SessionPrefsService.instance.saveActiveSession();
+        unawaited(AuthPersistenceService.instance.saveAll());
         return null;
       }
 
@@ -819,7 +1113,10 @@ class AuthService {
           password: password,
           schoolId: schoolId,
         );
-        if (localError == null) return null;
+        if (localError == null) {
+          await SessionPrefsService.instance.saveActiveSession();
+          return null;
+        }
         return 'cloud_required';
       }
       if (!kDebugMode) {
@@ -829,12 +1126,16 @@ class AuthService {
       return 'cloud_required';
     }
 
-    return validateLogin(
+    final localError = validateLogin(
       roleKey: roleKey,
       username: username,
       password: password,
       schoolId: schoolId,
     );
+    if (localError == null) {
+      await SessionPrefsService.instance.saveActiveSession();
+    }
+    return localError;
   }
 
   static String? validateLogin({
@@ -1204,7 +1505,7 @@ class AuthService {
     unawaited(_persistUser(user));
   }
 
-  static String? registerParent({
+  static Future<String?> registerParent({
     required String fullName,
     required String schoolId,
     required String phone,
@@ -1230,14 +1531,14 @@ class AuthService {
     );
   }
 
-  static String? registerParentAccount({
+  static Future<String?> registerParentAccount({
     required String fullName,
     required String schoolId,
     required String phone,
     required String password,
     String? email,
     required List<ParentChildRegistration> children,
-  }) {
+  }) async {
     if (children.isEmpty) return 'no_children';
     if (schoolAccessError(schoolId) != null) return 'school_blocked';
     if (!PhoneUtils.isValidLoginPhone(phone)) return 'invalid_phone';
@@ -1247,6 +1548,7 @@ class AuthService {
     final phoneError = _preparePhoneForParentRegistration(key, children);
     if (phoneError != null) return phoneError;
 
+    final createdLinkIds = <String>[];
     for (final child in children) {
       final linkError = EnrollmentService.instance.verifyAndCreateParentLink(
         schoolId: schoolId,
@@ -1258,8 +1560,19 @@ class AuthService {
         hasMedicalCondition: child.hasMedicalCondition,
         medicalConditionDetails: child.medicalConditionDetails,
         otherMedicalInfo: child.otherMedicalInfo,
+        persist: false,
       );
-      if (linkError != null) return linkError;
+      if (linkError != null) {
+        EnrollmentService.instance.removeLinksByIds(createdLinkIds);
+        return linkError;
+      }
+      createdLinkIds.add(
+        EnrollmentService.cloudLinkId(
+          schoolId: schoolId,
+          parentUsername: key,
+          studentId: child.studentId,
+        ),
+      );
     }
 
     final user = RegisteredUser(
@@ -1273,17 +1586,65 @@ class AuthService {
       linkedStudentIds: const [],
     );
     _users[key] = user;
-    unawaited(() async {
-      final cloud = await SchoolAuthCloudService.instance.registerParent(
-        user: user,
-        password: password,
+    // Local only until school-register-parent succeeds. Cloud push without a
+    // parent JWT is denied by RLS and left other phones with "invalid" login.
+    await AuthPersistenceService.instance.saveAll();
+    final published = await _publishNewParentToCloud(
+      user: user,
+      password: password,
+      children: children,
+    );
+    if (published != null) {
+      _removeUserAccount(user);
+      EnrollmentService.instance.removeLinksByIds(createdLinkIds);
+      await AuthPersistenceService.instance.saveAll();
+      await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
+        pushCloud: false,
       );
-      if (cloud.ok) {
-        user.password = passwordRedactedMarker;
-      }
-      await _persistUser(user);
-    }());
+      return published;
+    }
     return null;
+  }
+
+  /// Creates the cloud login and pending child-link so other phones can see it.
+  static Future<String?> _publishNewParentToCloud({
+    required RegisteredUser user,
+    required String password,
+    required List<ParentChildRegistration> children,
+  }) async {
+    final registered = await SchoolAuthCloudService.instance.registerParent(
+      user: user,
+      password: password,
+      children: children,
+    );
+    final createdNow = registered.ok;
+    if (!registered.ok && registered.errorCode != 'exists') {
+      return registered.errorCode ?? 'cloud_required';
+    }
+
+    final login = await SchoolAuthCloudService.instance.login(
+      roleKey: roleParent,
+      username: user.username,
+      password: password,
+      schoolId: user.schoolId,
+    );
+    if (login.ok) {
+      try {
+        if (createdNow) {
+          user.password = passwordRedactedMarker;
+          await AuthPersistenceService.instance.saveAll();
+        }
+        await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
+          pushCloud: true,
+        );
+      } finally {
+        clearSession();
+      }
+      return null;
+    }
+    // Account may already exist in the cloud (retry, or password mismatch).
+    // Do not show "account created" — the other phone would then get invalid.
+    return registered.errorCode ?? (createdNow ? 'cloud_required' : 'exists');
   }
 
   static const _demoLoginUsernames = {

@@ -12,6 +12,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
+import 'package:mayabela/services/cloud/cloud_idle_sync.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
 import 'package:mayabela/services/cloud/cloud_sync_router.dart';
@@ -34,19 +35,26 @@ abstract final class SessionCloudSync {
   static Duration get _adminCloudPullTimeout =>
       kIsWeb ? const Duration(seconds: 120) : const Duration(seconds: 45);
 
+  static bool _isLive(int generation) => AuthService.isLiveGeneration(generation);
+
   /// Local apply + login pull/push, then start EDUABA 5s CloudSyncEngine.
   static Future<void> startSessionWithCloudSync() async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
     RoleCloudLiveSync.stop();
     StaffContentRealtimeSync.deferLiveRefresh();
     try {
       await applyLocalForCurrentUser();
+      if (!_isLive(generation)) return;
       if (!CloudSyncFlags.enabled) {
         CloudSyncProgressService.instance.reset();
         return;
       }
       // Drop sticky Queued state from previous failed auth sessions.
       await CloudOutboxService.instance.ensureLoaded();
+      if (!_isLive(generation)) return;
       if (!await SchoolAuthCloudService.instance.ensureValidSchoolJwt()) {
+        if (!_isLive(generation)) return;
         await CloudOutboxService.instance.clear();
         final progress = CloudSyncProgressService.instance;
         progress.begin(totalSteps: 1, message: 'Connecting to cloud…');
@@ -55,16 +63,31 @@ abstract final class SessionCloudSync {
         );
         return;
       }
-      // Fresh login bootstraps role pack (clears stale delta boot marker).
+      if (!_isLive(generation)) return;
+      // Keep cursors on the same school so the 5s engine does not treat
+      // every sign-in as a first-time full download. School switch wipes.
       await SyncCursorStore.instance.ensureLoaded();
-      await SyncCursorStore.instance.clearAll();
+      if (!_isLive(generation)) return;
+      await SyncCursorStore.instance.bindToSchool(AuthService.activeSchoolId);
+      if (!_isLive(generation)) return;
       await syncRoleWithProgress();
+      if (_isLive(generation) && CloudSyncProgressService.instance.isReady) {
+        await SyncCursorStore.instance.markRoleBoot(
+          CloudSyncEngine.collectionsForCurrentRole(),
+        );
+      }
     } finally {
-      StaffContentRealtimeSync.markInitialSyncComplete();
-      await RealtimeMessagingBootstrap.onSessionStarted();
-      if (CloudSyncFlags.enabled &&
-          await SchoolAuthCloudService.hasSchoolClaims()) {
-        CloudSyncEngine.start();
+      if (_isLive(generation)) {
+        StaffContentRealtimeSync.markInitialSyncComplete();
+        await RealtimeMessagingBootstrap.onSessionStarted();
+        // Start the live loop even if JWT claims are still catching up after a
+        // browser refresh — ticks no-op until school claims are present.
+        if (_isLive(generation) &&
+            CloudSyncFlags.enabled &&
+            AuthService.currentUser != null) {
+          CloudSyncEngine.start();
+          CloudIdleSync.onEngineStarted();
+        }
       }
     }
   }
@@ -91,9 +114,10 @@ abstract final class SessionCloudSync {
 
   /// Fast path: local registry/enrollment only (no network).
   static Future<void> applyLocalForCurrentUser() async {
+    final generation = AuthService.sessionGeneration;
     await StartupProfiler.track('session.applyLocal', () async {
       final user = AuthService.currentUser;
-      if (user == null) return;
+      if (user == null || !_isLive(generation)) return;
 
       switch (user.roleKey) {
         case AuthService.roleParent:
@@ -119,16 +143,23 @@ abstract final class SessionCloudSync {
   /// Background cloud refresh — disabled while [CloudSyncFlags.enabled] is false.
   static Future<void> pullCloudInBackground() async {
     if (!CloudSyncFlags.enabled) return;
+    final generation = AuthService.sessionGeneration;
     final user = AuthService.currentUser;
-    if (user == null || !SupabaseBootstrap.isInitialized) return;
+    if (!_isLive(generation) || user == null || !SupabaseBootstrap.isInitialized) {
+      return;
+    }
+    if (AuthService.isPublicDemoStudentSession) return;
+    if (AuthService.isPublicDemoDriverSession) return;
 
     await StartupProfiler.track('session.pullCloud', () async {
+      if (!_isLive(generation)) return;
       switch (user.roleKey) {
         case AuthService.roleParent:
           await _pullIfReady(
             ({bool trackProgress = false}) =>
                 CloudAppStore.instance.pullForParentSession(),
           );
+          if (!_isLive(generation)) return;
           await _applyParentSessionLocally();
           SchoolContentSyncService.instance.markDataChanged();
         case AuthService.roleTeacher:
@@ -136,6 +167,7 @@ abstract final class SessionCloudSync {
             ({bool trackProgress = false}) =>
                 CloudAppStore.instance.pullForTeacherSession(),
           );
+          if (!_isLive(generation)) return;
           AuthService.alignTeacherSessionWithRegistry();
           await _applyStaffSessionLocally();
           SchoolContentSyncService.instance.markDataChanged();
@@ -144,6 +176,7 @@ abstract final class SessionCloudSync {
             ({bool trackProgress = false}) =>
                 CloudAppStore.instance.pullForAdminSession(),
           );
+          if (!_isLive(generation)) return;
           AuthService.alignTeacherSessionWithRegistry();
           AuthService.alignDriverSessionWithRegistry();
           await _applyStaffSessionLocally();
@@ -153,6 +186,7 @@ abstract final class SessionCloudSync {
             ({bool trackProgress = false}) =>
                 CloudAppStore.instance.pullForDriverSession(),
           );
+          if (!_isLive(generation)) return;
           AuthService.alignDriverSessionWithRegistry();
           await _applyDriverSessionLocally();
         case AuthService.roleStudent:
@@ -162,10 +196,12 @@ abstract final class SessionCloudSync {
               ({bool trackProgress = false}) =>
                   CloudAppStore.instance.pullForStudentSession(),
             );
+            if (!_isLive(generation)) return;
             await applyStudentSessionLocally();
             StudentPortalSyncService.instance.completeSync();
             SchoolContentSyncService.instance.markDataChanged();
           } catch (_) {
+            if (!_isLive(generation)) return;
             StudentPortalSyncService.instance.failSync(
               'Could not load school data. Some information may be outdated.',
             );
@@ -179,29 +215,38 @@ abstract final class SessionCloudSync {
 
   /// Applies local state then refreshes cloud data in the background.
   static Future<void> onSessionStarted() async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
     await applyLocalForCurrentUser();
+    if (!_isLive(generation)) return;
     unawaited(pullCloudInBackground());
   }
 
   static Future<void> onParentSessionStarted({bool trackProgress = false}) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
     if (trackProgress) CloudSyncProgressService.instance.step('Loading parent data…');
     await _pullIfReady(
       ({bool trackProgress = false}) =>
           CloudAppStore.instance.pullForParentSession(),
       trackProgress: trackProgress,
     );
+    if (!_isLive(generation)) return;
     if (trackProgress) CloudSyncProgressService.instance.step('Applying data…');
     await _applyParentSessionLocally();
     SchoolContentSyncService.instance.markDataChanged();
   }
 
   static Future<void> onTeacherSessionStarted({bool trackProgress = false}) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
     if (trackProgress) CloudSyncProgressService.instance.step('Loading teacher data…');
     await _pullIfReady(
       ({bool trackProgress = false}) =>
           CloudAppStore.instance.pullForTeacherSession(),
       trackProgress: trackProgress,
     );
+    if (!_isLive(generation)) return;
     if (trackProgress) CloudSyncProgressService.instance.step('Applying data…');
     AuthService.alignTeacherSessionWithRegistry();
     await _applyStaffSessionLocally();
@@ -210,6 +255,8 @@ abstract final class SessionCloudSync {
   }
 
   static Future<void> onAdminSessionStarted({bool trackProgress = false}) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
     await _pullIfReady(
       ({bool trackProgress = false}) =>
           CloudAppStore.instance.pullForAdminSession(
@@ -217,6 +264,7 @@ abstract final class SessionCloudSync {
           ),
       trackProgress: trackProgress,
     );
+    if (!_isLive(generation)) return;
     if (trackProgress) CloudSyncProgressService.instance.step('Applying data…');
     AuthService.alignTeacherSessionWithRegistry();
     AuthService.alignDriverSessionWithRegistry();
@@ -227,18 +275,35 @@ abstract final class SessionCloudSync {
   }
 
   static Future<void> onDriverSessionStarted({bool trackProgress = false}) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
+    if (AuthService.isPublicDemoDriverSession) {
+      AuthService.alignDriverSessionWithRegistry();
+      await _applyDriverSessionLocally(skipDatabaseSync: true);
+      return;
+    }
     if (trackProgress) CloudSyncProgressService.instance.step('Loading driver data…');
     await _pullIfReady(
       ({bool trackProgress = false}) =>
           CloudAppStore.instance.pullForDriverSession(),
       trackProgress: trackProgress,
     );
+    if (!_isLive(generation)) return;
     if (trackProgress) CloudSyncProgressService.instance.step('Applying data…');
     AuthService.alignDriverSessionWithRegistry();
     await _applyDriverSessionLocally();
   }
 
   static Future<void> onStudentSessionStarted({bool trackProgress = false}) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
+    if (AuthService.isPublicDemoStudentSession) {
+      StudentPortalSyncService.instance.beginSync();
+      await applyStudentSessionLocally(skipDatabaseSync: true);
+      StudentPortalSyncService.instance.completeSync();
+      SchoolContentSyncService.instance.markDataChanged();
+      return;
+    }
     StudentPortalSyncService.instance.beginSync();
     try {
       if (trackProgress) {
@@ -249,11 +314,13 @@ abstract final class SessionCloudSync {
             CloudAppStore.instance.pullForStudentSession(),
         trackProgress: trackProgress,
       );
+      if (!_isLive(generation)) return;
       if (trackProgress) CloudSyncProgressService.instance.step('Applying data…');
       await applyStudentSessionLocally();
       StudentPortalSyncService.instance.completeSync();
       SchoolContentSyncService.instance.markDataChanged();
     } catch (_) {
+      if (!_isLive(generation)) return;
       StudentPortalSyncService.instance.failSync(
         'Could not load school data. Some information may be outdated.',
       );
@@ -266,6 +333,8 @@ abstract final class SessionCloudSync {
 
   /// Full role-specific cloud refresh — blocks until complete.
   static Future<void> awaitRoleCloudSync({bool trackProgress = false}) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return;
     final role = AuthService.currentUser?.roleKey;
     switch (role) {
       case AuthService.roleAdmin:
@@ -285,11 +354,14 @@ abstract final class SessionCloudSync {
 
   /// Sync with bottom progress bar (mobile + web).
   static Future<void> syncRoleWithProgress() async {
+    final generation = AuthService.sessionGeneration;
     if (!CloudSyncFlags.enabled) {
-      CloudSyncProgressService.instance.reset();
+      if (_isLive(generation)) {
+        CloudSyncProgressService.instance.reset();
+      }
       return;
     }
-    if (AuthService.currentUser == null) return;
+    if (!_isLive(generation)) return;
 
     final progress = CloudSyncProgressService.instance;
     if (progress.isLoading) return;
@@ -299,6 +371,7 @@ abstract final class SessionCloudSync {
     if (!SupabaseBootstrap.isInitialized) {
       await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: false);
     }
+    if (!_isLive(generation)) return;
     if (!SupabaseBootstrap.isInitialized) {
       progress.begin(totalSteps: 1, message: 'Connecting to cloud…');
       progress.fail('Cloud is not configured for this app build');
@@ -311,9 +384,12 @@ abstract final class SessionCloudSync {
     progress.step('Signing in to cloud…');
 
     if (!await SchoolAuthCloudService.instance.ensureValidSchoolJwt()) {
-      progress.fail(_authFailureMessage());
+      if (_isLive(generation)) {
+        progress.fail(_authFailureMessage());
+      }
       return;
     }
+    if (!_isLive(generation)) return;
 
     // Download cloud first so this browser sees other devices' data.
     // Uploading full local state before pull was overwriting shared IDs.
@@ -323,12 +399,14 @@ abstract final class SessionCloudSync {
         return;
       }
       await awaitRoleCloudSync(trackProgress: true);
+      if (!_isLive(generation)) return;
       // Then upload school directories (clear router route) before Ready.
       progress.step('Uploading to cloud…');
       try {
         await CloudSyncRouter.publishActiveSchoolDirectories().timeout(
           _cloudPullTimeout,
         );
+        if (!_isLive(generation)) return;
         await CloudAppStore.instance.uploadLocalLeftoversToCloud().timeout(
           _cloudPullTimeout,
         );
@@ -337,11 +415,13 @@ abstract final class SessionCloudSync {
           debugPrint('[SessionCloudSync] post-pull upload failed: $e');
         }
       }
+      if (!_isLive(generation)) return;
       if (progress.isLoading) {
         await CloudOutboxService.instance.clear();
         progress.complete(message: 'Ready');
       }
     } catch (e) {
+      if (!_isLive(generation)) return;
       if (kDebugMode) {
         debugPrint('[SessionCloudSync] syncRoleWithProgress failed: $e');
       }
@@ -352,6 +432,7 @@ abstract final class SessionCloudSync {
   }
 
   static Future<void> _syncAdminWithProgress() async {
+    final generation = AuthService.sessionGeneration;
     final progress = CloudSyncProgressService.instance;
     try {
       CloudBootstrapService.resetIfRegistriesEmpty();
@@ -360,11 +441,13 @@ abstract final class SessionCloudSync {
       await CloudAppStore.instance
           .pullForAdminSession()
           .timeout(_adminCloudPullTimeout);
+      if (!_isLive(generation)) return;
 
       progress.step('Uploading to cloud…');
       try {
         await CloudSyncRouter.publishActiveSchoolDirectories()
             .timeout(_adminCloudPullTimeout);
+        if (!_isLive(generation)) return;
         await CloudAppStore.instance
             .uploadLocalLeftoversToCloud()
             .timeout(_adminCloudPullTimeout);
@@ -373,17 +456,21 @@ abstract final class SessionCloudSync {
           debugPrint('[SessionCloudSync] admin leftover upload failed: $e');
         }
       }
+      if (!_isLive(generation)) return;
 
       progress.step('Applying data…');
       AuthService.alignTeacherSessionWithRegistry();
       AuthService.alignDriverSessionWithRegistry();
       await _applyStaffSessionLocally();
+      if (!_isLive(generation)) return;
       await AuthService.persistRegistryLoginAccounts();
+      if (!_isLive(generation)) return;
       StaffRegistryNotifier.instance.notifyChanged();
       SchoolContentSyncService.instance.markDataChanged();
       await CloudOutboxService.instance.clear();
       progress.complete(message: 'Ready');
     } catch (e) {
+      if (!_isLive(generation)) return;
       if (kDebugMode) {
         debugPrint('[SessionCloudSync] admin sync failed: $e');
       }
@@ -444,21 +531,25 @@ abstract final class SessionCloudSync {
     Future<void> Function({bool trackProgress}) pull, {
     bool trackProgress = false,
   }) async {
+    final generation = AuthService.sessionGeneration;
+    if (!_isLive(generation)) return false;
     if (!SupabaseBootstrap.isInitialized) return false;
     if (!await SupabaseBootstrap.ensureAnonymousAuthReady()) {
-      if (trackProgress) {
+      if (trackProgress && _isLive(generation)) {
         CloudSyncProgressService.instance.fail(_authFailureMessage());
       }
       return false;
     }
+    if (!_isLive(generation)) return false;
     final role = AuthService.currentUser?.roleKey;
     final timeout = role == AuthService.roleAdmin
         ? _adminCloudPullTimeout
         : _cloudPullTimeout;
     try {
       await pull(trackProgress: trackProgress).timeout(timeout);
-      return true;
+      return _isLive(generation);
     } catch (e) {
+      if (!_isLive(generation)) return false;
       if (kDebugMode) {
         debugPrint('[SessionCloudSync] cloud pull timed out/failed: $e');
       }
@@ -466,15 +557,23 @@ abstract final class SessionCloudSync {
         final progress = CloudSyncProgressService.instance;
         if (progress.displayPercent >= 35) {
           progress.completePartial(message: 'Ready');
-          unawaited(pull(trackProgress: false));
+          unawaited(_retryPullIfLive(generation, pull));
           return true;
         }
         progress.fail(_friendlySyncError(e));
       } else {
-        unawaited(pull(trackProgress: false));
+        unawaited(_retryPullIfLive(generation, pull));
       }
       return false;
     }
+  }
+
+  static Future<void> _retryPullIfLive(
+    int generation,
+    Future<void> Function({bool trackProgress}) pull,
+  ) async {
+    if (!_isLive(generation)) return;
+    await pull(trackProgress: false);
   }
 
   static Future<void> _applyParentSessionLocally() async {
@@ -484,7 +583,9 @@ abstract final class SessionCloudSync {
     EnrollmentService.instance.ensureSeeded();
     final approved =
         EnrollmentService.instance.approvedStudentIdsForParent(user.username);
-    AuthService.updateParentLinks(user.username, approved);
+    if (approved.isNotEmpty) {
+      AuthService.updateParentLinks(user.username, approved);
+    }
 
     if (SchoolDatabaseService.instance.isInitialized) {
       try {

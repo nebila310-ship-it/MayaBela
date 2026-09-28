@@ -11,8 +11,11 @@ import 'package:mayabela/services/grade_report_export_service.dart';
 import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/grade_persistence_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/utils/attachment_path_utils.dart';
@@ -23,6 +26,8 @@ import 'package:mayabela/widgets/class_picker_bar.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/platform_path_image.dart';
+import 'package:mayabela/widgets/term_report_card_view.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 
 enum GradeReportView { teacher, parent, student, admin }
 
@@ -62,7 +67,14 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
         final classFilter = _selectedClass ?? widget.initialClass;
         if (classFilter != null && classFilter.isNotEmpty) {
           reports =
-              reports.where((r) => r.className == classFilter).toList();
+              reports
+                  .where(
+                    (r) => StudentRegistryService.classNamesMatch(
+                      r.className,
+                      classFilter,
+                    ),
+                  )
+                  .toList();
         }
         final studentFilter = widget.initialStudentName;
         if (studentFilter != null && studentFilter.isNotEmpty) {
@@ -164,16 +176,26 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
     if (!mounted) return;
     setState(() {});
     SchoolContentSyncService.instance.markDataChanged();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ok
-              ? (requireApproval
-                  ? 'Submitted for approval'
-                  : s.gradePublishedSuccess)
-              : s.gradePublishFailed,
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.gradePublishFailed),
+          backgroundColor: Colors.orange.shade800,
         ),
-        backgroundColor: ok ? const Color(0xFF15803D) : Colors.orange.shade800,
+      );
+      return;
+    }
+    final outcome = await CloudSaveHonesty.settle(
+      persist: GradePersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      CloudSaveHonesty.snackBar(
+        savedOk: requireApproval
+            ? 'Submitted for approval'
+            : s.gradePublishedSuccess,
+        outcome: outcome,
+        strings: s,
       ),
     );
   }
@@ -976,9 +998,17 @@ class _ReportDetail extends StatelessWidget {
                   color: _gradeTeacherAccent.withValues(alpha: 0.15),
                 ),
               ),
-              child: Padding(
+                child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(
+                child: report.reportCardPublished
+                    ? TermReportCardView(
+                        report: report,
+                        schoolName: SchoolRegistryService.instance
+                            .lookup(AuthService.activeSchoolId ?? '')
+                            ?.name,
+                        compact: true,
+                      )
+                    : Column(
                   children: [
                     Text(
                       report.studentName,
@@ -1002,6 +1032,14 @@ class _ReportDetail extends StatelessWidget {
                               ? _visibleAverage
                               : report.average,
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'GPA ${report.gpa.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade800,
                       ),
                     ),
                   ],
@@ -1171,6 +1209,23 @@ class _ReportDetail extends StatelessWidget {
                         minHeight: 8,
                         borderRadius: BorderRadius.circular(4),
                       ),
+                      if (subject.hasMarkbook) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final mark in subject.assessments.where((m) => m.isEntered))
+                              Chip(
+                                visualDensity: VisualDensity.compact,
+                                label: Text(
+                                  '${mark.label} ${mark.score!.toStringAsFixed(0)} (${mark.weightPercent.toStringAsFixed(0)}%)',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                       if (!publishedOnly &&
                           (subject.status == SubjectGradeStatus.rejected ||
                               subject.status ==

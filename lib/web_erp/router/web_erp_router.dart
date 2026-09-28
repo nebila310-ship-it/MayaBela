@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
-import 'package:mayabela/screens/admin_attendance_screens.dart';
+import 'package:mayabela/web_erp/pages/web_attendance_hub_page.dart';
 import 'package:mayabela/screens/admin_classes_screens.dart';
 import 'package:mayabela/screens/admin_enrollment_screens.dart';
 import 'package:mayabela/screens/admin_grade_overview_screen.dart';
@@ -17,11 +17,23 @@ import 'package:mayabela/screens/settings_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/web_erp/pages/inventory/web_inventory_shell_page.dart';
 import 'package:mayabela/web_erp/pages/staff_role_home_page.dart';
+import 'package:mayabela/web_erp/pages/web_admissions_page.dart';
+import 'package:mayabela/web_erp/pages/web_markbook_page.dart';
+import 'package:mayabela/web_erp/pages/web_report_cards_page.dart';
+import 'package:mayabela/web_erp/pages/web_exam_desk_page.dart';
+import 'package:mayabela/web_erp/pages/web_lesson_plans_page.dart';
+import 'package:mayabela/web_erp/pages/web_lms_hub_page.dart';
+import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
+import 'package:mayabela/web_erp/pages/web_attendance_intelligence_page.dart';
+import 'package:mayabela/web_erp/pages/web_academic_analytics_page.dart';
+import 'package:mayabela/web_erp/pages/web_homework_page.dart';
+import 'package:mayabela/web_erp/pages/web_alumni_page.dart';
 import 'package:mayabela/web_erp/pages/web_admin_overview_page.dart';
 import 'package:mayabela/web_erp/pages/web_announcements_page.dart';
 import 'package:mayabela/web_erp/pages/web_audit_log_page.dart';
 import 'package:mayabela/web_erp/pages/web_buses_page.dart';
 import 'package:mayabela/web_erp/pages/web_calendar_page.dart';
+import 'package:mayabela/web_erp/pages/web_gallery_page.dart';
 import 'package:mayabela/web_erp/pages/web_campus_management_page.dart';
 import 'package:mayabela/web_erp/pages/web_erp_placeholder_page.dart';
 import 'package:mayabela/web_erp/pages/web_finance_dashboard_page.dart';
@@ -33,19 +45,31 @@ import 'package:mayabela/web_erp/pages/web_school_management_page.dart';
 import 'package:mayabela/web_erp/pages/staff_role_config_page.dart';
 import 'package:mayabela/web_erp/pages/web_students_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
+import 'package:mayabela/web_erp/pages/web_go_live_page.dart';
+import 'package:mayabela/web_erp/pages/web_digital_ops_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_page.dart';
 import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
+import 'package:mayabela/web_erp/pages/web_student_support_page.dart';
+import 'package:mayabela/web_erp/pages/web_student_programs_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transfers_page.dart';
+import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
+import 'package:mayabela/web_erp/pages/web_cctv_page.dart';
+import 'package:mayabela/web_erp/pages/web_transport_live_gps_page.dart';
 
 /// Maps ERP route ids to page widgets (web shell content area).
 class WebErpRouter {
   static Widget pageFor(String routeId, {ValueChanged<String>? onNavigate}) {
     // Safety net behind the sidebar filter: stale favorites, search results
     // or manual navigation can still request modules the user cannot open.
-    const mutationRoutes = {'add_student', 'add_teacher', 'add_staff'};
+    const mutationRoutes = {
+      'add_student',
+      'add_teacher',
+      'add_staff',
+      'add_driver',
+    };
     if (!ModuleAccess.canView(routeId) ||
         (mutationRoutes.contains(routeId) &&
             !ModuleAccess.canManage(routeId))) {
@@ -67,12 +91,18 @@ class WebErpRouter {
         );
       case 'students':
         return WebStudentsTablePage(onNavigate: onNavigate);
+      case 'admissions':
+        return WebAdmissionsPage(onNavigate: onNavigate);
+      case 'alumni':
+        return const WebAlumniPage();
       case 'transfers':
         return const WebTransfersPage();
       case 'hr':
       case 'employees':
       case 'staff':
         return WebHrHubPage(onNavigate: onNavigate);
+      case 'payroll':
+        return WebHrHubPage(onNavigate: onNavigate, initialTab: 3);
       case 'teachers':
         return WebTeachersTablePage(
           onNavigate: onNavigate,
@@ -87,17 +117,59 @@ class WebErpRouter {
         return const ParentApprovalsScreen();
       case 'student_affairs':
         return const WebStudentAffairsPage();
+      case 'student_support':
+      case 'health':
+      case 'counseling':
+      case 'iep':
+      case 'college_guidance':
+        return WebStudentSupportPage(onNavigate: onNavigate);
+      case 'safeguarding':
+        return WebStudentSupportPage(
+          safeguardingOnly: true,
+          onNavigate: onNavigate,
+        );
+      case 'student_programs':
+      case 'clubs':
+      case 'gojo':
+      case 'scholarships':
+      case 'grievances':
+      case 'internships':
+      case 'leadership_meetings':
+      case 'dosa':
+        return WebStudentProgramsPage(onNavigate: onNavigate);
       case 'quality_assurance':
+      case 'surveys':
+      case 'qa_surveys':
+      case 'observations':
+      case 'academic_audits':
+      case 'action_research':
+      case 'academic_monitoring':
         return const WebQaPage();
       case 'finance':
         return const WebFinanceDashboardPage();
       case 'transport':
         return WebTransportDashboardPage(onNavigate: onNavigate);
       case 'attendance':
-        return const AdminAttendanceReportsScreen();
+        return WebAttendanceHubPage(onNavigate: onNavigate);
+      case 'homework':
+        return const WebHomeworkPage();
+      case 'at_risk':
+      case 'attendance_insights':
+        return WebAttendanceIntelligencePage(onNavigate: onNavigate);
+      case 'analytics':
+      case 'academic_analytics':
+        return WebAcademicAnalyticsPage(onNavigate: onNavigate);
       case 'examinations':
       case 'grade_approvals':
         return const GradeApprovalQueueScreen();
+      case 'markbook':
+        return WebMarkbookPage(onNavigate: onNavigate);
+      case 'report_cards':
+        return WebReportCardsPage(onNavigate: onNavigate);
+      case 'exam_bank':
+      case 'exam_papers':
+      case 'exam_desk':
+        return WebExamDeskPage(onNavigate: onNavigate);
       case 'grades':
         return const AdminGradeOverviewScreen();
       case 'academic':
@@ -117,6 +189,8 @@ class WebErpRouter {
       case 'events':
       case 'calendar':
         return const WebCalendarPage();
+      case 'gallery':
+        return const WebGalleryPage();
       case 'reports':
         return const WebReportsPage();
       case 'support':
@@ -131,6 +205,15 @@ class WebErpRouter {
         return const StaffRoleConfigPage();
       case 'system_health':
         return const WebSystemHealthPage();
+      case 'digital_ops':
+      case 'ict':
+        return WebDigitalOpsPage(onNavigate: onNavigate);
+      case 'go_live':
+      case 'compliance':
+      case 'privacy':
+      case 'backups':
+      case 'training_manuals':
+        return const WebGoLivePage();
       case 'settings':
       case 'profile':
         return const SettingsScreen();
@@ -150,12 +233,34 @@ class WebErpRouter {
         return const WebSchoolManagementPage();
       case 'campus':
         return const WebCampusManagementPage();
+      case 'cctv':
+        return const WebCctvPage();
       case 'library':
         return const WebLibraryPage();
       case 'inventory':
         return const WebInventoryShellPage();
       case 'transport_buses':
         return const WebBusesPage();
+      case 'transport_live_gps':
+        return WebTransportLiveGpsPage(onNavigate: onNavigate);
+      case 'add_driver':
+        return WebHrRegisterDriverPage(onNavigate: onNavigate);
+      case 'student_portal_settings':
+        return const AdminStudentPortalSettingsScreen();
+      case 'student_password_resets':
+        return const AdminStudentPasswordResetScreen();
+      case 'grade_workflow_settings':
+        return const AdminGradeWorkflowSettingsScreen();
+      case 'timetable':
+        return const AdminTimetablesScreen();
+      case 'lms':
+        return WebLmsHubPage(onNavigate: onNavigate);
+      case 'lesson_plans':
+      case 'lessons':
+        return WebLessonPlansPage(onNavigate: onNavigate);
+      case 'curriculum':
+      case 'academic_meetings':
+        return WebCurriculumPage(onNavigate: onNavigate);
       default:
         return WebErpPlaceholderPage(
           title: routeId,

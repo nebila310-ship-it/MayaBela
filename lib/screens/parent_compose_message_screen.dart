@@ -240,6 +240,30 @@ class _ParentComposeMessageScreenState extends State<ParentComposeMessageScreen>
 
     }
 
+    final uploaded = await _data.persistConversationToCloud(ids.single);
+
+    if (!mounted) return;
+
+    if (!uploaded) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+
+        SnackBar(
+
+          content: Text(
+            _data.lastConversationPersistError ?? s.messageSendFailed,
+          ),
+
+          backgroundColor: const Color(0xFFB91C1C),
+
+        ),
+
+      );
+
+      return;
+
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
 
       SnackBar(

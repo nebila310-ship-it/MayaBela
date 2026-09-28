@@ -7,20 +7,35 @@ import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
+import 'package:mayabela/services/admission_service.dart';
+import 'package:mayabela/services/attendance_intelligence_service.dart';
+import 'package:mayabela/services/exam_service.dart';
+import 'package:mayabela/services/curriculum_service.dart';
+import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
+import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
+import 'package:mayabela/services/dosa_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
+import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/digital_ops_service.dart';
+import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
+import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/student_password_reset_store.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/staff_role_labels.dart';
@@ -79,6 +94,10 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     DisciplineService.instance.ensureLoaded();
     LeaveRequestService.instance.ensureLoaded();
     QaFindingsService.instance.ensureLoaded();
+    AdmissionService.instance.ensureLoaded();
+    ExamService.instance.ensureLoaded();
+    LessonPlanService.instance.ensureLoaded();
+    CurriculumService.instance.ensureLoaded();
   }
 
   String? get _schoolId => AuthService.activeSchoolId;
@@ -93,10 +112,19 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         DisciplineService.instance,
         LeaveRequestService.instance,
         QaFindingsService.instance,
+        AdmissionService.instance,
+        ExamService.instance,
+        LessonPlanService.instance,
+        CurriculumService.instance,
         TransferWorkflowService.instance,
         ProcurementService.instance,
         InventoryService.instance,
         DashboardBadgeService.instance,
+        EnrollmentService.instance,
+        DigitalOpsService.instance,
+        GoliveService.instance,
+        SchoolContentSyncService.instance,
+        ConversationRealtimeSync.instance,
       ]),
       builder: (context, _) {
         final stats = _buildStats();
@@ -107,6 +135,11 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _greetingHeader(context, narrow),
+              if (ModuleAccess.canView('add_driver') ||
+                  ModuleAccess.canView('transport_live_gps')) ...[
+                const SizedBox(height: 12),
+                _schoolBusBanner(context),
+              ],
               const SizedBox(height: 16),
               if (stats.isNotEmpty) ...[
                 Text('Today at a glance',
@@ -283,6 +316,19 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       ));
     }
 
+    if (ModuleAccess.canView('admissions')) {
+      final open = AdmissionService.instance.openCount(sid);
+      out.add(_StatCard(
+        moduleId: 'admissions',
+        icon: Icons.how_to_reg_outlined,
+        color: const Color(0xFF1565C0),
+        value: '$open',
+        label: 'Open applications',
+        sub:
+            '${AdmissionService.instance.waitlistCount(sid)} waitlist · ${AdmissionService.instance.enrolledThisYear(sid)} enrolled this year',
+      ));
+    }
+
     if (ModuleAccess.canView('attendance')) {
       final report = SchoolDataService.instance.buildDailyAttendanceReport(
         DateTime(today.year, today.month, today.day),
@@ -323,6 +369,30 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         value: '$open',
         label: 'Open discipline cases',
         sub: '$leave leave requests pending',
+      ));
+    }
+
+    if (ModuleAccess.canView('student_support')) {
+      final pending = StudentSupportService.instance.pendingRequestCount(sid);
+      final unsigned = StudentSupportService.instance.unsignedIepCount(sid);
+      out.add(_StatCard(
+        moduleId: 'student_support',
+        icon: Icons.volunteer_activism_outlined,
+        color: const Color(0xFF00897B),
+        value: '$pending',
+        label: 'Support requests waiting',
+        sub: '$unsigned IEP plans unsigned',
+      ));
+    }
+
+    if (ModuleAccess.canView('safeguarding')) {
+      final openCp = StudentSupportService.instance.openSafeguardingCount(sid);
+      out.add(_StatCard(
+        moduleId: 'safeguarding',
+        icon: Icons.shield_outlined,
+        color: const Color(0xFF6A1B9A),
+        value: '$openCp',
+        label: 'Open safeguarding files',
       ));
     }
 
@@ -402,9 +472,24 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       out.add(_StatCard(
         moduleId: 'learning_materials',
         icon: Icons.auto_stories_outlined,
-        color: const Color(0xFF4527A0),
+        color: ClassroomPalette.purple,
         value: '$materials',
         label: 'e-Books & materials',
+      ));
+    }
+
+    if (ModuleAccess.canView('digital_ops')) {
+      final pending = DigitalOpsService.instance.pendingParentLinks(sid);
+      final devices = DigitalOpsService.instance.devicesForSchool(sid).length;
+      final week = DigitalOpsService.instance.reviewThisWeek(sid);
+      out.add(_StatCard(
+        moduleId: 'digital_ops',
+        icon: Icons.devices_other_outlined,
+        color: const Color(0xFF455A64),
+        value: '$pending',
+        label: 'Parent links to help',
+        sub: '$devices devices · '
+            '${week?.complete == true ? 'Friday checklist done' : 'Friday checklist open'}',
       ));
     }
 
@@ -492,10 +577,10 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     }
 
     add(
-      'examinations',
-      Icons.fact_check_outlined,
-      'Grade reports waiting for approval',
-      SchoolDataService.instance.pendingGradeApprovalCount(schoolId: sid),
+      'report_cards',
+      Icons.assignment_outlined,
+      'Report cards not yet published',
+      MarkbookService.instance.unpublishedCount(),
     );
     add(
       'transfers',
@@ -504,10 +589,76 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       TransferWorkflowService.instance.pendingCount,
     );
     add(
+      'admissions',
+      Icons.how_to_reg_outlined,
+      'Admissions applications still open',
+      AdmissionService.instance.openCount(sid),
+    );
+    add(
+      'admissions',
+      Icons.queue_outlined,
+      'Applicants on the waitlist',
+      AdmissionService.instance.waitlistCount(sid),
+    );
+    add(
+      'exam_bank',
+      Icons.quiz_outlined,
+      'Exam attempts waiting to be scored',
+      ExamService.instance.unscoredCount(sid),
+    );
+    add(
+      'lesson_plans',
+      Icons.event_note_outlined,
+      'Lesson plans still in draft',
+      LessonPlanService.instance.draftCount(sid),
+    );
+    add(
+      'at_risk',
+      Icons.warning_amber_outlined,
+      'Students flagged at-risk (low grades + high absence)',
+      AttendanceIntelligenceService.instance.atRiskCount(),
+    );
+    add(
+      'analytics',
+      Icons.insights_outlined,
+      'Analytics exports and at-risk rules (not ML)',
+      AttendanceIntelligenceService.instance.atRiskCount(),
+    );
+    add(
+      'curriculum',
+      Icons.account_tree_outlined,
+      'Curriculum units still unpublished',
+      CurriculumService.instance.unpublishedCount(sid),
+    );
+    add(
+      'curriculum',
+      Icons.rate_review_outlined,
+      'Lesson plans waiting for department-head review',
+      LessonPlanService.instance.pendingReviewCount(sid),
+    );
+    add(
+      'curriculum',
+      Icons.comment_outlined,
+      'Open curriculum feedback',
+      CurriculumService.instance.openFeedbackCount(sid),
+    );
+    add(
       'parents',
       Icons.family_restroom_outlined,
       'Parent link requests to approve',
       DashboardBadgeService.instance.countFor('parent_approvals'),
+    );
+    add(
+      'digital_ops',
+      Icons.support_agent_outlined,
+      'Parent-link pile to escalate (do not approve here)',
+      DigitalOpsService.instance.pendingParentLinks(sid),
+    );
+    add(
+      'digital_ops',
+      Icons.event_available_outlined,
+      'Friday digital-ops checklist not finished',
+      DigitalOpsService.instance.reviewThisWeek(sid)?.complete == true ? 0 : 1,
     );
     add(
       'student_affairs',
@@ -524,12 +675,56 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
           .where((r) => r.status == LeaveRequestStatus.pending)
           .length,
     );
+    add(
+      'student_support',
+      Icons.volunteer_activism_outlined,
+      'Student-support requests waiting on the care desk',
+      StudentSupportService.instance.pendingRequestCount(sid),
+    );
+    add(
+      'student_support',
+      Icons.assignment_late_outlined,
+      'IEP plans still waiting for parent agreement',
+      StudentSupportService.instance.unsignedIepCount(sid),
+    );
+    if (ModuleAccess.canView('safeguarding')) {
+      add(
+        'safeguarding',
+        Icons.shield_outlined,
+        'Open safeguarding case files',
+        StudentSupportService.instance.openSafeguardingCount(sid),
+      );
+    }
+    add(
+      'student_programs',
+      Icons.emoji_events_outlined,
+      'Scholarship applications waiting for a decision',
+      DosaService.instance.pendingScholarshipCount(sid),
+    );
+    add(
+      'student_programs',
+      Icons.report_gmailerrorred_outlined,
+      'Open student grievances',
+      DosaService.instance.openGrievanceCount(sid),
+    );
     final qa = QaFindingsService.instance.metricsForSchool(sid);
     add(
       'quality_assurance',
       Icons.verified_outlined,
       'QA findings without resolution',
       qa.open,
+    );
+    add(
+      'quality_assurance',
+      Icons.poll_outlined,
+      'Published QA surveys',
+      QaMonitorService.instance.openSurveyCount(sid),
+    );
+    add(
+      'quality_assurance',
+      Icons.science_outlined,
+      'Open action-research cycles',
+      QaMonitorService.instance.openResearchCount(sid),
     );
     add(
       'inventory',
@@ -653,9 +848,13 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
             children: [
               const Icon(Icons.campaign_outlined, color: Colors.orange),
               const SizedBox(width: 8),
-              Text('Latest announcements',
-                  style: WebErpTheme.sectionTitle(context)),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  'Latest announcements',
+                  style: WebErpTheme.sectionTitle(context),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               TextButton(
                 onPressed: () => _open('announcements'),
                 child: const Text('View all'),
@@ -790,6 +989,54 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     );
   }
 
+  Widget _schoolBusBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            ClassroomPalette.green,
+            Color.lerp(ClassroomPalette.green, ClassroomPalette.teal, 0.4)!,
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'SCHOOL BUS',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (ModuleAccess.canView('add_driver'))
+                FilledButton.icon(
+                  onPressed: () => _open('add_driver'),
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Register Driver'),
+                ),
+              if (ModuleAccess.canView('transport_live_gps'))
+                FilledButton.tonalIcon(
+                  onPressed: () => _open('transport_live_gps'),
+                  icon: const Icon(Icons.gps_fixed),
+                  label: const Text('Live GPS'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Quick actions ─────────────────────────────────────────────────────
 
   Widget _quickActions(BuildContext context) {
@@ -801,10 +1048,19 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       'maya_assistant',
       'announcements',
     };
-    final items = webErpNavItemsForCurrentUser()
+    final preferred = ['add_driver', 'transport_live_gps', 'transport', 'hr'];
+    final visible = webErpNavItemsForCurrentUser()
         .where((i) => !i.isLogout && !skip.contains(i.id))
-        .take(8)
         .toList();
+    visible.sort((a, b) {
+      final ai = preferred.indexOf(a.id);
+      final bi = preferred.indexOf(b.id);
+      if (ai >= 0 && bi >= 0) return ai.compareTo(bi);
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return 0;
+    });
+    final items = visible.take(8).toList();
     if (items.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

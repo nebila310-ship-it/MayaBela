@@ -6,6 +6,7 @@ import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 
 class AdminStudentRecord {
   AdminStudentRecord({
@@ -35,6 +36,7 @@ class AdminStudentRecord {
     this.emergencyContact2Name,
     this.homeroomTeacherId,
     this.academicYear,
+    this.house,
     this.hasMedicalCondition = false,
     this.medicalConditionDetails,
     this.otherMedicalInfo,
@@ -76,6 +78,8 @@ class AdminStudentRecord {
   final String? emergencyContact2Name;
   final String? homeroomTeacherId;
   final String? academicYear;
+  /// Optional house / Gojo colour group. Not a second campus or class.
+  final String? house;
   final bool hasMedicalCondition;
   final String? medicalConditionDetails;
   final String? otherMedicalInfo;
@@ -161,6 +165,7 @@ class AdminStudentRecord {
     DateTime? dateOfBirth,
     String? homeroomTeacherId,
     String? academicYear,
+    String? house,
     String? campus,
     String? gender,
     String? fatherName,
@@ -216,6 +221,7 @@ class AdminStudentRecord {
       emergencyContact2Name: emergencyContact2Name ?? this.emergencyContact2Name,
       homeroomTeacherId: homeroomTeacherId ?? this.homeroomTeacherId,
       academicYear: academicYear ?? this.academicYear,
+      house: house ?? this.house,
       hasMedicalCondition: hasMedicalCondition ?? this.hasMedicalCondition,
       medicalConditionDetails:
           medicalConditionDetails ?? this.medicalConditionDetails,
@@ -261,6 +267,7 @@ class AdminStudentRecord {
           'emergencyContact2Name': emergencyContact2Name,
         if (homeroomTeacherId != null) 'homeroomTeacherId': homeroomTeacherId,
         if (academicYear != null) 'academicYear': academicYear,
+        if (house != null) 'house': house,
         'hasMedicalCondition': hasMedicalCondition,
         if (medicalConditionDetails != null)
           'medicalConditionDetails': medicalConditionDetails,
@@ -310,6 +317,7 @@ class AdminStudentRecord {
       emergencyContact2Name: map['emergencyContact2Name'] as String?,
       homeroomTeacherId: map['homeroomTeacherId'] as String?,
       academicYear: map['academicYear'] as String?,
+      house: map['house'] as String?,
       hasMedicalCondition: map['hasMedicalCondition'] as bool? ?? false,
       medicalConditionDetails: map['medicalConditionDetails'] as String?,
       otherMedicalInfo: map['otherMedicalInfo'] as String?,
@@ -351,6 +359,9 @@ class StudentRegistryService {
       homeroomTeacherId: 'TCH-1001',
       transportEnabled: true,
       transportId: 'BUS-1001',
+      loginUsername: 'student',
+      portalAccountStatus: StudentAccountStatus.active,
+      firstLoginCompleted: true,
     ),
     AdminStudentRecord(
       studentId: 'STU-1002',
@@ -463,9 +474,98 @@ class StudentRegistryService {
     return className.trim().replaceAll(RegExp(r'\s+'), ' ');
   }
 
+  /// Compact `"5B"` and roster `"Grade 5B"` must hit the same cloud rows.
+  static const int maxClassNameQueryValues = 10;
+
+  /// Distinct spellings of one class for `whereIn` / local alias matching.
+  static List<String> classNameQueryValues(String className) {
+    final raw = className.trim();
+    if (raw.isEmpty) return const [];
+    final seen = <String>{};
+
+    void add(String value) {
+      final t = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (t.isNotEmpty) seen.add(t);
+    }
+
+    add(raw);
+    add(canonicalClassName(raw));
+
+    final parts = parseClassNameParts(raw);
+    if (parts != null && parts.section.isNotEmpty) {
+      add(buildClassName(parts.grade, parts.section));
+      add('${parts.grade} ${parts.section}');
+      final digits = RegExp(r'(\d+)').firstMatch(parts.grade)?.group(1);
+      if (digits != null) {
+        add('$digits${parts.section}');
+        add('$digits ${parts.section}');
+        add('Grade $digits${parts.section}');
+        add('Grade $digits ${parts.section}');
+      }
+    }
+
+    final compact = RegExp(r'^(\d+)\s*([A-Za-z]{1,3})$').firstMatch(raw);
+    if (compact != null) {
+      final n = compact.group(1)!;
+      final s = compact.group(2)!;
+      add('$n$s');
+      add('$n $s');
+      add(buildClassName('Grade $n', s));
+      add('Grade $n $s');
+    }
+
+    final gradeForm = RegExp(
+      r'^Grade\s+(\d+)\s*([A-Za-z]{1,3})?$',
+      caseSensitive: false,
+    ).firstMatch(canonicalClassName(raw).replaceAll(RegExp(r'\s+'), ' '));
+    if (gradeForm != null) {
+      final n = gradeForm.group(1)!;
+      final s = gradeForm.group(2);
+      if (s != null && s.isNotEmpty) {
+        add('$n$s');
+        add('Grade $n$s');
+        add('Grade $n $s');
+      }
+    }
+
+    return seen.take(maxClassNameQueryValues).toList();
+  }
+
+  /// Expands several class names, keeping originals first, capped for `whereIn`.
+  static List<String> expandClassNameQueryValues(
+    Iterable<String> classNames, {
+    int cap = maxClassNameQueryValues,
+  }) {
+    final seen = <String>{};
+    final originals = <String>[];
+    for (final name in classNames) {
+      final t = name.trim();
+      if (t.isEmpty) continue;
+      originals.add(t);
+      if (seen.add(t) && seen.length >= cap) return seen.toList();
+    }
+    for (final name in originals) {
+      for (final alias in classNameQueryValues(name)) {
+        if (seen.add(alias) && seen.length >= cap) return seen.toList();
+      }
+    }
+    return seen.toList();
+  }
+
   static bool classNamesMatch(String a, String b) {
-    if (canonicalClassName(a) == canonicalClassName(b)) return true;
-    return a.trim().toLowerCase() == b.trim().toLowerCase();
+    final left = a.trim();
+    final right = b.trim();
+    if (left.isEmpty || right.isEmpty) return false;
+    if (left.toLowerCase() == right.toLowerCase()) return true;
+    if (canonicalClassName(left).toLowerCase() ==
+        canonicalClassName(right).toLowerCase()) {
+      return true;
+    }
+    final aliasesA =
+        classNameQueryValues(left).map((e) => e.toLowerCase()).toSet();
+    final aliasesB =
+        classNameQueryValues(right).map((e) => e.toLowerCase()).toSet();
+    return aliasesA.intersection(aliasesB).isNotEmpty;
   }
 
   AdminStudentRecord? lookupById(String studentId) {
@@ -496,6 +596,47 @@ class StudentRegistryService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Sara Bekele portal row for the public student demo. In-memory only.
+  void ensureLocalDemoStudent() {
+    const id = 'STU-1001';
+    final existing = lookupAnyById(id);
+    if (existing != null) {
+      final idx = _students.indexWhere((s) => s.studentId == id);
+      if (idx < 0) return;
+      _students[idx] = existing.copyWith(
+        loginUsername: existing.loginUsername ?? 'demo.student',
+        portalAccountStatus: StudentAccountStatus.active,
+        firstLoginCompleted: true,
+        isActive: true,
+        lifecycleStatus: StudentLifecycleStatus.active,
+      );
+      return;
+    }
+    _students.insert(
+      0,
+      AdminStudentRecord(
+        studentId: id,
+        fullName: 'Sara Bekele',
+        grade: 'Grade 4',
+        className: 'Grade 4A',
+        schoolId: 'TB-001',
+        dateOfBirth: DateTime(2016, 3, 15),
+        gender: 'Female',
+        emergencyContact: '0911000002',
+        fatherName: 'Bekele Tadesse',
+        fatherPhone: '0911000002',
+        motherName: 'Almaz Bekele',
+        motherPhone: '0911000099',
+        homeroomTeacherId: 'TCH-1001',
+        transportEnabled: true,
+        transportId: 'BUS-1001',
+        loginUsername: 'demo.student',
+        portalAccountStatus: StudentAccountStatus.active,
+        firstLoginCompleted: true,
+      ),
+    );
   }
 
   void replaceStudent(AdminStudentRecord updated) => updateStudent(updated);
@@ -535,32 +676,19 @@ class StudentRegistryService {
 
   int get nextStudentIdCounter => _nextId;
 
-  /// Matches short human-friendly ids (STU-1001); legacy long timestamp ids
-  /// stay valid but are ignored when computing the next number.
-  static final RegExp _shortIdPattern = RegExp(r'^STU-(\d{1,6})$');
-
-  /// Short sequential id (STU-1001, STU-1002, …).
+  /// Short sequential id (`STU-0001` … `STU-9999`).
   ///
-  /// The old device-local counter collided across browsers because every
-  /// fresh install restarted at the same seed. Now the next number is
-  /// derived from the highest short id in the registry itself — which is
-  /// cloud-merged on login and every 5s — plus a local free-slot check, so
-  /// devices converge on the same sequence instead of racing a counter.
+  /// The next number is the highest existing 4-digit STU id in the
+  /// cloud-merged registry + 1. Timestamp leftovers are ignored.
   String _allocateStudentId() {
-    var highest = 1000;
-    for (final s in _students) {
-      final match = _shortIdPattern.firstMatch(s.studentId.trim().toUpperCase());
-      if (match == null) continue;
-      final n = int.tryParse(match.group(1) ?? '');
-      if (n != null && n > highest) highest = n;
-    }
-    if (_nextId > highest) highest = _nextId;
-    var candidate = highest + 1;
-    while (lookupAnyById('STU-$candidate') != null) {
-      candidate++;
-    }
-    _nextId = candidate;
-    return 'STU-$candidate';
+    final id = ShortRegistryId.allocate(
+      prefix: 'STU',
+      existingIds: _students.map((s) => s.studentId),
+      isTaken: (id) => lookupAnyById(id) != null,
+      persistedNext: _nextId,
+    );
+    _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
+    return id;
   }
 
   /// Merge saved students over in-memory seed (new students, edits, deactivations).
@@ -583,8 +711,9 @@ class StudentRegistryService {
         }
       }
     }
-    if (nextId != null && nextId > _nextId) {
-      _nextId = nextId;
+    final clamped = ShortRegistryId.clampCounter(nextId, fallback: _nextId);
+    if (clamped > _nextId) {
+      _nextId = clamped;
     }
   }
 
@@ -613,7 +742,8 @@ class StudentRegistryService {
   }) {
     final normalizedClass = className.trim();
     return _students.where((student) {
-      if (!student.isActive || student.className != normalizedClass) {
+      if (!student.isActive ||
+          !classNamesMatch(student.className, normalizedClass)) {
         return false;
       }
       if (schoolId == null) return true;
@@ -774,7 +904,11 @@ class StudentRegistryService {
     String? emergencyContact2Name,
     String? homeroomTeacherId,
     String? academicYear,
+    String? house,
     String? campus,
+    bool hasMedicalCondition = false,
+    String? medicalConditionDetails,
+    String? otherMedicalInfo,
   }) {
     final contact = _trimOrNull(emergencyContact) ??
         _phoneOrNull(fatherPhone) ??
@@ -807,7 +941,13 @@ class StudentRegistryService {
       emergencyContact2Name: _trimOrNull(emergencyContact2Name),
       homeroomTeacherId: _trimOrNull(homeroomTeacherId)?.toUpperCase(),
       academicYear: _trimOrNull(academicYear),
+      house: _trimOrNull(house),
       campus: _trimOrNull(campus) ?? 'Main Campus',
+      hasMedicalCondition: hasMedicalCondition,
+      medicalConditionDetails: hasMedicalCondition
+          ? _trimOrNull(medicalConditionDetails)
+          : null,
+      otherMedicalInfo: _trimOrNull(otherMedicalInfo),
     );
     _students.add(record);
     return record;

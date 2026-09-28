@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 
 /// Record-only school employee (no app login). Managed by Human Resource.
 class EmployeeRecord {
@@ -129,7 +130,7 @@ class EmployeeRegistryService extends ChangeNotifier {
     String? campus,
   }) {
     final record = EmployeeRecord(
-      employeeId: 'EMP-${_allocateEmployeeIdNumber()}',
+      employeeId: _allocateEmployeeId(),
       schoolId: schoolId.trim().toUpperCase(),
       fullName: fullName.trim(),
       jobTitle: jobTitle.trim(),
@@ -147,25 +148,15 @@ class EmployeeRegistryService extends ChangeNotifier {
     return record;
   }
 
-  static final RegExp _shortEmployeeIdPattern = RegExp(r'^EMP-(\d{1,6})$');
-
-  /// Short EMP-1001 style ids: next number = highest existing EMP-#### in the
-  /// cloud-merged registry + 1, with a free-slot check so devices converge.
-  int _allocateEmployeeIdNumber() {
-    var highest = 1000;
-    for (final e in _employees) {
-      final match =
-          _shortEmployeeIdPattern.firstMatch(e.employeeId.trim().toUpperCase());
-      final n = match == null ? null : int.tryParse(match.group(1) ?? '');
-      if (n != null && n > highest) highest = n;
-    }
-    var candidate = highest + 1;
-    if (_nextId > candidate) candidate = _nextId;
-    while (_employees.any((e) => e.employeeId == 'EMP-$candidate')) {
-      candidate++;
-    }
-    _nextId = candidate + 1;
-    return candidate;
+  String _allocateEmployeeId() {
+    final id = ShortRegistryId.allocate(
+      prefix: 'EMP',
+      existingIds: _employees.map((e) => e.employeeId),
+      isTaken: (id) => _employees.any((e) => e.employeeId == id),
+      persistedNext: _nextId,
+    );
+    _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
+    return id;
   }
 
   bool updateEmployee(EmployeeRecord updated) {
@@ -191,7 +182,8 @@ class EmployeeRegistryService extends ChangeNotifier {
     _employees
       ..clear()
       ..addAll(employees);
-    if (nextId != null && nextId > _nextId) _nextId = nextId;
+    final clamped = ShortRegistryId.clampCounter(nextId, fallback: _nextId);
+    if (clamped > _nextId) _nextId = clamped;
     notifyListeners();
   }
 }

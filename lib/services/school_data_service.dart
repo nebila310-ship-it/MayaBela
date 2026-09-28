@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/database/id_utils.dart';
 import 'package:mayabela/database/models/database_models.dart';
@@ -13,6 +15,7 @@ import 'package:mayabela/models/fee_record.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/models/school_class.dart';
 import 'package:mayabela/models/student_conduct.dart';
+import 'package:mayabela/models/attendance_intelligence_models.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/admin_registry_service.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -33,9 +36,14 @@ import 'package:mayabela/services/persistence/message_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/models/grade_workflow.dart';
+import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
 class SchoolDataService {
   SchoolDataService._() {
@@ -855,38 +863,156 @@ class SchoolDataService {
     }
   }
 
-  /// Merge a single conversation from Firestore (real-time sync).
+  /// Merge a single conversation from the school cloud (real-time sync).
   void mergeConversationFromCloud(Conversation cloud) {
     final index = _conversations.indexWhere((c) => c.id == cloud.id);
-    if (index >= 0) {
-      final local = _conversations[index];
-      if (cloud.messages.length >= local.messages.length) {
-        _conversations[index] = cloud;
-        unawaited(
-          MessagePersistenceService.instance.saveFromService(pushCloud: false),
-        );
-      }
-    } else {
+    if (index < 0) {
       _conversations.add(cloud);
+      unawaited(
+        MessagePersistenceService.instance.saveFromService(pushCloud: false),
+      );
+      return;
+    }
+
+    final local = _conversations[index];
+    final seen = <String>{
+      for (final message in local.messages) _messageMergeKey(message),
+    };
+    var added = false;
+    for (final message in cloud.messages) {
+      if (seen.add(_messageMergeKey(message))) {
+        local.messages.add(message);
+        added = true;
+      }
+    }
+    if (added) {
+      local.messages.sort((a, b) => a.time.compareTo(b.time));
+    }
+    final beforeUsers = local.parentParticipantUsernames.length;
+    final beforeStudents = local.linkedStudentIds.length;
+    _mergeConversationParticipants(
+      local,
+      studentIds: cloud.linkedStudentIds,
+      parentUsernames: cloud.parentParticipantUsernames,
+      staffParticipantId: cloud.staffParticipantId,
+      counterpartyStaffId: cloud.counterpartyStaffId,
+      staffSubjectName: cloud.staffSubjectName,
+    );
+    if (added ||
+        local.parentParticipantUsernames.length != beforeUsers ||
+        local.linkedStudentIds.length != beforeStudents) {
       unawaited(
         MessagePersistenceService.instance.saveFromService(pushCloud: false),
       );
     }
   }
 
+  String _messageMergeKey(ChatMessage message) {
+    final username = message.senderUsername?.trim().toLowerCase() ?? '';
+    final staff = message.senderStaffId?.trim().toLowerCase() ?? '';
+    return '${message.time.millisecondsSinceEpoch}|${message.senderRole}|$username|$staff|${message.text}';
+  }
+
+  String? lastConversationPersistError;
+
   void _persistConversation(String conversationId) {
     final conversation = getConversation(conversationId);
     if (conversation == null) return;
-    unawaited(MessagePersistenceService.instance.saveConversation(conversation));
+    // Local only. ChatScreen / compose immediately persist to the school
+    // cloud; a second unawaited cloud push races JWT refresh and can drop
+    // a working teacher session (parent messages still visible, Send fails).
+    unawaited(
+      MessagePersistenceService.instance.saveFromService(pushCloud: false),
+    );
+  }
+
+  Future<bool> persistConversationToCloud(String conversationId) async {
+    AuthService.alignTeacherSessionWithRegistry();
+    lastConversationPersistError = null;
+    final open = getConversation(conversationId);
+    if (open == null) {
+      lastConversationPersistError = 'missing thread';
+      return false;
+    }
+    _stampDirectParentThread(open);
+    final conversation = _linkedParentTeacherThreadToPersist(open);
+    _stampDirectParentThread(conversation);
+    // Write with the current JWT first. Refreshing before Send can drop
+    // school claims while parent messages are still visible.
+    final schoolId = SchoolAuthCloudService.jwtSchoolId() ??
+        SchoolAuthCloudService.resolvedSchoolId();
+    Future<void> write() => MessagePersistenceService.instance.saveConversation(
+          conversation,
+          requireCloud: true,
+          schoolId: schoolId,
+        );
+    try {
+      await write();
+      return true;
+    } catch (e) {
+      lastConversationPersistError = conversationPersistErrorText(e);
+      if (kDebugMode) {
+        debugPrint('persistConversationToCloud: $e');
+      }
+      try {
+        await SchoolAuthCloudService.instance.ensureValidSchoolJwt(
+          forceRefresh: true,
+        );
+        await write();
+        lastConversationPersistError = null;
+        return true;
+      } catch (e2) {
+        lastConversationPersistError = conversationPersistErrorText(e2);
+        if (kDebugMode) {
+          debugPrint('persistConversationToCloud retry: $e2');
+        }
+        unawaited(
+          MessagePersistenceService.instance.saveConversation(
+            conversation,
+            schoolId: schoolId,
+          ),
+        );
+        return false;
+      }
+    }
+  }
+
+  @visibleForTesting
+  static String conversationPersistErrorText(Object e) {
+    final s = '$e'.toLowerCase();
+    if (s.contains('without schoolid') || s.contains('school id')) {
+      return 'Could not save the message: school id is missing. Sign out and sign in again.';
+    }
+    if (s.contains('write_denied') || s.contains('not allowed')) {
+      return 'Could not save the message: the school cloud blocked the write. Sign out and sign in again.';
+    }
+    if (s.contains('jwt') ||
+        s.contains('session expired') ||
+        s.contains('sign in')) {
+      return 'Could not save the message: stay signed in and send again.';
+    }
+    if (s.contains('timeout')) {
+      return 'Could not save the message: the school cloud timed out. Send again.';
+    }
+    return 'Could not save the message to the school cloud. Stay signed in and send again.';
   }
 
   void _persistSchoolContent() {
-    SchoolContentPersistenceService.instance.saveFromService();
+    // Best-effort: SharedPreferences / cloud push must not fail the caller
+    // (calendar seed, UI, or a later unit test after this future completes).
+    unawaited(_saveSchoolContentBestEffort());
+  }
+
+  Future<void> _saveSchoolContentBestEffort() async {
+    try {
+      await SchoolContentPersistenceService.instance.saveFromService();
+    } catch (_) {}
   }
 
   List<Conversation> getConversationsForRole(String? roleKey) {
     return _conversations
         .where((c) => MessagingAccessService.canView(c, roleKey))
+        .where((c) => !_isWeakerDuplicateParentTeacherThread(c))
         .toList(growable: false);
   }
 
@@ -1153,9 +1279,7 @@ class SchoolDataService {
         _mergeConversationParticipants(
           conversation,
           studentIds: recipient.studentIds,
-          parentUsernames: recipient.parentUsername == null
-              ? const []
-              : [recipient.parentUsername!],
+          parentUsernames: MessagingAccessService.usernamesOf(recipient),
         );
       }
       added = true;
@@ -1261,9 +1385,7 @@ class SchoolDataService {
         _mergeConversationParticipants(
           groupConversation,
           studentIds: recipient.studentIds,
-          parentUsernames: recipient.parentUsername == null
-              ? const []
-              : [recipient.parentUsername!],
+          parentUsernames: MessagingAccessService.usernamesOf(recipient),
         );
       }
     }
@@ -1280,6 +1402,7 @@ class SchoolDataService {
     String? subject,
     String? parentName,
     String? staffId,
+    String? studentId,
     List<AnnouncementAttachment> attachments = const [],
   }) {
     final trimmedBody = body.trim();
@@ -1291,6 +1414,7 @@ class SchoolDataService {
     final hasStaff = trimmedStaff != null && trimmedStaff.isNotEmpty;
     if (hasParent == hasStaff) return [];
 
+    AuthService.alignTeacherSessionWithRegistry();
     final senderRole = AuthService.currentUser?.roleKey ?? AuthService.roleAdmin;
     if (senderRole == AuthService.roleTeacher) {
       if (hasParent &&
@@ -1313,6 +1437,10 @@ class SchoolDataService {
         schoolId: AuthService.activeSchoolId,
       );
       final senderStaffId = StaffMemberOption.viewerCompositeStaffId(senderRole);
+      final lookupStudentIds = _normalizeStudentIds([
+        if (studentId != null) studentId,
+        ...?recipient?.studentIds,
+      ]);
       conversationId = openOrCreateConversation(
         contactName: trimmedParent,
         role: 'Parent',
@@ -1322,12 +1450,16 @@ class SchoolDataService {
             ? null
             : MessagingAccessService.staffSubjectLabelFor(
                 staffParticipantId: senderStaffId,
-                linkedStudentIds: recipient?.studentIds ?? const [],
+                linkedStudentIds: lookupStudentIds,
               ),
-        linkedStudentIds: recipient?.studentIds,
-        parentParticipantUsernames: recipient?.parentUsername == null
-            ? null
-            : [recipient!.parentUsername!],
+        linkedStudentIds: lookupStudentIds,
+        parentParticipantUsernames: [
+          ...MessagingAccessService.usernamesOf(recipient),
+          ...MessagingAccessService.parentLoginKeysForStudentIds(
+            lookupStudentIds,
+            parentName: trimmedParent,
+          ),
+        ],
       );
     } else {
       final member = StaffMemberOption.resolve(trimmedStaff!);
@@ -1414,6 +1546,7 @@ class SchoolDataService {
       );
     }
 
+    _stampDirectParentThread(conversation);
     _persistConversation(conversationId);
     return [conversationId];
   }
@@ -1445,31 +1578,51 @@ class SchoolDataService {
     String? relationshipStudentId,
   }) {
     final user = AuthService.currentUser;
-    if (senderRole == AuthService.roleTeacher && user?.linkedTeacherId != null) {
-      final teacherName = TeacherRegistryService.instance
-              .lookupById(user!.linkedTeacherId!)
-              ?.fullName
-              .trim() ??
-          user.fullName?.trim() ??
-          'Teacher';
+    final username = user?.username.trim();
+    final senderUsername =
+        username == null || username.isEmpty ? null : username;
+
+    if (senderRole == AuthService.roleTeacher) {
+      final record = TeacherRegistryService.instance.resolveForAuthUser(
+        linkedTeacherId: user?.linkedTeacherId,
+        username: user?.username,
+        phone: user?.phone,
+        schoolId: AuthService.activeSchoolId ?? user?.schoolId,
+      );
+      final teacherId = record?.teacherId.trim().isNotEmpty == true
+          ? record!.teacherId
+          : user?.linkedTeacherId;
+      final teacherName = record?.fullName.trim().isNotEmpty == true
+          ? record!.fullName.trim()
+          : (user?.fullName?.trim() ?? 'Teacher');
       return (
-        senderStaffId: StaffMemberOption.teacherKey(user.linkedTeacherId!),
+        senderStaffId: teacherId == null || teacherId.trim().isEmpty
+            ? null
+            : StaffMemberOption.teacherKey(teacherId),
         senderDisplayName: teacherName,
-        senderUsername: null,
+        senderUsername: senderUsername,
         senderRelationshipLabel: null,
       );
     }
-    if (senderRole == AuthService.roleDriver && user?.linkedDriverId != null) {
-      final driverName = DriverRegistryService.instance
-              .lookupById(user!.linkedDriverId!)
-              ?.fullName
-              .trim() ??
-          user.fullName?.trim() ??
-          'Driver';
+    if (senderRole == AuthService.roleDriver) {
+      final record = DriverRegistryService.instance.resolveForAuthUser(
+        linkedDriverId: user?.linkedDriverId,
+        username: user?.username,
+        phone: user?.phone,
+        schoolId: AuthService.activeSchoolId ?? user?.schoolId,
+      );
+      final driverId = record?.driverId.trim().isNotEmpty == true
+          ? record!.driverId
+          : user?.linkedDriverId;
+      final driverName = record?.fullName.trim().isNotEmpty == true
+          ? record!.fullName.trim()
+          : (user?.fullName?.trim() ?? 'Driver');
       return (
-        senderStaffId: StaffMemberOption.driverKey(user.linkedDriverId!),
+        senderStaffId: driverId == null || driverId.trim().isEmpty
+            ? null
+            : StaffMemberOption.driverKey(driverId),
         senderDisplayName: driverName,
-        senderUsername: null,
+        senderUsername: senderUsername,
         senderRelationshipLabel: null,
       );
     }
@@ -1499,7 +1652,7 @@ class SchoolDataService {
         return (
           senderStaffId: StaffMemberOption.adminKey(adminRecord.adminId),
           senderDisplayName: adminRecord.fullName.trim(),
-          senderUsername: null,
+          senderUsername: senderUsername,
           senderRelationshipLabel: null,
         );
       }
@@ -1515,14 +1668,14 @@ class SchoolDataService {
       return (
         senderStaffId: null,
         senderDisplayName: user?.fullName ?? 'Parent',
-        senderUsername: user?.username,
+        senderUsername: senderUsername,
         senderRelationshipLabel: relationship,
       );
     }
     return (
       senderStaffId: null,
       senderDisplayName: AuthService.displayNameForRole(senderRole),
-      senderUsername: null,
+      senderUsername: senderUsername,
       senderRelationshipLabel: null,
     );
   }
@@ -1537,6 +1690,9 @@ class SchoolDataService {
     final roles = <String>{AuthService.roleAdmin};
     if (conversation.groupParentNames.isNotEmpty) {
       roles.add(AuthService.roleParent);
+    }
+    if (conversation.linkedStudentIds.isNotEmpty) {
+      roles.add(AuthService.roleStudent);
     }
     for (final staffId in conversation.groupStaffIds) {
       final member = StaffMemberOption.resolve(staffId);
@@ -1601,6 +1757,76 @@ class SchoolDataService {
       );
       return id;
     }
+  }
+
+  String ensureNamedGroupConversation({
+    required String groupName,
+    required List<String> parentNames,
+    required List<String> staffIds,
+    List<String>? linkedStudentIds,
+  }) {
+    final title = groupName.trim();
+    if (title.isEmpty) {
+      final id = openOrCreateGroupConversation(
+        parentNames: parentNames,
+        staffIds: staffIds,
+      );
+      _persistConversation(id);
+      return id;
+    }
+    for (final conversation in _conversations) {
+      if (conversation.isGroup &&
+          conversation.name.trim().toLowerCase() == title.toLowerCase()) {
+        var changed = false;
+        for (final id in staffIds) {
+          if (id.trim().isEmpty) continue;
+          if (!conversation.groupStaffIds.contains(id)) {
+            conversation.groupStaffIds.add(id);
+            changed = true;
+          }
+        }
+        for (final id in parentNames) {
+          if (id.trim().isEmpty) continue;
+          if (!conversation.groupParentNames.contains(id)) {
+            conversation.groupParentNames.add(id);
+            changed = true;
+          }
+        }
+        for (final id in linkedStudentIds ?? const <String>[]) {
+          final studentId = id.trim().toUpperCase();
+          if (studentId.isEmpty) continue;
+          if (!conversation.linkedStudentIds
+              .any((existing) => existing.toUpperCase() == studentId)) {
+            conversation.linkedStudentIds.add(studentId);
+            changed = true;
+          }
+        }
+        if (changed) _persistConversation(conversation.id);
+        return conversation.id;
+      }
+    }
+    final sortedParents = [...parentNames]
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final sortedStaffIds = [...staffIds]
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final slug = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final id = 'group-$slug';
+    _conversations.insert(
+      0,
+      Conversation(
+        id: id,
+        name: title,
+        role: 'Group',
+        isGroup: true,
+        groupParentNames: sortedParents,
+        groupStaffIds: sortedStaffIds,
+        linkedStudentIds: linkedStudentIds,
+        messages: [],
+        usesCustomGroupName: true,
+      ),
+    );
+    _persistConversation(id);
+    return id;
   }
 
   bool _sameIdList(List<String> a, List<String> b) {
@@ -1710,41 +1936,49 @@ class SchoolDataService {
     List<AnnouncementAttachment> attachments = const [],
     MessageReplyQuote? replyTo,
   }) {
-    final conversation = getConversation(conversationId);
+    final existing = getConversation(conversationId);
     final trimmed = text.trim();
-    if (conversation == null ||
+    if (existing == null ||
         (trimmed.isEmpty && attachments.isEmpty)) {
       return;
     }
+    final conversation = existing;
 
     final senderRole =
         AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
+    AuthService.alignTeacherSessionWithRegistry();
     if (!MessagingAccessService.canView(conversation, senderRole)) {
       return;
     }
+    _stampDirectParentThread(conversation);
+    final persistTarget = _linkedParentTeacherThreadToPersist(conversation);
     final senderMeta = _messageSenderMeta(
       senderRole,
       relationshipStudentId: conversation.linkedStudentIds.isNotEmpty
           ? conversation.linkedStudentIds.first
-          : null,
+          : persistTarget.linkedStudentIds.isNotEmpty
+              ? persistTarget.linkedStudentIds.first
+              : null,
     );
     final preview = _messagePreviewBody(trimmed, attachments);
     final senderName =
         senderMeta.senderDisplayName ?? AuthService.displayNameForRole(senderRole);
 
-    conversation.messages.add(
-      ChatMessage(
-        text: trimmed,
-        senderRole: senderRole,
-        time: DateTime.now(),
-        senderStaffId: senderMeta.senderStaffId,
-        senderDisplayName: senderMeta.senderDisplayName,
-        senderUsername: senderMeta.senderUsername,
-        senderRelationshipLabel: senderMeta.senderRelationshipLabel,
-        attachments: List.unmodifiable(attachments),
-        replyTo: replyTo,
-      ),
+    final message = ChatMessage(
+      text: trimmed,
+      senderRole: senderRole,
+      time: DateTime.now(),
+      senderStaffId: senderMeta.senderStaffId,
+      senderDisplayName: senderMeta.senderDisplayName,
+      senderUsername: senderMeta.senderUsername,
+      senderRelationshipLabel: senderMeta.senderRelationshipLabel,
+      attachments: List.unmodifiable(attachments),
+      replyTo: replyTo,
     );
+    conversation.messages.add(message);
+    if (persistTarget.id != conversation.id) {
+      _copyMessageIfMissing(persistTarget, message);
+    }
 
     if (conversation.isGroup) {
       _notifyGroupParticipants(
@@ -1754,7 +1988,7 @@ class SchoolDataService {
         title: 'New message from $senderName',
         body: preview,
       );
-      _persistConversation(conversationId);
+      _persistConversation(persistTarget.id);
       return;
     }
 
@@ -1774,7 +2008,77 @@ class SchoolDataService {
       recipientUsernames: targeting.recipientUsernames,
       targetStudentId: targeting.targetStudentId,
     );
-    _persistConversation(conversationId);
+    _persistConversation(persistTarget.id);
+  }
+
+  void _copyMessageIfMissing(Conversation? target, ChatMessage message) {
+    if (target == null) return;
+    final key = _messageMergeKey(message);
+    if (target.messages.any((existing) => _messageMergeKey(existing) == key)) {
+      return;
+    }
+    target.messages.add(message);
+  }
+
+  void _stampDirectParentThread(Conversation conversation) {
+    if (conversation.isGroup || conversation.isBroadcast) return;
+    if (conversation.isStaffOnlyDirectThread) return;
+
+    final role = AuthService.currentUser?.roleKey;
+    if ((conversation.staffParticipantId == null ||
+            conversation.staffParticipantId!.trim().isEmpty) &&
+        (role == AuthService.roleTeacher ||
+            role == AuthService.roleAdmin ||
+            role == AuthService.roleDriver)) {
+      final viewer = StaffMemberOption.viewerCompositeStaffId(role);
+      if (viewer != null && viewer.trim().isNotEmpty) {
+        conversation.staffParticipantId = viewer;
+      }
+    }
+
+    final threadStudents = _conversationStudentIds(conversation);
+    if (threadStudents.isEmpty) {
+      final parentName = conversation.parentParticipantName?.trim();
+      if (parentName != null && parentName.isNotEmpty) {
+        final recipient = MessagingAccessService.findParentRecipient(
+          parentName,
+          schoolId: AuthService.activeSchoolId,
+        );
+        threadStudents.addAll(
+          _normalizeStudentIds(recipient?.studentIds ?? const []),
+        );
+      }
+    }
+
+    final parentName = conversation.parentParticipantName?.trim();
+    final usernames = <String>[
+      ...conversation.parentParticipantUsernames,
+    ];
+    if (role == AuthService.roleParent) {
+      final username = AuthService.currentUser?.username.trim();
+      if (username != null && username.isNotEmpty) {
+        usernames.add(username);
+      }
+    }
+    if (parentName != null && parentName.isNotEmpty) {
+      final recipient = MessagingAccessService.findParentRecipient(
+        parentName,
+        schoolId: AuthService.activeSchoolId,
+      );
+      usernames.addAll(MessagingAccessService.usernamesOf(recipient));
+    }
+    usernames.addAll(
+      MessagingAccessService.parentLoginKeysForStudentIds(
+        threadStudents,
+        parentName: parentName,
+      ),
+    );
+
+    _mergeConversationParticipants(
+      conversation,
+      studentIds: threadStudents,
+      parentUsernames: usernames,
+    );
   }
 
   ({
@@ -1902,6 +2206,8 @@ class SchoolDataService {
         return {AuthService.roleParent};
       case AnnouncementAudiences.teachers:
         return {AuthService.roleTeacher};
+      case AnnouncementAudiences.students:
+        return {AuthService.roleStudent};
       case AnnouncementAudiences.transport:
         return {AuthService.roleDriver};
       case AnnouncementAudiences.admin:
@@ -1913,6 +2219,7 @@ class SchoolDataService {
           AuthService.roleTeacher,
           AuthService.roleAdmin,
           AuthService.roleDriver,
+          AuthService.roleStudent,
         };
     }
   }
@@ -1923,7 +2230,7 @@ class SchoolDataService {
 
     for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
       for (final assignment in teacher.classAssignments) {
-        if (assignment.className == className &&
+        if (_classNamesMatch(assignment.className, className) &&
             assignment.role == TeacherStaffRole.homeroomTeacher) {
           return teacher.teacherId;
         }
@@ -2051,19 +2358,26 @@ class SchoolDataService {
       return 'direct-staff-${pair[0]}-${pair[1]}';
     }
 
+    final primaryStudent = _primaryStudentId(studentIds);
+    if (hasStaff && primaryStudent != null) {
+      return _canonicalDirectParentTeacherConversationId(
+        staffParticipantId: staffId,
+        studentId: primaryStudent,
+      );
+    }
+
+    // Last-resort fallback when a parent/teacher thread has no student id yet.
     if (hasStaff) {
-      final parentKey = _directThreadParentKey(
+      final parentKey = _fallbackParentThreadKey(
         parentUsernames: parentUsernames,
-        studentIds: studentIds,
         parentParticipantName: parentParticipantName,
         contactName: contactName,
       );
       return 'direct-$staffId-$parentKey';
     }
 
-    final parentKey = _directThreadParentKey(
+    final parentKey = _fallbackParentThreadKey(
       parentUsernames: parentUsernames,
-      studentIds: studentIds,
       parentParticipantName: parentParticipantName,
       contactName: contactName,
     );
@@ -2074,26 +2388,194 @@ class SchoolDataService {
     return 'direct-$roleSlug-$parentKey';
   }
 
-  String _directThreadParentKey({
+  String _canonicalDirectParentTeacherConversationId({
+    required String staffParticipantId,
+    required String studentId,
+  }) {
+    return 'direct-${staffParticipantId.trim().toUpperCase()}'
+        '-stu-${studentId.trim().toUpperCase()}';
+  }
+
+  String? _studentIdFromParentTeacherConversationId(String id) {
+    final upper = id.trim().toUpperCase();
+    if (!upper.startsWith('DIRECT-') || upper.startsWith('DIRECT-STAFF-')) {
+      return null;
+    }
+    const marker = '-STU-';
+    final index = upper.lastIndexOf(marker);
+    if (index < 0) return null;
+    final student = upper.substring(index + marker.length).trim();
+    return student.isEmpty ? null : student;
+  }
+
+  List<String> _normalizeStudentIds(Iterable<String> raw) {
+    final seen = <String>{};
+    final ids = <String>[];
+    for (final value in raw) {
+      final id = value.trim().toUpperCase();
+      if (id.isEmpty || !seen.add(id)) continue;
+      ids.add(id);
+    }
+    return ids;
+  }
+
+  String? _primaryStudentId(Iterable<String> studentIds) {
+    final ids = _normalizeStudentIds(studentIds);
+    return ids.isEmpty ? null : ids.first;
+  }
+
+  List<String> _conversationStudentIds(Conversation conversation) {
+    final fromId = _studentIdFromParentTeacherConversationId(conversation.id);
+    return _normalizeStudentIds([
+      ...conversation.linkedStudentIds,
+      if (fromId != null) fromId,
+    ]);
+  }
+
+  String _fallbackParentThreadKey({
     required List<String> parentUsernames,
-    required List<String> studentIds,
     String? parentParticipantName,
     required String contactName,
   }) {
+    final named = parentParticipantName?.trim();
+    if (named != null && named.isNotEmpty) {
+      return 'name-${named.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
+    }
     if (parentUsernames.isNotEmpty) {
-      final sorted = parentUsernames.map((u) => u.toLowerCase()).toList()
-        ..sort();
-      return 'user-${sorted.join('_')}';
-    }
-    if (studentIds.isNotEmpty) {
-      final sorted = studentIds.map((id) => id.toUpperCase()).toList()..sort();
-      return 'stu-${sorted.join('_')}';
-    }
-    final parent = parentParticipantName?.trim();
-    if (parent != null && parent.isNotEmpty) {
-      return 'name-${parent.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
+      return 'user-${parentUsernames.first.trim().toLowerCase()}';
     }
     return 'name-${contactName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}';
+  }
+
+  bool _sameStaffParticipant(String? left, String? right) {
+    return StaffMemberOption.idsEqual(left, right);
+  }
+
+  bool _parentUsernamesOverlap(
+    Iterable<String> left,
+    Iterable<String> right,
+  ) {
+    final existing = left
+        .map((u) => u.trim().toLowerCase())
+        .where((u) => u.isNotEmpty)
+        .toList();
+    final incoming = right
+        .map((u) => u.trim().toLowerCase())
+        .where((u) => u.isNotEmpty)
+        .toList();
+    if (existing.isEmpty || incoming.isEmpty) return false;
+    for (final a in incoming) {
+      for (final b in existing) {
+        if (a == b || PhoneUtils.matches(a, b)) return true;
+      }
+    }
+    return false;
+  }
+
+  List<Conversation> _findParentTeacherThreads({
+    required String staffParticipantId,
+    required List<String> studentIds,
+    List<String> parentUsernames = const [],
+  }) {
+    final wantedStudents = _normalizeStudentIds(studentIds).toSet();
+    final candidates = <Conversation>[];
+    for (final conversation in _conversations) {
+      if (conversation.isGroup ||
+          conversation.isBroadcast ||
+          conversation.isStaffOnlyDirectThread) {
+        continue;
+      }
+      if (!_sameStaffParticipant(
+        conversation.staffParticipantId,
+        staffParticipantId,
+      )) {
+        continue;
+      }
+      final existingStudents = _conversationStudentIds(conversation).toSet();
+      final studentHit = wantedStudents.isNotEmpty &&
+          existingStudents.any(wantedStudents.contains);
+      if (studentHit) {
+        candidates.add(conversation);
+        continue;
+      }
+      if (existingStudents.isEmpty &&
+          _parentUsernamesOverlap(
+            conversation.parentParticipantUsernames,
+            parentUsernames,
+          )) {
+        candidates.add(conversation);
+      }
+    }
+    candidates.sort((a, b) {
+      final aHasParent = a.messages.any(
+            (m) => m.senderRole == AuthService.roleParent,
+          )
+          ? 0
+          : 1;
+      final bHasParent = b.messages.any(
+            (m) => m.senderRole == AuthService.roleParent,
+          )
+          ? 0
+          : 1;
+      if (aHasParent != bHasParent) {
+        return aHasParent.compareTo(bHasParent);
+      }
+      if (b.messages.length != a.messages.length) {
+        return b.messages.length.compareTo(a.messages.length);
+      }
+      final aTime = a.messages.isEmpty
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : a.messages.first.time;
+      final bTime = b.messages.isEmpty
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : b.messages.first.time;
+      return aTime.compareTo(bTime);
+    });
+    return candidates;
+  }
+
+  Conversation _linkedParentTeacherThreadToPersist(Conversation open) {
+    if (open.isGroup || open.isBroadcast || open.isStaffOnlyDirectThread) {
+      return open;
+    }
+    final staffId = open.staffParticipantId?.trim();
+    if (staffId == null || staffId.isEmpty) return open;
+    final matches = _findParentTeacherThreads(
+      staffParticipantId: staffId,
+      studentIds: _conversationStudentIds(open),
+      parentUsernames: open.parentParticipantUsernames,
+    );
+    if (matches.isEmpty) return open;
+    final best = matches.first;
+    if (best.id == open.id) return open;
+    for (final message in open.messages) {
+      _copyMessageIfMissing(best, message);
+    }
+    _mergeConversationParticipants(
+      best,
+      studentIds: open.linkedStudentIds,
+      parentUsernames: open.parentParticipantUsernames,
+      staffParticipantId: staffId,
+      staffSubjectName: open.staffSubjectName,
+    );
+    return best;
+  }
+
+  bool _isWeakerDuplicateParentTeacherThread(Conversation conversation) {
+    if (conversation.isGroup ||
+        conversation.isBroadcast ||
+        conversation.isStaffOnlyDirectThread) {
+      return false;
+    }
+    final staffId = conversation.staffParticipantId?.trim();
+    if (staffId == null || staffId.isEmpty) return false;
+    final matches = _findParentTeacherThreads(
+      staffParticipantId: staffId,
+      studentIds: _conversationStudentIds(conversation),
+      parentUsernames: conversation.parentParticipantUsernames,
+    );
+    if (matches.length < 2) return false;
+    return matches.first.id != conversation.id;
   }
 
   String openOrCreateConversation({
@@ -2110,11 +2592,7 @@ class SchoolDataService {
     final staffId = staffParticipantId?.trim();
     final peerStaffId = counterpartyStaffId?.trim();
     final hasStaffThread = staffId != null && staffId.isNotEmpty;
-    final studentIds = linkedStudentIds
-            ?.map((id) => id.trim().toUpperCase())
-            .where((id) => id.isNotEmpty)
-            .toList() ??
-        const <String>[];
+    final studentIds = _normalizeStudentIds(linkedStudentIds ?? const []);
     final parentUsernames = parentParticipantUsernames
             ?.map((u) => u.trim().toLowerCase())
             .where((u) => u.isNotEmpty)
@@ -2127,40 +2605,32 @@ class SchoolDataService {
         studentIds.isEmpty &&
         parentUsernames.isEmpty;
 
+    if (hasStaffThread && !isStaffToStaff) {
+      return _openOrCreateParentTeacherConversation(
+        contactName: contactName,
+        role: role,
+        staffId: staffId,
+        parentParticipantName: parentParticipantName,
+        staffSubjectName: staffSubjectName,
+        studentIds: studentIds,
+        parentUsernames: parentUsernames,
+      );
+    }
+
     for (final conversation in _conversations) {
       if (conversation.isGroup || conversation.isBroadcast) continue;
 
-      if (hasStaffThread) {
-        if (isStaffToStaff) {
-          if (!_staffPeerPairMatches(conversation, staffId, peerStaffId)) {
-            continue;
-          }
-        } else if (conversation.staffParticipantId?.trim() != staffId) {
-          continue;
-        } else if (peerStaffId != null &&
-            conversation.counterpartyStaffId?.trim().isNotEmpty == true &&
-            conversation.counterpartyStaffId!.trim() != peerStaffId) {
-          continue;
-        }
-        if (!_directThreadMatchesParent(
-          conversation,
-          parentParticipantName: parentParticipantName,
-          parentUsernames: parentUsernames,
-          studentIds: studentIds,
-        )) {
+      if (isStaffToStaff) {
+        if (!_staffPeerPairMatches(conversation, staffId, peerStaffId)) {
           continue;
         }
         _mergeConversationParticipants(
           conversation,
-          studentIds: studentIds,
-          parentUsernames: parentUsernames,
           staffParticipantId: staffId,
           counterpartyStaffId: peerStaffId,
           staffSubjectName: staffSubjectName,
         );
-        if (isStaffToStaff) {
-          _canonicalizeStaffToStaffThread(conversation);
-        }
+        _canonicalizeStaffToStaffThread(conversation);
         return conversation.id;
       }
 
@@ -2230,36 +2700,87 @@ class SchoolDataService {
     return id;
   }
 
-  bool _directThreadMatchesParent(
-    Conversation conversation, {
+  String _openOrCreateParentTeacherConversation({
+    required String contactName,
+    required String role,
+    required String staffId,
     String? parentParticipantName,
-    required List<String> parentUsernames,
+    String? staffSubjectName,
     required List<String> studentIds,
+    required List<String> parentUsernames,
   }) {
-    final parent = parentParticipantName?.trim();
-    final usernameMatch = parentUsernames.isEmpty ||
-        parentUsernames.any(
-          conversation.parentParticipantUsernames
-              .map((u) => u.toLowerCase())
-              .contains,
-        ) ||
-        (AuthService.currentUser?.username != null &&
-            conversation.parentParticipantUsernames.any(
-              (u) =>
-                  u.toLowerCase() ==
-                  AuthService.currentUser!.username.toLowerCase(),
-            ));
-    final studentMatch = studentIds.isEmpty ||
-        studentIds.any(conversation.linkedStudentIds.contains);
-    if (parent == null || parent.isEmpty) {
-      return usernameMatch || studentMatch;
+    var lookupStudents = List<String>.from(studentIds);
+    if (lookupStudents.isEmpty &&
+        parentParticipantName != null &&
+        parentParticipantName.trim().isNotEmpty) {
+      final recipient = MessagingAccessService.findParentRecipient(
+        parentParticipantName,
+        schoolId: AuthService.activeSchoolId,
+      );
+      lookupStudents = _normalizeStudentIds(recipient?.studentIds ?? const []);
     }
-    if (conversation.parentParticipantName == null ||
-        conversation.parentParticipantName!.trim().toLowerCase() !=
-            parent.toLowerCase()) {
-      return false;
+
+    final matches = _findParentTeacherThreads(
+      staffParticipantId: staffId,
+      studentIds: lookupStudents,
+      parentUsernames: parentUsernames,
+    );
+
+    if (matches.isNotEmpty) {
+      final match = matches.first;
+      _mergeConversationParticipants(
+        match,
+        studentIds: lookupStudents,
+        parentUsernames: parentUsernames,
+        staffParticipantId: staffId,
+        staffSubjectName: staffSubjectName,
+      );
+      for (final other in matches.skip(1)) {
+        for (final message in other.messages) {
+          _copyMessageIfMissing(match, message);
+        }
+        _mergeConversationParticipants(
+          match,
+          studentIds: other.linkedStudentIds,
+          parentUsernames: other.parentParticipantUsernames,
+        );
+      }
+      return match.id;
     }
-    return usernameMatch || studentMatch || conversation.messages.isNotEmpty;
+
+    final threadStudent = _primaryStudentId(lookupStudents);
+    final id = _deterministicDirectConversationId(
+      contactName: contactName,
+      staffParticipantId: staffId,
+      studentIds: threadStudent == null ? const [] : [threadStudent],
+      parentUsernames: parentUsernames,
+      parentParticipantName: parentParticipantName,
+    );
+    final existingById = _conversations.indexWhere((c) => c.id == id);
+    if (existingById >= 0) {
+      _mergeConversationParticipants(
+        _conversations[existingById],
+        studentIds: lookupStudents,
+        parentUsernames: parentUsernames,
+        staffParticipantId: staffId,
+        staffSubjectName: staffSubjectName,
+      );
+      return id;
+    }
+
+    final created = Conversation(
+      id: id,
+      name: contactName,
+      role: role,
+      messages: [],
+      parentParticipantName: parentParticipantName?.trim(),
+      staffParticipantId: staffId,
+      staffSubjectName: staffSubjectName?.trim(),
+      linkedStudentIds: lookupStudents,
+      parentParticipantUsernames: List.from(parentUsernames),
+    );
+    _conversations.insert(0, created);
+    return created.id;
   }
 
   void _mergeConversationParticipants(
@@ -2425,8 +2946,18 @@ class SchoolDataService {
     return fallback.trim().isEmpty ? null : fallback;
   }
 
-  List<ClassSubjectTeacher> getSubjectsForClass(String className) =>
-      List.unmodifiable(_classSubjectTeachers[className] ?? []);
+  List<ClassSubjectTeacher> getSubjectsForClass(String className) {
+    final merged = <ClassSubjectTeacher>[];
+    final seen = <String>{};
+    for (final entry in _classSubjectTeachers.entries) {
+      if (!_classNamesMatch(entry.key, className)) continue;
+      for (final item in entry.value) {
+        final key = '${item.teacherId}|${item.subject}';
+        if (seen.add(key)) merged.add(item);
+      }
+    }
+    return List.unmodifiable(merged);
+  }
 
   List<StudentRef> getStudentsForClass(String className, {String? schoolId}) {
     final normalized = className.trim();
@@ -2434,7 +2965,10 @@ class SchoolDataService {
       normalized,
       schoolId: schoolId ?? AuthService.activeSchoolId,
     );
-    final rosterCache = _classRosters[normalized] ?? const <StudentRef>[];
+    final rosterCache = <StudentRef>[
+      for (final entry in _classRosters.entries)
+        if (_classNamesMatch(entry.key, normalized)) ...entry.value,
+    ];
 
     if (registryStudents.isNotEmpty) {
       return registryStudents.map((record) {
@@ -2712,7 +3246,7 @@ class SchoolDataService {
 
   List<DailyActivityReport> getDailyActivitiesForClass(String className) {
     return _dailyActivities
-        .where((report) => report.className == className)
+        .where((report) => _classNamesMatch(report.className, className))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
@@ -2888,6 +3422,7 @@ class SchoolDataService {
     required String teacherId,
     String? subjectId,
     String? teachingSlotId,
+    DateTime? dueDate,
     List<String> attachmentPaths = const [],
   }) {
     final canonicalClass = _canonicalClassName(className);
@@ -2903,6 +3438,7 @@ class SchoolDataService {
         postedAt: DateTime.now(),
         subjectId: subjectId,
         teachingSlotId: teachingSlotId,
+        dueDate: dueDate,
         attachmentPaths: List.from(attachmentPaths),
       ),
     );
@@ -2922,10 +3458,17 @@ class SchoolDataService {
     required String id,
     required String description,
     List<String>? attachmentPaths,
+    DateTime? dueDate,
+    bool clearDueDate = false,
   }) {
     try {
       final item = _homework.firstWhere((hw) => hw.id == id);
       item.description = description.trim();
+      if (clearDueDate) {
+        item.dueDate = null;
+      } else if (dueDate != null) {
+        item.dueDate = dueDate;
+      }
       if (attachmentPaths != null) {
         item.attachmentPaths
           ..clear()
@@ -3132,8 +3675,7 @@ class SchoolDataService {
   }
 
   bool _classNamesMatch(String a, String b) {
-    if (_canonicalClassName(a) == _canonicalClassName(b)) return true;
-    return a.trim().toLowerCase() == b.trim().toLowerCase();
+    return StudentRegistryService.classNamesMatch(a, b);
   }
 
   bool _gradeReportMatches(
@@ -3148,14 +3690,58 @@ class SchoolDataService {
   StudentGradeReport? _findGradeReport({
     required String studentName,
     required String className,
+    String? term,
+    String? academicYear,
   }) {
-    try {
-      return _gradeReports.firstWhere(
-        (item) => _gradeReportMatches(item, studentName, className),
-      );
-    } catch (_) {
+    final matches = _gradeReports.where(
+      (item) => _gradeReportMatches(item, studentName, className),
+    );
+    final wantTerm = (term ?? '').trim().toLowerCase();
+    final wantYear = (academicYear ?? '').trim().toLowerCase();
+    if (wantTerm.isNotEmpty) {
+      for (final item in matches) {
+        if (item.term.trim().toLowerCase() != wantTerm) continue;
+        if (wantYear.isNotEmpty &&
+            (item.academicYear ?? '').trim().toLowerCase() != wantYear) {
+          continue;
+        }
+        return item;
+      }
       return null;
     }
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  /// Opens or creates a term/year report without merging into another term.
+  StudentGradeReport openTermGradeReport({
+    required String studentName,
+    required String className,
+    required String term,
+    String? academicYear,
+  }) {
+    final canonicalClass = _canonicalClassName(className);
+    final existing = _findGradeReport(
+      studentName: studentName,
+      className: canonicalClass,
+      term: term,
+      academicYear: academicYear,
+    );
+    if (existing != null) return existing;
+    final created = StudentGradeReport(
+      studentName: studentName,
+      className: canonicalClass,
+      term: term.trim().isEmpty ? 'Term 1' : term.trim(),
+      academicYear: academicYear?.trim().isEmpty == true
+          ? null
+          : academicYear?.trim(),
+      subjects: [],
+      studentId: StudentRegistryService.instance
+          .lookupByName(studentName)
+          ?.studentId,
+    );
+    _gradeReports.add(created);
+    _persistGradeReports();
+    return created;
   }
 
   SubjectGrade? _findSubjectGrade({
@@ -3177,7 +3763,7 @@ class SchoolDataService {
 
   List<GalleryPost> getGalleryForClass(String className) {
     return _galleryPosts
-        .where((post) => post.className == className)
+        .where((post) => _classNamesMatch(post.className, className))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
@@ -3185,7 +3771,9 @@ class SchoolDataService {
   List<GalleryPost> getGalleryForParent() {
     final classNames = getChildren().map((child) => child.className).toSet();
     return _galleryPosts
-        .where((post) => classNames.contains(post.className))
+        .where(
+          (post) => classNames.any((name) => _classNamesMatch(name, post.className)),
+        )
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
@@ -3198,6 +3786,7 @@ class SchoolDataService {
     required String authorName,
     String? mediaLabel,
     String? mediaPath,
+    List<String> attachmentPaths = const [],
   }) {
     _galleryPosts.insert(
       0,
@@ -3211,6 +3800,7 @@ class SchoolDataService {
         postedAt: DateTime.now(),
         mediaLabel: mediaLabel,
         mediaPath: mediaPath,
+        attachmentPaths: List<String>.from(attachmentPaths),
       ),
     );
 
@@ -3222,6 +3812,7 @@ class SchoolDataService {
       fromRole: AuthService.roleTeacher,
       fromName: authorName,
     );
+    SchoolContentSyncService.instance.markDataChanged();
     _persistSchoolContent();
   }
 
@@ -3233,7 +3824,8 @@ class SchoolDataService {
     try {
       return _attendanceSessions.firstWhere(
         (session) =>
-            session.className == className && _isSameDay(session.date, date),
+            _classNamesMatch(session.className, className) &&
+            _isSameDay(session.date, date),
       );
     } catch (_) {
       return null;
@@ -3356,7 +3948,7 @@ class SchoolDataService {
 
   List<AttendanceSession> getAttendanceHistory(String className) {
     return _attendanceSessions
-        .where((session) => session.className == className)
+        .where((session) => _classNamesMatch(session.className, className))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
@@ -3369,6 +3961,10 @@ class SchoolDataService {
     bool notifyParents = true,
   }) {
     final existing = getAttendanceSession(className, date);
+    final previousByName = {
+      for (final entry in existing?.entries ?? const <StudentAttendanceEntry>[])
+        entry.studentName: entry.status,
+    };
     if (existing != null) {
       _attendanceSessions.remove(existing);
     }
@@ -3390,29 +3986,107 @@ class SchoolDataService {
     );
 
     if (notifyParents) {
-      _notifyParentsInClass(
+      _notifyParentsOfAttendanceChanges(
         className: className,
-        title: 'Attendance recorded',
-        body: '$conductedBy saved attendance for $className.',
+        conductedBy: conductedBy,
+        entries: entries,
+        previousByName: previousByName,
+      );
+    }
+    _alertStaffWhenAbsenceStreakStarts(
+      className: className,
+      conductedBy: conductedBy,
+      entries: entries,
+    );
+    _persistSchoolContent();
+  }
+
+  void _notifyParentsOfAttendanceChanges({
+    required String className,
+    required String conductedBy,
+    required List<StudentAttendanceEntry> entries,
+    required Map<String, AttendanceStatus> previousByName,
+  }) {
+    for (final entry in entries) {
+      if (entry.status != AttendanceStatus.absent &&
+          entry.status != AttendanceStatus.late) {
+        continue;
+      }
+      if (previousByName[entry.studentName] == entry.status) continue;
+
+      final student = StudentRegistryService.instance.lookupByName(
+        entry.studentName,
+      );
+      final late = entry.status == AttendanceStatus.late;
+      NotificationService.instance.push(
+        title: late ? 'Late arrival recorded' : 'Absence recorded',
+        body: late
+            ? '$conductedBy marked ${entry.studentName} late in $className.'
+            : '$conductedBy marked ${entry.studentName} absent in $className.',
         type: NotificationType.attendance,
         fromRole: AuthService.roleTeacher,
         fromName: conductedBy,
+        recipientRole: AuthService.roleParent,
+        targetStudentId: student?.studentId,
+        targetClassName: className,
       );
     }
-    _persistSchoolContent();
+  }
+
+  void _alertStaffWhenAbsenceStreakStarts({
+    required String className,
+    required String conductedBy,
+    required List<StudentAttendanceEntry> entries,
+  }) {
+    const threshold =
+        AttendanceIntelligenceThresholds.consecutiveAbsenceThreshold;
+    for (final entry in entries) {
+      if (entry.status != AttendanceStatus.absent) continue;
+      final streak = _consecutiveAbsences(entry.studentName, className);
+      if (streak != threshold) continue;
+      NotificationService.instance.push(
+        title: 'Absence pattern detected',
+        body:
+            '${entry.studentName} in $className has $streak consecutive absences.',
+        type: NotificationType.attendance,
+        fromRole: AuthService.roleTeacher,
+        fromName: conductedBy,
+        recipientRole: AuthService.roleAdmin,
+        targetClassName: className,
+        showOnMessagesBadge: false,
+      );
+    }
+  }
+
+  int _consecutiveAbsences(String studentName, String className) {
+    var streak = 0;
+    for (final session in getAttendanceHistory(className)) {
+      StudentAttendanceEntry? match;
+      for (final entry in session.entries) {
+        if (entry.studentName == studentName) {
+          match = entry;
+          break;
+        }
+      }
+      if (match == null) continue;
+      if (match.status != AttendanceStatus.absent) break;
+      streak++;
+    }
+    return streak;
   }
 
   bool updateSubjectGrade({
     required String studentName,
     required String className,
-    required String subject,
     required double score,
+    required String subject,
     String? comment,
     List<String>? markPhotoPaths,
     List<String>? attachmentPaths,
     String? enteredByTeacherId,
     String? subjectId,
     String? teachingSlotId,
+    List<AssessmentMark>? assessments,
   }) {
     final subjectGrade = _findSubjectGrade(
       studentName: studentName,
@@ -3431,6 +4105,16 @@ class SchoolDataService {
       subjectGrade.status = SubjectGradeStatus.draft;
     }
     subjectGrade.score = score;
+    if (assessments != null) {
+      subjectGrade.assessments
+        ..clear()
+        ..addAll(assessments.map((m) => m.copy()));
+      if (subjectGrade.assessments.any((m) => m.isEntered)) {
+        subjectGrade.applyWeightedScore(
+          missingCountsAsZero: _markbookMissingCountsAsZero(),
+        );
+      }
+    }
     if (comment != null) subjectGrade.comment = comment;
     if (markPhotoPaths != null) {
       subjectGrade.markPhotoPaths
@@ -4039,6 +4723,7 @@ class SchoolDataService {
     Map<String, String>? commentsByStudentName,
     Map<String, List<String>>? markPhotoPathsByStudentName,
     Map<String, List<String>>? attachmentPathsByStudentName,
+    Map<String, List<AssessmentMark>>? assessmentsByStudentName,
   }) {
     final canonicalClass = _canonicalClassName(className);
     var saved = 0;
@@ -4068,6 +4753,7 @@ class SchoolDataService {
         enteredByTeacherId: teacherId,
         subjectId: subjectId,
         teachingSlotId: teachingSlotId,
+        assessments: assessmentsByStudentName?[studentName],
       );
       if (!updated) {
         final existing = _findSubjectGrade(
@@ -4157,13 +4843,106 @@ class SchoolDataService {
     GradePersistenceService.instance.saveFromService();
   }
 
+  bool _markbookMissingCountsAsZero() {
+    final schoolId = AuthService.activeSchoolId;
+    if (schoolId == null || schoolId.isEmpty) return false;
+    return SchoolRegistryService.instance
+            .lookup(schoolId)
+            ?.markbookSettings
+            .missingCountsAsZero ??
+        false;
+  }
+
+  StudentAttendanceSnapshot attendanceSnapshotForStudent({
+    required String studentName,
+    required String className,
+  }) {
+    var present = 0;
+    var late = 0;
+    var absent = 0;
+    for (final session in getAttendanceHistory(className)) {
+      for (final entry in session.entries) {
+        if (entry.studentName != studentName) continue;
+        switch (entry.status) {
+          case AttendanceStatus.present:
+            present++;
+          case AttendanceStatus.late:
+            late++;
+          case AttendanceStatus.absent:
+            absent++;
+        }
+      }
+    }
+    return StudentAttendanceSnapshot(
+      present: present,
+      late: late,
+      absent: absent,
+    );
+  }
+
+  bool updateTermReportCard({
+    required String studentName,
+    required String className,
+    String? term,
+    String? academicYear,
+    String? homeroomComment,
+    String? principalComment,
+    bool? publish,
+    bool refreshAttendance = true,
+  }) {
+    final report = _findGradeReport(
+      studentName: studentName,
+      className: className,
+    );
+    if (report == null) return false;
+    if (term != null && term.trim().isNotEmpty) {
+      report.term = term.trim();
+    }
+    if (academicYear != null) {
+      report.academicYear = academicYear.trim().isEmpty ? null : academicYear.trim();
+    }
+    if (homeroomComment != null) {
+      report.homeroomComment =
+          homeroomComment.trim().isEmpty ? null : homeroomComment.trim();
+    }
+    if (principalComment != null) {
+      report.principalComment =
+          principalComment.trim().isEmpty ? null : principalComment.trim();
+    }
+    if (refreshAttendance) {
+      final snap = attendanceSnapshotForStudent(
+        studentName: studentName,
+        className: className,
+      );
+      report.attendancePresent = snap.present;
+      report.attendanceLate = snap.late;
+      report.attendanceAbsent = snap.absent;
+    }
+    if (publish != null) {
+      report.reportCardPublished = publish;
+      report.reportCardPublishedAt = publish ? DateTime.now() : null;
+    }
+    _persistGradeReports();
+    return true;
+  }
+
+  int unpublishedReportCardCount({String? className}) {
+    final reports = className == null || className.isEmpty
+        ? _gradeReports
+        : getGradeReportsForClass(className);
+    return reports
+        .where(
+          (r) =>
+              !r.reportCardPublished &&
+              r.subjects.any((s) => s.status == SubjectGradeStatus.approved),
+        )
+        .length;
+  }
+
   void applyPersistedGradeReports(List<StudentGradeReport> reports) {
     for (final persisted in reports) {
-      final normalized = StudentGradeReport(
-        studentName: persisted.studentName,
+      final normalized = persisted.copyWith(
         className: _canonicalClassName(persisted.className),
-        term: persisted.term,
-        studentId: persisted.studentId,
         subjects: persisted.subjects.map(_normalizeSubjectWorkflow).toList(),
       );
       final index = _gradeReports.indexWhere(
@@ -4213,11 +4992,21 @@ class SchoolDataService {
       );
     }
 
-    return StudentGradeReport(
+    return local.copyWith(
       studentName: incoming.studentName,
       className: incoming.className,
       term: incoming.term,
       studentId: incoming.studentId ?? local.studentId,
+      academicYear: incoming.academicYear ?? local.academicYear,
+      homeroomComment: incoming.homeroomComment ?? local.homeroomComment,
+      principalComment: incoming.principalComment ?? local.principalComment,
+      reportCardPublished:
+          incoming.reportCardPublished || local.reportCardPublished,
+      reportCardPublishedAt:
+          incoming.reportCardPublishedAt ?? local.reportCardPublishedAt,
+      attendancePresent: incoming.attendancePresent ?? local.attendancePresent,
+      attendanceLate: incoming.attendanceLate ?? local.attendanceLate,
+      attendanceAbsent: incoming.attendanceAbsent ?? local.attendanceAbsent,
       subjects: mergedBySubject.values.toList(),
     );
   }
@@ -4271,36 +5060,8 @@ class SchoolDataService {
     return _gradeReports
         .where((report) => report.subjects.isNotEmpty)
         .map(
-          (report) => StudentGradeReport(
-            studentName: report.studentName,
-            className: report.className,
-            term: report.term,
-            studentId: report.studentId,
-            subjects: report.subjects
-                .map(
-                  (subject) => SubjectGrade(
-                    subject: subject.subject,
-                    score: subject.score,
-                    maxScore: subject.maxScore,
-                    comment: subject.comment,
-                    enteredByTeacherId: subject.enteredByTeacherId,
-                    subjectId: subject.subjectId,
-                    teachingSlotId: subject.teachingSlotId,
-                    publishedToParents: subject.publishedToParents,
-                    publishedAt: subject.publishedAt,
-                    status: subject.status,
-                    approvalLevelIndex: subject.approvalLevelIndex,
-                    submittedAt: subject.submittedAt,
-                    submittedByTeacherId: subject.submittedByTeacherId,
-                    reviewComment: subject.reviewComment,
-                    lastReviewedBy: subject.lastReviewedBy,
-                    lastReviewedAt: subject.lastReviewedAt,
-                    markPhotoPaths: List<String>.from(subject.markPhotoPaths),
-                    attachmentPaths:
-                        List<String>.from(subject.attachmentPaths),
-                  ),
-                )
-                .toList(),
+          (report) => report.copyWith(
+            subjects: report.subjects.map((subject) => subject.clone()).toList(),
           ),
         )
         .toList();
@@ -4400,7 +5161,7 @@ class SchoolDataService {
     for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
       if (!teacher.isActive) continue;
       final assigned = teacher.classAssignments.any(
-        (a) => a.className == classKey,
+        (a) => _classNamesMatch(a.className, classKey),
       );
       if (!assigned) continue;
       final option = StaffMemberOption.fromTeacher(teacher);
@@ -4440,9 +5201,11 @@ class SchoolDataService {
 
     final parentName = AuthService.currentUser?.fullName ?? 'Parent';
     final username = AuthService.currentUser?.username;
-    final studentIds = studentId != null
-        ? [studentId.trim().toUpperCase()]
-        : AuthService.activeLinkedStudentIds();
+    final studentIds = _normalizeStudentIds(
+      studentId != null
+          ? [studentId]
+          : AuthService.activeLinkedStudentIds(),
+    );
     final conversationId = openOrCreateConversation(
       contactName: member.displayName,
       role: member.conversationRole,
@@ -4453,8 +5216,13 @@ class SchoolDataService {
       ),
       parentParticipantName: parentName,
       linkedStudentIds: studentIds,
-      parentParticipantUsernames:
-          username != null ? [username.toLowerCase()] : const [],
+      parentParticipantUsernames: [
+        if (username != null && username.trim().isNotEmpty) username.toLowerCase(),
+        ...MessagingAccessService.parentLoginKeysForStudentIds(
+          studentIds,
+          parentName: parentName,
+        ),
+      ],
     );
 
     return _postAdminMessage(
@@ -4736,7 +5504,7 @@ class SchoolDataService {
       if (entry.value.trim().toUpperCase() != teacherId) continue;
       final stillHomeroom = teacher.classAssignments.any(
         (assignment) =>
-            assignment.className == entry.key &&
+            _classNamesMatch(assignment.className, entry.key) &&
             assignment.role == TeacherStaffRole.homeroomTeacher,
       );
       if (!stillHomeroom) {
@@ -4833,7 +5601,7 @@ class SchoolDataService {
       final list = _classSubjectTeachers[className];
       if (list == null) continue;
       final allowedSubjects = teacher.classAssignments
-          .where((assignment) => assignment.className == className)
+          .where((assignment) => _classNamesMatch(assignment.className, className))
           .expand((assignment) => _subjectSlotsForAssignment(teacher, assignment))
           .map((slot) => slot.subjectName)
           .toSet();
@@ -5110,18 +5878,27 @@ class SchoolDataService {
       List.unmodifiable(_gradeReports);
 
   StudentGradeReport? getGradeReportForStudentId(String studentId) {
+    final reports = gradeReportsForStudent(studentId);
+    return reports.isEmpty ? null : reports.first;
+  }
+
+  /// All term / year reports for one student (academic history).
+  List<StudentGradeReport> gradeReportsForStudent(String studentId) {
     final normalized = studentId.trim().toUpperCase();
-    try {
-      return _gradeReports.firstWhere(
-        (r) => r.studentId?.toUpperCase() == normalized,
-      );
-    } catch (_) {
-      final record = StudentRegistryService.instance.lookupById(studentId);
-      if (record != null) {
-        return getGradeReportForStudent(record.fullName);
-      }
-      return null;
+    final record = StudentRegistryService.instance.lookupById(studentId);
+    final seen = <String>{};
+    final out = <StudentGradeReport>[];
+    for (final report in _gradeReports) {
+      final matchId = report.studentId?.toUpperCase() == normalized;
+      final matchName =
+          record != null && report.studentName == record.fullName;
+      if (!matchId && !matchName) continue;
+      final key =
+          '${report.academicYear}|${report.term}|${report.className}|${report.studentName}';
+      if (!seen.add(key)) continue;
+      out.add(report);
     }
+    return out;
   }
 
   StudentGradeReport? getGradeReportForStudent(String studentName) {
@@ -5180,7 +5957,15 @@ class SchoolDataService {
     final published = report.subjects
         .where((subject) => subject.isVisibleToParent)
         .toList();
-    return report.copyWithSubjects(published);
+    if (!report.reportCardPublished) {
+      return report.copyWith(
+        subjects: published,
+        clearHomeroomComment: true,
+        clearPrincipalComment: true,
+        reportCardPublished: false,
+      );
+    }
+    return report.copyWith(subjects: published);
   }
 
   final List<ChildBusAssignment> _childBusAssignments = [
@@ -5555,8 +6340,20 @@ class SchoolDataService {
   List<FeeRecord> getAllFees() => List.unmodifiable(_fees);
 
   List<FeeRecord> getFeesForParent() {
-    final childNames = _children.map((c) => c.name).toSet();
-    return _fees.where((f) => childNames.contains(f.studentName)).toList();
+    final children = getChildren();
+    final childIds = children
+        .map((c) => c.studentId?.trim().toUpperCase())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final childNames = children.map((c) => c.name.trim()).toSet();
+    return _fees.where((f) {
+      final sid = f.studentId?.trim().toUpperCase();
+      if (sid != null && sid.isNotEmpty) {
+        return childIds.contains(sid);
+      }
+      return childNames.contains(f.studentName.trim());
+    }).toList();
   }
 
   PaymentSummary getPaymentSummary({bool parentOnly = true}) {
@@ -5721,9 +6518,13 @@ class SchoolDataService {
     ),
   ];
 
-  List<CalendarEvent> getCalendarEvents() => List.unmodifiable(_calendarEvents);
+  List<CalendarEvent> getCalendarEvents() {
+    ensureEthiopianHolidaysSynced();
+    return List.unmodifiable(_calendarEvents);
+  }
 
   List<CalendarEvent> getEventsForDay(DateTime day) {
+    ensureEthiopianHolidaysSynced();
     return _calendarEvents.where((event) {
       return event.date.year == day.year &&
           event.date.month == day.month &&
@@ -5755,13 +6556,23 @@ class SchoolDataService {
 
   List<StudentQrProfile> getStudentQrProfilesForClass(String className) {
     return _studentQrProfiles
-        .where((profile) => profile.className == className)
+        .where((profile) => _classNamesMatch(profile.className, className))
         .toList();
   }
 
   List<StudentQrProfile> getStudentQrProfilesForParent() {
-    final childNames = _children.map((c) => c.name).toSet();
-    return _studentQrProfiles.where((s) => childNames.contains(s.name)).toList();
+    final children = getChildren();
+    final childIds = children
+        .map((c) => c.studentId?.trim().toUpperCase())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final childNames = children.map((c) => c.name.trim()).toSet();
+    return _studentQrProfiles.where((s) {
+      final sid = s.id.trim().toUpperCase();
+      if (sid.isNotEmpty && childIds.contains(sid)) return true;
+      return childNames.contains(s.name.trim());
+    }).toList();
   }
 
   StudentQrProfile? findStudentByQrCode(String code) {
@@ -5935,17 +6746,24 @@ class SchoolDataService {
     required String teacherId,
     String? subjectId,
     String? teachingSlotId,
+    String? term,
+    String? academicYear,
   }) {
     final canonicalClass = _canonicalClassName(className);
     StudentGradeReport? report = _findGradeReport(
       studentName: studentName,
       className: canonicalClass,
+      term: term,
+      academicYear: academicYear,
     );
     if (report == null) {
       report = StudentGradeReport(
         studentName: studentName,
         className: canonicalClass,
-        term: 'Term 1',
+        term: (term ?? 'Term 1').trim().isEmpty ? 'Term 1' : (term ?? 'Term 1').trim(),
+        academicYear: academicYear?.trim().isEmpty == true
+            ? null
+            : academicYear?.trim(),
         subjects: [],
         studentId: StudentRegistryService.instance
             .lookupByName(studentName)
@@ -6065,6 +6883,7 @@ class SchoolDataService {
   }
 
   List<CalendarEvent> getVisibleCalendarEvents({bool includeEthiopian = true}) {
+    ensureEthiopianHolidaysSynced();
     if (includeEthiopian) return List.unmodifiable(_calendarEvents);
     return _calendarEvents.where((event) => !event.isEthiopianHoliday).toList();
   }
@@ -6086,12 +6905,14 @@ class SchoolDataService {
     if (audience.isEmpty || audience == 'all') return true;
 
     final classNames = getChildren()
-        .map((child) => child.className.trim().toLowerCase())
+        .map((child) => child.className.trim())
         .where((name) => name.isNotEmpty)
         .toSet();
 
     bool matchesClass() => classNames.any(
-          (className) => audience == className || audience.contains(className),
+          (className) =>
+              _classNamesMatch(className, event.audience) ||
+              audience.contains(className.toLowerCase()),
         );
 
     return switch (roleKey) {
@@ -6111,6 +6932,7 @@ class SchoolDataService {
   }
 
   List<CalendarEvent> getUpcomingEvents({int days = 30}) {
+    ensureEthiopianHolidaysSynced();
     final now = DateTime.now();
     final end = now.add(Duration(days: days));
     return _calendarEvents

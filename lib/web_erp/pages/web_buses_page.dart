@@ -7,7 +7,10 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/transport_service.dart';
+import 'package:mayabela/web_erp/pages/web_hr_register_driver_page.dart';
+import 'package:mayabela/web_erp/pages/web_transport_live_gps_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/widgets/mobile_erp_host.dart';
 
 /// First-class bus registry management for the web ERP (Phase E).
 class WebBusesPage extends StatefulWidget {
@@ -68,10 +71,44 @@ class _WebBusesPageState extends State<WebBusesPage> {
                     ),
                   ),
                   if (_canManage)
-                    FilledButton.icon(
-                      onPressed: _showAddOrEdit,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Bus'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MobileErpHost(
+                                  title: 'Live GPS',
+                                  child: WebTransportLiveGpsPage(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.gps_fixed),
+                          label: const Text('Live GPS'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MobileErpHost(
+                                  title: 'Register driver',
+                                  child: WebHrRegisterDriverPage(),
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.person_add_alt_1_outlined),
+                          label: const Text('Register Driver'),
+                        ),
+                        FilledButton.icon(
+                          onPressed: _showAddOrEdit,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Bus'),
+                        ),
+                      ],
                     ),
                 ],
               ),

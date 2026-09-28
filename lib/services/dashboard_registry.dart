@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/services/rbac/school_module_catalog.dart';
+
 class DashboardEntry {
   const DashboardEntry({
     required this.id,
@@ -69,6 +71,7 @@ class DashboardRegistry {
   }
 
   static bool shouldShow(DashboardEntry entry) {
+    if (!SchoolModuleCatalog.isEnabled(entry.id)) return false;
     final visible = entry.isVisible;
     return visible == null || visible();
   }

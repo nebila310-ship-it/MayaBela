@@ -15,7 +15,39 @@ enum DisciplineCaseStatus {
   escalated,
 }
 
-enum DisciplineOutcome { none, warning, suspension, restorative }
+enum DisciplineOutcome { none, warning, detention, suspension, restorative }
+
+/// Suggested school-rule codes — stored as free text on [DisciplineCase.conductCode].
+abstract final class DisciplineConductCodes {
+  static const codes = <String>[
+    'Disruption',
+    'Disrespect',
+    'Bullying',
+    'Academic integrity',
+    'Property',
+    'Safety',
+    'Attendance / punctuality',
+  ];
+
+  static String escalationLabel(String key) {
+    return switch (key) {
+      'section_director' => 'Section Director',
+      'vice_president' => 'Vice Principal',
+      'principal' => 'Principal',
+      _ => key,
+    };
+  }
+
+  static String outcomeLabel(DisciplineOutcome outcome) {
+    return switch (outcome) {
+      DisciplineOutcome.warning => 'Warning',
+      DisciplineOutcome.detention => 'Detention',
+      DisciplineOutcome.suspension => 'Suspension',
+      DisciplineOutcome.restorative => 'Restorative action',
+      DisciplineOutcome.none => 'None',
+    };
+  }
+}
 
 class DisciplineCase {
   const DisciplineCase({
@@ -30,6 +62,7 @@ class DisciplineCase {
     required this.kind,
     required this.title,
     required this.description,
+    this.conductCode = '',
     this.status = DisciplineCaseStatus.submitted,
     this.outcome = DisciplineOutcome.none,
     this.outcomeNotes = '',
@@ -58,6 +91,9 @@ class DisciplineCase {
   final DisciplineCaseKind kind;
   final String title;
   final String description;
+
+  /// Optional code-of-conduct rule (free text; see [DisciplineConductCodes]).
+  final String conductCode;
   final DisciplineCaseStatus status;
   final DisciplineOutcome outcome;
   final String outcomeNotes;
@@ -65,7 +101,7 @@ class DisciplineCase {
   final bool parentInvited;
   final bool parentNotified;
 
-  /// 'vice_president' or 'principal' when escalated.
+  /// 'section_director', 'vice_president', or 'principal' when escalated.
   final String escalatedTo;
 
   /// Student Affairs officer (or admin) who handled the case.
@@ -87,6 +123,7 @@ class DisciplineCase {
     bool? parentNotified,
     String? escalatedTo,
     String? handledByName,
+    String? conductCode,
     DateTime? updatedAt,
   }) {
     return DisciplineCase(
@@ -101,6 +138,7 @@ class DisciplineCase {
       kind: kind,
       title: title,
       description: description,
+      conductCode: conductCode ?? this.conductCode,
       status: status ?? this.status,
       outcome: outcome ?? this.outcome,
       outcomeNotes: outcomeNotes ?? this.outcomeNotes,
@@ -126,6 +164,7 @@ class DisciplineCase {
         'kind': kind.name,
         'title': title,
         'description': description,
+        'conductCode': conductCode,
         'status': status.name,
         'outcome': outcome.name,
         'outcomeNotes': outcomeNotes,
@@ -156,6 +195,7 @@ class DisciplineCase {
       ),
       title: '${map['title'] ?? ''}',
       description: '${map['description'] ?? ''}',
+      conductCode: '${map['conductCode'] ?? ''}',
       status: DisciplineCaseStatus.values.firstWhere(
         (s) => s.name == map['status'],
         orElse: () => DisciplineCaseStatus.submitted,

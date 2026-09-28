@@ -5,6 +5,10 @@
 -- 2) Links existing Auth users onto school secrets so Save stops saying
 --    "A user with this email address has already been registered".
 -- Login / password-reset buckets are unchanged.
+--
+-- If the project is empty, also run:
+--   supabase/migrations/20260725120000_app_documents.sql
+--   supabase/migrations/20260825163000_upsert_school_conversation.sql
 
 create or replace function public.auth_rate_limit_hit(
   p_bucket_key text,

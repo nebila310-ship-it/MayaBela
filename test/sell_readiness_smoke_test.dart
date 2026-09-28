@@ -1,6 +1,8 @@
 @Tags(['sell_audit'])
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mayabela/models/discipline_case.dart';
@@ -99,6 +101,18 @@ void main() {
       ]) {
         expect(MayaAssistantService.titleForRole(role), 'Maya Assistant');
       }
+    });
+
+    test('pilot APK stays on AGP 8.12 / Gradle 8.14.3', () {
+      // Flutter 3.47 still crashes on AGP 9 (afterEvaluate / new DSL).
+      final settings = File('android/settings.gradle.kts').readAsStringSync();
+      expect(settings, contains('id("com.android.application") version "8.12.0"'));
+      expect(settings, contains('id("org.jetbrains.kotlin.android") version "2.2.20"'));
+      final wrapper =
+          File('android/gradle/wrapper/gradle-wrapper.properties').readAsStringSync();
+      expect(wrapper, contains('gradle-8.14.3'));
+      final root = File('android/build.gradle.kts').readAsStringSync();
+      expect(root, contains('evaluationDependsOn(":app")'));
     });
   });
 
@@ -251,9 +265,20 @@ void main() {
       for (final id in [
         'dashboard',
         'students',
+        'admissions',
         'student_affairs',
         'quality_assurance',
         'examinations',
+        'markbook',
+        'report_cards',
+        'exam_bank',
+        'lesson_plans',
+        'homework',
+        'curriculum',
+        'at_risk',
+        'student_support',
+        'safeguarding',
+        'student_programs',
         'finance',
         'transport',
         'inventory',
@@ -437,7 +462,17 @@ void main() {
         'staff_announcements',
       ];
       const teacherEntries = ['student_affairs', 'maya_assistant'];
-      const parentEntries = ['student_affairs', 'fees', 'bus', 'maya_assistant'];
+      const parentEntries = [
+        'student_affairs',
+        'student_support',
+        'student_programs',
+        'qa_surveys',
+        'privacy_rights',
+        'training_manuals',
+        'fees',
+        'bus',
+        'maya_assistant',
+      ];
       expect(staffEntries, isNotEmpty);
       expect(teacherEntries, contains('student_affairs'));
       expect(parentEntries, containsAll(['fees', 'bus']));
@@ -604,18 +639,18 @@ class _SellScorecard {
       'Real PDF report engine',
       'Integration: grade approve→publish, parent link, attendance, GPS',
       'Sell package docs (pricing, onboarding, support) + pilot APK script',
+      'Pilot APK assembleRelease unblocked (AGP 8.12 / Gradle 8.14.3 pin)',
     ];
 
     final must = <String>[
       'Live customer dry-run sign-off (SELL_DRY_RUN.md) before first paid school',
-      'Pilot APK: unblock Flutter 3.44 + AGP 9 assembleRelease (web pilot OK meanwhile)',
     ];
 
     final should = <String>[
       'Walk SELL_DRY_RUN.md on production with a real school admin (sign-off)',
     ];
 
-    // Sell package docs + APK script shipped; remaining is live human sign-off.
+    // APK toolchain unblocked; remaining must-fix is live human sign-off.
     var score = 92 - (must.length * 2) - (should.length * 1);
     if (score < 0) score = 0;
     if (score > 100) score = 100;

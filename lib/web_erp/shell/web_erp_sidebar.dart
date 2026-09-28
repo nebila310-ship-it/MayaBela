@@ -5,6 +5,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 import 'package:mayabela/web_erp/models/web_erp_nav_item.dart';
 import 'package:mayabela/web_erp/services/web_erp_prefs_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
 class WebErpSidebar extends StatelessWidget {
@@ -32,14 +33,26 @@ class WebErpSidebar extends StatelessWidget {
     final favorites = WebErpPrefsService.instance.favorites;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
       width: width,
-      color: WebErpTheme.sidebarBg,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: WebErpTheme.sidebarBg,
+        border: Border(right: BorderSide(color: ClassroomPalette.line)),
+      ),
       child: Column(
         children: [
-          SizedBox(
+          Container(
             height: WebErpTheme.topBarHeight,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  ClassroomPalette.teal,
+                  Color.lerp(ClassroomPalette.teal, ClassroomPalette.blue, 0.45)!,
+                ],
+              ),
+            ),
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 16),
               child: Row(
@@ -72,14 +85,13 @@ class WebErpSidebar extends StatelessWidget {
                           : collapsed
                               ? Icons.chevron_right
                               : Icons.chevron_left,
-                      color: Colors.white70,
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, color: Colors.white12),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -97,12 +109,36 @@ class WebErpSidebar extends StatelessWidget {
                       ),
                   const SizedBox(height: 8),
                 ],
-                for (final item in items) _NavTile(
-                  item: item,
-                  collapsed: collapsed,
-                  selected: selectedId == item.id,
-                  onTap: () => onSelect(item.id),
-                ),
+                if (ModuleAccess.canView('add_driver') ||
+                    ModuleAccess.canView('transport_live_gps')) ...[
+                  if (!collapsed) _sectionLabel('School bus', highlight: true),
+                  if (ModuleAccess.canView('add_driver'))
+                    _NavTile(
+                      item: webErpNavItemById('add_driver') ??
+                          const WebErpNavItem(
+                            id: 'add_driver',
+                            label: 'Register Driver',
+                            icon: Icons.person_add_alt_1_outlined,
+                          ),
+                      collapsed: collapsed,
+                      selected: selectedId == 'add_driver',
+                      onTap: () => onSelect('add_driver'),
+                    ),
+                  if (ModuleAccess.canView('transport_live_gps'))
+                    _NavTile(
+                      item: webErpNavItemById('transport_live_gps') ??
+                          const WebErpNavItem(
+                            id: 'transport_live_gps',
+                            label: 'Live GPS',
+                            icon: Icons.gps_fixed,
+                          ),
+                      collapsed: collapsed,
+                      selected: selectedId == 'transport_live_gps',
+                      onTap: () => onSelect('transport_live_gps'),
+                    ),
+                  const SizedBox(height: 8),
+                ],
+                ..._sectionedTiles(items, selectedId, collapsed, onSelect),
               ],
             ),
           ),
@@ -111,15 +147,44 @@ class WebErpSidebar extends StatelessWidget {
     );
   }
 
-  Widget _sectionLabel(String text) {
+  List<Widget> _sectionedTiles(
+    List<WebErpNavItem> items,
+    String selectedId,
+    bool collapsed,
+    ValueChanged<String> onSelect,
+  ) {
+    final out = <Widget>[];
+    String? lastSection;
+    for (final item in items) {
+      final section = item.section;
+      if (!collapsed &&
+          section != null &&
+          section.isNotEmpty &&
+          section != lastSection) {
+        out.add(_sectionLabel(section));
+        lastSection = section;
+      }
+      out.add(
+        _NavTile(
+          item: item,
+          collapsed: collapsed,
+          selected: selectedId == item.id,
+          onTap: () => onSelect(item.id),
+        ),
+      );
+    }
+    return out;
+  }
+
+  Widget _sectionLabel(String text, {bool highlight = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white38,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
+        style: TextStyle(
+          color: highlight ? ClassroomPalette.green : ClassroomPalette.muted,
+          fontSize: highlight ? 12 : 10,
+          fontWeight: FontWeight.w800,
           letterSpacing: 1.1,
         ),
       ),
@@ -146,7 +211,7 @@ class _NavTile extends StatelessWidget {
       return _tile(
         icon: item.icon,
         label: item.label,
-        color: Colors.redAccent.shade100,
+        color: ClassroomPalette.red,
         badge: 0,
       );
     }
@@ -168,8 +233,11 @@ class _NavTile extends StatelessWidget {
     int badge = 0,
     Color? color,
   }) {
-    final fg = color ?? (selected ? Colors.white : Colors.white70);
+    final accent = ClassroomPalette.forKey(item.id);
+    final fg = color ??
+        (selected ? WebErpTheme.primary : ClassroomPalette.ink);
     final bg = selected ? WebErpTheme.sidebarActive : Colors.transparent;
+    final iconColor = color ?? (selected ? WebErpTheme.primary : accent);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -190,7 +258,23 @@ class _NavTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: fg, size: 22),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutBack,
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? iconColor
+                        : iconColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: selected ? Colors.white : iconColor,
+                    size: 20,
+                  ),
+                ),
                 if (!collapsed) ...[
                   const SizedBox(width: 12),
                   Expanded(

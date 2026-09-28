@@ -31,6 +31,16 @@ class StudentQrCard extends StatelessWidget {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Text(profile.className),
+            if (profile.id.isNotEmpty)
+              Text(
+                profile.id.toUpperCase().startsWith('STU-')
+                    ? profile.id.toUpperCase()
+                    : profile.id,
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),

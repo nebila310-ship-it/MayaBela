@@ -10,6 +10,7 @@ import {
   getDoc,
   normalizeUsername,
   profileFromAccount,
+  syntheticEmail,
 } from "../_shared/school_auth.ts";
 
 Deno.serve(async (req) => {
@@ -31,9 +32,21 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const callerUsername = normalizeUsername(meta.username);
     const targetUsername = normalizeUsername(body?.username || meta.username);
-    const isSelf = targetUsername === callerUsername;
-    const schoolId = String(meta.schoolId || "").trim().toUpperCase();
-    const isAdmin = meta.role === "admin" && !!schoolId;
+    const schoolId = String(meta.schoolId || body?.schoolId || "")
+      .trim()
+      .toUpperCase();
+    const expectedEmail = targetUsername && schoolId
+      ? syntheticEmail(targetUsername, schoolId).toLowerCase()
+      : "";
+    const callerEmail = String(user.email || "").toLowerCase();
+    const emailMatches = !!expectedEmail && callerEmail === expectedEmail;
+    const isSelf = (targetUsername === callerUsername && !!targetUsername) ||
+      emailMatches;
+    const isAdmin = meta.role === "admin" && !!schoolId &&
+      String(meta.schoolId || "").trim().toUpperCase() === schoolId;
+    if (!targetUsername || !schoolId) {
+      return errorResponse("username and schoolId are required.", 400, "invalid");
+    }
     if (!isSelf && !isAdmin) {
       return errorResponse("Cannot refresh another user's access claims.", 403);
     }

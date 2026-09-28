@@ -12,6 +12,15 @@ import 'package:mayabela/widgets/maya_assistant_chat_body.dart';
 class MayaFloatingChat extends StatefulWidget {
   const MayaFloatingChat({super.key});
 
+  /// Circular launcher diameter. Keep in sync with [_MayaFab].
+  static const double fabSize = 56;
+
+  /// Inset from the screen edge.
+  static const double fabEdgeInset = 16;
+
+  /// Trailing space page footers need so controls are not hidden under the FAB.
+  static const double pageEndClearance = fabSize + fabEdgeInset;
+
   @override
   State<MayaFloatingChat> createState() => _MayaFloatingChatState();
 }
@@ -27,12 +36,13 @@ class _MayaFloatingChatState extends State<MayaFloatingChat>
   @override
   void initState() {
     super.initState();
-    _anim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    )..addListener(() {
-        if (mounted) setState(() {});
-      });
+    _anim =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 260),
+        )..addListener(() {
+          if (mounted) setState(() {});
+        });
     AuthService.sessionListenable.addListener(_onSession);
   }
 
@@ -74,8 +84,8 @@ class _MayaFloatingChatState extends State<MayaFloatingChat>
 
     // Keep Positioned as the Stack direct-path root even when logged out.
     return Positioned(
-      right: 16,
-      bottom: 16 + bottomInset,
+      right: MayaFloatingChat.fabEdgeInset,
+      bottom: MayaFloatingChat.fabEdgeInset + bottomInset,
       child: user == null
           ? const SizedBox.shrink()
           : _MayaChatBody(
@@ -136,8 +146,9 @@ class _MayaChatBody extends StatelessWidget {
                         end: Alignment.bottomCenter,
                       ),
                       border: Border.all(
-                        color: _MayaFloatingChatState._accent
-                            .withValues(alpha: 0.2),
+                        color: _MayaFloatingChatState._accent.withValues(
+                          alpha: 0.2,
+                        ),
                       ),
                       boxShadow: kIsWeb
                           ? const []
@@ -217,7 +228,11 @@ class _FloatingHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.auto_awesome,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(

@@ -9,6 +9,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/discipline_conduct_code_chips.dart';
 
 /// EDUABA Student Affairs desk — discipline / behaviour cases and
 /// parent leave requests, per the Student Affairs branch spec.
@@ -56,7 +57,8 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
               const SizedBox(height: 4),
               Text(
                 'Behaviour & incident cases (investigation → hearing → outcome) '
-                'and parent leave requests.',
+                'on the existing discipline register. Tag a code-of-conduct rule '
+                'when filing; parents are notified on new reports and escalation.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -221,9 +223,15 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                 scheme.onSecondaryContainer,
               ),
               _statusChip(context, c.status),
+              if (c.conductCode.isNotEmpty)
+                _chip(
+                  c.conductCode,
+                  scheme.primaryContainer,
+                  scheme.onPrimaryContainer,
+                ),
               if (c.outcome != DisciplineOutcome.none)
                 _chip(
-                  'Outcome: ${c.outcome.name}',
+                  'Outcome: ${DisciplineConductCodes.outcomeLabel(c.outcome)}',
                   scheme.tertiaryContainer,
                   scheme.onTertiaryContainer,
                 ),
@@ -239,7 +247,7 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
           Text(
             'Reported by ${c.reporterName}'
             '${c.hearingAt != null ? ' • Hearing: ${_dateLabel(c.hearingAt!)}${c.parentInvited ? ' (parent invited)' : ''}' : ''}'
-            '${c.escalatedTo.isNotEmpty ? ' • Escalated to ${c.escalatedTo == 'principal' ? 'Principal' : 'Vice Principal'}' : ''}'
+            '${c.escalatedTo.isNotEmpty ? ' • Escalated to ${DisciplineConductCodes.escalationLabel(c.escalatedTo)}' : ''}'
             '${c.handledByName.isNotEmpty ? ' • Handled by ${c.handledByName}' : ''}',
             style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
           ),
@@ -327,6 +335,7 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
 
     String? studentId = students.first.studentId;
     var kind = DisciplineCaseKind.behaviour;
+    var conductCode = '';
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
 
@@ -372,6 +381,12 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                     ),
                   ),
                   const SizedBox(height: 10),
+                  DisciplineConductCodeChips(
+                    selected: conductCode,
+                    onSelected: (v) =>
+                        setDialogState(() => conductCode = v),
+                  ),
+                  const SizedBox(height: 10),
                   TextField(
                     controller: titleCtrl,
                     decoration: const InputDecoration(
@@ -415,6 +430,7 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       kind: kind,
       title: titleCtrl.text,
       description: descCtrl.text,
+      conductCode: conductCode,
     );
   }
 
@@ -498,6 +514,10 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                       child: Text('Warning'),
                     ),
                     DropdownMenuItem(
+                      value: DisciplineOutcome.detention,
+                      child: Text('Detention'),
+                    ),
+                    DropdownMenuItem(
                       value: DisciplineOutcome.suspension,
                       child: Text('Suspension'),
                     ),
@@ -554,6 +574,10 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
         title: const Text('Escalate critical case to'),
         children: [
           SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'section_director'),
+            child: const Text('Section Director'),
+          ),
+          SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, 'vice_president'),
             child: const Text('Vice Principal'),
           ),
@@ -570,7 +594,9 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       (cur) => cur.copyWith(
         status: DisciplineCaseStatus.escalated,
         escalatedTo: target,
+        parentNotified: true,
       ),
+      notifyParent: true,
     );
   }
 

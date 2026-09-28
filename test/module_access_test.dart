@@ -144,17 +144,34 @@ void main() {
         'library',
         'quality_assurance',
         'student_affairs',
+        'admissions',
+        'alumni',
+        'markbook',
+        'report_cards',
+        'exam_bank',
+        'lesson_plans',
+        'curriculum',
+        'at_risk',
+        'student_support',
+        'safeguarding',
+        'student_programs',
+        'go_live',
+        'homework',
       ]) {
         expect(ModuleAccess.canView(id), isTrue, reason: id);
       }
-      // EDUABA allocation: events/calendar belong to Section Director
-      // (executives also see them read-only; VP does not operate them).
-      expect(ModuleAccess.canView('calendar'), isFalse);
-      expect(ModuleAccess.canView('events'), isFalse);
+      expect(ModuleAccess.canView('calendar'), isTrue);
+      expect(ModuleAccess.canView('events'), isTrue);
+      expect(ModuleAccess.canManage('calendar'), isFalse);
+      expect(ModuleAccess.canManage('events'), isFalse);
+      expect(ModuleAccess.canView('homework'), isTrue);
+      expect(ModuleAccess.canManage('homework'), isFalse);
+      expect(ModuleAccess.isReadOnly('homework'), isTrue);
       // Reports opened for VP oversight (export read-only).
       expect(ModuleAccess.canView('reports'), isTrue);
       expect(ModuleAccess.canManage('reports'), isFalse);
-      expect(ModuleAccess.canView('audit_log'), isFalse);
+      expect(ModuleAccess.canView('audit_log'), isTrue);
+      expect(ModuleAccess.canManage('audit_log'), isFalse);
     });
 
     test('does not see owner-only system chrome', () {
@@ -231,11 +248,42 @@ void main() {
       // Item 16: events & calendar belong to SD on the staff side.
       expect(ModuleAccess.canView('events'), isTrue);
       expect(ModuleAccess.canManage('calendar'), isTrue);
+      expect(
+        AuthService.hasPermission(SchoolPermissions.sendAnnouncements),
+        isTrue,
+      );
       expect(ModuleAccess.canLinkStudentTransport, isTrue);
       expect(ModuleAccess.canManage('parents'), isTrue);
       expect(ModuleAccess.canManage('examinations'), isTrue);
+      expect(ModuleAccess.canView('homework'), isTrue);
+      expect(ModuleAccess.canManage('homework'), isFalse);
       expect(ModuleAccess.canManage('grade_approvals'), isTrue);
       expect(ModuleAccess.canView('support'), isTrue);
+      // Child-protection files are not a classroom or department-head desk.
+      expect(ModuleAccess.canView('safeguarding'), isFalse);
+      expect(ModuleAccess.canView('reports'), isTrue);
+      expect(ModuleAccess.canManage('reports'), isFalse);
+    });
+  });
+
+  group('Quality Assurance', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.qualityAssurance]));
+
+    test('opens reports and the audit log read-only', () {
+      expect(ModuleAccess.canView('quality_assurance'), isTrue);
+      expect(ModuleAccess.canView('reports'), isTrue);
+      expect(ModuleAccess.canView('audit_log'), isTrue);
+      expect(ModuleAccess.canManage('audit_log'), isFalse);
+    });
+  });
+
+  group('Student Affairs', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.studentAffairs]));
+
+    test('can view and manage parent link approvals', () {
+      expect(ModuleAccess.canView('parents'), isTrue);
+      expect(ModuleAccess.canManage('parents'), isTrue);
+      expect(ModuleAccess.canView('students'), isTrue);
     });
   });
 
@@ -247,6 +295,40 @@ void main() {
       expect(ModuleAccess.canView('students'), isFalse);
       expect(ModuleAccess.canView('inventory'), isFalse);
       expect(ModuleAccess.canView('transport'), isFalse);
+      expect(ModuleAccess.canView('digital_ops'), isFalse);
+    });
+  });
+
+  group('Administration Staff (staffs)', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.staffs]));
+
+    test('runs the digital-ops desk without Full Access', () {
+      expect(ModuleAccess.canView('digital_ops'), isTrue);
+      expect(ModuleAccess.canManage('digital_ops'), isTrue);
+      expect(ModuleAccess.canView('go_live'), isTrue);
+      expect(ModuleAccess.canManage('go_live'), isTrue);
+      expect(ModuleAccess.canView('cctv'), isTrue);
+      expect(ModuleAccess.canManage('cctv'), isTrue);
+      expect(ModuleAccess.canView('system_health'), isTrue);
+      expect(ModuleAccess.canManage('system_health'), isFalse);
+      expect(ModuleAccess.canView('finance'), isFalse);
+      expect(ModuleAccess.canView('examinations'), isFalse);
+      expect(ModuleAccess.canManage('parents'), isFalse);
+      expect(ModuleAccess.canView('homework'), isFalse);
+      expect(ModuleAccess.hasErpAccess, isTrue);
+    });
+
+    test('sidebar lists digital ops plus chrome, not markbook', () {
+      final ids = webErpNavItemsForCurrentUser().map((e) => e.id).toSet();
+      expect(ids, contains('digital_ops'));
+      expect(ids, contains('go_live'));
+      expect(ids, contains('cctv'));
+      expect(ids, contains('system_health'));
+      expect(ids, isNot(contains('finance')));
+      expect(ids, isNot(contains('examinations')));
+      expect(ids, isNot(contains('markbook')));
+      expect(ids, contains('dashboard'));
+      expect(ids, contains('logout'));
     });
   });
 
@@ -259,12 +341,47 @@ void main() {
       expect(ModuleAccess.canManage('add_teacher'), isFalse);
       expect(ModuleAccess.normalize('staff'), 'hr');
       expect(ModuleAccess.normalize('employees'), 'hr');
+      expect(ModuleAccess.normalize('payroll'), 'hr');
       // Classroom teachers is its own module now (item 7 allocation).
       expect(ModuleAccess.normalize('classroom_teachers'), 'classroom_teachers');
       expect(ModuleAccess.normalize('add_teacher'), 'hr');
       expect(ModuleAccess.normalize('add_staff'), 'teachers');
       expect(ModuleAccess.normalize('grade_approvals'), 'examinations');
+      expect(ModuleAccess.normalize('markbook'), 'examinations');
+      expect(ModuleAccess.normalize('report_cards'), 'examinations');
+      expect(ModuleAccess.normalize('exam_bank'), 'examinations');
+      expect(ModuleAccess.normalize('exam_papers'), 'examinations');
+      expect(ModuleAccess.normalize('exam_desk'), 'examinations');
+      expect(ModuleAccess.normalize('lesson_plans'), 'academic');
+      expect(ModuleAccess.normalize('lessons'), 'academic');
+      expect(ModuleAccess.normalize('curriculum'), 'academic');
+      expect(ModuleAccess.normalize('academic_meetings'), 'academic');
+      expect(ModuleAccess.normalize('at_risk'), 'attendance');
+      expect(ModuleAccess.normalize('attendance_insights'), 'attendance');
+      expect(ModuleAccess.normalize('health'), 'student_affairs');
+      expect(ModuleAccess.normalize('counseling'), 'student_affairs');
+      expect(ModuleAccess.normalize('iep'), 'student_affairs');
+      expect(ModuleAccess.normalize('special_needs'), 'student_affairs');
+      expect(ModuleAccess.normalize('college_guidance'), 'student_affairs');
+      expect(ModuleAccess.normalize('student_support'), 'student_affairs');
+      expect(ModuleAccess.normalize('safeguarding'), 'safeguarding');
+      expect(ModuleAccess.normalize('clubs'), 'student_affairs');
+      expect(ModuleAccess.normalize('gojo'), 'student_affairs');
+      expect(ModuleAccess.normalize('scholarships'), 'student_affairs');
+      expect(ModuleAccess.normalize('grievances'), 'student_affairs');
+      expect(ModuleAccess.normalize('internships'), 'student_affairs');
+      expect(ModuleAccess.normalize('leadership_meetings'), 'student_affairs');
+      expect(ModuleAccess.normalize('student_programs'), 'student_affairs');
+      expect(ModuleAccess.normalize('dosa'), 'student_affairs');
+      expect(ModuleAccess.normalize('surveys'), 'quality_assurance');
+      expect(ModuleAccess.normalize('qa_surveys'), 'quality_assurance');
+      expect(ModuleAccess.normalize('observations'), 'quality_assurance');
+      expect(ModuleAccess.normalize('academic_audits'), 'quality_assurance');
+      expect(ModuleAccess.normalize('action_research'), 'quality_assurance');
+      expect(ModuleAccess.normalize('academic_monitoring'), 'quality_assurance');
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
+      expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
+      expect(ModuleAccess.normalize('add_driver'), 'transport');
       expect(ModuleAccess.normalize('timetable'), 'academic');
       expect(ModuleAccess.normalize('grade_workflow_settings'), 'examinations');
       expect(ModuleAccess.normalize('student_portal_settings'), 'school');

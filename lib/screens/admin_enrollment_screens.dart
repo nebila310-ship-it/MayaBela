@@ -30,10 +30,13 @@ import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/student_medical_form_fields.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
+import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/send_student_parent_invites.dart';
+import 'package:mayabela/widgets/student_qr_card.dart';
 import 'package:mayabela/widgets/send_teacher_credentials.dart';
 import 'package:mayabela/widgets/staff_role_picker_table.dart';
 import 'package:mayabela/widgets/transport_driver_field.dart';
@@ -130,7 +133,7 @@ class _ParentPendingScreenState extends State<ParentPendingScreen> {
     if (_refreshing) return;
     setState(() => _refreshing = true);
     try {
-      await SessionCloudSync.onSessionStarted();
+      await SessionCloudSync.awaitRoleCloudSync();
     } catch (_) {}
     if (!mounted) return;
     setState(() => _refreshing = false);
@@ -143,13 +146,26 @@ class _ParentPendingScreenState extends State<ParentPendingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthService.currentUser!;
-    final links = EnrollmentService.instance.sortedLinksForParent(user.username);
-    final hasPending = links.any((l) => l.status == ParentLinkStatus.pending);
-
     return ListenableBuilder(
-      listenable: AppLocale.instance,
+      listenable: Listenable.merge([
+        AppLocale.instance,
+        AuthService.sessionListenable,
+      ]),
       builder: (context, _) {
+        if (AuthService.isParentAccessApproved()) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ParentDashboard()),
+            );
+          });
+        }
+
+        final user = AuthService.currentUser!;
+        final links =
+            EnrollmentService.instance.sortedLinksForParent(user.username);
+        final hasPending =
+            links.any((l) => l.status == ParentLinkStatus.pending);
         final s = AppLocale.instance.strings;
         return Scaffold(
           appBar: AppBar(
@@ -307,6 +323,26 @@ class ParentApprovalsScreen extends StatefulWidget {
 }
 
 class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_refreshFromCloud());
+    });
+  }
+
+  Future<void> _refreshFromCloud() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await SessionCloudSync.awaitRoleCloudSync();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _busy = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -325,6 +361,20 @@ class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
             backgroundColor: Colors.indigo,
             title: Text(s.parentApprovals),
             actions: [
+              IconButton(
+                tooltip: s.tryAgain,
+                onPressed: _busy ? null : _refreshFromCloud,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+              ),
               if (pendingCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -344,7 +394,9 @@ class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
                 ),
             ],
           ),
-          body: queue.isEmpty
+          body: _busy && queue.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : queue.isEmpty
               ? Center(child: Text(s.noApprovalRequests))
               : ListView.separated(
                   padding: listPagePadding(context),
@@ -421,7 +473,9 @@ class _ParentApprovalsScreenState extends State<ParentApprovalsScreen> {
                                 ),
                               ),
                             ],
-                            if (isPending) ...[
+                            if (isPending &&
+                                EnrollmentService.instance
+                                    .canCurrentUserManageParentLink(link)) ...[
                               const SizedBox(height: 12),
                               Row(
                                 children: [
@@ -640,7 +694,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       initialPassword: tempPassword,
       classAssignments: const [],
       campus: _selectedCampus,
-      // Role initials drive the short id prefix (QA-1001, HR-1001, …).
+      // Role initials drive the short 4-digit id (QA-0001, HR-0001, …).
       staffRoles: _isStaff ? _selectedRoles.toList() : const [],
     );
     final createdTeacherId = teacher.teacherId;
@@ -1035,7 +1089,11 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
   final _section = TextEditingController();
   final _homeroomTeacherId = TextEditingController();
   final _academicYear = TextEditingController(text: '2025/2026');
+  final _house = TextEditingController();
+  final _medicalDetails = TextEditingController();
+  final _otherMedical = TextEditingController();
   final _transportId = TextEditingController();
+  bool _hasMedicalCondition = false;
   bool _transport = false;
   String? _selectedGender;
   Uint8List? _pickedPhotoBytes;
@@ -1068,6 +1126,9 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
     _section.dispose();
     _homeroomTeacherId.dispose();
     _academicYear.dispose();
+    _house.dispose();
+    _medicalDetails.dispose();
+    _otherMedical.dispose();
     _transportId.dispose();
     super.dispose();
   }
@@ -1309,6 +1370,10 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       emergencyContact2Name: _emergencyName2.text,
       homeroomTeacherId: homeroomTeacherId,
       academicYear: _academicYear.text.trim(),
+      house: _house.text.trim(),
+      hasMedicalCondition: _hasMedicalCondition,
+      medicalConditionDetails: _medicalDetails.text,
+      otherMedicalInfo: _otherMedical.text,
       transportEnabled: _transport,
       transportId: transportIdRaw.isEmpty ? null : transportIdRaw,
       campus: _selectedCampus,
@@ -1426,6 +1491,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
     }
 
     if (!mounted) return;
+    final qrProfile = qrProfileForStudent(student);
     await showAdminSuccessDialog(
       context: context,
       title: s.studentEnrolled,
@@ -1433,6 +1499,8 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       accent: AdminFormTheme.student.primary,
       icon: Icons.check_circle_outline,
       items: summaryItems,
+      extra: StudentQrCard(profile: qrProfile, size: 160),
+      footnote: s.studentQrUsageHint,
       actions: [
         if (portalStudent.loginUsername != null)
           AdminDialogAction(
@@ -1443,6 +1511,13 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
               await StudentCredentialsService.instance.share(portalStudent);
             },
           ),
+        AdminDialogAction(
+          label: s.generateStudentQr,
+          icon: Icons.qr_code_2,
+          onPressed: () {
+            showAdminStudentQrSheet(context, student: student);
+          },
+        ),
         AdminDialogAction(
           label: s.sendInviteToContacts,
           icon: Icons.mail_outline,
@@ -1660,6 +1735,31 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
                     accent: theme.secondary,
                   ),
                 ),
+                TextField(
+                  controller: _house,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: adminFieldDecoration(
+                    label: 'House',
+                    hint: 'Blue, Green, Red, Yellow…',
+                    icon: Icons.home_outlined,
+                    accent: theme.secondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  s.studentMedicalSection,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                StudentMedicalFormFields(
+                  hasMedicalCondition: _hasMedicalCondition,
+                  onHasMedicalChanged: (v) =>
+                      setState(() => _hasMedicalCondition = v),
+                  detailsController: _medicalDetails,
+                  otherController: _otherMedical,
+                  accent: theme.secondary,
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _dob,
                   keyboardType: TextInputType.number,

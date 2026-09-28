@@ -49,86 +49,106 @@ class DashboardWelcomeCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accentLight.withValues(alpha: 0.35)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDADCE0)),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.08),
-            blurRadius: 10,
+            color: accent.withValues(alpha: 0.16),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          leading ??
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: accent.withValues(alpha: 0.12),
-                child: Icon(Icons.person_outline, color: accent, size: 32),
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [accent, accentLight],
               ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  s.welcomeBack,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: accentLight,
-                    letterSpacing: 0.2,
+                leading ??
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor: accent.withValues(alpha: 0.12),
+                      child: Icon(Icons.person_outline, color: accent, size: 32),
+                    ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.welcomeBack,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: accentLight,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: accent,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        schoolLine,
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                      for (final line in detailLines) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          line,
+                          style: TextStyle(
+                              color: Colors.grey.shade700, fontSize: 13),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
+                        statsSectionTitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: accent,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: chips),
+                      if (footer != null) ...[
+                        const SizedBox(height: 12),
+                        footer!,
+                      ] else if (footerLine != null &&
+                          footerLine!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          footerLine!,
+                          style: TextStyle(
+                              color: Colors.grey.shade600, fontSize: 12),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: accent,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  schoolLine,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                ),
-                for (final line in detailLines) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    line,
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Text(
-                  statsSectionTitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: accent,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 8, children: chips),
-                if (footer != null) ...[
-                  const SizedBox(height: 12),
-                  footer!,
-                ] else if (footerLine != null && footerLine!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    footerLine!,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                ],
               ],
             ),
           ),
@@ -257,8 +277,8 @@ class TeacherDashboardSummary extends StatelessWidget {
 class AdminDashboardSummary extends StatelessWidget {
   const AdminDashboardSummary({super.key});
 
-  static const _accent = Color(0xFF4527A0);
-  static const _accentLight = Color(0xFF7E57C2);
+  static const _accent = Color(0xFF00897B);
+  static const _accentLight = Color(0xFF12B5CB);
 
   @override
   Widget build(BuildContext context) {

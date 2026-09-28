@@ -10,6 +10,7 @@ import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/qr_entry_exit_screen.dart';
+import 'package:mayabela/services/lms_classroom_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 
@@ -73,13 +74,30 @@ class ClassToolsPanel extends StatelessWidget {
         color: Colors.cyan,
         onTap: () => open(HomeworkScreen(initialClass: className)),
       ),
-      if (access.canMessageInClass(className))
+      if (access.canMessageInClass(className)) ...[
         ClassToolChip(
           icon: Icons.message,
           label: s.dashboardTitle('messages'),
           color: Colors.orange,
           onTap: () => open(const MessagesScreen()),
         ),
+        ClassToolChip(
+          icon: Icons.forum_outlined,
+          label: 'Class discussion',
+          color: Colors.indigo,
+          onTap: () {
+            final id = LmsClassroomService.instance
+                .ensureClassDiscussion(className);
+            open(
+              ChatScreen(
+                conversationId: id,
+                contactName: LmsClassroomService.discussionTitle(className),
+                isGroup: true,
+              ),
+            );
+          },
+        ),
+      ],
       ClassToolChip(
         icon: Icons.qr_code_scanner,
         label: s.dashboardTitle('qr'),

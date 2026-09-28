@@ -25,9 +25,10 @@ class WebLineChartPanel extends StatelessWidget {
     final spots = [
       for (var i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
     ];
-    final maxY = values.isEmpty
+    final rawMax = values.isEmpty
         ? 10.0
         : values.reduce((a, b) => a > b ? a : b) * 1.2;
+    final maxY = rawMax < 1 ? 1.0 : rawMax;
 
     return Container(
       decoration: WebErpTheme.cardDecoration(context),
@@ -42,7 +43,7 @@ class WebLineChartPanel extends StatelessWidget {
             child: LineChart(
               LineChartData(
                 minY: 0,
-                maxY: maxY < 1 ? 1 : maxY,
+                maxY: maxY,
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,

@@ -79,7 +79,13 @@ class AdminStudentsScreen extends StatelessWidget {
                   ),
                   title: Text(student.fullName),
                   subtitle: Text(
-                    '${student.studentId} · ${student.grade} · ${student.className}',
+                    [
+                      student.studentId,
+                      student.grade,
+                      student.className,
+                      if (student.house != null && student.house!.trim().isNotEmpty)
+                        student.house,
+                    ].join(' · '),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

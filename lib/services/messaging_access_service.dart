@@ -9,6 +9,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 
 /// Role-scoped conversation visibility — direct threads are participant-only.
 abstract final class MessagingAccessService {
@@ -73,10 +74,134 @@ abstract final class MessagingAccessService {
   }) {
     final normalized = parentName.trim().toLowerCase();
     if (normalized.isEmpty) return null;
+    ParentRecipientOption? merged;
     for (final option in parentsForSchool(schoolId ?? AuthService.activeSchoolId)) {
-      if (option.parentName.trim().toLowerCase() == normalized) return option;
+      final nameMatch = option.parentName.trim().toLowerCase() == normalized;
+      final usernameMatch = option.participantUsernames.any(
+        (username) =>
+            username == normalized || PhoneUtils.matches(username, parentName),
+      );
+      if (!nameMatch && !usernameMatch) continue;
+      merged = _combineParentRecipients(merged, option);
     }
-    return null;
+    if (merged == null) return null;
+    return _attachEnrollmentUsernames(merged);
+  }
+
+  /// Login usernames to stamp on a thread so the parent can pull it from cloud.
+  static List<String> usernamesOf(ParentRecipientOption? recipient) {
+    return recipient?.participantUsernames ?? const [];
+  }
+
+  static ParentRecipientOption _combineParentRecipients(
+    ParentRecipientOption? existing,
+    ParentRecipientOption incoming,
+  ) {
+    if (existing == null) return incoming;
+    final studentNames = [...existing.studentNames];
+    for (final name in incoming.studentNames) {
+      if (!studentNames.contains(name)) studentNames.add(name);
+    }
+    final studentIds = [...existing.studentIds];
+    for (final id in incoming.studentIds) {
+      if (!studentIds.contains(id)) studentIds.add(id);
+    }
+    final usernames = <String>{
+      ...existing.participantUsernames,
+      ...incoming.participantUsernames,
+    };
+    return ParentRecipientOption(
+      parentName: existing.parentName,
+      studentNames: studentNames,
+      studentIds: studentIds,
+      parentUsername: existing.parentUsername ?? incoming.parentUsername,
+      parentUsernames: usernames.toList(),
+    );
+  }
+
+  static ParentRecipientOption _attachEnrollmentUsernames(
+    ParentRecipientOption option,
+  ) {
+    EnrollmentService.instance.ensureSeeded();
+    final usernames = <String>{...option.participantUsernames};
+    final studentIds = option.studentIds.map((id) => id.toUpperCase()).toSet();
+    final parentName = option.parentName.trim().toLowerCase();
+    for (final link in EnrollmentService.instance.allLinksSnapshot()) {
+      if (link.status != ParentLinkStatus.approved) continue;
+      final matchesStudent = studentIds.contains(link.studentId.toUpperCase());
+      final matchesName =
+          link.parentFullName.trim().toLowerCase() == parentName;
+      if (!matchesStudent && !matchesName) continue;
+      final username = link.parentUsername.trim().toLowerCase();
+      if (username.isNotEmpty) usernames.add(username);
+    }
+    for (final id in option.studentIds) {
+      usernames.addAll(
+        parentLoginKeysForStudentIds([id], parentName: option.parentName),
+      );
+    }
+    return ParentRecipientOption(
+      parentName: option.parentName,
+      studentNames: option.studentNames,
+      studentIds: option.studentIds,
+      parentUsername: option.parentUsername ??
+          (usernames.isEmpty ? null : usernames.first),
+      parentUsernames: usernames.toList(),
+    );
+  }
+
+  /// Parent login keys (phone / username) that must be stamped so the parent
+  /// can read the conversation from the school cloud.
+  static List<String> parentLoginKeysForStudentIds(
+    List<String> studentIds, {
+    String? parentName,
+  }) {
+    final keys = <String>{};
+    final named = parentName?.trim().toLowerCase() ?? '';
+    for (final rawId in studentIds) {
+      final student = StudentRegistryService.instance.lookupById(rawId);
+      if (student == null) continue;
+      final phones = <String?>[];
+      if (named.isNotEmpty) {
+        if (student.fatherName?.trim().toLowerCase() == named) {
+          phones.add(student.fatherPhone);
+        } else if (student.motherName?.trim().toLowerCase() == named) {
+          phones.add(student.motherPhone);
+        } else if (student.guardianName?.trim().toLowerCase() == named) {
+          phones.add(student.guardianPhone);
+        } else {
+          phones.addAll([
+            student.fatherPhone,
+            student.motherPhone,
+            student.guardianPhone,
+          ]);
+        }
+      } else {
+        phones.addAll([
+          student.fatherPhone,
+          student.motherPhone,
+          student.guardianPhone,
+        ]);
+      }
+      for (final phone in phones) {
+        final normalized = PhoneUtils.normalizeLocal(phone ?? '');
+        if (normalized != null) keys.add(normalized);
+      }
+    }
+    EnrollmentService.instance.ensureSeeded();
+    final wanted = studentIds.map((id) => id.trim().toUpperCase()).toSet();
+    for (final link in EnrollmentService.instance.allLinksSnapshot()) {
+      if (link.status != ParentLinkStatus.approved) continue;
+      if (!wanted.contains(link.studentId.toUpperCase())) continue;
+      if (named.isNotEmpty &&
+          link.parentFullName.trim().toLowerCase() != named &&
+          link.parentUsername.trim().toLowerCase() != named) {
+        continue;
+      }
+      final username = link.parentUsername.trim().toLowerCase();
+      if (username.isNotEmpty) keys.add(username);
+    }
+    return keys.toList();
   }
 
   static List<ParentRecipientOption> _collectParentRecipients({
@@ -131,7 +256,7 @@ abstract final class MessagingAccessService {
       );
     }
 
-    return byKey.values.toList()
+    return byKey.values.map(_attachEnrollmentUsernames).toList()
       ..sort((a, b) => a.parentName.compareTo(b.parentName));
   }
 
@@ -166,11 +291,16 @@ abstract final class MessagingAccessService {
     if (!studentIds.contains(studentId)) {
       studentIds.add(studentId);
     }
+    final usernames = <String>{
+      ...existing.participantUsernames,
+      if (username != null && username.isNotEmpty) username,
+    };
     byKey[key] = ParentRecipientOption(
       parentName: existing.parentName,
       studentNames: studentNames,
       studentIds: studentIds,
       parentUsername: existing.parentUsername ?? username,
+      parentUsernames: usernames.toList(),
     );
   }
 
@@ -324,7 +454,12 @@ abstract final class MessagingAccessService {
       }
 
       for (final assignment in teacher.classAssignments) {
-        if (assignment.className != student.className) continue;
+        if (!StudentRegistryService.classNamesMatch(
+          assignment.className,
+          student.className,
+        )) {
+          continue;
+        }
         if (assignment.role == TeacherStaffRole.homeroomTeacher) {
           return 'Homeroom';
         }

@@ -124,6 +124,7 @@ class ParentLinkRequest {
     this.hasMedicalCondition = false,
     this.medicalConditionDetails,
     this.otherMedicalInfo,
+    this.className,
   });
 
   final String id;
@@ -139,6 +140,7 @@ class ParentLinkRequest {
   final bool hasMedicalCondition;
   final String? medicalConditionDetails;
   final String? otherMedicalInfo;
+  final String? className;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -155,6 +157,8 @@ class ParentLinkRequest {
         if (medicalConditionDetails != null)
           'medicalConditionDetails': medicalConditionDetails,
         if (otherMedicalInfo != null) 'otherMedicalInfo': otherMedicalInfo,
+        if (className != null && className!.trim().isNotEmpty)
+          'className': className,
       };
 
   factory ParentLinkRequest.fromMap(Map<String, dynamic> map) {
@@ -164,13 +168,15 @@ class ParentLinkRequest {
       parentFullName: map['parentFullName'] as String,
       studentId: map['studentId'] as String,
       schoolId: map['schoolId'] as String,
-      relationship: ParentRelationship.values.byName(
-        map['relationship'] as String,
-      ),
+      relationship: ParentRelationship.values.asNameMap()[
+            '${map['relationship'] ?? ''}'.trim().toLowerCase()
+          ] ??
+          ParentRelationship.guardian,
       requestedAt: DateTime.parse(map['requestedAt'] as String),
-      status: ParentLinkStatus.values.byName(
-        map['status'] as String? ?? 'pending',
-      ),
+      status: ParentLinkStatus.values.asNameMap()[
+            '${map['status'] ?? 'pending'}'.trim().toLowerCase()
+          ] ??
+          ParentLinkStatus.pending,
       reviewedBy: map['reviewedBy'] as String?,
       reviewedAt: map['reviewedAt'] != null
           ? DateTime.tryParse(map['reviewedAt'] as String)
@@ -178,6 +184,7 @@ class ParentLinkRequest {
       hasMedicalCondition: map['hasMedicalCondition'] as bool? ?? false,
       medicalConditionDetails: map['medicalConditionDetails'] as String?,
       otherMedicalInfo: map['otherMedicalInfo'] as String?,
+      className: (map['className'] as String?)?.trim(),
     );
   }
 }

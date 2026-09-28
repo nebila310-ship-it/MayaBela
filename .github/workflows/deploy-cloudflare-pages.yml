@@ -1,4 +1,4 @@
-# Deploy Flutter web to Cloudflare Pages (manual or on push to main).
+# Deploy Flutter web to Cloudflare Pages (manual or on push to main/master).
 # Secrets required in GitHub repo settings:
 #   CLOUDFLARE_API_TOKEN   — Pages Edit permission
 #   CLOUDFLARE_ACCOUNT_ID  — from Cloudflare dashboard URL / overview
@@ -37,7 +37,7 @@ jobs:
       - name: Unit tests
         run: |
           flutter pub get
-          flutter test --reporter compact
+          flutter test --reporter expanded
 
   deploy:
     needs: test
@@ -60,10 +60,17 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           flutter pub get
-          flutter build web --release \
-            --dart-define=SUPABASE_CONFIGURED=true \
-            --dart-define=SUPABASE_URL="${SUPABASE_URL}" \
-            --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
+          DEFINES=(--dart-define=SUPABASE_CONFIGURED=true)
+          # Empty GitHub secrets become `--dart-define=SUPABASE_URL=` and
+          # wipe the compiled defaults, which breaks Admin login on Pages.
+          if [ -n "${SUPABASE_URL}" ]; then
+            DEFINES+=(--dart-define=SUPABASE_URL="${SUPABASE_URL}")
+          fi
+          if [ -n "${SUPABASE_ANON_KEY}" ]; then
+            DEFINES+=(--dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}")
+          fi
+          flutter build web --release --pwa-strategy=none "${DEFINES[@]}"
+          python3 web/fenote-raey-academy/build_download.py --out build/web/fenote-raey-academy
           cp -f web/_redirects build/web/_redirects
           cp -f web/_headers build/web/_headers
 
@@ -72,4 +79,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy build/web --project-name=mayabela --commit-dirty=true
+          command: pages deploy build/web --project-name=mayabela --branch=main --commit-dirty=true

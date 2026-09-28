@@ -19,6 +19,15 @@ import 'package:mayabela/models/procurement_models.dart';
 import 'package:mayabela/models/bus_record.dart';
 import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/models/leave_request.dart';
+import 'package:mayabela/models/admission_application.dart';
+import 'package:mayabela/models/exam_models.dart';
+import 'package:mayabela/models/lesson_plan_models.dart';
+import 'package:mayabela/models/curriculum_models.dart';
+import 'package:mayabela/models/student_support_models.dart';
+import 'package:mayabela/models/dosa_models.dart';
+import 'package:mayabela/models/qa_monitor_models.dart';
+import 'package:mayabela/models/golive_models.dart';
+import 'package:mayabela/models/digital_ops_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -26,8 +35,10 @@ import 'package:mayabela/models/transport_passenger.dart';
 import 'package:mayabela/services/bus_live_location_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/transport_service.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 import 'package:mayabela/services/cloud/school_account_ids.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/cloud_sync_progress_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
@@ -46,12 +57,33 @@ import 'package:mayabela/services/persistence/procurement_persistence_service.da
 import 'package:mayabela/services/persistence/transfer_persistence_service.dart';
 import 'package:mayabela/services/persistence/discipline_persistence_service.dart';
 import 'package:mayabela/services/persistence/leave_request_persistence_service.dart';
+import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/qa_findings_persistence_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_audit_persistence_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
+import 'package:mayabela/services/admission_service.dart';
+import 'package:mayabela/services/exam_service.dart';
+import 'package:mayabela/services/persistence/exam_persistence_service.dart';
+import 'package:mayabela/services/lesson_plan_service.dart';
+import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
+import 'package:mayabela/services/curriculum_service.dart';
+import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
+import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
+import 'package:mayabela/services/dosa_service.dart';
+import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
+import 'package:mayabela/services/persistence/qa_monitor_persistence_service.dart';
+import 'package:mayabela/services/persistence/golive_persistence_service.dart';
+import 'package:mayabela/services/persistence/digital_ops_persistence_service.dart';
+import 'package:mayabela/services/persistence/payroll_persistence_service.dart';
+import 'package:mayabela/services/qa_monitor_service.dart';
+import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/digital_ops_service.dart';
+import 'package:mayabela/services/payroll_service.dart';
+import 'package:mayabela/models/payroll_models.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
@@ -95,10 +127,18 @@ class CloudAppStore {
       CloudSyncFlags.enabled && SupabaseBootstrap.isInitialized;
 
   Future<T> _serializedPull<T>(Future<T> Function() action) {
+    final generation = AuthService.sessionGeneration;
     final previous = (_pullChain ?? Future<void>.value())
         .catchError((_) => null);
     late final Future<T> run;
-    run = previous.then((_) => action()).whenComplete(() {
+    run = previous.then((_) {
+      if (!AuthService.isLiveGeneration(generation)) {
+        return Future<T>.error(
+          StateError('Skipped cloud pull for ended session'),
+        );
+      }
+      return action();
+    }).whenComplete(() {
       if (identical(_pullChain, run)) {
         _pullChain = null;
       }
@@ -109,7 +149,16 @@ class CloudAppStore {
 
   Future<void> _prepareCloudRead() async {
     if (!available) return;
+    if (AuthService.currentUser == null) {
+      throw StateError(
+        'School cloud sign-in required. Sign in again to sync.',
+      );
+    }
+    final generation = AuthService.sessionGeneration;
     final authed = await SupabaseBootstrap.ensureReadyForFirestore();
+    if (!AuthService.isLiveGeneration(generation)) {
+      throw StateError('Skipped cloud read for ended session');
+    }
     if (!authed) {
       throw StateError(
         SupabaseBootstrap.lastAuthError ??
@@ -152,11 +201,12 @@ class CloudAppStore {
     await uploadLocalLeftoversToCloud();
   }
 
-  /// EDUABA CloudSyncEngine — cheap delta probe, then role-scoped apply.
+  /// EDUABA CloudSyncEngine — cheap delta probe, then collection-scoped apply.
   ///
   /// First boot (no cursor): full role download once.
-  /// Later ticks: probe collections with `updated_at > cursor`; only re-pull
-  /// the role pack when at least one collection has changes.
+  /// Later ticks: probe collections with `updated_at > cursor` and re-pull
+  /// only the collections that have new rows. A GPS ping no longer downloads
+  /// the whole school.
   Future<bool> pullRoleDeltaForSyncEngine({
     required List<String> collections,
   }) async {
@@ -165,34 +215,284 @@ class CloudAppStore {
     final cursors = SyncCursorStore.instance;
     await cursors.ensureLoaded();
 
-    final now = DateTime.now().toUtc();
-    final bootKey = '_role_boot';
-    if (cursors.cursorFor(bootKey) == null) {
+    if (cursors.cursorFor(SyncCursorStore.bootCursorKey) == null) {
       await _pullCurrentRolePack();
-      for (final collection in collections) {
-        await cursors.setCursor(collection, now);
-      }
-      await cursors.setCursor(bootKey, now);
+      await cursors.markRoleBoot(collections);
       return true;
     }
 
-    var anyChanged = false;
+    final changed = <String>[];
     for (final collection in collections) {
       final raw = cursors.cursorFor(collection);
       final since = raw == null ? null : DateTime.tryParse(raw);
       final rows = await _schoolRead(collection, updatedSince: since);
       if (rows.isEmpty) continue;
-      anyChanged = true;
-      break;
+      changed.add(collection);
     }
 
-    if (!anyChanged) return false;
+    if (changed.isEmpty) return false;
 
-    await _pullCurrentRolePack();
-    for (final collection in collections) {
+    await pullMappedCollections(changed);
+    final now = DateTime.now().toUtc();
+    for (final collection in changed) {
       await cursors.setCursor(collection, now);
     }
     return true;
+  }
+
+  /// Apply only the named collections (realtime / targeted refresh).
+  Future<void> pullMappedCollections(Iterable<String> collections) {
+    return _serializedPull(() async {
+      if (!available) return;
+      await _prepareCloudRead();
+      await _applyMappedCollections(collections);
+    });
+  }
+
+  Future<void> _applyMappedCollections(Iterable<String> collections) async {
+    final seen = <String>{};
+    for (final collection in collections) {
+      final key = _pullGroupKey(collection);
+      if (key == null || !seen.add(key)) continue;
+      await _runPullGroup(key);
+    }
+  }
+
+  @visibleForTesting
+  String? pullGroupKeyForTest(String collection) => _pullGroupKey(collection);
+
+  @visibleForTesting
+  bool classReadsAreSchoolWideForTest() => !AuthService.usesScopedCloudReads;
+
+  @visibleForTesting
+  bool studentIdReadsAreSchoolWideForTest() {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleStudent) {
+      return false;
+    }
+    if (role == AuthService.roleTeacher) {
+      return !AuthService.usesScopedCloudReads;
+    }
+    return true;
+  }
+
+  String? _pullGroupKey(String collection) {
+    switch (collection) {
+      case AppCollections.conversations:
+        return 'conversations';
+      case AppCollections.appNotifications:
+        return 'notifications';
+      case AppCollections.attendanceSessions:
+        return 'attendance';
+      case AppCollections.gradeReports:
+        return 'grades';
+      case AppCollections.busLivePositions:
+        return 'bus_gps';
+      case AppCollections.transportPassengerStatus:
+        return 'passenger_status';
+      case AppCollections.transportScans:
+        return 'transport_scans';
+      case AppCollections.parentLinkRequests:
+        return 'parent_links';
+      case AppCollections.studentRegistry:
+        return 'students';
+      case AppCollections.teacherRegistry:
+        return 'teachers';
+      case AppCollections.driverRegistry:
+        return 'drivers';
+      case AppCollections.employeeRegistry:
+        return 'employees';
+      case AppCollections.studentMedical:
+        return 'medical';
+      case AppCollections.schoolRegistry:
+        return 'school_registry';
+      case AppCollections.gradeAuditLog:
+        return 'grade_audit';
+      case AppCollections.homework:
+        return 'homework';
+      case AppCollections.dailyActivities:
+        return 'daily_activities';
+      case AppCollections.announcements:
+        return 'announcements';
+      case AppCollections.learningMaterials:
+        return 'learning_materials';
+      case AppCollections.calendarEvents:
+        return 'calendar';
+      case AppCollections.galleryPosts:
+        return 'gallery';
+      case AppCollections.classTimetables:
+        return 'timetables';
+      case AppCollections.fees:
+        return 'fees';
+      case AppCollections.buses:
+        return 'buses';
+      case AppCollections.disciplineCases:
+        return 'discipline';
+      case AppCollections.leaveRequests:
+        return 'leave';
+      case AppCollections.qaFindings:
+        return 'qa_findings';
+      case AppCollections.admissionApplications:
+        return 'admissions';
+      case AppCollections.examQuestions:
+      case AppCollections.examPapers:
+      case AppCollections.examAttempts:
+        return 'exam_bank';
+      case AppCollections.lessonPlans:
+        return 'lesson_plans';
+      case AppCollections.curriculumUnits:
+      case AppCollections.curriculumFeedback:
+      case AppCollections.lessonPlanReviews:
+      case AppCollections.teacherEvaluations:
+      case AppCollections.academicMeetings:
+        return 'curriculum';
+      case AppCollections.healthRecords:
+      case AppCollections.counselingRecords:
+      case AppCollections.iepPlans:
+      case AppCollections.collegeGuidance:
+      case AppCollections.supportRequests:
+      case AppCollections.safeguardingCases:
+      case AppCollections.studentDocuments:
+      case AppCollections.medicationStock:
+      case AppCollections.selObservations:
+        return 'student_support';
+      case AppCollections.extracurricularClubs:
+      case AppCollections.clubMemberships:
+      case AppCollections.scholarships:
+      case AppCollections.grievances:
+      case AppCollections.internships:
+      case AppCollections.dosaMeetings:
+      case AppCollections.leadershipTasks:
+        return 'dosa';
+      case AppCollections.teachingObservations:
+      case AppCollections.academicAudits:
+      case AppCollections.qaSurveys:
+      case AppCollections.qaSurveyResponses:
+      case AppCollections.actionResearch:
+        return 'qa_monitor';
+      case AppCollections.mfaEnrollments:
+      case AppCollections.privacyConsents:
+      case AppCollections.dataRightsRequests:
+      case AppCollections.schoolBackups:
+        return 'golive';
+      case AppCollections.ictDevices:
+      case AppCollections.ictWeeklyReviews:
+        return 'digital_ops';
+      case AppCollections.payrollProfiles:
+      case AppCollections.payrollRuns:
+        return 'payroll';
+      case AppCollections.inventoryItems:
+      case AppCollections.classroomInventory:
+      case AppCollections.stockTransactions:
+      case AppCollections.studentIssuedItems:
+      case AppCollections.assets:
+      case AppCollections.suppliers:
+      case AppCollections.maintenanceReports:
+        return 'inventory';
+      case AppCollections.purchaseRequests:
+        return 'procurement';
+      case AppCollections.materialPurchaseRequests:
+        return 'material_purchases';
+      case AppCollections.transferRequests:
+        return 'transfers';
+      case AppCollections.schoolAuditLog:
+        return 'school_audit';
+      case AppCollections.authAccounts:
+        return 'auth_accounts';
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _runPullGroup(String key) async {
+    switch (key) {
+      case 'conversations':
+        await _pullConversations();
+      case 'notifications':
+        await _pullAppNotifications();
+      case 'attendance':
+        await _pullAttendanceSessions();
+      case 'grades':
+        await _pullGradeReports();
+      case 'bus_gps':
+        await _pullBusLivePositions();
+      case 'passenger_status':
+        await _pullTransportPassengerStatus();
+      case 'transport_scans':
+        await _pullTransportScans();
+      case 'parent_links':
+        await _pullParentLinks();
+      case 'students':
+        await _pullStudentRegistry();
+      case 'teachers':
+        await _pullTeacherRegistry();
+      case 'drivers':
+        await _pullDriverRegistry();
+      case 'employees':
+        await _pullEmployeeRegistry();
+      case 'medical':
+        await _pullStudentMedical();
+      case 'school_registry':
+        await _pullSchoolRegistry();
+      case 'grade_audit':
+        await _pullGradeAuditLog();
+      case 'homework':
+        await _pullHomework();
+      case 'daily_activities':
+        await _pullDailyActivities();
+      case 'announcements':
+        await _pullAnnouncements();
+      case 'learning_materials':
+        await _pullLearningMaterials();
+      case 'calendar':
+        await _pullCalendarEvents();
+      case 'gallery':
+        await _pullGalleryPosts();
+      case 'timetables':
+        await _pullClassTimetables();
+      case 'fees':
+        await _pullFees();
+      case 'buses':
+        await _pullBuses();
+      case 'discipline':
+        await _pullDisciplineCases();
+      case 'leave':
+        await _pullLeaveRequests();
+      case 'qa_findings':
+        await _pullQaFindings();
+      case 'admissions':
+        await _pullAdmissionApplications();
+      case 'exam_bank':
+        await _pullExamBank();
+      case 'lesson_plans':
+        await _pullLessonPlans();
+      case 'curriculum':
+        await _pullCurriculumOffice();
+      case 'student_support':
+        await _pullStudentSupport();
+      case 'dosa':
+        await _pullDosa();
+      case 'qa_monitor':
+        await _pullQaMonitor();
+      case 'golive':
+        await _pullGoLive();
+      case 'digital_ops':
+        await _pullDigitalOps();
+      case 'payroll':
+        await _pullPayroll();
+      case 'inventory':
+        await _pullInventory();
+      case 'procurement':
+        await _pullProcurement();
+      case 'material_purchases':
+        await _pullMaterialPurchases();
+      case 'transfers':
+        await _pullTransferRequests();
+      case 'school_audit':
+        await _pullSchoolAudit();
+      case 'auth_accounts':
+        await _pullAuthAccounts();
+    }
   }
 
   Future<void> _pullCurrentRolePack() async {
@@ -214,11 +514,15 @@ class CloudAppStore {
   }
 
   List<String> _localStudentIdsForTeacherScope() {
-    final classes = AuthService.accessClassNamesForSync().toSet();
+    final classes = AuthService.accessClassNamesForSync();
     if (classes.isEmpty) return const [];
     return StudentRegistryService.instance
         .registrySnapshot()
-        .where((s) => classes.contains(s.className))
+        .where(
+          (s) => classes.any(
+            (c) => StudentRegistryService.classNamesMatch(c, s.className),
+          ),
+        )
         .map((s) => s.studentId)
         .toList();
   }
@@ -238,6 +542,9 @@ class CloudAppStore {
     return _schoolRead(collection);
   }
 
+  /// Parent / student stay linked-id scoped. Classroom teachers stay on
+  /// assigned classes. Office desks with [AuthService.mayReadAllSchoolData]
+  /// read the whole school (same rule as JWT RLS).
   Future<List<Map<String, dynamic>>> _scopedStudentIdRead(String collection) {
     final role = AuthService.currentUser?.roleKey;
     if (role == AuthService.roleParent || role == AuthService.roleStudent) {
@@ -247,7 +554,7 @@ class CloudAppStore {
         whereInValues: AuthService.activeLinkedStudentIds(),
       );
     }
-    if (role == AuthService.roleTeacher) {
+    if (role == AuthService.roleTeacher && AuthService.usesScopedCloudReads) {
       return _schoolRead(
         collection,
         whereInField: 'studentId',
@@ -264,7 +571,7 @@ class CloudAppStore {
     return _schoolRead(
       collection,
       whereInField: 'className',
-      whereInValues: AuthService.accessClassNamesForSync(),
+      whereInValues: AuthService.cloudClassNameQueryValues(),
     );
   }
 
@@ -304,6 +611,13 @@ class CloudAppStore {
       _pullGradeReports(),
       _pullHomework(),
       _pullLearningMaterials(),
+      _pullLessonPlans(),
+      _pullCurriculumOffice(),
+      _pullStudentSupport(),
+      _pullDosa(),
+      _pullQaMonitor(),
+      _pullGoLive(),
+      _pullDigitalOps(),
       _pullGradeAuditLog(),
       _pullDailyActivities(),
       _pullConversations(),
@@ -413,6 +727,16 @@ class CloudAppStore {
     await pushAllDisciplineCases();
     await pushAllLeaveRequests();
     await pushAllQaFindings();
+    await pushAllAdmissionApplications();
+    await pushAllExamBank();
+    await pushAllLessonPlans();
+    await pushAllCurriculumOffice();
+    await pushAllStudentSupport();
+    await pushAllDosa();
+    await pushAllQaMonitor();
+    await pushAllGoLive();
+    await pushAllDigitalOps();
+    await pushAllPayroll();
   }
 
   /// Upload queued document mutations; full snapshot only when still needed.
@@ -437,12 +761,7 @@ class CloudAppStore {
         await pushFullLocalStateToCloud();
       }
     } catch (e) {
-      final text = e.toString().toLowerCase();
-      final authFail = text.contains('sub claim') ||
-          text.contains('jwt') ||
-          text.contains('denied') ||
-          text.contains('sign in');
-      if (!authFail) {
+      if (shouldEscalateToFullPush(e)) {
         await CloudOutboxService.instance.markFullPushNeeded(
           reason: 'upload failed: $e',
         );
@@ -492,6 +811,12 @@ class CloudAppStore {
           );
           await CloudOutboxService.instance.ack(m.collection, m.docId);
         } catch (e) {
+          if (DocumentStore.isStaleWrite(e)) {
+            // Cloud already has a newer row. Retrying the stale payload
+            // every 5s is what produced thousands of 40001 errors.
+            await CloudOutboxService.instance.ack(m.collection, m.docId);
+            continue;
+          }
           if (kDebugMode) {
             debugPrint('[CloudAppStore] outbox upsert failed ${m.docId}: $e');
           }
@@ -663,6 +988,14 @@ class CloudAppStore {
         _pullMaterialPurchases(),
         _pullDisciplineCases(),
         _pullLeaveRequests(),
+        _pullConversations(),
+        _pullAppNotifications(),
+        _pullCurriculumOffice(),
+        _pullLessonPlans(),
+        _pullStudentSupport(),
+        _pullDosa(),
+        _pullQaMonitor(),
+        _pullGoLive(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -673,6 +1006,11 @@ class CloudAppStore {
     return _serializedPull(() async {
       if (!available) return;
       await _prepareCloudRead();
+      if (AuthService.usesScopedCloudReads) {
+        try {
+          await SchoolAuthCloudService.instance.refreshAccessClaims();
+        } catch (_) {}
+      }
       // Teachers first so class assignments exist before any class-scoped reads.
       await _pullTeacherRegistry();
       await Future.wait([
@@ -697,8 +1035,19 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullAdmissionApplications(),
+        _pullExamBank(),
+        _pullLessonPlans(),
+        _pullCurriculumOffice(),
+        _pullStudentSupport(),
+        _pullDosa(),
+        _pullQaMonitor(),
+        _pullGoLive(),
+        _pullDigitalOps(),
         _pullInventory(),
         _pullProcurement(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -747,6 +1096,17 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullAdmissionApplications(),
+        _pullExamBank(),
+        _pullLessonPlans(),
+        _pullCurriculumOffice(),
+        _pullStudentSupport(),
+        _pullDosa(),
+        _pullQaMonitor(),
+        _pullGoLive(),
+        _pullDigitalOps(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       _trackStep(trackProgress, 'Loading transport…');
       await pullTransportStateIntoServices();
@@ -762,6 +1122,8 @@ class CloudAppStore {
       await Future.wait([
         _pullDriverRegistry(),
         _pullStudentRegistry(),
+        _pullConversations(),
+        _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -772,6 +1134,11 @@ class CloudAppStore {
     return _serializedPull(() async {
       if (!available) return;
       await _prepareCloudRead();
+      if (AuthService.usesScopedCloudReads) {
+        try {
+          await SchoolAuthCloudService.instance.refreshAccessClaims();
+        } catch (_) {}
+      }
       await Future.wait([
         _pullStudentRegistry(),
         _pullTeacherRegistry(),
@@ -789,6 +1156,13 @@ class CloudAppStore {
         _pullConversations(),
         _pullAppNotifications(),
         _pullMaterialPurchases(),
+        _pullExamBank(),
+        _pullLessonPlans(),
+        _pullCurriculumOffice(),
+        _pullStudentSupport(),
+        _pullDosa(),
+        _pullQaMonitor(),
+        _pullGoLive(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -818,9 +1192,12 @@ class CloudAppStore {
       }
       return;
     }
+
+    // Refresh claims when missing. Do not block an explicit Send on a
+    // false-negative claims check — the JWT may still be valid for RLS.
     if (!await SchoolAuthCloudService.hasSchoolClaims()) {
       final ok = await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
-      if (!ok) {
+      if (!ok && !immediate) {
         if (rethrowOnError) {
           throw StateError(
             'Cloud session expired — sign out, sign in as Admin, wait for Ready.',
@@ -859,14 +1236,29 @@ class CloudAppStore {
     try {
       await action().timeout(const Duration(seconds: 45));
     } catch (e) {
-      await CloudOutboxService.instance.markFullPushNeeded(
-        reason: e.toString(),
-      );
+      if (shouldEscalateToFullPush(e)) {
+        await CloudOutboxService.instance.markFullPushNeeded(
+          reason: e.toString(),
+        );
+      }
       if (kDebugMode) {
         debugPrint('[CloudAppStore] push failed: $e');
       }
       if (rethrowOnError) rethrow;
     }
+  }
+
+  /// Full-school dump is for offline catch-up, not version conflicts.
+  /// `stale_write` (40001) plus JWT/deny must not re-queue every fee/inventory
+  /// row — that loop is what filled Postgres logs in a minute.
+  @visibleForTesting
+  static bool shouldEscalateToFullPush(Object error) {
+    if (DocumentStore.isStaleWrite(error)) return false;
+    final text = error.toString().toLowerCase();
+    return !text.contains('sub claim') &&
+        !text.contains('jwt') &&
+        !text.contains('denied') &&
+        !text.contains('sign in');
   }
 
   // —— CRUD: Auth ——
@@ -1324,6 +1716,17 @@ class CloudAppStore {
         ));
   }
 
+  /// Admissions pipeline — registrar/admin writers pass the write guard.
+  Future<void> pushAllAdmissionApplications() async {
+    final items = AdmissionService.instance.snapshotMaps();
+    if (items.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.admissionApplications,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
   /// QA findings — QA staff (teacher JWT) writers pass the write guard.
   Future<void> pushAllQaFindings() async {
     final items = QaFindingsService.instance.snapshotMaps();
@@ -1349,6 +1752,106 @@ class CloudAppStore {
         throw StateError(
           result.errorMessage ?? 'Leave request sync failed.',
         );
+      }
+    });
+  }
+
+  /// Question bank + papers (staff writeBatch) and attempts (upsert so
+  /// students can submit without a client write-guard allowlist).
+  Future<void> pushAllExamBank() async {
+    final role = AuthService.currentUser?.roleKey;
+    final isStudent = role == AuthService.roleStudent;
+    if (!isStudent) {
+      final questions = ExamService.instance.questionMaps();
+      if (questions.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.examQuestions,
+              items: questions,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final papers = ExamService.instance.paperMaps();
+      if (papers.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.examPapers,
+              items: papers,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+    }
+    final attempts = ExamService.instance.attemptMaps();
+    if (attempts.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.examAttempts,
+        records: attempts,
+      );
+      if (!result.ok) {
+        throw StateError(result.errorMessage ?? 'Exam attempt sync failed.');
+      }
+    });
+  }
+
+  Future<void> pushAllLessonPlans() async {
+    final items = LessonPlanService.instance.snapshotMaps();
+    if (items.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.lessonPlans,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
+  /// Staff write units / reviews / evals / meetings. Feedback uses
+  /// school-upsert-registry so students and parents can submit comments.
+  Future<void> pushAllCurriculumOffice() async {
+    final svc = CurriculumService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      final units = svc.unitMaps();
+      if (units.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.curriculumUnits,
+              items: units,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final reviews = svc.reviewMaps();
+      if (reviews.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.lessonPlanReviews,
+              items: reviews,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final evals = svc.evaluationMaps();
+      if (evals.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.teacherEvaluations,
+              items: evals,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+      final meetings = svc.meetingMaps();
+      if (meetings.isNotEmpty) {
+        await _pushSafe(() => _crud.writeBatch(
+              collection: AppCollections.academicMeetings,
+              items: meetings,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+    }
+    final feedback = svc.feedbackMaps();
+    if (feedback.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.curriculumFeedback,
+        records: feedback,
+      );
+      if (!result.ok) {
+        throw StateError(result.errorMessage ?? 'Curriculum feedback sync failed.');
       }
     });
   }
@@ -1447,16 +1950,47 @@ class CloudAppStore {
 
   // —— CRUD: Conversations ——
 
-  Future<void> pushConversation(Conversation conversation, {String? schoolId}) async {
+  Future<void> pushConversation(
+    Conversation conversation, {
+    String? schoolId,
+    bool requireCloud = false,
+  }) async {
+    final sid = (SchoolAuthCloudService.jwtSchoolId() ??
+            schoolId ??
+            SchoolAuthCloudService.resolvedSchoolId() ??
+            AuthService.activeSchoolId ??
+            '')
+        .trim()
+        .toUpperCase();
+    var merged = conversation;
+    try {
+      final existing = await _crud.readDoc(
+        collection: AppCollections.conversations,
+        docId: conversation.id,
+      );
+      if (existing != null) {
+        existing['id'] = conversation.id;
+        final cloud = ConversationDocument.fromMap(existing).toConversation();
+        SchoolDataService.instance.mergeConversationFromCloud(cloud);
+        merged =
+            SchoolDataService.instance.getConversation(conversation.id) ??
+                conversation;
+      }
+    } catch (_) {}
+
     final doc = ConversationDocument.fromConversation(
-      conversation,
-      schoolId: schoolId,
+      merged,
+      schoolId: sid.isEmpty ? null : sid,
     );
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.conversations,
-          docId: conversation.id,
-          data: doc.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.conversations,
+        docId: merged.id,
+        data: doc.toMap(),
+      ),
+      rethrowOnError: requireCloud,
+      immediate: true,
+    );
   }
 
   Future<void> pushAllConversations() async {
@@ -1546,16 +2080,17 @@ class CloudAppStore {
 
   Future<void> _pullParentLinks() async {
     final role = AuthService.currentUser?.roleKey;
-    final List<Map<String, dynamic>> rows;
+    var rows = await _schoolRead(AppCollections.parentLinkRequests);
     if (role == AuthService.roleParent) {
-      final username = AuthService.currentUser?.username.toLowerCase();
-      if (username == null) return;
-      rows = await _schoolRead(
-        AppCollections.parentLinkRequests,
-        equals: {'parentUsername': username},
-      );
-    } else {
-      rows = await _schoolRead(AppCollections.parentLinkRequests);
+      final username = AuthService.currentUser?.username;
+      if (username == null || username.trim().isEmpty) return;
+      rows = rows.where((map) {
+        final stored = '${map['parentUsername'] ?? ''}';
+        final a = stored.trim().toLowerCase();
+        final b = username.trim().toLowerCase();
+        if (a.isNotEmpty && a == b) return true;
+        return PhoneUtils.matches(stored, username);
+      }).toList();
     }
     if (rows.isEmpty) return;
 
@@ -1572,7 +2107,11 @@ class CloudAppStore {
     }
 
     if (links.isNotEmpty) {
-      EnrollmentService.instance.replaceLinks(links, nextId: maxId);
+      if (role == AuthService.roleParent) {
+        EnrollmentService.instance.upsertLinks(links, nextId: maxId);
+      } else {
+        EnrollmentService.instance.replaceLinks(links, nextId: maxId);
+      }
       await EnrollmentPersistenceService.instance.saveFromEnrollmentService(
         pushCloud: false,
       );
@@ -1590,8 +2129,7 @@ class CloudAppStore {
       try {
         final student = AdminStudentRecord.fromMap(map);
         students.add(student);
-        final numeric =
-            int.tryParse(student.studentId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(student.studentId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1618,8 +2156,7 @@ class CloudAppStore {
       try {
         final teacher = AdminTeacherRecord.fromMap(map);
         teachers.add(teacher);
-        final numeric =
-            int.tryParse(teacher.teacherId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(teacher.teacherId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1647,8 +2184,7 @@ class CloudAppStore {
       try {
         final driver = AdminDriverRecord.fromMap(map);
         drivers.add(driver);
-        final numeric =
-            int.tryParse(driver.driverId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(driver.driverId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1676,8 +2212,7 @@ class CloudAppStore {
       try {
         final employee = EmployeeRecord.fromMap(map);
         employees.add(employee);
-        final numeric =
-            int.tryParse(employee.employeeId.replaceAll(RegExp(r'\D'), ''));
+        final numeric = ShortRegistryId.parseNumber(employee.employeeId);
         if (numeric != null && numeric >= maxId) maxId = numeric + 1;
       } catch (_) {}
     }
@@ -1823,17 +2358,11 @@ class CloudAppStore {
   }
 
   Future<void> _pullConversations() async {
-    final role = AuthService.currentUser?.roleKey;
-    final List<Map<String, dynamic>> rows;
-    if (role == AuthService.roleParent) {
-      rows = await _schoolRead(
-        AppCollections.conversations,
-        arrayContainsAnyField: 'linkedStudentIds',
-        arrayContainsAnyValues: AuthService.activeLinkedStudentIds(),
-      );
-    } else {
-      rows = await _schoolRead(AppCollections.conversations);
-    }
+    // Parent visibility is enforced by RLS (`app_doc_parent_conversation_visible`)
+    // and then again by MessagingAccessService.canView. Do not pre-filter by
+    // linkedStudentIds — username-only threads (and empty linked-student arrays)
+    // would never download, so parents would never see teacher messages.
+    final rows = await _schoolRead(AppCollections.conversations);
     if (rows.isEmpty) return;
 
     final parsed = <Conversation>[];
@@ -2423,6 +2952,793 @@ class CloudAppStore {
     await LeaveRequestPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
+  }
+
+  /// Admissions applications — staff/admin only.
+  Future<void> _pullAdmissionApplications() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final rows = await _schoolRead(AppCollections.admissionApplications);
+    if (rows.isEmpty) return;
+    final items = <AdmissionApplication>[];
+    for (final map in rows) {
+      try {
+        items.add(AdmissionApplication.fromMap(map));
+      } catch (_) {}
+    }
+    if (items.isEmpty) return;
+    AdmissionService.instance.applyPersistedData(items, merge: true);
+    await AdmissionPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Exam bank, papers, and attempts. Students pull all three so they can
+  /// sit published papers; parents/drivers never receive the bank.
+  Future<void> _pullExamBank() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleDriver) {
+      return;
+    }
+    final questionRows = await _schoolRead(AppCollections.examQuestions);
+    final paperRows = await _schoolRead(AppCollections.examPapers);
+    final attemptRows = await _schoolRead(AppCollections.examAttempts);
+    if (questionRows.isEmpty && paperRows.isEmpty && attemptRows.isEmpty) {
+      return;
+    }
+    final questions = <ExamQuestion>[];
+    for (final map in questionRows) {
+      try {
+        questions.add(ExamQuestion.fromMap(map));
+      } catch (_) {}
+    }
+    final papers = <ExamPaper>[];
+    for (final map in paperRows) {
+      try {
+        papers.add(ExamPaper.fromMap(map));
+      } catch (_) {}
+    }
+    final attempts = <ExamAttempt>[];
+    for (final map in attemptRows) {
+      try {
+        attempts.add(ExamAttempt.fromMap(map));
+      } catch (_) {}
+    }
+    if (questions.isEmpty && papers.isEmpty && attempts.isEmpty) return;
+    ExamService.instance.applyPersistedData(
+      questions: questions.isEmpty ? null : questions,
+      papers: papers.isEmpty ? null : papers,
+      attempts: attempts.isEmpty ? null : attempts,
+      merge: true,
+    );
+    await ExamPersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  Future<void> _pullLessonPlans() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) {
+      return;
+    }
+    final rows = await _scopedClassRead(AppCollections.lessonPlans);
+    if (rows.isEmpty) return;
+    final plans = <LessonPlan>[];
+    for (final map in rows) {
+      try {
+        plans.add(LessonPlan.fromMap(map));
+      } catch (_) {}
+    }
+    if (plans.isEmpty) return;
+    LessonPlanService.instance.applyPersistedData(plans, merge: true);
+    await LessonPlanPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Curriculum office. Students/parents receive published units + own
+  /// feedback only — never reviews, evaluations, or meeting notes.
+  Future<void> _pullCurriculumOffice() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+    final unitRows = await _schoolRead(AppCollections.curriculumUnits);
+    final feedbackRows = await _schoolRead(AppCollections.curriculumFeedback);
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    final reviewRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.lessonPlanReviews);
+    final evalRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.teacherEvaluations);
+    final meetingRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.academicMeetings);
+    if (unitRows.isEmpty &&
+        feedbackRows.isEmpty &&
+        reviewRows.isEmpty &&
+        evalRows.isEmpty &&
+        meetingRows.isEmpty) {
+      return;
+    }
+    final units = <CurriculumUnit>[];
+    for (final map in unitRows) {
+      try {
+        units.add(CurriculumUnit.fromMap(map));
+      } catch (_) {}
+    }
+    final feedback = <CurriculumFeedback>[];
+    for (final map in feedbackRows) {
+      try {
+        feedback.add(CurriculumFeedback.fromMap(map));
+      } catch (_) {}
+    }
+    final reviews = <LessonPlanReview>[];
+    for (final map in reviewRows) {
+      try {
+        reviews.add(LessonPlanReview.fromMap(map));
+      } catch (_) {}
+    }
+    final evals = <TeacherEvaluation>[];
+    for (final map in evalRows) {
+      try {
+        evals.add(TeacherEvaluation.fromMap(map));
+      } catch (_) {}
+    }
+    final meetings = <AcademicMeeting>[];
+    for (final map in meetingRows) {
+      try {
+        meetings.add(AcademicMeeting.fromMap(map));
+      } catch (_) {}
+    }
+    if (units.isEmpty &&
+        feedback.isEmpty &&
+        reviews.isEmpty &&
+        evals.isEmpty &&
+        meetings.isEmpty) {
+      return;
+    }
+    CurriculumService.instance.applyPersistedData(
+      units: units.isEmpty ? null : units,
+      feedback: feedback.isEmpty ? null : feedback,
+      reviews: publicReader ? const [] : (reviews.isEmpty ? null : reviews),
+      evaluations: publicReader ? const [] : (evals.isEmpty ? null : evals),
+      meetings: publicReader ? const [] : (meetings.isEmpty ? null : meetings),
+      merge: true,
+    );
+    await CurriculumPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Staff write care files via writeBatch. Parents/students file
+  /// [support_requests] through school-upsert-registry. Safeguarding never
+  /// leaves the care-leadership desk.
+  Future<void> pushAllStudentSupport() async {
+    final svc = StudentSupportService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      Future<void> pushStaff(String collection, List<Map<String, dynamic>> items) async {
+        if (items.isEmpty) return;
+        await _pushSafe(() => _crud.writeBatch(
+              collection: collection,
+              items: items,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+
+      await pushStaff(AppCollections.healthRecords, svc.healthMaps());
+      await pushStaff(AppCollections.counselingRecords, svc.counselingMaps());
+      await pushStaff(AppCollections.iepPlans, svc.iepMaps());
+      await pushStaff(AppCollections.collegeGuidance, svc.collegeMaps());
+      await pushStaff(AppCollections.studentDocuments, svc.documentMaps());
+      await pushStaff(AppCollections.medicationStock, svc.medicationMaps());
+      await pushStaff(AppCollections.selObservations, svc.selMaps());
+      if (role == AuthService.roleAdmin ||
+          role == AuthService.roleTeacher) {
+        await pushStaff(
+          AppCollections.safeguardingCases,
+          svc.safeguardingMaps(),
+        );
+      }
+    }
+    final requests = svc.requestMaps();
+    if (requests.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.supportRequests,
+        records: requests,
+      );
+      if (!result.ok) {
+        throw StateError(
+          result.errorMessage ?? 'Student-support request sync failed.',
+        );
+      }
+    });
+  }
+
+  /// Health / counseling / IEP / college / requests. Child-protection files
+  /// are never pulled for parents, students, or drivers.
+  Future<void> _pullStudentSupport() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final parent = role == AuthService.roleParent;
+    final student = role == AuthService.roleStudent;
+    final publicReader = parent || student;
+
+    final healthRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.healthRecords);
+    final counselingRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.counselingRecords);
+    final iepRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.iepPlans);
+    final collegeRows = await _schoolRead(AppCollections.collegeGuidance);
+    final requestRows = await _schoolRead(AppCollections.supportRequests);
+    final safeguardingRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.safeguardingCases);
+    final documentRows = await _schoolRead(AppCollections.studentDocuments);
+    final medRows = publicReader
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.medicationStock);
+    final selRows = student
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.selObservations);
+
+    if (healthRows.isEmpty &&
+        counselingRows.isEmpty &&
+        iepRows.isEmpty &&
+        collegeRows.isEmpty &&
+        requestRows.isEmpty &&
+        safeguardingRows.isEmpty &&
+        documentRows.isEmpty &&
+        medRows.isEmpty &&
+        selRows.isEmpty) {
+      return;
+    }
+
+    final health = <HealthRecord>[];
+    for (final map in healthRows) {
+      try {
+        health.add(HealthRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final counseling = <CounselingRecord>[];
+    for (final map in counselingRows) {
+      try {
+        counseling.add(CounselingRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final iep = <IepPlan>[];
+    for (final map in iepRows) {
+      try {
+        iep.add(IepPlan.fromMap(map));
+      } catch (_) {}
+    }
+    final college = <CollegeGuidancePlan>[];
+    for (final map in collegeRows) {
+      try {
+        college.add(CollegeGuidancePlan.fromMap(map));
+      } catch (_) {}
+    }
+    final requests = <SupportRequest>[];
+    for (final map in requestRows) {
+      try {
+        requests.add(SupportRequest.fromMap(map));
+      } catch (_) {}
+    }
+    final safeguarding = <SafeguardingCase>[];
+    for (final map in safeguardingRows) {
+      try {
+        safeguarding.add(SafeguardingCase.fromMap(map));
+      } catch (_) {}
+    }
+    final documents = <StudentDocument>[];
+    for (final map in documentRows) {
+      try {
+        documents.add(StudentDocument.fromMap(map));
+      } catch (_) {}
+    }
+    final meds = <MedicationStockItem>[];
+    for (final map in medRows) {
+      try {
+        meds.add(MedicationStockItem.fromMap(map));
+      } catch (_) {}
+    }
+    final sel = <SelObservation>[];
+    for (final map in selRows) {
+      try {
+        sel.add(SelObservation.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (health.isEmpty &&
+        counseling.isEmpty &&
+        iep.isEmpty &&
+        college.isEmpty &&
+        requests.isEmpty &&
+        safeguarding.isEmpty &&
+        documents.isEmpty &&
+        meds.isEmpty &&
+        sel.isEmpty) {
+      return;
+    }
+
+    StudentSupportService.instance.applyPersistedData(
+      health: health.isEmpty ? null : health,
+      counseling: counseling.isEmpty ? null : counseling,
+      iep: iep.isEmpty ? null : iep,
+      college: college.isEmpty ? null : college,
+      requests: requests.isEmpty ? null : requests,
+      safeguarding:
+          publicReader ? const [] : (safeguarding.isEmpty ? null : safeguarding),
+      documents: documents.isEmpty ? null : documents,
+      medication: publicReader ? const [] : (meds.isEmpty ? null : meds),
+      sel: student ? const [] : (sel.isEmpty ? null : sel),
+      merge: true,
+    );
+    await StudentSupportPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  /// Staff write clubs / internships / meetings. Memberships, scholarships,
+  /// and grievances use upsert so students and parents can apply.
+  Future<void> pushAllDosa() async {
+    final svc = DosaService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      Future<void> pushStaff(
+        String collection,
+        List<Map<String, dynamic>> items,
+      ) async {
+        if (items.isEmpty) return;
+        await _pushSafe(() => _crud.writeBatch(
+              collection: collection,
+              items: items,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+
+      await pushStaff(AppCollections.extracurricularClubs, svc.clubMaps());
+      await pushStaff(AppCollections.internships, svc.internshipMaps());
+      await pushStaff(AppCollections.dosaMeetings, svc.meetingMaps());
+      await pushStaff(AppCollections.leadershipTasks, svc.leadershipTaskMaps());
+    }
+
+    Future<void> upsertPublic(
+      String collection,
+      List<Map<String, dynamic>> items,
+    ) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() async {
+        final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+          collection: collection,
+          records: items,
+        );
+        if (!result.ok) {
+          throw StateError(
+            result.errorMessage ?? 'Student-program sync failed.',
+          );
+        }
+      });
+    }
+
+    await upsertPublic(AppCollections.clubMemberships, svc.membershipMaps());
+    await upsertPublic(AppCollections.scholarships, svc.scholarshipMaps());
+    await upsertPublic(AppCollections.grievances, svc.grievanceMaps());
+  }
+
+  Future<void> _pullDosa() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final clubRows = await _schoolRead(AppCollections.extracurricularClubs);
+    final membershipRows = await _schoolRead(AppCollections.clubMemberships);
+    final scholarshipRows = await _schoolRead(AppCollections.scholarships);
+    final grievanceRows = await _schoolRead(AppCollections.grievances);
+    final internshipRows = await _schoolRead(AppCollections.internships);
+    final meetingRows = await _schoolRead(AppCollections.dosaMeetings);
+    final taskRows = role == AuthService.roleStudent ||
+            role == AuthService.roleParent
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.leadershipTasks);
+
+    if (clubRows.isEmpty &&
+        membershipRows.isEmpty &&
+        scholarshipRows.isEmpty &&
+        grievanceRows.isEmpty &&
+        internshipRows.isEmpty &&
+        meetingRows.isEmpty &&
+        taskRows.isEmpty) {
+      return;
+    }
+
+    final clubs = <ExtracurricularClub>[];
+    for (final map in clubRows) {
+      try {
+        clubs.add(ExtracurricularClub.fromMap(map));
+      } catch (_) {}
+    }
+    final memberships = <ClubMembership>[];
+    for (final map in membershipRows) {
+      try {
+        memberships.add(ClubMembership.fromMap(map));
+      } catch (_) {}
+    }
+    final scholarships = <ScholarshipRecord>[];
+    for (final map in scholarshipRows) {
+      try {
+        scholarships.add(ScholarshipRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final grievances = <Grievance>[];
+    for (final map in grievanceRows) {
+      try {
+        grievances.add(Grievance.fromMap(map));
+      } catch (_) {}
+    }
+    final internships = <Internship>[];
+    for (final map in internshipRows) {
+      try {
+        internships.add(Internship.fromMap(map));
+      } catch (_) {}
+    }
+    final meetings = <DosaMeeting>[];
+    for (final map in meetingRows) {
+      try {
+        meetings.add(DosaMeeting.fromMap(map));
+      } catch (_) {}
+    }
+    final tasks = <LeadershipTask>[];
+    for (final map in taskRows) {
+      try {
+        tasks.add(LeadershipTask.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (clubs.isEmpty &&
+        memberships.isEmpty &&
+        scholarships.isEmpty &&
+        grievances.isEmpty &&
+        internships.isEmpty &&
+        meetings.isEmpty &&
+        tasks.isEmpty) {
+      return;
+    }
+
+    DosaService.instance.applyPersistedData(
+      clubs: clubs.isEmpty ? null : clubs,
+      memberships: memberships.isEmpty ? null : memberships,
+      scholarships: scholarships.isEmpty ? null : scholarships,
+      grievances: grievances.isEmpty ? null : grievances,
+      internships: internships.isEmpty ? null : internships,
+      meetings: meetings.isEmpty ? null : meetings,
+      leadershipTasks: tasks.isEmpty ? null : tasks,
+      merge: true,
+    );
+    await DosaPersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  /// Staff write observations / audits / surveys / research. Responses upsert
+  /// so parents, students, and teachers can submit.
+  Future<void> pushAllQaMonitor() async {
+    final svc = QaMonitorService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+    if (!publicReader) {
+      Future<void> pushStaff(
+        String collection,
+        List<Map<String, dynamic>> items,
+      ) async {
+        if (items.isEmpty) return;
+        await _pushSafe(() => _crud.writeBatch(
+              collection: collection,
+              items: items,
+              docIdFor: (item) => item['id'] as String,
+            ));
+      }
+
+      await pushStaff(
+        AppCollections.teachingObservations,
+        svc.observationMaps(),
+      );
+      await pushStaff(AppCollections.academicAudits, svc.auditMaps());
+      await pushStaff(AppCollections.qaSurveys, svc.surveyMaps());
+      await pushStaff(AppCollections.actionResearch, svc.researchMaps());
+    }
+
+    if (svc.responseMaps().isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.qaSurveyResponses,
+        records: svc.responseMaps(),
+      );
+      if (!result.ok) {
+        throw StateError(result.errorMessage ?? 'Survey response sync failed.');
+      }
+    });
+  }
+
+  Future<void> _pullQaMonitor() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final observationRows =
+        await _schoolRead(AppCollections.teachingObservations);
+    final auditRows = await _schoolRead(AppCollections.academicAudits);
+    final surveyRows = await _schoolRead(AppCollections.qaSurveys);
+    final responseRows = await _schoolRead(AppCollections.qaSurveyResponses);
+    final researchRows = await _schoolRead(AppCollections.actionResearch);
+
+    if (observationRows.isEmpty &&
+        auditRows.isEmpty &&
+        surveyRows.isEmpty &&
+        responseRows.isEmpty &&
+        researchRows.isEmpty) {
+      return;
+    }
+
+    final observations = <TeachingObservation>[];
+    for (final map in observationRows) {
+      try {
+        observations.add(TeachingObservation.fromMap(map));
+      } catch (_) {}
+    }
+    final audits = <AcademicAudit>[];
+    for (final map in auditRows) {
+      try {
+        audits.add(AcademicAudit.fromMap(map));
+      } catch (_) {}
+    }
+    final surveys = <QaSurvey>[];
+    for (final map in surveyRows) {
+      try {
+        surveys.add(QaSurvey.fromMap(map));
+      } catch (_) {}
+    }
+    final responses = <QaSurveyResponse>[];
+    for (final map in responseRows) {
+      try {
+        responses.add(QaSurveyResponse.fromMap(map));
+      } catch (_) {}
+    }
+    final research = <ActionResearch>[];
+    for (final map in researchRows) {
+      try {
+        research.add(ActionResearch.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (observations.isEmpty &&
+        audits.isEmpty &&
+        surveys.isEmpty &&
+        responses.isEmpty &&
+        research.isEmpty) {
+      return;
+    }
+
+    QaMonitorService.instance.applyPersistedData(
+      observations: observations.isEmpty ? null : observations,
+      audits: audits.isEmpty ? null : audits,
+      surveys: surveys.isEmpty ? null : surveys,
+      responses: responses.isEmpty ? null : responses,
+      research: research.isEmpty ? null : research,
+      merge: true,
+    );
+    await QaMonitorPersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  /// MFA, consents, data-rights, school backup meta.
+  Future<void> pullGoLive() => _pullGoLive();
+
+  Future<void> pushAllGoLive() async {
+    final svc = GoliveService.instance;
+    final role = AuthService.currentUser?.roleKey;
+    final publicReader = role == AuthService.roleStudent ||
+        role == AuthService.roleParent;
+
+    Future<void> upsert(String collection, List<Map<String, dynamic>> items) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() async {
+        final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+          collection: collection,
+          records: items,
+        );
+        if (!result.ok) {
+          throw StateError(result.errorMessage ?? 'Go-live sync failed.');
+        }
+      });
+    }
+
+    await upsert(AppCollections.mfaEnrollments, svc.mfaMaps(cloud: true));
+    await upsert(AppCollections.privacyConsents, svc.consentMaps());
+    await upsert(AppCollections.dataRightsRequests, svc.rightsMaps());
+
+    if (publicReader) return;
+    final backups = svc.backupMaps();
+    if (backups.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.schoolBackups,
+          items: backups,
+          docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
+  Future<void> _pullGoLive() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleDriver) return;
+
+    final mfaRows = await _schoolRead(AppCollections.mfaEnrollments);
+    final consentRows = await _schoolRead(AppCollections.privacyConsents);
+    final rightsRows = await _schoolRead(AppCollections.dataRightsRequests);
+    final backupRows = role == AuthService.roleParent ||
+            role == AuthService.roleStudent
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.schoolBackups);
+
+    if (mfaRows.isEmpty &&
+        consentRows.isEmpty &&
+        rightsRows.isEmpty &&
+        backupRows.isEmpty) {
+      return;
+    }
+
+    final enrollments = <MfaEnrollment>[];
+    for (final map in mfaRows) {
+      try {
+        enrollments.add(MfaEnrollment.fromMap(map));
+      } catch (_) {}
+    }
+    final consents = <PrivacyConsent>[];
+    for (final map in consentRows) {
+      try {
+        consents.add(PrivacyConsent.fromMap(map));
+      } catch (_) {}
+    }
+    final rights = <DataRightsRequest>[];
+    for (final map in rightsRows) {
+      try {
+        rights.add(DataRightsRequest.fromMap(map));
+      } catch (_) {}
+    }
+    final backups = <SchoolBackupRecord>[];
+    for (final map in backupRows) {
+      try {
+        backups.add(SchoolBackupRecord.fromMap(map));
+      } catch (_) {}
+    }
+
+    if (enrollments.isEmpty &&
+        consents.isEmpty &&
+        rights.isEmpty &&
+        backups.isEmpty) {
+      return;
+    }
+
+    GoliveService.instance.applyPersistedData(
+      enrollments: enrollments.isEmpty ? null : enrollments,
+      consents: consents.isEmpty ? null : consents,
+      rights: rights.isEmpty ? null : rights,
+      backups: backups.isEmpty ? null : backups,
+      merge: true,
+    );
+    await GolivePersistenceService.instance.saveFromService(pushCloud: false);
+  }
+
+  Future<void> pushAllDigitalOps() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent ||
+        role == AuthService.roleStudent ||
+        role == AuthService.roleDriver) {
+      return;
+    }
+    final svc = DigitalOpsService.instance;
+    Future<void> push(String collection, List<Map<String, dynamic>> items) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ));
+    }
+
+    await push(AppCollections.ictDevices, svc.deviceMaps());
+    await push(AppCollections.ictWeeklyReviews, svc.reviewMaps());
+  }
+
+  Future<void> _pullDigitalOps() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final deviceRows = await _schoolRead(AppCollections.ictDevices);
+    final reviewRows = await _schoolRead(AppCollections.ictWeeklyReviews);
+    if (deviceRows.isEmpty && reviewRows.isEmpty) return;
+
+    final devices = <IctDeviceRecord>[];
+    for (final map in deviceRows) {
+      try {
+        devices.add(IctDeviceRecord.fromMap(map));
+      } catch (_) {}
+    }
+    final reviews = <IctWeeklyReview>[];
+    for (final map in reviewRows) {
+      try {
+        reviews.add(IctWeeklyReview.fromMap(map));
+      } catch (_) {}
+    }
+    if (devices.isEmpty && reviews.isEmpty) return;
+
+    DigitalOpsService.instance.applyPersistedData(
+      devices: devices.isEmpty ? null : devices,
+      reviews: reviews.isEmpty ? null : reviews,
+      merge: true,
+    );
+    await DigitalOpsPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  Future<void> pushAllPayroll() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent ||
+        role == AuthService.roleStudent ||
+        role == AuthService.roleDriver) {
+      return;
+    }
+    final svc = PayrollService.instance;
+    Future<void> push(String collection, List<Map<String, dynamic>> items) async {
+      if (items.isEmpty) return;
+      await _pushSafe(() => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ));
+    }
+
+    await push(AppCollections.payrollProfiles, svc.profileMaps());
+    await push(AppCollections.payrollRuns, svc.runMaps());
+  }
+
+  Future<void> _pullPayroll() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final profileRows = await _schoolRead(AppCollections.payrollProfiles);
+    final runRows = await _schoolRead(AppCollections.payrollRuns);
+    if (profileRows.isEmpty && runRows.isEmpty) return;
+
+    final profiles = <PayrollProfile>[];
+    for (final map in profileRows) {
+      try {
+        profiles.add(PayrollProfile.fromMap(map));
+      } catch (_) {}
+    }
+    final runs = <PayrollRun>[];
+    for (final map in runRows) {
+      try {
+        runs.add(PayrollRun.fromMap(map));
+      } catch (_) {}
+    }
+    if (profiles.isEmpty && runs.isEmpty) return;
+
+    PayrollService.instance.applyPersistedData(
+      profiles: profiles.isEmpty ? null : profiles,
+      runs: runs.isEmpty ? null : runs,
+      merge: true,
+    );
+    await PayrollPersistenceService.instance.saveFromService(pushCloud: false);
   }
 
   /// QA findings — staff-only register (parents/students never pull it).

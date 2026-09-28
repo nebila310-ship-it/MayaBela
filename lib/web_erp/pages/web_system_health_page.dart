@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
+import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
 class WebSystemHealthPage extends StatefulWidget {
@@ -108,6 +109,25 @@ class _WebSystemHealthPageState extends State<WebSystemHealthPage> {
                     : 'Local only until Storage is enabled',
                 ok: storageOk || storageChecking == true,
                 icon: Icons.inventory_2_outlined,
+              ),
+              _HealthCard(
+                title: 'Last school backup',
+                status: GoliveService.instance.lastBackupAt() == null
+                    ? 'None yet — open Go-live'
+                    : GoliveService.instance
+                        .lastBackupAt()!
+                        .toLocal()
+                        .toString()
+                        .split('.')
+                        .first,
+                ok: GoliveService.instance.lastBackupAt() != null,
+                icon: Icons.backup_outlined,
+              ),
+              _HealthCard(
+                title: 'Authenticator enrollments',
+                status: '${GoliveService.instance.mfaEnrolledCount()} opt-in',
+                ok: true,
+                icon: Icons.phonelink_lock_outlined,
               ),
             ],
           ),

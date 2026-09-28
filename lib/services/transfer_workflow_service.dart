@@ -42,6 +42,13 @@ class TransferWorkflowService extends ChangeNotifier {
         .toList();
   }
 
+  List<TransferRequest> requestsForStudent(String studentId) {
+    final id = studentId.trim().toUpperCase();
+    return requestsSnapshot()
+        .where((r) => r.studentId.trim().toUpperCase() == id)
+        .toList();
+  }
+
   int get pendingCount => requestsForSchool()
       .where((r) => r.status == TransferRequestStatus.pending)
       .length;

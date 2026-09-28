@@ -32,6 +32,71 @@ void main() {
       AuthService.clearSession();
     });
 
+    test('debug demo student login succeeds locally', () {
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleStudent,
+        username: 'student',
+        password: AuthService.demoPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.roleKey, AuthService.roleStudent);
+      expect(AuthService.currentUser?.linkedStudentId, 'STU-1001');
+      AuthService.clearSession();
+    });
+
+    test('public demo student login succeeds without cloud', () {
+      expect(
+        AuthService.isPublicDemoStudentLogin(
+          roleKey: AuthService.roleStudent,
+          username: AuthService.demoStudentUsername,
+          password: AuthService.demoStudentPassword,
+          schoolId: AuthService.demoStudentSchoolId,
+        ),
+        isTrue,
+      );
+      AuthService.preparePublicDemoStudentSession();
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleStudent,
+        username: AuthService.demoStudentUsername,
+        password: AuthService.demoStudentPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.username, AuthService.demoStudentUsername);
+      expect(AuthService.isPublicDemoStudentSession, isTrue);
+      expect(
+        AuthService.schoolAccessError(AuthService.demoStudentSchoolId),
+        isNull,
+      );
+      AuthService.clearSession();
+    });
+
+    test('public transport demo login succeeds without cloud', () {
+      expect(
+        AuthService.isPublicDemoDriverLogin(
+          roleKey: AuthService.roleDriver,
+          username: AuthService.demoDriverPhone,
+          password: AuthService.demoDriverPassword,
+          schoolId: AuthService.demoDriverSchoolId,
+        ),
+        isTrue,
+      );
+      AuthService.preparePublicDemoDriverSession();
+      final error = AuthService.validateLogin(
+        roleKey: AuthService.roleDriver,
+        username: AuthService.demoDriverPhone,
+        password: AuthService.demoDriverPassword,
+      );
+      expect(error, isNull);
+      expect(AuthService.currentUser?.roleKey, AuthService.roleDriver);
+      expect(AuthService.currentUser?.linkedDriverId, 'DRV-1001');
+      expect(AuthService.isPublicDemoDriverSession, isTrue);
+      expect(
+        AuthService.schoolAccessError(AuthService.demoDriverSchoolId),
+        isNull,
+      );
+      AuthService.clearSession();
+    });
+
     test('wrong password rejected', () {
       final error = AuthService.validateLogin(
         roleKey: AuthService.roleTeacher,
@@ -169,6 +234,7 @@ void main() {
       expect(ids.contains('teachers'), isTrue);
       expect(ids.contains('finance'), isTrue);
       expect(ids.contains('transport'), isTrue);
+      expect(ids.contains('cctv'), isTrue);
       expect(ids.contains('inventory'), isTrue);
       expect(ids.contains('settings'), isTrue);
     });
@@ -180,6 +246,7 @@ void main() {
         'teachers',
         'finance',
         'transport',
+        'cctv',
         'inventory',
         'settings',
         'audit_log',

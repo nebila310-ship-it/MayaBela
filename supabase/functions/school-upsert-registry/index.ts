@@ -10,10 +10,39 @@ const ALLOWED = new Set([
   "student_medical",
   "discipline_cases",
   "leave_requests",
+  "admission_applications",
+  "exam_questions",
+  "exam_papers",
+  "exam_attempts",
+  "curriculum_feedback",
+  "support_requests",
+  "club_memberships",
+  "scholarships",
+  "grievances",
+  "qa_survey_responses",
+  "mfa_enrollments",
+  "privacy_consents",
+  "data_rights_requests",
 ]);
 
 // Collections keyed by their own record id (many rows per student).
-const OWN_ID_COLLECTIONS = new Set(["discipline_cases", "leave_requests"]);
+const OWN_ID_COLLECTIONS = new Set([
+  "discipline_cases",
+  "leave_requests",
+  "admission_applications",
+  "exam_questions",
+  "exam_papers",
+  "exam_attempts",
+  "curriculum_feedback",
+  "support_requests",
+  "club_memberships",
+  "scholarships",
+  "grievances",
+  "qa_survey_responses",
+  "mfa_enrollments",
+  "privacy_consents",
+  "data_rights_requests",
+]);
 
 function normalizeRecord(
   raw: Record<string, unknown>,
@@ -157,6 +186,79 @@ Deno.serve(async (req) => {
         "denied",
       );
     }
+    // Exam bank / papers: staff only. Attempts: staff + the student sitting.
+    if (
+      (collection === "exam_questions" || collection === "exam_papers") &&
+      callerRole !== "admin" &&
+      callerRole !== "teacher"
+    ) {
+      return errorResponse("Not allowed to write the exam bank.", 403, "denied");
+    }
+    if (
+      collection === "exam_attempts" &&
+      callerRole !== "admin" &&
+      callerRole !== "teacher" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse("Not allowed to write exam attempts.", 403, "denied");
+    }
+    // Phase G: parents/students file care requests; staff review.
+    if (
+      collection === "support_requests" &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse(
+        "Not allowed to write student-support requests.",
+        403,
+        "denied",
+      );
+    }
+    if (
+      (collection === "club_memberships" ||
+        collection === "scholarships" ||
+        collection === "grievances") &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse(
+        "Not allowed to write student-program records.",
+        403,
+        "denied",
+      );
+    }
+    if (
+      collection === "qa_survey_responses" &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student" &&
+      callerRole !== "teacher" &&
+      callerRole !== "admin"
+    ) {
+      return errorResponse("Not allowed to write survey responses.", 403, "denied");
+    }
+    if (
+      collection === "mfa_enrollments" &&
+      callerRole !== "admin" &&
+      callerRole !== "teacher" &&
+      callerRole !== "parent" &&
+      callerRole !== "student"
+    ) {
+      return errorResponse("Not allowed to write authenticator enrollments.", 403, "denied");
+    }
+    if (
+      (collection === "privacy_consents" ||
+        collection === "data_rights_requests") &&
+      !canStudents &&
+      callerRole !== "parent" &&
+      callerRole !== "student" &&
+      callerRole !== "teacher" &&
+      callerRole !== "admin"
+    ) {
+      return errorResponse("Not allowed to write privacy records.", 403, "denied");
+    }
 
     const rows: Array<{
       collection: string;
@@ -191,6 +293,56 @@ Deno.serve(async (req) => {
           : [];
         const sid = String(normalized.record.studentId || "").trim().toUpperCase();
         if (!sid || !linked.includes(sid)) {
+          continue;
+        }
+      }
+      // Parents/students may only file support requests for linked students.
+      if (
+        (collection === "support_requests" ||
+          collection === "club_memberships" ||
+          collection === "scholarships" ||
+          collection === "grievances") &&
+        (callerRole === "parent" || callerRole === "student")
+      ) {
+        const linked = Array.isArray(meta.linkedStudentIds)
+          ? (meta.linkedStudentIds as unknown[]).map((x) =>
+            String(x || "").trim().toUpperCase()
+          )
+          : [];
+        const selfId = String(
+          meta.linkedStudentId || meta.linked_student_id || "",
+        ).trim().toUpperCase();
+        const sid = String(normalized.record.studentId || "").trim().toUpperCase();
+        const allowed = new Set(
+          [...linked, selfId].filter((id) => id.length > 0),
+        );
+        if (!sid || !allowed.has(sid)) {
+          continue;
+        }
+      }
+      if (
+        collection === "qa_survey_responses" &&
+        (callerRole === "parent" ||
+          callerRole === "student" ||
+          callerRole === "teacher")
+      ) {
+        const author = String(normalized.record.authorUsername || "")
+          .trim()
+          .toLowerCase();
+        const uname = String(meta.username || meta.userName || "")
+          .trim()
+          .toLowerCase();
+        if (!author || !uname || author !== uname) {
+          continue;
+        }
+      }
+      // Students may only write their own exam attempts.
+      if (collection === "exam_attempts" && callerRole === "student") {
+        const selfId = String(
+          meta.linkedStudentId || meta.linked_student_id || "",
+        ).trim().toUpperCase();
+        const sid = String(normalized.record.studentId || "").trim().toUpperCase();
+        if (selfId && sid && sid !== selfId) {
           continue;
         }
       }

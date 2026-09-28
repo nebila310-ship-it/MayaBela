@@ -5,6 +5,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/short_registry_id.dart';
 
 class AdminDriverRecord {
   AdminDriverRecord({
@@ -178,6 +179,31 @@ class DriverRegistryService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Alemayehu / Bus 12 row for the public transport demo. In-memory only.
+  void ensureLocalDemoDriver() {
+    const id = 'DRV-1001';
+    final existing = lookupById(id);
+    if (existing == null) {
+      _drivers.insert(
+        0,
+        AdminDriverRecord(
+          driverId: id,
+          busId: 'BUS-1001',
+          fullName: 'Alemayehu T.',
+          busNumber: 'Bus 12',
+          routeName: 'Bole → Megenagna → School',
+          plateNumber: 'AA-3-45678',
+          schoolId: 'TB-001',
+          email: 'alemayehu@mayaschool.et',
+          phone: '0911667788',
+          loginUsername: 'demo.driver',
+          initialPassword: AuthService.tempPassword,
+        ),
+      );
+    }
+    BusRegistryService.instance.ensureLocalDemoBus();
   }
 
   AdminDriverRecord? lookupByBusId(String busId) {
@@ -392,10 +418,11 @@ class DriverRegistryService {
       throw ArgumentError('busNumber is required');
     }
 
-    final idNum = _allocateDriverIdNumber();
+    final driverId = _allocateDriverId();
+    final idNum = ShortRegistryId.parseNumber(driverId) ?? 1;
     final record = AdminDriverRecord(
-      driverId: 'DRV-$idNum',
-      busId: 'BUS-$idNum',
+      driverId: driverId,
+      busId: ShortRegistryId.format('BUS', idNum),
       fullName: fullName.trim(),
       busNumber: normalizedBus,
       routeName: routeName.trim(),
@@ -419,25 +446,15 @@ class DriverRegistryService {
     _drivers.removeWhere((d) => d.driverId == id);
   }
 
-  static final RegExp _shortDriverIdPattern = RegExp(r'^DRV-(\d{1,6})$');
-
-  /// Short DRV-1004 style ids: next number = highest existing DRV-#### in the
-  /// cloud-merged registry + 1, with a free-slot check so devices converge.
-  int _allocateDriverIdNumber() {
-    var highest = 1000;
-    for (final d in _drivers) {
-      final match =
-          _shortDriverIdPattern.firstMatch(d.driverId.trim().toUpperCase());
-      final n = match == null ? null : int.tryParse(match.group(1) ?? '');
-      if (n != null && n > highest) highest = n;
-    }
-    var candidate = highest + 1;
-    if (_nextId > candidate) candidate = _nextId;
-    while (_drivers.any((d) => d.driverId == 'DRV-$candidate')) {
-      candidate++;
-    }
-    _nextId = candidate + 1;
-    return candidate;
+  String _allocateDriverId() {
+    final id = ShortRegistryId.allocate(
+      prefix: 'DRV',
+      existingIds: _drivers.map((d) => d.driverId),
+      isTaken: (id) => _drivers.any((d) => d.driverId == id),
+      persistedNext: _nextId,
+    );
+    _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
+    return id;
   }
 
   List<AdminDriverRecord> registrySnapshot() => List.unmodifiable(_drivers);
@@ -464,8 +481,9 @@ class DriverRegistryService {
         }
       }
     }
-    if (nextId != null && nextId > _nextId) {
-      _nextId = nextId;
+    final clamped = ShortRegistryId.clampCounter(nextId, fallback: _nextId);
+    if (clamped > _nextId) {
+      _nextId = clamped;
     }
   }
 

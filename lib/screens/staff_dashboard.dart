@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/web_erp/shell/web_erp_shell.dart';
 
-/// Administration staff home — same ERP sidebar/catalog as web, filtered by
-/// [ModuleAccess]. Phone layout uses the ERP drawer instead of a second tile list.
+/// Home for administration / custom staff roles (`staffRoles` on a teacher
+/// account). Classroom teachers use [TeacherDashboard] instead.
+///
+/// Same ERP sidebar as web (phone uses the ERP drawer). [ModuleAccess] hides
+/// modules the role cannot open.
 class StaffDashboard extends StatelessWidget {
   const StaffDashboard({super.key});
 

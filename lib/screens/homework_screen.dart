@@ -7,7 +7,10 @@ import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/homework_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/student_account_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
@@ -15,6 +18,7 @@ import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/attachment_share_actions.dart';
 import 'package:mayabela/widgets/homework_attachments_panel.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
 
@@ -96,6 +100,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     required String subject,
     required TextEditingController descriptionController,
     required List<String> attachmentPaths,
+    DateTime? dueDate,
     String? homeworkId,
   }) async {
     final s = AppLocale.instance.strings;
@@ -111,32 +116,32 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         teacherId: _access.teacherId,
         subjectId: slot?.subjectId,
         teachingSlotId: slot?.slotId,
+        dueDate: dueDate,
         attachmentPaths: attachmentPaths,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s.homeworkPostedForParents),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     } else {
       _data.updateHomework(
         id: homeworkId,
         description: descriptionController.text.trim(),
         attachmentPaths: attachmentPaths,
+        dueDate: dueDate,
+        clearDueDate: dueDate == null,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s.homeworkUpdated),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
+    final outcome = await CloudSaveHonesty.settle(
+      persist: HomeworkPersistenceService.instance.saveFromService(),
+    );
+    if (!mounted) return;
     setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      CloudSaveHonesty.snackBar(
+        savedOk: homeworkId == null
+            ? s.homeworkPostedForParents
+            : s.homeworkUpdated,
+        outcome: outcome,
+        strings: s,
+      ),
+    );
   }
 
   Future<void> _showHomeworkDialog({
@@ -158,6 +163,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         _access.defaultHomeworkSubject(className) ??
         subjects.first;
     var attachmentPaths = List<String>.from(existing?.attachmentPaths ?? []);
+    DateTime? dueDate = existing?.dueDate;
 
     final saved = await showAdminFormDialog(
       context: context,
@@ -218,6 +224,29 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
               ),
             ),
           ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Due date'),
+            subtitle: Text(
+              dueDate == null
+                  ? 'No due date'
+                  : '${dueDate!.day}/${dueDate!.month}/${dueDate!.year}',
+            ),
+            trailing: TextButton(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: dueDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2035),
+                );
+                if (picked != null) {
+                  setDialogState(() => dueDate = picked);
+                }
+              },
+              child: const Text('Set'),
+            ),
+          ),
           OutlinedButton.icon(
             onPressed: () async {
               final picked = await AnnouncementAttachmentService.instance
@@ -242,6 +271,8 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                         path.split(Platform.pathSeparator).last,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      onPressed: () =>
+                          openAttachmentWithFeedback(context, path: path),
                       onDeleted: () {
                         setDialogState(() => attachmentPaths.remove(path));
                       },
@@ -260,6 +291,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         subject: subject,
         descriptionController: descriptionController,
         attachmentPaths: attachmentPaths,
+        dueDate: dueDate,
         homeworkId: existing?.id,
       );
     }
@@ -286,12 +318,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       studentId: studentId,
       paths: picked.map((attachment) => attachment.filePath).toList(),
     );
+    final outcome = await CloudSaveHonesty.settle(
+      persist: HomeworkPersistenceService.instance.saveFromService(),
+    );
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(s.worksheetUploadedSuccess),
-        backgroundColor: Colors.green,
+      CloudSaveHonesty.snackBar(
+        savedOk: s.worksheetUploadedSuccess,
+        outcome: outcome,
+        strings: s,
       ),
     );
   }
@@ -308,6 +344,43 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       path: path,
     );
     setState(() {});
+  }
+
+  Widget _teacherSubmissionInbox(HomeworkItem item) {
+    final count = item.submittedStudentCount;
+    if (count == 0) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          'No student submissions yet',
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+        ),
+      );
+    }
+    final rows = item.studentWorksheetPaths.entries
+        .where((e) => e.value.isNotEmpty)
+        .toList();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$count student submission${count == 1 ? '' : 's'}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          for (final entry in rows)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${StudentRegistryService.instance.lookupById(entry.key)?.fullName ?? entry.key}'
+                ' · ${entry.value.length} file${entry.value.length == 1 ? '' : 's'}',
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _studentWorksheetSection(HomeworkItem item) {
@@ -548,6 +621,17 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                                     ),
                                   ],
                                   if (_isStudent) _studentWorksheetSection(item),
+                                  if (!_isParent) _teacherSubmissionInbox(item),
+                                  if (item.dueDate != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Due ${item.dueDate!.day}/${item.dueDate!.month}/${item.dueDate!.year}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade800,
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 10),
                                   Row(
                                     children: [

@@ -23,12 +23,17 @@ Future<void> downloadBytes({
   web.URL.revokeObjectURL(url);
 }
 
-Future<void> openOrDownload({
+Future<bool> openOrDownload({
   required String filePath,
   required String fileName,
   List<int>? bytes,
 }) async {
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    web.window.open(filePath, '_blank');
+    return true;
+  }
   final data = bytes ?? WebAttachmentCache.instance.read(filePath);
-  if (data == null) return;
+  if (data == null) return false;
   await downloadBytes(fileName: fileName, bytes: data);
+  return true;
 }

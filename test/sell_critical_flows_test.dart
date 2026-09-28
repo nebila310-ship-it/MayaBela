@@ -211,6 +211,7 @@ void main() {
           EnrollmentService.instance.linksForParent('0911999888');
       expect(links, hasLength(1));
       expect(links.single.status, ParentLinkStatus.pending);
+      expect(links.single.className, 'Grade 4A');
       expect(
         EnrollmentService.instance.approvedStudentIdsForParent('0911999888'),
         isEmpty,

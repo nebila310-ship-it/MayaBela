@@ -3,20 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/screens/notifications_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
-import 'package:mayabela/services/dashboard_navigation_store.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/utils/adaptive_breakpoints.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
+import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
 import 'package:mayabela/widgets/dashboard_scaffold.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
-/// Desktop/tablet shell: sidebar navigation + top bar. Mobile uses [DashboardScaffold] unchanged.
+/// Desktop/tablet shell: collapsible classroom sidebar + top bar.
+/// Phone widths use [DashboardScaffold] with a slide-out menu.
 class AdaptiveDashboardShell extends StatelessWidget {
   const AdaptiveDashboardShell({
     super.key,
@@ -221,122 +225,130 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
         AppLocale.instance,
         NotificationService.instance,
         DashboardBadgeService.instance,
+        SchoolContentSyncService.instance,
+        ConversationRealtimeSync.instance,
         UserPreferencesService.instance,
       ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
         final themeColor = widget.gradientColors.first;
         final unread = NotificationService.instance.unreadCount();
-        final entries = DashboardRegistry.visibleEntriesFor(widget.roleKey);
         final compact = UserPreferencesService.instance.compactDashboard;
         final crossAxis = AdaptiveBreakpoints.dashboardCrossAxisCount(
           context,
           compact: compact,
         );
+        final destinations = classroomNavDestinations(
+          roleKey: widget.roleKey,
+          s: s,
+        );
+        final collapsed =
+            UserPreferencesService.instance.classroomSidebarCollapsed;
 
-        final destinations = <NavigationRailDestination>[
-          const NavigationRailDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: Text('Home'),
-          ),
-          ...entries.map(
-            (entry) => NavigationRailDestination(
-              icon: Icon(entry.icon),
-              selectedIcon: Icon(entry.icon),
-              label: Text(s.dashboardTitle(entry.id, roleKey: widget.roleKey)),
-            ),
-          ),
-        ];
-
-        final isWideRail =
-            MediaQuery.sizeOf(context).width >= AdaptiveBreakpoints.wideDesktopMin;
+        void toggleSidebar() {
+          UserPreferencesService.instance
+              .setClassroomSidebarCollapsed(!collapsed);
+        }
 
         return Scaffold(
           backgroundColor: const Color(0xFFCFDBEA),
-          body: Row(
+          body: Column(
             children: [
-              NavigationRail(
-                extended: isWideRail,
-                minExtendedWidth: 200,
-                selectedIndex: _selectedIndex,
-                labelType: isWideRail
-                    ? NavigationRailLabelType.none
-                    : NavigationRailLabelType.all,
-                backgroundColor: Colors.white.withValues(alpha: 0.96),
-                indicatorColor: themeColor.withValues(alpha: 0.15),
-                onDestinationSelected: (index) {
-                  setState(() => _selectedIndex = index);
-                  if (index == 0) return;
-                  final entry = entries[index - 1];
-                  final action = DashboardNavigationStore.instance
-                      .actionFor(widget.roleKey, entry.id);
-                  action?.call();
-                },
-                destinations: destinations,
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: Column(
-                  children: [
-                    Material(
-                      color: themeColor,
-                      child: SafeArea(
-                        bottom: false,
-                        child: SizedBox(
-                          height: 64,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.title,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const NotificationsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: Badge(
-                                    isLabelVisible: unread > 0,
-                                    label: Text(
-                                      unread > 99 ? '99+' : '$unread',
-                                    ),
-                                    child: const Icon(
-                                      Icons.notifications,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () => _openAccountMenu(context),
-                                  icon: const CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.white24,
-                                    child: Icon(
-                                      Icons.person_rounded,
-                                      size: 18,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
+              Material(
+                color: themeColor,
+                child: SafeArea(
+                  bottom: false,
+                  child: SizedBox(
+                    height: ClassroomSidebar.headerHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            key: const Key('classroom-top-menu'),
+                            tooltip: collapsed
+                                ? s.expandClassroomSidebar
+                                : s.collapseClassroomSidebar,
+                            onPressed: toggleSidebar,
+                            icon: Icon(
+                              collapsed
+                                  ? Icons.menu_rounded
+                                  : Icons.menu_open_rounded,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsScreen(),
+                                ),
+                              );
+                            },
+                            icon: Badge(
+                              isLabelVisible: unread > 0,
+                              label: Text(
+                                unread > 99 ? '99+' : '$unread',
+                              ),
+                              child: const Icon(
+                                Icons.notifications,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _openAccountMenu(context),
+                            icon: const CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.white24,
+                              child: Icon(
+                                Icons.person_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ),
+                ),
+              ),
+              const WebCloudSyncBar(horizontalPadding: 16),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ClassroomSidebar(
+                      title: widget.title,
+                      accent: themeColor,
+                      destinations: destinations,
+                      selectedIndex:
+                          _selectedIndex.clamp(0, destinations.length - 1),
+                      collapsed: collapsed,
+                      onToggle: toggleSidebar,
+                      onSelect: (index) {
+                        setState(() => _selectedIndex = index);
+                        selectClassroomDestination(
+                          index: index,
+                          roleKey: widget.roleKey,
+                          destinations: destinations,
+                          onIndex: (i) => _selectedIndex = i,
+                        );
+                      },
                     ),
                     Expanded(
                       child: Stack(
@@ -345,9 +357,9 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                           AdminEducationalBackground(accentColor: themeColor),
                           SingleChildScrollView(
                             padding: listPagePadding(context).copyWith(
-                              left: 28,
-                              right: 28,
-                              top: 24,
+                              left: 20,
+                              right: 20,
+                              top: 20,
                             ),
                             child: Align(
                               alignment: Alignment.topCenter,
@@ -356,7 +368,8 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                   maxWidth: AdaptiveBreakpoints.contentMaxWidth,
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     if (!widget.hideBrandingBanner &&
                                         AuthService.activeSchoolId != null &&

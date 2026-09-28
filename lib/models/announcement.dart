@@ -1,6 +1,7 @@
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/models/grade_workflow.dart';
+import 'package:mayabela/models/markbook.dart';
 
 enum AnnouncementPriority { normal, important, urgent }
 
@@ -178,12 +179,14 @@ class SubjectGrade {
     this.lastReviewedAt,
     List<String>? markPhotoPaths,
     List<String>? attachmentPaths,
+    List<AssessmentMark>? assessments,
   })  : status = status ??
             (publishedToParents
                 ? SubjectGradeStatus.approved
                 : SubjectGradeStatus.draft),
         markPhotoPaths = markPhotoPaths ?? [],
-        attachmentPaths = attachmentPaths ?? [];
+        attachmentPaths = attachmentPaths ?? [],
+        assessments = assessments ?? [];
 
   final String subject;
   double score;
@@ -205,20 +208,54 @@ class SubjectGrade {
   List<String> markPhotoPaths;
   List<String> attachmentPaths;
 
+  /// Weighted category marks. Empty = legacy single [score].
+  List<AssessmentMark> assessments;
+
   bool get canTeacherEdit => status.canTeacherEdit;
 
   bool get isVisibleToParent =>
       status == SubjectGradeStatus.approved && publishedToParents;
 
+  bool get hasMarkbook => assessments.any((m) => m.isEntered);
+
   double get percentage => maxScore == 0 ? 0 : (score / maxScore) * 100;
 
-  String get letterGrade {
-    final p = percentage;
-    if (p >= 90) return 'A';
-    if (p >= 80) return 'B';
-    if (p >= 70) return 'C';
-    if (p >= 60) return 'D';
-    return 'F';
+  String get letterGrade => MarkbookMath.letterFromPercentage(percentage);
+
+  double get gpaPoints => MarkbookMath.gpaPoints(letterGrade);
+
+  /// Recompute [score] from weighted assessments. No-op when none entered.
+  void applyWeightedScore({bool missingCountsAsZero = false}) {
+    if (!assessments.any((m) => m.isEntered || missingCountsAsZero)) return;
+    final pct = MarkbookMath.weightedPercentage(
+      assessments,
+      missingCountsAsZero: missingCountsAsZero,
+    );
+    score = (pct / 100) * maxScore;
+  }
+
+  SubjectGrade clone() {
+    return SubjectGrade(
+      subject: subject,
+      score: score,
+      maxScore: maxScore,
+      comment: comment,
+      enteredByTeacherId: enteredByTeacherId,
+      subjectId: subjectId,
+      teachingSlotId: teachingSlotId,
+      publishedToParents: publishedToParents,
+      publishedAt: publishedAt,
+      status: status,
+      approvalLevelIndex: approvalLevelIndex,
+      submittedAt: submittedAt,
+      submittedByTeacherId: submittedByTeacherId,
+      reviewComment: reviewComment,
+      lastReviewedBy: lastReviewedBy,
+      lastReviewedAt: lastReviewedAt,
+      markPhotoPaths: List<String>.from(markPhotoPaths),
+      attachmentPaths: List<String>.from(attachmentPaths),
+      assessments: assessments.map((m) => m.copy()).toList(),
+    );
   }
 
   Map<String, dynamic> toMap() => {
@@ -242,6 +279,8 @@ class SubjectGrade {
           'lastReviewedAt': lastReviewedAt!.toIso8601String(),
         'markPhotoPaths': markPhotoPaths,
         'attachmentPaths': attachmentPaths,
+        if (assessments.isNotEmpty)
+          'assessments': assessments.map((m) => m.toMap()).toList(),
       };
 
   factory SubjectGrade.fromMap(Map<String, dynamic> map) {
@@ -280,6 +319,11 @@ class SubjectGrade {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      assessments: (map['assessments'] as List?)
+              ?.whereType<Map>()
+              .map((e) => AssessmentMark.fromMap(Map<String, dynamic>.from(e)))
+              .toList() ??
+          const [],
     );
   }
 }
@@ -291,13 +335,29 @@ class StudentGradeReport {
     required this.term,
     required this.subjects,
     this.studentId,
+    this.academicYear,
+    this.homeroomComment,
+    this.principalComment,
+    this.reportCardPublished = false,
+    this.reportCardPublishedAt,
+    this.attendancePresent,
+    this.attendanceLate,
+    this.attendanceAbsent,
   });
 
   final String studentName;
   final String className;
-  final String term;
+  String term;
   final List<SubjectGrade> subjects;
   final String? studentId;
+  String? academicYear;
+  String? homeroomComment;
+  String? principalComment;
+  bool reportCardPublished;
+  DateTime? reportCardPublishedAt;
+  int? attendancePresent;
+  int? attendanceLate;
+  int? attendanceAbsent;
 
   double get average {
     if (subjects.isEmpty) return 0;
@@ -305,11 +365,33 @@ class StudentGradeReport {
         subjects.length;
   }
 
+  double get gpa {
+    if (subjects.isEmpty) return 0;
+    return subjects.map((s) => s.gpaPoints).reduce((a, b) => a + b) /
+        subjects.length;
+  }
+
+  StudentAttendanceSnapshot get attendanceSnapshot =>
+      StudentAttendanceSnapshot.fromCounts(
+        present: attendancePresent,
+        late: attendanceLate,
+        absent: attendanceAbsent,
+      );
+
   Map<String, dynamic> toMap() => {
         'studentName': studentName,
         'className': className,
         'term': term,
         if (studentId != null) 'studentId': studentId,
+        if (academicYear != null) 'academicYear': academicYear,
+        if (homeroomComment != null) 'homeroomComment': homeroomComment,
+        if (principalComment != null) 'principalComment': principalComment,
+        'reportCardPublished': reportCardPublished,
+        if (reportCardPublishedAt != null)
+          'reportCardPublishedAt': reportCardPublishedAt!.toIso8601String(),
+        if (attendancePresent != null) 'attendancePresent': attendancePresent,
+        if (attendanceLate != null) 'attendanceLate': attendanceLate,
+        if (attendanceAbsent != null) 'attendanceAbsent': attendanceAbsent,
         'subjects': subjects.map((s) => s.toMap()).toList(),
       };
 
@@ -319,6 +401,16 @@ class StudentGradeReport {
       className: map['className'] as String? ?? '',
       term: map['term'] as String? ?? 'Term 1',
       studentId: map['studentId'] as String?,
+      academicYear: map['academicYear'] as String?,
+      homeroomComment: map['homeroomComment'] as String?,
+      principalComment: map['principalComment'] as String?,
+      reportCardPublished: map['reportCardPublished'] as bool? ?? false,
+      reportCardPublishedAt: map['reportCardPublishedAt'] != null
+          ? DateTime.tryParse(map['reportCardPublishedAt'] as String)
+          : null,
+      attendancePresent: map['attendancePresent'] as int?,
+      attendanceLate: map['attendanceLate'] as int?,
+      attendanceAbsent: map['attendanceAbsent'] as int?,
       subjects: (map['subjects'] as List?)
               ?.whereType<Map>()
               .map((e) => SubjectGrade.fromMap(Map<String, dynamic>.from(e)))
@@ -327,14 +419,46 @@ class StudentGradeReport {
     );
   }
 
-  StudentGradeReport copyWithSubjects(List<SubjectGrade> nextSubjects) {
+  StudentGradeReport copyWith({
+    String? studentName,
+    String? className,
+    String? term,
+    List<SubjectGrade>? subjects,
+    String? studentId,
+    String? academicYear,
+    String? homeroomComment,
+    String? principalComment,
+    bool? reportCardPublished,
+    DateTime? reportCardPublishedAt,
+    int? attendancePresent,
+    int? attendanceLate,
+    int? attendanceAbsent,
+    bool clearHomeroomComment = false,
+    bool clearPrincipalComment = false,
+  }) {
     return StudentGradeReport(
-      studentName: studentName,
-      className: className,
-      term: term,
-      studentId: studentId,
-      subjects: nextSubjects,
+      studentName: studentName ?? this.studentName,
+      className: className ?? this.className,
+      term: term ?? this.term,
+      subjects: subjects ?? this.subjects,
+      studentId: studentId ?? this.studentId,
+      academicYear: academicYear ?? this.academicYear,
+      homeroomComment:
+          clearHomeroomComment ? null : (homeroomComment ?? this.homeroomComment),
+      principalComment: clearPrincipalComment
+          ? null
+          : (principalComment ?? this.principalComment),
+      reportCardPublished: reportCardPublished ?? this.reportCardPublished,
+      reportCardPublishedAt:
+          reportCardPublishedAt ?? this.reportCardPublishedAt,
+      attendancePresent: attendancePresent ?? this.attendancePresent,
+      attendanceLate: attendanceLate ?? this.attendanceLate,
+      attendanceAbsent: attendanceAbsent ?? this.attendanceAbsent,
     );
+  }
+
+  StudentGradeReport copyWithSubjects(List<SubjectGrade> nextSubjects) {
+    return copyWith(subjects: nextSubjects);
   }
 }
 

@@ -5,15 +5,17 @@ import 'package:mayabela/services/employee_registry_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
+import 'package:mayabela/web_erp/pages/web_payroll_page.dart';
 import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
-/// Human Resource hub: classroom teachers, record-only employees, transport.
+/// Human Resource hub: classroom teachers, record-only employees, transport, payroll.
 class WebHrHubPage extends StatefulWidget {
-  const WebHrHubPage({super.key, this.onNavigate});
+  const WebHrHubPage({super.key, this.onNavigate, this.initialTab = 0});
 
   final ValueChanged<String>? onNavigate;
+  final int initialTab;
 
   @override
   State<WebHrHubPage> createState() => _WebHrHubPageState();
@@ -26,7 +28,11 @@ class _WebHrHubPageState extends State<WebHrHubPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 3),
+    );
   }
 
   @override
@@ -41,7 +47,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -49,15 +55,6 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                 'Human Resource',
                 style: WebErpTheme.sectionTitle(context),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Create classroom teachers, keep non-login staff records, '
-                'and manage transport. ERP admin accounts stay with the owner.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 12),
               TabBar(
                 controller: _tabs,
                 isScrollable: true,
@@ -66,6 +63,7 @@ class _WebHrHubPageState extends State<WebHrHubPage>
                   Tab(text: 'Teachers'),
                   Tab(text: 'Other staff'),
                   Tab(text: 'Transport'),
+                  Tab(text: 'Payroll'),
                 ],
               ),
             ],
@@ -75,13 +73,16 @@ class _WebHrHubPageState extends State<WebHrHubPage>
         Expanded(
           child: TabBarView(
             controller: _tabs,
+            physics: const NeverScrollableScrollPhysics(),
             children: [
               WebTeachersTablePage(
                 onNavigate: widget.onNavigate,
                 directoryMode: WebTeachersDirectoryMode.classroomTeachers,
+                embedded: true,
               ),
               _EmployeesTab(onNavigate: widget.onNavigate),
               WebTransportDashboardPage(onNavigate: widget.onNavigate),
+              const WebPayrollPage(embedded: true),
             ],
           ),
         ),

@@ -9,7 +9,7 @@ Future<void> downloadBytes({
   // No-op on IO platforms — callers use share_plus / open_file.
 }
 
-Future<void> openOrDownload({
+Future<bool> openOrDownload({
   required String filePath,
   required String fileName,
   List<int>? bytes,
@@ -18,6 +18,9 @@ Future<void> openOrDownload({
     final data = bytes ?? WebAttachmentCache.instance.read(filePath);
     if (data != null) {
       await downloadBytes(fileName: fileName, bytes: data);
+      return true;
     }
+    return false;
   }
+  return false;
 }

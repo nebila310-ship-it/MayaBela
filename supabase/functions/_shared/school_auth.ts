@@ -74,6 +74,8 @@ export const ALL_PERMISSIONS: string[] = [
   // Settings
   "manage_school_settings",
   "manage_campuses",
+  // Administration Staff digital-ops desk (not a new IT role)
+  "manage_digital_ops",
 ];
 
 const BASELINE: string[] = [
@@ -114,8 +116,6 @@ const LEADERSHIP = withBaseline([
   "access_support",
   "message_parents",
   "manage_staff_accounts",
-  "assign_teachers",
-  "manage_classes",
 ]);
 
 export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -130,8 +130,15 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_reports",
     "view_audit_log",
   ]),
-  general_manager: LEADERSHIP,
-  deputy_general_manager: LEADERSHIP,
+  general_manager: withBaseline([
+    ...LEADERSHIP,
+    "manage_digital_ops",
+  ]),
+  deputy_general_manager: withBaseline([
+    ...LEADERSHIP,
+    "assign_teachers",
+    "manage_classes",
+  ]),
   principal: withBaseline([
     "view_students",
     "view_staff",
@@ -146,6 +153,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "message_parents",
     "access_support",
     "view_transport",
+    "manage_digital_ops",
   ]),
   quality_assurance: withBaseline([
     "view_students",
@@ -178,6 +186,16 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "message_parents",
     "assign_teachers",
     "manage_classes",
+    "manage_students",
+    "manage_parent_links",
+    "manage_fees",
+    "record_payments",
+    "manage_staff_accounts",
+    "manage_buses",
+    "manage_drivers",
+    "assign_student_transport",
+    "manage_qa_findings",
+    "manage_digital_ops",
   ]),
   section_director: withBaseline([
     "manage_classes",
@@ -198,6 +216,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_parent_links",
     "access_support",
     "message_parents",
+    "send_announcements",
   ]),
   student_affairs: withBaseline([
     "view_students",
@@ -217,6 +236,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "promote_students",
     "message_parents",
     "access_support",
+    "manage_digital_ops",
   ]),
   accountant: withBaseline([
     "manage_fees",
@@ -273,6 +293,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
   staffs: withBaseline([
     "view_staff",
     "access_support",
+    "manage_digital_ops",
   ]),
   // Legacy keys (same bundles as their aliases).
   academic_admin: withBaseline([
@@ -283,7 +304,8 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_all_grades",
     "view_all_school_data",
     "approve_grades",
-    "approve_transfers",
+    "create_transfers",
+    "manage_students",
     "manage_learning_materials",
     "manage_material_access",
     "view_students",
@@ -293,6 +315,7 @@ export const STAFF_ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_parent_links",
     "access_support",
     "message_parents",
+    "send_announcements",
   ]),
   hr_admin: withBaseline([
     "view_staff",
@@ -382,6 +405,42 @@ export function normalizeEmail(value: unknown): string | null {
   const email = String(value || "").trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
   return email;
+}
+
+/** Ethiopian mobile login key, e.g. 0911234567. */
+export function ethiopianLoginKey(value: unknown): string {
+  const normalized = normalizeUsername(value);
+  let digits = normalized.replace(/\D/g, "");
+  if (!digits) return normalized;
+  if (digits.startsWith("251") && digits.length >= 12) {
+    digits = digits.slice(3);
+  }
+  digits = digits.replace(/^0+/, "");
+  if (digits.length === 9 && (digits.startsWith("9") || digits.startsWith("7"))) {
+    digits = `0${digits}`;
+  }
+  if (digits.length === 10 && digits.startsWith("0")) return digits;
+  return normalized;
+}
+
+export function usernamesMatch(a: unknown, b: unknown): boolean {
+  const na = normalizeUsername(a);
+  const nb = normalizeUsername(b);
+  if (na && nb && na === nb) return true;
+  const ka = ethiopianLoginKey(a);
+  const kb = ethiopianLoginKey(b);
+  return !!ka && ka === kb;
+}
+
+export function parentLinkDocId(
+  schoolId: string,
+  parentUsername: string,
+  studentId: string,
+): string {
+  const school = String(schoolId || "").trim().toUpperCase();
+  const user = ethiopianLoginKey(parentUsername);
+  const stu = String(studentId || "").trim().toUpperCase();
+  return `PL-${school}__${user}__${stu}`.replace(/[^A-Za-z0-9._-]/g, "_");
 }
 
 export function uniqueStrings(values: unknown, cap = ACCESS_CLAIM_CAP): string[] {
@@ -490,10 +549,11 @@ export async function deleteAccountAndSecrets(
   username: string,
   schoolId: string,
 ): Promise<{ deletedAccountIds: string[]; deletedSecretIds: string[] }> {
-  const key = normalizeUsername(username);
+  const key = ethiopianLoginKey(username) || normalizeUsername(username);
   const sid = String(schoolId || "").trim().toUpperCase();
   const accountIds = new Set<string>([
     key,
+    normalizeUsername(username),
     ...(sid ? [accountDocId(sid, key)] : []),
   ]);
   const secretIds = new Set<string>(accountIds);
@@ -504,7 +564,7 @@ export async function deleteAccountAndSecrets(
     if (!existing) continue;
     const phone = String(existing.phone || "").trim();
     if (phone) {
-      const phoneKey = normalizeUsername(phone);
+      const phoneKey = ethiopianLoginKey(phone) || normalizeUsername(phone);
       accountIds.add(phoneKey);
       secretIds.add(phoneKey);
       if (sid) {
@@ -761,7 +821,7 @@ export async function upsertSecret(
 ): Promise<void> {
   const passwordHash = await bcryptHash(plainPassword);
   const sid = String(schoolId || "").trim().toUpperCase();
-  const key = normalizeUsername(username);
+  const key = ethiopianLoginKey(username) || normalizeUsername(username);
   const docId = sid ? accountDocId(sid, key) : key;
   const existing = await loadSecret(sb, key, sid, docId);
   await upsertDoc(sb, "auth_secrets", docId, {
@@ -780,16 +840,29 @@ export async function loadSecret(
   accountDocIdHint?: string | null,
 ): Promise<Record<string, unknown> | null> {
   const key = normalizeUsername(username);
+  const phoneKey = ethiopianLoginKey(username);
+  const keys = [...new Set([key, phoneKey].filter((k) => !!k))];
   const sid = String(schoolId || "").trim().toUpperCase();
   if (accountDocIdHint) {
     const byHint = await getDoc(sb, "auth_secrets", accountDocIdHint, sid || null);
     if (byHint) return byHint;
   }
   if (sid) {
-    const composite = await getDoc(sb, "auth_secrets", accountDocId(sid, key), sid);
-    if (composite) return composite;
+    for (const lookup of keys) {
+      const composite = await getDoc(
+        sb,
+        "auth_secrets",
+        accountDocId(sid, lookup),
+        sid,
+      );
+      if (composite) return composite;
+    }
   }
-  return await getDoc(sb, "auth_secrets", key);
+  for (const lookup of keys) {
+    const legacy = await getDoc(sb, "auth_secrets", lookup);
+    if (legacy) return legacy;
+  }
+  return null;
 }
 
 function generateSessionPassword(): string {
@@ -1087,16 +1160,22 @@ export async function enrichAccessProfile(
     );
     const hasClassNames =
       ((enriched.linkedClassNames as string[]) || []).length > 0;
-    // Skip a full parent_link_requests scan when the account already has
-    // linked students (typical after first successful login).
-    if (ids.size === 0) {
-      const links = await queryDocs(sb, "parent_link_requests", [
-        { column: "schoolId", op: "eq", value: schoolId },
-      ], 200);
-      for (const doc of links) {
-        if (doc.data.parentUsername !== username) continue;
-        if (doc.data.status !== "approved") continue;
-        const studentId = String(doc.data.studentId || "").trim().toUpperCase();
+    // Always scan approved parent_link_requests. Login used to take the first
+    // 200 school-wide rows, so this parent's approval could be missing on a
+    // new phone even after staff approved it.
+    if (schoolId) {
+      const { data: linkRows, error: linkError } = await sb
+        .from("app_documents")
+        .select("data")
+        .eq("collection", "parent_link_requests")
+        .eq("school_id", schoolId)
+        .eq("data->>status", "approved")
+        .limit(500);
+      if (linkError) throw linkError;
+      for (const row of linkRows || []) {
+        const data = (row.data || {}) as Record<string, unknown>;
+        if (!usernamesMatch(data.parentUsername, username)) continue;
+        const studentId = String(data.studentId || "").trim().toUpperCase();
         if (studentId) ids.add(studentId);
       }
     }
@@ -1154,7 +1233,9 @@ export async function findAccountDoc(
   roleKey: string,
   schoolId?: string | null,
 ): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  const key = normalizeUsername(identifier);
+  const rawKey = normalizeUsername(identifier);
+  const phoneKey = ethiopianLoginKey(identifier);
+  const keys = [...new Set([phoneKey, rawKey].filter((k) => !!k))];
   const sid = String(schoolId || "").trim().toUpperCase();
 
   const roleOk = (data: Record<string, unknown>) =>
@@ -1162,10 +1243,12 @@ export async function findAccountDoc(
 
   // Prefer school-scoped account ids: SCHOOLID__username
   if (sid) {
-    const compositeId = accountDocId(sid, key);
-    const composite = await getDoc(sb, "app_auth_accounts", compositeId, sid);
-    if (composite && roleOk(composite)) {
-      return { id: compositeId, data: composite };
+    for (const key of keys) {
+      const compositeId = accountDocId(sid, key);
+      const composite = await getDoc(sb, "app_auth_accounts", compositeId, sid);
+      if (composite && roleOk(composite)) {
+        return { id: compositeId, data: composite };
+      }
     }
 
     const inSchool = await queryDocs(
@@ -1175,8 +1258,7 @@ export async function findAccountDoc(
       500,
     );
     for (const doc of inSchool) {
-      const uname = normalizeUsername(doc.data.username || doc.id);
-      if (uname === key && roleOk(doc.data)) {
+      if (usernamesMatch(doc.data.username || doc.id, identifier) && roleOk(doc.data)) {
         return { id: doc.id, data: doc.data };
       }
       if (normalizeEmail(doc.data.email) === key && roleOk(doc.data)) {
@@ -1192,27 +1274,30 @@ export async function findAccountDoc(
     }
 
     // Legacy global phone doc — only if it belongs to this school.
-    const legacy = await getDoc(sb, "app_auth_accounts", key, sid);
-    if (
-      legacy &&
-      roleOk(legacy) &&
-      String(legacy.schoolId || "").trim().toUpperCase() === sid
-    ) {
-      return { id: key, data: legacy };
+    for (const key of keys) {
+      const legacy = await getDoc(sb, "app_auth_accounts", key, sid);
+      if (
+        legacy &&
+        roleOk(legacy) &&
+        String(legacy.schoolId || "").trim().toUpperCase() === sid
+      ) {
+        return { id: key, data: legacy };
+      }
     }
     return null;
   }
 
-  const direct = await getDoc(sb, "app_auth_accounts", key);
-  if (direct && roleOk(direct)) {
-    return { id: key, data: direct };
+  for (const key of keys) {
+    const direct = await getDoc(sb, "app_auth_accounts", key);
+    if (direct && roleOk(direct)) {
+      return { id: key, data: direct };
+    }
   }
 
   const snap = await queryDocs(sb, "app_auth_accounts", [], 500);
   for (const doc of snap) {
     const data = doc.data;
-    const uname = normalizeUsername(data.username || doc.id);
-    if (uname === key && roleOk(data)) {
+    if (usernamesMatch(data.username || doc.id, identifier) && roleOk(data)) {
       return { id: doc.id, data };
     }
     if (normalizeEmail(data.email) === key && roleOk(data)) {
@@ -1259,6 +1344,6 @@ export async function findAccountByEmail(
 /** School-scoped account document id (avoids cross-school phone collisions). */
 export function accountDocId(schoolId: string, username: string): string {
   const sid = String(schoolId || "").trim().toUpperCase();
-  const key = normalizeUsername(username);
+  const key = ethiopianLoginKey(username) || normalizeUsername(username);
   return `${sid}__${key}`;
 }

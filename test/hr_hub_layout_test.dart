@@ -1,0 +1,170 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
+import 'package:mayabela/web_erp/pages/web_payroll_page.dart';
+import 'package:mayabela/web_erp/pages/web_teachers_table_page.dart';
+import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    AuthService.currentUser = RegisteredUser(
+      username: 'hr.admin',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'FR-001',
+      fullName: 'HR Admin',
+    );
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-STAT-1',
+        employeeId: 'TCH-STAT-1',
+        fullName: 'Status Visible',
+        assignedClass: 'Grade 1A',
+        schoolId: 'FR-001',
+        phone: '0911000000',
+      ),
+    ]);
+  });
+
+  tearDown(() {
+    AuthService.currentUser = null;
+  });
+
+  testWidgets('teacher Status column stays fully visible on a tight desktop width',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: WebTeachersTablePage(
+            directoryMode: WebTeachersDirectoryMode.classroomTeachers,
+            embedded: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(WebTeachersTablePage.directoryMinTableWidth, 1180);
+    expect(find.text('Status'), findsOneWidget);
+    expect(find.text('Active'), findsWidgets);
+    expect(find.text('Stat'), findsNothing);
+  });
+
+  testWidgets('HR Teachers tab does not show driver or GPS actions',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebHrHubPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Teachers'), findsOneWidget);
+    expect(find.text('Payroll'), findsOneWidget);
+    expect(find.byKey(const ValueKey('hr-register-driver')), findsNothing);
+    expect(find.byKey(const ValueKey('hr-live-gps')), findsNothing);
+
+    await tester.tap(find.text('Transport'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('hr-register-driver')), findsOneWidget);
+    expect(find.byKey(const ValueKey('hr-live-gps')), findsOneWidget);
+
+    await tester.tap(find.text('Payroll'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Income tax (PAYE)'), findsOneWidget);
+    expect(find.text('Run payroll'), findsOneWidget);
+    expect(find.text('Export Excel'), findsOneWidget);
+    expect(find.text('Print / PDF'), findsOneWidget);
+    expect(find.text('Income tax'), findsWidgets);
+    expect(find.text('Net pay'), findsWidgets);
+    expect(find.text('Payroll register'), findsOneWidget);
+    expect(
+      find.textContaining('Use the scrollbar or arrows'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('payroll-scroll-right')), findsOneWidget);
+    final tableSize = tester.getSize(
+      find.byKey(const ValueKey('payroll-register-table')),
+    );
+    expect(tableSize.width, greaterThanOrEqualTo(WebPayrollPage.registerMinWidth));
+
+    final registerScroll = tester
+        .widget<SingleChildScrollView>(
+          find.ancestor(
+            of: find.byKey(const ValueKey('payroll-register-table')),
+            matching: find.byKey(const ValueKey('web-erp-hscroll-view')),
+          ),
+        )
+        .controller!;
+    expect(registerScroll.position.maxScrollExtent, greaterThan(100));
+
+    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.pumpAndSettle();
+    expect(registerScroll.position.pixels, greaterThan(0));
+  });
+
+  testWidgets('payroll register can scroll horizontally on a 500px surface',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(500, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebHrHubPage(initialTab: 3)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('payroll-register-table')), findsOneWidget);
+
+    final registerScroll = tester
+        .widget<SingleChildScrollView>(
+          find.ancestor(
+            of: find.byKey(const ValueKey('payroll-register-table')),
+            matching: find.byKey(const ValueKey('web-erp-hscroll-view')),
+          ),
+        )
+        .controller!;
+    expect(registerScroll.position.maxScrollExtent, greaterThan(1000));
+    expect(registerScroll.position.pixels, 0);
+
+    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.pumpAndSettle();
+    expect(registerScroll.position.pixels, greaterThan(200));
+
+    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.pumpAndSettle();
+    expect(registerScroll.position.pixels, greaterThan(400));
+  });
+
+  testWidgets('Transport tile hosts Register Driver and Live GPS',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebTransportDashboardPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('hr-register-driver')), findsOneWidget);
+    expect(find.byKey(const ValueKey('hr-live-gps')), findsOneWidget);
+    expect(find.text('Register Driver'), findsOneWidget);
+    expect(find.text('Live GPS'), findsOneWidget);
+  });
+}

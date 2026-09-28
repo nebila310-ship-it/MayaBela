@@ -15,11 +15,20 @@ class CloudSyncProgressService extends ChangeNotifier {
   String _message = 'Loading school data…';
   Timer? _autoHide;
 
+  DateTime? _loadingStartedAt;
+
   CloudSyncProgressPhase get phase => _phase;
   bool get isVisible => _phase != CloudSyncProgressPhase.idle;
   bool get isLoading => _phase == CloudSyncProgressPhase.loading;
   bool get isReady => _phase == CloudSyncProgressPhase.ready;
   bool get isFailed => _phase == CloudSyncProgressPhase.failed;
+
+  /// True when a progress chip has been "loading" too long and is blocking live ticks.
+  bool get isLoadingStale {
+    if (!isLoading || _loadingStartedAt == null) return false;
+    return DateTime.now().difference(_loadingStartedAt!) >
+        const Duration(seconds: 45);
+  }
 
   /// Whether a cloud pull is currently running.
   bool get isActive => isLoading;
@@ -44,6 +53,7 @@ class CloudSyncProgressService extends ChangeNotifier {
     if (isLoading || isReady || isFailed) return;
     _autoHide?.cancel();
     _phase = CloudSyncProgressPhase.loading;
+    _loadingStartedAt = DateTime.now();
     _totalSteps = totalSteps.clamp(1, 99);
     _completedSteps = 0;
     _message = message;
@@ -98,6 +108,7 @@ class CloudSyncProgressService extends ChangeNotifier {
     _autoHide = null;
     if (_phase == CloudSyncProgressPhase.idle) return;
     _phase = CloudSyncProgressPhase.idle;
+    _loadingStartedAt = null;
     _completedSteps = 0;
     _totalSteps = 1;
     _message = 'Loading school data…';

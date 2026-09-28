@@ -2,14 +2,15 @@ group 'com.javih.add_2_calendar'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '2.1.0'
+    ext.kotlin_version = '2.2.20'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.7.3'
+        // Keep in lockstep with the app AGP pin (android/settings.gradle.kts).
+        classpath 'com.android.tools.build:gradle:8.12.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }

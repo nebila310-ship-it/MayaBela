@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -12,8 +15,9 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/utils/phone_utils.dart';
 
-class EnrollmentService {
+class EnrollmentService extends ChangeNotifier {
   EnrollmentService._();
   static final instance = EnrollmentService._();
 
@@ -70,6 +74,30 @@ class EnrollmentService {
       ..addAll(links);
     if (nextId != null) _nextLinkId = nextId;
     _seeded = true;
+    notifyListeners();
+  }
+
+  /// Merges remote rows for one parent without wiping other parents' requests.
+  /// Logging in as a different parent used to replace the whole queue.
+  void upsertLinks(List<ParentLinkRequest> incoming, {int? nextId}) {
+    ensureSeeded();
+    final byId = {for (final link in _parentLinks) link.id: link};
+    for (final link in incoming) {
+      byId[link.id] = link;
+    }
+    _parentLinks
+      ..clear()
+      ..addAll(byId.values);
+    if (nextId != null && nextId > _nextLinkId) _nextLinkId = nextId;
+    _seeded = true;
+    notifyListeners();
+  }
+
+  void removeLinksByIds(Iterable<String> ids) {
+    final idSet = ids.toSet();
+    if (idSet.isEmpty) return;
+    _parentLinks.removeWhere((link) => idSet.contains(link.id));
+    notifyListeners();
   }
 
   Future<void> _persist({String? syncLinkId}) async {
@@ -88,6 +116,7 @@ class EnrollmentService {
     bool hasMedicalCondition = false,
     String? medicalConditionDetails,
     String? otherMedicalInfo,
+    bool persist = true,
   }) {
     ensureSeeded();
     if (!StudentRegistryService.instance.verifyStudent(
@@ -99,20 +128,45 @@ class EnrollmentService {
     }
 
     final sid = studentId.trim().toUpperCase();
-    final existing = _parentLinks.where(
-      (link) =>
-          link.parentUsername == parentUsername.toLowerCase() &&
-          link.studentId == sid &&
-          link.status != ParentLinkStatus.rejected,
-    );
+    final username = PhoneUtils.loginKey(parentUsername).toLowerCase();
+    final existing = _parentLinks
+        .where(
+          (link) =>
+              _sameParentUsername(link.parentUsername, username) &&
+              link.studentId == sid &&
+              link.status != ParentLinkStatus.rejected,
+        )
+        .toList();
     if (existing.isNotEmpty) {
-      return 'already_linked';
+      final loggedInParent = AuthService.currentUser?.roleKey ==
+              AuthService.roleParent &&
+          _sameParentUsername(AuthService.currentUser!.username, username);
+      if (loggedInParent) {
+        return 'already_linked';
+      }
+      var reopened = false;
+      for (final link in existing) {
+        if (link.status == ParentLinkStatus.approved) {
+          link.status = ParentLinkStatus.pending;
+          link.reviewedBy = null;
+          link.reviewedAt = null;
+          reopened = true;
+        }
+      }
+      if (reopened) notifyListeners();
+      if (persist && reopened) unawaited(_persist());
+      return null;
     }
 
+    final student = StudentRegistryService.instance.lookupById(sid);
     _parentLinks.add(
       ParentLinkRequest(
-        id: 'PL-${_nextLinkId++}',
-        parentUsername: parentUsername.toLowerCase(),
+        id: cloudLinkId(
+          schoolId: schoolId,
+          parentUsername: username,
+          studentId: sid,
+        ),
+        parentUsername: username,
         parentFullName: parentFullName,
         studentId: sid,
         schoolId: schoolId.trim().toUpperCase(),
@@ -125,10 +179,12 @@ class EnrollmentService {
         otherMedicalInfo: otherMedicalInfo?.trim().isEmpty == true
             ? null
             : otherMedicalInfo?.trim(),
+        className: student?.className,
       ),
     );
+    notifyListeners();
 
-    unawaited(_persist());
+    if (persist) unawaited(_persist());
     return null;
   }
 
@@ -188,10 +244,32 @@ class EnrollmentService {
     );
   }
 
+  /// Stable cloud document id so the same parent+child is one row on every device.
+  static String cloudLinkId({
+    required String schoolId,
+    required String parentUsername,
+    required String studentId,
+  }) {
+    final school = schoolId.trim().toUpperCase();
+    final user = PhoneUtils.loginKey(parentUsername).toLowerCase();
+    final stu = studentId.trim().toUpperCase();
+    return 'PL-${school}__${user}__$stu'
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+  }
+
+  static bool _sameParentUsername(String stored, String username) {
+    final a = stored.trim().toLowerCase();
+    final b = username.trim().toLowerCase();
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+    return PhoneUtils.matches(stored, username);
+  }
+
   List<ParentLinkRequest> linksForParent(String username) {
     ensureSeeded();
-    final lower = username.toLowerCase();
-    return _parentLinks.where((l) => l.parentUsername == lower).toList();
+    return _parentLinks
+        .where((l) => _sameParentUsername(l.parentUsername, username))
+        .toList();
   }
 
   List<String> approvedStudentIdsForParent(String username) {
@@ -233,16 +311,57 @@ class EnrollmentService {
         .toList();
   }
 
+  String? _classNameForLink(ParentLinkRequest link) {
+    final stamped = link.className?.trim();
+    if (stamped != null && stamped.isNotEmpty) return stamped;
+    return StudentRegistryService.instance.lookupById(link.studentId)?.className;
+  }
+
+  Set<String> _assignedClassNamesForCurrentTeacher() {
+    final names = <String>{};
+    void add(String? name) {
+      final trimmed = name?.trim() ?? '';
+      if (trimmed.isNotEmpty) names.add(trimmed);
+    }
+
+    for (final assignment in TeacherAccessService.instance.myClasses) {
+      add(assignment.className);
+    }
+    for (final name in TeacherAccessService.instance.homeroomClassNames) {
+      add(name);
+    }
+    for (final name in AuthService.cloudAssignedClassNames) {
+      add(name);
+    }
+    return names;
+  }
+
+  bool _isAssignedClass(String? className) {
+    if (className == null || className.trim().isEmpty) return false;
+    return _assignedClassNamesForCurrentTeacher().any(
+      (assigned) => StudentRegistryService.classNamesMatch(assigned, className),
+    );
+  }
+
+  /// Approve/reject only for parents-desk managers or classroom teachers
+  /// of the student's class. Administration Staff cannot approve.
+  bool canCurrentUserManageParentLink(ParentLinkRequest link) {
+    if (ModuleAccess.canManage('parents')) return true;
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    if (user.roleKey != AuthService.roleTeacher) return false;
+    if (AuthService.isAdministrationStaff) return false;
+    return _isAssignedClass(_classNameForLink(link));
+  }
+
   List<ParentLinkRequest> pendingForHomeroomTeacher() {
     ensureSeeded();
-    final homeroomClasses = TeacherAccessService.instance.homeroomClassNames;
-    if (homeroomClasses.isEmpty) return [];
+    final assigned = _assignedClassNamesForCurrentTeacher();
+    if (assigned.isEmpty) return [];
 
     return _parentLinks.where((link) {
       if (link.status != ParentLinkStatus.pending) return false;
-      final student = StudentRegistryService.instance.lookupById(link.studentId);
-      if (student == null) return false;
-      return homeroomClasses.contains(student.className);
+      return _isAssignedClass(_classNameForLink(link));
     }).toList();
   }
 
@@ -271,14 +390,12 @@ class EnrollmentService {
 
   List<ParentLinkRequest> allLinksForHomeroomTeacher() {
     ensureSeeded();
-    final homeroomClasses = TeacherAccessService.instance.homeroomClassNames;
-    if (homeroomClasses.isEmpty) return [];
+    final assigned = _assignedClassNamesForCurrentTeacher();
+    if (assigned.isEmpty) return [];
 
-    return _parentLinks.where((link) {
-      final student = StudentRegistryService.instance.lookupById(link.studentId);
-      if (student == null) return false;
-      return homeroomClasses.contains(student.className);
-    }).toList();
+    return _parentLinks
+        .where((link) => _isAssignedClass(_classNameForLink(link)))
+        .toList();
   }
 
   /// Pending first, then approved, then rejected; newest first within each group.
@@ -328,7 +445,8 @@ class EnrollmentService {
   int pendingCountForCurrentUser() => pendingApprovalsForCurrentUser().length;
 
   Future<void> approveLink(String linkId, String reviewerName) async {
-    final link = _parentLinks.firstWhere((l) => l.id == linkId);
+    final link = findLink(linkId);
+    if (link == null || !canCurrentUserManageParentLink(link)) return;
     link.status = ParentLinkStatus.approved;
     link.reviewedBy = reviewerName;
     link.reviewedAt = DateTime.now();
@@ -360,15 +478,18 @@ class EnrollmentService {
       recipientRole: AuthService.roleParent,
     );
     await _persist(syncLinkId: linkId);
+    notifyListeners();
   }
 
   Future<void> rejectLink(String linkId, String reviewerName) async {
-    final link = _parentLinks.firstWhere((l) => l.id == linkId);
+    final link = findLink(linkId);
+    if (link == null || !canCurrentUserManageParentLink(link)) return;
     link.status = ParentLinkStatus.rejected;
     link.reviewedBy = reviewerName;
     link.reviewedAt = DateTime.now();
     await _syncParentUserLinks(link.parentUsername);
     await _persist(syncLinkId: linkId);
+    notifyListeners();
   }
 
   Future<void> _syncParentUserLinks(String username) async {

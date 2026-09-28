@@ -62,7 +62,10 @@ abstract final class ParentMessagingPolicy {
     for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
       if (!teacher.isActive) continue;
       for (final assignment in teacher.classAssignments) {
-        if (assignment.className != student.className ||
+        if (!StudentRegistryService.classNamesMatch(
+              assignment.className,
+              student.className,
+            ) ||
             assignment.role != TeacherStaffRole.homeroomTeacher) {
           continue;
         }

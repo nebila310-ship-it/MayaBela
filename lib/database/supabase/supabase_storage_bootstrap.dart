@@ -39,15 +39,20 @@ abstract final class SupabaseStorageBootstrap {
     try {
       final path =
           '_app_setup_probe/${DateTime.now().millisecondsSinceEpoch}.txt';
-      await SupabaseBootstrap.client.storage.from('school-files').uploadBinary(
+      await SupabaseBootstrap.client.storage
+          .from('school-files')
+          .uploadBinary(
             path,
             Uint8List.fromList(const [1]),
             fileOptions: const FileOptions(
               contentType: 'text/plain',
               upsert: true,
             ),
-          );
-      await SupabaseBootstrap.client.storage.from('school-files').remove([path]);
+          )
+          .timeout(const Duration(seconds: 8));
+      await SupabaseBootstrap.client.storage
+          .from('school-files')
+          .remove([path]).timeout(const Duration(seconds: 5));
       _ready = true;
       _lastError = null;
       return true;

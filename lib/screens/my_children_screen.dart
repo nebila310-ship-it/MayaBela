@@ -10,6 +10,8 @@ import 'package:mayabela/screens/gallery_screen.dart';
 import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/parent_compose_message_screen.dart';
+import 'package:mayabela/screens/parent_feedback_screen.dart';
+import 'package:mayabela/screens/parent_student_affairs_screen.dart';
 import 'package:mayabela/screens/transport_live_map_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
@@ -660,6 +662,18 @@ class _ChildToolsGrid extends StatelessWidget {
           ctx,
           ParentComposeMessageScreen(child: child),
         ),
+      ),
+      _ChildTool(
+        icon: Icons.balance_outlined,
+        label: s.dashboardTitle('student_affairs', roleKey: 'parent'),
+        color: const Color(0xFF8E24AA),
+        onTap: (ctx) => _push(ctx, const ParentStudentAffairsScreen()),
+      ),
+      _ChildTool(
+        icon: Icons.forum_outlined,
+        label: s.dashboardTitle('feedback', roleKey: 'parent'),
+        color: const Color(0xFF6D4C41),
+        onTap: (ctx) => _push(ctx, const ParentFeedbackScreen()),
       ),
       _ChildTool(
         icon: Icons.qr_code_2_rounded,

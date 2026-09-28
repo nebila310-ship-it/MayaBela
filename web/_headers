@@ -4,7 +4,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(self), microphone=(self), camera=(self)
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.gstatic.com https://apis.google.com https://*.firebaseio.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://fonts.gstatic.com https://*.firebaseio.com https://*.cloudfunctions.net https://*.firebase.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://www.gstatic.com https://apis.google.com https://*.firebaseio.com https://www.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://www.gstatic.com https://fonts.gstatic.com https://*.firebaseio.com https://*.cloudfunctions.net https://*.firebase.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.arcgisonline.com https://www.openstreetmap.org; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
@@ -17,3 +17,22 @@
 
 /main.dart.js
   Cache-Control: no-cache, no-store, must-revalidate
+
+/fenote-raey-academy/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/fenote-raey-academy/screens/*
+  Cache-Control: no-cache, must-revalidate
+
+/fenote-raey-academy/Fenote-Raey-Academy-slides.htm
+  Content-Disposition: attachment; filename="Fenote-Raey-Academy-slides.htm"
+  Cache-Control: no-cache, must-revalidate
+
+/fenote-raey-academy/fenote-raey-slides.zip
+  Content-Disposition: attachment; filename="Fenote-Raey-Academy-slides.zip"
+  Cache-Control: no-cache, must-revalidate
+
+/fenote-raey-academy/fenote-raey-owner-money.pdf
+  Content-Type: application/pdf
+  Content-Disposition: inline; filename="Fenote-Raey-owner-money.pdf"
+  Cache-Control: no-cache, must-revalidate

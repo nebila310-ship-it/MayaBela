@@ -19,10 +19,10 @@ extension StudentLifecycleStatusX on StudentLifecycleStatus {
   bool get countsAsEnrolled => this == StudentLifecycleStatus.active;
 
   String get label => switch (this) {
-        StudentLifecycleStatus.active => 'Active',
+        StudentLifecycleStatus.active => 'Active / Enrolled',
         StudentLifecycleStatus.transferred => 'Transferred',
-        StudentLifecycleStatus.left => 'Left',
-        StudentLifecycleStatus.graduated => 'Graduated',
+        StudentLifecycleStatus.left => 'Withdrawn',
+        StudentLifecycleStatus.graduated => 'Graduated / Alumni',
       };
 }
 
@@ -113,7 +113,10 @@ class TransferRequest {
   String get summary {
     if (kind == TransferRequestKind.external) {
       final outcome = externalOutcome ?? ExternalTransferOutcome.transferred;
-      return '$studentName: leave school (${outcome.name})';
+      if (outcome == ExternalTransferOutcome.left) {
+        return '$studentName: withdrawal';
+      }
+      return '$studentName: transfer out';
     }
     return '$studentName: $fromClassName → ${toClassName ?? toCampus ?? '?'}';
   }

@@ -30,6 +30,17 @@ class PlatformPathImage extends StatelessWidget {
       return _fallback(context, Exception('empty path'));
     }
 
+    final cached = WebAttachmentCache.instance.read(value);
+    if (cached != null) {
+      return Image.memory(
+        cached,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: errorBuilder,
+      );
+    }
+
     if (value.startsWith('http://') || value.startsWith('https://')) {
       return Image.network(
         value,
@@ -37,6 +48,16 @@ class PlatformPathImage extends StatelessWidget {
         height: height,
         fit: fit,
         errorBuilder: errorBuilder,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            width: width,
+            height: height,
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.white54),
+            ),
+          );
+        },
       );
     }
 
@@ -51,16 +72,6 @@ class PlatformPathImage extends StatelessWidget {
     }
 
     if (kIsWeb || WebAttachmentCache.instance.isWebPath(value)) {
-      final bytes = WebAttachmentCache.instance.read(value);
-      if (bytes != null) {
-        return Image.memory(
-          bytes,
-          width: width,
-          height: height,
-          fit: fit,
-          errorBuilder: errorBuilder,
-        );
-      }
       return _fallback(context, Exception('missing web cache'));
     }
 

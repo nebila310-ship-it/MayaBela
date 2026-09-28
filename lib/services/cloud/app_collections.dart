@@ -42,9 +42,66 @@ abstract final class AppCollections {
   // Student Affairs & welfare (EDUABA)
   static const disciplineCases = 'discipline_cases';
   static const leaveRequests = 'leave_requests';
+  static const admissionApplications = 'admission_applications';
+
+  /// LIA Phase C exams: question bank, papers, student attempts.
+  static const examQuestions = 'exam_questions';
+  static const examPapers = 'exam_papers';
+  static const examAttempts = 'exam_attempts';
+
+  /// LIA Phase D lesson plans (planning/content; not a grade store).
+  static const lessonPlans = 'lesson_plans';
+
+  /// LIA Phase E curriculum office (maps, feedback, DH reviews, academic evals).
+  static const curriculumUnits = 'curriculum_units';
+  static const curriculumFeedback = 'curriculum_feedback';
+  static const lessonPlanReviews = 'lesson_plan_reviews';
+  static const teacherEvaluations = 'teacher_evaluations';
+  static const academicMeetings = 'academic_meetings';
+
+  /// LIA Phase G student support (health, counseling, IEP, college, CP).
+  static const healthRecords = 'health_records';
+  static const counselingRecords = 'counseling_records';
+  static const iepPlans = 'iep_plans';
+  static const collegeGuidance = 'college_guidance';
+  static const supportRequests = 'support_requests';
+  static const safeguardingCases = 'safeguarding_cases';
+  static const studentDocuments = 'student_documents';
+  static const medicationStock = 'medication_stock';
+  static const selObservations = 'sel_observations';
+
+  /// LIA Phase H DoSA programs (clubs/Gojo, scholarships, grievances).
+  static const extracurricularClubs = 'extracurricular_clubs';
+  static const clubMemberships = 'club_memberships';
+  static const scholarships = 'scholarships';
+  static const grievances = 'grievances';
+  static const internships = 'internships';
+  static const dosaMeetings = 'dosa_meetings';
+  static const leadershipTasks = 'leadership_tasks';
 
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
+
+  /// LIA Phase I QA monitoring (observations, audits, surveys, action research).
+  static const teachingObservations = 'teaching_observations';
+  static const academicAudits = 'academic_audits';
+  static const qaSurveys = 'qa_surveys';
+  static const qaSurveyResponses = 'qa_survey_responses';
+  static const actionResearch = 'action_research';
+
+  /// LIA Phase J go-live (MFA, privacy rights, school backups).
+  static const mfaEnrollments = 'mfa_enrollments';
+  static const privacyConsents = 'privacy_consents';
+  static const dataRightsRequests = 'data_rights_requests';
+  static const schoolBackups = 'school_backups';
+
+  /// Administration Staff digital-ops desk (device register + Friday ritual).
+  static const ictDevices = 'ict_devices';
+  static const ictWeeklyReviews = 'ict_weekly_reviews';
+
+  /// HR payroll (PAYE + POESSA).
+  static const payrollProfiles = 'payroll_profiles';
+  static const payrollRuns = 'payroll_runs';
 
   // School inventory
   static const inventoryItems = 'inventory_items';

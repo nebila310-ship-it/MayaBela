@@ -28,6 +28,7 @@ class AppNotification {
     this.showOnMessagesBadge = true,
     this.isRead = false,
     this.targetStudentId,
+    this.targetClassName,
   });
 
   final String id;
@@ -42,4 +43,8 @@ class AppNotification {
   bool isRead;
   /// When set, parent accounts only see this if they are linked to the student.
   final String? targetStudentId;
+
+  /// When set, parent/student accounts only see this if a linked child is
+  /// in this class (`5B` and `Grade 5B` match).
+  final String? targetClassName;
 }

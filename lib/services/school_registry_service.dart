@@ -2,11 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/academic_term.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/school_lifecycle.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/models/grade_workflow.dart';
+import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
@@ -17,6 +19,8 @@ import 'package:mayabela/services/platform_schools_cloud_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+
+const _keepEnabledModules = Object();
 
 class SchoolRecord {
   SchoolRecord({
@@ -44,7 +48,10 @@ class SchoolRecord {
     this.adminFullName,
     this.studentPortal = const StudentPortalSettings(),
     this.gradeWorkflow = const GradeWorkflowSettings(),
+    this.markbookSettings = MarkbookSettings.liaDefaults,
     this.allowSelfApproval = false,
+    this.enabledModules,
+    this.academicTerms = const [],
   });
 
   final String id;
@@ -71,12 +78,18 @@ class SchoolRecord {
   String? adminFullName;
   StudentPortalSettings studentPortal;
   GradeWorkflowSettings gradeWorkflow;
+  MarkbookSettings markbookSettings;
 
   /// Whether a requester may approve their own purchase / issue requests.
   /// Off by default (separation of duties); only the owner can enable it.
   /// Mirrored to `data.settings.allowSelfApproval`, which the SQL
   /// write-guard reads via school_setting_bool().
   bool allowSelfApproval;
+
+  /// Nav module ids this school may use. `null` = all modules on.
+  /// Owned by the platform owner console; school JWT updates cannot change it.
+  Set<String>? enabledModules;
+  final List<AcademicTerm> academicTerms;
 
   SchoolAccessBlock? get accessBlock {
     if (status == SchoolLifecycleStatus.inactive) {
@@ -118,7 +131,10 @@ class SchoolRecord {
     String? adminFullName,
     StudentPortalSettings? studentPortal,
     GradeWorkflowSettings? gradeWorkflow,
+    MarkbookSettings? markbookSettings,
     bool? allowSelfApproval,
+    Object? enabledModules = _keepEnabledModules,
+    List<AcademicTerm>? academicTerms,
   }) {
     return SchoolRecord(
       id: id,
@@ -141,60 +157,83 @@ class SchoolRecord {
       logoUrl: logoUrl ?? this.logoUrl,
       logoStyle: logoStyle ?? this.logoStyle,
       contractedSeats: contractedSeats ?? this.contractedSeats,
-      ratePerStudentMonthEtb: ratePerStudentMonthEtb ?? this.ratePerStudentMonthEtb,
+      ratePerStudentMonthEtb:
+          ratePerStudentMonthEtb ?? this.ratePerStudentMonthEtb,
       minimumMonthlyEtb: minimumMonthlyEtb ?? this.minimumMonthlyEtb,
       adminInitialPassword: adminInitialPassword ?? this.adminInitialPassword,
       adminFullName: adminFullName ?? this.adminFullName,
       studentPortal: studentPortal ?? this.studentPortal,
       gradeWorkflow: gradeWorkflow ?? this.gradeWorkflow,
+      markbookSettings: markbookSettings ?? this.markbookSettings,
       allowSelfApproval: allowSelfApproval ?? this.allowSelfApproval,
+      enabledModules: identical(enabledModules, _keepEnabledModules)
+          ? (this.enabledModules == null
+                ? null
+                : Set<String>.from(this.enabledModules!))
+          : (enabledModules as Set<String>?),
+      academicTerms: academicTerms ?? List.from(this.academicTerms),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'city': city,
-        'academicYear': academicYear,
-        'gradeLevels': gradeLevels,
-        'sections': sections,
-        'campuses': campuses,
-        'registeredAt': registeredAt?.toIso8601String(),
-        'status': status.name,
-        'subscriptionExpiresAt': subscriptionExpiresAt?.toIso8601String(),
-        'notes': notes,
-        'adminContactPhone': adminContactPhone,
-        'address': address,
-        'officePhone': officePhone,
-        'logoPath': logoPath,
-        'logoUrl': logoUrl,
-        'logoStyle': logoStyle.name,
-        'contractedSeats': contractedSeats,
-        'ratePerStudentMonthEtb': ratePerStudentMonthEtb,
-        'minimumMonthlyEtb': minimumMonthlyEtb,
-        'adminInitialPassword': adminInitialPassword,
-        'adminFullName': adminFullName,
-        'studentPortal': studentPortal.toMap(),
-        'gradeWorkflow': gradeWorkflow.toMap(),
-        // The SQL write-guard reads data->settings->allowSelfApproval.
-        'settings': {'allowSelfApproval': allowSelfApproval},
-      };
+    'id': id,
+    'name': name,
+    'city': city,
+    'academicYear': academicYear,
+    'gradeLevels': gradeLevels,
+    'sections': sections,
+    'campuses': campuses,
+    'registeredAt': registeredAt?.toIso8601String(),
+    'status': status.name,
+    'subscriptionExpiresAt': subscriptionExpiresAt?.toIso8601String(),
+    'notes': notes,
+    'adminContactPhone': adminContactPhone,
+    'address': address,
+    'officePhone': officePhone,
+    'logoPath': logoPath,
+    'logoUrl': logoUrl,
+    'logoStyle': logoStyle.name,
+    'contractedSeats': contractedSeats,
+    'ratePerStudentMonthEtb': ratePerStudentMonthEtb,
+    'minimumMonthlyEtb': minimumMonthlyEtb,
+    'adminInitialPassword': adminInitialPassword,
+    'adminFullName': adminFullName,
+    'studentPortal': studentPortal.toMap(),
+    'gradeWorkflow': gradeWorkflow.toMap(),
+    'markbookSettings': markbookSettings.toMap(),
+    'academicTerms': academicTerms.map((term) => term.toJson()).toList(),
+    // The SQL write-guard reads data->settings->allowSelfApproval.
+    // enabledModules: null means all on (key is sent so the owner can clear a pack).
+    'settings': {
+      'allowSelfApproval': allowSelfApproval,
+      'enabledModules': enabledModules == null
+          ? null
+          : (enabledModules!.toList()..sort()),
+    },
+  };
 
   factory SchoolRecord.fromJson(Map<String, dynamic> json) {
+    final settingsRaw = json['settings'];
+    final settings = settingsRaw is Map
+        ? Map<String, dynamic>.from(settingsRaw)
+        : null;
     return SchoolRecord(
       id: json['id'] as String,
       name: json['name'] as String? ?? '',
       city: json['city'] as String?,
       academicYear: json['academicYear'] as String?,
-      gradeLevels: (json['gradeLevels'] as List<dynamic>?)
+      gradeLevels:
+          (json['gradeLevels'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      sections: (json['sections'] as List<dynamic>?)
+      sections:
+          (json['sections'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      campuses: (json['campuses'] as List<dynamic>?)
+      campuses:
+          (json['campuses'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const ['Main Campus'],
@@ -223,11 +262,31 @@ class SchoolRecord {
       gradeWorkflow: GradeWorkflowSettings.fromMap(
         json['gradeWorkflow'] as Map<String, dynamic>?,
       ),
-      allowSelfApproval:
-          ((json['settings'] as Map<String, dynamic>?)?['allowSelfApproval']
-                  as bool?) ??
-              false,
+      markbookSettings: MarkbookSettings.fromMap(
+        json['markbookSettings'] as Map<String, dynamic>?,
+      ),
+      allowSelfApproval: (settings?['allowSelfApproval'] as bool?) ?? false,
+      enabledModules: _enabledModulesFromSettings(settings),
+      academicTerms:
+          (json['academicTerms'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map(
+                (item) =>
+                    AcademicTerm.fromJson(Map<String, dynamic>.from(item)),
+              )
+              .toList() ??
+          const [],
     );
+  }
+
+  static Set<String>? _enabledModulesFromSettings(Map<String, dynamic>? settings) {
+    if (settings == null || !settings.containsKey('enabledModules')) {
+      return null;
+    }
+    final raw = settings['enabledModules'];
+    if (raw == null) return null;
+    if (raw is! List) return null;
+    return raw.map((item) => item.toString()).toSet();
   }
 }
 
@@ -252,6 +311,12 @@ class SchoolRegistryService {
     _loaded = true;
   }
 
+  /// Local sandbox school for the public student demo login. Never pushed.
+  void ensureLocalDemoSchool() {
+    if (lookup('TB-001') != null) return;
+    _seedDemoSchool();
+  }
+
   /// Used by platform console after a cloud list pull.
   void removeDemoIfNotInCloud({required Set<String> cloudIds}) {
     final upper = cloudIds.map((e) => e.toUpperCase()).toSet();
@@ -271,7 +336,13 @@ class SchoolRegistryService {
         name: 'Maya School',
         city: 'Addis Ababa',
         academicYear: '2025/2026',
-        gradeLevels: ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 4', 'Grade 5'],
+        gradeLevels: [
+          'Kindergarten',
+          'Grade 1',
+          'Grade 2',
+          'Grade 4',
+          'Grade 5',
+        ],
         sections: ['Grade 1A', 'Grade 2C', 'Grade 4A', 'Grade 4B', 'Grade 5B'],
         campuses: ['Main Campus', 'Bole Campus'],
         registeredAt: DateTime(2024, 9, 1),
@@ -386,8 +457,11 @@ class SchoolRegistryService {
     current[idx] = target;
     await updateSchool(school.copyWith(campuses: current));
 
-    StudentRegistryService.instance
-        .reassignCampusForSchool(schoolId, from: from, to: target);
+    StudentRegistryService.instance.reassignCampusForSchool(
+      schoolId,
+      from: from,
+      to: target,
+    );
     final teachersChanged = TeacherRegistryService.instance
         .reassignCampusForSchool(schoolId, from: from, to: target);
     if (teachersChanged > 0) {
@@ -424,10 +498,12 @@ class SchoolRegistryService {
   }
 
   String generateSchoolId(String schoolName) {
-    final letters =
-        schoolName.replaceAll(RegExp(r'[^a-zA-Z]'), '').toUpperCase();
-    final prefix =
-        letters.length >= 3 ? letters.substring(0, 3) : (letters.padRight(3, 'X'));
+    final letters = schoolName
+        .replaceAll(RegExp(r'[^a-zA-Z]'), '')
+        .toUpperCase();
+    final prefix = letters.length >= 3
+        ? letters.substring(0, 3)
+        : (letters.padRight(3, 'X'));
     final suffix = 100 + Random().nextInt(900);
     var candidate = '$prefix$suffix';
     while (_schools.any((s) => s.id.toUpperCase() == candidate)) {
@@ -467,12 +543,15 @@ class SchoolRegistryService {
       notes: notes,
       adminContactPhone: adminContactPhone ?? adminUsername.trim(),
       address: address?.trim().isEmpty ?? true ? null : address!.trim(),
-      officePhone: officePhone?.trim().isEmpty ?? true ? null : officePhone!.trim(),
+      officePhone: officePhone?.trim().isEmpty ?? true
+          ? null
+          : officePhone!.trim(),
       ratePerStudentMonthEtb: ratePerStudentMonthEtb ?? 8,
       minimumMonthlyEtb: minimumMonthlyEtb ?? 500,
       adminInitialPassword: adminInitialPassword,
-      adminFullName:
-          adminFullName?.trim().isEmpty ?? true ? null : adminFullName!.trim(),
+      adminFullName: adminFullName?.trim().isEmpty ?? true
+          ? null
+          : adminFullName!.trim(),
     );
   }
 
@@ -551,7 +630,8 @@ class SchoolRegistryService {
     bool preferPlatformEdge = false,
   }) async {
     final pin = PlatformOwnerService.instance.sessionOwnerPin;
-    final usePlatform = preferPlatformEdge ||
+    final usePlatform =
+        preferPlatformEdge ||
         (pin != null && pin.trim().length >= PlatformOwnerService.minPinLength);
     if (usePlatform) {
       return PlatformSchoolsCloudService.instance.updateSchoolInCloud(
@@ -612,6 +692,40 @@ class SchoolRegistryService {
         action: 'school_updated',
         schoolId: updated.id,
         schoolName: updated.name,
+      );
+    } catch (_) {}
+    return cloud;
+  }
+
+  /// Platform-owner module pack for one school. `null` turns every module on.
+  Future<PlatformSchoolCloudResult> setEnabledModules(
+    String schoolId,
+    Set<String>? modules, {
+    bool preferPlatformCloud = false,
+  }) async {
+    final record = lookup(schoolId);
+    if (record == null) {
+      return const PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'not_found',
+        errorMessage: 'School not found locally.',
+      );
+    }
+    final updated = record.copyWith(enabledModules: modules);
+    final cloud = await updateSchool(
+      updated,
+      preferPlatformCloud: preferPlatformCloud,
+    );
+    try {
+      await PlatformAuditLogService.instance.log(
+        action: 'module_pack_changed',
+        schoolId: record.id,
+        schoolName: record.name,
+        detail: modules == null
+            ? 'all modules on'
+            : modules.isEmpty
+            ? 'no optional modules'
+            : '${modules.length} modules on',
       );
     } catch (_) {}
     return cloud;
@@ -811,8 +925,7 @@ class SchoolRegistryService {
   List<String> sectionLabelsForGrade(String? schoolId, String grade) {
     if (schoolId == null) return [];
     final g = grade.trim();
-    return lookup(schoolId)
-            ?.sections
+    return lookup(schoolId)?.sections
             .where((className) => className.startsWith(g))
             .map((className) => _sectionLabel(className, g))
             .toList() ??

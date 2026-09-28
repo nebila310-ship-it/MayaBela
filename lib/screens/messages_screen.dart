@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
@@ -17,6 +18,7 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/screens/parent_compose_message_screen.dart';
 import 'package:mayabela/widgets/messages_ui.dart';
 import 'package:mayabela/widgets/message_voice_input_bar.dart';
+import 'package:mayabela/widgets/attachment_share_actions.dart';
 import 'package:mayabela/widgets/voice_message_player.dart';
 
 enum MessageComposeScope { admin, teacher }
@@ -103,7 +105,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
     if (draft == null || !mounted) return;
 
-    _data.sendAdminGroupMessage(
+    final sent = _data.sendAdminGroupMessage(
       parentNames: draft.parentNames,
       staffIds: draft.staffIds,
       body: draft.body,
@@ -113,7 +115,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       attachments: draft.attachments,
     );
     _refresh();
-    _showSentSnackBar();
+    _showSendResult(sent.isNotEmpty);
   }
 
   Future<void> _directChat() async {
@@ -127,15 +129,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
     if (draft == null || !mounted) return;
 
-    _data.sendAdminDirectMessage(
+    final sent = _data.sendAdminDirectMessage(
       parentName: draft.parentName,
       staffId: draft.staffId,
       body: draft.body,
       subject: draft.subject,
       attachments: draft.attachments,
     );
+    var ok = sent.isNotEmpty;
+    if (ok) {
+      ok = await _data.persistConversationToCloud(sent.single);
+    }
     _refresh();
-    _showSentSnackBar();
+    if (!ok && sent.isEmpty && draft.parentName != null) {
+      _showSendResult(false, classCheck: true);
+      return;
+    }
+    _showSendResult(ok);
   }
 
   Future<void> _parentCompose() async {
@@ -149,6 +159,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (conversation != null) {
       _openChat(conversation);
     }
+  }
+
+  void _showSendResult(bool sent, {bool classCheck = false}) {
+    if (sent) {
+      _showSentSnackBar();
+      return;
+    }
+    final s = AppLocale.instance.strings;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          classCheck
+              ? s.messageParentNotInClasses
+              : (_data.lastConversationPersistError ?? s.messageSendFailed),
+        ),
+        backgroundColor: const Color(0xFFB91C1C),
+      ),
+    );
   }
 
   void _showSentSnackBar() {
@@ -1127,6 +1155,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _pendingAttachments.clear();
     _replyTarget = null;
     setState(() {});
+    unawaited(_pushSentMessage());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -1137,6 +1166,20 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
+  }
+
+  Future<void> _pushSentMessage() async {
+    final ok = await _data.persistConversationToCloud(widget.conversationId);
+    if (ok || !mounted) return;
+    final s = AppLocale.instance.strings;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _data.lastConversationPersistError ?? s.messageSendFailed,
+        ),
+        backgroundColor: const Color(0xFFB91C1C),
+      ),
+    );
   }
 
   Future<void> _confirmDeleteMessage(int index) async {
@@ -1190,13 +1233,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       return;
     }
-    final result =
-        await AnnouncementAttachmentService.instance.openAttachment(attachment);
-    if (!mounted || result.type == ResultType.done) return;
-    final s = AppLocale.instance.strings;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.announcementAttachmentOpenFailed)),
-    );
+    await openAttachmentWithFeedback(context, path: attachment.filePath);
   }
 
   String _formatTime(DateTime time) {

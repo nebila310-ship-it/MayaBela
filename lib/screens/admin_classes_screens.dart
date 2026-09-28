@@ -10,6 +10,7 @@ import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_classes_ui.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
+import 'package:mayabela/widgets/school_grade_level_picker.dart';
 import 'package:mayabela/widgets/section_teacher_assign_dialogs.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
@@ -190,12 +191,18 @@ class _AdminSectionsScreenState extends State<AdminSectionsScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final section = sections[index];
-                    final className =
-                        structure.classNameFor(widget.grade, section);
-                    final students =
-                        structure.studentsInSection(widget.grade, section);
-                    final teachers =
-                        structure.teachersForSection(widget.grade, section);
+                    final className = structure.classNameFor(
+                      widget.grade,
+                      section,
+                    );
+                    final students = structure.studentsInSection(
+                      widget.grade,
+                      section,
+                    );
+                    final teachers = structure.teachersForSection(
+                      widget.grade,
+                      section,
+                    );
                     final homeroomName = SchoolDataService.instance
                         .homeroomTeacherNameForClass(className);
                     return AdminSectionCard(
@@ -207,8 +214,9 @@ class _AdminSectionsScreenState extends State<AdminSectionsScreen> {
                       teachersLabel:
                           '${teachers.length} ${s.teachersTab.toLowerCase()}',
                       homeroomName: homeroomName,
-                      homeroomLabel:
-                          homeroomName != null ? s.homeroomTeacher : null,
+                      homeroomLabel: homeroomName != null
+                          ? s.homeroomTeacher
+                          : null,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -335,10 +343,12 @@ class _AdminSectionDetailScreenState extends State<AdminSectionDetailScreen> {
     final teachers = structure.teachersForSection(widget.grade, widget.section);
     final homeroomTeachers = teachers.where((t) => t.isHomeroom).toList();
     final otherTeachers = teachers.where((t) => !t.isHomeroom).toList();
-    final homeroomName =
-        SchoolDataService.instance.homeroomTeacherNameForClass(className);
-    final homeroomId =
-        SchoolDataService.instance.homeroomTeacherIdForClass(className);
+    final homeroomName = SchoolDataService.instance.homeroomTeacherNameForClass(
+      className,
+    );
+    final homeroomId = SchoolDataService.instance.homeroomTeacherIdForClass(
+      className,
+    );
     final canAssign = ModuleAccess.canAssignTeachers;
 
     return ListenableBuilder(
@@ -368,30 +378,31 @@ class _AdminSectionDetailScreenState extends State<AdminSectionDetailScreen> {
                       : homeroomName!,
                   onTap: homeroomTeachers.isNotEmpty
                       ? () => _openTeacher(
-                            context,
-                            homeroomTeachers.first.teacher.teacherId,
-                          )
+                          context,
+                          homeroomTeachers.first.teacher.teacherId,
+                        )
                       : null,
                   onEdit: canAssign
                       ? () => _assignHomeroom(
-                            className,
-                            currentId: homeroomTeachers.isNotEmpty
-                                ? homeroomTeachers.first.teacher.teacherId
-                                : homeroomId,
-                          )
+                          className,
+                          currentId: homeroomTeachers.isNotEmpty
+                              ? homeroomTeachers.first.teacher.teacherId
+                              : homeroomId,
+                        )
                       : null,
-                  onClear: canAssign &&
+                  onClear:
+                      canAssign &&
                           (homeroomTeachers.isNotEmpty ||
                               (homeroomId != null && homeroomId.isNotEmpty))
                       ? () => _removeFromClass(
-                            className: className,
-                            teacherId: homeroomTeachers.isNotEmpty
-                                ? homeroomTeachers.first.teacher.teacherId
-                                : homeroomId!,
-                            teacherName: homeroomTeachers.isNotEmpty
-                                ? homeroomTeachers.first.teacher.fullName
-                                : homeroomName!,
-                          )
+                          className: className,
+                          teacherId: homeroomTeachers.isNotEmpty
+                              ? homeroomTeachers.first.teacher.teacherId
+                              : homeroomId!,
+                          teacherName: homeroomTeachers.isNotEmpty
+                              ? homeroomTeachers.first.teacher.fullName
+                              : homeroomName!,
+                        )
                       : null,
                 )
               else if (canAssign)

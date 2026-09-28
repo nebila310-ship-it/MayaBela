@@ -12,8 +12,8 @@ class SystemNavSafeScope extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      left: false,
-      right: false,
+      left: true,
+      right: true,
       bottom: true,
       minimum: const EdgeInsets.only(bottom: minimumBottomInset),
       child: child,

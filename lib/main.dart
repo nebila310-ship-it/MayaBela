@@ -2,12 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 
 import 'package:mayabela/screens/login_screen.dart';
-
+import 'package:mayabela/screens/public_admission_apply_screen.dart';
 import 'package:mayabela/screens/settings_screen.dart';
 
 import 'package:mayabela/services/app_lock_service.dart';
@@ -47,9 +48,19 @@ import 'package:mayabela/services/persistence/learning_materials_persistence_ser
 import 'package:mayabela/services/material_purchase_service.dart';
 import 'package:mayabela/services/persistence/message_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
+import 'package:mayabela/services/persistence/admission_persistence_service.dart';
+import 'package:mayabela/services/persistence/exam_persistence_service.dart';
+import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
+import 'package:mayabela/services/persistence/curriculum_persistence_service.dart';
+import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
+import 'package:mayabela/services/persistence/dosa_persistence_service.dart';
+import 'package:mayabela/services/persistence/qa_monitor_persistence_service.dart';
+import 'package:mayabela/services/persistence/golive_persistence_service.dart';
+import 'package:mayabela/services/persistence/digital_ops_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
+import 'package:mayabela/services/persistence/payroll_persistence_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
@@ -58,6 +69,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
+import 'package:mayabela/services/cloud/cloud_idle_sync.dart';
 import 'package:mayabela/services/cloud/fcm_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
 
@@ -117,6 +129,7 @@ Future<void> _bootstrapCriticalForLogin() async {
       TeacherPersistenceService.instance.loadRegistryIntoService(),
       DriverPersistenceService.instance.loadRegistryIntoService(),
       EmployeePersistenceService.instance.loadRegistryIntoService(),
+      PayrollPersistenceService.instance.loadIntoService(),
       BusPersistenceService.instance.loadIntoService(),
       AppLocale.instance.load(),
       UserPreferencesService.instance.load(),
@@ -155,6 +168,15 @@ Future<void> bootstrapBackgroundServices() async {
   await StartupProfiler.track('bootstrap.background.heavyPersistence', () async {
     await Future.wait([
       StudentPersistenceService.instance.loadMedicalOverrides(),
+      AdmissionPersistenceService.instance.loadIntoService(),
+      ExamPersistenceService.instance.loadIntoService(),
+      LessonPlanPersistenceService.instance.loadIntoService(),
+      CurriculumPersistenceService.instance.loadIntoService(),
+      StudentSupportPersistenceService.instance.loadIntoService(),
+      DosaPersistenceService.instance.loadIntoService(),
+      QaMonitorPersistenceService.instance.loadIntoService(),
+      GolivePersistenceService.instance.loadIntoService(),
+      DigitalOpsPersistenceService.instance.loadIntoService(),
       GradePersistenceService.instance.loadIntoSchoolDataService(),
       GradeAuditPersistenceService.instance.loadIntoService(),
       DailyActivityPersistenceService.instance.loadIntoSchoolDataService(),
@@ -257,13 +279,20 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
     super.initState();
     AppLocale.instance.addListener(_rebuild);
     UserPreferencesService.instance.addListener(_rebuild);
+    HardwareKeyboard.instance.addHandler(_onKeyActivity);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyActivity);
     AppLocale.instance.removeListener(_rebuild);
     UserPreferencesService.instance.removeListener(_rebuild);
     super.dispose();
+  }
+
+  bool _onKeyActivity(KeyEvent event) {
+    CloudIdleSync.bumpActivity();
+    return false;
   }
 
 
@@ -298,12 +327,18 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
         // Do NOT put sync/Maya overlays in a Stack here. On Flutter web,
         // builder-level Stack siblings of the navigator grey the whole page
         // when those chips are hovered. Overlays live in [AppFloatingChrome].
-        return SystemNavSafeScope(
-          child: AppLockGate(child: child ?? const SizedBox.shrink()),
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => CloudIdleSync.bumpActivity(),
+          onPointerSignal: (_) => CloudIdleSync.bumpActivity(),
+          child: SystemNavSafeScope(
+            child: AppLockGate(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
       routes: {
         '/settings': (_) => const SettingsScreen(),
+        '/apply': (_) => const PublicAdmissionApplyScreen(),
       },
       home: const AppBootstrap(),
     );
@@ -357,7 +392,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
         'bootstrap.sessionRestore',
         () => SessionPrefsService.instance
             .restoreActiveSession()
-            .timeout(const Duration(seconds: 2)),
+            .timeout(Duration(seconds: kIsWeb ? 12 : 8)),
       );
       if (restored) {
         AppLockService.instance.ensureSessionMonitoring();
@@ -368,19 +403,22 @@ class _AppBootstrapState extends State<AppBootstrap> {
       if (kDebugMode) {
         debugPrint('[AppBootstrap] session bootstrap failed: $e');
       }
-      restored = false;
+      restored = await SessionPrefsService.instance.restoreSavedLocalSession();
+      if (restored) {
+        AppLockService.instance.ensureSessionMonitoring();
+        unawaited(SessionCloudSync.startSessionWithCloudSync());
+        unawaited(NotificationService.instance.onSessionStarted());
+      }
     }
 
     StartupProfiler.printSummary(title: 'Cold Start Summary');
 
     if (!mounted) return;
-    if (restored) {
-      setState(() {
-        _home = AuthNavigation.homeForCurrentUser();
-      });
-    } else if (!kIsWeb) {
-      setState(() => _home = const LoginScreen());
-    }
+    setState(() {
+      _home = restored
+          ? AuthNavigation.homeForCurrentUser()
+          : const LoginScreen();
+    });
   }
 
   @override

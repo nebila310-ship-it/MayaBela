@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
+import 'package:mayabela/services/cloud/cloud_idle_sync.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/cloud/cloud_sync_flags.dart';
 import 'package:mayabela/services/cloud_sync_progress_service.dart';
@@ -145,6 +146,7 @@ abstract final class CloudSyncRouter {
     if (CloudSyncProgressService.instance.isLoading) return;
     if (!CloudSyncEngine.isStarted) {
       CloudSyncEngine.start();
+      CloudIdleSync.onEngineStarted();
       return;
     }
     await CloudSyncEngine.tick(reason: reason);

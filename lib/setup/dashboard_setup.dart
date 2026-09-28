@@ -101,7 +101,7 @@ const _erpTileColors = <Color>[
 
 /// Fallback admin/staff tiles share the web ERP catalog so they cannot drift.
 List<DashboardEntry> _erpAlignedEntries() {
-  final items = webErpAllNavItems()
+  final items = webErpAllNavItems
       .where((item) => item.id != 'dashboard' && !item.isLogout)
       .toList(growable: false);
   final entries = <DashboardEntry>[];

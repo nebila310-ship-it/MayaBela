@@ -12,6 +12,7 @@ import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 
 /// Live Supabase listener for conversations.
@@ -109,6 +110,7 @@ class ConversationRealtimeSync extends ChangeNotifier {
 
     if (changed) {
       notifyListeners();
+      SchoolContentSyncService.instance.markDataChanged();
     }
   }
 

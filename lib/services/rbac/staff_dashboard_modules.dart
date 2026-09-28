@@ -75,6 +75,19 @@ abstract final class StaffDashboardModules {
       },
     ),
     const StaffDashboardModule(
+      id: 'admissions',
+      labelEn: 'Admissions',
+      permissions: {
+        SchoolPermissions.viewStudents,
+        SchoolPermissions.manageStudents,
+      },
+    ),
+    const StaffDashboardModule(
+      id: 'alumni',
+      labelEn: 'Alumni',
+      permissions: {SchoolPermissions.viewStudents},
+    ),
+    const StaffDashboardModule(
       id: 'school_wide_data',
       labelEn: 'See all school student data',
       permissions: {SchoolPermissions.viewAllSchoolData},
@@ -146,6 +159,14 @@ abstract final class StaffDashboardModules {
       },
     ),
     const StaffDashboardModule(
+      id: 'homework',
+      labelEn: 'Homework',
+      permissions: {
+        SchoolPermissions.viewAllGrades,
+        SchoolPermissions.viewStudents,
+      },
+    ),
+    const StaffDashboardModule(
       id: 'examinations',
       labelEn: 'Examinations',
       permissions: {
@@ -193,6 +214,11 @@ abstract final class StaffDashboardModules {
       permissions: {SchoolPermissions.sendAnnouncements},
     ),
     const StaffDashboardModule(
+      id: 'gallery',
+      labelEn: 'Gallery',
+      permissions: {SchoolPermissions.sendAnnouncements},
+    ),
+    const StaffDashboardModule(
       id: 'calendar',
       labelEn: 'Calendar',
       permissions: {
@@ -224,6 +250,11 @@ abstract final class StaffDashboardModules {
       id: 'system_health',
       labelEn: 'System Health',
       permissions: {SchoolPermissions.viewSystemHealth},
+    ),
+    const StaffDashboardModule(
+      id: 'digital_ops',
+      labelEn: 'Digital operations',
+      permissions: {SchoolPermissions.manageDigitalOps},
     ),
     const StaffDashboardModule(
       id: 'settings',

@@ -10,4 +10,8 @@ abstract final class WebViewport {
 
   static bool isCompactPhone(BuildContext context) =>
       MediaQuery.sizeOf(context).width < compactPhoneBreakpoint;
+
+  /// Inner page padding. Keep smaller on phones so 12px shell + page still fits.
+  static EdgeInsets pagePadding(BuildContext context) =>
+      EdgeInsets.all(isNarrow(context) ? 12 : 20);
 }
