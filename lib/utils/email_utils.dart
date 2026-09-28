@@ -11,4 +11,12 @@ class EmailUtils {
   }
 
   static bool isValid(String? raw) => normalize(raw) != null;
+
+  /// Real mailbox the owner typed — not a generated `*.mayabela.local` login.
+  static String? userFacing(String? raw) {
+    final value = normalize(raw);
+    if (value == null) return null;
+    if (value.endsWith('.mayabela.local')) return null;
+    return value;
+  }
 }

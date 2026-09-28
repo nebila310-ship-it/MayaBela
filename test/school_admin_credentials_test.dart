@@ -31,4 +31,28 @@ void main() {
     expect(creds.passwordLabel(school), 'BridgeWalk12!');
     expect(creds.schoolHasPassword(school), isTrue);
   });
+
+  test('admin email is blank when none is registered', () {
+    final school = SchoolRecord(id: 'FR-001', name: 'Fenote Raey Academy');
+    expect(
+      SchoolAdminCredentialsService.instance.adminEmailForSchool(school),
+      isNull,
+    );
+  });
+
+  test('admin email uses the school record and ignores synthetic mailboxes', () {
+    final withEmail = SchoolRecord(
+      id: 'FR-001',
+      name: 'Fenote Raey Academy',
+      adminEmail: '  Director@Fenote.et ',
+    );
+    final synthetic = SchoolRecord(
+      id: 'FR-002',
+      name: 'Fenote Raey Academy',
+      adminEmail: '0911000003@fr-002.mayabela.local',
+    );
+    final creds = SchoolAdminCredentialsService.instance;
+    expect(creds.adminEmailForSchool(withEmail), 'director@fenote.et');
+    expect(creds.adminEmailForSchool(synthetic), isNull);
+  });
 }

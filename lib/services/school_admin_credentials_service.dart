@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 
 class SchoolAdminCredentialsService {
@@ -65,6 +66,12 @@ class SchoolAdminCredentialsService {
           dirty = true;
         }
       }
+      final storedEmail = EmailUtils.userFacing(school.adminEmail);
+      final adminEmail = EmailUtils.userFacing(admin.email);
+      if (storedEmail == null && adminEmail != null) {
+        school.adminEmail = adminEmail;
+        dirty = true;
+      }
       if (dirty) {
         await SchoolRegistryService.instance.updateSchool(
           school,
@@ -88,6 +95,7 @@ class SchoolAdminCredentialsService {
 School ID: ${school.id}
 Admin: ${adminNameForSchool(school) ?? '—'}
 Login: $login
+Admin email: ${adminEmailForSchool(school) ?? '—'}
         Temp password: ${password ?? 'Hidden after save'}
 $expiryLine''';
   }
@@ -105,6 +113,14 @@ $expiryLine''';
     if (fromRecord != null && fromRecord.isNotEmpty) return fromRecord;
     final admin = AuthService.adminUserForSchool(school.id);
     return admin?.phone ?? admin?.username;
+  }
+
+  String? adminEmailForSchool(SchoolRecord school) {
+    final fromRecord = EmailUtils.userFacing(school.adminEmail);
+    if (fromRecord != null) return fromRecord;
+    return EmailUtils.userFacing(
+      AuthService.adminUserForSchool(school.id)?.email,
+    );
   }
 
   String adminLoginForSchool(SchoolRecord school) {
@@ -128,6 +144,7 @@ Your school admin account:
 School: ${school.name}
 School ID: ${school.id}
 Admin login: $login
+Admin email: ${adminEmailForSchool(school) ?? '—'}
 Temp password: ${password ?? '—'}
 $expiryLine
 

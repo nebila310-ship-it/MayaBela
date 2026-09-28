@@ -13,4 +13,10 @@ void main() {
     expect(EmailUtils.normalize('missing-domain@'), isNull);
     expect(EmailUtils.isValid('   '), isFalse);
   });
+
+  test('hides generated mayabela.local mailboxes from the owner console', () {
+    expect(EmailUtils.userFacing(''), isNull);
+    expect(EmailUtils.userFacing('admin@fenote.mayabela.local'), isNull);
+    expect(EmailUtils.userFacing('director@school.et'), 'director@school.et');
+  });
 }

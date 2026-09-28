@@ -31,13 +31,12 @@ class SchoolSupportContactService {
     if (school == null) return null;
 
     final creds = SchoolAdminCredentialsService.instance;
-    final admin = AuthService.adminUserForSchool(school.id);
 
     return SchoolSupportContact(
       schoolName: school.name,
       adminName: creds.adminNameForSchool(school),
       phone: creds.adminPhoneForSchool(school),
-      email: admin?.email?.trim().isNotEmpty == true ? admin!.email!.trim() : null,
+      email: creds.adminEmailForSchool(school),
     );
   }
 

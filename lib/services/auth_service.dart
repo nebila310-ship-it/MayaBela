@@ -51,7 +51,7 @@ class RegisteredUser {
   final String username;
   String password;
   final String roleKey;
-  final String? email;
+  String? email;
   final String? phone;
   final String? schoolId;
   String? fullName;
@@ -1303,6 +1303,11 @@ class AuthService {
     if (admin != null) admin.password = newPassword;
   }
 
+  static void updateAdminEmailForSchool(String schoolId, String? email) {
+    final admin = adminUserForSchool(schoolId);
+    if (admin != null) admin.email = _normalizedEmail(email);
+  }
+
   static String? registerSchoolAdmin({
     required String schoolName,
     required String city,
@@ -1313,8 +1318,11 @@ class AuthService {
     String? adminEmail,
   }) {
     if (!PhoneUtils.isValidLoginPhone(adminPhone)) return 'invalid_phone';
-    final emailError = _requireEmail(adminEmail);
-    if (emailError != null) return emailError;
+    final typedEmail = (adminEmail ?? '').trim();
+    if (typedEmail.isNotEmpty) {
+      final emailError = _requireEmail(adminEmail);
+      if (emailError != null) return emailError;
+    }
     final key = PhoneUtils.loginKey(adminPhone);
     if (_accountExists(key)) return 'exists';
 

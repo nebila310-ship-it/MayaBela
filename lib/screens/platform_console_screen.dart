@@ -901,6 +901,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
   final _ratePerStudent = TextEditingController();
   final _minimumMonthly = TextEditingController();
   final _adminTempPassword = TextEditingController();
+  final _adminEmail = TextEditingController();
   final Set<String> _selectedGrades = {};
 
   SchoolRecord? _school;
@@ -925,6 +926,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       _ratePerStudent,
       _minimumMonthly,
       _adminTempPassword,
+      _adminEmail,
     ]) {
       c.addListener(_onFormChanged);
     }
@@ -945,6 +947,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
         _ratePerStudent.text,
         _minimumMonthly.text,
         _adminTempPassword.text,
+        _adminEmail.text,
         SchoolGradeCatalog.all.where(_selectedGrades.contains).join('|'),
       ].join('|');
 
@@ -975,6 +978,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           (record.minimumMonthlyEtb ?? SchoolEnrollmentMetrics.defaultMinimumMonthlyEtb).toString();
       final shownPwd = SchoolAdminCredentialsService.instance.passwordForSchool(record);
       _adminTempPassword.text = shownPwd ?? '';
+      _adminEmail.text =
+          SchoolAdminCredentialsService.instance.adminEmailForSchool(record) ?? '';
       _selectedGrades
         ..clear()
         ..addAll(record.gradeLevels);
@@ -1020,6 +1025,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       _ratePerStudent,
       _minimumMonthly,
       _adminTempPassword,
+      _adminEmail,
     ]) {
       c
         ..removeListener(_onFormChanged)
@@ -1076,6 +1082,14 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       AuthService.updateAdminPasswordForSchool(school.id, tempPwd);
     }
 
+    final emailRaw = _adminEmail.text.trim();
+    if (emailRaw.isNotEmpty && !EmailUtils.isValid(emailRaw)) {
+      _toast('Enter a valid admin email, or leave it blank.', isError: true);
+      return;
+    }
+    final adminEmail = EmailUtils.userFacing(emailRaw);
+    AuthService.updateAdminEmailForSchool(school.id, adminEmail);
+
     final grades = SchoolGradeCatalog.all
         .where(_selectedGrades.contains)
         .toList();
@@ -1096,6 +1110,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       minimumMonthlyEtb: minBill,
       adminInitialPassword:
           tempPwd.isNotEmpty ? tempPwd : school.adminInitialPassword,
+      adminEmail: adminEmail,
       gradeLevels: grades,
     );
 
@@ -1106,6 +1121,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
         toSave,
         preferPlatformCloud: true,
         adminPassword: tempPwd.isNotEmpty ? tempPwd : null,
+        adminEmail: adminEmail,
+        updateAdminEmail: true,
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1495,6 +1512,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     String value, {
     Color? valueColor,
     Widget? trailing,
+    String emptyPlaceholder = '—',
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 11),
@@ -1511,7 +1529,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           Expanded(
             child: trailing ??
                 Text(
-                  value.isEmpty ? '—' : value,
+                  value.isEmpty ? emptyPlaceholder : value,
                   style: TextStyle(
                     color: valueColor ?? Colors.white,
                     fontSize: 14,
@@ -1729,6 +1747,11 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           if (adminName != null && adminName.isNotEmpty)
             _profileRow('Admin name', adminName),
           _profileRow('Admin login', adminLogin),
+          _profileRow(
+            'Admin email',
+            creds.adminEmailForSchool(school) ?? '',
+            emptyPlaceholder: '',
+          ),
           _profileRow(
             'Temp password',
             passwordLabel,
@@ -1972,6 +1995,12 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
                   _contractedSeats,
                   keyboard: TextInputType.number,
                   hint: 'Optional — leave empty for no cap',
+                ),
+                _editField(
+                  'Admin email',
+                  _adminEmail,
+                  keyboard: TextInputType.emailAddress,
+                  hint: 'Leave blank if none — add or change it here',
                 ),
                 _editField(
                   'Admin temp password',
@@ -2371,6 +2400,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
     super.initState();
     _password.addListener(_onCredentialsChanged);
     _adminPhone.addListener(_onCredentialsChanged);
+    _adminEmail.addListener(_onCredentialsChanged);
   }
 
   void _onCredentialsChanged() => setState(() {});
@@ -2379,6 +2409,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
   void dispose() {
     _password.removeListener(_onCredentialsChanged);
     _adminPhone.removeListener(_onCredentialsChanged);
+    _adminEmail.removeListener(_onCredentialsChanged);
     _schoolName.dispose();
     _city.dispose();
     _address.dispose();
@@ -2434,10 +2465,15 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         setState(() => _message = 'Fill school name, admin name, and phone.');
         return;
       }
-      if (!EmailUtils.isValid(_adminEmail.text)) {
-        setState(() => _message = 'Enter a valid admin email address.');
+      final emailRaw = _adminEmail.text.trim();
+      if (emailRaw.isNotEmpty && !EmailUtils.isValid(emailRaw)) {
+        setState(
+          () => _message =
+              'Enter a valid admin email, or leave it blank to add later.',
+        );
         return;
       }
+      final adminEmail = EmailUtils.userFacing(emailRaw);
       if (_password.text.length < AuthService.minPasswordLength) {
         setState(
           () => _message =
@@ -2508,6 +2544,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         minimumMonthlyEtb: minBill,
         adminInitialPassword: password,
         adminFullName: _adminName.text.trim(),
+        adminEmail: adminEmail,
       );
 
       // Cloud-first: do not show success unless school + admin exist in Supabase.
@@ -2516,7 +2553,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         adminUsername: loginKey,
         adminFullName: _adminName.text.trim(),
         adminPhone: adminPhoneLocal,
-        adminEmail: EmailUtils.normalize(_adminEmail.text),
+        adminEmail: adminEmail,
         password: password,
       );
       if (!cloud.ok && cloud.errorCode == 'school_exists') {
@@ -2534,13 +2571,14 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           minimumMonthlyEtb: minBill,
           adminInitialPassword: password,
           adminFullName: _adminName.text.trim(),
+          adminEmail: adminEmail,
         );
         cloud = await PlatformSchoolsCloudService.instance.createSchoolInCloud(
           school: draft,
           adminUsername: loginKey,
           adminFullName: _adminName.text.trim(),
           adminPhone: adminPhoneLocal,
-          adminEmail: EmailUtils.normalize(_adminEmail.text),
+          adminEmail: adminEmail,
           password: password,
         );
       }
@@ -2565,7 +2603,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         city: school.city ?? '',
         adminFullName: _adminName.text.trim(),
         adminPhone: _adminPhone.text.trim(),
-        adminEmail: EmailUtils.normalize(_adminEmail.text),
+        adminEmail: adminEmail,
         password: password,
         schoolId: school.id,
       );
@@ -2831,7 +2869,12 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           ),
           const SizedBox(height: 8),
           _field('Admin full name', _adminName),
-          _field('Admin email', _adminEmail, keyboard: TextInputType.emailAddress),
+          _field(
+            'Admin email (optional)',
+            _adminEmail,
+            keyboard: TextInputType.emailAddress,
+            hint: 'Leave blank if none — you can add it later on Edit school',
+          ),
           _field('Admin phone (login username)', _adminPhone, keyboard: TextInputType.phone),
           _passwordField(),
           _adminCredentialsPreview(),
@@ -2946,6 +2989,10 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
           ),
           const SizedBox(height: 10),
           _previewRow('Login', login),
+          _previewRow(
+            'Email',
+            EmailUtils.userFacing(_adminEmail.text) ?? '',
+          ),
           _previewRow('Password', password.isEmpty ? '—' : password, highlight: true),
         ],
       ),
@@ -3007,6 +3054,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
     TextEditingController controller, {
     TextInputType? keyboard,
     int maxLines = 1,
+    String? hint,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -3017,7 +3065,9 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
+          hintText: hint,
           labelStyle: const TextStyle(color: Colors.white54),
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
           filled: true,
           fillColor: const Color(0xFF1E293B),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),

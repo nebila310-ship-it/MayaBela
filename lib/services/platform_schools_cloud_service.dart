@@ -185,6 +185,8 @@ class PlatformSchoolsCloudService {
     required SchoolRecord school,
     String? adminPassword,
     String? adminUsername,
+    String? adminEmail,
+    bool updateAdminEmail = false,
   }) async {
     try {
       final ownerPin = await _ownerPinOrNull();
@@ -214,6 +216,7 @@ class PlatformSchoolsCloudService {
             'adminPassword': adminPassword,
           if (adminUsername != null && adminUsername.trim().isNotEmpty)
             'adminUsername': adminUsername.trim(),
+          if (updateAdminEmail) 'adminEmail': adminEmail?.trim(),
         },
       );
       final data = res.data;

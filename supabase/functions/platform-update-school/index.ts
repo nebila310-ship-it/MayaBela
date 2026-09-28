@@ -6,6 +6,7 @@ import {
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
+  normalizeEmail,
   normalizeUsername,
   queryDocs,
   upsertDoc,
@@ -83,11 +84,41 @@ Deno.serve(async (req) => {
     }
     merged.name = name;
 
+    const emailFromBody = Object.prototype.hasOwnProperty.call(
+      body || {},
+      "adminEmail",
+    );
+    if (emailFromBody) {
+      const emailRaw = body?.adminEmail == null
+        ? ""
+        : String(body.adminEmail).trim();
+      if (emailRaw && !normalizeEmail(emailRaw)) {
+        return errorResponse(
+          "Enter a valid admin email, or leave it blank.",
+          400,
+          "invalid_email",
+        );
+      }
+      merged.adminEmail = emailRaw ? normalizeEmail(emailRaw) : null;
+    } else if (
+      (merged.adminEmail == null || merged.adminEmail === "") &&
+      existing.adminEmail
+    ) {
+      // Generic profile saves omit the mailbox. Keep the stored one.
+      merged.adminEmail = existing.adminEmail;
+    } else if (
+      typeof merged.adminEmail === "string" &&
+      merged.adminEmail.trim() === ""
+    ) {
+      merged.adminEmail = null;
+    }
+
     await upsertDoc(sb, "school_registry", schoolId, merged, schoolId);
 
-    // Optional admin password reset from owner console.
+    // Optional admin password reset and/or email add/change from owner console.
     const password = body?.adminPassword ?? body?.password;
-    if (password != null && password !== "") {
+    const shouldResetPassword = password != null && password !== "";
+    if (shouldResetPassword) {
       if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
         return errorResponse(
           `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
@@ -95,7 +126,9 @@ Deno.serve(async (req) => {
           "password_too_short",
         );
       }
+    }
 
+    if (shouldResetPassword || emailFromBody) {
       let username = normalizeUsername(
         body?.adminUsername || merged.adminContactPhone || "",
       );
@@ -108,7 +141,9 @@ Deno.serve(async (req) => {
       }
       if (!username) {
         return errorResponse(
-          "No admin account found to update password.",
+          shouldResetPassword
+            ? "No admin account found to update password."
+            : "No admin account found to update email.",
           400,
           "no_admin",
         );
@@ -118,30 +153,37 @@ Deno.serve(async (req) => {
       const account = (await getDoc(sb, "app_auth_accounts", docId, schoolId)) ||
         (await getDoc(sb, "app_auth_accounts", username, schoolId)) ||
         {};
+      const nextEmail = emailFromBody
+        ? (merged.adminEmail || null)
+        : (account.email || merged.adminEmail || null);
       const profile = {
         ...account,
         username,
         roleKey: "admin",
         schoolId,
-        email: account.email || merged.adminEmail || null,
+        email: nextEmail,
         phone: account.phone || merged.adminContactPhone || null,
         fullName: account.fullName || merged.adminFullName || null,
         updatedAt: now,
       };
-      await upsertSecret(sb, username, password, schoolId);
+      if (shouldResetPassword) {
+        await upsertSecret(sb, username, password as string, schoolId);
+      }
       await upsertDoc(sb, "app_auth_accounts", docId, profile, schoolId);
-      const accessProfile = await enrichAccessProfile(sb, profile);
-      try {
-        await ensureAuthUser(sb, username, password, accessProfile, {
-          forceRotate: true,
-        });
-      } catch (authErr) {
-        const msg = String((authErr as Error)?.message || authErr);
-        if (!/already (been )?registered|email_exists/i.test(msg)) {
-          throw authErr;
+      if (shouldResetPassword) {
+        const accessProfile = await enrichAccessProfile(sb, profile);
+        try {
+          await ensureAuthUser(sb, username, password as string, accessProfile, {
+            forceRotate: true,
+          });
+        } catch (authErr) {
+          const msg = String((authErr as Error)?.message || authErr);
+          if (!/already (been )?registered|email_exists/i.test(msg)) {
+            throw authErr;
+          }
+          // School password is already stored. Login can use it even if Auth
+          // already has this email.
         }
-        // School password is already stored. Login can use it even if Auth
-        // already has this email.
       }
 
       // Never persist plaintext admin passwords on school_registry.
