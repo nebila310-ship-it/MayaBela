@@ -94,12 +94,12 @@ void main() {
   test('parents see own grievances and not leadership minutes', () async {
     final briefing = await DosaService.instance.recordMeeting(
       title: 'DoSA briefing',
-      startsAt: DateTime.utc(2026, 9, 10),
+      startsAt: DateTime.now().add(const Duration(days: 3)),
       schoolId: 'TB-001',
     );
     final graduation = await DosaService.instance.recordMeeting(
       title: 'Graduation rehearsal',
-      startsAt: DateTime.utc(2026, 9, 20),
+      startsAt: DateTime.now().add(const Duration(days: 10)),
       kind: DosaMeetingKind.graduation,
       schoolId: 'TB-001',
     );

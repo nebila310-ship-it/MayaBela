@@ -85,10 +85,10 @@ void main() {
       expect(ids, sidebarModuleIds().toSet());
       expect(ids, isNot(contains('staff_students')));
       expect(ids, contains('students'));
-      expect(ids, isNot(contains('add_student')));
+      expect(ids, contains('add_student'));
     });
 
-    test('APK-only tools stay inside parent ERP modules', () {
+    test('catalog desks have a real page on APK and web', () {
       signInAdmin();
       final sidebar = webErpNavItemsForCurrentUser().map((e) => e.id).toSet();
       for (final extra in [
@@ -100,7 +100,7 @@ void main() {
         'add_teacher',
         'add_student',
       ]) {
-        expect(sidebar.contains(extra), isFalse, reason: extra);
+        expect(sidebar.contains(extra), isTrue, reason: extra);
         expect(WebErpRouter.pageFor(extra), isA<Widget>(), reason: extra);
       }
     });

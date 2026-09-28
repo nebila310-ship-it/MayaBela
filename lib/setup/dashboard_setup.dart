@@ -15,6 +15,7 @@ import 'package:mayabela/screens/fees_payments_screen.dart';
 import 'package:mayabela/screens/gallery_screen.dart';
 import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
+import 'package:mayabela/screens/student_lesson_plans_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
@@ -494,6 +495,22 @@ List<DashboardEntry> _parentEntries() {
             MaterialPageRoute(
               builder: (_) => const HomeworkScreen(mode: HomeworkViewMode.parent),
             ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'lesson_plans',
+      icon: Icons.event_note_outlined,
+      color: const Color(0xFF5D4037),
+      builder: (context) => DashboardCard(
+        icon: Icons.event_note_outlined,
+        title: _t('lesson_plans', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('lesson_plans', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentLessonPlansScreen()),
           );
         }),
       ),
@@ -1199,7 +1216,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My children',
           icon: Icons.child_care,
-          entryIds: ['children', 'attendance', 'homework', 'learning_materials', 'grades', 'timetable'],
+          entryIds: ['children', 'attendance', 'homework', 'lesson_plans', 'learning_materials', 'grades', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'School updates',
