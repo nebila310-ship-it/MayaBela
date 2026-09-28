@@ -9,6 +9,7 @@ import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/screens/maya_assistant_screen.dart';
 import 'package:mayabela/screens/platform_audit_log_screen.dart';
 import 'package:mayabela/screens/platform_bulk_sms_screen.dart';
+import 'package:mayabela/screens/platform_mail_settings_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/maya_assistant_service.dart';
 import 'package:mayabela/services/platform_audit_log_service.dart';
@@ -219,6 +220,13 @@ class _PlatformConsoleScreenState extends State<PlatformConsoleScreen> {
     );
   }
 
+  void _openMailSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PlatformMailSettingsScreen()),
+    );
+  }
+
   void _openBulkSms() {
     final List<SchoolRecord> schools;
     if (_listFilter == _SchoolListFilter.expiring && _visible.isNotEmpty) {
@@ -348,12 +356,15 @@ class _PlatformConsoleScreenState extends State<PlatformConsoleScreen> {
                   _openAuditLog();
                 case 'bulk_sms':
                   _openBulkSms();
+                case 'mail':
+                  _openMailSettings();
                 case 'reload_cloud':
                   await _reloadFromCloud();
               }
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'reload_cloud', child: Text('Reload schools from cloud')),
+              PopupMenuItem(value: 'mail', child: Text('Password reset email')),
               PopupMenuItem(value: 'export_json', child: Text('Export backup (JSON)')),
               PopupMenuItem(value: 'export_csv', child: Text('Export schools (CSV)')),
               PopupMenuItem(value: 'audit', child: Text('Audit log')),

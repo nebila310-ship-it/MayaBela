@@ -19,6 +19,18 @@ function resetDocId(schoolId: string, email: string): string {
   return `${schoolId}__${email}`;
 }
 
+async function verifyGoTrueOtp(
+  sb: ReturnType<typeof adminClient>,
+  email: string,
+  token: string,
+): Promise<boolean> {
+  for (const type of ["email", "recovery", "magiclink"] as const) {
+    const { error } = await sb.auth.verifyOtp({ email, token, type });
+    if (!error) return true;
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -55,50 +67,52 @@ Deno.serve(async (req) => {
       resetDocId(schoolId, email),
       schoolId,
     );
-    if (!reset) {
+
+    if (reset) {
+      const expiresAt = Date.parse(String(reset.expiresAt || ""));
+      if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) {
+        await deleteDoc(
+          sb,
+          "password_reset_codes",
+          resetDocId(schoolId, email),
+          schoolId,
+        );
+        return errorResponse("Reset code expired.", 400, "expired");
+      }
+
+      const attempts = Number(reset.attempts) || 0;
+      if (attempts >= MAX_ATTEMPTS) {
+        await deleteDoc(
+          sb,
+          "password_reset_codes",
+          resetDocId(schoolId, email),
+          schoolId,
+        );
+        return errorResponse("Too many attempts. Request a new code.", 429, "rate_limited");
+      }
+
+      const hash = String(reset.codeHash || "");
+      const hashedOk = hash ? await bcryptCompare(code, hash) : false;
+      const goTrueOk = hashedOk ? false : await verifyGoTrueOtp(sb, email, code);
+      if (!hashedOk && !goTrueOk) {
+        reset.attempts = attempts + 1;
+        await sb.from("app_documents").upsert({
+          collection: "password_reset_codes",
+          doc_id: resetDocId(schoolId, email),
+          school_id: schoolId,
+          data: reset,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "collection,school_id,doc_id" });
+        return errorResponse("Invalid or expired reset code.", 400, "invalid_code");
+      }
+    } else if (!await verifyGoTrueOtp(sb, email, code)) {
       return errorResponse("Invalid or expired reset code.", 400, "invalid_code");
     }
 
-    const expiresAt = Date.parse(String(reset.expiresAt || ""));
-    if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) {
-      await deleteDoc(
-        sb,
-        "password_reset_codes",
-        resetDocId(schoolId, email),
-        schoolId,
-      );
-      return errorResponse("Reset code expired.", 400, "expired");
-    }
-
-    const attempts = Number(reset.attempts) || 0;
-    if (attempts >= MAX_ATTEMPTS) {
-      await deleteDoc(
-        sb,
-        "password_reset_codes",
-        resetDocId(schoolId, email),
-        schoolId,
-      );
-      return errorResponse("Too many attempts. Request a new code.", 429, "rate_limited");
-    }
-
-    const hash = String(reset.codeHash || "");
-    const ok = hash ? await bcryptCompare(code, hash) : false;
-    if (!ok) {
-      reset.attempts = attempts + 1;
-      await sb.from("app_documents").upsert({
-        collection: "password_reset_codes",
-        doc_id: resetDocId(schoolId, email),
-        school_id: schoolId,
-        data: reset,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "collection,school_id,doc_id" });
-      return errorResponse("Invalid or expired reset code.", 400, "invalid_code");
-    }
-
-    const scopedRole = roleKey || String(reset.roleKey || "").trim() || null;
+    const scopedRole = roleKey || String(reset?.roleKey || "").trim() || null;
     const found = await findAccountByEmail(sb, schoolId, email, scopedRole);
     const username = normalizeUsername(
-      found?.data.username || reset.username,
+      found?.data.username || reset?.username,
     );
     if (!username) {
       return errorResponse("Account not found.", 404, "not_found");

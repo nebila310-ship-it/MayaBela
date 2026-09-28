@@ -1,5 +1,5 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
-import { assertMailConfigured, sendPlainEmail } from "../_shared/mailer.ts";
+import { loadMailSecrets, sendPasswordResetEmail } from "../_shared/mailer.ts";
 import {
   adminClient,
   assertNotRateLimited,
@@ -36,22 +36,6 @@ Deno.serve(async (req) => {
       return errorResponse("School ID and email are required.", 400, "invalid");
     }
 
-    // Fail before lookup so a missing mailbox config cannot reveal whether
-    // the address is enrolled (unknown → {ok:true}, known → 503).
-    try {
-      assertMailConfigured();
-    } catch (e) {
-      const msg = String((e as { message?: string })?.message || e);
-      if (msg.includes("mail_not_configured")) {
-        return errorResponse(
-          "Email sending is not configured on the server.",
-          503,
-          "mail_not_configured",
-        );
-      }
-      throw e;
-    }
-
     const sb = adminClient();
     await assertNotRateLimited(sb, `reset_request_${schoolId}_${email}`);
 
@@ -73,17 +57,16 @@ Deno.serve(async (req) => {
       expiresAt: new Date(Date.now() + RESET_TTL_MS).toISOString(),
     }, schoolId);
 
+    const mail = await loadMailSecrets(sb);
     try {
-      await sendPlainEmail({
+      await sendPasswordResetEmail(sb, {
         to: email,
-        subject: "MayaBela password reset code",
-        text:
-          `Your MayaBela password reset code is ${code}.\n\n` +
-          `School ID: ${schoolId}\n` +
-          `This code expires in 15 minutes. If you did not request it, ignore this email.`,
+        schoolId,
+        username,
+        code,
+        mail,
       });
     } catch (sendErr) {
-      // Same {ok:true} as an unknown email so a send failure cannot enumerate.
       console.error("password reset mail failed", sendErr);
       try {
         await deleteDoc(
@@ -95,6 +78,11 @@ Deno.serve(async (req) => {
       } catch (_) {
         /* ignore */
       }
+      return errorResponse(
+        "Email sending is not configured on the server.",
+        503,
+        "mail_not_configured",
+      );
     }
 
     return jsonResponse({ ok: true });
