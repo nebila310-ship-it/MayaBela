@@ -57,13 +57,18 @@ Deno.serve(async (req) => {
     const password = body?.password;
     const fullName = String(body?.adminFullName || "").trim();
     const phone = String(body?.adminPhone || "").trim();
-    const email = normalizeEmail(body?.adminEmail);
+    const emailRaw = body?.adminEmail == null ? "" : String(body.adminEmail).trim();
+    const email = emailRaw ? normalizeEmail(body?.adminEmail) : null;
 
     if (!username) {
       return errorResponse("adminUsername is required.", 400, "invalid");
     }
-    if (!email) {
-      return errorResponse("A valid admin email is required.", 400, "invalid_email");
+    if (emailRaw && !email) {
+      return errorResponse(
+        "Enter a valid admin email, or leave it blank to add later.",
+        400,
+        "invalid_email",
+      );
     }
     if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
       return errorResponse(
@@ -81,6 +86,7 @@ Deno.serve(async (req) => {
     if (!school.status) school.status = "active";
     if (phone) school.adminContactPhone = phone;
     if (fullName) school.adminFullName = fullName;
+    school.adminEmail = email;
     delete school.adminInitialPassword;
     delete school.password;
     delete school.passwordHash;

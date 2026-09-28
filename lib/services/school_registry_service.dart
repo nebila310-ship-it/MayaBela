@@ -21,6 +21,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
 const _keepEnabledModules = Object();
+const _keepAdminEmail = Object();
 
 class SchoolRecord {
   SchoolRecord({
@@ -46,6 +47,7 @@ class SchoolRecord {
     this.minimumMonthlyEtb,
     this.adminInitialPassword,
     this.adminFullName,
+    this.adminEmail,
     this.studentPortal = const StudentPortalSettings(),
     this.gradeWorkflow = const GradeWorkflowSettings(),
     this.markbookSettings = MarkbookSettings.liaDefaults,
@@ -76,6 +78,7 @@ class SchoolRecord {
   int? minimumMonthlyEtb;
   String? adminInitialPassword;
   String? adminFullName;
+  String? adminEmail;
   StudentPortalSettings studentPortal;
   GradeWorkflowSettings gradeWorkflow;
   MarkbookSettings markbookSettings;
@@ -129,6 +132,7 @@ class SchoolRecord {
     int? minimumMonthlyEtb,
     String? adminInitialPassword,
     String? adminFullName,
+    Object? adminEmail = _keepAdminEmail,
     StudentPortalSettings? studentPortal,
     GradeWorkflowSettings? gradeWorkflow,
     MarkbookSettings? markbookSettings,
@@ -162,6 +166,9 @@ class SchoolRecord {
       minimumMonthlyEtb: minimumMonthlyEtb ?? this.minimumMonthlyEtb,
       adminInitialPassword: adminInitialPassword ?? this.adminInitialPassword,
       adminFullName: adminFullName ?? this.adminFullName,
+      adminEmail: identical(adminEmail, _keepAdminEmail)
+          ? this.adminEmail
+          : adminEmail as String?,
       studentPortal: studentPortal ?? this.studentPortal,
       gradeWorkflow: gradeWorkflow ?? this.gradeWorkflow,
       markbookSettings: markbookSettings ?? this.markbookSettings,
@@ -198,6 +205,7 @@ class SchoolRecord {
     'minimumMonthlyEtb': minimumMonthlyEtb,
     'adminInitialPassword': adminInitialPassword,
     'adminFullName': adminFullName,
+    'adminEmail': adminEmail,
     'studentPortal': studentPortal.toMap(),
     'gradeWorkflow': gradeWorkflow.toMap(),
     'markbookSettings': markbookSettings.toMap(),
@@ -256,6 +264,7 @@ class SchoolRecord {
       minimumMonthlyEtb: json['minimumMonthlyEtb'] as int?,
       adminInitialPassword: json['adminInitialPassword'] as String?,
       adminFullName: json['adminFullName'] as String?,
+      adminEmail: _optionalTrimmed(json['adminEmail']),
       studentPortal: StudentPortalSettings.fromMap(
         json['studentPortal'] as Map<String, dynamic>?,
       ),
@@ -277,6 +286,12 @@ class SchoolRecord {
               .toList() ??
           const [],
     );
+  }
+
+  static String? _optionalTrimmed(dynamic raw) {
+    if (raw == null) return null;
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value.toLowerCase();
   }
 
   static Set<String>? _enabledModulesFromSettings(Map<String, dynamic>? settings) {
@@ -528,6 +543,7 @@ class SchoolRegistryService {
     int? minimumMonthlyEtb,
     String? adminInitialPassword,
     String? adminFullName,
+    String? adminEmail,
   }) {
     final schoolId = (id ?? generateSchoolId(name)).trim().toUpperCase();
     return SchoolRecord(
@@ -552,6 +568,7 @@ class SchoolRegistryService {
       adminFullName: adminFullName?.trim().isEmpty ?? true
           ? null
           : adminFullName!.trim(),
+      adminEmail: SchoolRecord._optionalTrimmed(adminEmail),
     );
   }
 
@@ -600,6 +617,7 @@ class SchoolRegistryService {
     int? minimumMonthlyEtb,
     String? adminInitialPassword,
     String? adminFullName,
+    String? adminEmail,
     String? id,
     bool pushCloud = true,
   }) async {
@@ -618,6 +636,7 @@ class SchoolRegistryService {
       minimumMonthlyEtb: minimumMonthlyEtb,
       adminInitialPassword: adminInitialPassword,
       adminFullName: adminFullName,
+      adminEmail: adminEmail,
     );
     return commitSchool(record, pushCloud: pushCloud);
   }
@@ -627,6 +646,8 @@ class SchoolRegistryService {
   Future<PlatformSchoolCloudResult> syncSchoolToCloud(
     SchoolRecord school, {
     String? adminPassword,
+    String? adminEmail,
+    bool updateAdminEmail = false,
     bool preferPlatformEdge = false,
   }) async {
     final pin = PlatformOwnerService.instance.sessionOwnerPin;
@@ -638,6 +659,8 @@ class SchoolRegistryService {
         school: school,
         adminPassword: adminPassword,
         adminUsername: school.adminContactPhone,
+        adminEmail: adminEmail,
+        updateAdminEmail: updateAdminEmail,
       );
     }
     try {
@@ -663,6 +686,8 @@ class SchoolRegistryService {
     bool preferPlatformCloud = false,
     bool syncCloud = true,
     String? adminPassword,
+    String? adminEmail,
+    bool updateAdminEmail = false,
   }) async {
     final index = _schools.indexWhere(
       (s) => s.id.toUpperCase() == updated.id.toUpperCase(),
@@ -685,6 +710,8 @@ class SchoolRegistryService {
     final cloud = await syncSchoolToCloud(
       updated,
       adminPassword: adminPassword,
+      adminEmail: adminEmail,
+      updateAdminEmail: updateAdminEmail,
       preferPlatformEdge: preferPlatformCloud,
     );
     try {

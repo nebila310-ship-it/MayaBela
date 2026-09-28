@@ -1,6 +1,13 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
-import { adminClient } from "../_shared/school_auth.ts";
+import { adminClient, normalizeEmail } from "../_shared/school_auth.ts";
 import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
+
+function userFacingEmail(value: unknown): string | null {
+  const email = normalizeEmail(value);
+  if (!email) return null;
+  if (email.endsWith(".mayabela.local")) return null;
+  return email;
+}
 
 /**
  * Returns school_registry documents for the platform console.
@@ -22,6 +29,27 @@ Deno.serve(async (req) => {
       .limit(2000);
     if (error) throw error;
 
+    const emailBySchool = new Map<string, string>();
+    try {
+      const { data: accounts } = await sb
+        .from("app_documents")
+        .select("school_id, data")
+        .eq("collection", "app_auth_accounts")
+        .limit(5000);
+      for (const row of accounts || []) {
+        const account = (row.data || {}) as Record<string, unknown>;
+        if (account.roleKey !== "admin") continue;
+        const email = userFacingEmail(account.email);
+        if (!email) continue;
+        const sid = String(row.school_id || account.schoolId || "")
+          .trim()
+          .toUpperCase();
+        if (sid && !emailBySchool.has(sid)) emailBySchool.set(sid, email);
+      }
+    } catch (_) {
+      /* list still works without account emails */
+    }
+
     const schools = (data || []).map((row) => {
       const raw = { ...((row.data || {}) as Record<string, unknown>) };
       // Never return bootstrap passwords to the console payload.
@@ -31,6 +59,8 @@ Deno.serve(async (req) => {
       const id = String(raw.id || row.doc_id || row.school_id || "")
         .trim()
         .toUpperCase();
+      const stored = userFacingEmail(raw.adminEmail);
+      raw.adminEmail = stored || emailBySchool.get(id) || null;
       return {
         ...raw,
         id,
