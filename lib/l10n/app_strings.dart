@@ -216,8 +216,8 @@ class AppStrings implements AppStringsLike {
       t('Registered phone number', 'የተመዘገበ ስልክ ቁጥር');
   String get sendOtp => t('Send reset code', 'የእንደገና ማስጀመሪያ ኮድ ላክ');
   String get resetCodeSent => t(
-        'If that email is registered at this school, a reset code was sent. Check your inbox.',
-        'ኢሜይሉ በዚህ ትምህርት ቤት ከተመዘገበ፣ የእንደገና ማስጀመሪያ ኮድ ተልኳል። የኢሜይል ሳጥንዎን ይመልከቱ።',
+        'If that email is registered at this school, a reset email was sent. Use the code, or open the link, from the message.',
+        'ኢሜይሉ በዚህ ትምህርት ቤት ከተመዘገበ፣ መልዕክት ተልኳል። ኮዱን ይጠቀሙ ወይም ሊንኩን ይክፈቱ።',
       );
   String get mailNotConfigured => t(
         'Password reset email is not set up yet. In the owner console open Password reset email and add a Resend API key (or SMTP).',

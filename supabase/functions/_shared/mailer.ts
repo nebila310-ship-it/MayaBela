@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { getDoc, PLATFORM_SCHOOL_ID } from "./school_auth.ts";
+import {
+  findAuthUserByEmail,
+  getDoc,
+  loadSecret,
+  PLATFORM_SCHOOL_ID,
+  syntheticEmail,
+} from "./school_auth.ts";
 
 export type MailPayload = {
   to: string;
@@ -122,6 +128,129 @@ export async function sendPlainEmail(
     return;
   }
   throw new Error("mail_not_configured");
+}
+
+/**
+ * Send a password-reset email. Prefers Resend/SMTP; otherwise uses the
+ * project's built-in Auth mailer so reset works without extra secrets.
+ */
+export async function sendPasswordResetEmail(
+  sb: SupabaseClient,
+  opts: {
+    to: string;
+    schoolId: string;
+    username: string;
+    code: string;
+    mail: MailSecrets;
+  },
+): Promise<void> {
+  if (isMailReady(opts.mail)) {
+    await sendPlainEmail({
+      to: opts.to,
+      subject: "MayaBela password reset code",
+      text:
+        `Your MayaBela password reset code is ${opts.code}.\n\n` +
+        `School ID: ${opts.schoolId}\n` +
+        `This code expires in 15 minutes. If you did not request it, ignore this email.`,
+    }, opts.mail);
+    return;
+  }
+  const sent = await sendViaGoTrueMailer(sb, opts);
+  if (!sent) throw new Error("mail_not_configured");
+}
+
+async function sendViaGoTrueMailer(
+  sb: SupabaseClient,
+  opts: { to: string; schoolId: string; username: string },
+): Promise<boolean> {
+  const synthetic = syntheticEmail(opts.username, opts.schoolId);
+  const secret = await loadSecret(sb, opts.username, opts.schoolId);
+  let userId = String(secret?.authUserId || "").trim();
+  if (!userId) {
+    const found = await findAuthUserByEmail(sb, synthetic) ||
+      await findAuthUserByEmail(sb, opts.to);
+    userId = found?.id || "";
+  }
+  if (!userId) {
+    console.error("gotrue reset: no auth user for", opts.username, opts.schoolId);
+    return false;
+  }
+
+  const { data } = await sb.auth.admin.getUserById(userId);
+  const original = String(data.user?.email || synthetic).trim() || synthetic;
+
+  const { error: upErr } = await sb.auth.admin.updateUserById(userId, {
+    email: opts.to,
+    email_confirm: true,
+  });
+  if (upErr) {
+    console.error("gotrue reset: could not set mailbox", upErr);
+    return false;
+  }
+
+  try {
+    const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY") ||
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+      "";
+    if (!url || !anon) {
+      await restoreLoginEmail(sb, userId, original, opts.to);
+      return false;
+    }
+
+    const headers = {
+      apikey: anon,
+      Authorization: `Bearer ${anon}`,
+      "Content-Type": "application/json",
+    };
+    const redirectTo = "https://mayabela.pages.dev";
+    let res = await fetch(`${url}/auth/v1/otp`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        email: opts.to,
+        create_user: false,
+        options: { emailRedirectTo: redirectTo },
+      }),
+    });
+    if (!res.ok) {
+      const otpBody = await res.text();
+      console.error("gotrue otp failed", res.status, otpBody);
+      res = await fetch(`${url}/auth/v1/recover`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ email: opts.to, gotrue_meta_security: {} }),
+      });
+      if (!res.ok) {
+        console.error("gotrue recover failed", res.status, await res.text());
+        await restoreLoginEmail(sb, userId, original, opts.to);
+        return false;
+      }
+    }
+    // Leave the real mailbox on the Auth user so the emailed OTP still verifies.
+    return true;
+  } catch (e) {
+    console.error("gotrue reset send failed", e);
+    await restoreLoginEmail(sb, userId, original, opts.to);
+    return false;
+  }
+}
+
+async function restoreLoginEmail(
+  sb: SupabaseClient,
+  userId: string,
+  original: string,
+  current: string,
+): Promise<void> {
+  if (original.toLowerCase() === current.toLowerCase()) return;
+  try {
+    await sb.auth.admin.updateUserById(userId, {
+      email: original,
+      email_confirm: true,
+    });
+  } catch (e) {
+    console.error("gotrue reset: restore login email failed", e);
+  }
 }
 
 async function sendViaResend(

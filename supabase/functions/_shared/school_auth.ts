@@ -958,12 +958,22 @@ export async function ensureAuthUser(
 }> {
   const claims = claimsFor(profile);
   const schoolId = String(profile.schoolId || "").trim().toUpperCase();
-  const email = syntheticEmail(username, schoolId);
+  let email = syntheticEmail(username, schoolId);
   const secret = options.secret === undefined
     ? await loadSecret(sb, username, schoolId)
     : options.secret;
   let authUserId = String(secret?.authUserId || "").trim();
   let sessionPassword = String(secret?.sessionPassword || "");
+
+  if (authUserId) {
+    try {
+      const { data } = await sb.auth.admin.getUserById(authUserId);
+      const live = String(data.user?.email || "").trim();
+      if (live) email = live;
+    } catch {
+      /* keep synthetic login email */
+    }
+  }
 
   if (
     authUserId &&
@@ -1068,7 +1078,7 @@ export async function ensureAuthUser(
   return { email, claims, sessionPassword, authUserId };
 }
 
-async function findAuthUserByEmail(
+export async function findAuthUserByEmail(
   sb: SupabaseClient,
   email: string,
 ): Promise<{ id: string } | null> {
