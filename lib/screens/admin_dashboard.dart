@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/web_erp/shell/web_erp_shell.dart';
 
-/// School Admin home — same ERP modules on web and on the APK.
+/// School owner home — same ERP catalog as the web app (phone uses a drawer).
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 

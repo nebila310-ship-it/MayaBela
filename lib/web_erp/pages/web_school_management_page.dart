@@ -4,6 +4,7 @@ import 'package:mayabela/models/academic_term.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 import 'package:mayabela/widgets/academic_terms_editor.dart';
 import 'package:mayabela/widgets/school_grade_level_picker.dart';
 
@@ -262,6 +263,24 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
                 ],
               ),
             ),
+          const SizedBox(height: 16),
+          const WebErpRelatedToolsCard(
+            title: 'Student portal',
+            tools: [
+              WebErpRelatedTool(
+                routeId: 'student_portal_settings',
+                label: 'Student portal settings',
+                icon: Icons.tune,
+                subtitle: 'What students can see and do in their app',
+              ),
+              WebErpRelatedTool(
+                routeId: 'student_password_resets',
+                label: 'Student password requests',
+                icon: Icons.lock_reset,
+                subtitle: 'Approve student reset requests',
+              ),
+            ],
+          ),
         ],
       ),
     );

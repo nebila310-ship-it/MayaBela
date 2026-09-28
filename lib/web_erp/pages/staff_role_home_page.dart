@@ -31,6 +31,7 @@ import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/student_password_reset_store.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
@@ -743,6 +744,15 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       'Unread messages',
       DashboardBadgeService.instance.countFor('messages'),
     );
+    final schoolId = sid;
+    if (schoolId != null) {
+      add(
+        'student_password_resets',
+        Icons.lock_reset,
+        'Student password requests',
+        StudentPasswordResetStore.instance.pendingForSchool(schoolId).length,
+      );
+    }
     return out;
   }
 

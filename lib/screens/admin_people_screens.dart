@@ -17,6 +17,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/subject_multi_picker.dart';
@@ -576,9 +577,11 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
       icon: Icons.school_outlined,
       saveBlockedReason: (_) {
         if (nameCtrl.text.trim().isEmpty) return s.enterName;
+        if (!EmailUtils.isValid(emailCtrl.text)) return s.emailRequired;
         return null;
       },
-      canSave: (_) => nameCtrl.text.trim().isNotEmpty,
+      canSave: (_) =>
+          nameCtrl.text.trim().isNotEmpty && EmailUtils.isValid(emailCtrl.text),
       builder: (ctx, setDialogState) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -672,7 +675,7 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
       fullName: nameCtrl.text.trim(),
       subjects: selectedSubjects,
       phone: phoneCtrl.text.trim(),
-      email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+      email: EmailUtils.normalize(emailCtrl.text),
       campus: selectedCampus,
     );
 
@@ -1035,6 +1038,13 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
       subtitle: driver.fullName,
       accent: AdminFormTheme.driver.primary,
       icon: Icons.directions_bus_outlined,
+      saveBlockedReason: (_) {
+        if (nameCtrl.text.trim().isEmpty) return s.enterName;
+        if (!EmailUtils.isValid(emailCtrl.text)) return s.emailRequired;
+        return null;
+      },
+      canSave: (_) =>
+          nameCtrl.text.trim().isNotEmpty && EmailUtils.isValid(emailCtrl.text),
       builder: (ctx, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1171,7 +1181,7 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
     final updated = driver.copyWith(
       fullName: nameCtrl.text.trim(),
       phone: phoneCtrl.text.trim(),
-      email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+      email: EmailUtils.normalize(emailCtrl.text),
       busNumber: DriverRegistryService.normalizeBusNumber(busCtrl.text),
       routeName: DriverRegistryService.formatRoute(
         routeFromCtrl.text,

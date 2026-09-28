@@ -174,6 +174,14 @@ class WebErpRouter {
         return const AdminGradeOverviewScreen();
       case 'academic':
         return const AdminGradesScreen();
+      case 'timetable':
+        return const AdminTimetablesScreen();
+      case 'grade_workflow_settings':
+        return const AdminGradeWorkflowSettingsScreen();
+      case 'student_portal_settings':
+        return const AdminStudentPortalSettingsScreen();
+      case 'student_password_resets':
+        return const AdminStudentPasswordResetScreen();
       case 'learning_materials':
         return const WebLearningMaterialsPage();
       case 'announcements':

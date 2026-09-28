@@ -10,6 +10,7 @@ import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
 class GradeApprovalQueueScreen extends StatefulWidget {
   const GradeApprovalQueueScreen({super.key});
@@ -160,13 +161,38 @@ class _GradeApprovalQueueScreenState extends State<GradeApprovalQueueScreen> {
             foregroundColor: Colors.white,
             title: Text(s.gradeApprovalsTitle),
           ),
-          body: items.isEmpty
-              ? Center(child: Text(s.noGradeApprovalsPending))
-              : ListView.separated(
-                  padding: listPagePadding(context),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: WebErpRelatedToolsCard(
+                  tools: [
+                    WebErpRelatedTool(
+                      routeId: 'grades',
+                      label: 'Grade overview',
+                      icon: Icons.analytics_outlined,
+                      subtitle: 'Marks, reports, and class performance',
+                    ),
+                    WebErpRelatedTool(
+                      routeId: 'grade_workflow_settings',
+                      label: s.dashboardTitle(
+                        'grade_workflow_settings',
+                        roleKey: 'admin',
+                      ),
+                      icon: Icons.rule_outlined,
+                      subtitle: 'Approve, publish, and lock policy',
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: items.isEmpty
+                    ? Center(child: Text(s.noGradeApprovalsPending))
+                    : ListView.separated(
+                        padding: listPagePadding(context),
+                        itemCount: items.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
                     final item = items[index];
                     final grade = item.subjectGrade;
                     final status = grade.status;
@@ -314,6 +340,9 @@ class _GradeApprovalQueueScreenState extends State<GradeApprovalQueueScreen> {
                     );
                   },
                 ),
+              ),
+            ],
+          ),
         );
       },
     );

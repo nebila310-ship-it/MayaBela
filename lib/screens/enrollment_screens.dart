@@ -3,6 +3,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
 export 'parent_signup_screen.dart';
@@ -53,6 +54,10 @@ class _SchoolRegistrationScreenState extends State<SchoolRegistrationScreen> {
       setState(() => message = s.fillRequiredFields);
       return;
     }
+    if (!EmailUtils.isValid(_adminEmail.text)) {
+      setState(() => message = s.emailRequired);
+      return;
+    }
     if (_password.text.length < AuthService.minPasswordLength) {
       setState(() => message = s.passwordTooShort);
       return;
@@ -87,7 +92,7 @@ class _SchoolRegistrationScreenState extends State<SchoolRegistrationScreen> {
       schoolName: school.name,
       city: school.city ?? '',
       adminFullName: _adminName.text.trim(),
-      adminEmail: _adminEmail.text.trim(),
+      adminEmail: EmailUtils.normalize(_adminEmail.text),
       adminPhone: _adminPhone.text.trim(),
       password: _password.text,
       schoolId: school.id,
@@ -166,7 +171,7 @@ class _SchoolRegistrationScreenState extends State<SchoolRegistrationScreen> {
           ),
           TextField(
             controller: _adminEmail,
-            decoration: InputDecoration(labelText: s.emailOptional, filled: true),
+            decoration: InputDecoration(labelText: s.email, filled: true),
             keyboardType: TextInputType.emailAddress,
           ),
           TextField(

@@ -1,6 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:mayabela/models/remembered_school_brand.dart';
+import 'package:mayabela/models/school_logo_style.dart';
 
 class SavedLoginEntry {
   const SavedLoginEntry({
@@ -39,15 +43,26 @@ class LoginPrefsService {
   static const _rememberKey = 'login_remember_enabled';
   static const _entriesKey = 'login_saved_entries';
   static const _lastSchoolIdKey = 'login_last_school_id';
+  static const _brandKey = 'login_last_school_brand';
 
   bool _rememberEnabled = false;
   List<SavedLoginEntry> _entries = [];
   String? _lastSchoolId;
+  RememberedSchoolBrand? _rememberedBrand;
   bool _loaded = false;
 
   bool get rememberEnabled => _rememberEnabled;
   List<SavedLoginEntry> get entries => List.unmodifiable(_entries);
   String? get lastSchoolId => _lastSchoolId;
+  RememberedSchoolBrand? get rememberedBrand => _rememberedBrand;
+
+  RememberedSchoolBrand? brandForSchool(String? schoolId) {
+    final id = schoolId?.trim().toUpperCase();
+    if (id == null || id.isEmpty) return null;
+    final brand = _rememberedBrand;
+    if (brand == null || brand.schoolId != id) return null;
+    return brand;
+  }
 
   List<String> get savedSchoolIds {
     final ids = _entries.map((e) => e.schoolId.trim().toUpperCase()).toSet().toList();
@@ -60,6 +75,11 @@ class LoginPrefsService {
     final prefs = await SharedPreferences.getInstance();
     _rememberEnabled = prefs.getBool(_rememberKey) ?? false;
     _lastSchoolId = prefs.getString(_lastSchoolIdKey);
+    _rememberedBrand = _readBrand(prefs.getString(_brandKey));
+    if (_rememberedBrand != null &&
+        (_lastSchoolId == null || _lastSchoolId!.isEmpty)) {
+      _lastSchoolId = _rememberedBrand!.schoolId;
+    }
     final raw = prefs.getString(_entriesKey);
     if (raw == null || raw.isEmpty) {
       _entries = [];
@@ -106,6 +126,58 @@ class LoginPrefsService {
     _lastSchoolId = id;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSchoolIdKey, id);
+    if (_rememberedBrand != null && _rememberedBrand!.schoolId != id) {
+      _rememberedBrand = null;
+      await prefs.remove(_brandKey);
+    }
+  }
+
+  Future<void> rememberSchoolBrand({
+    required String schoolId,
+    required String name,
+    String? logoUrl,
+    String? logoPath,
+    SchoolLogoStyle logoStyle = SchoolLogoStyle.rectangular,
+  }) async {
+    final id = schoolId.trim().toUpperCase();
+    final trimmedName = name.trim();
+    if (id.isEmpty || trimmedName.isEmpty) return;
+    final brand = RememberedSchoolBrand(
+      schoolId: id,
+      name: trimmedName,
+      logoUrl: logoUrl?.trim().isEmpty == true ? null : logoUrl?.trim(),
+      logoPath: logoPath?.trim().isEmpty == true ? null : logoPath?.trim(),
+      logoStyle: logoStyle,
+    );
+    _lastSchoolId = id;
+    _rememberedBrand = brand;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastSchoolIdKey, id);
+    await prefs.setString(_brandKey, jsonEncode(brand.toJson()));
+  }
+
+  RememberedSchoolBrand? _readBrand(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final map = jsonDecode(raw);
+      if (map is! Map) return null;
+      final brand = RememberedSchoolBrand.fromJson(
+        Map<String, dynamic>.from(map),
+      );
+      if (brand.schoolId.isEmpty || brand.name.isEmpty) return null;
+      return brand;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  void debugReset() {
+    _rememberEnabled = false;
+    _entries = [];
+    _lastSchoolId = null;
+    _rememberedBrand = null;
+    _loaded = false;
   }
 
   Future<void> saveLogin({

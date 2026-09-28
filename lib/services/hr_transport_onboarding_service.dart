@@ -2,6 +2,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 
 class HrDriverOnboardingResult {
@@ -63,6 +64,10 @@ class HrTransportOnboardingService {
     if (AuthService.accountExists(loginKey)) {
       return const HrDriverOnboardingResult(ok: false, errorCode: 'exists');
     }
+    final resolvedEmail = EmailUtils.isValid(email)
+        ? EmailUtils.normalize(email)
+        : '${loginKey.replaceAll(RegExp(r'[^0-9a-zA-Z]'), '')}'
+            '@${sid.toLowerCase()}.driver.mayabela.local';
 
     final tempPassword = AuthService.generateTempPassword();
     final routeName = DriverRegistryService.formatRoute(
@@ -75,7 +80,7 @@ class HrTransportOnboardingService {
       schoolId: sid,
       fullName: fullName,
       phone: phone,
-      email: email,
+      email: resolvedEmail,
       busNumber: busNumber,
       routeName: routeName,
       plateNumber: plateNumber,
@@ -89,7 +94,7 @@ class HrTransportOnboardingService {
         fullName: fullName,
         schoolId: sid,
         phone: phone,
-        email: email?.trim().isEmpty == true ? null : email?.trim(),
+        email: resolvedEmail,
         linkedDriverId: driver.driverId,
         password: tempPassword,
       );

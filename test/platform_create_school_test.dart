@@ -37,4 +37,31 @@ void main() {
     expect(result.ok, isFalse);
     expect(result.errorCode, 'unauthorized');
   });
+
+  test('treats GoTrue email-already-registered as a reused admin account', () {
+    expect(
+      PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(
+        'A user with this email address has already been registered',
+      ),
+      isTrue,
+    );
+    expect(
+      PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(
+        'Auth user failed: email_exists',
+      ),
+      isTrue,
+    );
+    expect(
+      PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(
+        'Owner PIN required.',
+      ),
+      isFalse,
+    );
+    expect(
+      PlatformSchoolCloudResult.isAuthEmailAlreadyRegistered(
+        'School ID FR-001 already exists in cloud.',
+      ),
+      isFalse,
+    );
+  });
 }

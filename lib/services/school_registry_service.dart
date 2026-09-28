@@ -661,6 +661,7 @@ class SchoolRegistryService {
   Future<PlatformSchoolCloudResult> updateSchool(
     SchoolRecord updated, {
     bool preferPlatformCloud = false,
+    bool syncCloud = true,
     String? adminPassword,
   }) async {
     final index = _schools.indexWhere(
@@ -675,6 +676,12 @@ class SchoolRegistryService {
     }
     _schools[index] = updated;
     await _persist(pushCloud: false);
+    if (!syncCloud) {
+      return PlatformSchoolCloudResult(
+        ok: true,
+        schoolId: updated.id.trim().toUpperCase(),
+      );
+    }
     final cloud = await syncSchoolToCloud(
       updated,
       adminPassword: adminPassword,

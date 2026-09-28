@@ -209,7 +209,9 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                       ? Scaffold(
                           key: _scaffoldKey,
                           backgroundColor: WebErpTheme.paperBackdrop,
-                          drawer: Drawer(child: sidebar),
+                          drawer: Drawer(
+                            child: SafeArea(child: sidebar),
+                          ),
                           body: Stack(
                             fit: StackFit.expand,
                             children: [

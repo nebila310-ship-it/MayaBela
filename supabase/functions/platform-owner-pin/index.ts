@@ -1,5 +1,13 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
-import { adminClient, assertNotRateLimited } from "../_shared/school_auth.ts";
+import {
+  adminClient,
+  assertNotRateLimited,
+  clientIp,
+  PLATFORM_AUTHED_RATE_LIMIT,
+  PLATFORM_AUTHED_RATE_WINDOW_MS,
+  LOGIN_RATE_LIMIT,
+  LOGIN_RATE_WINDOW_MS,
+} from "../_shared/school_auth.ts";
 import {
   hashOwnerPin,
   loadOwnerPinHash,
@@ -25,25 +33,38 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "status").trim().toLowerCase();
     const sb = adminClient();
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("cf-connecting-ip") ||
-      "unknown";
+    const ip = clientIp(req);
 
     if (action === "load") {
       // Backward-compatible alias — never returns the hash.
-      await assertNotRateLimited(sb, `platform_pin_status_${ip}`);
+      await assertNotRateLimited(
+        sb,
+        `platform_pin_status_${ip}`,
+        PLATFORM_AUTHED_RATE_LIMIT,
+        PLATFORM_AUTHED_RATE_WINDOW_MS,
+      );
       const existing = await loadOwnerPinHash(sb);
       return jsonResponse({ configured: !!existing, pinHash: null });
     }
 
     if (action === "status") {
-      await assertNotRateLimited(sb, `platform_pin_status_${ip}`);
+      await assertNotRateLimited(
+        sb,
+        `platform_pin_status_${ip}`,
+        PLATFORM_AUTHED_RATE_LIMIT,
+        PLATFORM_AUTHED_RATE_WINDOW_MS,
+      );
       const existing = await loadOwnerPinHash(sb);
       return jsonResponse({ configured: !!existing });
     }
 
     if (action === "verify") {
-      await assertNotRateLimited(sb, `platform_pin_verify_${ip}`);
+      await assertNotRateLimited(
+        sb,
+        `platform_pin_verify_${ip}`,
+        LOGIN_RATE_LIMIT,
+        LOGIN_RATE_WINDOW_MS,
+      );
       const existing = await loadOwnerPinHash(sb);
       if (!existing) {
         return errorResponse("Owner PIN is not configured.", 404, "not_configured");
@@ -56,7 +77,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "save") {
-      await assertNotRateLimited(sb, `platform_pin_save_${ip}`);
+      await assertNotRateLimited(
+        sb,
+        `platform_pin_save_${ip}`,
+        LOGIN_RATE_LIMIT,
+        LOGIN_RATE_WINDOW_MS,
+      );
       const newPin = String(body?.newPin || body?.ownerPin || "").trim();
       if (newPin.length < 6) {
         return errorResponse("PIN must be at least 6 characters.", 400, "invalid");

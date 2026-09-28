@@ -12,6 +12,7 @@ import 'package:mayabela/widgets/admin_classes_ui.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/school_grade_level_picker.dart';
 import 'package:mayabela/widgets/section_teacher_assign_dialogs.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
 /// Admin: Classes → Grades → Sections → roster.
 class AdminGradesScreen extends StatelessWidget {
@@ -30,44 +31,48 @@ class AdminGradesScreen extends StatelessWidget {
             title: s.dashboardTitle('classes', roleKey: 'admin'),
             subtitle: s.allClasses,
           ),
-          body: grades.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      s.noStudentsInSection,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontSize: 15,
-                      ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: WebErpRelatedToolsCard(
+                  tools: [
+                    WebErpRelatedTool(
+                      routeId: 'timetable',
+                      label: s.timetableAdminTitle,
+                      icon: Icons.calendar_view_week,
+                      subtitle: 'Homeroom class schedules',
                     ),
-                  ),
-                )
-              : ListView(
-                  padding: listPagePadding(context),
-                  children: [
-                    for (final entry in SchoolGradeCatalog.group(
-                      grades,
-                    ).entries)
-                      if (entry.value.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: grades.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
                           child: Text(
-                            SchoolGradeCatalog.labelFor(entry.key),
+                            s.noStudentsInSection,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                              color: AdminClassesPalette.deep,
+                              color: Colors.grey.shade700,
+                              fontSize: 15,
                             ),
                           ),
                         ),
-                        for (final grade in entry.value) ...[
-                          AdminGradeCard(
+                      )
+                    : ListView.separated(
+                        padding: listPagePadding(context),
+                        itemCount: grades.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final grade = grades[index];
+                          final sectionCount = ClassStructureService.instance
+                              .sectionsForGrade(grade)
+                              .length;
+                          return AdminGradeCard(
                             grade: grade,
-                            sectionCount: ClassStructureService.instance
-                                .sectionsForGrade(grade)
-                                .length,
+                            sectionCount: sectionCount,
                             sectionLabel: s.section,
                             onTap: () {
                               Navigator.push(
@@ -78,12 +83,12 @@ class AdminGradesScreen extends StatelessWidget {
                                 ),
                               );
                             },
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      ],
-                  ],
-                ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         );
       },
     );

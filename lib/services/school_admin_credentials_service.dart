@@ -18,15 +18,23 @@ class SchoolAdminCredentialsService {
     return AuthService.adminUserForSchool(school.id)?.fullName;
   }
 
+  static bool isDisplayablePassword(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return false;
+    if (v == AuthService.passwordRedactedMarker) return false;
+    if (v.toLowerCase() == 'redacted') return false;
+    return true;
+  }
+
   String passwordLabel(SchoolRecord school) {
     final pwd = passwordForSchool(school);
-    if (pwd != null && pwd.isNotEmpty) return pwd;
-    return 'Not saved';
+    if (pwd != null) return pwd;
+    return 'Hidden after save — set a new temp password to log in';
   }
 
   bool schoolHasPassword(SchoolRecord school) {
-    final stored = school.adminInitialPassword?.trim();
-    return stored != null && stored.isNotEmpty;
+    return isDisplayablePassword(school.adminInitialPassword) ||
+        isDisplayablePassword(passwordForSchool(school));
   }
 
   /// Backfill admin phone/password from in-memory auth into persisted school records.
@@ -41,9 +49,15 @@ class SchoolAdminCredentialsService {
         school.adminContactPhone = admin.phone ?? admin.username;
         dirty = true;
       }
-      if (school.adminInitialPassword == null || school.adminInitialPassword!.trim().isEmpty) {
-        school.adminInitialPassword = admin.password;
-        dirty = true;
+      if (school.adminInitialPassword == null ||
+          school.adminInitialPassword!.trim().isEmpty ||
+          !SchoolAdminCredentialsService.isDisplayablePassword(
+            school.adminInitialPassword,
+          )) {
+        if (SchoolAdminCredentialsService.isDisplayablePassword(admin.password)) {
+          school.adminInitialPassword = admin.password;
+          dirty = true;
+        }
       }
       if (school.adminFullName == null || school.adminFullName!.trim().isEmpty) {
         if (admin.fullName != null && admin.fullName!.trim().isNotEmpty) {
@@ -52,7 +66,10 @@ class SchoolAdminCredentialsService {
         }
       }
       if (dirty) {
-        await SchoolRegistryService.instance.updateSchool(school);
+        await SchoolRegistryService.instance.updateSchool(
+          school,
+          syncCloud: false,
+        );
         updated++;
       }
     }
@@ -71,14 +88,16 @@ class SchoolAdminCredentialsService {
 School ID: ${school.id}
 Admin: ${adminNameForSchool(school) ?? '—'}
 Login: $login
-Temp password: ${password ?? 'Not saved'}
+        Temp password: ${password ?? 'Hidden after save'}
 $expiryLine''';
   }
 
   String? passwordForSchool(SchoolRecord school) {
     final stored = school.adminInitialPassword?.trim();
-    if (stored != null && stored.isNotEmpty) return stored;
-    return AuthService.adminUserForSchool(school.id)?.password;
+    if (isDisplayablePassword(stored)) return stored;
+    final local = AuthService.adminUserForSchool(school.id)?.password;
+    if (isDisplayablePassword(local)) return local;
+    return null;
   }
 
   String? adminPhoneForSchool(SchoolRecord school) {

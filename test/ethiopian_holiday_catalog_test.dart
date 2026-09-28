@@ -8,6 +8,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('EthiopianHolidayCatalog', () {
     test('loads fixed national holidays for a year', () {
       final holidays = EthiopianHolidayCatalog.forYear(2026);
