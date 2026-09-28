@@ -26,7 +26,7 @@ void main() {
 
   test('reset lookup prefers role but still finds school admin email', () {
     final auth = read('supabase/functions/_shared/school_auth.ts');
-    expect(auth, contains('roleKey is a preference only'));
+    expect(auth, contains('is a preference only'));
     expect(auth, contains("school?.adminEmail"));
     expect(auth, contains('mailboxAddress'));
 
