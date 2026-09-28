@@ -12,6 +12,16 @@ class EmailUtils {
 
   static bool isValid(String? raw) => normalize(raw) != null;
 
+  /// Accepts `user@school.et` or `MayaBela <user@school.et>`.
+  static String? normalizeFromHeader(String? raw) {
+    final value = (raw ?? '').trim();
+    if (value.isEmpty) return null;
+    final angle = RegExp(r'<([^>]+)>').firstMatch(value);
+    return normalize(angle?.group(1) ?? value);
+  }
+
+  static bool isValidFromHeader(String? raw) => normalizeFromHeader(raw) != null;
+
   /// Real mailbox the owner typed — not a generated `*.mayabela.local` login.
   static String? userFacing(String? raw) {
     final value = normalize(raw);

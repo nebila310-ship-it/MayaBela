@@ -19,4 +19,13 @@ void main() {
     expect(EmailUtils.userFacing('admin@fenote.mayabela.local'), isNull);
     expect(EmailUtils.userFacing('director@school.et'), 'director@school.et');
   });
+
+  test('accepts a display-name From header', () {
+    expect(
+      EmailUtils.normalizeFromHeader('MayaBela <onboarding@resend.dev>'),
+      'onboarding@resend.dev',
+    );
+    expect(EmailUtils.isValidFromHeader('noreply@school.et'), isTrue);
+    expect(EmailUtils.isValidFromHeader('not-an-email'), isFalse);
+  });
 }

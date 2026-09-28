@@ -44,6 +44,7 @@ npx supabase functions deploy platform-list-schools
 npx supabase functions deploy platform-create-school
 npx supabase functions deploy platform-update-school
 npx supabase functions deploy platform-upload-logo
+npx supabase functions deploy platform-mail-config
 npx supabase functions deploy maya-assistant-chat
 ```
 
@@ -53,7 +54,13 @@ Optional secret for Maya AI:
 npx supabase secrets set MAYA_AI_API_KEY=your_gemini_key
 ```
 
-Password reset email (set SMTP **or** Resend; do not email the new password):
+Password reset email (set SMTP **or** Resend; do not email the new password).
+
+Owner console (no CLI): menu → **Password reset email**, paste a Resend API key
+and From address such as `MayaBela <onboarding@resend.dev>`. The test sender
+only delivers to the email you used at resend.com until a domain is verified.
+
+Or set Edge Function secrets:
 
 ```bash
 npx supabase secrets set MAIL_FROM="MayaBela <noreply@yourdomain.com>"

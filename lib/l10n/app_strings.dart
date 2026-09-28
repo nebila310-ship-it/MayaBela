@@ -220,8 +220,8 @@ class AppStrings implements AppStringsLike {
         'ኢሜይሉ በዚህ ትምህርት ቤት ከተመዘገበ፣ የእንደገና ማስጀመሪያ ኮድ ተልኳል። የኢሜይል ሳጥንዎን ይመልከቱ።',
       );
   String get mailNotConfigured => t(
-        'Email reset is not configured on the server yet. Contact MayaBela support.',
-        'የኢሜይል ዳግም ማስጀመር በሰርቨሩ ላይ አልተዘጋጀም። የMayaBela ድጋፍን ያግኙ።',
+        'Password reset email is not set up yet. In the owner console open Password reset email and add a Resend API key (or SMTP).',
+        'የኢሜይል ዳግም ማስጀመር ገና አልተዘጋጀም። በባለቤት ኮንሶል Password reset email ላይ Resend ቁልፍ ወይም SMTP ያክሉ።',
       );
   String get tooManyAttempts => t(
         'Too many attempts. Try again later.',

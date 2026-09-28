@@ -1,0 +1,175 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
+import 'package:mayabela/services/platform_owner_service.dart';
+
+class PlatformMailStatus {
+  const PlatformMailStatus({
+    required this.ok,
+    required this.configured,
+    this.from = '',
+    this.hasResend = false,
+    this.hasSmtp = false,
+    this.errorCode,
+    this.errorMessage,
+  });
+
+  final bool ok;
+  final bool configured;
+  final String from;
+  final bool hasResend;
+  final bool hasSmtp;
+  final String? errorCode;
+  final String? errorMessage;
+
+  factory PlatformMailStatus.fromMap(Map<dynamic, dynamic> data) {
+    return PlatformMailStatus(
+      ok: data['ok'] == true && data['error'] == null,
+      configured: data['configured'] == true,
+      from: (data['from'] ?? '').toString(),
+      hasResend: data['hasResend'] == true,
+      hasSmtp: data['hasSmtp'] == true,
+      errorCode: data['code']?.toString(),
+      errorMessage: data['error']?.toString() ?? data['message']?.toString(),
+    );
+  }
+
+  static const unauthorized = PlatformMailStatus(
+    ok: false,
+    configured: false,
+    errorCode: 'unauthorized',
+    errorMessage: 'Unlock the platform console with your Owner PIN, then retry.',
+  );
+
+  static const cloudRequired = PlatformMailStatus(
+    ok: false,
+    configured: false,
+    errorCode: 'cloud_required',
+    errorMessage: 'Cloud is not configured on this build.',
+  );
+}
+
+class PlatformMailCloudService {
+  PlatformMailCloudService._();
+  static final instance = PlatformMailCloudService._();
+
+  Future<String?> _ownerPinOrNull() async {
+    await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+    if (!SupabaseBootstrap.isInitialized) return null;
+    final existing = PlatformOwnerService.instance.sessionOwnerPin?.trim();
+    if (existing != null &&
+        existing.length >= PlatformOwnerService.minPinLength) {
+      return existing;
+    }
+    await PlatformOwnerService.instance.syncPinWithCloud();
+    final pin = PlatformOwnerService.instance.sessionOwnerPin?.trim();
+    if (pin == null || pin.length < PlatformOwnerService.minPinLength) {
+      return null;
+    }
+    return pin;
+  }
+
+  Future<PlatformMailStatus> _invoke(Map<String, dynamic> body) async {
+    try {
+      final ownerPin = await _ownerPinOrNull();
+      if (!SupabaseBootstrap.isInitialized) {
+        return PlatformMailStatus.cloudRequired;
+      }
+      if (ownerPin == null) return PlatformMailStatus.unauthorized;
+
+      final res = await SupabaseBootstrap.client.functions.invoke(
+        'platform-mail-config',
+        body: {
+          'ownerPin': ownerPin,
+          ...body,
+        },
+      );
+      final data = res.data;
+      if (data is! Map) {
+        return const PlatformMailStatus(
+          ok: false,
+          configured: false,
+          errorCode: 'invalid',
+          errorMessage: 'Unexpected cloud response.',
+        );
+      }
+      if (data['error'] != null) {
+        return PlatformMailStatus(
+          ok: false,
+          configured: false,
+          errorCode: (data['code'] as String?) ?? 'invalid',
+          errorMessage: data['error']?.toString() ?? 'Mail config failed.',
+        );
+      }
+      return PlatformMailStatus.fromMap(data);
+    } on FunctionException catch (e) {
+      if (kDebugMode) {
+        debugPrint('PlatformMailCloudService: ${e.status} ${e.details}');
+      }
+      final details = e.details;
+      String? code;
+      String? message;
+      if (details is Map) {
+        code = details['code']?.toString();
+        message = details['error']?.toString() ?? details['message']?.toString();
+      } else if (details is String) {
+        message = details;
+        final codeMatch = RegExp(r'"code"\s*:\s*"([^"]+)"').firstMatch(details);
+        final errMatch = RegExp(r'"error"\s*:\s*"([^"]+)"').firstMatch(details);
+        code = codeMatch?.group(1);
+        message = errMatch?.group(1) ?? message;
+      }
+      return PlatformMailStatus(
+        ok: false,
+        configured: false,
+        errorCode: code ?? 'invalid',
+        errorMessage: message ?? 'Mail config failed (${e.status}).',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PlatformMailCloudService failed: $e');
+      }
+      return PlatformMailStatus(
+        ok: false,
+        configured: false,
+        errorCode: 'invalid',
+        errorMessage: e.toString(),
+      );
+    }
+  }
+
+  Future<PlatformMailStatus> status() => _invoke({'action': 'status'});
+
+  Future<PlatformMailStatus> save({
+    required String from,
+    String? resendApiKey,
+    String? smtpHost,
+    String? smtpPort,
+    String? smtpUser,
+    String? smtpPass,
+    String? smtpSecure,
+  }) {
+    return _invoke({
+      'action': 'save',
+      'from': from.trim(),
+      if (resendApiKey != null && resendApiKey.trim().isNotEmpty)
+        'resendApiKey': resendApiKey.trim(),
+      if (smtpHost != null && smtpHost.trim().isNotEmpty)
+        'smtpHost': smtpHost.trim(),
+      if (smtpPort != null && smtpPort.trim().isNotEmpty)
+        'smtpPort': smtpPort.trim(),
+      if (smtpUser != null && smtpUser.trim().isNotEmpty)
+        'smtpUser': smtpUser.trim(),
+      if (smtpPass != null && smtpPass.trim().isNotEmpty)
+        'smtpPass': smtpPass,
+      if (smtpSecure != null && smtpSecure.trim().isNotEmpty)
+        'smtpSecure': smtpSecure.trim(),
+    });
+  }
+
+  Future<PlatformMailStatus> sendTest(String to) => _invoke({
+        'action': 'test',
+        'to': to.trim(),
+      });
+}
