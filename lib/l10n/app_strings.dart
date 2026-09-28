@@ -216,12 +216,16 @@ class AppStrings implements AppStringsLike {
       t('Registered phone number', 'የተመዘገበ ስልክ ቁጥር');
   String get sendOtp => t('Send reset code', 'የእንደገና ማስጀመሪያ ኮድ ላክ');
   String get resetCodeSent => t(
-        'If that email is registered at this school, a reset email was sent. Use the code, or open the link, from the message.',
-        'ኢሜይሉ በዚህ ትምህርት ቤት ከተመዘገበ፣ መልዕክት ተልኳል። ኮዱን ይጠቀሙ ወይም ሊንኩን ይክፈቱ።',
+        'If that email is registered at this school, a reset email was sent. Check Inbox and Spam for a 6-digit MayaBela code.',
+        'ኢሜይሉ በዚህ ትምህርት ቤት ከተመዘገበ፣ መልዕክት ተልኳል። Inbox እና Spam ውስጥ የ6-አሃዝ MayaBela ኮድ ይመልከቱ።',
+      );
+  String get resetCodeSentCheckSpam => t(
+        'If that email is registered, a reset message was requested. Check Inbox, Spam, and Promotions — it may come from supabase.io, not MayaBela. If nothing arrives, open the owner console → Password reset email and add a Gmail App Password (SMTP) or Resend key.',
+        'ኢሜይሉ ከተመዘገበ መልዕክት ተጠይቋል። Inbox፣ Spam እና Promotions ይመልከቱ — ከ supabase.io ሊመጣ ይችላል። ካልደረሰ በባለቤት ኮንሶል Password reset email ላይ Gmail App Password ወይም Resend ያክሉ።',
       );
   String get mailNotConfigured => t(
-        'Password reset email is not set up yet. In the owner console open Password reset email and add a Resend API key (or SMTP).',
-        'የኢሜይል ዳግም ማስጀመር ገና አልተዘጋጀም። በባለቤት ኮንሶል Password reset email ላይ Resend ቁልፍ ወይም SMTP ያክሉ።',
+        'Gmail is not receiving the built-in mailer. In the owner console open Password reset email and add smtp.gmail.com plus a Gmail App Password (or a Resend API key).',
+        'የውስጥ መላኪያ Gmail አይደርስም። በባለቤት ኮንሶል Password reset email ላይ smtp.gmail.com እና Gmail App Password (ወይም Resend) ያክሉ።',
       );
   String get tooManyAttempts => t(
         'Too many attempts. Try again later.',

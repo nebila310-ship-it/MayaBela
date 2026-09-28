@@ -19,6 +19,7 @@ class SchoolAuthCloudResult {
     this.profile,
     this.teacherSynced = false,
     this.applicationId,
+    this.via,
   });
 
   final bool ok;
@@ -27,6 +28,8 @@ class SchoolAuthCloudResult {
   final RegisteredUser? profile;
   final bool teacherSynced;
   final String? applicationId;
+  /// `mail` = Resend/SMTP 6-digit code. `auth` = Supabase Auth mailer.
+  final String? via;
 }
 
 /// Server-side school login via Supabase Edge Functions + Auth session.
@@ -538,7 +541,10 @@ class SchoolAuthCloudService {
           errorMessage: data?['error']?.toString(),
         );
       }
-      return const SchoolAuthCloudResult(ok: true);
+      return SchoolAuthCloudResult(
+        ok: true,
+        via: data['via']?.toString(),
+      );
     } on FunctionException catch (e) {
       return SchoolAuthCloudResult(
         ok: false,

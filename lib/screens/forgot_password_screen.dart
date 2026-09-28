@@ -10,12 +10,11 @@ class ForgotPasswordScreen extends StatefulWidget {
     super.key,
     this.initialSchoolId,
     this.initialEmail,
-    this.roleKey,
   });
 
   final String? initialSchoolId;
   final String? initialEmail;
-  final String? roleKey;
+
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -79,10 +78,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
 
     setState(() => _busy = true);
+    // Do not send the login-tab role. Teacher/Staff tabs would skip the
+    // school admin mailbox and show "email sent" without mailing anyone.
     final result = await SchoolAuthCloudService.instance.requestPasswordReset(
       schoolId: _schoolId.text,
       email: _email.text,
-      roleKey: widget.roleKey,
     );
     if (!mounted) return;
     if (!result.ok) {
@@ -96,7 +96,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _busy = false;
       _step = 1;
       _messageOk = true;
-      message = s.resetCodeSent;
+      message = result.via == 'mail'
+          ? s.resetCodeSent
+          : s.resetCodeSentCheckSpam;
     });
   }
 
@@ -124,7 +126,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       email: _email.text,
       code: _otp.text,
       newPassword: _newPassword.text,
-      roleKey: widget.roleKey,
     );
     if (!mounted) return;
     setState(() => _busy = false);

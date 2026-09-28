@@ -407,6 +407,15 @@ export function normalizeEmail(value: unknown): string | null {
   return email;
 }
 
+/** `user@school.et` or `MayaBela <user@school.et>`. */
+export function mailboxAddress(value: unknown): string | null {
+  const direct = normalizeEmail(value);
+  if (direct) return direct;
+  const raw = String(value || "").trim();
+  const angle = /<([^>]+)>/.exec(raw);
+  return angle ? normalizeEmail(angle[1]) : null;
+}
+
 /** Ethiopian mobile login key, e.g. 0911234567. */
 export function ethiopianLoginKey(value: unknown): string {
   const normalized = normalizeUsername(value);
@@ -1327,6 +1336,15 @@ export async function findAccountDoc(
   return null;
 }
 
+function isStudentRole(role: unknown): boolean {
+  return String(role || "").trim().toLowerCase() === "student";
+}
+
+/**
+ * Find a non-student account by mailbox at a school.
+ * `roleKey` is a preference only — Reset Password from the Teacher tab
+ * must still find the school admin mailbox.
+ */
 export async function findAccountByEmail(
   sb: SupabaseClient,
   schoolId: string,
@@ -1337,18 +1355,55 @@ export async function findAccountByEmail(
   const sid = String(schoolId || "").trim().toUpperCase();
   if (!target || !sid) return null;
 
+  const matches: Array<{ id: string; data: Record<string, unknown> }> = [];
+
+  const { data: exactRows } = await sb
+    .from("app_documents")
+    .select("doc_id, data, school_id")
+    .eq("collection", "app_auth_accounts")
+    .eq("school_id", sid)
+    .filter("data->>email", "eq", target)
+    .limit(20);
+  for (const row of exactRows || []) {
+    const data = { ...(row.data as Record<string, unknown>) };
+    if (isStudentRole(data.roleKey)) continue;
+    if (mailboxAddress(data.email) !== target) continue;
+    matches.push({ id: row.doc_id as string, data });
+  }
+
+  if (matches.length === 0) {
+    const inSchool = await queryDocs(
+      sb,
+      "app_auth_accounts",
+      [{ column: "schoolId", op: "eq", value: sid }],
+      2000,
+    );
+    for (const doc of inSchool) {
+      if (isStudentRole(doc.data.roleKey)) continue;
+      if (mailboxAddress(doc.data.email) !== target) continue;
+      matches.push(doc);
+    }
+  }
+
+  const wanted = String(roleKey || "").trim();
+  if (wanted) {
+    const preferred = matches.find((m) => m.data.roleKey === wanted);
+    if (preferred) return preferred;
+  }
+  if (matches[0]) return matches[0];
+
+  const school = await getDoc(sb, "school_registry", sid, sid);
+  if (mailboxAddress(school?.adminEmail) !== target) return null;
+
   const inSchool = await queryDocs(
     sb,
     "app_auth_accounts",
     [{ column: "schoolId", op: "eq", value: sid }],
-    500,
+    200,
   );
-  for (const doc of inSchool) {
-    if (normalizeEmail(doc.data.email) !== target) continue;
-    if (roleKey && doc.data.roleKey !== roleKey) continue;
-    return { id: doc.id, data: doc.data };
-  }
-  return null;
+  const admin = inSchool.find((doc) => doc.data.roleKey === "admin") ||
+    inSchool.find((doc) => !isStudentRole(doc.data.roleKey));
+  return admin || null;
 }
 
 /** School-scoped account document id (avoids cross-school phone collisions). */

@@ -30,7 +30,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const schoolId = String(body?.schoolId || "").trim().toUpperCase();
     const email = normalizeEmail(body?.email);
-    const roleKey = String(body?.roleKey || "").trim() || null;
 
     if (!schoolId || !email) {
       return errorResponse("School ID and email are required.", 400, "invalid");
@@ -39,7 +38,7 @@ Deno.serve(async (req) => {
     const sb = adminClient();
     await assertNotRateLimited(sb, `reset_request_${schoolId}_${email}`);
 
-    const found = await findAccountByEmail(sb, schoolId, email, roleKey);
+    const found = await findAccountByEmail(sb, schoolId, email);
     if (!found || found.data.roleKey === "student") {
       return jsonResponse({ ok: true });
     }
@@ -59,13 +58,14 @@ Deno.serve(async (req) => {
 
     const mail = await loadMailSecrets(sb);
     try {
-      await sendPasswordResetEmail(sb, {
+      const via = await sendPasswordResetEmail(sb, {
         to: email,
         schoolId,
         username,
         code,
         mail,
       });
+      return jsonResponse({ ok: true, via });
     } catch (sendErr) {
       console.error("password reset mail failed", sendErr);
       try {
@@ -84,8 +84,6 @@ Deno.serve(async (req) => {
         "mail_not_configured",
       );
     }
-
-    return jsonResponse({ ok: true });
   } catch (e) {
     const msg = String(e?.message || e);
     if (msg.includes("rate_limited")) {
