@@ -18,6 +18,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/screens/parent_compose_message_screen.dart';
 import 'package:mayabela/widgets/chat_contact_profile.dart';
+import 'package:mayabela/widgets/maya_floating_chat.dart';
 import 'package:mayabela/widgets/messages_ui.dart';
 import 'package:mayabela/widgets/message_voice_input_bar.dart';
 import 'package:mayabela/widgets/attachment_share_actions.dart';
@@ -210,9 +211,14 @@ class _MessagesScreenState extends State<MessagesScreen>
     required List<Conversation> chats,
     required bool empty,
     required AppStrings s,
+    required bool showCompose,
   }) {
+    final bottomPad =
+        MayaFloatingChat.pageEndClearance +
+        (showCompose ? MayaFloatingChat.stackedFabLift : 0);
     if (chats.isEmpty) {
       return ListView(
+        padding: EdgeInsets.only(bottom: bottomPad),
         children: [
           const SizedBox(height: 48),
           if (empty) _EmptyMessagesHeader(),
@@ -229,6 +235,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       );
     }
     return ListView.separated(
+      padding: EdgeInsets.only(bottom: bottomPad),
       itemCount: chats.length,
       separatorBuilder: (_, _) =>
           const Divider(height: 1, indent: 76, color: Color(0xFFE9EDEF)),
@@ -317,25 +324,47 @@ class _MessagesScreenState extends State<MessagesScreen>
           body: TabBarView(
             controller: _tabs,
             children: [
-              _inboxList(context, chats: direct, empty: chats.isEmpty, s: s),
-              _inboxList(context, chats: groups, empty: false, s: s),
-              _inboxList(context, chats: broadcasts, empty: false, s: s),
+              _inboxList(
+                context,
+                chats: direct,
+                empty: chats.isEmpty,
+                s: s,
+                showCompose: showCompose,
+              ),
+              _inboxList(
+                context,
+                chats: groups,
+                empty: false,
+                s: s,
+                showCompose: showCompose,
+              ),
+              _inboxList(
+                context,
+                chats: broadcasts,
+                empty: false,
+                s: s,
+                showCompose: showCompose,
+              ),
             ],
           ),
           floatingActionButton: !showCompose
               ? null
-              : isParent
-              ? FloatingActionButton(
-                  backgroundColor: MessagesPalette.fab,
-                  foregroundColor: Colors.white,
-                  onPressed: _parentCompose,
-                  child: const Icon(Icons.message_rounded),
-                )
-              : FloatingActionButton(
-                  backgroundColor: MessagesPalette.fab,
-                  foregroundColor: Colors.white,
-                  onPressed: () => _showComposeSheet(context),
-                  child: const Icon(Icons.chat_rounded),
+              : Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: MayaFloatingChat.stackedFabLift,
+                  ),
+                  child: FloatingActionButton(
+                    key: const Key('messages-compose-fab'),
+                    heroTag: 'messages-compose-fab',
+                    backgroundColor: MessagesPalette.fab,
+                    foregroundColor: Colors.white,
+                    onPressed: isParent
+                        ? _parentCompose
+                        : () => _showComposeSheet(context),
+                    child: Icon(
+                      isParent ? Icons.message_rounded : Icons.add_rounded,
+                    ),
+                  ),
                 ),
         );
       },
@@ -1475,7 +1504,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     SafeArea(
                       child: Container(
                         color: MessagesPalette.composerBar,
-                        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                        padding: const EdgeInsets.fromLTRB(
+                          8,
+                          6,
+                          8 + MayaFloatingChat.pageEndClearance,
+                          8,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
