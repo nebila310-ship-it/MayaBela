@@ -3,8 +3,6 @@ import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/parent_messaging_policy.dart';
-import 'package:mayabela/services/rbac/eduaba_chat_matrix.dart';
-import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
@@ -16,9 +14,8 @@ abstract final class MessagingAccessService {
   /// School owner, or staff granted messaging / support (e.g. Vice President).
   static bool hasSchoolWideMessaging() {
     final role = AuthService.currentUser?.roleKey;
-    if (role == AuthService.roleAdmin) return true;
-    return AuthService.hasPermission(SchoolPermissions.messageParents) ||
-        AuthService.hasPermission(SchoolPermissions.accessSupport);
+    if (role == null || role == AuthService.roleStudent) return false;
+    return true;
   }
 
   static bool canView(Conversation conversation, String? roleKey) {
@@ -75,7 +72,9 @@ abstract final class MessagingAccessService {
     final normalized = parentName.trim().toLowerCase();
     if (normalized.isEmpty) return null;
     ParentRecipientOption? merged;
-    for (final option in parentsForSchool(schoolId ?? AuthService.activeSchoolId)) {
+    for (final option in parentsForSchool(
+      schoolId ?? AuthService.activeSchoolId,
+    )) {
       final nameMatch = option.parentName.trim().toLowerCase() == normalized;
       final usernameMatch = option.participantUsernames.any(
         (username) =>
@@ -144,8 +143,8 @@ abstract final class MessagingAccessService {
       parentName: option.parentName,
       studentNames: option.studentNames,
       studentIds: option.studentIds,
-      parentUsername: option.parentUsername ??
-          (usernames.isEmpty ? null : usernames.first),
+      parentUsername:
+          option.parentUsername ?? (usernames.isEmpty ? null : usernames.first),
       parentUsernames: usernames.toList(),
     );
   }
@@ -237,8 +236,9 @@ abstract final class MessagingAccessService {
         : EnrollmentService.instance.approvedForSchool(normalizedSchoolId);
     for (final link in links) {
       if (link.status != ParentLinkStatus.approved) continue;
-      final student =
-          StudentRegistryService.instance.lookupById(link.studentId);
+      final student = StudentRegistryService.instance.lookupById(
+        link.studentId,
+      );
       if (student == null || !student.isActive) continue;
       if (normalizedSchoolId != null &&
           student.schoolId.trim().toUpperCase() != normalizedSchoolId) {
@@ -333,79 +333,38 @@ abstract final class MessagingAccessService {
   static bool canTeacherDirectToParent(String parentName) {
     final normalized = parentName.trim().toLowerCase();
     if (normalized.isEmpty) return false;
-    if (hasSchoolWideMessaging()) {
-      return parentsForSchool(AuthService.activeSchoolId)
-          .any((p) => p.parentName.trim().toLowerCase() == normalized);
-    }
-    return parentsForTeacherClasses()
-        .any((p) => p.parentName.trim().toLowerCase() == normalized);
+    return parentsForSchool(
+      AuthService.activeSchoolId,
+    ).any((p) => p.parentName.trim().toLowerCase() == normalized);
   }
 
   static bool canTeacherDirectToStaff(String staffId) {
-    if (hasSchoolWideMessaging()) {
-      final member = StaffMemberOption.resolve(staffId);
-      return member != null;
-    }
-    return ParentMessagingPolicy.isAdminStaff(staffId);
+    final member = StaffMemberOption.resolve(staffId);
+    if (member == null) return false;
+    final me = StaffMemberOption.viewerCompositeStaffId(
+      AuthService.currentUser?.roleKey,
+    );
+    if (me != null && StaffMemberOption.idsEqual(me, member.id)) return false;
+    return true;
   }
 
   /// Parents list for compose UI based on the signed-in user's messaging scope.
   static List<ParentRecipientOption> parentsForCurrentCompose() {
-    if (hasSchoolWideMessaging()) {
-      return parentsForSchool(AuthService.activeSchoolId);
+    if (AuthService.currentUser?.roleKey == AuthService.roleParent) {
+      return const [];
     }
-    return parentsForTeacherClasses();
+    return parentsForSchool(AuthService.activeSchoolId);
   }
 
-  /// Staff list for compose UI based on the signed-in user's messaging scope.
-  ///
-  /// Owner sees everyone; administration staff see the EDUABA chat matrix
-  /// scope (superior, reports, peers, and operationally linked branches);
-  /// classroom teachers see their admin contacts.
+  /// Staff directory for compose — every school login except the viewer.
   static List<StaffMemberOption> staffForCurrentCompose() {
-    final me = AuthService.currentUser;
-    if (me?.roleKey == AuthService.roleAdmin) {
-      return SchoolDataService.instance.getStaffForActiveSchool();
-    }
-    if (AuthService.isAdministrationStaff) {
-      final myRoles = me?.staffRoles ?? const <String>[];
-      if (myRoles.isNotEmpty) {
-        return SchoolDataService.instance
-            .getStaffForActiveSchool()
-            .where((peer) => _staffPeerAllowedByMatrix(myRoles, peer))
-            .toList();
-      }
-    }
-    if (hasSchoolWideMessaging()) {
-      return SchoolDataService.instance.getStaffForActiveSchool();
-    }
-    return adminContactsForTeacher();
-  }
-
-  /// EDUABA chat matrix filter for one staff-directory entry.
-  static bool _staffPeerAllowedByMatrix(
-    List<String> myRoles,
-    StaffMemberOption peer,
-  ) {
-    final my = myRoles.map(StaffRoles.canonicalize).toSet();
-    switch (peer.kind) {
-      case StaffKind.driver:
-        return my.any(EduabaChatMatrix.driverContacts.contains);
-      case StaffKind.adminStaff:
-        // School owner / console accounts are always reachable upward.
-        return true;
-      case StaffKind.teacher:
-        final record = TeacherRegistryService.instance.lookupById(peer.rawId);
-        final peerRoles = record?.staffRoles ?? const <String>[];
-        if (peerRoles.isEmpty) {
-          // Classroom teacher without administration staff roles.
-          return my.any(EduabaChatMatrix.classroomTeacherContacts.contains);
-        }
-        return EduabaChatMatrix.canStaffChat(
-          actorRoles: myRoles,
-          peerRoles: peerRoles,
-        );
-    }
+    final me = StaffMemberOption.viewerCompositeStaffId(
+      AuthService.currentUser?.roleKey,
+    );
+    return SchoolDataService.instance
+        .getStaffForActiveSchool()
+        .where((peer) => me == null || !StaffMemberOption.idsEqual(me, peer.id))
+        .toList();
   }
 
   /// Subject shown to parents in direct threads, e.g. Mathematics or Homeroom.
@@ -420,10 +379,10 @@ abstract final class MessagingAccessService {
       StaffKind.adminStaff => 'Admin',
       StaffKind.driver => 'Transport',
       StaffKind.teacher => _teacherSubjectLabel(
-          member.rawId,
-          staffParticipantId: staffParticipantId,
-          linkedStudentIds: linkedStudentIds,
-        ),
+        member.rawId,
+        staffParticipantId: staffParticipantId,
+        linkedStudentIds: linkedStudentIds,
+      ),
     };
   }
 
@@ -447,7 +406,9 @@ abstract final class MessagingAccessService {
       }
 
       for (final subjectTeacher
-          in SchoolDataService.instance.getSubjectsForClass(student.className)) {
+          in SchoolDataService.instance.getSubjectsForClass(
+            student.className,
+          )) {
         if (subjectTeacher.teacherId.toUpperCase() == teacherId.toUpperCase()) {
           return subjectTeacher.subject;
         }

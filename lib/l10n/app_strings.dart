@@ -1221,9 +1221,11 @@ class AppStrings implements AppStringsLike {
         'የትምህርት ቤት ሰራተኞችን መልእክት',
       );
   String get parentComposeMessageHint => t(
-        'Reach homeroom, subject teachers, or admin',
-        'የክፍል መምህር፣ የትምህርት መምህራን ወይም አስተዳዳሪን ያግኙ',
+        'Message any teacher, office, or staff member at the school',
+        'ማንኛውንም መምህር፣ ቢሮ ወይም ሰራተኛ ያግኙ',
       );
+  String get onlineNow => t('Online', 'መስመር ላይ', 'Sarara irratti');
+  String get offlineNow => t('Offline', 'ከመስመር ውጪ', 'Sarara irraa');
   String get parentMessagesSubtitle => t(
         'Chat with teachers and school staff',
         'ከመምህራን እና ከትምህርት ቤት ሰራተኞች ጋር ይወያዩ',
@@ -1730,9 +1732,9 @@ class AppStrings implements AppStringsLike {
         'Maatii fili; barsiisota filannoo dabaluu dandeessa',
       );
   String get messagesAdminSubtitle => t(
-        'School-wide messaging',
-        'የትምህርት ቤት መልዕክት',
-        'Ergaa mana barumsaa',
+        'Message any parent or staff at the school',
+        'ማንኛውንም ወላጅ ወይም ሰራተኛ ያግኙ',
+        'Maatii ykn hojjetaa kamiyyuu ergi',
       );
   String get messageBroadcasts =>
       t('Broadcasts', 'የጅምላ መልዕክቶች', 'Beeksisa gurguddaa');
