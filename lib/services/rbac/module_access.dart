@@ -59,6 +59,7 @@ abstract final class ModuleAccess {
     'profile': ModuleRule(open: true),
     'logout': ModuleRule(open: true),
     'maya_assistant': ModuleRule(open: true),
+    'messages': ModuleRule(open: true),
 
     // Organization
     'institution': ModuleRule(adminOnly: true),
@@ -269,11 +270,7 @@ abstract final class ModuleAccess {
       manage: [],
       departmental: false,
     ),
-    'support': ModuleRule(
-      view: [SchoolPermissions.accessSupport],
-      manage: [SchoolPermissions.accessSupport],
-      departmental: false,
-    ),
+    'support': ModuleRule(open: true),
     'system_health': ModuleRule(
       view: [SchoolPermissions.viewSystemHealth],
       manage: [],
@@ -563,6 +560,10 @@ abstract final class ModuleAccess {
       },
     ),
     'announcements': ModuleRoleAllocation(visibleTo: _everyStaffRole),
+    'support': ModuleRoleAllocation(
+      visibleTo: _everyStaffRole,
+      manageBy: _everyStaffRole,
+    ),
     'events': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.sectionDirector,
@@ -657,8 +658,8 @@ abstract final class ModuleAccess {
     if (rule == null || rule.adminOnly) return false;
 
     // Administration staff: only modules granted by their staff role(s),
-    // plus minimal chrome (home / profile / settings / logout / Maya — the
-    // AI assistant is allocated to every role).
+    // plus minimal chrome (home / profile / settings / logout / Maya /
+    // Messages — allocated to every role).
     if (AuthService.isAdministrationStaff) {
       const staffChrome = {
         'dashboard',
@@ -666,6 +667,8 @@ abstract final class ModuleAccess {
         'settings',
         'logout',
         'maya_assistant',
+        'support',
+        'messages',
       };
       if (staffChrome.contains(id)) return true;
       // EDUABA dashboard matrix: allocated modules show only for their roles.

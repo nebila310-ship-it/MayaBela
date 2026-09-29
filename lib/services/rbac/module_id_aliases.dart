@@ -65,6 +65,7 @@ const Map<String, String> kModuleIdAliases = {
   'ict': 'digital_ops',
   'devices': 'digital_ops',
   'gallery': 'events',
+  'messages': 'support',
 };
 
 String normalizeModuleId(String moduleId) =>
