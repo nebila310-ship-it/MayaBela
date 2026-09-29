@@ -12,7 +12,7 @@ import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/widgets/inbox_messages_action.dart';
 
-/// Remind the signed-in role about unread messages once until new mail arrives.
+/// Remind about unread mail once. Seeing or reading it never repeats that mail.
 class InboxLoginReminder extends StatefulWidget {
   const InboxLoginReminder({
     super.key,
@@ -23,7 +23,7 @@ class InboxLoginReminder extends StatefulWidget {
   final Widget child;
   final VoidCallback? onOpenMessages;
 
-  static const _prefsPrefix = 'inbox_login_notified_v1_';
+  static const _prefsPrefix = 'inbox_ack_v3_';
   static int? shownForGeneration;
   static final Set<String> _rememberedKeys = {};
 
@@ -37,26 +37,30 @@ class InboxLoginReminder extends StatefulWidget {
     shownForGeneration = null;
     _rememberedKeys.clear();
     final prefs = await SharedPreferences.getInstance();
-    for (final key in prefs.getKeys().where((k) => k.startsWith(_prefsPrefix))) {
+    for (final key in prefs.getKeys().where(
+      (k) =>
+          k.startsWith(_prefsPrefix) ||
+          k.startsWith('inbox_login_notified_v1_'),
+    )) {
       await prefs.remove(key);
     }
   }
 
   static String _storageKey() {
-    final user = AuthService.currentUser;
-    final school = (AuthService.activeSchoolId ?? user?.schoolId ?? '').trim();
-    final username = (user?.username ?? '').trim().toLowerCase();
-    return '$_prefsPrefix$school|$username';
+    final username =
+        (AuthService.currentUser?.username ?? '').trim().toLowerCase();
+    final role = AuthService.currentUser?.roleKey ?? '';
+    return '$_prefsPrefix${username.isEmpty ? role : username}';
   }
 
-  static List<String> currentUnseenKeys() {
+  static List<Set<String>> currentUnseenGroups({bool messagesOnly = true}) {
     final user = AuthService.currentUser;
     if (user == null) return const [];
     final role = user.roleKey;
     final staffId = role == AuthService.roleAdmin
         ? StaffMemberOption.viewerAdminStaffId(role)
         : StaffMemberOption.viewerStaffId(role);
-    final keys = <String>{};
+    final groups = <Set<String>>[];
     for (final conversation
         in SchoolDataService.instance.getConversationsForRole(role)) {
       for (final message in conversation.messages) {
@@ -68,15 +72,73 @@ class InboxLoginReminder extends StatefulWidget {
           continue;
         }
         if (message.seenAt != null) continue;
-        keys.add('chat:${conversation.id}:${message.text}');
+        groups.add({
+          'chat:${conversation.id}:${message.text}',
+          'msg:${message.senderDisplayName}|${message.text}',
+        });
       }
     }
-    for (final item in NotificationService.instance.notificationsForCurrentUser()) {
-      if (item.isRead || item.type != NotificationType.message) continue;
-      keys.add('n:${item.id}');
+    for (final item
+        in NotificationService.instance.notificationsForCurrentUser()) {
+      if (item.isRead) continue;
+      if (messagesOnly && item.type != NotificationType.message) continue;
+      groups.add({
+        'n:${item.id}',
+        'n:${item.type.name}|${item.title}|${item.body}|${item.recipientRole}',
+      });
     }
-    final out = keys.toList()..sort();
-    return out;
+    return groups;
+  }
+
+  static List<String> currentUnseenKeys({bool messagesOnly = true}) {
+    final keys = <String>{};
+    for (final group in currentUnseenGroups(messagesOnly: messagesOnly)) {
+      keys.addAll(group);
+    }
+    return keys.toList()..sort();
+  }
+
+  /// Call when the user opens Messages or the notification tray.
+  static Future<void> acknowledgeCurrent() async {
+    final unseen = currentUnseenKeys(messagesOnly: false);
+    if (unseen.isNotEmpty) {
+      await _persistAck(unseen);
+    }
+    NotificationService.instance.markAllRead();
+    NotificationService.instance.markMessagesBadgeRead();
+  }
+
+  static Future<void> _persistAck(List<String> unseen) async {
+    final scope = _storageKey();
+    for (final key in unseen) {
+      _rememberedKeys.add('$scope|$key');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getStringList(scope) ?? const [];
+      await prefs.setStringList(
+        scope,
+        {...stored, ...unseen}.toList()..sort(),
+      );
+    } catch (_) {}
+  }
+
+  static Future<bool> _alreadyAcknowledged({bool messagesOnly = true}) async {
+    final groups = currentUnseenGroups(messagesOnly: messagesOnly);
+    if (groups.isEmpty) return true;
+    final scope = _storageKey();
+    bool known(String key) => _rememberedKeys.contains('$scope|$key');
+    if (groups.every((group) => group.any(known))) return true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = (prefs.getStringList(scope) ?? const []).toSet();
+      for (final key in stored) {
+        _rememberedKeys.add('$scope|$key');
+      }
+      return groups.every((group) => group.any(stored.contains));
+    } catch (_) {
+      return groups.every((group) => group.any(known));
+    }
   }
 
   @override
@@ -100,48 +162,24 @@ class _InboxLoginReminderState extends State<InboxLoginReminder> {
     final generation = AuthService.sessionGeneration;
     if (InboxLoginReminder.shownForGeneration == generation) return;
 
+    await NotificationService.instance.hydratePersistedReads();
+    if (!mounted) return;
+
     final unread = DashboardBadgeService.instance.countFor('messages');
     if (unread <= 0) return;
 
     final unseen = InboxLoginReminder.currentUnseenKeys();
     if (unseen.isEmpty) return;
-
-    final scope = InboxLoginReminder._storageKey();
-    final remembered = unseen
-        .every((key) => InboxLoginReminder._rememberedKeys.contains('$scope|$key'));
-    final prefs = await SharedPreferences.getInstance();
+    if (await InboxLoginReminder._alreadyAcknowledged()) return;
     if (!mounted) return;
-    final stored = prefs.getStringList(scope) ?? const [];
-    final storedSet = stored.toSet();
-    if (remembered || unseen.every(storedSet.contains)) return;
 
+    // Remember before showing so a rebuild or next login cannot repeat it.
     InboxLoginReminder.shownForGeneration = generation;
-    for (final key in unseen) {
-      InboxLoginReminder._rememberedKeys.add('$scope|$key');
-    }
-    await prefs.setStringList(
-      scope,
-      {...storedSet, ...unseen}.toList()..sort(),
-    );
-
-    final s = AppLocale.instance.strings;
-    final alreadyNotified =
-        NotificationService.instance.unreadCountForTypes([
-          NotificationType.message,
-        ]) >
-        0;
-    if (!alreadyNotified) {
-      NotificationService.instance.push(
-        title: s.notifyMessages,
-        body: s.inboxUnreadOnLogin(unread),
-        type: NotificationType.message,
-        fromRole: 'school',
-        fromName: s.notifyMessages,
-        recipientRole: user.roleKey,
-      );
-    }
+    await InboxLoginReminder._persistAck(unseen);
+    NotificationService.instance.markMessagesBadgeRead();
 
     if (!mounted) return;
+    final s = AppLocale.instance.strings;
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.showSnackBar(
       SnackBar(
@@ -150,6 +188,7 @@ class _InboxLoginReminderState extends State<InboxLoginReminder> {
         action: SnackBarAction(
           label: s.inboxOpenMessages,
           onPressed: () {
+            unawaited(InboxLoginReminder.acknowledgeCurrent());
             if (widget.onOpenMessages != null) {
               widget.onOpenMessages!();
               return;

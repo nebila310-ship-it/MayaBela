@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/screens/announcements_screen.dart';
@@ -11,11 +13,25 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/widgets/inbox_login_reminder.dart';
 import 'package:mayabela/widgets/localized_screen.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(InboxLoginReminder.acknowledgeCurrent());
+    });
+  }
 
   IconData _iconForType(NotificationType type) {
     switch (type) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/platform/web_browser_notification.dart';
@@ -9,6 +10,7 @@ import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/pending_notification_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+
 class NotificationService extends ChangeNotifier {
   NotificationService._();
   static final instance = NotificationService._();
@@ -25,6 +27,7 @@ class NotificationService extends ChangeNotifier {
       recipientRole: AuthService.roleParent,
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
       targetClassName: 'Grade 4A',
+      isRead: true,
     ),
     AppNotification(
       id: 'seed-2',
@@ -35,8 +38,69 @@ class NotificationService extends ChangeNotifier {
       fromName: 'Mr. Bekele',
       recipientRole: AuthService.roleTeacher,
       createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+      isRead: false,
     ),
   ];
+
+  final Set<String> _persistedReadIds = {};
+  String _hydratedForUsername = '';
+
+  static String _readIdsKey(String username) =>
+      'notif_read_ids_v1_${username.trim().toLowerCase()}';
+
+  static String _fingerprint(AppNotification item) =>
+      'fp:${item.type.name}|${item.title}|${item.body}|${item.recipientRole}';
+
+  Future<void> hydratePersistedReads() async {
+    final username = AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    if (username.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getStringList(_readIdsKey(username)) ?? const [];
+      if (_hydratedForUsername != username) {
+        _persistedReadIds.clear();
+        _hydratedForUsername = username;
+      }
+      _persistedReadIds.addAll(stored);
+      _applyPersistedReadsToItems();
+    } catch (_) {}
+  }
+
+  Future<void> _saveReadIds() async {
+    final username = AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    if (username.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _readIdsKey(username),
+        _persistedReadIds.toList()..sort(),
+      );
+    } catch (_) {}
+  }
+
+  void _rememberRead(AppNotification item) {
+    item.isRead = true;
+    _persistedReadIds.add(item.id);
+    _persistedReadIds.add(_fingerprint(item));
+  }
+
+  bool _wasRead(AppNotification item) =>
+      item.isRead ||
+      _persistedReadIds.contains(item.id) ||
+      _persistedReadIds.contains(_fingerprint(item));
+
+  void _applyPersistedReadsToItems() {
+    var changed = false;
+    for (final item in _items) {
+      if (_wasRead(item) && !item.isRead) {
+        item.isRead = true;
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
+  void _persistReadsSoon() => unawaited(_saveReadIds());
 
   String get _currentRole =>
       AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
@@ -233,6 +297,7 @@ class NotificationService extends ChangeNotifier {
 
   /// Call after login / session restore to show queued phone notifications.
   Future<void> onSessionStarted() async {
+    await hydratePersistedReads();
     final delivered = await PendingNotificationStore.instance.deliverForCurrentUser();
     if (delivered.isEmpty) return;
 
@@ -256,22 +321,23 @@ class NotificationService extends ChangeNotifier {
       );
       if (exists) continue;
 
-      _items.insert(
-        0,
-        AppNotification(
-          id: 'n-${_nextId++}',
-          title: title,
-          body: body,
-          type: type,
-          fromRole: item['fromRole'] as String? ?? '',
-          fromName: item['fromName'] as String? ?? '',
-          recipientRole: recipientRole,
-          createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
-              DateTime.now(),
-          targetStudentId: item['targetStudentId'] as String?,
-          targetClassName: item['targetClassName'] as String?,
-        ),
+      final created = AppNotification(
+        id: 'n-${_nextId++}',
+        title: title,
+        body: body,
+        type: type,
+        fromRole: item['fromRole'] as String? ?? '',
+        fromName: item['fromName'] as String? ?? '',
+        recipientRole: recipientRole,
+        createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+        targetStudentId: item['targetStudentId'] as String?,
+        targetClassName: item['targetClassName'] as String?,
       );
+      if (_wasRead(created)) {
+        created.isRead = true;
+      }
+      _items.insert(0, created);
     }
     notifyListeners();
   }
@@ -283,16 +349,26 @@ class NotificationService extends ChangeNotifier {
     final role = _currentRole;
     for (final cloud in cloudItems) {
       if (!_matchesCurrentUser(cloud, role)) continue;
+      if (_wasRead(cloud)) {
+        cloud.isRead = true;
+      }
       final index = _items.indexWhere((n) => n.id == cloud.id);
       if (index >= 0) {
-        if (_items[index].createdAt.isBefore(cloud.createdAt)) {
+        final existing = _items[index];
+        final keepRead = existing.isRead || cloud.isRead;
+        if (existing.createdAt.isBefore(cloud.createdAt)) {
           _items[index] = cloud;
+          changed = true;
+        }
+        if (keepRead && !_items[index].isRead) {
+          _items[index].isRead = true;
           changed = true;
         }
       } else {
         _items.add(cloud);
         changed = true;
-        if (newest == null || cloud.createdAt.isAfter(newest.createdAt)) {
+        if (!cloud.isRead &&
+            (newest == null || cloud.createdAt.isAfter(newest.createdAt))) {
           newest = cloud;
         }
       }
@@ -300,7 +376,7 @@ class NotificationService extends ChangeNotifier {
     if (changed) {
       _items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
-      if (kIsWeb && newest != null && !newest.isRead) {
+      if (kIsWeb && newest != null && !newest.isRead && !_wasRead(newest)) {
         unawaited(
           showWebBrowserNotification(
             title: newest.title,
@@ -315,8 +391,9 @@ class NotificationService extends ChangeNotifier {
     try {
       final item = _items.firstWhere((n) => n.id == id);
       if (!item.isRead) {
-        item.isRead = true;
+        _rememberRead(item);
         notifyListeners();
+        _persistReadsSoon();
       }
     } catch (_) {}
   }
@@ -332,11 +409,14 @@ class NotificationService extends ChangeNotifier {
       if (_matchesCurrentUser(item, role) &&
           typeSet.contains(item.type) &&
           !item.isRead) {
-        item.isRead = true;
+        _rememberRead(item);
         changed = true;
       }
     }
-    if (changed) notifyListeners();
+    if (changed) {
+      notifyListeners();
+      _persistReadsSoon();
+    }
   }
 
   void markAllRead({String? roleKey}) {
@@ -344,11 +424,14 @@ class NotificationService extends ChangeNotifier {
     var changed = false;
     for (final item in _items) {
       if (_matchesCurrentUser(item, role) && !item.isRead) {
-        item.isRead = true;
+        _rememberRead(item);
         changed = true;
       }
     }
-    if (changed) notifyListeners();
+    if (changed) {
+      notifyListeners();
+      _persistReadsSoon();
+    }
   }
 
   void markTypeRead(NotificationType type, {String? roleKey}) {
@@ -362,11 +445,14 @@ class NotificationService extends ChangeNotifier {
       if (_matchesCurrentUser(item, role) &&
           item.showOnMessagesBadge &&
           !item.isRead) {
-        item.isRead = true;
+        _rememberRead(item);
         changed = true;
       }
     }
-    if (changed) notifyListeners();
+    if (changed) {
+      notifyListeners();
+      _persistReadsSoon();
+    }
   }
 
   void refreshBadges() => notifyListeners();
@@ -374,9 +460,53 @@ class NotificationService extends ChangeNotifier {
   void clearForLogout() {
     _items.clear();
     _nextId = 1;
+    _persistedReadIds.clear();
+    _hydratedForUsername = '';
     notifyListeners();
   }
 
   @visibleForTesting
   List<AppNotification> itemsForTests() => List.unmodifiable(_items);
+
+  @visibleForTesting
+  void resetForTests() {
+    _persistedReadIds.clear();
+    _hydratedForUsername = '';
+    _nextId = 1;
+    if (_items.every((item) => item.id != 'seed-1')) {
+      _items.add(
+        AppNotification(
+          id: 'seed-1',
+          title: 'Homework posted',
+          body: 'Miss Belen added Mathematics homework for Grade 4A.',
+          type: NotificationType.homework,
+          fromRole: AuthService.roleTeacher,
+          fromName: 'Miss Belen',
+          recipientRole: AuthService.roleParent,
+          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          targetClassName: 'Grade 4A',
+          isRead: true,
+        ),
+      );
+    }
+    if (_items.every((item) => item.id != 'seed-2')) {
+      _items.add(
+        AppNotification(
+          id: 'seed-2',
+          title: 'New message',
+          body: 'Mr. Bekele asked about today\'s homework.',
+          type: NotificationType.message,
+          fromRole: AuthService.roleParent,
+          fromName: 'Mr. Bekele',
+          recipientRole: AuthService.roleTeacher,
+          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+          isRead: false,
+        ),
+      );
+    }
+    for (final item in _items) {
+      if (item.id == 'seed-1') item.isRead = true;
+      if (item.id == 'seed-2') item.isRead = false;
+    }
+  }
 }

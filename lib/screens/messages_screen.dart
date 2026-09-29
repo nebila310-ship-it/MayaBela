@@ -9,7 +9,6 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/community_photo_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
-import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/presence_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -18,6 +17,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/screens/parent_compose_message_screen.dart';
 import 'package:mayabela/widgets/chat_contact_profile.dart';
+import 'package:mayabela/widgets/inbox_login_reminder.dart';
 import 'package:mayabela/widgets/maya_floating_chat.dart';
 import 'package:mayabela/widgets/messages_ui.dart';
 import 'package:mayabela/widgets/message_voice_input_bar.dart';
@@ -70,7 +70,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   @override
   void initState() {
     super.initState();
-    NotificationService.instance.markMessagesBadgeRead();
+    unawaited(InboxLoginReminder.acknowledgeCurrent());
     ConversationRealtimeSync.instance.addListener(_refresh);
     PresenceService.instance.startForCurrentUser();
     PresenceService.instance.noteFromConversations(_conversations);
