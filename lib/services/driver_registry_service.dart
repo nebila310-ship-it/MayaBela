@@ -340,6 +340,7 @@ class DriverRegistryService {
   void updatePhoto(String driverId, String photoPath, {bool persist = true}) {
     final existing = lookupById(driverId);
     if (existing == null) return;
+    if (existing.photoPath == photoPath) return;
     _replace(existing.copyWith(photoPath: photoPath), persist: persist);
   }
 

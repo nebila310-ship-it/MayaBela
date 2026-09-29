@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 import 'package:mayabela/utils/phone_utils.dart';
@@ -437,10 +441,20 @@ class TeacherRegistryService {
     if (idx >= 0) _teachers[idx] = updated;
   }
 
-  void updatePhoto(String teacherId, String photoPath) {
+  void updatePhoto(String teacherId, String photoPath, {bool persist = true}) {
     final existing = lookupById(teacherId);
     if (existing == null) return;
+    if (existing.photoPath == photoPath) return;
     _replace(existing.copyWith(photoPath: photoPath));
+    StaffRegistryNotifier.instance.notifyChanged();
+    if (persist) {
+      unawaited(
+        TeacherPersistenceService.instance.saveRegistryFromService(
+          syncTeacherId: teacherId,
+          pushCloud: true,
+        ),
+      );
+    }
   }
 
   void saveCredentials({
