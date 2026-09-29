@@ -14,8 +14,11 @@ import 'package:mayabela/utils/adaptive_breakpoints.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
+import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
+import 'package:mayabela/widgets/dashboard_module_section.dart';
 import 'package:mayabela/widgets/dashboard_scaffold.dart';
 import 'package:mayabela/widgets/inbox_login_reminder.dart';
 import 'package:mayabela/widgets/inbox_messages_action.dart';
@@ -255,106 +258,118 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFCFDBEA),
-          body: Column(
+          backgroundColor: ClassroomPalette.stream,
+          body: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Material(
-                color: themeColor,
-                child: SafeArea(
-                  bottom: false,
-                  child: SizedBox(
-                    height: ClassroomSidebar.headerHeight,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            key: const Key('classroom-top-menu'),
-                            tooltip: collapsed
-                                ? s.expandClassroomSidebar
-                                : s.collapseClassroomSidebar,
-                            onPressed: toggleSidebar,
-                            icon: Icon(
-                              collapsed
-                                  ? Icons.menu_rounded
-                                  : Icons.menu_open_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              widget.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const InboxMessagesAction(iconColor: Colors.white),
-                          IconButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const NotificationsScreen(),
-                                ),
-                              );
-                            },
-                            icon: Badge(
-                              isLabelVisible: unread > 0,
-                              label: Text(unread > 99 ? '99+' : '$unread'),
-                              child: const Icon(
-                                Icons.notifications,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => _openAccountMenu(context),
-                            icon: const CircleAvatar(
-                              radius: 16,
-                              backgroundColor: Colors.white24,
-                              child: Icon(
-                                Icons.person_rounded,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              ClassroomSidebar(
+                title: widget.title,
+                accent: themeColor,
+                destinations: destinations,
+                selectedIndex: _selectedIndex.clamp(
+                  0,
+                  destinations.length - 1,
                 ),
+                collapsed: collapsed,
+                onToggle: toggleSidebar,
+                onSelect: (index) {
+                  setState(() => _selectedIndex = index);
+                  selectClassroomDestination(
+                    index: index,
+                    roleKey: widget.roleKey,
+                    destinations: destinations,
+                    onIndex: (i) => _selectedIndex = i,
+                  );
+                },
               ),
-              const WebCloudSyncBar(horizontalPadding: 16),
               Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: Column(
                   children: [
-                    ClassroomSidebar(
-                      title: widget.title,
-                      accent: themeColor,
-                      destinations: destinations,
-                      selectedIndex: _selectedIndex.clamp(
-                        0,
-                        destinations.length - 1,
+                    Material(
+                      color: WebErpTheme.paper.withValues(alpha: 0.92),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Container(
+                          height: ClassroomSidebar.headerHeight,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: WebErpTheme.paperEdge.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                key: const Key('classroom-top-menu'),
+                                tooltip: collapsed
+                                    ? s.expandClassroomSidebar
+                                    : s.collapseClassroomSidebar,
+                                onPressed: toggleSidebar,
+                                icon: Icon(
+                                  collapsed
+                                      ? Icons.menu_rounded
+                                      : Icons.menu_open_rounded,
+                                  color: ClassroomPalette.ink,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: ClassroomPalette.ink,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const InboxMessagesAction(
+                                iconColor: ClassroomPalette.ink,
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const NotificationsScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: Badge(
+                                  isLabelVisible: unread > 0,
+                                  label: Text(unread > 99 ? '99+' : '$unread'),
+                                  child: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: ClassroomPalette.ink,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => _openAccountMenu(context),
+                                icon: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: themeColor.withValues(
+                                    alpha: 0.16,
+                                  ),
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    size: 18,
+                                    color: themeColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      collapsed: collapsed,
-                      onToggle: toggleSidebar,
-                      onSelect: (index) {
-                        setState(() => _selectedIndex = index);
-                        selectClassroomDestination(
-                          index: index,
-                          roleKey: widget.roleKey,
-                          destinations: destinations,
-                          onIndex: (i) => _selectedIndex = i,
-                        );
-                      },
                     ),
+                    const WebCloudSyncBar(horizontalPadding: 16),
                     Expanded(
                       child: Stack(
                         fit: StackFit.expand,
@@ -400,33 +415,17 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                         widget.sections!.isNotEmpty)
                                       for (final section
                                           in widget.sections!) ...[
-                                        Row(
-                                          children: [
-                                            if (section.icon != null) ...[
-                                              Icon(
-                                                section.icon,
-                                                color: themeColor,
-                                                size: 18,
-                                              ),
-                                              const SizedBox(width: 8),
-                                            ],
-                                            Text(
-                                              section.title,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                                color: themeColor,
-                                              ),
-                                            ),
-                                          ],
+                                        DashboardModuleSection(
+                                          title: section.title,
+                                          icon: section.icon,
+                                          accent: themeColor,
+                                          child: _buildCardGrid(
+                                            section.cards,
+                                            crossAxis,
+                                            compact,
+                                          ),
                                         ),
-                                        const SizedBox(height: 12),
-                                        _buildCardGrid(
-                                          section.cards,
-                                          crossAxis,
-                                          compact,
-                                        ),
-                                        const SizedBox(height: 24),
+                                        const SizedBox(height: 16),
                                       ]
                                     else
                                       _buildCardGrid(

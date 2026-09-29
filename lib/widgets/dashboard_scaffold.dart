@@ -9,11 +9,13 @@ import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
+import 'package:mayabela/widgets/dashboard_module_section.dart';
 import 'package:mayabela/widgets/inbox_messages_action.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
@@ -196,26 +198,13 @@ class DashboardScaffold extends StatefulWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var i = 0; i < sections.length; i++) ...[
-          if (i > 0) const SizedBox(height: 20),
-          Row(
-            children: [
-              if (sections[i].icon != null) ...[
-                Icon(sections[i].icon, size: 18, color: gradientColors.first),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                sections[i].title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: gradientColors.first,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
+          if (i > 0) const SizedBox(height: 16),
+          DashboardModuleSection(
+            title: sections[i].title,
+            icon: sections[i].icon,
+            accent: gradientColors.first,
+            child: _buildCardGrid(sections[i].cards, crossAxis, compact),
           ),
-          const SizedBox(height: 10),
-          _buildCardGrid(sections[i].cards, crossAxis, compact),
         ],
       ],
     );
@@ -253,7 +242,7 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
         return Scaffold(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? Theme.of(context).colorScheme.surface
-              : const Color(0xFFCFDBEA),
+              : ClassroomPalette.stream,
           drawer: ClassroomSidebar(
             title: widget.title,
             accent: themeColor,
