@@ -1193,7 +1193,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return Scaffold(
           backgroundColor: MessagesPalette.chatWallpaper,
           appBar: MessagesAppBar(
-            title: chat?.displayTitleForViewer() ?? widget.contactName,
+            title: chat?.inboxTitleForViewer() ?? widget.contactName,
             peerOnline: peerOnline,
             photoPath: widget.isGroup ? chat?.photoPath : null,
             onTitleTap: chat == null

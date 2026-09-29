@@ -119,6 +119,22 @@ class ChatMessage {
     };
   }
 
+  /// Inbox / preview label: person name with their school role.
+  String resolveLabeledName() {
+    if (senderStaffId != null) {
+      final member = StaffMemberOption.resolve(senderStaffId!);
+      if (member != null && member.displayName.trim().isNotEmpty) {
+        return member.labeledName;
+      }
+    }
+    final name = resolveDisplayName().trim();
+    if (_hasTrailingRoleSuffix(name)) return name;
+    final role = _plainRoleLabel(senderRole);
+    if (name.isEmpty) return role;
+    if (name.toLowerCase() == role.toLowerCase()) return name;
+    return '$name ($role)';
+  }
+
   bool isOutgoingFor(
     String? viewerRole, {
     String? viewerStaffId,
@@ -524,6 +540,69 @@ class Conversation {
     return groupStaffIds.any((id) => id.trim() == viewerStaffId.trim());
   }
 
+  /// Inbox row title: peer or group name, with role on direct chats.
+  String inboxTitleForViewer({String? viewerRole}) {
+    viewerRole ??= AuthService.currentUser?.roleKey;
+    if (isGroup) return displayTitleForViewer(viewerRole: viewerRole);
+    if (isBroadcast) {
+      final title = displayTitleForViewer(viewerRole: viewerRole);
+      if (_hasTrailingRoleSuffix(title)) return title;
+      return '$title (Broadcast)';
+    }
+    final title = displayTitleForViewer(viewerRole: viewerRole);
+    if (_hasTrailingRoleSuffix(title)) return title;
+    final role = inboxPeerRoleLabel(viewerRole: viewerRole);
+    if (role == null || role.trim().isEmpty) return title;
+    if (title.toLowerCase() == role.toLowerCase()) return title;
+    return '$title ($role)';
+  }
+
+  /// Role shown next to the conversation name (Teacher, Parent, …).
+  String? inboxPeerRoleLabel({String? viewerRole}) {
+    viewerRole ??= AuthService.currentUser?.roleKey;
+    if (isBroadcast) return 'Broadcast';
+    if (isGroup) return 'Community';
+    if (viewerRole == AuthService.roleParent) {
+      if (staffParticipantId != null) {
+        return StaffMemberOption.resolve(staffParticipantId!)?.roleLabel ??
+            (role.trim().isEmpty ? 'Teacher' : role);
+      }
+      return role.trim().isEmpty ? null : role;
+    }
+    if (_hasParentParticipant()) return 'Parent';
+    final peerId = _peerStaffId(viewerRole);
+    if (peerId != null) {
+      return StaffMemberOption.resolve(peerId)?.roleLabel ??
+          (role.trim().isEmpty ? null : role);
+    }
+    return role.trim().isEmpty ? null : role;
+  }
+
+  String? _peerStaffId(String? viewerRole) {
+    final viewerId = viewerRole == null
+        ? null
+        : _compositeStaffIdForRole(viewerRole);
+    if (viewerId != null) {
+      if (staffParticipantId?.trim() == viewerId.trim()) {
+        return counterpartyStaffId?.trim();
+      }
+      if (counterpartyStaffId?.trim() == viewerId.trim()) {
+        return staffParticipantId?.trim();
+      }
+    }
+    return counterpartyStaffId?.trim() ?? staffParticipantId?.trim();
+  }
+
+  /// Last line on the inbox row: `Name (Role): message`.
+  String lastMessagePreviewForViewer() {
+    if (messages.isEmpty) return lastMessage;
+    final sender = messages.last.resolveLabeledName();
+    final body = lastMessage;
+    if (body.isEmpty) return sender;
+    if (body.startsWith('$sender:')) return body;
+    return '$sender: $body';
+  }
+
   /// Conversation list / chat header title for the signed-in viewer.
   String displayTitleForViewer({String? viewerRole}) {
     viewerRole ??= AuthService.currentUser?.roleKey;
@@ -580,10 +659,10 @@ class Conversation {
       if (msg.senderRole == AuthService.roleParent) continue;
       final senderStaffId = msg.senderStaffId?.trim();
       if (senderStaffId != null && senderStaffId != viewerId.trim()) {
-        return msg.resolveDisplayName();
+        return msg.resolveLabeledName();
       }
       if (senderStaffId == null && msg.senderRole != viewerRole) {
-        return msg.resolveDisplayName();
+        return msg.resolveLabeledName();
       }
     }
 
@@ -1045,4 +1124,19 @@ class GroupMemberEntry {
   final String typeLabel;
 
   final bool isParent;
+}
+
+bool _hasTrailingRoleSuffix(String value) {
+  return RegExp(r'\([^)]+\)\s*$').hasMatch(value);
+}
+
+String _plainRoleLabel(String roleKey) {
+  return switch (roleKey) {
+    AuthService.roleParent => 'Parent',
+    AuthService.roleTeacher => 'Teacher',
+    AuthService.roleDriver => 'Driver',
+    AuthService.roleAdmin => 'Admin',
+    AuthService.roleStudent => 'Student',
+    _ => roleKey,
+  };
 }
