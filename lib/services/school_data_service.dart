@@ -1117,7 +1117,7 @@ class SchoolDataService {
       members.add(
         GroupMemberEntry(
           key: parentName,
-          displayName: parentName,
+          displayName: option?.labeledName ?? '$parentName (Parent)',
           subtitle: option?.searchDetail ?? parentName,
           typeLabel: 'Parent',
           isParent: true,
@@ -1131,7 +1131,7 @@ class SchoolDataService {
       members.add(
         GroupMemberEntry(
           key: staffId,
-          displayName: staff.displayName,
+          displayName: staff.labeledName,
           subtitle: staff.subtitle,
           typeLabel: _staffTypeLabel(staff),
           isParent: false,
@@ -1142,13 +1142,7 @@ class SchoolDataService {
     return members;
   }
 
-  String _staffTypeLabel(StaffMemberOption staff) {
-    return switch (staff.kind) {
-      StaffKind.teacher => 'Teacher',
-      StaffKind.driver => 'Driver',
-      StaffKind.adminStaff => 'Admin',
-    };
-  }
+  String _staffTypeLabel(StaffMemberOption staff) => staff.roleLabel;
 
   bool removeCommunityMember(
     String conversationId, {
@@ -1205,19 +1199,11 @@ class SchoolDataService {
   }
 
   List<ParentRecipientOption> _parentRecipientsForCommunityPicker() {
-    final role = AuthService.currentUser?.roleKey;
-    if (role == AuthService.roleTeacher) {
-      return MessagingAccessService.parentsForTeacherClasses();
-    }
-    return getParentRecipientsForActiveSchool();
+    return MessagingAccessService.parentsForCurrentCompose();
   }
 
   List<StaffMemberOption> _staffRecipientsForCommunityPicker() {
-    final role = AuthService.currentUser?.roleKey;
-    if (role == AuthService.roleTeacher) {
-      return MessagingAccessService.adminContactsForTeacher();
-    }
-    return getStaffForActiveSchool();
+    return MessagingAccessService.staffForCurrentCompose();
   }
 
   bool teacherIsCommunityStaffMember(String conversationId) {
@@ -1416,15 +1402,14 @@ class SchoolDataService {
 
     AuthService.alignTeacherSessionWithRegistry();
     final senderRole = AuthService.currentUser?.roleKey ?? AuthService.roleAdmin;
-    if (senderRole == AuthService.roleTeacher) {
-      if (hasParent &&
-          !MessagingAccessService.canTeacherDirectToParent(trimmedParent)) {
-        return [];
-      }
-      if (hasStaff &&
-          !MessagingAccessService.canTeacherDirectToStaff(trimmedStaff)) {
-        return [];
-      }
+    if (senderRole == AuthService.roleStudent) return [];
+    if (hasParent &&
+        !MessagingAccessService.canTeacherDirectToParent(trimmedParent)) {
+      return [];
+    }
+    if (hasStaff &&
+        !MessagingAccessService.canTeacherDirectToStaff(trimmedStaff)) {
+      return [];
     }
 
     final String conversationId;
@@ -2290,7 +2275,7 @@ class SchoolDataService {
         peerMember.roleKey != AuthService.roleAdmin) {
       conversation.staffParticipantId = peerId;
       conversation.counterpartyStaffId = staffId;
-      conversation.name = peerMember.displayName;
+      conversation.name = peerMember.labeledName;
     }
   }
 
@@ -2304,7 +2289,7 @@ class SchoolDataService {
       return (
         staffId: recipient.id,
         peerId: recipient.id,
-        contactName: recipient.displayName,
+        contactName: recipient.labeledName,
         role: recipient.conversationRole,
       );
     }
@@ -2313,7 +2298,7 @@ class SchoolDataService {
       return (
         staffId: recipient.id,
         peerId: senderStaffId,
-        contactName: recipient.displayName,
+        contactName: recipient.labeledName,
         role: recipient.conversationRole,
       );
     }
@@ -2322,7 +2307,7 @@ class SchoolDataService {
       return (
         staffId: senderStaffId,
         peerId: recipient.id,
-        contactName: recipient.displayName,
+        contactName: recipient.labeledName,
         role: recipient.conversationRole,
       );
     }
@@ -2330,7 +2315,7 @@ class SchoolDataService {
     return (
       staffId: senderStaffId,
       peerId: recipient.id,
-      contactName: recipient.displayName,
+      contactName: recipient.labeledName,
       role: recipient.conversationRole,
     );
   }
@@ -5207,7 +5192,7 @@ class SchoolDataService {
           : AuthService.activeLinkedStudentIds(),
     );
     final conversationId = openOrCreateConversation(
-      contactName: member.displayName,
+      contactName: member.labeledName,
       role: member.conversationRole,
       staffParticipantId: member.id,
       staffSubjectName: MessagingAccessService.staffSubjectLabelFor(

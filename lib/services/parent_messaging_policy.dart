@@ -6,7 +6,7 @@ import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
-/// Who parents may message / see in direct threads (homeroom + school leadership).
+/// Who parents may message / see in direct threads (homeroom teacher only).
 abstract final class ParentMessagingPolicy {
   static List<StaffMemberOption> adminContactsForSchool(String? schoolId) {
     final id = schoolId?.trim().toUpperCase();
@@ -48,8 +48,9 @@ abstract final class ParentMessagingPolicy {
 
   static StaffMemberOption? homeroomStaffForStudent(String? studentId) {
     if (studentId == null || studentId.trim().isEmpty) return null;
-    final student =
-        StudentRegistryService.instance.lookupById(studentId.trim());
+    final student = StudentRegistryService.instance.lookupById(
+      studentId.trim(),
+    );
     if (student == null) return null;
 
     final homeroomId = student.homeroomTeacherId?.trim();
@@ -79,8 +80,9 @@ abstract final class ParentMessagingPolicy {
     String className, {
     String? homeroomTeacherName,
   }) {
-    for (final student
-        in StudentRegistryService.instance.studentsForClass(className)) {
+    for (final student in StudentRegistryService.instance.studentsForClass(
+      className,
+    )) {
       final option = homeroomStaffForStudent(student.studentId);
       if (option != null) return option;
     }
@@ -133,11 +135,7 @@ abstract final class ParentMessagingPolicy {
     return false;
   }
 
-  static bool canMessageStaff({
-    required String staffId,
-    String? studentId,
-  }) {
-    if (isAdminStaff(staffId)) return true;
+  static bool canMessageStaff({required String staffId, String? studentId}) {
     if (studentId != null && studentId.trim().isNotEmpty) {
       return isHomeroomStaffForStudent(staffId, studentId);
     }
@@ -146,18 +144,8 @@ abstract final class ParentMessagingPolicy {
 
   static bool canViewDirectStaffThread(Conversation conversation) {
     if (conversation.isStaffOnlyDirectThread) return false;
-
     final staffId = conversation.staffParticipantId;
     if (staffId == null || staffId.trim().isEmpty) return false;
-
-    if (isAdminStaff(staffId)) return true;
-
-    for (final studentId in conversation.linkedStudentIds) {
-      if (isHomeroomStaffForStudent(staffId, studentId)) return true;
-    }
-    for (final studentId in AuthService.activeLinkedStudentIds()) {
-      if (isHomeroomStaffForStudent(staffId, studentId)) return true;
-    }
-    return false;
+    return isHomeroomStaffForAnyLinkedChild(staffId);
   }
 }

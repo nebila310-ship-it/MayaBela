@@ -11,11 +11,10 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 
 import 'package:mayabela/services/parent_messaging_policy.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 import 'package:mayabela/services/teacher_registry_service.dart';
-
-
 
 class MessageReplyQuote {
   const MessageReplyQuote({
@@ -35,9 +34,7 @@ class MessageReplyQuote {
 }
 
 class ChatMessage {
-
   ChatMessage({
-
     required this.text,
 
     required this.time,
@@ -59,10 +56,7 @@ class ChatMessage {
     this.attachments = const [],
 
     this.replyTo,
-
   });
-
-
 
   final String text;
 
@@ -88,8 +82,6 @@ class ChatMessage {
 
   DateTime? seenAt;
 
-
-
   /// Short preview for reply quotes and notifications.
   String previewBody() {
     final trimmed = text.trim();
@@ -108,8 +100,6 @@ class ChatMessage {
         lower.startsWith('voice_');
   }
 
-
-
   /// Resolved label for message bubbles (actual person, not generic role).
   String resolveDisplayName() {
     final explicit = senderDisplayName?.trim();
@@ -117,7 +107,7 @@ class ChatMessage {
     if (senderStaffId != null) {
       final member = StaffMemberOption.resolve(senderStaffId!);
       if (member != null && member.displayName.trim().isNotEmpty) {
-        return member.displayName;
+        return member.labeledName;
       }
     }
     return switch (senderRole) {
@@ -129,10 +119,11 @@ class ChatMessage {
     };
   }
 
-
-
-  bool isOutgoingFor(String? viewerRole, {String? viewerStaffId, String? viewerUsername}) {
-
+  bool isOutgoingFor(
+    String? viewerRole, {
+    String? viewerStaffId,
+    String? viewerUsername,
+  }) {
     if (viewerRole == null || viewerRole != senderRole) return false;
 
     if (senderRole == AuthService.roleParent &&
@@ -147,17 +138,11 @@ class ChatMessage {
     }
 
     return true;
-
   }
-
 }
 
-
-
 class Conversation {
-
   Conversation({
-
     required this.id,
 
     required this.name,
@@ -193,14 +178,11 @@ class Conversation {
     List<String>? linkedStudentIds,
 
     List<String>? parentParticipantUsernames,
+  }) : linkedStudentIds = List<String>.from(linkedStudentIds ?? const []),
 
-  })  : linkedStudentIds = List<String>.from(linkedStudentIds ?? const []),
-
-        parentParticipantUsernames =
-
-            List<String>.from(parentParticipantUsernames ?? const []);
-
-
+       parentParticipantUsernames = List<String>.from(
+         parentParticipantUsernames ?? const [],
+       );
 
   final String id;
 
@@ -244,8 +226,6 @@ class Conversation {
   /// Parent login usernames allowed in this thread.
   List<String> parentParticipantUsernames;
 
-
-
   /// Unread incoming messages for the signed-in viewer.
   int unreadForViewer(String? roleKey, {String? viewerStaffId}) {
     if (roleKey == null) return unread;
@@ -258,8 +238,6 @@ class Conversation {
     }
     return count;
   }
-
-
 
   String get lastMessage {
     if (messages.isEmpty) return 'No messages yet';
@@ -274,8 +252,6 @@ class Conversation {
     }
     return '${last.attachments.length} attachments';
   }
-
-
 
   bool isVisibleToRole(String? roleKey) {
     if (roleKey == null) return false;
@@ -301,7 +277,8 @@ class Conversation {
       return switch (roleKey) {
         AuthService.roleAdmin => _adminInGroup(),
         AuthService.roleParent => _parentInGroup(),
-        AuthService.roleTeacher || AuthService.roleDriver => _staffInGroup(roleKey),
+        AuthService.roleTeacher ||
+        AuthService.roleDriver => _staffInGroup(roleKey),
         AuthService.roleStudent => _studentInGroup(),
         _ => false,
       };
@@ -311,13 +288,17 @@ class Conversation {
   }
 
   bool _studentInGroup() {
-    final studentId = AuthService.currentUser?.linkedStudentId?.trim().toUpperCase();
+    final studentId = AuthService.currentUser?.linkedStudentId
+        ?.trim()
+        .toUpperCase();
     if (studentId == null || studentId.isEmpty) return false;
     return linkedStudentIds.any((id) => id.toUpperCase() == studentId);
   }
 
   bool _studentCanSeeDirectThread() {
-    final studentId = AuthService.currentUser?.linkedStudentId?.trim().toUpperCase();
+    final studentId = AuthService.currentUser?.linkedStudentId
+        ?.trim()
+        .toUpperCase();
     if (studentId == null || studentId.isEmpty) return false;
     return linkedStudentIds.any((id) => id.toUpperCase() == studentId);
   }
@@ -344,10 +325,7 @@ class Conversation {
     if (_hasParentParticipant()) return false;
     final staff = staffParticipantId?.trim();
     final peer = counterpartyStaffId?.trim();
-    return staff != null &&
-        staff.isNotEmpty &&
-        peer != null &&
-        peer.isNotEmpty;
+    return staff != null && staff.isNotEmpty && peer != null && peer.isNotEmpty;
   }
 
   String? _compositeStaffIdForRole(String roleKey) {
@@ -403,8 +381,9 @@ class Conversation {
   }
 
   bool _adminInGroup() {
-    final viewerAdminId =
-        StaffMemberOption.viewerAdminStaffId(AuthService.roleAdmin);
+    final viewerAdminId = StaffMemberOption.viewerAdminStaffId(
+      AuthService.roleAdmin,
+    );
     if (viewerAdminId != null &&
         groupStaffIds.any((id) => id.trim() == viewerAdminId)) {
       return true;
@@ -426,8 +405,9 @@ class Conversation {
     final username = AuthService.currentUser?.username.trim().toLowerCase();
     if (username != null &&
         username.isNotEmpty &&
-        parentParticipantUsernames
-            .any((u) => u.trim().toLowerCase() == username)) {
+        parentParticipantUsernames.any(
+          (u) => u.trim().toLowerCase() == username,
+        )) {
       return true;
     }
     final linked = AuthService.activeLinkedStudentIds()
@@ -476,7 +456,9 @@ class Conversation {
     add(user.fullName);
     add(user.username);
     EnrollmentService.instance.ensureSeeded();
-    for (final link in EnrollmentService.instance.linksForParent(user.username)) {
+    for (final link in EnrollmentService.instance.linksForParent(
+      user.username,
+    )) {
       if (link.status != ParentLinkStatus.approved) continue;
       add(link.parentFullName);
     }
@@ -491,69 +473,55 @@ class Conversation {
     return names.contains(needle);
   }
 
-
-
   bool _parentInGroup() {
-
     final parentUsername = AuthService.currentUser?.username;
     final normalizedUsername = parentUsername?.trim().toLowerCase();
     if (normalizedUsername != null &&
         normalizedUsername.isNotEmpty &&
-        parentParticipantUsernames
-            .any((u) => u.trim().toLowerCase() == normalizedUsername)) {
+        parentParticipantUsernames.any(
+          (u) => u.trim().toLowerCase() == normalizedUsername,
+        )) {
       return true;
     }
 
     if (groupParentNames.isEmpty) return false;
 
     final targets = groupParentNames
-
         .map((n) => n.trim().toLowerCase())
-
         .where((n) => n.isNotEmpty)
-
         .toSet();
 
     for (final studentId in AuthService.activeLinkedStudentIds()) {
-
       final student = StudentRegistryService.instance.lookupById(studentId);
 
       final name = student?.primaryParentName?.trim().toLowerCase();
 
       if (name != null && targets.contains(name)) return true;
-
     }
 
     if (parentUsername != null) {
-
       EnrollmentService.instance.ensureSeeded();
 
-      for (final link in EnrollmentService.instance.linksForParent(parentUsername)) {
-
+      for (final link in EnrollmentService.instance.linksForParent(
+        parentUsername,
+      )) {
         if (link.status != ParentLinkStatus.approved) continue;
 
         final linkName = link.parentFullName.trim().toLowerCase();
 
         if (linkName.isNotEmpty && targets.contains(linkName)) return true;
-
       }
-
     }
 
     return false;
-
   }
 
-
-
   bool _staffInGroup(String roleKey) {
-
     final viewerStaffId = StaffMemberOption.viewerStaffId(roleKey);
 
     if (viewerStaffId == null) return false;
 
     return groupStaffIds.any((id) => id.trim() == viewerStaffId.trim());
-
   }
 
   /// Conversation list / chat header title for the signed-in viewer.
@@ -563,7 +531,8 @@ class Conversation {
 
     final contactRole = role.trim().toLowerCase();
 
-    if (viewerRole == AuthService.roleParent && _isStaffDirectContact(contactRole)) {
+    if (viewerRole == AuthService.roleParent &&
+        _isStaffDirectContact(contactRole)) {
       return _staffDisplayNameWithSubject() ?? name;
     }
 
@@ -602,7 +571,7 @@ class Conversation {
 
     if (peerId != null) {
       final member = StaffMemberOption.resolve(peerId);
-      if (member != null) return member.displayName;
+      if (member != null) return member.labeledName;
     }
 
     if (viewerId == null) return null;
@@ -619,7 +588,7 @@ class Conversation {
     }
 
     if (peerId != null) {
-      return StaffMemberOption.resolve(peerId)?.displayName;
+      return StaffMemberOption.resolve(peerId)?.labeledName;
     }
     return null;
   }
@@ -647,19 +616,13 @@ class Conversation {
   String parentSenderLabelForStaff() => _parentWithStudentLabel();
 
   String? _staffDisplayNameWithSubject() {
-    final staffName = _staffDisplayNameForThread();
-    if (staffName == null) return null;
-    final subject = staffSubjectName?.trim();
-    if (subject != null && subject.isNotEmpty) {
-      return '$staffName ($subject)';
-    }
-    return staffName;
+    return _staffDisplayNameForThread();
   }
 
   String? _staffDisplayNameForThread() {
     if (staffParticipantId != null) {
       final member = StaffMemberOption.resolve(staffParticipantId!);
-      if (member != null) return member.displayName;
+      if (member != null) return member.labeledName;
     }
     for (var i = messages.length - 1; i >= 0; i--) {
       final msg = messages[i];
@@ -682,34 +645,28 @@ class Conversation {
         .where((n) => n.isNotEmpty)
         .toList();
     if (linkedStudentIds.isNotEmpty) {
-      final student =
-          StudentRegistryService.instance.lookupById(linkedStudentIds.first);
+      final student = StudentRegistryService.instance.lookupById(
+        linkedStudentIds.first,
+      );
       final registryParent = student?.primaryParentName?.trim();
       if (registryParent != null && registryParent.isNotEmpty) {
         parentName = registryParent;
       }
     }
     if (studentNames.length == 1) {
-      return '$parentName (${studentNames.first})';
+      return '$parentName (Parent · ${studentNames.first})';
     }
     if (studentNames.isNotEmpty) {
-      return '$parentName (${studentNames.join(', ')})';
+      return '$parentName (Parent · ${studentNames.join(', ')})';
     }
-    return parentName;
+    return '$parentName (Parent)';
   }
-
 }
-
-
 
 enum StaffKind { teacher, driver, adminStaff }
 
-
-
 class StaffMemberOption {
-
   const StaffMemberOption({
-
     required this.id,
 
     required this.displayName,
@@ -721,24 +678,20 @@ class StaffMemberOption {
     required this.kind,
 
     required this.rawId,
-
+    this.staffRoles = const [],
+    this.presenceUsername,
+    this.presencePhone,
   });
 
-
-
   final String id;
-
   final String displayName;
-
   final String roleKey;
-
   final String subtitle;
-
   final StaffKind kind;
-
   final String rawId;
-
-
+  final List<String> staffRoles;
+  final String? presenceUsername;
+  final String? presencePhone;
 
   static String teacherKey(String teacherId) => 'teacher:${teacherId.trim()}';
 
@@ -755,51 +708,34 @@ class StaffMemberOption {
       final i = id.indexOf(':');
       return i >= 0 ? id.substring(i + 1) : id;
     }
+
     return raw(a) == raw(b);
   }
 
-
-
   static StaffMemberOption? resolve(String compositeId) {
-
     final parts = compositeId.split(':');
 
     if (parts.length != 2) return null;
 
     return switch (parts[0]) {
-
       'teacher' => fromTeacher(
-
-          TeacherRegistryService.instance.lookupById(parts[1]),
-
-        ),
+        TeacherRegistryService.instance.lookupById(parts[1]),
+      ),
 
       'driver' => fromDriver(
+        DriverRegistryService.instance.lookupById(parts[1]),
+      ),
 
-          DriverRegistryService.instance.lookupById(parts[1]),
-
-        ),
-
-      'admin' => fromAdmin(
-
-          AdminRegistryService.instance.lookupById(parts[1]),
-
-        ),
+      'admin' => fromAdmin(AdminRegistryService.instance.lookupById(parts[1])),
 
       _ => null,
-
     };
-
   }
 
-
-
   static StaffMemberOption? fromTeacher(AdminTeacherRecord? teacher) {
-
     if (teacher == null || !teacher.isActive) return null;
 
     return StaffMemberOption(
-
       id: teacherKey(teacher.teacherId),
 
       displayName: teacher.fullName,
@@ -807,23 +743,18 @@ class StaffMemberOption {
       roleKey: AuthService.roleTeacher,
 
       subtitle: '${teacher.teacherId} · ${teacher.subject}',
-
       kind: StaffKind.teacher,
-
       rawId: teacher.teacherId,
-
+      staffRoles: teacher.staffRoles,
+      presenceUsername: teacher.loginUsername,
+      presencePhone: teacher.phone,
     );
-
   }
 
-
-
   static StaffMemberOption? fromDriver(AdminDriverRecord? driver) {
-
     if (driver == null || !driver.isActive) return null;
 
     return StaffMemberOption(
-
       id: driverKey(driver.driverId),
 
       displayName: driver.fullName,
@@ -831,23 +762,17 @@ class StaffMemberOption {
       roleKey: AuthService.roleDriver,
 
       subtitle: '${driver.driverId} · ${driver.routeName}',
-
       kind: StaffKind.driver,
-
       rawId: driver.driverId,
-
+      presenceUsername: driver.loginUsername,
+      presencePhone: driver.phone,
     );
-
   }
 
-
-
   static StaffMemberOption? fromAdmin(AdminStaffRecord? admin) {
-
     if (admin == null) return null;
 
     return StaffMemberOption(
-
       id: adminKey(admin.adminId),
 
       displayName: admin.fullName,
@@ -855,16 +780,12 @@ class StaffMemberOption {
       roleKey: AuthService.roleAdmin,
 
       subtitle: '${admin.adminId} · ${admin.position}',
-
       kind: StaffKind.adminStaff,
-
       rawId: admin.adminId,
-
+      presenceUsername: admin.phone,
+      presencePhone: admin.phone,
     );
-
   }
-
-
 
   static String? viewerStaffId(String? roleKey) {
     final user = AuthService.currentUser;
@@ -916,13 +837,12 @@ class StaffMemberOption {
     final schoolId = AuthService.activeSchoolId ?? user?.schoolId;
     for (final admin in AdminRegistryService.instance.getAllAdmins()) {
       if (schoolId != null &&
-          admin.schoolId.trim().toUpperCase() != schoolId.trim().toUpperCase()) {
+          admin.schoolId.trim().toUpperCase() !=
+              schoolId.trim().toUpperCase()) {
         continue;
       }
       final phone = user?.phone?.trim();
-      if (phone != null &&
-          phone.isNotEmpty &&
-          admin.phone?.trim() == phone) {
+      if (phone != null && phone.isNotEmpty && admin.phone?.trim() == phone) {
         return adminKey(admin.adminId);
       }
     }
@@ -937,40 +857,42 @@ class StaffMemberOption {
     return viewerStaffId(roleKey);
   }
 
-
-
-  String get conversationRole => switch (kind) {
-
-        StaffKind.teacher => 'Teacher',
-
-        StaffKind.driver => 'Driver',
-
-        StaffKind.adminStaff => 'Admin',
-
-      };
-
-
-
-  bool matchesQuery(String query) {
-
-    final q = query.trim().toLowerCase();
-
-    if (q.isEmpty) return true;
-
-    final fields = [displayName, id, rawId, subtitle, roleKey];
-
-    return fields.any((value) => value.toLowerCase().contains(q));
-
+  String get roleLabel {
+    if (kind == StaffKind.driver) return 'Driver';
+    if (kind == StaffKind.adminStaff) {
+      final position = subtitle.split('·').last.trim();
+      return position.isEmpty ? 'Admin' : position;
+    }
+    for (final key in staffRoles) {
+      final role = StaffRoles.lookup(key);
+      if (role != null) return role.labelEn;
+    }
+    return 'Teacher';
   }
 
+  String get labeledName => '$displayName ($roleLabel)';
+
+  String get conversationRole => roleLabel;
+
+  bool matchesQuery(String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final fields = [
+      displayName,
+      labeledName,
+      roleLabel,
+      id,
+      rawId,
+      subtitle,
+      roleKey,
+      ...staffRoles,
+    ];
+    return fields.any((value) => value.toLowerCase().contains(q));
+  }
 }
 
-
-
 class ParentRecipientOption {
-
   const ParentRecipientOption({
-
     required this.parentName,
 
     required this.studentNames,
@@ -980,10 +902,7 @@ class ParentRecipientOption {
     this.parentUsername,
 
     this.parentUsernames = const [],
-
   });
-
-
 
   final String parentName;
 
@@ -1007,34 +926,23 @@ class ParentRecipientOption {
     return [single];
   }
 
-
+  String get labeledName => '$parentName (Parent)';
 
   String displayLabel() {
-
     if (studentNames.length == 1) {
-
       return '$parentName (${studentNames.first})';
-
     }
 
     return '$parentName (${studentNames.join(', ')})';
-
   }
 
-
-
   String get searchDetail {
-
     final ids = studentIds.join(', ');
 
     return '$ids · ${studentNames.join(', ')}';
-
   }
 
-
-
   bool matchesQuery(String query) {
-
     final q = query.trim().toLowerCase();
 
     if (q.isEmpty) return true;
@@ -1042,37 +950,25 @@ class ParentRecipientOption {
     if (parentName.toLowerCase().contains(q)) return true;
 
     for (final name in studentNames) {
-
       if (name.toLowerCase().contains(q)) return true;
-
     }
 
     for (final id in studentIds) {
-
       if (id.toLowerCase().contains(q)) return true;
-
     }
 
     final username = parentUsername?.trim().toLowerCase();
 
     if (username != null && username.isNotEmpty && username.contains(q)) {
-
       return true;
-
     }
 
     return false;
-
   }
-
 }
 
-
-
 class GroupMessageDraft {
-
   const GroupMessageDraft({
-
     required this.groupName,
 
     required this.body,
@@ -1086,10 +982,7 @@ class GroupMessageDraft {
     this.photoPath,
 
     this.attachments = const [],
-
   });
-
-
 
   final String groupName;
 
@@ -1104,15 +997,10 @@ class GroupMessageDraft {
   final String? photoPath;
 
   final List<AnnouncementAttachment> attachments;
-
 }
 
-
-
 class DirectMessageDraft {
-
   const DirectMessageDraft({
-
     required this.body,
 
     this.subject,
@@ -1122,10 +1010,7 @@ class DirectMessageDraft {
     this.staffId,
 
     this.attachments = const [],
-
   });
-
-
 
   final String body;
 
@@ -1136,15 +1021,10 @@ class DirectMessageDraft {
   final String? staffId;
 
   final List<AnnouncementAttachment> attachments;
-
 }
 
-
-
 class GroupMemberEntry {
-
   const GroupMemberEntry({
-
     required this.key,
 
     required this.displayName,
@@ -1154,10 +1034,7 @@ class GroupMemberEntry {
     required this.typeLabel,
 
     required this.isParent,
-
   });
-
-
 
   final String key;
 
@@ -1168,6 +1045,4 @@ class GroupMemberEntry {
   final String typeLabel;
 
   final bool isParent;
-
 }
-

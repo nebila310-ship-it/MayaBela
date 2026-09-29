@@ -6,11 +6,13 @@ import 'package:mayabela/services/cloud/inventory_realtime_sync.dart';
 import 'package:mayabela/services/cloud/staff_content_realtime_sync.dart';
 import 'package:mayabela/services/cloud/student_realtime_sync.dart';
 import 'package:mayabela/services/cloud/transport_realtime_sync.dart';
+import 'package:mayabela/services/presence_service.dart';
 
 /// Optional realtime acceleration — [CloudSyncEngine] remains the 5s source of truth.
 abstract final class RealtimeMessagingBootstrap {
   static Future<void> onSessionStarted() async {
     if (AuthService.currentUser == null) return;
+    PresenceService.instance.startForCurrentUser();
     final generation = AuthService.sessionGeneration;
     await FcmService.instance.registerForCurrentUser();
     if (!AuthService.isLiveGeneration(generation)) return;
@@ -52,6 +54,7 @@ abstract final class RealtimeMessagingBootstrap {
   }
 
   static Future<void> onSessionEnded() async {
+    PresenceService.instance.stop();
     final generation = AuthService.sessionGeneration;
     ConversationRealtimeSync.instance.stop();
     StaffContentRealtimeSync.stop();
@@ -64,9 +67,7 @@ abstract final class RealtimeMessagingBootstrap {
 
   static Future<void> onAppBoot({required bool sessionRestored}) async {
     await FcmService.instance.init();
-    if (sessionRestored &&
-        AuthService.currentUser != null &&
-        CloudSyncFlags.enabled) {
+    if (sessionRestored && AuthService.currentUser != null) {
       await onSessionStarted();
     }
   }

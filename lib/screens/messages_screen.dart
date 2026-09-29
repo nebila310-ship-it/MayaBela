@@ -10,6 +10,7 @@ import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/community_photo_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/presence_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/voice_playback_service.dart';
@@ -67,6 +68,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.initState();
     NotificationService.instance.markMessagesBadgeRead();
     ConversationRealtimeSync.instance.addListener(_refresh);
+    PresenceService.instance.startForCurrentUser();
+    PresenceService.instance.noteFromConversations(_conversations);
   }
 
   @override
@@ -75,7 +78,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.dispose();
   }
 
-  void _refresh() => setState(() {});
+  void _refresh() {
+    PresenceService.instance.noteFromConversations(_conversations);
+    setState(() {});
+  }
 
   void _openChat(Conversation conversation) {
     _data.markConversationRead(conversation.id);
@@ -98,9 +104,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final draft = await Navigator.push<GroupMessageDraft>(
       context,
       MaterialPageRoute(
-        builder: (_) => CreateCommunityMessageScreen(
-          composeScope: _composeScope,
-        ),
+        builder: (_) =>
+            CreateCommunityMessageScreen(composeScope: _composeScope),
       ),
     );
     if (draft == null || !mounted) return;
@@ -122,9 +127,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final draft = await Navigator.push<DirectMessageDraft>(
       context,
       MaterialPageRoute(
-        builder: (_) => DirectMessageScreen(
-          composeScope: _composeScope,
-        ),
+        builder: (_) => DirectMessageScreen(composeScope: _composeScope),
       ),
     );
     if (draft == null || !mounted) return;
@@ -206,12 +209,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
         final chats = _conversations;
         final isParent =
             AuthService.currentUser?.roleKey == AuthService.roleParent;
-        final showCompose =
-            _canCompose || isParent;
+        final showCompose = _canCompose || isParent;
         final broadcasts = chats.where((c) => c.isBroadcast).toList();
         final groups = chats.where((c) => c.isGroup && !c.isBroadcast).toList();
-        final direct =
-            chats.where((c) => !c.isBroadcast && !c.isGroup).toList();
+        final direct = chats
+            .where((c) => !c.isBroadcast && !c.isGroup)
+            .toList();
 
         return Scaffold(
           backgroundColor: const Color(0xFFEEF2FF),
@@ -219,8 +222,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             title: s.dashboardTitle('messages'),
             subtitle: _canCompose && !isParent
                 ? (_composeScope == MessageComposeScope.teacher
-                    ? s.parentMessagesSubtitle
-                    : s.messagesAdminSubtitle)
+                      ? s.parentMessagesSubtitle
+                      : s.messagesAdminSubtitle)
                 : (isParent ? s.parentMessagesSubtitle : null),
           ),
           body: Container(
@@ -350,10 +353,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
       ],
     );
@@ -531,8 +531,8 @@ class _CreateCommunityMessageScreenState
   Future<void> _pickAttachments() async {
     if (_pickingAttachment) return;
     setState(() => _pickingAttachment = true);
-    final picked =
-        await AnnouncementAttachmentService.instance.pickAndSaveMessageAttachments();
+    final picked = await AnnouncementAttachmentService.instance
+        .pickAndSaveMessageAttachments();
     if (!mounted) return;
     setState(() {
       _pickingAttachment = false;
@@ -547,7 +547,7 @@ class _CreateCommunityMessageScreenState
       return;
     }
     if (widget.composeScope == MessageComposeScope.teacher) {
-      if (_selectedParentNames.isEmpty) {
+      if (_selectedParentNames.isEmpty && _selectedStaffIds.isEmpty) {
         setState(() => _error = s.messageRecipientsRequired);
         return;
       }
@@ -615,7 +615,9 @@ class _CreateCommunityMessageScreenState
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: CommunityPalette.primary.withValues(alpha: 0.1),
+                          color: CommunityPalette.primary.withValues(
+                            alpha: 0.1,
+                          ),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -650,34 +652,37 @@ class _CreateCommunityMessageScreenState
                           onRemove: () => setState(() => _photoPath = null),
                         ),
                         const SizedBox(height: 18),
-                        Text(
-                          s.messageParentsOptional,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                        if (_parents.isNotEmpty) ...[
+                          Text(
+                            s.messageParentsOptional,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.messageSearchParentHint,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            height: 1.35,
+                          const SizedBox(height: 6),
+                          Text(
+                            s.messageSearchParentHint,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.35,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        MessageParentPicker(
-                          parents: _parents,
-                          selectedNames: _selectedParentNames,
-                          onChanged: (value) => setState(() {
-                            _selectedParentNames
-                              ..clear()
-                              ..addAll(value);
-                            _error = '';
-                          }),
-                        ),
-                        if (widget.composeScope == MessageComposeScope.teacher) ...[
+                          const SizedBox(height: 12),
+                          MessageParentPicker(
+                            parents: _parents,
+                            selectedNames: _selectedParentNames,
+                            onChanged: (value) => setState(() {
+                              _selectedParentNames
+                                ..clear()
+                                ..addAll(value);
+                              _error = '';
+                            }),
+                          ),
+                        ],
+                        if (widget.composeScope ==
+                            MessageComposeScope.teacher) ...[
                           const SizedBox(height: 18),
                           Text(
                             s.adminLabel,
@@ -816,8 +821,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   Future<void> _pickAttachments() async {
     if (_pickingAttachment) return;
     setState(() => _pickingAttachment = true);
-    final picked =
-        await AnnouncementAttachmentService.instance.pickAndSaveMessageAttachments();
+    final picked = await AnnouncementAttachmentService.instance
+        .pickAndSaveMessageAttachments();
     if (!mounted) return;
     setState(() {
       _pickingAttachment = false;
@@ -855,8 +860,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
       DirectMessageDraft(
         subject: _subject.text.trim(),
         body: _body.text.trim(),
-        parentName:
-            hasParent ? _selectedParentNames.first : null,
+        parentName: hasParent ? _selectedParentNames.first : null,
         staffId: hasStaff ? _selectedStaffIds.first : null,
         attachments: List.unmodifiable(_attachments),
       ),
@@ -903,7 +907,9 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: MessagesPalette.primary.withValues(alpha: 0.08),
+                          color: MessagesPalette.primary.withValues(
+                            alpha: 0.08,
+                          ),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -921,71 +927,49 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                           ),
                         ),
                         const SizedBox(height: 18),
+                        if (_parents.isNotEmpty) ...[
+                          Text(
+                            s.messageSelectParent,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          MessageParentPicker(
+                            parents: _parents,
+                            selectedNames: _selectedParentNames,
+                            multiSelect: false,
+                            onChanged: (value) => setState(() {
+                              _selectedParentNames
+                                ..clear()
+                                ..addAll(value);
+                              if (value.isNotEmpty) _selectedStaffIds.clear();
+                              _error = '';
+                            }),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
                         Text(
-                          s.messageSelectParent,
+                          s.messageSelectStaff,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        MessageParentPicker(
-                          parents: _parents,
-                          selectedNames: _selectedParentNames,
+                        MessageStaffPicker(
+                          staff: _staff,
+                          selectedIds: _selectedStaffIds,
                           multiSelect: false,
                           onChanged: (value) => setState(() {
-                            _selectedParentNames
+                            _selectedStaffIds
                               ..clear()
                               ..addAll(value);
-                            if (value.isNotEmpty) _selectedStaffIds.clear();
+                            if (value.isNotEmpty) _selectedParentNames.clear();
                             _error = '';
                           }),
                         ),
-                        if (widget.composeScope == MessageComposeScope.teacher) ...[
-                          const SizedBox(height: 18),
-                          Text(
-                            s.adminLabel,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          MessageStaffPicker(
-                            staff: _staff,
-                            selectedIds: _selectedStaffIds,
-                            multiSelect: false,
-                            onChanged: (value) => setState(() {
-                              _selectedStaffIds
-                                ..clear()
-                                ..addAll(value);
-                              if (value.isNotEmpty) _selectedParentNames.clear();
-                              _error = '';
-                            }),
-                          ),
-                        ] else ...[
-                          const SizedBox(height: 18),
-                          Text(
-                            s.messageSelectStaff,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          MessageStaffPicker(
-                            staff: _staff,
-                            selectedIds: _selectedStaffIds,
-                            multiSelect: false,
-                            onChanged: (value) => setState(() {
-                              _selectedStaffIds
-                                ..clear()
-                                ..addAll(value);
-                              if (value.isNotEmpty) _selectedParentNames.clear();
-                              _error = '';
-                            }),
-                          ),
-                        ],
                         const SizedBox(height: 18),
                         TextField(
                           controller: _subject,
@@ -1061,7 +1045,8 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _pickingAttachment = false;
   ChatMessage? _replyTarget;
 
-  Conversation? get conversation => _data.getConversation(widget.conversationId);
+  Conversation? get conversation =>
+      _data.getConversation(widget.conversationId);
 
   String? get _viewerRole => AuthService.currentUser?.roleKey;
 
@@ -1073,10 +1058,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   bool _isOutgoing(ChatMessage msg) => msg.isOutgoingFor(
-        _viewerRole,
-        viewerStaffId: _viewerStaffId,
-        viewerUsername: AuthService.currentUser?.username,
-      );
+    _viewerRole,
+    viewerStaffId: _viewerStaffId,
+    viewerUsername: AuthService.currentUser?.username,
+  );
 
   bool get _canReply {
     if (widget.isBroadcast) {
@@ -1138,7 +1123,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _send({List<AnnouncementAttachment>? attachments, String? text}) {
     if (!_canReply) return;
     final messageText = text ?? _controller.text.trim();
-    final attachmentList = attachments ?? List.unmodifiable(_pendingAttachments);
+    final attachmentList =
+        attachments ?? List.unmodifiable(_pendingAttachments);
     if (messageText.isEmpty && attachmentList.isEmpty) return;
 
     final replyTo = _replyTarget == null
@@ -1204,17 +1190,17 @@ class _ChatScreenState extends State<ChatScreen> {
     if (confirmed != true || !mounted) return;
     if (_data.deleteMessage(widget.conversationId, index)) {
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.messageDeleted)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.messageDeleted)));
     }
   }
 
   Future<void> _pickAttachments() async {
     if (!_canReply || _pickingAttachment) return;
     setState(() => _pickingAttachment = true);
-    final picked =
-        await AnnouncementAttachmentService.instance.pickAndSaveMessageAttachments();
+    final picked = await AnnouncementAttachmentService.instance
+        .pickAndSaveMessageAttachments();
     if (!mounted) return;
     setState(() {
       _pickingAttachment = false;
@@ -1224,13 +1210,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _openAttachment(AnnouncementAttachment attachment) async {
     if (AnnouncementAttachmentService.instance.isVoiceAttachment(attachment)) {
-      final ok =
-          await VoicePlaybackService.instance.play(attachment.filePath);
+      final ok = await VoicePlaybackService.instance.play(attachment.filePath);
       if (!mounted || ok) return;
       final s = AppLocale.instance.strings;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.voicePlaybackFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.voicePlaybackFailed)));
       return;
     }
     await openAttachmentWithFeedback(context, path: attachment.filePath);
@@ -1264,14 +1249,24 @@ class _ChatScreenState extends State<ChatScreen> {
     final chat = conversation;
 
     return ListenableBuilder(
-      listenable: AppLocale.instance,
+      listenable: Listenable.merge([
+        AppLocale.instance,
+        PresenceService.instance,
+      ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
+        final peerOnline = chat == null
+            ? null
+            : (widget.isGroup || widget.isBroadcast
+                  ? null
+                  : PresenceService.instance.isConversationPeerOnline(chat));
         return Scaffold(
-          backgroundColor:
-              widget.isGroup ? CommunityPalette.surface : const Color(0xFFEEF2FF),
+          backgroundColor: widget.isGroup
+              ? CommunityPalette.surface
+              : const Color(0xFFEEF2FF),
           appBar: MessagesAppBar(
             title: chat?.displayTitleForViewer() ?? widget.contactName,
+            peerOnline: peerOnline,
             useCommunityTheme: widget.isGroup,
             photoPath: widget.isGroup ? chat?.photoPath : null,
             actions: [
@@ -1288,11 +1283,18 @@ class _ChatScreenState extends State<ChatScreen> {
               if (widget.isBroadcast)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   color: MessagesPalette.warm.withValues(alpha: 0.12),
                   child: Row(
                     children: [
-                      Icon(Icons.campaign_outlined, color: MessagesPalette.warm, size: 20),
+                      Icon(
+                        Icons.campaign_outlined,
+                        color: MessagesPalette.warm,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1375,169 +1377,186 @@ class _ChatScreenState extends State<ChatScreen> {
                               accent: accent,
                               onReply: () => _startReply(msg),
                               child: GestureDetector(
-                              onLongPress: isOutgoing
-                                  ? () => _confirmDeleteMessage(index)
-                                  : null,
-                              child: Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.78,
-                              ),
-                              decoration: BoxDecoration(
-                                color: bubbleColor,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(18),
-                                  topRight: const Radius.circular(18),
-                                  bottomLeft: Radius.circular(isOutgoing ? 18 : 4),
-                                  bottomRight: Radius.circular(isOutgoing ? 4 : 18),
-                                ),
-                                border: isOutgoing
-                                    ? null
-                                    : Border.all(color: Colors.grey.shade200),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                                onLongPress: isOutgoing
+                                    ? () => _confirmDeleteMessage(index)
+                                    : null,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
                                   ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (_directIncomingSenderLabel(msg, chat) !=
-                                      null) ...[
-                                    Text(
-                                      _directIncomingSenderLabel(msg, chat)!,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: isOutgoing
-                                            ? Colors.white70
-                                            : MessagesPalette.primary,
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width *
+                                        0.78,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: bubbleColor,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(18),
+                                      topRight: const Radius.circular(18),
+                                      bottomLeft: Radius.circular(
+                                        isOutgoing ? 18 : 4,
+                                      ),
+                                      bottomRight: Radius.circular(
+                                        isOutgoing ? 4 : 18,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                  ] else ...[
-                                    if (msg.senderRelationshipLabel != null &&
-                                        msg.senderRelationshipLabel!
-                                            .isNotEmpty) ...[
-                                      Text(
-                                        msg.senderRelationshipLabel!,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 11,
-                                          color: isOutgoing
-                                              ? Colors.white70
-                                              : MessagesPalette.primary,
+                                    border: isOutgoing
+                                        ? null
+                                        : Border.all(
+                                            color: Colors.grey.shade200,
+                                          ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.04,
                                         ),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
                                       ),
-                                      const SizedBox(height: 4),
                                     ],
-                                    if (widget.isGroup && !isOutgoing) ...[
-                                      Text(
-                                        msg.resolveDisplayName(),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                          color: CommunityPalette.primary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                    ],
-                                  ],
-                                  if (msg.replyTo != null) ...[
-                                    MessageReplyQuoteBubble(
-                                      quote: msg.replyTo!,
-                                      isOutgoing: isOutgoing,
-                                      accent: accent,
-                                    ),
-                                  ],
-                                  if (msg.subject != null &&
-                                      msg.subject!.isNotEmpty) ...[
-                                    Text(
-                                      msg.subject!,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isOutgoing
-                                            ? Colors.white
-                                            : MessagesPalette.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                  ],
-                                  if (msg.text.trim().isNotEmpty)
-                                    Text(
-                                      msg.text,
-                                      style: TextStyle(
-                                        color: isOutgoing
-                                            ? Colors.white
-                                            : Colors.black87,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  if (msg.attachments.isNotEmpty) ...[
-                                    if (msg.text.trim().isNotEmpty)
-                                      const SizedBox(height: 8),
-                                    ...msg.attachments.map(
-                                      (attachment) {
-                                        final attachmentService =
-                                            AnnouncementAttachmentService
-                                                .instance;
-                                        if (attachmentService
-                                            .isVoiceAttachment(attachment)) {
-                                          return VoiceMessagePlayer(
-                                            attachment: attachment,
-                                            isOutgoing: isOutgoing,
-                                            accent: widget.isGroup
-                                                ? CommunityPalette.primary
-                                                : MessagesPalette.primary,
-                                          );
-                                        }
-                                        return MessageAttachmentChip(
-                                          attachment: attachment,
-                                          isOutgoing: isOutgoing,
-                                          onTap: () =>
-                                              _openAttachment(attachment),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        _formatTime(msg.time),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: isOutgoing
-                                              ? Colors.white70
-                                              : Colors.black54,
+                                      if (_directIncomingSenderLabel(
+                                            msg,
+                                            chat,
+                                          ) !=
+                                          null) ...[
+                                        Text(
+                                          _directIncomingSenderLabel(
+                                            msg,
+                                            chat,
+                                          )!,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: isOutgoing
+                                                ? Colors.white70
+                                                : MessagesPalette.primary,
+                                          ),
                                         ),
-                                      ),
-                                      if (isOutgoing) ...[
-                                        const SizedBox(width: 6),
-                                        Icon(
-                                          msg.seenAt != null
-                                              ? Icons.done_all
-                                              : Icons.check,
-                                          size: 14,
-                                          color: msg.seenAt != null
-                                              ? Colors.lightBlueAccent
-                                              : Colors.white70,
+                                        const SizedBox(height: 4),
+                                      ] else ...[
+                                        if (msg.senderRelationshipLabel !=
+                                                null &&
+                                            msg
+                                                .senderRelationshipLabel!
+                                                .isNotEmpty) ...[
+                                          Text(
+                                            msg.senderRelationshipLabel!,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 11,
+                                              color: isOutgoing
+                                                  ? Colors.white70
+                                                  : MessagesPalette.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                        ],
+                                        if (widget.isGroup && !isOutgoing) ...[
+                                          Text(
+                                            msg.resolveDisplayName(),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: CommunityPalette.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                        ],
+                                      ],
+                                      if (msg.replyTo != null) ...[
+                                        MessageReplyQuoteBubble(
+                                          quote: msg.replyTo!,
+                                          isOutgoing: isOutgoing,
+                                          accent: accent,
                                         ),
                                       ],
+                                      if (msg.subject != null &&
+                                          msg.subject!.isNotEmpty) ...[
+                                        Text(
+                                          msg.subject!,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isOutgoing
+                                                ? Colors.white
+                                                : MessagesPalette.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                      ],
+                                      if (msg.text.trim().isNotEmpty)
+                                        Text(
+                                          msg.text,
+                                          style: TextStyle(
+                                            color: isOutgoing
+                                                ? Colors.white
+                                                : Colors.black87,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      if (msg.attachments.isNotEmpty) ...[
+                                        if (msg.text.trim().isNotEmpty)
+                                          const SizedBox(height: 8),
+                                        ...msg.attachments.map((attachment) {
+                                          final attachmentService =
+                                              AnnouncementAttachmentService
+                                                  .instance;
+                                          if (attachmentService
+                                              .isVoiceAttachment(attachment)) {
+                                            return VoiceMessagePlayer(
+                                              attachment: attachment,
+                                              isOutgoing: isOutgoing,
+                                              accent: widget.isGroup
+                                                  ? CommunityPalette.primary
+                                                  : MessagesPalette.primary,
+                                            );
+                                          }
+                                          return MessageAttachmentChip(
+                                            attachment: attachment,
+                                            isOutgoing: isOutgoing,
+                                            onTap: () =>
+                                                _openAttachment(attachment),
+                                          );
+                                        }),
+                                      ],
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            _formatTime(msg.time),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isOutgoing
+                                                  ? Colors.white70
+                                                  : Colors.black54,
+                                            ),
+                                          ),
+                                          if (isOutgoing) ...[
+                                            const SizedBox(width: 6),
+                                            Icon(
+                                              msg.seenAt != null
+                                                  ? Icons.done_all
+                                                  : Icons.check,
+                                              size: 14,
+                                              color: msg.seenAt != null
+                                                  ? Colors.lightBlueAccent
+                                                  : Colors.white70,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                            ),
                             ),
                           );
                         },

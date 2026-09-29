@@ -14,6 +14,8 @@ abstract final class AppCollections {
   static const homework = 'homework';
   static const dailyActivities = 'daily_activities';
   static const conversations = 'conversations';
+  /// Signed-in heartbeat for messaging online status.
+  static const userPresence = 'user_presence';
   static const announcements = 'app_announcements';
   static const attendanceSessions = 'attendance_sessions';
   static const fees = 'fees';

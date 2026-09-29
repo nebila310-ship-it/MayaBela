@@ -7,6 +7,7 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
+import 'package:mayabela/services/presence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 
@@ -18,17 +19,21 @@ class MessagesPalette {
   static const accent = Color(0xFFA5B4FC);
   static const warm = Color(0xFFF59E0B);
 
-  static const gradient = [Color(0xFF4338CA), Color(0xFF6366F1), Color(0xFF818CF8)];
+  static const gradient = [
+    Color(0xFF4338CA),
+    Color(0xFF6366F1),
+    Color(0xFF818CF8),
+  ];
 
   static LinearGradient get pageGradient => LinearGradient(
-        colors: [
-          const Color(0xFFEEF2FF),
-          const Color(0xFFF5F3FF),
-          const Color(0xFFFAFAFA),
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      );
+    colors: [
+      const Color(0xFFEEF2FF),
+      const Color(0xFFF5F3FF),
+      const Color(0xFFFAFAFA),
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
 }
 
 class CommunityPalette {
@@ -39,17 +44,71 @@ class CommunityPalette {
   static const accent = Color(0xFF99F6E4);
   static const surface = Color(0xFFF0FDFA);
 
-  static const gradient = [Color(0xFF0F766E), Color(0xFF0D9488), Color(0xFF2DD4BF)];
+  static const gradient = [
+    Color(0xFF0F766E),
+    Color(0xFF0D9488),
+    Color(0xFF2DD4BF),
+  ];
 
   static LinearGradient get pageGradient => LinearGradient(
-        colors: [
-          const Color(0xFFF0FDFA),
-          const Color(0xFFECFDF5),
-          const Color(0xFFFAFAFA),
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      );
+    colors: [
+      const Color(0xFFF0FDFA),
+      const Color(0xFFECFDF5),
+      const Color(0xFFFAFAFA),
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+}
+
+class PresenceDot extends StatelessWidget {
+  const PresenceDot({super.key, required this.online, this.size = 10});
+
+  final bool online;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: online ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+    );
+  }
+}
+
+class PresenceLabel extends StatelessWidget {
+  const PresenceLabel({super.key, required this.online, this.light = false});
+
+  final bool online;
+  final bool light;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppLocale.instance.strings;
+    final color = light
+        ? Colors.white.withValues(alpha: 0.92)
+        : (online ? const Color(0xFF15803D) : Colors.grey.shade600);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PresenceDot(online: online, size: 8),
+        const SizedBox(width: 6),
+        Text(
+          online ? s.onlineNow : s.offlineNow,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -57,6 +116,7 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.peerOnline,
     this.actions = const [],
     this.useCommunityTheme = false,
     this.photoPath,
@@ -64,29 +124,39 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
   final String? subtitle;
+  final bool? peerOnline;
   final List<Widget> actions;
   final bool useCommunityTheme;
   final String? photoPath;
 
   @override
-  Size get preferredSize => Size.fromHeight(subtitle != null ? 88 : kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+    subtitle != null || peerOnline != null ? 88 : kToolbarHeight,
+  );
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        useCommunityTheme ? CommunityPalette.primary : MessagesPalette.primary;
-    final titleWidget = subtitle != null
+    final accent = useCommunityTheme
+        ? CommunityPalette.primary
+        : MessagesPalette.primary;
+    Widget? subtitleChild;
+    if (peerOnline != null) {
+      subtitleChild = PresenceLabel(online: peerOnline!, light: true);
+    } else if (subtitle != null) {
+      subtitleChild = Text(
+        subtitle!,
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.white.withValues(alpha: 0.88),
+        ),
+      );
+    }
+    final titleWidget = subtitleChild != null
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(
-                subtitle!,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.88),
-                ),
-              ),
+              subtitleChild,
             ],
           )
         : Text(title, style: const TextStyle(fontWeight: FontWeight.bold));
@@ -154,6 +224,13 @@ class MessageStaffPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: PresenceService.instance,
+      builder: (context, _) => _buildPicker(context),
+    );
+  }
+
+  Widget _buildPicker(BuildContext context) {
     final s = AppLocale.instance.strings;
     if (staff.isEmpty) {
       return Text(
@@ -162,8 +239,9 @@ class MessageStaffPicker extends StatelessWidget {
       );
     }
 
-    final selectedMembers =
-        staff.where((member) => selectedIds.contains(member.id)).toList();
+    final selectedMembers = staff
+        .where((member) => selectedIds.contains(member.id))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,19 +250,20 @@ class MessageStaffPicker extends StatelessWidget {
           onTap: () => _openPicker(context),
           borderRadius: BorderRadius.circular(14),
           child: InputDecorator(
-            decoration: adminFieldDecoration(
-              label: s.messageSelectStaff,
-              icon: Icons.badge_outlined,
-              accent: const Color(0xFF7C3AED),
-            ).copyWith(
-              suffixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-            ),
+            decoration:
+                adminFieldDecoration(
+                  label: s.messageSelectStaff,
+                  icon: Icons.badge_outlined,
+                  accent: const Color(0xFF7C3AED),
+                ).copyWith(
+                  suffixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+                ),
             child: Text(
               selectedMembers.isEmpty
                   ? s.messageSelectStaff
                   : multiSelect
-                      ? s.messageStaffSelected(selectedMembers.length)
-                      : selectedMembers.first.displayName,
+                  ? s.messageStaffSelected(selectedMembers.length)
+                  : selectedMembers.first.labeledName,
               style: TextStyle(
                 color: selectedMembers.isEmpty
                     ? Colors.grey.shade600
@@ -201,10 +280,9 @@ class MessageStaffPicker extends StatelessWidget {
             children: selectedMembers.map((member) {
               return InputChip(
                 avatar: Icon(_staffIcon(member.kind), size: 16),
-                label: Text(member.displayName),
+                label: Text(member.labeledName),
                 onDeleted: () {
-                  final next = Set<String>.from(selectedIds)
-                    ..remove(member.id);
+                  final next = Set<String>.from(selectedIds)..remove(member.id);
                   onChanged(next);
                 },
               );
@@ -246,6 +324,13 @@ class MessageParentPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: PresenceService.instance,
+      builder: (context, _) => _buildPicker(context),
+    );
+  }
+
+  Widget _buildPicker(BuildContext context) {
     final s = AppLocale.instance.strings;
     if (parents.isEmpty) {
       return Text(
@@ -265,19 +350,20 @@ class MessageParentPicker extends StatelessWidget {
           onTap: () => _openPicker(context),
           borderRadius: BorderRadius.circular(14),
           child: InputDecorator(
-            decoration: adminFieldDecoration(
-              label: s.messageSelectParent,
-              icon: Icons.family_restroom_outlined,
-              accent: MessagesPalette.primary,
-            ).copyWith(
-              suffixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-            ),
+            decoration:
+                adminFieldDecoration(
+                  label: s.messageSelectParent,
+                  icon: Icons.family_restroom_outlined,
+                  accent: MessagesPalette.primary,
+                ).copyWith(
+                  suffixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+                ),
             child: Text(
               selectedOptions.isEmpty
                   ? s.messageSelectParent
                   : multiSelect
-                      ? s.messageParentsSelected(selectedOptions.length)
-                      : selectedOptions.first.displayLabel(),
+                  ? s.messageParentsSelected(selectedOptions.length)
+                  : selectedOptions.first.labeledName,
               style: TextStyle(
                 color: selectedOptions.isEmpty
                     ? Colors.grey.shade600
@@ -294,7 +380,7 @@ class MessageParentPicker extends StatelessWidget {
             runSpacing: 8,
             children: selectedOptions.map((option) {
               return InputChip(
-                label: Text(option.displayLabel()),
+                label: Text(option.labeledName),
                 onDeleted: () {
                   final next = Set<String>.from(selectedNames)
                     ..remove(option.parentName);
@@ -310,22 +396,19 @@ class MessageParentPicker extends StatelessWidget {
 }
 
 IconData _staffIcon(StaffKind kind) => switch (kind) {
-      StaffKind.teacher => Icons.school_outlined,
-      StaffKind.driver => Icons.directions_bus_outlined,
-      StaffKind.adminStaff => Icons.admin_panel_settings_outlined,
-    };
+  StaffKind.teacher => Icons.school_outlined,
+  StaffKind.driver => Icons.directions_bus_outlined,
+  StaffKind.adminStaff => Icons.admin_panel_settings_outlined,
+};
 
 Color _staffColor(StaffKind kind) => switch (kind) {
-      StaffKind.teacher => const Color(0xFF7C3AED),
-      StaffKind.driver => const Color(0xFFEA580C),
-      StaffKind.adminStaff => MessagesPalette.primary,
-    };
+  StaffKind.teacher => const Color(0xFF7C3AED),
+  StaffKind.driver => const Color(0xFFEA580C),
+  StaffKind.adminStaff => MessagesPalette.primary,
+};
 
 class _SelectAllBar extends StatelessWidget {
-  const _SelectAllBar({
-    required this.allSelected,
-    required this.onToggleAll,
-  });
+  const _SelectAllBar({required this.allSelected, required this.onToggleAll});
 
   final bool allSelected;
   final VoidCallback onToggleAll;
@@ -418,155 +501,195 @@ class _ParentSearchSheetState extends State<_ParentSearchSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final s = AppLocale.instance.strings;
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return ListenableBuilder(
+      listenable: PresenceService.instance,
+      builder: (context, _) {
+        final s = AppLocale.instance.strings;
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.78,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(99),
-              ),
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.78,
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    s.messageSelectParent,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    s.messageSearchParentHint,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _query,
-                    autofocus: true,
-                    decoration: adminFieldDecoration(
-                      label: s.search,
-                      icon: Icons.search_rounded,
-                      accent: MessagesPalette.primary,
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  if (widget.multiSelect) ...[
-                    const SizedBox(height: 10),
-                    _SelectAllBar(
-                      allSelected: _allFilteredSelected,
-                      onToggleAll: _toggleSelectAll,
-                    ),
-                  ],
-                ],
-              ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            Flexible(
-              child: _filtered.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          s.messageNoSearchResults,
-                          style: TextStyle(color: Colors.grey.shade600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        s.messageSelectParent,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _filtered.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final option = _filtered[index];
-                        final isSelected =
-                            _selected.contains(option.parentName);
-                        if (widget.multiSelect) {
-                          return CheckboxListTile(
-                            value: isSelected,
-                            onChanged: (_) => _toggleParent(option.parentName),
-                            secondary: CircleAvatar(
-                              backgroundColor: MessagesPalette.primary
-                                  .withValues(alpha: 0.12),
-                              child: Icon(
-                                Icons.family_restroom_outlined,
-                                color: MessagesPalette.primary,
-                              ),
-                            ),
-                            title: Text(
-                              option.parentName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(option.searchDetail),
-                          );
-                        }
-                        return ListTile(
-                          selected: isSelected,
-                          leading: CircleAvatar(
-                            backgroundColor: MessagesPalette.primary
-                                .withValues(alpha: 0.12),
-                            child: Icon(
-                              Icons.family_restroom_outlined,
-                              color: MessagesPalette.primary,
-                            ),
-                          ),
-                          title: Text(
-                            option.parentName,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(option.searchDetail),
-                          trailing: isSelected
-                              ? Icon(Icons.check_circle,
-                                  color: MessagesPalette.primary)
-                              : null,
-                          onTap: () => _toggleParent(option.parentName),
-                        );
-                      },
-                    ),
-            ),
-            if (widget.multiSelect)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context, _selected),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: MessagesPalette.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 6),
+                      Text(
+                        s.messageSearchParentHint,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _query,
+                        autofocus: true,
+                        decoration: adminFieldDecoration(
+                          label: s.search,
+                          icon: Icons.search_rounded,
+                          accent: MessagesPalette.primary,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      if (widget.multiSelect) ...[
+                        const SizedBox(height: 10),
+                        _SelectAllBar(
+                          allSelected: _allFilteredSelected,
+                          onToggleAll: _toggleSelectAll,
+                        ),
+                      ],
+                    ],
                   ),
-                  child: Text(s.messageDoneSelecting),
                 ),
-              )
-            else
-              const SizedBox(height: 8),
-          ],
-        ),
-      ),
+                Flexible(
+                  child: _filtered.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              s.messageNoSearchResults,
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _filtered.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final option = _filtered[index];
+                            final isSelected = _selected.contains(
+                              option.parentName,
+                            );
+                            final online = PresenceService.instance
+                                .isParentOnline(option);
+                            if (widget.multiSelect) {
+                              return CheckboxListTile(
+                                value: isSelected,
+                                onChanged: (_) =>
+                                    _toggleParent(option.parentName),
+                                secondary: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: MessagesPalette.primary
+                                          .withValues(alpha: 0.12),
+                                      child: Icon(
+                                        Icons.family_restroom_outlined,
+                                        color: MessagesPalette.primary,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: -1,
+                                      bottom: -1,
+                                      child: PresenceDot(online: online),
+                                    ),
+                                  ],
+                                ),
+                                title: Text(
+                                  option.labeledName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${online ? AppLocale.instance.strings.onlineNow : AppLocale.instance.strings.offlineNow} · ${option.searchDetail}',
+                                ),
+                              );
+                            }
+                            return ListTile(
+                              selected: isSelected,
+                              leading: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: MessagesPalette.primary
+                                        .withValues(alpha: 0.12),
+                                    child: Icon(
+                                      Icons.family_restroom_outlined,
+                                      color: MessagesPalette.primary,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: -1,
+                                    bottom: -1,
+                                    child: PresenceDot(
+                                      online: PresenceService.instance
+                                          .isParentOnline(option),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              title: Text(
+                                option.labeledName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${PresenceService.instance.isParentOnline(option) ? AppLocale.instance.strings.onlineNow : AppLocale.instance.strings.offlineNow} · ${option.searchDetail}',
+                              ),
+                              trailing: isSelected
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: MessagesPalette.primary,
+                                    )
+                                  : null,
+                              onTap: () => _toggleParent(option.parentName),
+                            );
+                          },
+                        ),
+                ),
+                if (widget.multiSelect)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, _selected),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: MessagesPalette.primary,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: Text(s.messageDoneSelecting),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -596,9 +719,8 @@ class _StaffSearchSheetState extends State<_StaffSearchSheet> {
     super.dispose();
   }
 
-  List<StaffMemberOption> get _filtered => widget.staff
-      .where((member) => member.matchesQuery(_query.text))
-      .toList();
+  List<StaffMemberOption> get _filtered =>
+      widget.staff.where((member) => member.matchesQuery(_query.text)).toList();
 
   bool get _allFilteredSelected =>
       _filtered.isNotEmpty &&
@@ -635,146 +757,189 @@ class _StaffSearchSheetState extends State<_StaffSearchSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final s = AppLocale.instance.strings;
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return ListenableBuilder(
+      listenable: PresenceService.instance,
+      builder: (context, _) {
+        final s = AppLocale.instance.strings;
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.78,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(99),
-              ),
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.78,
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    s.messageSelectStaff,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    s.messageSearchStaffHint,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _query,
-                    autofocus: true,
-                    decoration: adminFieldDecoration(
-                      label: s.search,
-                      icon: Icons.search_rounded,
-                      accent: const Color(0xFF7C3AED),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  if (widget.multiSelect) ...[
-                    const SizedBox(height: 10),
-                    _SelectAllBar(
-                      allSelected: _allFilteredSelected,
-                      onToggleAll: _toggleSelectAll,
-                    ),
-                  ],
-                ],
-              ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            Flexible(
-              child: _filtered.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          s.messageNoSearchResults,
-                          style: TextStyle(color: Colors.grey.shade600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        s.messageSelectStaff,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _filtered.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final member = _filtered[index];
-                        final isSelected = _selected.contains(member.id);
-                        final color = _staffColor(member.kind);
-                        if (widget.multiSelect) {
-                          return CheckboxListTile(
-                            value: isSelected,
-                            onChanged: (_) => _toggleStaff(member.id),
-                            secondary: CircleAvatar(
-                              backgroundColor: color.withValues(alpha: 0.12),
-                              child: Icon(_staffIcon(member.kind), color: color),
-                            ),
-                            title: Text(
-                              member.displayName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(member.subtitle),
-                          );
-                        }
-                        return ListTile(
-                          selected: isSelected,
-                          leading: CircleAvatar(
-                            backgroundColor: color.withValues(alpha: 0.12),
-                            child: Icon(_staffIcon(member.kind), color: color),
-                          ),
-                          title: Text(
-                            member.displayName,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(member.subtitle),
-                          trailing: isSelected
-                              ? Icon(Icons.check_circle, color: color)
-                              : null,
-                          onTap: () => _toggleStaff(member.id),
-                        );
-                      },
-                    ),
-            ),
-            if (widget.multiSelect)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context, _selected),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 6),
+                      Text(
+                        s.messageSearchStaffHint,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _query,
+                        autofocus: true,
+                        decoration: adminFieldDecoration(
+                          label: s.search,
+                          icon: Icons.search_rounded,
+                          accent: const Color(0xFF7C3AED),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      if (widget.multiSelect) ...[
+                        const SizedBox(height: 10),
+                        _SelectAllBar(
+                          allSelected: _allFilteredSelected,
+                          onToggleAll: _toggleSelectAll,
+                        ),
+                      ],
+                    ],
                   ),
-                  child: Text(s.messageDoneSelecting),
                 ),
-              )
-            else
-              const SizedBox(height: 8),
-          ],
-        ),
-      ),
+                Flexible(
+                  child: _filtered.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              s.messageNoSearchResults,
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _filtered.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final member = _filtered[index];
+                            final isSelected = _selected.contains(member.id);
+                            final color = _staffColor(member.kind);
+                            final online = PresenceService.instance
+                                .isStaffOnline(member);
+                            if (widget.multiSelect) {
+                              return CheckboxListTile(
+                                value: isSelected,
+                                onChanged: (_) => _toggleStaff(member.id),
+                                secondary: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: color.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      child: Icon(
+                                        _staffIcon(member.kind),
+                                        color: color,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: -1,
+                                      bottom: -1,
+                                      child: PresenceDot(online: online),
+                                    ),
+                                  ],
+                                ),
+                                title: Text(
+                                  member.labeledName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${online ? AppLocale.instance.strings.onlineNow : AppLocale.instance.strings.offlineNow} · ${member.subtitle}',
+                                ),
+                              );
+                            }
+                            return ListTile(
+                              selected: isSelected,
+                              leading: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: color.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    child: Icon(
+                                      _staffIcon(member.kind),
+                                      color: color,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: -1,
+                                    bottom: -1,
+                                    child: PresenceDot(online: online),
+                                  ),
+                                ],
+                              ),
+                              title: Text(
+                                member.labeledName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${online ? AppLocale.instance.strings.onlineNow : AppLocale.instance.strings.offlineNow} · ${member.subtitle}',
+                              ),
+                              trailing: isSelected
+                                  ? Icon(Icons.check_circle, color: color)
+                                  : null,
+                              onTap: () => _toggleStaff(member.id),
+                            );
+                          },
+                        ),
+                ),
+                if (widget.multiSelect)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, _selected),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF7C3AED),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: Text(s.messageDoneSelecting),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -869,138 +1034,151 @@ class ConversationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chat = conversation;
-    final role = AuthService.currentUser?.roleKey;
-    final viewerStaffId = role == AuthService.roleAdmin
-        ? StaffMemberOption.viewerAdminStaffId(role)
-        : StaffMemberOption.viewerStaffId(role);
-    final unread = unreadCount ??
-        chat.unreadForViewer(
-          role,
-          viewerStaffId: viewerStaffId,
-        );
-    final isBroadcast = chat.isBroadcast;
-    final isCommunity = chat.isGroup;
-    final accent = isBroadcast
-        ? MessagesPalette.warm
-        : isCommunity
+    return ListenableBuilder(
+      listenable: PresenceService.instance,
+      builder: (context, _) {
+        final chat = conversation;
+        final role = AuthService.currentUser?.roleKey;
+        final viewerStaffId = role == AuthService.roleAdmin
+            ? StaffMemberOption.viewerAdminStaffId(role)
+            : StaffMemberOption.viewerStaffId(role);
+        final unread =
+            unreadCount ??
+            chat.unreadForViewer(role, viewerStaffId: viewerStaffId);
+        final isBroadcast = chat.isBroadcast;
+        final isCommunity = chat.isGroup;
+        final accent = isBroadcast
+            ? MessagesPalette.warm
+            : isCommunity
             ? CommunityPalette.primary
             : MessagesPalette.secondary;
+        final showPresence = !isBroadcast && !isCommunity;
+        final peerOnline = showPresence
+            ? PresenceService.instance.isConversationPeerOnline(chat)
+            : false;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: Colors.white,
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: accent.withValues(alpha: 0.16)),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.1),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                CommunityAvatar(
-                  accent: accent,
-                  photoPath: isCommunity ? chat.photoPath : null,
-                  size: 52,
-                  icon: isBroadcast
-                      ? Icons.campaign_rounded
-                      : isCommunity
-                          ? Icons.diversity_3_rounded
-                          : Icons.person_rounded,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              chat.displayTitleForViewer(),
-                              style: TextStyle(
-                                fontWeight: unread > 0
-                                    ? FontWeight.bold
-                                    : FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            timeLabel,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        chat.lastMessage,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontWeight:
-                              unread > 0 ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                      if (isBroadcast && chat.broadcastAudienceKeys.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: chat.broadcastAudienceKeys
-                              .map(
-                                (key) => _MiniChip(
-                                  label: audienceLabelBuilder(key),
-                                  color: accent,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (unread > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: MessagesPalette.warm,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      unread > 99 ? '99+' : '$unread',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+            child: Ink(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: accent.withValues(alpha: 0.16)),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
-              ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    CommunityAvatar(
+                      accent: accent,
+                      photoPath: isCommunity ? chat.photoPath : null,
+                      size: 52,
+                      icon: isBroadcast
+                          ? Icons.campaign_rounded
+                          : isCommunity
+                          ? Icons.diversity_3_rounded
+                          : Icons.person_rounded,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  chat.displayTitleForViewer(),
+                                  style: TextStyle(
+                                    fontWeight: unread > 0
+                                        ? FontWeight.bold
+                                        : FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              if (showPresence) ...[
+                                PresenceDot(online: peerOnline),
+                                const SizedBox(width: 8),
+                              ],
+                              Text(
+                                timeLabel,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            chat.lastMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: unread > 0
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          if (isBroadcast &&
+                              chat.broadcastAudienceKeys.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: chat.broadcastAudienceKeys
+                                  .map(
+                                    (key) => _MiniChip(
+                                      label: audienceLabelBuilder(key),
+                                      color: accent,
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (unread > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: MessagesPalette.warm,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1077,15 +1255,16 @@ class _CommunityMembersSheetState extends State<CommunityMembersSheet> {
   }
 
   Future<void> _openAddMembers() async {
-    final parents =
-        _data.getAvailableParentsForCommunity(widget.conversationId);
+    final parents = _data.getAvailableParentsForCommunity(
+      widget.conversationId,
+    );
     final staff = _data.getAvailableStaffForCommunity(widget.conversationId);
     if (parents.isEmpty && staff.isEmpty) {
       final s = AppLocale.instance.strings;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.noMembersAvailableToAdd)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.noMembersAvailableToAdd)));
       return;
     }
 
@@ -1398,7 +1577,10 @@ class _AddCommunityMembersSheetState extends State<AddCommunityMembersSheet> {
               if (_error.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(_error, style: const TextStyle(color: Colors.red)),
+                  child: Text(
+                    _error,
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
               FilledButton(
                 onPressed: _confirmAdd,
@@ -1452,23 +1634,38 @@ class _MemberTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
+    final online = member.isParent
+        ? PresenceService.instance.isOnline(username: member.key)
+        : PresenceService.instance.isOnline(staffId: member.key);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      leading: CircleAvatar(
-        backgroundColor: CommunityPalette.primary.withValues(alpha: 0.12),
-        child: Icon(
-          member.isParent
-              ? Icons.family_restroom_outlined
-              : Icons.badge_outlined,
-          color: CommunityPalette.primary,
-          size: 20,
-        ),
+      leading: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          CircleAvatar(
+            backgroundColor: CommunityPalette.primary.withValues(alpha: 0.12),
+            child: Icon(
+              member.isParent
+                  ? Icons.family_restroom_outlined
+                  : Icons.badge_outlined,
+              color: CommunityPalette.primary,
+              size: 20,
+            ),
+          ),
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: PresenceDot(online: online, size: 8),
+          ),
+        ],
       ),
       title: Text(
         member.displayName,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: Text('${member.typeLabel} · ${member.subtitle}'),
+      subtitle: Text(
+        '${online ? s.onlineNow : s.offlineNow} · ${member.typeLabel} · ${member.subtitle}',
+      ),
       trailing: canManage
           ? TextButton.icon(
               onPressed: onRemove,
@@ -1537,7 +1734,8 @@ class CommunityAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = photoPath != null &&
+    final hasPhoto =
+        photoPath != null &&
         photoPath!.isNotEmpty &&
         File(photoPath!).existsSync();
 
@@ -1589,7 +1787,9 @@ class CommunityPhotoPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
     final hasPhoto =
-        photoPath != null && photoPath!.isNotEmpty && File(photoPath!).existsSync();
+        photoPath != null &&
+        photoPath!.isNotEmpty &&
+        File(photoPath!).existsSync();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1624,12 +1824,18 @@ class CommunityPhotoPicker extends StatelessWidget {
                             ),
                           )
                         : Icon(
-                            hasPhoto ? Icons.photo_camera_outlined : Icons.add_a_photo_outlined,
+                            hasPhoto
+                                ? Icons.photo_camera_outlined
+                                : Icons.add_a_photo_outlined,
                           ),
-                    label: Text(hasPhoto ? s.changeCommunityPhoto : s.addCommunityPhoto),
+                    label: Text(
+                      hasPhoto ? s.changeCommunityPhoto : s.addCommunityPhoto,
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: CommunityPalette.primary,
-                      side: BorderSide(color: CommunityPalette.primary.withValues(alpha: 0.35)),
+                      side: BorderSide(
+                        color: CommunityPalette.primary.withValues(alpha: 0.35),
+                      ),
                     ),
                   ),
                   if (hasPhoto) ...[
@@ -1776,14 +1982,13 @@ class PendingAttachmentRow extends StatelessWidget {
               size: 16,
               color: CommunityPalette.primary,
             ),
-            label: Text(
-              attachment.fileName,
-              overflow: TextOverflow.ellipsis,
-            ),
+            label: Text(attachment.fileName, overflow: TextOverflow.ellipsis),
             deleteIcon: const Icon(Icons.close, size: 16),
             onDeleted: () => onRemove(attachment),
             backgroundColor: Colors.white,
-            side: BorderSide(color: CommunityPalette.primary.withValues(alpha: 0.2)),
+            side: BorderSide(
+              color: CommunityPalette.primary.withValues(alpha: 0.2),
+            ),
           );
         },
       ),
@@ -1848,8 +2053,9 @@ class _SwipeToReplyMessageState extends State<SwipeToReplyMessage> {
       onHorizontalDragEnd: _onDragEnd,
       child: Stack(
         clipBehavior: Clip.none,
-        alignment:
-            widget.isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
+        alignment: widget.isOutgoing
+            ? Alignment.centerRight
+            : Alignment.centerLeft,
         children: [
           if (showReplyHint)
             Positioned(
@@ -1895,9 +2101,7 @@ class MessageReplyComposerBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: accent, width: 3),
-        ),
+        border: Border(left: BorderSide(color: accent, width: 3)),
       ),
       child: Row(
         children: [
@@ -1918,10 +2122,7 @@ class MessageReplyComposerBar extends StatelessWidget {
                   quote.previewText,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
               ],
             ),
@@ -1964,9 +2165,7 @@ class MessageReplyQuoteBubble extends StatelessWidget {
             ? Colors.white.withValues(alpha: 0.12)
             : accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border(
-          left: BorderSide(color: borderColor, width: 3),
-        ),
+        border: Border(left: BorderSide(color: borderColor, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1986,11 +2185,7 @@ class MessageReplyQuoteBubble extends StatelessWidget {
             quote.previewText,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.3,
-              color: bodyColor,
-            ),
+            style: TextStyle(fontSize: 12, height: 1.3, color: bodyColor),
           ),
         ],
       ),
