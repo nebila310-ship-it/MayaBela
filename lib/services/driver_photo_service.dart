@@ -1,81 +1,86 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:image/image.dart' as img;
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 
-/// Saves square driver profile photos on device keyed by driver ID.
+/// Saves square driver profile photos keyed by driver ID.
 class DriverPhotoService {
   DriverPhotoService._();
   static final instance = DriverPhotoService._();
 
-  final _picker = ImagePicker();
+  final Map<String, String> _cachedPaths = {};
+  final Map<String, Uint8List> _cachedBytes = {};
 
-  Future<File?> pickFromGallery() async {
-    if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
+  bool get _canPick => AuthService.currentUser != null;
+
+  String? get lastError => ProfilePhotoCodec.lastError;
+
+  Future<Uint8List?> pickBytes() async {
+    if (!_canPick) {
+      ProfilePhotoCodec.lastError = 'You do not have permission to add photos.';
       return null;
     }
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      imageQuality: 90,
+    return ProfilePhotoCodec.pickBytes();
+  }
+
+  Future<File?> pickFromGallery() async {
+    if (kIsWeb) return null;
+    final bytes = await pickBytes();
+    if (bytes == null) return null;
+    final file = File(
+      '${Directory.systemTemp.path}/driver_pick_${DateTime.now().millisecondsSinceEpoch}.jpg',
     );
-    if (picked == null) return null;
-    return File(picked.path);
+    await file.writeAsBytes(bytes);
+    return file;
   }
 
   Future<String?> saveForDriver(String driverId, File source) async {
-    final id = driverId.trim().toUpperCase();
-    final bytes = await source.readAsBytes();
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) return null;
-
-    final size =
-        decoded.width < decoded.height ? decoded.width : decoded.height;
-    final left = (decoded.width - size) ~/ 2;
-    final top = (decoded.height - size) ~/ 2;
-    final cropped =
-        img.copyCrop(decoded, x: left, y: top, width: size, height: size);
-    final resized = img.copyResize(cropped, width: 512, height: 512);
-    final encoded = img.encodeJpg(resized, quality: 88);
-
-    final dir = await getApplicationDocumentsDirectory();
-    final photosDir = Directory('${dir.path}/driver_photos');
-    if (!await photosDir.exists()) {
-      await photosDir.create(recursive: true);
-    }
-    final file = File('${photosDir.path}/$id.jpg');
-    await file.writeAsBytes(encoded);
-    return file.path;
+    return saveBytesForDriver(driverId, await source.readAsBytes());
   }
 
-  final Map<String, String> _cachedPaths = {};
+  Future<String?> saveBytesForDriver(
+    String driverId,
+    Uint8List sourceBytes,
+  ) async {
+    return ProfilePhotoCodec.saveBytes(
+      personId: driverId,
+      sourceBytes: sourceBytes,
+      folder: 'driver_photos',
+      byteCache: _cachedBytes,
+      pathCache: _cachedPaths,
+    );
+  }
 
   void rememberPath(String driverId, String path) {
     _cachedPaths[driverId.trim().toUpperCase()] = path;
   }
 
-  String? lookupPath(String? driverId) {
-    if (driverId == null || driverId.trim().isEmpty) return null;
-    final id = driverId.trim().toUpperCase();
-    final cached = _cachedPaths[id];
-    if (cached != null && File(cached).existsSync()) return cached;
-    return null;
+  void rememberBytes(String driverId, Uint8List bytes) {
+    _cachedBytes[driverId.trim().toUpperCase()] = bytes;
   }
 
-  Future<String?> resolvePath(String? driverId) async {
-    if (driverId == null || driverId.trim().isEmpty) return null;
-    final id = driverId.trim().toUpperCase();
-    final cached = lookupPath(id);
-    if (cached != null) return cached;
+  Uint8List? lookupBytes(String? driverId, {String? storedPath}) {
+    return ProfilePhotoCodec.lookupBytes(
+      personId: driverId,
+      byteCache: _cachedBytes,
+      pathCache: _cachedPaths,
+      storedPath: storedPath,
+    );
+  }
 
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/driver_photos/$id.jpg');
-    if (await file.exists()) {
-      _cachedPaths[id] = file.path;
-      return file.path;
-    }
-    return null;
+  String? lookupPath(String? driverId) {
+    if (driverId == null || driverId.trim().isEmpty) return null;
+    return _cachedPaths[driverId.trim().toUpperCase()];
+  }
+
+  Future<String?> resolvePath(String? driverId, {String? storedPath}) {
+    return ProfilePhotoCodec.resolvePath(
+      personId: driverId,
+      folder: 'driver_photos',
+      pathCache: _cachedPaths,
+      storedPath: storedPath,
+    );
   }
 }

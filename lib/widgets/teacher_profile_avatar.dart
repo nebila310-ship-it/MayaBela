@@ -1,11 +1,11 @@
-import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Profile photo for the logged-in teacher (from registry + saved file).
 class TeacherProfileAvatar extends StatefulWidget {
@@ -34,6 +34,7 @@ class TeacherProfileAvatar extends StatefulWidget {
 
 class _TeacherProfileAvatarState extends State<TeacherProfileAvatar> {
   String? _photoPath;
+  Uint8List? _photoBytes;
 
   @override
   void initState() {
@@ -49,13 +50,20 @@ class _TeacherProfileAvatarState extends State<TeacherProfileAvatar> {
     if (id == null || id.isEmpty) return;
 
     final fromRecord = TeacherRegistryService.instance.lookupById(id)?.photoPath;
-    if (fromRecord != null && !kIsWeb && File(fromRecord).existsSync()) {
-      if (mounted) setState(() => _photoPath = fromRecord);
-      return;
+    final resolved = await TeacherPhotoService.instance.resolvePath(
+      id,
+      storedPath: fromRecord,
+    );
+    final bytes = TeacherPhotoService.instance.lookupBytes(
+      id,
+      storedPath: resolved ?? fromRecord,
+    );
+    if (mounted) {
+      setState(() {
+        _photoPath = resolved ?? fromRecord;
+        _photoBytes = bytes;
+      });
     }
-
-    final resolved = await TeacherPhotoService.instance.resolvePath(id);
-    if (mounted) setState(() => _photoPath = resolved);
   }
 
   String get _initial {
@@ -67,20 +75,18 @@ class _TeacherProfileAvatarState extends State<TeacherProfileAvatar> {
   @override
   Widget build(BuildContext context) {
     final size = widget.radius * 2;
-    final hasPhoto =
-        !kIsWeb && _photoPath != null && File(_photoPath!).existsSync();
+    final provider = profilePhotoProvider(bytes: _photoBytes, path: _photoPath);
 
     Widget avatar = CircleAvatar(
       radius: widget.radius,
       backgroundColor:
           widget.backgroundColor ?? Colors.white.withValues(alpha: 0.25),
-      child: hasPhoto
+      child: provider != null
           ? ClipOval(
-              child: Image.file(
-                File(_photoPath!),
-                width: size,
-                height: size,
-                fit: BoxFit.cover,
+              child: ProfilePhotoImage(
+                bytes: _photoBytes,
+                path: _photoPath,
+                size: size,
               ),
             )
           : Text(

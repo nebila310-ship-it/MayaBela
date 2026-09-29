@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/web_erp/shell/web_erp_navigation_scope.dart';
@@ -257,7 +258,7 @@ class AdminPhotoPicker extends StatelessWidget {
     if (photoBytes != null && photoBytes!.isNotEmpty) {
       return MemoryImage(photoBytes!);
     }
-    if (photo != null) return FileImage(photo!);
+    if (!kIsWeb && photo != null) return FileImage(photo!);
     return null;
   }
 

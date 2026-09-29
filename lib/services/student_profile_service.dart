@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/school_class.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_account_service.dart';
+import 'package:mayabela/services/student_photo_service.dart';
 
 /// Live student profile fields for the portal profile screen.
 class StudentPortalProfile {
@@ -58,10 +60,19 @@ class StudentPortalProfile {
   }
 
   bool get hasPhoto {
-    if (kIsWeb) return false;
-    return photoPath != null &&
-        photoPath!.trim().isNotEmpty &&
-        File(photoPath!).existsSync();
+    if (photoPath == null || photoPath!.trim().isEmpty) return false;
+    if (StudentPhotoService.instance
+            .lookupBytes(studentId, storedPath: photoPath)
+            ?.isNotEmpty ==
+        true) {
+      return true;
+    }
+    if (WebAttachmentCache.instance.read(photoPath) != null) return true;
+    if (photoPath!.startsWith('http://') || photoPath!.startsWith('https://')) {
+      return true;
+    }
+    if (kIsWeb) return WebAttachmentCache.instance.isWebPath(photoPath);
+    return File(photoPath!).existsSync();
   }
 }
 

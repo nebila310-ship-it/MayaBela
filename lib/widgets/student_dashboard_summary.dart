@@ -6,9 +6,11 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/widgets/dashboard_welcome_card.dart';
+import 'package:mayabela/widgets/profile_photo_view.dart';
 
 class StudentDashboardSummary extends StatelessWidget {
   const StudentDashboardSummary({super.key});
@@ -136,10 +138,20 @@ class _StudentAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (profile.hasPhoto) {
-      return CircleAvatar(
-        radius: 36,
-        backgroundImage: FileImage(File(profile.photoPath!)),
+      final bytes = StudentPhotoService.instance.lookupBytes(
+        profile.studentId,
+        storedPath: profile.photoPath,
       );
+      final provider = profilePhotoProvider(
+        bytes: bytes,
+        path: profile.photoPath,
+      );
+      if (provider != null) {
+        return CircleAvatar(
+          radius: 36,
+          backgroundImage: provider,
+        );
+      }
     }
 
     if (profile.hasSchoolLogo) {
