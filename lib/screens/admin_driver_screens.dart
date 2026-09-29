@@ -14,6 +14,7 @@ import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 
 class AdminAddDriverScreen extends StatefulWidget {
   const AdminAddDriverScreen({super.key});
@@ -50,15 +51,12 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final bytes = await DriverPhotoService.instance.pickBytes();
-    if (!mounted) return;
-    if (bytes == null) {
-      final err = DriverPhotoService.instance.lastError;
-      if (err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
-      return;
-    }
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: DriverPhotoService.instance.pickBytes,
+      errorOf: () => DriverPhotoService.instance.lastError,
+    );
+    if (!mounted || bytes == null) return;
     setState(() => _pickedPhotoBytes = bytes);
   }
 
@@ -336,6 +334,15 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
               hint: s.driverPhotoHint,
               accent: theme.primary,
               onTap: _pickPhoto,
+              onView: _pickedPhotoBytes == null
+                  ? null
+                  : () => showProfilePhotoViewer(
+                        context,
+                        bytes: _pickedPhotoBytes,
+                        title: _name.text.trim().isEmpty
+                            ? 'Photo'
+                            : _name.text.trim(),
+                      ),
             ),
             const SizedBox(height: 20),
             AdminFormSection(

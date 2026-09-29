@@ -11,7 +11,9 @@ import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
+import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/maya_floating_chat.dart';
+import 'package:mayabela/widgets/staff_registry_avatar.dart';
 
 class WebStudentsTablePage extends StatefulWidget {
   const WebStudentsTablePage({super.key, this.onNavigate});
@@ -292,12 +294,16 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                                     ),
                                 cells: [
                                   DataCell(
-                                    CircleAvatar(
-                                      child: Text(
-                                        s.fullName.isEmpty
-                                            ? '?'
-                                            : s.fullName[0],
+                                    StaffRegistryAvatar(
+                                      key: ValueKey(
+                                        'stu-photo-${s.studentId}-${s.photoPath ?? ''}',
                                       ),
+                                      staffId: s.studentId,
+                                      name: s.fullName,
+                                      radius: 20,
+                                      isStudent: true,
+                                      fallbackColor:
+                                          AdminFormTheme.student.secondary,
                                     ),
                                   ),
                                   DataCell(Text(s.studentId)),

@@ -4,6 +4,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
 
 class StudentAvatar extends StatelessWidget {
@@ -26,7 +27,11 @@ class StudentAvatar extends StatelessWidget {
       return;
     }
 
-    final bytes = await StudentPhotoService.instance.pickBytes();
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: StudentPhotoService.instance.pickBytes,
+      errorOf: () => StudentPhotoService.instance.lastError,
+    );
     if (bytes == null) return;
 
     final path = await StudentPhotoService.instance.saveBytesForStudent(
@@ -76,25 +81,37 @@ class StudentAvatar extends StatelessWidget {
             ),
     );
 
+    avatar = GestureDetector(
+      onTap: provider == null
+          ? (allowEdit ? () => _pickPhoto(context) : null)
+          : () => showProfilePhotoViewer(
+                context,
+                bytes: bytes,
+                path: student.photoPath,
+                title: student.name,
+              ),
+      child: avatar,
+    );
+
     if (!allowEdit) return avatar;
 
-    return GestureDetector(
-      onTap: () => _pickPhoto(context),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          avatar,
-          Positioned(
-            right: -2,
-            bottom: -2,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          right: -2,
+          bottom: -2,
+          child: GestureDetector(
+            onTap: () => _pickPhoto(context),
             child: CircleAvatar(
               radius: 12,
               backgroundColor: Colors.indigo,
               child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

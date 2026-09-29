@@ -9,7 +9,9 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
+import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/maya_floating_chat.dart';
+import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 
 /// Unified directory for administration staff or classroom teachers.
@@ -427,12 +429,14 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                       DataRow(
                         cells: [
                           DataCell(
-                            CircleAvatar(
-                              child: Text(
-                                t.fullName.isEmpty
-                                    ? '?'
-                                    : t.fullName[0].toUpperCase(),
+                            StaffRegistryAvatar(
+                              key: ValueKey(
+                                'tch-photo-${t.teacherId}-${t.photoPath ?? ''}',
                               ),
+                              staffId: t.teacherId,
+                              name: t.fullName,
+                              radius: 20,
+                              fallbackColor: AdminFormTheme.teacher.secondary,
                             ),
                           ),
                           DataCell(Text(t.employeeId ?? t.teacherId)),

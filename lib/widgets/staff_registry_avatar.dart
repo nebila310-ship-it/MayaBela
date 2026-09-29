@@ -7,6 +7,7 @@ import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Profile avatar for teachers, drivers, or students in admin views.
@@ -20,6 +21,8 @@ class StaffRegistryAvatar extends StatefulWidget {
     this.fallbackColor = Colors.indigo,
     this.isDriver = false,
     this.isStudent = false,
+    this.onTap,
+    this.enableViewer = true,
   });
 
   final String staffId;
@@ -29,6 +32,8 @@ class StaffRegistryAvatar extends StatefulWidget {
   final Color fallbackColor;
   final bool isDriver;
   final bool isStudent;
+  final VoidCallback? onTap;
+  final bool enableViewer;
 
   @override
   State<StaffRegistryAvatar> createState() => _StaffRegistryAvatarState();
@@ -132,10 +137,21 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
       );
     }
 
-    return CircleAvatar(
-      radius: widget.radius,
-      backgroundColor: widget.fallbackColor.withValues(alpha: 0.15),
-      child: child,
+    return GestureDetector(
+      onTap: widget.onTap ??
+          (widget.enableViewer && provider != null
+              ? () => showProfilePhotoViewer(
+                    context,
+                    bytes: _photoBytes,
+                    path: _photoPath,
+                    title: widget.name,
+                  )
+              : null),
+      child: CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: widget.fallbackColor.withValues(alpha: 0.15),
+        child: child,
+      ),
     );
   }
 }
