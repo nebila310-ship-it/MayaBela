@@ -6,6 +6,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/hr_transport_onboarding_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
 /// HR registers a driver login, creates their bus, and links students.
@@ -52,6 +53,11 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
     final schoolId = AuthService.activeSchoolId;
     if (schoolId == null || schoolId.trim().isEmpty) {
       _toast('Select a school first.', error: true);
+      return;
+    }
+
+    if (!EmailUtils.isRealMailbox(_email.text)) {
+      _toast('Enter a valid email. Forgot password sends a code there.', error: true);
       return;
     }
 
@@ -151,7 +157,7 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
       'bus_number' => 'Enter a bus number.',
       'route' => 'Enter route from, through, and to.',
       'plate' => 'Enter the plate number.',
-      'no_school' => 'Select a school first.',
+      'invalid_email' => 'Enter a valid email. Forgot password sends a code there.',
       _ => 'Could not register this driver. Try again.',
     };
   }
@@ -257,7 +263,8 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
                             controller: _email,
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
-                              labelText: 'Email (optional)',
+                              labelText: 'Email (required for password reset)',
+                              hintText: 'Forgot password sends a code here',
                               border: OutlineInputBorder(),
                             ),
                           ),

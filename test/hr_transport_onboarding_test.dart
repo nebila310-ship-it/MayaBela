@@ -88,6 +88,37 @@ void main() {
     );
   });
 
+  test('rejects a driver without a real mailbox', () async {
+    final created = await HrTransportOnboardingService.instance.registerDriver(
+      schoolId: schoolId,
+      fullName: 'No Email Driver',
+      phone: '0911444666',
+      busNumber: 'Bus 3',
+      routeFrom: 'A',
+      routeThrough: 'B',
+      routeTo: 'C',
+      plateNumber: 'AA-3333',
+    );
+    expect(created.ok, isFalse);
+    expect(created.errorCode, 'invalid_email');
+  });
+
+  test('rejects a generated mayabela.local mailbox', () async {
+    final created = await HrTransportOnboardingService.instance.registerDriver(
+      schoolId: schoolId,
+      fullName: 'Synthetic Driver',
+      phone: '0911444777',
+      email: '0911444777@fr-001.mayabela.local',
+      busNumber: 'Bus 4',
+      routeFrom: 'A',
+      routeThrough: 'B',
+      routeTo: 'C',
+      plateNumber: 'AA-4444',
+    );
+    expect(created.ok, isFalse);
+    expect(created.errorCode, 'invalid_email');
+  });
+
   test('rejects a phone that is already registered', () async {
     final first = await HrTransportOnboardingService.instance.registerDriver(
       schoolId: schoolId,
@@ -98,6 +129,7 @@ void main() {
       routeThrough: 'B',
       routeTo: 'C',
       plateNumber: 'AA-1111',
+      email: 'first.driver@example.com',
     );
     expect(first.ok, isTrue);
 
@@ -110,6 +142,7 @@ void main() {
       routeThrough: 'B',
       routeTo: 'C',
       plateNumber: 'AA-2222',
+      email: 'second.driver@example.com',
     );
     expect(again.ok, isFalse);
     expect(again.errorCode, 'exists');

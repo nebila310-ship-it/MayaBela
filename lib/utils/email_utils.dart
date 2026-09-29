@@ -29,4 +29,7 @@ class EmailUtils {
     if (value.endsWith('.mayabela.local')) return null;
     return value;
   }
+
+  /// Parent / teacher / driver / staff login mailbox for password reset.
+  static bool isRealMailbox(String? raw) => userFacing(raw) != null;
 }

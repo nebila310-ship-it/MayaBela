@@ -88,10 +88,10 @@ class AuthService {
   static const minPasswordLength = 10;
 
   static String? _requireEmail(String? email) {
-    return EmailUtils.isValid(email) ? null : 'invalid_email';
+    return EmailUtils.isRealMailbox(email) ? null : 'invalid_email';
   }
 
-  static String? _normalizedEmail(String? email) => EmailUtils.normalize(email);
+  static String? _normalizedEmail(String? email) => EmailUtils.userFacing(email);
   static const passwordRedactedMarker = '__REDACTED__';
 
   /// Release-safe fallback when a registry record has no password.

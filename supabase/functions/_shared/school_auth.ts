@@ -416,6 +416,12 @@ export function mailboxAddress(value: unknown): string | null {
   return angle ? normalizeEmail(angle[1]) : null;
 }
 
+/** Real inbox for password reset — not a generated `*.mayabela.local` login. */
+export function isUserFacingEmail(value: unknown): boolean {
+  const email = mailboxAddress(value);
+  return !!email && !email.endsWith(".mayabela.local");
+}
+
 /** Ethiopian mobile login key, e.g. 0911234567. */
 export function ethiopianLoginKey(value: unknown): string {
   const normalized = normalizeUsername(value);

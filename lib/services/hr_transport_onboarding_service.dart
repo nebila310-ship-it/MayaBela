@@ -48,6 +48,10 @@ class HrTransportOnboardingService {
     if (!PhoneUtils.isValidLoginPhone(phone)) {
       return const HrDriverOnboardingResult(ok: false, errorCode: 'invalid_phone');
     }
+    final resolvedEmail = EmailUtils.userFacing(email);
+    if (resolvedEmail == null) {
+      return const HrDriverOnboardingResult(ok: false, errorCode: 'invalid_email');
+    }
     if (busNumber.trim().isEmpty) {
       return const HrDriverOnboardingResult(ok: false, errorCode: 'bus_number');
     }
@@ -64,10 +68,6 @@ class HrTransportOnboardingService {
     if (AuthService.accountExists(loginKey)) {
       return const HrDriverOnboardingResult(ok: false, errorCode: 'exists');
     }
-    final resolvedEmail = EmailUtils.isValid(email)
-        ? EmailUtils.normalize(email)
-        : '${loginKey.replaceAll(RegExp(r'[^0-9a-zA-Z]'), '')}'
-            '@${sid.toLowerCase()}.driver.mayabela.local';
 
     final tempPassword = AuthService.generateTempPassword();
     final routeName = DriverRegistryService.formatRoute(

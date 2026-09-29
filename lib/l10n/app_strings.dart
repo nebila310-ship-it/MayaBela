@@ -77,6 +77,16 @@ class AppStrings implements AppStringsLike {
         'ትክክለኛ ኢሜይል ያስገቡ',
         'Imeelii sirrii galchi',
       );
+  String get emailForPasswordReset => t(
+        'Email (required for password reset)',
+        'ኢሜይል (ለየይለፍ ቃል ዳግም ማስጀመር ያስፈልጋል)',
+        'Imeelii (reset passwordf barbaachisaa)',
+      );
+  String get emailForPasswordResetHint => t(
+        'Forgot password sends a 6-digit code to this inbox.',
+        'የይለፍ ቃል ሲረሳ ወደዚህ ኢሜይል 6-አሃዝ ኮድ ይላካል።',
+        'Jibbiinsa jecha icciitii koodii 6-digarii gara imeelii kanaatti erga.',
+      );
   String get invalidPhone => t('Enter a valid phone number (e.g. 0911234567)', 'ትክክለኛ Ethiopian ስልክ ቁጥር ያስገቡ (ለምሳሌ 0911234567)');
   String get phoneAlreadyRegistered => t('This phone number is already registered', 'ይህ ስልክ ቁጥር ቀድሞ ተመዝግቧል');
   String get phoneUsedByStaff => t(

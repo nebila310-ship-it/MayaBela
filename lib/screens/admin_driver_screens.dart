@@ -66,7 +66,8 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
       return;
     }
 
-    if (!EmailUtils.isValid(_email.text)) {
+    final resolvedEmail = EmailUtils.userFacing(_email.text);
+    if (resolvedEmail == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.emailRequired)),
       );
@@ -124,7 +125,7 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
       schoolId: schoolId,
       fullName: _name.text,
       phone: _phone.text,
-      email: _email.text,
+      email: resolvedEmail,
       busNumber: _busNumber.text,
       routeName: routeName,
       plateNumber: _plateNumber.text,
@@ -154,7 +155,7 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
       final authError = AuthService.registerDriverAccount(
         fullName: _name.text,
         schoolId: schoolId,
-        email: _email.text.trim(),
+        email: resolvedEmail,
         phone: _phone.text.trim(),
         linkedDriverId: driver.driverId,
         password: tempPassword,
@@ -353,7 +354,8 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: adminFieldDecoration(
-                    label: s.email,
+                    label: s.emailForPasswordReset,
+                    hint: s.emailForPasswordResetHint,
                     icon: Icons.email_outlined,
                     accent: theme.primary,
                   ),

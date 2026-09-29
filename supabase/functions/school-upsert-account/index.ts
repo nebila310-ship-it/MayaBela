@@ -10,6 +10,7 @@ import {
   ensureAuthUser,
   enrichAccessProfile,
   getDoc,
+  isUserFacingEmail,
   normalizeStaffRoles,
   normalizeEmail,
   normalizeUsername,
@@ -209,15 +210,22 @@ Deno.serve(async (req) => {
         ? normalizeEmail(body.email)
         : undefined;
       if (!existing) {
-        if (!incoming) {
+        if (!isUserFacingEmail(incoming)) {
           return errorResponse(
-            "A valid email is required.",
+            "A valid email is required for password reset.",
             400,
             "invalid_email",
           );
         }
         email = incoming;
       } else if (incoming) {
+        if (!isUserFacingEmail(incoming)) {
+          return errorResponse(
+            "A valid email is required for password reset.",
+            400,
+            "invalid_email",
+          );
+        }
         email = incoming;
       } else if (
         Object.prototype.hasOwnProperty.call(body, "email") &&
@@ -225,7 +233,7 @@ Deno.serve(async (req) => {
         String(body.email).trim() !== ""
       ) {
         return errorResponse(
-          "A valid email is required.",
+          "A valid email is required for password reset.",
           400,
           "invalid_email",
         );

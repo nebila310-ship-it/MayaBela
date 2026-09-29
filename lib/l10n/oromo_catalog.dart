@@ -99,6 +99,9 @@ class OromoCatalog {
     'Edit grade': 'Qabxii gulaali',
     'Email': 'Imeelii',
     'Email (optional)': 'Imeelii (filannoo)',
+    'Email (required for password reset)': 'Imeelii (reset passwordf barbaachisaa)',
+    'Forgot password sends a 6-digit code to this inbox.':
+        'Jibbiinsa jecha icciitii koodii 6-digarii gara imeelii kanaatti erga.',
     'Email / Phone': 'Imeelii / Bilbila',
     'Emergency Contact': 'Quunnamtii Yeroo Balaa',
     'Employee ID': 'ID Hojjettootaa',

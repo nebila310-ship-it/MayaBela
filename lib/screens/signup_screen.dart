@@ -223,7 +223,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validateForm() {
     if (fullName.text.trim().isEmpty) return s.enterName;
     if (schoolId.text.trim().isEmpty) return s.enterSchoolId;
-    if (!EmailUtils.isValid(email.text)) return s.emailRequired;
+    if (!EmailUtils.isRealMailbox(email.text)) return s.emailRequired;
     if (selectedRole == AuthService.roleParent &&
         !PhoneUtils.isValidLoginPhone(phone.text)) {
       return s.invalidPhone;
@@ -456,9 +456,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  InputDecoration _field(String label) {
+  InputDecoration _field(String label, {String? hint}) {
     return InputDecoration(
       labelText: label,
+      hintText: hint,
       filled: true,
       fillColor: Colors.white,
     );
@@ -749,7 +750,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 8),
                 TextField(controller: schoolId, decoration: _field(s.schoolId)),
                 const SizedBox(height: 8),
-                TextField(controller: email, decoration: _field(s.email)),
+                TextField(
+                  controller: email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _field(
+                    s.emailForPasswordReset,
+                    hint: s.emailForPasswordResetHint,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(controller: phone, decoration: _field(s.phone)),
                 const SizedBox(height: 8),

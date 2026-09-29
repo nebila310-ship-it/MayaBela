@@ -577,11 +577,12 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
       icon: Icons.school_outlined,
       saveBlockedReason: (_) {
         if (nameCtrl.text.trim().isEmpty) return s.enterName;
-        if (!EmailUtils.isValid(emailCtrl.text)) return s.emailRequired;
+        if (!EmailUtils.isRealMailbox(emailCtrl.text)) return s.emailRequired;
         return null;
       },
       canSave: (_) =>
-          nameCtrl.text.trim().isNotEmpty && EmailUtils.isValid(emailCtrl.text),
+          nameCtrl.text.trim().isNotEmpty &&
+          EmailUtils.isRealMailbox(emailCtrl.text),
       builder: (ctx, setDialogState) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -652,7 +653,8 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: adminFieldDecoration(
-                    label: s.email,
+                    label: s.emailForPasswordReset,
+                    hint: s.emailForPasswordResetHint,
                     icon: Icons.email_outlined,
                     accent: theme.secondary,
                   ),
@@ -675,7 +677,7 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
       fullName: nameCtrl.text.trim(),
       subjects: selectedSubjects,
       phone: phoneCtrl.text.trim(),
-      email: EmailUtils.normalize(emailCtrl.text),
+      email: EmailUtils.userFacing(emailCtrl.text),
       campus: selectedCampus,
     );
 
@@ -1040,11 +1042,12 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
       icon: Icons.directions_bus_outlined,
       saveBlockedReason: (_) {
         if (nameCtrl.text.trim().isEmpty) return s.enterName;
-        if (!EmailUtils.isValid(emailCtrl.text)) return s.emailRequired;
+        if (!EmailUtils.isRealMailbox(emailCtrl.text)) return s.emailRequired;
         return null;
       },
       canSave: (_) =>
-          nameCtrl.text.trim().isNotEmpty && EmailUtils.isValid(emailCtrl.text),
+          nameCtrl.text.trim().isNotEmpty &&
+          EmailUtils.isRealMailbox(emailCtrl.text),
       builder: (ctx, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1080,7 +1083,8 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: adminFieldDecoration(
-                    label: s.email,
+                    label: s.emailForPasswordReset,
+                    hint: s.emailForPasswordResetHint,
                     icon: Icons.email_outlined,
                     accent: AdminFormTheme.driver.primary,
                   ),
@@ -1181,7 +1185,7 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
     final updated = driver.copyWith(
       fullName: nameCtrl.text.trim(),
       phone: phoneCtrl.text.trim(),
-      email: EmailUtils.normalize(emailCtrl.text),
+      email: EmailUtils.userFacing(emailCtrl.text),
       busNumber: DriverRegistryService.normalizeBusNumber(busCtrl.text),
       routeName: DriverRegistryService.formatRoute(
         routeFromCtrl.text,

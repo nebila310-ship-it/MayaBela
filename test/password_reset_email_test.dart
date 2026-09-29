@@ -55,6 +55,50 @@ void main() {
     expect(s.mailNotConfigured.toLowerCase(), contains('smtp.gmail.com'));
   });
 
+  test('creating parent or staff accounts requires a real mailbox', () {
+    final upsert = read('supabase/functions/school-upsert-account/index.ts');
+    expect(upsert, contains('isUserFacingEmail'));
+    expect(upsert, contains('invalid_email'));
+    expect(upsert, contains('A valid email is required for password reset.'));
+
+    final parent = read('supabase/functions/school-register-parent/index.ts');
+    expect(parent, contains('isUserFacingEmail'));
+    expect(parent, contains('invalid_email'));
+
+    final auth = read('supabase/functions/_shared/school_auth.ts');
+    expect(auth, contains('isUserFacingEmail'));
+    expect(auth, contains('.mayabela.local'));
+  });
+
+  test('registration screens mark email required for password reset', () {
+    final s = AppStrings('en');
+    expect(s.emailForPasswordReset.toLowerCase(), contains('required'));
+    expect(s.emailForPasswordResetHint.toLowerCase(), contains('forgot'));
+
+    for (final path in [
+      'lib/screens/parent_signup_screen.dart',
+      'lib/screens/signup_screen.dart',
+      'lib/screens/admin_enrollment_screens.dart',
+      'lib/screens/admin_driver_screens.dart',
+      'lib/screens/admin_people_screens.dart',
+      'lib/screens/enrollment_screens.dart',
+      'lib/web_erp/pages/web_hr_register_driver_page.dart',
+    ]) {
+      final source = read(path);
+      expect(
+        source.contains('isRealMailbox') || source.contains('userFacing'),
+        isTrue,
+        reason: path,
+      );
+      expect(
+        source.contains('emailForPasswordReset') ||
+            source.contains('required for password reset'),
+        isTrue,
+        reason: path,
+      );
+    }
+  });
+
   test('cloud result keeps the mailer via flag', () {
     const sent = SchoolAuthCloudResult(ok: true, via: 'mail');
     expect(sent.via, 'mail');
