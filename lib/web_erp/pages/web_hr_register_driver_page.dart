@@ -55,6 +55,11 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
       return;
     }
 
+    if (!EmailUtils.isRealMailbox(_email.text)) {
+      _toast('Enter a valid email. Forgot password sends a code there.', error: true);
+      return;
+    }
+
     setState(() => _saving = true);
     final result = await HrTransportOnboardingService.instance.registerDriver(
       schoolId: schoolId,
@@ -151,7 +156,7 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
       'bus_number' => 'Enter a bus number.',
       'route' => 'Enter route from, through, and to.',
       'plate' => 'Enter the plate number.',
-      'no_school' => 'Select a school first.',
+      'invalid_email' => 'Enter a valid email. Forgot password sends a code there.',
       _ => 'Could not register this driver. Try again.',
     };
   }
@@ -257,7 +262,8 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
                             controller: _email,
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
-                              labelText: 'Email (optional)',
+                              labelText: 'Email (required for password reset)',
+                              hintText: 'Forgot password sends a code here',
                               border: OutlineInputBorder(),
                             ),
                           ),

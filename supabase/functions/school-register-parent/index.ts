@@ -7,6 +7,7 @@ import {
   ensureAuthUser,
   ethiopianLoginKey,
   getDoc,
+  isUserFacingEmail,
   normalizeEmail,
   loadSecret,
   normalizeUsername,
@@ -41,8 +42,12 @@ Deno.serve(async (req) => {
     if (!username || !schoolId) {
       return errorResponse("username/phone and schoolId are required.", 400);
     }
-    if (!email) {
-      return errorResponse("A valid email is required.", 400, "invalid_email");
+    if (!isUserFacingEmail(email)) {
+      return errorResponse(
+        "A valid email is required for password reset.",
+        400,
+        "invalid_email",
+      );
     }
     if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
       return errorResponse(

@@ -20,6 +20,14 @@ void main() {
     expect(EmailUtils.userFacing('director@school.et'), 'director@school.et');
   });
 
+  test('isRealMailbox is required for forgot-password inboxes', () {
+    expect(EmailUtils.isRealMailbox('parent@school.et'), isTrue);
+    expect(EmailUtils.isRealMailbox('  Teacher@Fenote.et '), isTrue);
+    expect(EmailUtils.isRealMailbox(''), isFalse);
+    expect(EmailUtils.isRealMailbox('not-an-email'), isFalse);
+    expect(EmailUtils.isRealMailbox('teacher@tb-001.mayabela.local'), isFalse);
+  });
+
   test('accepts a display-name From header', () {
     expect(
       EmailUtils.normalizeFromHeader('MayaBela <onboarding@resend.dev>'),

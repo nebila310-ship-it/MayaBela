@@ -54,7 +54,7 @@ class _SchoolRegistrationScreenState extends State<SchoolRegistrationScreen> {
       setState(() => message = s.fillRequiredFields);
       return;
     }
-    if (!EmailUtils.isValid(_adminEmail.text)) {
+    if (!EmailUtils.isRealMailbox(_adminEmail.text)) {
       setState(() => message = s.emailRequired);
       return;
     }
@@ -92,7 +92,7 @@ class _SchoolRegistrationScreenState extends State<SchoolRegistrationScreen> {
       schoolName: school.name,
       city: school.city ?? '',
       adminFullName: _adminName.text.trim(),
-      adminEmail: EmailUtils.normalize(_adminEmail.text),
+      adminEmail: EmailUtils.userFacing(_adminEmail.text),
       adminPhone: _adminPhone.text.trim(),
       password: _password.text,
       schoolId: school.id,
@@ -171,7 +171,11 @@ class _SchoolRegistrationScreenState extends State<SchoolRegistrationScreen> {
           ),
           TextField(
             controller: _adminEmail,
-            decoration: InputDecoration(labelText: s.email, filled: true),
+            decoration: InputDecoration(
+              labelText: s.emailForPasswordReset,
+              hintText: s.emailForPasswordResetHint,
+              filled: true,
+            ),
             keyboardType: TextInputType.emailAddress,
           ),
           TextField(

@@ -619,7 +619,8 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       return;
     }
 
-    if (!EmailUtils.isValid(_email.text)) {
+    final resolvedEmail = EmailUtils.userFacing(_email.text);
+    if (resolvedEmail == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.emailRequired)),
       );
@@ -683,7 +684,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
     var teacher = TeacherRegistryService.instance.addTeacher(
       schoolId: schoolId,
       fullName: _name.text,
-      email: _email.text,
+      email: resolvedEmail,
       phone: _phone.text,
       employeeId:
           _employeeId.text.trim().isEmpty ? null : _employeeId.text.trim(),
@@ -717,7 +718,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       final authError = AuthService.registerTeacherAccount(
         fullName: _name.text,
         schoolId: schoolId,
-        email: _email.text.trim(),
+        email: resolvedEmail,
         phone: _phone.text.trim(),
         linkedTeacherId: teacher.teacherId,
         password: tempPassword,
@@ -997,7 +998,8 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: adminFieldDecoration(
-                    label: s.email,
+                    label: s.emailForPasswordReset,
+                    hint: s.emailForPasswordResetHint,
                     icon: Icons.email_outlined,
                     accent: theme.primary,
                   ),

@@ -210,6 +210,7 @@ class AdminFormSection extends StatelessWidget {
 InputDecoration adminFieldDecoration({
   required String label,
   String? hint,
+  String? helper,
   IconData? icon,
   Color? accent,
 }) {
@@ -217,6 +218,7 @@ InputDecoration adminFieldDecoration({
   return InputDecoration(
     labelText: label,
     hintText: hint,
+    helperText: helper,
     prefixIcon: icon != null ? Icon(icon, color: c, size: 22) : null,
     filled: true,
     fillColor: c.withValues(alpha: 0.04),

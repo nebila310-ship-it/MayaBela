@@ -133,7 +133,7 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
       _setMessage(s.enterSchoolId, isSuccess: false);
       return;
     }
-    if (!EmailUtils.isValid(_email.text)) {
+    if (!EmailUtils.isRealMailbox(_email.text)) {
       _setMessage(s.emailRequired, isSuccess: false);
       return;
     }
@@ -370,7 +370,8 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
             controller: _email,
             keyboardType: TextInputType.emailAddress,
             decoration: adminFieldDecoration(
-              label: s.email,
+              label: s.emailForPasswordReset,
+              hint: s.emailForPasswordResetHint,
               icon: Icons.email_outlined,
               accent: _accent,
             ),

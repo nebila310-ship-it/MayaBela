@@ -89,6 +89,29 @@ void main() {
       expect(err, 'invalid_email');
     });
 
+    test('staff registration rejects generated mayabela.local mailboxes', () {
+      expect(
+        AuthService.registerTeacherAccount(
+          fullName: 'Local Mail Teacher',
+          schoolId: 'TB-001',
+          phone: '0911999003',
+          email: 'teacher@tb-001.mayabela.local',
+          linkedTeacherId: 'T-LOCAL-MAIL',
+        ),
+        'invalid_email',
+      );
+      expect(
+        AuthService.registerDriverAccount(
+          fullName: 'Local Mail Driver',
+          schoolId: 'TB-001',
+          phone: '0911999004',
+          email: 'driver@tb-001.mayabela.local',
+          linkedDriverId: 'D-LOCAL-MAIL',
+        ),
+        'invalid_email',
+      );
+    });
+
     test('email login is scoped to the typed school id', () {
       final tempA = AuthService.generateTempPassword();
       final tempB = AuthService.generateTempPassword();
