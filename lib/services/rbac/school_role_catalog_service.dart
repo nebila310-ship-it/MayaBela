@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
+import 'package:mayabela/services/rbac/module_right.dart';
 import 'package:mayabela/services/rbac/staff_dashboard_modules.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_audit_log_service.dart';
@@ -187,9 +188,45 @@ class SchoolRoleCatalogService {
     return out;
   }
 
+  bool hasModuleRights(String roleKey, {String? schoolId}) {
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    final catalog = _bySchool[sid];
+    if (catalog == null) return false;
+    final key = StaffRoles.canonicalize(roleKey);
+    return catalog.moduleRights.containsKey(key) ||
+        catalog.moduleRights.containsKey(roleKey.trim().toLowerCase());
+  }
+
+  ModuleRight? moduleRightFor(
+    String roleKey,
+    String moduleId, {
+    String? schoolId,
+  }) {
+    final map = moduleRightsFor(roleKey, schoolId: schoolId);
+    if (map == null) return null;
+    final id = moduleId.trim();
+    if (id.isEmpty) return null;
+    final stored = map[id];
+    return stored;
+  }
+
+  Map<String, ModuleRight>? moduleRightsFor(String roleKey, {String? schoolId}) {
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    final catalog = _bySchool[sid];
+    if (catalog == null) return null;
+    final key = StaffRoles.canonicalize(roleKey);
+    final raw = catalog.moduleRights[key] ??
+        catalog.moduleRights[roleKey.trim().toLowerCase()];
+    if (raw == null) return null;
+    return {
+      for (final entry in raw.entries) entry.key: ModuleRight.parse(entry.value),
+    };
+  }
+
   Future<String?> saveRoleModules({
     required String roleKey,
     required Set<String> permissions,
+    Map<String, ModuleRight>? moduleRights,
     String? schoolId,
   }) async {
     if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
@@ -215,6 +252,11 @@ class SchoolRoleCatalogService {
       catalog.customRoles[existing] =
           catalog.customRoles[existing].copyWith(permissions: next);
     }
+    if (moduleRights != null) {
+      catalog.moduleRights[key] = {
+        for (final entry in moduleRights.entries) entry.key: entry.value.name,
+      };
+    }
     final cloudErr = await _persist(sid, catalog);
     await SchoolAuditLogService.instance.log(
       action: 'staff_role_modules_updated',
@@ -222,7 +264,13 @@ class SchoolRoleCatalogService {
       entityType: 'staff_role',
       entityId: key,
       detail: 'Updated modules/permissions for $key',
-      after: {'permissions': next.toList()..sort()},
+      after: {
+        'permissions': next.toList()..sort(),
+        if (moduleRights != null)
+          'moduleRights': {
+            for (final entry in moduleRights.entries) entry.key: entry.value.name,
+          },
+      },
     );
     return cloudErr;
   }
@@ -254,6 +302,7 @@ class SchoolRoleCatalogService {
         builtIn: false,
       ),
     );
+    catalog.moduleRights[key] = {};
     final cloudErr = await _persist(sid, catalog);
     await SchoolAuditLogService.instance.log(
       action: 'staff_role_created',
@@ -280,6 +329,7 @@ class SchoolRoleCatalogService {
     final before = catalog.customRoles.length;
     catalog.customRoles.removeWhere((r) => r.key == key);
     if (catalog.customRoles.length == before) return 'unknown_role';
+    catalog.moduleRights.remove(key);
     return _persist(sid, catalog);
   }
 
@@ -357,22 +407,63 @@ class SchoolRoleCatalogService {
       await prefs.setString('$_prefsPrefix$sid', jsonEncode(catalog.toJson()));
     } catch (_) {}
   }
+
+  @visibleForTesting
+  void resetForTests() {
+    _bySchool.clear();
+  }
+
+  @visibleForTesting
+  void putEmptyForTests(String schoolId) {
+    final sid = schoolId.trim();
+    if (sid.isEmpty) return;
+    _bySchool[sid] = _SchoolRoleCatalog();
+  }
+
+  @visibleForTesting
+  void seedModuleRightsForTests({
+    required String schoolId,
+    required String roleKey,
+    required Map<String, ModuleRight> rights,
+    Set<String>? permissions,
+  }) {
+    final sid = schoolId.trim();
+    if (sid.isEmpty) return;
+    final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
+    final key = StaffRoles.canonicalize(roleKey);
+    catalog.moduleRights[key] = {
+      for (final entry in rights.entries) entry.key: entry.value.name,
+    };
+    if (permissions != null) {
+      catalog.overrides[key] = StaffDashboardModules.withBaseline(permissions);
+    }
+  }
 }
 
 class _SchoolRoleCatalog {
   _SchoolRoleCatalog({
     Map<String, Set<String>>? overrides,
     List<StaffRole>? customRoles,
+    Map<String, Map<String, String>>? moduleRights,
   })  : overrides = overrides ?? {},
-        customRoles = customRoles ?? [];
+        customRoles = customRoles ?? [],
+        moduleRights = moduleRights ?? {};
 
   final Map<String, Set<String>> overrides;
   final List<StaffRole> customRoles;
+
+  /// roleKey → moduleId → none|read|edit. Presence of the role key means the
+  /// owner saved an explicit map (missing module ids count as none).
+  final Map<String, Map<String, String>> moduleRights;
 
   Map<String, dynamic> toJson() => {
         'overrides': {
           for (final e in overrides.entries)
             e.key: e.value.toList()..sort(),
+        },
+        'moduleRights': {
+          for (final e in moduleRights.entries)
+            e.key: Map<String, String>.from(e.value),
         },
         'customRoles': [
           for (final r in customRoles)
@@ -394,6 +485,18 @@ class _SchoolRoleCatalog {
         final perms = e.value;
         overrides[e.key.toString()] = {
           if (perms is List) for (final p in perms) p.toString(),
+        };
+      }
+    }
+    final moduleRights = <String, Map<String, String>>{};
+    final rightsRaw = json['moduleRights'];
+    if (rightsRaw is Map) {
+      for (final e in rightsRaw.entries) {
+        final value = e.value;
+        if (value is! Map) continue;
+        moduleRights[e.key.toString()] = {
+          for (final inner in value.entries)
+            inner.key.toString(): inner.value.toString(),
         };
       }
     }
@@ -422,6 +525,10 @@ class _SchoolRoleCatalog {
         );
       }
     }
-    return _SchoolRoleCatalog(overrides: overrides, customRoles: custom);
+    return _SchoolRoleCatalog(
+      overrides: overrides,
+      customRoles: custom,
+      moduleRights: moduleRights,
+    );
   }
 }

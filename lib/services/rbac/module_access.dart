@@ -1,6 +1,8 @@
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_id_aliases.dart';
+import 'package:mayabela/services/rbac/module_right.dart';
 import 'package:mayabela/services/rbac/school_module_catalog.dart';
+import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 
 /// Per-module access rule used by the shared ERP sidebar/router (web and APK).
@@ -299,6 +301,22 @@ abstract final class ModuleAccess {
     // available to everyone in the shell. School-level settings are gated
     // separately via manage_school_settings inside their own pages.
     'settings': ModuleRule(open: true),
+  };
+
+  /// Chrome every staff login keeps even when a role map turns other desks off.
+  static const Set<String> forcedChrome = {
+    'dashboard',
+    'profile',
+    'settings',
+    'logout',
+    'support',
+    'messages',
+  };
+
+  /// Default staff chrome when the school has not saved a per-role module map.
+  static const Set<String> defaultStaffChrome = {
+    ...forcedChrome,
+    'maya_assistant',
   };
 
   /// Every built-in staff role (used for "wire with all roles" modules).
@@ -653,7 +671,8 @@ abstract final class ModuleAccess {
   static bool canView(String moduleId) {
     if (!SchoolModuleCatalog.isEnabled(moduleId)) return false;
     if (_isAdmin) return true;
-    final id = normalize(moduleId);
+    final raw = moduleId.trim();
+    final id = normalize(raw);
     final rule = ruleFor(moduleId);
     if (rule == null || rule.adminOnly) return false;
 
@@ -661,19 +680,15 @@ abstract final class ModuleAccess {
     // plus minimal chrome (home / profile / settings / logout / Maya /
     // Messages — allocated to every role).
     if (AuthService.isAdministrationStaff) {
-      const staffChrome = {
-        'dashboard',
-        'profile',
-        'settings',
-        'logout',
-        'maya_assistant',
-        'support',
-        'messages',
-      };
-      if (staffChrome.contains(id)) return true;
-      // EDUABA dashboard matrix: allocated modules show only for their roles.
+      if (forcedChrome.contains(id) || forcedChrome.contains(raw)) return true;
       final myRoles = _currentStaffRoleKeys();
       if (!myRoles.contains(StaffRoles.fullAccess)) {
+        final configured = _combinedConfiguredRight(raw, id, myRoles);
+        if (configured != null) return configured.canView;
+        if (defaultStaffChrome.contains(id) || defaultStaffChrome.contains(raw)) {
+          return true;
+        }
+        // EDUABA dashboard matrix: allocated modules show only for their roles.
         final allocation = roleAllocations[id];
         if (allocation != null) {
           return myRoles.intersection(allocation.visibleTo).isNotEmpty;
@@ -701,16 +716,28 @@ abstract final class ModuleAccess {
   static bool canManage(String moduleId) {
     if (!SchoolModuleCatalog.isEnabled(moduleId)) return false;
     if (_isAdmin) return true;
-    final id = normalize(moduleId);
+    final raw = moduleId.trim();
+    final id = normalize(raw);
     final rule = ruleFor(moduleId);
     if (rule == null || rule.adminOnly) return false;
-    if (AuthService.isAdministrationStaff && rule.open) {
-      if (id == 'profile' || id == 'settings' || id == 'logout') return true;
+    if (AuthService.isAdministrationStaff &&
+        (forcedChrome.contains(id) || forcedChrome.contains(raw))) {
+      if (id == 'profile' ||
+          id == 'settings' ||
+          id == 'logout' ||
+          id == 'support' ||
+          id == 'messages' ||
+          raw == 'support' ||
+          raw == 'messages') {
+        return true;
+      }
       if (id == 'dashboard') return false;
     }
     if (AuthService.isAdministrationStaff) {
       final myRoles = _currentStaffRoleKeys();
       if (!myRoles.contains(StaffRoles.fullAccess)) {
+        final configured = _combinedConfiguredRight(raw, id, myRoles);
+        if (configured != null) return configured.canManage;
         final allocation = roleAllocations[id];
         if (allocation != null) {
           if (myRoles.intersection(allocation.visibleTo).isEmpty) return false;
@@ -729,6 +756,78 @@ abstract final class ModuleAccess {
     }
     if (rule.open) return true;
     return AuthService.hasAnyPermission(rule.manage);
+  }
+
+  /// EDUABA default right for [roleKey] on [moduleId] (before owner overrides).
+  static ModuleRight matrixRightForRole(
+    String roleKey,
+    String moduleId, {
+    Set<String>? permissions,
+  }) {
+    final role = StaffRoles.canonicalize(roleKey);
+    if (role == StaffRoles.fullAccess) return ModuleRight.edit;
+
+    final raw = moduleId.trim();
+    final id = normalize(raw);
+    if (defaultStaffChrome.contains(id) || defaultStaffChrome.contains(raw)) {
+      return id == 'dashboard' ? ModuleRight.read : ModuleRight.edit;
+    }
+
+    final rule = ruleFor(raw);
+    if (rule == null || rule.adminOnly) return ModuleRight.none;
+
+    final perms = permissions ??
+        StaffRoles.lookup(role)?.permissions ??
+        const <String>{};
+
+    final allocation = roleAllocations[id];
+    if (allocation != null) {
+      if (!allocation.visibleTo.contains(role)) return ModuleRight.none;
+      final managers = allocation.manageBy;
+      if (managers != null) {
+        if (!managers.contains(role)) return ModuleRight.read;
+        if (rule.manage.isEmpty) return ModuleRight.edit;
+        if (rule.manage.any(perms.contains)) return ModuleRight.edit;
+        return ModuleRight.read;
+      }
+      if (rule.manage.any(perms.contains)) return ModuleRight.edit;
+      return ModuleRight.read;
+    }
+
+    if (rule.open) return ModuleRight.none;
+    if (rule.manage.any(perms.contains)) return ModuleRight.edit;
+    if (rule.view.any(perms.contains)) return ModuleRight.read;
+    if (rule.departmental &&
+        perms.contains(SchoolPermissions.viewAllDepartments)) {
+      return ModuleRight.read;
+    }
+    return ModuleRight.none;
+  }
+
+  /// Owner-saved module map for any of [roles], unioned with EDUABA defaults
+  /// for roles that have not been customized. Null when nobody has a map yet.
+  static ModuleRight? _combinedConfiguredRight(
+    String raw,
+    String normalized,
+    Set<String> roles,
+  ) {
+    var anyExplicit = false;
+    var best = ModuleRight.none;
+    for (final role in roles) {
+      if (!SchoolRoleCatalogService.instance.hasModuleRights(role)) continue;
+      anyExplicit = true;
+      final stored = SchoolRoleCatalogService.instance.moduleRightFor(role, raw) ??
+          SchoolRoleCatalogService.instance.moduleRightFor(role, normalized) ??
+          ModuleRight.none;
+      if (stored.index > best.index) best = stored;
+    }
+    if (!anyExplicit) return null;
+    for (final role in roles) {
+      if (SchoolRoleCatalogService.instance.hasModuleRights(role)) continue;
+      final matrix = matrixRightForRole(role, raw);
+      if (matrix.index > best.index) best = matrix;
+    }
+    return best;
   }
 
   /// True when [heldPermissions] cover every allocated manage desk for [roleKey].

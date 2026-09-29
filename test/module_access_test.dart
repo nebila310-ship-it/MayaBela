@@ -2,12 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 
 void main() {
   tearDown(() {
     AuthService.currentUser = null;
+    SchoolRoleCatalogService.instance.resetForTests();
   });
 
   RegisteredUser signIn(String roleKey, List<String> staffRoles) {
