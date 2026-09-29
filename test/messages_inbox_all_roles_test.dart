@@ -12,6 +12,7 @@ import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/web_erp/router/web_erp_router.dart';
 import 'package:mayabela/web_erp/shell/web_erp_shell.dart';
 import 'package:mayabela/widgets/adaptive_dashboard_shell.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/widgets/inbox_login_reminder.dart';
 import 'package:mayabela/widgets/inbox_messages_action.dart';
 import 'package:mayabela/screens/messages_screen.dart';
@@ -21,6 +22,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    NotificationService.instance.resetForTests();
     await InboxLoginReminder.resetForTests();
     AuthService.currentUser = null;
     registerAllDashboards();
@@ -28,6 +30,7 @@ void main() {
 
   tearDown(() async {
     AuthService.currentUser = null;
+    NotificationService.instance.resetForTests();
     await InboxLoginReminder.resetForTests();
   });
 
@@ -176,6 +179,38 @@ void main() {
     expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
 
     InboxLoginReminder.reset();
+    await tester.pumpWidget(reminder());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
+  });
+
+  testWidgets('login reminder stays hidden after a later login for the same user', (
+    tester,
+  ) async {
+    signIn(AuthService.roleAdmin);
+
+    Widget reminder() => MaterialApp(
+          home: InboxLoginReminder(
+            child: Scaffold(
+              body: Text(AppLocale.instance.strings.notifyMessages),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(reminder());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold)))
+        .hideCurrentSnackBar();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    InboxLoginReminder.reset();
+    NotificationService.instance.clearForLogout();
+    signIn(AuthService.roleAdmin);
+
     await tester.pumpWidget(reminder());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
