@@ -98,6 +98,9 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     ExamService.instance.ensureLoaded();
     LessonPlanService.instance.ensureLoaded();
     CurriculumService.instance.ensureLoaded();
+    SchoolRoleCatalogService.instance.ensureLoaded().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   String? get _schoolId => AuthService.activeSchoolId;

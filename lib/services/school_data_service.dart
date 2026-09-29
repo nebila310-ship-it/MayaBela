@@ -1889,13 +1889,23 @@ class SchoolDataService {
     if (conversation == null || viewerRole == null) return;
 
     final now = DateTime.now();
+    final viewerStaffId = viewerRole == AuthService.roleAdmin
+        ? StaffMemberOption.viewerAdminStaffId(viewerRole)
+        : StaffMemberOption.viewerStaffId(viewerRole);
+    final viewerUsername = AuthService.currentUser?.username;
     for (final message in conversation.messages) {
-      if (message.senderRole != viewerRole && message.seenAt == null) {
-        message.seenAt = now;
+      if (message.isOutgoingFor(
+        viewerRole,
+        viewerStaffId: viewerStaffId,
+        viewerUsername: viewerUsername,
+      )) {
+        continue;
       }
+      message.seenAt ??= now;
     }
     conversation.unread = 0;
     NotificationService.instance.refreshBadges();
+    _persistSchoolContent();
   }
 
   bool deleteMessage(String conversationId, int messageIndex) {
