@@ -935,6 +935,8 @@ class AppStrings implements AppStringsLike {
   String get notifyHomework => t('Homework', 'የቤት ሥራ');
   String get notifyHomeworkHint => t('When new homework is posted for your class or child', 'አዲስ የቤት ሥራ ሲቀርብ');
   String get notifyMessages => t('Messages', 'መልዕክቶች');
+  String get contactInfo => t('Contact info', 'የእውቂያ መረጃ', 'Odeeffannoo quunnamtii');
+  String get contactNotOnFile => t('Not on file', 'በመዝገብ የለም', 'Galmee irratti hin jiru');
   String get notifyMessagesHint => t('From school, teachers, parents, or transport staff', 'ከትምህርት ቤት፣ መምህር፣ ወላጅ ወይም ትራንስፖርት');
   String inboxUnreadOnLogin(int count) {
     if (count <= 1) {
@@ -1757,6 +1759,7 @@ class AppStrings implements AppStringsLike {
       );
   String get messageBroadcasts =>
       t('Broadcasts', 'የጅምላ መልዕክቶች', 'Beeksisa gurguddaa');
+  String get messageChatsTab => t('Chats', 'ውይይቶች', 'Haasawaa');
   String get messageDirectChats =>
       t('Direct chats', 'ቀጥታ ውይይቶች', 'Haasawa kallatti');
   String get messageGroupChats =>

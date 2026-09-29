@@ -17,6 +17,7 @@ import 'package:mayabela/services/voice_playback_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/screens/parent_compose_message_screen.dart';
+import 'package:mayabela/widgets/chat_contact_profile.dart';
 import 'package:mayabela/widgets/messages_ui.dart';
 import 'package:mayabela/widgets/message_voice_input_bar.dart';
 import 'package:mayabela/widgets/attachment_share_actions.dart';
@@ -38,8 +39,10 @@ class MessagesScreen extends StatefulWidget {
   State<MessagesScreen> createState() => _MessagesScreenState();
 }
 
-class _MessagesScreenState extends State<MessagesScreen> {
+class _MessagesScreenState extends State<MessagesScreen>
+    with SingleTickerProviderStateMixin {
   final _data = SchoolDataService.instance;
+  late final TabController _tabs;
 
   MessageComposeScope get _composeScope {
     if (AuthService.currentUser?.roleKey == AuthService.roleAdmin ||
@@ -70,11 +73,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
     ConversationRealtimeSync.instance.addListener(_refresh);
     PresenceService.instance.startForCurrentUser();
     PresenceService.instance.noteFromConversations(_conversations);
+    _tabs = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
     ConversationRealtimeSync.instance.removeListener(_refresh);
+    _tabs.dispose();
     super.dispose();
   }
 
@@ -200,6 +205,77 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return '${time.day}/${time.month}';
   }
 
+  Widget _inboxList(
+    BuildContext context, {
+    required List<Conversation> chats,
+    required bool empty,
+    required AppStrings s,
+  }) {
+    if (chats.isEmpty) {
+      return ListView(
+        children: [
+          const SizedBox(height: 48),
+          if (empty) _EmptyMessagesHeader(),
+          if (!empty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                s.startConversation,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: MessagesPalette.muted),
+              ),
+            ),
+        ],
+      );
+    }
+    return ListView.separated(
+      itemCount: chats.length,
+      separatorBuilder: (_, _) =>
+          const Divider(height: 1, indent: 76, color: Color(0xFFE9EDEF)),
+      itemBuilder: (context, index) {
+        final chat = chats[index];
+        return ConversationCard(
+          conversation: chat,
+          timeLabel: _formatTime(
+            chat.messages.isEmpty ? DateTime.now() : chat.messages.last.time,
+          ),
+          audienceLabelBuilder: s.messageAudienceKey,
+          onTap: () => _openChat(chat),
+        );
+      },
+    );
+  }
+
+  Future<void> _showComposeSheet(BuildContext context) async {
+    final s = AppLocale.instance.strings;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline),
+              title: Text(s.directChat),
+              onTap: () => Navigator.pop(context, 'direct'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.groups_outlined),
+              title: Text(s.createGroup),
+              onTap: () => Navigator.pop(context, 'group'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'direct') {
+      await _directChat();
+    } else if (choice == 'group') {
+      await _createCommunity();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -217,233 +293,52 @@ class _MessagesScreenState extends State<MessagesScreen> {
             .toList();
 
         return Scaffold(
-          backgroundColor: const Color(0xFFEEF2FF),
+          backgroundColor: MessagesPalette.listBg,
           appBar: MessagesAppBar(
             title: s.dashboardTitle('messages'),
-            subtitle: _canCompose && !isParent
-                ? (_composeScope == MessageComposeScope.teacher
-                      ? s.parentMessagesSubtitle
-                      : s.messagesAdminSubtitle)
-                : (isParent ? s.parentMessagesSubtitle : null),
-          ),
-          body: Container(
-            decoration: BoxDecoration(gradient: MessagesPalette.pageGradient),
-            child: ListView(
-              padding: listPagePadding(context),
-              children: [
-                if (chats.isEmpty) ...[
-                  const SizedBox(height: 24),
-                  _EmptyMessagesHeader(),
-                  const SizedBox(height: 24),
-                ],
-                if (broadcasts.isNotEmpty) ...[
-                  _SectionHeader(
-                    title: s.messageBroadcasts,
-                    icon: Icons.campaign_outlined,
-                  ),
-                  const SizedBox(height: 10),
-                  ...broadcasts.map(
-                    (chat) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ConversationCard(
-                        conversation: chat,
-                        timeLabel: _formatTime(
-                          chat.messages.isEmpty
-                              ? DateTime.now()
-                              : chat.messages.last.time,
-                        ),
-                        audienceLabelBuilder: s.messageAudienceKey,
-                        onTap: () => _openChat(chat),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                if (groups.isNotEmpty) ...[
-                  _SectionHeader(
-                    title: s.messageGroupChats,
-                    icon: Icons.diversity_3_outlined,
-                    accentColor: CommunityPalette.primary,
-                  ),
-                  const SizedBox(height: 10),
-                  ...groups.map(
-                    (chat) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ConversationCard(
-                        conversation: chat,
-                        timeLabel: _formatTime(
-                          chat.messages.isEmpty
-                              ? DateTime.now()
-                              : chat.messages.last.time,
-                        ),
-                        audienceLabelBuilder: s.messageAudienceKey,
-                        onTap: () => _openChat(chat),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                if (direct.isNotEmpty) ...[
-                  _SectionHeader(
-                    title: s.messageDirectChats,
-                    icon: Icons.forum_outlined,
-                  ),
-                  const SizedBox(height: 10),
-                  ...direct.map(
-                    (chat) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ConversationCard(
-                        conversation: chat,
-                        timeLabel: _formatTime(
-                          chat.messages.isEmpty
-                              ? DateTime.now()
-                              : chat.messages.last.time,
-                        ),
-                        audienceLabelBuilder: s.messageAudienceKey,
-                        onTap: () => _openChat(chat),
-                      ),
-                    ),
-                  ),
-                ],
-                if (showCompose && _canCompose && !isParent) ...[
-                  const SizedBox(height: 20),
-                  _AdminMessagingActions(
-                    onCreateCommunity: _createCommunity,
-                    onDirectChat: _directChat,
-                  ),
-                  const SizedBox(height: 8),
-                ] else if (showCompose && isParent) ...[
-                  const SizedBox(height: 20),
-                  _ParentMessagingActions(onCompose: _parentCompose),
-                  const SizedBox(height: 8),
-                ],
+            bottom: TabBar(
+              controller: _tabs,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              tabs: [
+                Tab(text: s.messageChatsTab),
+                Tab(text: s.messageGroupChats),
+                Tab(text: s.messageBroadcasts),
               ],
             ),
           ),
+          body: TabBarView(
+            controller: _tabs,
+            children: [
+              _inboxList(context, chats: direct, empty: chats.isEmpty, s: s),
+              _inboxList(context, chats: groups, empty: false, s: s),
+              _inboxList(context, chats: broadcasts, empty: false, s: s),
+            ],
+          ),
+          floatingActionButton: !showCompose
+              ? null
+              : isParent
+              ? FloatingActionButton(
+                  backgroundColor: MessagesPalette.fab,
+                  foregroundColor: Colors.white,
+                  onPressed: _parentCompose,
+                  child: const Icon(Icons.message_rounded),
+                )
+              : FloatingActionButton(
+                  backgroundColor: MessagesPalette.fab,
+                  foregroundColor: Colors.white,
+                  onPressed: () => _showComposeSheet(context),
+                  child: const Icon(Icons.chat_rounded),
+                ),
         );
       },
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.icon,
-    this.accentColor,
-  });
-
-  final String title;
-  final IconData icon;
-  final Color? accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = accentColor ?? MessagesPalette.primary;
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: accent),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
-      ],
-    );
-  }
-}
-
-class _AdminMessagingActions extends StatelessWidget {
-  const _AdminMessagingActions({
-    required this.onCreateCommunity,
-    required this.onDirectChat,
-  });
-
-  final VoidCallback onCreateCommunity;
-  final VoidCallback onDirectChat;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = AppLocale.instance.strings;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        FilledButton.icon(
-          onPressed: onCreateCommunity,
-          style: FilledButton.styleFrom(
-            backgroundColor: CommunityPalette.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          icon: const Icon(Icons.diversity_3_rounded, color: Colors.white),
-          label: Text(
-            s.createGroup,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: onDirectChat,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: MessagesPalette.primary,
-            side: BorderSide(color: MessagesPalette.primary),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          icon: const Icon(Icons.person_outline_rounded),
-          label: Text(
-            s.directChat,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ParentMessagingActions extends StatelessWidget {
-  const _ParentMessagingActions({required this.onCompose});
-
-  final VoidCallback onCompose;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = AppLocale.instance.strings;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        FilledButton.icon(
-          onPressed: onCompose,
-          style: FilledButton.styleFrom(
-            backgroundColor: MessagesPalette.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          icon: const Icon(Icons.edit_outlined, color: Colors.white),
-          label: Text(
-            s.composeMessage,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          s.parentComposeMessageHint,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-        ),
-      ],
     );
   }
 }
@@ -1233,6 +1128,12 @@ class _ChatScreenState extends State<ChatScreen> {
       context,
       conversationId: widget.conversationId,
       canManage: _canManageGroup,
+      onMemberTap: (member) {
+        ChatContactProfileScreen.open(
+          context,
+          ChatContactDirectory.fromGroupMember(member),
+        );
+      },
       onChanged: () {
         if (!mounted) return;
         if (_data.getConversation(widget.conversationId) == null) {
@@ -1261,14 +1162,21 @@ class _ChatScreenState extends State<ChatScreen> {
                   ? null
                   : PresenceService.instance.isConversationPeerOnline(chat));
         return Scaffold(
-          backgroundColor: widget.isGroup
-              ? CommunityPalette.surface
-              : const Color(0xFFEEF2FF),
+          backgroundColor: MessagesPalette.chatWallpaper,
           appBar: MessagesAppBar(
             title: chat?.displayTitleForViewer() ?? widget.contactName,
             peerOnline: peerOnline,
-            useCommunityTheme: widget.isGroup,
             photoPath: widget.isGroup ? chat?.photoPath : null,
+            onTitleTap: chat == null
+                ? null
+                : () {
+                    if (widget.isGroup) {
+                      _showMembers();
+                      return;
+                    }
+                    if (widget.isBroadcast) return;
+                    ChatContactProfileScreen.openPeer(context, chat);
+                  },
             actions: [
               if (widget.isGroup && _canManageGroup)
                 IconButton(
@@ -1278,58 +1186,30 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
             ],
           ),
-          body: Column(
+          body: Stack(
             children: [
-              if (widget.isBroadcast)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  color: MessagesPalette.warm.withValues(alpha: 0.12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.campaign_outlined,
-                        color: MessagesPalette.warm,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          s.messageBroadcastNotice,
-                          style: TextStyle(
-                            color: Colors.grey.shade800,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (widget.isGroup)
-                Material(
-                  color: CommunityPalette.primary.withValues(alpha: 0.1),
-                  child: InkWell(
-                    onTap: _canManageGroup ? _showMembers : null,
-                    child: Padding(
+              const Positioned.fill(child: ChatWallpaper()),
+              Column(
+                children: [
+                  if (widget.isBroadcast)
+                    Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 10,
                       ),
+                      color: MessagesPalette.warm.withValues(alpha: 0.12),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.diversity_3_outlined,
-                            color: CommunityPalette.primary,
+                          Icon(
+                            Icons.campaign_outlined,
+                            color: MessagesPalette.warm,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              s.messageGroupNotice,
+                              s.messageBroadcastNotice,
                               style: TextStyle(
                                 color: Colors.grey.shade800,
                                 fontSize: 12,
@@ -1337,283 +1217,313 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                             ),
                           ),
-                          if (_canManageGroup)
-                            Text(
-                              s.viewMembers,
-                              style: const TextStyle(
-                                color: CommunityPalette.primary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-              Expanded(
-                child: chat == null || chat.messages.isEmpty
-                    ? Center(child: Text(s.startConversation))
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: listPagePadding(context),
-                        itemCount: chat.messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = chat.messages[index];
-                          final isOutgoing = _isOutgoing(msg);
-                          final bubbleColor = isOutgoing
-                              ? MessagesPalette.primary
-                              : Colors.white;
-                          final accent = widget.isGroup
-                              ? CommunityPalette.primary
-                              : MessagesPalette.primary;
-                          return Align(
-                            alignment: isOutgoing
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: SwipeToReplyMessage(
-                              isOutgoing: isOutgoing,
-                              enabled: _canReply,
-                              accent: accent,
-                              onReply: () => _startReply(msg),
-                              child: GestureDetector(
-                                onLongPress: isOutgoing
-                                    ? () => _confirmDeleteMessage(index)
-                                    : null,
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10,
+                  if (widget.isGroup)
+                    Material(
+                      color: CommunityPalette.primary.withValues(alpha: 0.1),
+                      child: InkWell(
+                        onTap: _canManageGroup ? _showMembers : null,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.diversity_3_outlined,
+                                color: CommunityPalette.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  s.messageGroupNotice,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade800,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  constraints: BoxConstraints(
-                                    maxWidth:
-                                        MediaQuery.of(context).size.width *
-                                        0.78,
+                                ),
+                              ),
+                              if (_canManageGroup)
+                                Text(
+                                  s.viewMembers,
+                                  style: const TextStyle(
+                                    color: CommunityPalette.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: bubbleColor,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: const Radius.circular(18),
-                                      topRight: const Radius.circular(18),
-                                      bottomLeft: Radius.circular(
-                                        isOutgoing ? 18 : 4,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: chat == null || chat.messages.isEmpty
+                        ? Center(child: Text(s.startConversation))
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
+                            itemCount: chat.messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = chat.messages[index];
+                              final isOutgoing = _isOutgoing(msg);
+                              final bubbleColor = isOutgoing
+                                  ? MessagesPalette.outgoingBubble
+                                  : MessagesPalette.incomingBubble;
+                              final accent = MessagesPalette.primary;
+                              final senderLabel = _directIncomingSenderLabel(
+                                msg,
+                                chat,
+                              );
+                              return Align(
+                                alignment: isOutgoing
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: SwipeToReplyMessage(
+                                  isOutgoing: isOutgoing,
+                                  enabled: _canReply,
+                                  accent: accent,
+                                  onReply: () => _startReply(msg),
+                                  child: GestureDetector(
+                                    onLongPress: isOutgoing
+                                        ? () => _confirmDeleteMessage(index)
+                                        : null,
+                                    child: Container(
+                                      margin: EdgeInsets.only(
+                                        bottom: 4,
+                                        left: isOutgoing ? 48 : 8,
+                                        right: isOutgoing ? 8 : 48,
                                       ),
-                                      bottomRight: Radius.circular(
-                                        isOutgoing ? 4 : 18,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        10,
+                                        6,
+                                        10,
+                                        6,
                                       ),
-                                    ),
-                                    border: isOutgoing
-                                        ? null
-                                        : Border.all(
-                                            color: Colors.grey.shade200,
+                                      constraints: BoxConstraints(
+                                        maxWidth:
+                                            MediaQuery.of(context).size.width *
+                                            0.78,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: bubbleColor,
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: const Radius.circular(12),
+                                          topRight: const Radius.circular(12),
+                                          bottomLeft: Radius.circular(
+                                            isOutgoing ? 12 : 2,
                                           ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.04,
-                                        ),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (_directIncomingSenderLabel(
-                                            msg,
-                                            chat,
-                                          ) !=
-                                          null) ...[
-                                        Text(
-                                          _directIncomingSenderLabel(
-                                            msg,
-                                            chat,
-                                          )!,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            color: isOutgoing
-                                                ? Colors.white70
-                                                : MessagesPalette.primary,
+                                          bottomRight: Radius.circular(
+                                            isOutgoing ? 2 : 12,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                      ] else ...[
-                                        if (msg.senderRelationshipLabel !=
-                                                null &&
-                                            msg
-                                                .senderRelationshipLabel!
-                                                .isNotEmpty) ...[
-                                          Text(
-                                            msg.senderRelationshipLabel!,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 11,
-                                              color: isOutgoing
-                                                  ? Colors.white70
-                                                  : MessagesPalette.primary,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.06,
                                             ),
+                                            blurRadius: 1.5,
+                                            offset: const Offset(0, 1),
                                           ),
-                                          const SizedBox(height: 4),
                                         ],
-                                        if (widget.isGroup && !isOutgoing) ...[
-                                          Text(
-                                            msg.resolveDisplayName(),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                              color: CommunityPalette.primary,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                        ],
-                                      ],
-                                      if (msg.replyTo != null) ...[
-                                        MessageReplyQuoteBubble(
-                                          quote: msg.replyTo!,
-                                          isOutgoing: isOutgoing,
-                                          accent: accent,
-                                        ),
-                                      ],
-                                      if (msg.subject != null &&
-                                          msg.subject!.isNotEmpty) ...[
-                                        Text(
-                                          msg.subject!,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: isOutgoing
-                                                ? Colors.white
-                                                : MessagesPalette.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                      ],
-                                      if (msg.text.trim().isNotEmpty)
-                                        Text(
-                                          msg.text,
-                                          style: TextStyle(
-                                            color: isOutgoing
-                                                ? Colors.white
-                                                : Colors.black87,
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      if (msg.attachments.isNotEmpty) ...[
-                                        if (msg.text.trim().isNotEmpty)
-                                          const SizedBox(height: 8),
-                                        ...msg.attachments.map((attachment) {
-                                          final attachmentService =
-                                              AnnouncementAttachmentService
-                                                  .instance;
-                                          if (attachmentService
-                                              .isVoiceAttachment(attachment)) {
-                                            return VoiceMessagePlayer(
-                                              attachment: attachment,
-                                              isOutgoing: isOutgoing,
-                                              accent: widget.isGroup
-                                                  ? CommunityPalette.primary
-                                                  : MessagesPalette.primary,
-                                            );
-                                          }
-                                          return MessageAttachmentChip(
-                                            attachment: attachment,
-                                            isOutgoing: isOutgoing,
-                                            onTap: () =>
-                                                _openAttachment(attachment),
-                                          );
-                                        }),
-                                      ],
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            _formatTime(msg.time),
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: isOutgoing
-                                                  ? Colors.white70
-                                                  : Colors.black54,
+                                          if (senderLabel != null) ...[
+                                            TappableSenderName(
+                                              name: senderLabel,
+                                              onTap: () =>
+                                                  ChatContactProfileScreen.openFromMessage(
+                                                    context,
+                                                    msg,
+                                                    conversation: chat,
+                                                  ),
                                             ),
-                                          ),
-                                          if (isOutgoing) ...[
-                                            const SizedBox(width: 6),
-                                            Icon(
-                                              msg.seenAt != null
-                                                  ? Icons.done_all
-                                                  : Icons.check,
-                                              size: 14,
-                                              color: msg.seenAt != null
-                                                  ? Colors.lightBlueAccent
-                                                  : Colors.white70,
+                                          ] else ...[
+                                            if (msg.senderRelationshipLabel !=
+                                                    null &&
+                                                msg
+                                                    .senderRelationshipLabel!
+                                                    .isNotEmpty) ...[
+                                              Text(
+                                                msg.senderRelationshipLabel!,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11,
+                                                  color: MessagesPalette.colorForName(
+                                                    msg.senderRelationshipLabel!,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                            ],
+                                            if (widget.isGroup &&
+                                                !isOutgoing) ...[
+                                              TappableSenderName(
+                                                name: msg.resolveDisplayName(),
+                                                onTap: () =>
+                                                    ChatContactProfileScreen.openFromMessage(
+                                                      context,
+                                                      msg,
+                                                      conversation: chat,
+                                                    ),
+                                              ),
+                                            ],
+                                          ],
+                                          if (msg.replyTo != null) ...[
+                                            MessageReplyQuoteBubble(
+                                              quote: msg.replyTo!,
+                                              isOutgoing: isOutgoing,
+                                              accent: accent,
                                             ),
                                           ],
+                                          if (msg.subject != null &&
+                                              msg.subject!.isNotEmpty) ...[
+                                            Text(
+                                              msg.subject!,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: MessagesPalette.ink,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                          ],
+                                          if (msg.text.trim().isNotEmpty)
+                                            Text(
+                                              msg.text,
+                                              style: const TextStyle(
+                                                color: MessagesPalette.ink,
+                                                height: 1.35,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          if (msg.attachments.isNotEmpty) ...[
+                                            if (msg.text.trim().isNotEmpty)
+                                              const SizedBox(height: 8),
+                                            ...msg.attachments.map((
+                                              attachment,
+                                            ) {
+                                              final attachmentService =
+                                                  AnnouncementAttachmentService
+                                                      .instance;
+                                              if (attachmentService
+                                                  .isVoiceAttachment(
+                                                    attachment,
+                                                  )) {
+                                                return VoiceMessagePlayer(
+                                                  attachment: attachment,
+                                                  isOutgoing: isOutgoing,
+                                                  accent:
+                                                      MessagesPalette.primary,
+                                                );
+                                              }
+                                              return MessageAttachmentChip(
+                                                attachment: attachment,
+                                                isOutgoing: isOutgoing,
+                                                onTap: () =>
+                                                    _openAttachment(attachment),
+                                              );
+                                            }),
+                                          ],
+                                          const SizedBox(height: 4),
+                                          Align(
+                                            alignment: Alignment.bottomRight,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  _formatTime(msg.time),
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color:
+                                                        MessagesPalette.muted,
+                                                  ),
+                                                ),
+                                                if (isOutgoing) ...[
+                                                  const SizedBox(width: 3),
+                                                  Icon(
+                                                    msg.seenAt != null
+                                                        ? Icons.done_all
+                                                        : Icons.check,
+                                                    size: 16,
+                                                    color: msg.seenAt != null
+                                                        ? MessagesPalette
+                                                              .checkBlue
+                                                        : MessagesPalette.muted,
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-              if (_canReply)
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_replyTarget != null)
-                          MessageReplyComposerBar(
-                            quote: MessageReplyQuote.fromMessage(_replyTarget!),
-                            accent: widget.isGroup
-                                ? CommunityPalette.primary
-                                : MessagesPalette.primary,
-                            onCancel: _clearReply,
+                              );
+                            },
                           ),
-                        if (_pendingAttachments.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: PendingAttachmentRow(
-                              attachments: _pendingAttachments,
-                              onRemove: (attachment) => setState(() {
-                                _pendingAttachments.removeWhere(
-                                  (a) => a.id == attachment.id,
-                                );
-                              }),
-                            ),
-                          ),
-                        Row(
+                  ),
+                  if (_canReply)
+                    SafeArea(
+                      child: Container(
+                        color: MessagesPalette.composerBar,
+                        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Expanded(
-                              child: MessageVoiceInputBar(
-                                controller: _controller,
-                                accent: widget.isGroup
-                                    ? CommunityPalette.primary
-                                    : MessagesPalette.primary,
-                                enabled: _canReply && !_pickingAttachment,
-                                pickingAttachment: _pickingAttachment,
-                                hintText: s.typeMessage,
-                                onPickAttachment: _pickAttachments,
-                                onSend: _send,
-                                onSendVoice: (attachment) => _send(
-                                  attachments: [attachment],
-                                  text: 'Voice message',
+                            if (_replyTarget != null)
+                              MessageReplyComposerBar(
+                                quote: MessageReplyQuote.fromMessage(
+                                  _replyTarget!,
+                                ),
+                                accent: MessagesPalette.primary,
+                                onCancel: _clearReply,
+                              ),
+                            if (_pendingAttachments.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: PendingAttachmentRow(
+                                  attachments: _pendingAttachments,
+                                  onRemove: (attachment) => setState(() {
+                                    _pendingAttachments.removeWhere(
+                                      (a) => a.id == attachment.id,
+                                    );
+                                  }),
                                 ),
                               ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: MessageVoiceInputBar(
+                                    controller: _controller,
+                                    accent: MessagesPalette.primary,
+                                    enabled: _canReply && !_pickingAttachment,
+                                    pickingAttachment: _pickingAttachment,
+                                    hintText: s.typeMessage,
+                                    onPickAttachment: _pickAttachments,
+                                    onSend: _send,
+                                    onSendVoice: (attachment) => _send(
+                                      attachments: [attachment],
+                                      text: 'Voice message',
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                ],
+              ),
             ],
           ),
         );
