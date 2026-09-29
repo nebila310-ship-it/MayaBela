@@ -19,16 +19,16 @@ import 'package:mayabela/screens/messages_screen.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    InboxLoginReminder.reset();
+    await InboxLoginReminder.resetForTests();
     AuthService.currentUser = null;
     registerAllDashboards();
   });
 
-  tearDown(() {
+  tearDown(() async {
     AuthService.currentUser = null;
-    InboxLoginReminder.reset();
+    await InboxLoginReminder.resetForTests();
   });
 
   void signIn(String roleKey, {List<String> staffRoles = const []}) {
@@ -142,12 +142,43 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byKey(const Key('inbox-login-reminder')), findsOneWidget);
     expect(
       find.text(AppLocale.instance.strings.inboxOpenMessages),
       findsOneWidget,
     );
+  });
+
+  testWidgets('login reminder does not repeat after it has been shown', (
+    tester,
+  ) async {
+    signIn(AuthService.roleTeacher);
+
+    Widget reminder() => MaterialApp(
+          home: InboxLoginReminder(
+            child: Scaffold(
+              body: Text(AppLocale.instance.strings.notifyMessages),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(reminder());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('inbox-login-reminder')), findsOneWidget);
+
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold)))
+        .hideCurrentSnackBar();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
+
+    InboxLoginReminder.reset();
+    await tester.pumpWidget(reminder());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
   });
 }

@@ -580,6 +580,15 @@ class AuthService {
     _bumpSessionGeneration();
     currentUser = user;
     sessionListenable.value++;
+    unawaited(_hydrateRoleCatalog());
+  }
+
+  static Future<void> _hydrateRoleCatalog() async {
+    final generation = _sessionGeneration;
+    final schoolId = currentUser?.schoolId ?? activeSchoolId;
+    await SchoolRoleCatalogService.instance.reload(schoolId);
+    if (!isCurrentGeneration(generation) || currentUser == null) return;
+    sessionListenable.value++;
   }
 
   // —— RBAC (staff role templates + combined permissions) ——

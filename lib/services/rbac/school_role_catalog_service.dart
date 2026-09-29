@@ -11,6 +11,8 @@ import 'package:mayabela/services/rbac/module_right.dart';
 import 'package:mayabela/services/rbac/staff_dashboard_modules.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_audit_log_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 
 /// Per-school role catalog: built-in defaults + module checkbox overrides +
 /// custom roles the school owner adds.
@@ -22,14 +24,41 @@ class SchoolRoleCatalogService {
   static const _collection = 'school_role_catalogs';
 
   final Map<String, _SchoolRoleCatalog> _bySchool = {};
+  final Map<String, Future<void>> _loads = {};
   DocumentStore get _crud => DocumentStore();
 
   String? get _activeSchoolId =>
       AuthService.activeSchoolId ?? AuthService.sessionSchoolId;
 
-  Future<void> ensureLoaded([String? schoolId]) async {
+  Future<void> ensureLoaded([String? schoolId]) =>
+      _ensureLoaded(schoolId, forceRefresh: false);
+
+  /// Re-read cloud/prefs so a staff login picks up the owner's latest grants.
+  Future<void> reload([String? schoolId]) =>
+      _ensureLoaded(schoolId, forceRefresh: true);
+
+  Future<void> _ensureLoaded(
+    String? schoolId, {
+    required bool forceRefresh,
+  }) async {
     final sid = (schoolId ?? _activeSchoolId ?? '').trim();
-    if (sid.isEmpty || _bySchool.containsKey(sid)) return;
+    if (sid.isEmpty) return;
+    if (!forceRefresh && _bySchool.containsKey(sid)) return;
+    final pending = _loads[sid];
+    if (pending != null && !forceRefresh) {
+      await pending;
+      return;
+    }
+    final future = _loadAndUpgrade(sid);
+    _loads[sid] = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_loads[sid], future)) _loads.remove(sid);
+    }
+  }
+
+  Future<void> _loadAndUpgrade(String sid) async {
     await _load(sid);
     _upgradeVicePresidentOverride(sid);
   }
@@ -258,6 +287,7 @@ class SchoolRoleCatalogService {
       };
     }
     final cloudErr = await _persist(sid, catalog);
+    unawaited(_restampHolders(sid, key));
     await SchoolAuditLogService.instance.log(
       action: 'staff_role_modules_updated',
       schoolId: sid,
@@ -340,9 +370,25 @@ class SchoolRoleCatalogService {
   }
 
   Future<void> _load(String sid) async {
+    if (_crud.available) {
+      try {
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+        final data = await _readCloudCatalog(sid);
+        if (data != null) {
+          _bySchool[sid] = _SchoolRoleCatalog.fromJson(data);
+          await _savePrefs(sid, _bySchool[sid]!);
+          return;
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('SchoolRoleCatalogService cloud load: $e');
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('$_prefsPrefix$sid');
+      final raw = prefs.getString('$_prefsPrefix$sid') ??
+          prefs.getString('$_prefsPrefix${sid.toUpperCase()}') ??
+          prefs.getString('$_prefsPrefix${sid.toLowerCase()}');
       if (raw != null && raw.isNotEmpty) {
         _bySchool[sid] = _SchoolRoleCatalog.fromJson(
           jsonDecode(raw) as Map<String, dynamic>,
@@ -353,19 +399,58 @@ class SchoolRoleCatalogService {
       if (kDebugMode) debugPrint('SchoolRoleCatalogService prefs load: $e');
     }
 
-    if (_crud.available) {
+    _bySchool[sid] = _SchoolRoleCatalog();
+  }
+
+  Future<Map<String, dynamic>?> _readCloudCatalog(String sid) async {
+    final jwtSchool = (SupabaseBootstrap.isInitialized
+            ? (SupabaseBootstrap.client.auth.currentUser
+                    ?.appMetadata['schoolId'] as String?)
+                ?.trim()
+            : null) ??
+        '';
+    final ids = <String>{
+      sid,
+      sid.toUpperCase(),
+      sid.toLowerCase(),
+      if (jwtSchool.isNotEmpty) jwtSchool,
+    };
+    for (final id in ids) {
+      final data = await _crud.readDoc(collection: _collection, docId: id);
+      if (data != null) return data;
+    }
+    return null;
+  }
+
+  Future<void> _restampHolders(String sid, String roleKey) async {
+    final canonical = StaffRoles.canonicalize(roleKey);
+    for (final teacher
+        in TeacherRegistryService.instance.teachersForSchool(sid)) {
+      final roles = [
+        for (final raw in teacher.staffRoles) StaffRoles.canonicalize(raw),
+      ];
+      if (!roles.contains(canonical)) continue;
+      final username = teacher.loginUsername?.trim().toLowerCase() ?? '';
+      if (username.isEmpty) continue;
+      final combined = permissionsForRoles(roles, schoolId: sid).toList()
+        ..sort();
+      final account = AuthService.findUser(username);
+      if (account == null) continue;
+      account.staffRoles = List<String>.from(roles);
+      account.staffPermissions = List<String>.from(combined);
+      AuthService.mergePersistedUser(account);
       try {
-        final data = await _crud.readDoc(collection: _collection, docId: sid);
-        if (data != null) {
-          _bySchool[sid] = _SchoolRoleCatalog.fromJson(data);
-          await _savePrefs(sid, _bySchool[sid]!);
-          return;
-        }
+        await SchoolAuthCloudService.instance.upsertAccount(
+          user: account,
+          staffRoles: roles,
+          staffPermissions: combined,
+        );
       } catch (e) {
-        if (kDebugMode) debugPrint('SchoolRoleCatalogService cloud load: $e');
+        if (kDebugMode) {
+          debugPrint('SchoolRoleCatalogService restamp $username: $e');
+        }
       }
     }
-    _bySchool[sid] = _SchoolRoleCatalog();
   }
 
   Future<String?> _persist(String sid, _SchoolRoleCatalog catalog) async {
@@ -411,6 +496,7 @@ class SchoolRoleCatalogService {
   @visibleForTesting
   void resetForTests() {
     _bySchool.clear();
+    _loads.clear();
   }
 
   @visibleForTesting

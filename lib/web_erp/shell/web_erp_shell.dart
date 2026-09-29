@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
@@ -42,7 +44,13 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
   @override
   void initState() {
     super.initState();
-    unawaited(WebErpPrefsService.instance.load());
+    unawaited(_bootstrap());
+  }
+
+  Future<void> _bootstrap() async {
+    await WebErpPrefsService.instance.load();
+    await SchoolRoleCatalogService.instance.ensureLoaded();
+    if (mounted) setState(() {});
   }
 
   bool get _canGoBack => _routeStack.isNotEmpty || _routeId != 'dashboard';
@@ -172,6 +180,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
         NotificationService.instance,
         DashboardBadgeService.instance,
         ConversationRealtimeSync.instance,
+        AuthService.sessionListenable,
       ]),
       builder: (context, _) {
         final narrow = WebViewport.isNarrow(context);

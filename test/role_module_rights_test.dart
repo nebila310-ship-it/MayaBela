@@ -204,6 +204,38 @@ void main() {
       expect(ModuleAccess.canManage('library'), isFalse);
       expect(ModuleAccess.canView('support'), isTrue);
     });
+
+    test('procurement grants still apply after a fresh login load', () async {
+      signIn(roleKey: AuthService.roleAdmin);
+      final procurement = StaffRoles.lookup(StaffRoles.procurement)!;
+      final rights = RoleModuleCatalog.defaultsForRole(procurement);
+      rights['finance'] = ModuleRight.edit;
+      rights['students'] = ModuleRight.read;
+      final err = await SchoolRoleCatalogService.instance.saveRoleModules(
+        roleKey: StaffRoles.procurement,
+        permissions: RoleModuleCatalog.permissionsFor(rights),
+        moduleRights: rights,
+        schoolId: schoolId,
+      );
+      expect(err, isNull);
+
+      SchoolRoleCatalogService.instance.resetForTests();
+      signIn(
+        roleKey: AuthService.roleTeacher,
+        staffRoles: [StaffRoles.procurement],
+      );
+      await SchoolRoleCatalogService.instance.ensureLoaded(schoolId);
+
+      expect(
+        SchoolRoleCatalogService.instance.hasModuleRights(StaffRoles.procurement),
+        isTrue,
+      );
+      expect(ModuleAccess.canView('finance'), isTrue);
+      expect(ModuleAccess.canManage('finance'), isTrue);
+      expect(ModuleAccess.canView('students'), isTrue);
+      expect(ModuleAccess.canManage('students'), isFalse);
+      expect(ModuleAccess.canView('inventory'), isTrue);
+    });
   });
 
   group('Role permission editor', () {
