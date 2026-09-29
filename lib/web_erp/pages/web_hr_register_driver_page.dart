@@ -6,6 +6,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/hr_transport_onboarding_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
 /// HR registers a driver login, creates their bus, and links students.

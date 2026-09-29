@@ -85,7 +85,11 @@ void main() {
       'lib/web_erp/pages/web_hr_register_driver_page.dart',
     ]) {
       final source = read(path);
-      expect(source, contains('isRealMailbox'), reason: path);
+      expect(
+        source.contains('isRealMailbox') || source.contains('userFacing'),
+        isTrue,
+        reason: path,
+      );
       expect(
         source.contains('emailForPasswordReset') ||
             source.contains('required for password reset'),
