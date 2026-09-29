@@ -23,6 +23,7 @@ import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/subject_multi_picker.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/admin_staff_ui.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/widgets/send_driver_credentials.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
@@ -236,14 +237,12 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
   AppStrings get s => AppLocale.instance.strings;
 
   Future<void> _changeStudentPhoto(AdminStudentRecord student) async {
-    final bytes = await StudentPhotoService.instance.pickBytes();
-    if (bytes == null || !mounted) {
-      final err = StudentPhotoService.instance.lastError;
-      if (mounted && err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
-      return;
-    }
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: StudentPhotoService.instance.pickBytes,
+      errorOf: () => StudentPhotoService.instance.lastError,
+    );
+    if (bytes == null || !mounted) return;
     final path = await StudentPhotoService.instance.saveBytesForStudent(
       student.studentId,
       bytes,
@@ -548,14 +547,12 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
 
   Future<void> _changePhoto(AdminTeacherRecord teacher) async {
     if (!ModuleAccess.canHireStaff) return;
-    final bytes = await TeacherPhotoService.instance.pickBytes();
-    if (bytes == null || !mounted) {
-      final err = TeacherPhotoService.instance.lastError;
-      if (mounted && err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
-      return;
-    }
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: TeacherPhotoService.instance.pickBytes,
+      errorOf: () => TeacherPhotoService.instance.lastError,
+    );
+    if (bytes == null || !mounted) return;
     final path = await TeacherPhotoService.instance.saveBytesForTeacher(
       teacher.teacherId,
       bytes,
@@ -1025,14 +1022,12 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
   AppStrings get s => AppLocale.instance.strings;
 
   Future<void> _changePhoto(AdminDriverRecord driver) async {
-    final bytes = await DriverPhotoService.instance.pickBytes();
-    if (bytes == null || !mounted) {
-      final err = DriverPhotoService.instance.lastError;
-      if (mounted && err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
-      return;
-    }
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: DriverPhotoService.instance.pickBytes,
+      errorOf: () => DriverPhotoService.instance.lastError,
+    );
+    if (bytes == null || !mounted) return;
     final path = await DriverPhotoService.instance.saveBytesForDriver(
       driver.driverId,
       bytes,

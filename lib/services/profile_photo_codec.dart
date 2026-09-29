@@ -94,26 +94,31 @@ class ProfilePhotoCodec {
     return Uint8List.fromList(bytes);
   }
 
-  /// Square JPEG when the decoder understands the file; otherwise original bytes.
+  /// JPEG 512×512. Already-square bytes (aligned crop) are not re-centered.
   static Uint8List squareJpegOrOriginal(Uint8List bytes) {
     if (bytes.isEmpty) return bytes;
     try {
       final decoded = img.decodeImage(bytes);
       if (decoded == null) return bytes;
 
-      final size =
-          decoded.width < decoded.height ? decoded.width : decoded.height;
-      if (size <= 0) return bytes;
-      final left = (decoded.width - size) ~/ 2;
-      final top = (decoded.height - size) ~/ 2;
-      final cropped = img.copyCrop(
-        decoded,
-        x: left,
-        y: top,
-        width: size,
-        height: size,
-      );
-      final resized = img.copyResize(cropped, width: 512, height: 512);
+      img.Image square;
+      if (decoded.width == decoded.height) {
+        square = decoded;
+      } else {
+        final size =
+            decoded.width < decoded.height ? decoded.width : decoded.height;
+        if (size <= 0) return bytes;
+        final left = (decoded.width - size) ~/ 2;
+        final top = (decoded.height - size) ~/ 2;
+        square = img.copyCrop(
+          decoded,
+          x: left,
+          y: top,
+          width: size,
+          height: size,
+        );
+      }
+      final resized = img.copyResize(square, width: 512, height: 512);
       return Uint8List.fromList(img.encodeJpg(resized, quality: 88));
     } catch (_) {
       return bytes;

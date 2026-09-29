@@ -7,6 +7,7 @@ import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Profile avatar for teachers, drivers, or students in admin views.
@@ -15,20 +16,26 @@ class StaffRegistryAvatar extends StatefulWidget {
     super.key,
     required this.staffId,
     required this.name,
+    this.photoPath,
     this.radius = 24,
     this.fallbackIcon,
     this.fallbackColor = Colors.indigo,
     this.isDriver = false,
     this.isStudent = false,
+    this.onTap,
+    this.enableViewer = true,
   });
 
   final String staffId;
   final String name;
+  final String? photoPath;
   final double radius;
   final IconData? fallbackIcon;
   final Color fallbackColor;
   final bool isDriver;
   final bool isStudent;
+  final VoidCallback? onTap;
+  final bool enableViewer;
 
   @override
   State<StaffRegistryAvatar> createState() => _StaffRegistryAvatarState();
@@ -47,20 +54,25 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
   @override
   void didUpdateWidget(covariant StaffRegistryAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.staffId != widget.staffId) _loadPhoto();
+    if (oldWidget.staffId != widget.staffId ||
+        oldWidget.photoPath != widget.photoPath) {
+      _loadPhoto();
+    }
   }
 
   Future<void> _loadPhoto() async {
-    String? fromRecord;
-    if (widget.isStudent) {
-      fromRecord =
-          StudentRegistryService.instance.lookupById(widget.staffId)?.photoPath;
-    } else if (widget.isDriver) {
-      fromRecord =
-          DriverRegistryService.instance.lookupById(widget.staffId)?.photoPath;
-    } else {
-      fromRecord =
-          TeacherRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+    String? fromRecord = widget.photoPath;
+    if (fromRecord == null || fromRecord.trim().isEmpty) {
+      if (widget.isStudent) {
+        fromRecord =
+            StudentRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+      } else if (widget.isDriver) {
+        fromRecord =
+            DriverRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+      } else {
+        fromRecord =
+            TeacherRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+      }
     }
 
     final resolved = widget.isStudent
@@ -103,39 +115,44 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
 
   @override
   Widget build(BuildContext context) {
-    final size = widget.radius * 2;
     final provider = profilePhotoProvider(bytes: _photoBytes, path: _photoPath);
 
-    Widget child;
-    if (provider != null) {
-      child = ClipOval(
-        child: ProfilePhotoImage(
-          bytes: _photoBytes,
-          path: _photoPath,
-          size: size,
-        ),
-      );
-    } else if (widget.fallbackIcon != null) {
-      child = Icon(
-        widget.fallbackIcon,
-        color: widget.fallbackColor,
-        size: widget.radius,
-      );
-    } else {
-      child = Text(
-        widget.name.isNotEmpty ? widget.name[0].toUpperCase() : '?',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: widget.radius * 0.85,
+    Widget? child;
+    if (provider == null) {
+      if (widget.fallbackIcon != null) {
+        child = Icon(
+          widget.fallbackIcon,
           color: widget.fallbackColor,
-        ),
-      );
+          size: widget.radius,
+        );
+      } else {
+        child = Text(
+          widget.name.isNotEmpty ? widget.name[0].toUpperCase() : '?',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: widget.radius * 0.85,
+            color: widget.fallbackColor,
+          ),
+        );
+      }
     }
 
-    return CircleAvatar(
-      radius: widget.radius,
-      backgroundColor: widget.fallbackColor.withValues(alpha: 0.15),
-      child: child,
+    return GestureDetector(
+      onTap: widget.onTap ??
+          (widget.enableViewer && provider != null
+              ? () => showProfilePhotoViewer(
+                    context,
+                    bytes: _photoBytes,
+                    path: _photoPath,
+                    title: widget.name,
+                  )
+              : null),
+      child: CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: widget.fallbackColor.withValues(alpha: 0.15),
+        backgroundImage: provider,
+        child: child,
+      ),
     );
   }
 }

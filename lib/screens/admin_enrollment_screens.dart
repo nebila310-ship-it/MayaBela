@@ -29,6 +29,7 @@ import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/text_input_formatters.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/student_medical_form_fields.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
@@ -593,15 +594,12 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final bytes = await TeacherPhotoService.instance.pickBytes();
-    if (!mounted) return;
-    if (bytes == null) {
-      final err = TeacherPhotoService.instance.lastError;
-      if (err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
-      return;
-    }
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: TeacherPhotoService.instance.pickBytes,
+      errorOf: () => TeacherPhotoService.instance.lastError,
+    );
+    if (!mounted || bytes == null) return;
     setState(() => _pickedPhotoBytes = bytes);
   }
 
@@ -974,6 +972,15 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
               hint: s.teacherPhotoHint,
               accent: theme.primary,
               onTap: _pickPhoto,
+              onView: _pickedPhotoBytes == null
+                  ? null
+                  : () => showProfilePhotoViewer(
+                        context,
+                        bytes: _pickedPhotoBytes,
+                        title: _name.text.trim().isEmpty
+                            ? 'Photo'
+                            : _name.text.trim(),
+                      ),
             ),
             const SizedBox(height: 20),
             AdminFormSection(
@@ -1165,15 +1172,12 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final bytes = await StudentPhotoService.instance.pickBytes();
-    if (!mounted) return;
-    if (bytes == null) {
-      final err = StudentPhotoService.instance.lastError;
-      if (err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
-      return;
-    }
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: StudentPhotoService.instance.pickBytes,
+      errorOf: () => StudentPhotoService.instance.lastError,
+    );
+    if (!mounted || bytes == null) return;
     setState(() => _pickedPhotoBytes = bytes);
   }
 
@@ -1579,6 +1583,15 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
               hint: s.studentPhotoHint,
               accent: theme.primary,
               onTap: _pickPhoto,
+              onView: _pickedPhotoBytes == null
+                  ? null
+                  : () => showProfilePhotoViewer(
+                        context,
+                        bytes: _pickedPhotoBytes,
+                        title: _name.text.trim().isEmpty
+                            ? 'Photo'
+                            : _name.text.trim(),
+                      ),
             ),
             const SizedBox(height: 20),
             AdminFormSection(

@@ -22,6 +22,7 @@ import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/admin_staff_ui.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/admin_student_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
@@ -104,7 +105,11 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
   }
 
   Future<void> _changePhoto(AdminStudentRecord student) async {
-    final bytes = await StudentPhotoService.instance.pickBytes();
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: StudentPhotoService.instance.pickBytes,
+      errorOf: () => StudentPhotoService.instance.lastError,
+    );
     if (bytes == null || !mounted) return;
     final path = await StudentPhotoService.instance.saveBytesForStudent(
       student.studentId,

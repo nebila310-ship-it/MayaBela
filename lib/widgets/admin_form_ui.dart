@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/web_erp/shell/web_erp_navigation_scope.dart';
+import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Shared colorful styling for admin enrollment forms.
 class AdminFormTheme {
@@ -243,20 +244,27 @@ class AdminPhotoPicker extends StatelessWidget {
     super.key,
     this.photo,
     this.photoBytes,
+    this.photoPath,
     required this.hint,
     required this.accent,
     required this.onTap,
+    this.onView,
   });
 
   final File? photo;
   final Uint8List? photoBytes;
+  final String? photoPath;
   final String hint;
   final Color accent;
   final VoidCallback onTap;
+  final VoidCallback? onView;
 
   ImageProvider? get _image {
     if (photoBytes != null && photoBytes!.isNotEmpty) {
       return MemoryImage(photoBytes!);
+    }
+    if (photoPath != null && photoPath!.trim().isNotEmpty) {
+      return profilePhotoProvider(path: photoPath);
     }
     if (!kIsWeb && photo != null) return FileImage(photo!);
     return null;
@@ -267,36 +275,57 @@ class AdminPhotoPicker extends StatelessWidget {
     final image = _image;
     return Column(
       children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [accent, accent.withValues(alpha: 0.6)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.35),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
+        Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            GestureDetector(
+              onTap: image != null && onView != null ? onView : onTap,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [accent, accent.withValues(alpha: 0.6)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-              ],
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.white,
+                  backgroundImage: image,
+                  child: image == null
+                      ? Icon(
+                          Icons.person,
+                          size: 48,
+                          color: accent.withValues(alpha: 0.5),
+                        )
+                      : null,
+                ),
+              ),
             ),
-            child: CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.white,
-              backgroundImage: image,
-              child: image == null
-                  ? Icon(
-                      Icons.person,
-                      size: 48,
-                      color: accent.withValues(alpha: 0.5),
-                    )
-                  : null,
+            Material(
+              color: accent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onTap,
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.camera_alt_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(

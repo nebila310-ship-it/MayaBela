@@ -7,9 +7,13 @@ import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_photo_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
+import 'package:mayabela/web_erp/pages/web_students_table_page.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
+import 'package:mayabela/widgets/staff_registry_avatar.dart';
 
   /// 1x1 PNG so CircleAvatar can decode preview bytes.
   final tinyPng = Uint8List.fromList(const [
@@ -88,6 +92,106 @@ void main() {
     );
     expect(find.byType(CircleAvatar), findsOneWidget);
     expect(find.text('Tap to add photo'), findsOneWidget);
+  });
+
+  testWidgets('student directory photo column uses profile avatars', (
+    tester,
+  ) async {
+    final photoPath = WebAttachmentCache.instance.store('STU-LIST-1.jpg', tinyPng);
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-LIST-1',
+        fullName: 'Rayan',
+        grade: 'Grade 3',
+        className: 'Grade 3A',
+        schoolId: 'TB-001',
+        dateOfBirth: DateTime(2016, 3, 1),
+        photoPath: photoPath,
+      ),
+    ], replace: true);
+    await tester.binding.setSurfaceSize(const Size(1400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: WebStudentsTablePage())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StaffRegistryAvatar), findsWidgets);
+    expect(find.text('Photo'), findsOneWidget);
+    final avatar = tester.widget<StaffRegistryAvatar>(
+      find.byType(StaffRegistryAvatar).first,
+    );
+    expect(avatar.photoPath, photoPath);
+    expect(avatar.isStudent, isTrue);
+  });
+
+  testWidgets('registry avatar paints the stored photo in the circle', (
+    tester,
+  ) async {
+    final photoPath = WebAttachmentCache.instance.store('STU-AV-1.jpg', tinyPng);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StaffRegistryAvatar(
+            staffId: 'STU-AV-1',
+            name: 'Rayan',
+            photoPath: photoPath,
+            isStudent: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final circle = tester.widget<CircleAvatar>(find.byType(CircleAvatar));
+    expect(circle.backgroundImage, isNotNull);
+  });
+
+  testWidgets('align dialog exposes zoom in and zoom out', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showProfilePhotoAlignDialog(
+                context,
+                bytes: tinyPng,
+              ),
+              child: const Text('open-align'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open-align'));
+    await tester.pumpAndSettle();
+    expect(find.text('Align photo'), findsOneWidget);
+    expect(find.byIcon(Icons.zoom_in), findsOneWidget);
+    expect(find.byIcon(Icons.zoom_out), findsOneWidget);
+    expect(find.byType(Slider), findsOneWidget);
+  });
+
+  testWidgets('saved photo opens a zoomable viewer', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showProfilePhotoViewer(
+                context,
+                bytes: tinyPng,
+                title: 'Rayan',
+              ),
+              child: const Text('open-view'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open-view'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rayan'), findsOneWidget);
+    expect(find.byType(InteractiveViewer), findsOneWidget);
   });
 
   test('profile photo provider uses memory bytes', () {

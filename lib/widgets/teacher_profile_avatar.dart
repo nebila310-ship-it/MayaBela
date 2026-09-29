@@ -5,6 +5,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Profile photo for the logged-in teacher (from registry + saved file).
@@ -98,6 +99,18 @@ class _TeacherProfileAvatarState extends State<TeacherProfileAvatar> {
               ),
             ),
     );
+
+    if (provider != null) {
+      avatar = GestureDetector(
+        onTap: () => showProfilePhotoViewer(
+          context,
+          bytes: _photoBytes,
+          path: _photoPath,
+          title: widget.name,
+        ),
+        child: avatar,
+      );
+    }
 
     if (widget.borderWidth > 0) {
       avatar = Container(

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
+import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
 
 class StudentProfileScreen extends StatelessWidget {
@@ -150,9 +151,17 @@ class _Avatar extends StatelessWidget {
         path: profile.photoPath,
       );
       if (provider != null) {
-        return CircleAvatar(
-          radius: radius,
-          backgroundImage: provider,
+        return GestureDetector(
+          onTap: () => showProfilePhotoViewer(
+            context,
+            bytes: bytes,
+            path: profile.photoPath,
+            title: profile.fullName,
+          ),
+          child: CircleAvatar(
+            radius: radius,
+            backgroundImage: provider,
+          ),
         );
       }
     }
