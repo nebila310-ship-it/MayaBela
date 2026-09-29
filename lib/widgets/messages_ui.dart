@@ -14,26 +14,56 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 class MessagesPalette {
   MessagesPalette._();
 
-  static const primary = Color(0xFF4338CA);
-  static const secondary = Color(0xFF6366F1);
-  static const accent = Color(0xFFA5B4FC);
-  static const warm = Color(0xFFF59E0B);
+  static const appBar = Color(0xFF008069);
+  static const primary = Color(0xFF008069);
+  static const secondary = Color(0xFF00A884);
+  static const accent = Color(0xFF25D366);
+  static const warm = Color(0xFF25D366);
+  static const outgoingBubble = Color(0xFFD9FDD3);
+  static const incomingBubble = Color(0xFFFFFFFF);
+  static const chatWallpaper = Color(0xFFEFEAE2);
+  static const listBg = Color(0xFFFFFFFF);
+  static const composerBar = Color(0xFFF0F2F5);
+  static const ink = Color(0xFF111B21);
+  static const muted = Color(0xFF667781);
+  static const checkBlue = Color(0xFF53BDEB);
+  static const fab = Color(0xFF25D366);
+  static const unreadBadge = Color(0xFF25D366);
 
   static const gradient = [
-    Color(0xFF4338CA),
-    Color(0xFF6366F1),
-    Color(0xFF818CF8),
+    Color(0xFF075E54),
+    Color(0xFF008069),
+    Color(0xFF00A884),
   ];
 
-  static LinearGradient get pageGradient => LinearGradient(
-    colors: [
-      const Color(0xFFEEF2FF),
-      const Color(0xFFF5F3FF),
-      const Color(0xFFFAFAFA),
-    ],
+  static LinearGradient get pageGradient => const LinearGradient(
+    colors: [Color(0xFFFFFFFF), Color(0xFFF0F2F5)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
+
+  static const avatarColors = [
+    Color(0xFF00A884),
+    Color(0xFF53BDEB),
+    Color(0xFF9B59B6),
+    Color(0xFFE91E63),
+    Color(0xFFE67E22),
+    Color(0xFF1ABC9C),
+    Color(0xFF3498DB),
+    Color(0xFF16A085),
+  ];
+
+  static Color colorForName(String name) {
+    final hash = name.trim().toLowerCase().hashCode.abs();
+    return avatarColors[hash % avatarColors.length];
+  }
+
+  static Color bubbleFg(bool outgoing) => ink;
+
+  static Color bubbleMuted(bool outgoing) => muted;
+
+  static Color chipBg(bool outgoing) =>
+      outgoing ? const Color(0xFFC6E9C1) : const Color(0xFFF0F2F5);
 }
 
 class CommunityPalette {
@@ -120,6 +150,8 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
     this.useCommunityTheme = false,
     this.photoPath,
+    this.onTitleTap,
+    this.bottom,
   });
 
   final String title;
@@ -128,17 +160,18 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget> actions;
   final bool useCommunityTheme;
   final String? photoPath;
+  final VoidCallback? onTitleTap;
+  final PreferredSizeWidget? bottom;
 
   @override
-  Size get preferredSize => Size.fromHeight(
-    subtitle != null || peerOnline != null ? 88 : kToolbarHeight,
-  );
+  Size get preferredSize {
+    final extra = subtitle != null || peerOnline != null ? 16.0 : 0.0;
+    final tab = bottom?.preferredSize.height ?? 0;
+    return Size.fromHeight(kToolbarHeight + extra + tab);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final accent = useCommunityTheme
-        ? CommunityPalette.primary
-        : MessagesPalette.primary;
     Widget? subtitleChild;
     if (peerOnline != null) {
       subtitleChild = PresenceLabel(online: peerOnline!, light: true);
@@ -146,50 +179,51 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
       subtitleChild = Text(
         subtitle!,
         style: TextStyle(
-          fontSize: 12,
-          color: Colors.white.withValues(alpha: 0.88),
+          fontSize: 13,
+          color: Colors.white.withValues(alpha: 0.86),
         ),
       );
     }
+    final titleText = Text(
+      title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+    );
     final titleWidget = subtitleChild != null
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            children: [titleText, subtitleChild],
+          )
+        : titleText;
+
+    final showAvatar =
+        photoPath != null || peerOnline != null || onTitleTap != null;
+    final titled = showAvatar
+        ? Row(
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitleChild,
+              ChatPersonAvatar(
+                name: title,
+                photoPath: photoPath,
+                size: 38,
+                online: peerOnline ?? false,
+                showOnline: peerOnline != null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: titleWidget),
             ],
           )
-        : Text(title, style: const TextStyle(fontWeight: FontWeight.bold));
+        : titleWidget;
 
     return AppBar(
       elevation: 0,
+      backgroundColor: MessagesPalette.appBar,
       foregroundColor: Colors.white,
       actions: actions,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: useCommunityTheme
-                ? CommunityPalette.gradient
-                : MessagesPalette.gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
-      title: photoPath != null
-          ? Row(
-              children: [
-                CommunityAvatar(
-                  accent: accent,
-                  photoPath: photoPath,
-                  size: 36,
-                  borderRadius: 12,
-                ),
-                const SizedBox(width: 10),
-                Expanded(child: titleWidget),
-              ],
-            )
-          : titleWidget,
+      bottom: bottom,
+      title: onTitleTap == null
+          ? titled
+          : InkWell(onTap: onTitleTap, child: titled),
     );
   }
 }
@@ -1047,133 +1081,135 @@ class ConversationCard extends StatelessWidget {
             chat.unreadForViewer(role, viewerStaffId: viewerStaffId);
         final isBroadcast = chat.isBroadcast;
         final isCommunity = chat.isGroup;
-        final accent = isBroadcast
-            ? MessagesPalette.warm
-            : isCommunity
-            ? CommunityPalette.primary
-            : MessagesPalette.secondary;
         final showPresence = !isBroadcast && !isCommunity;
         final peerOnline = showPresence
             ? PresenceService.instance.isConversationPeerOnline(chat)
             : false;
 
         return Material(
-          color: Colors.transparent,
+          color: Colors.white,
           child: InkWell(
+            key: Key('conversation-row-${chat.id}'),
             onTap: onTap,
-            borderRadius: BorderRadius.circular(20),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: accent.withValues(alpha: 0.16)),
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  ChatPersonAvatar(
+                    name: chat.displayTitleForViewer(),
+                    photoPath: isCommunity ? chat.photoPath : null,
+                    size: 52,
+                    icon: isBroadcast
+                        ? Icons.campaign_rounded
+                        : isCommunity
+                        ? Icons.groups_rounded
+                        : null,
+                    online: peerOnline,
+                    showOnline: showPresence,
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    CommunityAvatar(
-                      accent: accent,
-                      photoPath: isCommunity ? chat.photoPath : null,
-                      size: 52,
-                      icon: isBroadcast
-                          ? Icons.campaign_rounded
-                          : isCommunity
-                          ? Icons.diversity_3_rounded
-                          : Icons.person_rounded,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                chat.displayTitleForViewer(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: unread > 0
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  fontSize: 16,
+                                  color: MessagesPalette.ink,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              timeLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: unread > 0
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: unread > 0
+                                    ? MessagesPalette.accent
+                                    : MessagesPalette.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                chat.lastMessage,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: unread > 0
+                                      ? MessagesPalette.ink
+                                      : MessagesPalette.muted,
+                                  fontWeight: unread > 0
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            if (unread > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 20,
+                                  minHeight: 20,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: MessagesPalette.unreadBadge,
+                                  borderRadius: BorderRadius.circular(11),
+                                ),
+                                alignment: Alignment.center,
                                 child: Text(
-                                  chat.displayTitleForViewer(),
-                                  style: TextStyle(
-                                    fontWeight: unread > 0
-                                        ? FontWeight.bold
-                                        : FontWeight.w600,
-                                    fontSize: 16,
+                                  unread > 99 ? '99+' : '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ),
-                              if (showPresence) ...[
-                                PresenceDot(online: peerOnline),
-                                const SizedBox(width: 8),
-                              ],
-                              Text(
-                                timeLabel,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
                             ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            chat.lastMessage,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              fontWeight: unread > 0
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                          if (isBroadcast &&
-                              chat.broadcastAudienceKeys.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: chat.broadcastAudienceKeys
-                                  .map(
-                                    (key) => _MiniChip(
-                                      label: audienceLabelBuilder(key),
-                                      color: accent,
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
                           ],
-                        ],
-                      ),
-                    ),
-                    if (unread > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
                         ),
-                        decoration: BoxDecoration(
-                          color: MessagesPalette.warm,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          unread > 99 ? '99+' : '$unread',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                        if (isBroadcast &&
+                            chat.broadcastAudienceKeys.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: chat.broadcastAudienceKeys
+                                .map(
+                                  (key) => _MiniChip(
+                                    label: audienceLabelBuilder(key),
+                                    color: MessagesPalette.secondary,
+                                  ),
+                                )
+                                .toList(),
                           ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1215,17 +1251,20 @@ class CommunityMembersSheet extends StatefulWidget {
     required this.conversationId,
     required this.canManage,
     this.onChanged,
+    this.onMemberTap,
   });
 
   final String conversationId;
   final bool canManage;
   final VoidCallback? onChanged;
+  final ValueChanged<GroupMemberEntry>? onMemberTap;
 
   static Future<void> show(
     BuildContext context, {
     required String conversationId,
     required bool canManage,
     VoidCallback? onChanged,
+    ValueChanged<GroupMemberEntry>? onMemberTap,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -1235,6 +1274,7 @@ class CommunityMembersSheet extends StatefulWidget {
         conversationId: conversationId,
         canManage: canManage,
         onChanged: onChanged,
+        onMemberTap: onMemberTap,
       ),
     );
   }
@@ -1418,6 +1458,9 @@ class _CommunityMembersSheetState extends State<CommunityMembersSheet> {
                       member: member,
                       canManage: widget.canManage,
                       onRemove: () => _removeMember(member),
+                      onTap: widget.onMemberTap == null
+                          ? null
+                          : () => widget.onMemberTap!(member),
                     ),
                   ),
                 ],
@@ -1428,6 +1471,9 @@ class _CommunityMembersSheetState extends State<CommunityMembersSheet> {
                       member: member,
                       canManage: widget.canManage,
                       onRemove: () => _removeMember(member),
+                      onTap: widget.onMemberTap == null
+                          ? null
+                          : () => widget.onMemberTap!(member),
                     ),
                   ),
                 ],
@@ -1625,11 +1671,13 @@ class _MemberTile extends StatelessWidget {
     required this.member,
     required this.canManage,
     required this.onRemove,
+    this.onTap,
   });
 
   final GroupMemberEntry member;
   final bool canManage;
   final VoidCallback onRemove;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1639,29 +1687,19 @@ class _MemberTile extends StatelessWidget {
         : PresenceService.instance.isOnline(staffId: member.key);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      leading: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          CircleAvatar(
-            backgroundColor: CommunityPalette.primary.withValues(alpha: 0.12),
-            child: Icon(
-              member.isParent
-                  ? Icons.family_restroom_outlined
-                  : Icons.badge_outlined,
-              color: CommunityPalette.primary,
-              size: 20,
-            ),
-          ),
-          Positioned(
-            right: -1,
-            bottom: -1,
-            child: PresenceDot(online: online, size: 8),
-          ),
-        ],
+      onTap: onTap,
+      leading: ChatPersonAvatar(
+        name: member.displayName,
+        size: 42,
+        online: online,
+        showOnline: true,
       ),
       title: Text(
         member.displayName,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: MessagesPalette.colorForName(member.displayName),
+        ),
       ),
       subtitle: Text(
         '${online ? s.onlineNow : s.offlineNow} · ${member.typeLabel} · ${member.subtitle}',
@@ -1714,6 +1752,163 @@ Color roleColor(String role) {
     default:
       return MessagesPalette.secondary;
   }
+}
+
+class ChatPersonAvatar extends StatelessWidget {
+  const ChatPersonAvatar({
+    super.key,
+    required this.name,
+    this.photoPath,
+    this.size = 52,
+    this.icon,
+    this.online = false,
+    this.showOnline = false,
+  });
+
+  final String name;
+  final String? photoPath;
+  final double size;
+  final IconData? icon;
+  final bool online;
+  final bool showOnline;
+
+  String get _initials {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    String first(String value) {
+      final iter = value.runes.iterator;
+      return iter.moveNext() ? String.fromCharCode(iter.current) : '?';
+    }
+
+    if (parts.length == 1) return first(parts.first).toUpperCase();
+    return (first(parts.first) + first(parts.last)).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto =
+        photoPath != null &&
+        photoPath!.isNotEmpty &&
+        File(photoPath!).existsSync();
+    final color = MessagesPalette.colorForName(name);
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              image: hasPhoto
+                  ? DecorationImage(
+                      image: FileImage(File(photoPath!)),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: hasPhoto
+                ? null
+                : icon != null
+                ? Icon(icon, color: Colors.white, size: size * 0.46)
+                : Text(
+                    _initials,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: size * 0.34,
+                    ),
+                  ),
+          ),
+          if (showOnline)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: PresenceDot(online: online, size: size * 0.22),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tappable WhatsApp-style sender name in a chat bubble.
+class TappableSenderName extends StatelessWidget {
+  const TappableSenderName({
+    super.key,
+    required this.name,
+    required this.onTap,
+  });
+
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Text(
+          name,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: MessagesPalette.colorForName(name),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ChatWallpaper extends StatelessWidget {
+  const ChatWallpaper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: MessagesPalette.chatWallpaper,
+      child: CustomPaint(
+        painter: _ChatDoodlePainter(),
+        child: SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _ChatDoodlePainter extends CustomPainter {
+  const _ChatDoodlePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x14000000)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1;
+    const step = 42.0;
+    for (var row = 0; row * step < size.height + step; row++) {
+      final y = row * step;
+      final odd = row.isOdd;
+      for (var col = 0; col * step < size.width + step; col++) {
+        final x = col * step + (odd ? step / 2 : 0);
+        canvas.drawCircle(Offset(x, y), 1.6, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class CommunityAvatar extends StatelessWidget {
@@ -1887,11 +2082,9 @@ class MessageAttachmentChip extends StatelessWidget {
       IconHint.archive => Icons.folder_zip_outlined,
       IconHint.generic => Icons.insert_drive_file_outlined,
     };
-    final bg = isOutgoing
-        ? Colors.white.withValues(alpha: 0.16)
-        : CommunityPalette.primary.withValues(alpha: 0.08);
-    final fg = isOutgoing ? Colors.white : CommunityPalette.primary;
-    final subFg = isOutgoing ? Colors.white70 : Colors.grey.shade600;
+    final bg = MessagesPalette.chipBg(isOutgoing);
+    final fg = MessagesPalette.bubbleFg(isOutgoing);
+    final subFg = MessagesPalette.bubbleMuted(isOutgoing);
 
     return Padding(
       padding: EdgeInsets.only(top: compact ? 0 : 6, bottom: compact ? 6 : 0),
@@ -1905,9 +2098,7 @@ class MessageAttachmentChip extends StatelessWidget {
               color: bg,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isOutgoing
-                    ? Colors.white24
-                    : CommunityPalette.primary.withValues(alpha: 0.15),
+                color: MessagesPalette.accent.withValues(alpha: 0.18),
               ),
             ),
             child: Padding(
@@ -2152,18 +2343,16 @@ class MessageReplyQuoteBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isOutgoing ? Colors.white54 : accent;
-    final nameColor = isOutgoing ? Colors.white : accent;
-    final bodyColor = isOutgoing ? Colors.white70 : Colors.grey.shade700;
+    final borderColor = accent;
+    final nameColor = accent;
+    final bodyColor = MessagesPalette.muted;
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
-        color: isOutgoing
-            ? Colors.white.withValues(alpha: 0.12)
-            : accent.withValues(alpha: 0.08),
+        color: MessagesPalette.chipBg(isOutgoing),
         borderRadius: BorderRadius.circular(10),
         border: Border(left: BorderSide(color: borderColor, width: 3)),
       ),

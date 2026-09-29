@@ -92,9 +92,9 @@ class _MessageVoiceInputBarState extends State<MessageVoiceInputBar> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -105,46 +105,33 @@ class _MessageVoiceInputBarState extends State<MessageVoiceInputBar> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        IconButton(
-          tooltip: s.messageAddAttachment,
-          onPressed: canInteract && !widget.pickingAttachment
-              ? widget.onPickAttachment
-              : null,
-          icon: widget.pickingAttachment
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: widget.accent,
-                  ),
-                )
-              : Icon(Icons.attach_file_rounded, color: widget.accent),
-        ),
         Expanded(
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.fromLTRB(4, 2, 8, 2),
             decoration: BoxDecoration(
               color: _recording
                   ? widget.accent.withValues(alpha: 0.08)
                   : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: _recording
-                    ? widget.accent.withValues(alpha: 0.45)
-                    : Colors.grey.shade200,
-              ),
             ),
             child: _recording
                 ? Row(
                     children: [
-                      Icon(Icons.mic_rounded, color: Colors.red.shade600, size: 20),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.mic_rounded,
+                        color: Colors.red.shade600,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: SizedBox(
                           height: 36,
-                          child: VoiceWaveform(samples: _samples, color: widget.accent),
+                          child: VoiceWaveform(
+                            samples: _samples,
+                            color: widget.accent,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -158,51 +145,86 @@ class _MessageVoiceInputBarState extends State<MessageVoiceInputBar> {
                       ),
                     ],
                   )
-                : TextField(
-                    controller: widget.controller,
-                    enabled: canInteract,
-                    decoration: InputDecoration(
-                      hintText: widget.hintText ?? s.typeMessage,
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                : Row(
+                    children: [
+                      IconButton(
+                        tooltip: s.messageAddAttachment,
+                        onPressed: canInteract && !widget.pickingAttachment
+                            ? widget.onPickAttachment
+                            : null,
+                        icon: widget.pickingAttachment
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: widget.accent,
+                                ),
+                              )
+                            : Icon(
+                                Icons.attach_file_rounded,
+                                color: Colors.grey.shade600,
+                              ),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: widget.controller,
+                          enabled: canInteract,
+                          minLines: 1,
+                          maxLines: 5,
+                          decoration: InputDecoration(
+                            hintText: widget.hintText ?? s.typeMessage,
+                            hintStyle: TextStyle(color: Colors.grey.shade500),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
+                          ),
+                          onSubmitted: (_) => widget.onSend(),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Material(
+          color: _recording ? Colors.red.shade600 : widget.accent,
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: _recording ? s.voiceStopRecording : s.voiceStartRecording,
+            onPressed: canInteract
+                ? () async {
+                    if (_recording) {
+                      await _stopAndSend();
+                    } else {
+                      await _startRecording();
+                    }
+                  }
+                : null,
+            icon: _busy
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
                     ),
-                    onSubmitted: (_) => widget.onSend(),
+                  )
+                : Icon(
+                    _recording ? Icons.stop_rounded : Icons.mic_rounded,
+                    color: Colors.white,
                   ),
           ),
         ),
         const SizedBox(width: 4),
-        IconButton(
-          tooltip: _recording ? s.voiceStopRecording : s.voiceStartRecording,
-          onPressed: canInteract
-              ? () async {
-                  if (_recording) {
-                    await _stopAndSend();
-                  } else {
-                    await _startRecording();
-                  }
-                }
-              : null,
-          icon: _busy
-              ? SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: widget.accent,
-                  ),
-                )
-              : Icon(
-                  _recording ? Icons.stop_circle_rounded : Icons.mic_rounded,
-                  color: _recording ? Colors.red : widget.accent,
-                ),
-        ),
-        IconButton.filled(
-          onPressed: canInteract && !_recording ? widget.onSend : null,
-          icon: const Icon(Icons.send_rounded),
-          style: IconButton.styleFrom(
-            backgroundColor: widget.accent,
-            foregroundColor: Colors.white,
+        Material(
+          color: widget.accent,
+          shape: const CircleBorder(),
+          child: IconButton(
+            onPressed: canInteract && !_recording ? widget.onSend : null,
+            icon: const Icon(Icons.send_rounded, color: Colors.white),
           ),
         ),
       ],
@@ -212,11 +234,7 @@ class _MessageVoiceInputBarState extends State<MessageVoiceInputBar> {
 
 /// Live amplitude bars from microphone input.
 class VoiceWaveform extends StatelessWidget {
-  const VoiceWaveform({
-    super.key,
-    required this.samples,
-    required this.color,
-  });
+  const VoiceWaveform({super.key, required this.samples, required this.color});
 
   final List<double> samples;
   final Color color;

@@ -8,6 +8,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/voice_playback_service.dart';
+import 'package:mayabela/widgets/messages_ui.dart';
 
 class VoiceMessagePlayer extends StatefulWidget {
   const VoiceMessagePlayer({
@@ -72,9 +73,9 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   bool get _isActive =>
@@ -84,10 +85,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   @override
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
-    final fg = widget.isOutgoing ? Colors.white : widget.accent;
-    final bg = widget.isOutgoing
-        ? Colors.white.withValues(alpha: 0.16)
-        : widget.accent.withValues(alpha: 0.08);
+    final fg = MessagesPalette.bubbleFg(widget.isOutgoing);
+    final bg = MessagesPalette.chipBg(widget.isOutgoing);
     final service = AnnouncementAttachmentService.instance;
     final sizeLabel = service.formatFileSize(widget.attachment.fileSizeBytes);
 
@@ -102,11 +101,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: widget.isOutgoing
-                    ? Colors.white24
-                    : widget.accent.withValues(alpha: 0.15),
-              ),
+              border: Border.all(color: widget.accent.withValues(alpha: 0.18)),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -117,8 +112,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                     _missingFile
                         ? Icons.error_outline_rounded
                         : (_isActive
-                            ? Icons.pause_circle_filled_rounded
-                            : Icons.play_circle_fill_rounded),
+                              ? Icons.pause_circle_filled_rounded
+                              : Icons.play_circle_fill_rounded),
                     color: _missingFile ? Colors.red.shade400 : fg,
                     size: 32,
                   ),
@@ -139,9 +134,9 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                           sizeLabel,
                           style: TextStyle(
                             fontSize: 10,
-                            color: widget.isOutgoing
-                                ? Colors.white70
-                                : Colors.grey.shade600,
+                            color: MessagesPalette.bubbleMuted(
+                              widget.isOutgoing,
+                            ),
                           ),
                         ),
                     ],
