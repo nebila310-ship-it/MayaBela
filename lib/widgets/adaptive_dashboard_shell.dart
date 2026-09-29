@@ -17,6 +17,8 @@ import 'package:mayabela/widgets/admin_educational_background.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
 import 'package:mayabela/widgets/dashboard_scaffold.dart';
+import 'package:mayabela/widgets/inbox_login_reminder.dart';
+import 'package:mayabela/widgets/inbox_messages_action.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
 /// Desktop/tablet shell: collapsible classroom sidebar + top bar.
@@ -57,41 +59,40 @@ class AdaptiveDashboardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdaptiveBreakpoints.isMobile(context)) {
-      return DashboardScaffold(
-        title: title,
-        welcomeMessage: welcomeMessage,
-        welcomeGreeting: welcomeGreeting,
-        welcomeName: welcomeName,
-        welcomeSubtitle: welcomeSubtitle,
-        welcomeEmoji: welcomeEmoji,
-        welcomeLeading: welcomeLeading,
-        gradientColors: gradientColors,
-        roleKey: roleKey,
-        cards: cards,
-        sections: sections,
-        header: header,
-        hideWelcomeBanner: hideWelcomeBanner,
-        hideBrandingBanner: hideBrandingBanner,
-      );
-    }
-
-    return _DesktopDashboardShell(
-      title: title,
-      welcomeMessage: welcomeMessage,
-      welcomeGreeting: welcomeGreeting,
-      welcomeName: welcomeName,
-      welcomeSubtitle: welcomeSubtitle,
-      welcomeEmoji: welcomeEmoji,
-      welcomeLeading: welcomeLeading,
-      gradientColors: gradientColors,
-      roleKey: roleKey,
-      cards: cards,
-      sections: sections,
-      header: header,
-      hideWelcomeBanner: hideWelcomeBanner,
-      hideBrandingBanner: hideBrandingBanner,
-    );
+    final shell = AdaptiveBreakpoints.isMobile(context)
+        ? DashboardScaffold(
+            title: title,
+            welcomeMessage: welcomeMessage,
+            welcomeGreeting: welcomeGreeting,
+            welcomeName: welcomeName,
+            welcomeSubtitle: welcomeSubtitle,
+            welcomeEmoji: welcomeEmoji,
+            welcomeLeading: welcomeLeading,
+            gradientColors: gradientColors,
+            roleKey: roleKey,
+            cards: cards,
+            sections: sections,
+            header: header,
+            hideWelcomeBanner: hideWelcomeBanner,
+            hideBrandingBanner: hideBrandingBanner,
+          )
+        : _DesktopDashboardShell(
+            title: title,
+            welcomeMessage: welcomeMessage,
+            welcomeGreeting: welcomeGreeting,
+            welcomeName: welcomeName,
+            welcomeSubtitle: welcomeSubtitle,
+            welcomeEmoji: welcomeEmoji,
+            welcomeLeading: welcomeLeading,
+            gradientColors: gradientColors,
+            roleKey: roleKey,
+            cards: cards,
+            sections: sections,
+            header: header,
+            hideWelcomeBanner: hideWelcomeBanner,
+            hideBrandingBanner: hideBrandingBanner,
+          );
+    return InboxLoginReminder(child: shell);
   }
 }
 
@@ -161,8 +162,10 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
             if (widget.welcomeLeading != null)
               widget.welcomeLeading!
             else
-              Text(widget.welcomeEmoji ?? '👋',
-                  style: const TextStyle(fontSize: 36)),
+              Text(
+                widget.welcomeEmoji ?? '👋',
+                style: const TextStyle(fontSize: 36),
+              ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -246,8 +249,9 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
             UserPreferencesService.instance.classroomSidebarCollapsed;
 
         void toggleSidebar() {
-          UserPreferencesService.instance
-              .setClassroomSidebarCollapsed(!collapsed);
+          UserPreferencesService.instance.setClassroomSidebarCollapsed(
+            !collapsed,
+          );
         }
 
         return Scaffold(
@@ -289,6 +293,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                               ),
                             ),
                           ),
+                          const InboxMessagesAction(iconColor: Colors.white),
                           IconButton(
                             onPressed: () {
                               Navigator.push(
@@ -300,9 +305,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                             },
                             icon: Badge(
                               isLabelVisible: unread > 0,
-                              label: Text(
-                                unread > 99 ? '99+' : '$unread',
-                              ),
+                              label: Text(unread > 99 ? '99+' : '$unread'),
                               child: const Icon(
                                 Icons.notifications,
                                 color: Colors.white,
@@ -336,8 +339,10 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                       title: widget.title,
                       accent: themeColor,
                       destinations: destinations,
-                      selectedIndex:
-                          _selectedIndex.clamp(0, destinations.length - 1),
+                      selectedIndex: _selectedIndex.clamp(
+                        0,
+                        destinations.length - 1,
+                      ),
                       collapsed: collapsed,
                       onToggle: toggleSidebar,
                       onSelect: (index) {
@@ -356,11 +361,9 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                         children: [
                           AdminEducationalBackground(accentColor: themeColor),
                           SingleChildScrollView(
-                            padding: listPagePadding(context).copyWith(
-                              left: 20,
-                              right: 20,
-                              top: 20,
-                            ),
+                            padding: listPagePadding(
+                              context,
+                            ).copyWith(left: 20, right: 20, top: 20),
                             child: Align(
                               alignment: Alignment.topCenter,
                               child: ConstrainedBox(
@@ -374,11 +377,13 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                     if (!widget.hideBrandingBanner &&
                                         AuthService.activeSchoolId != null &&
                                         SchoolRegistryService.instance.lookup(
-                                                AuthService.activeSchoolId) !=
+                                              AuthService.activeSchoolId,
+                                            ) !=
                                             null)
                                       Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 16),
+                                        padding: const EdgeInsets.only(
+                                          bottom: 16,
+                                        ),
                                         child: SchoolBrandingHeader(
                                           schoolId: AuthService.activeSchoolId,
                                           compact: true,
@@ -398,8 +403,11 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                         Row(
                                           children: [
                                             if (section.icon != null) ...[
-                                              Icon(section.icon,
-                                                  color: themeColor, size: 18),
+                                              Icon(
+                                                section.icon,
+                                                color: themeColor,
+                                                size: 18,
+                                              ),
                                               const SizedBox(width: 8),
                                             ],
                                             Text(

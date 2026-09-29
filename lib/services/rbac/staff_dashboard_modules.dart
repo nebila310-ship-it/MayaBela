@@ -235,6 +235,7 @@ abstract final class StaffDashboardModules {
       id: 'support',
       labelEn: 'Messages',
       permissions: {SchoolPermissions.accessSupport},
+      alwaysOn: true,
     ),
     const StaffDashboardModule(
       id: 'maya_assistant',

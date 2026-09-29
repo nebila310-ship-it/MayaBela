@@ -86,6 +86,8 @@ void main() {
     expect(ModuleAccess.canView('profile'), isTrue);
     expect(ModuleAccess.canView('settings'), isTrue);
     expect(ModuleAccess.canView('logout'), isTrue);
+    expect(ModuleAccess.canView('support'), isTrue);
+    expect(ModuleAccess.canView('messages'), isTrue);
     expect(ModuleAccess.canView('finance'), isFalse);
     expect(ModuleAccess.canView('maya_assistant'), isFalse);
   });

@@ -14,6 +14,7 @@ import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
 import 'package:mayabela/widgets/classroom_sidebar.dart';
 import 'package:mayabela/widgets/dashboard_account_menu.dart';
+import 'package:mayabela/widgets/inbox_messages_action.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 
 class DashboardScaffold extends StatefulWidget {
@@ -90,12 +91,11 @@ class DashboardScaffold extends StatefulWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.22),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.35),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
               ),
               clipBehavior: Clip.antiAlias,
-              child: welcomeLeading ??
+              child:
+                  welcomeLeading ??
                   Center(
                     child: Text(
                       welcomeEmoji ?? '👋',
@@ -127,7 +127,8 @@ class DashboardScaffold extends StatefulWidget {
                       height: 1.15,
                     ),
                   ),
-                  if (welcomeSubtitle != null && welcomeSubtitle!.isNotEmpty) ...[
+                  if (welcomeSubtitle != null &&
+                      welcomeSubtitle!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -186,7 +187,11 @@ class DashboardScaffold extends StatefulWidget {
     );
   }
 
-  Widget _buildSectionedCards(List<BuiltDashboardSection> sections, int crossAxis, bool compact) {
+  Widget _buildSectionedCards(
+    List<BuiltDashboardSection> sections,
+    int crossAxis,
+    bool compact,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -215,7 +220,6 @@ class DashboardScaffold extends StatefulWidget {
       ],
     );
   }
-
 }
 
 class _DashboardScaffoldState extends State<DashboardScaffold> {
@@ -284,6 +288,7 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
             ),
             title: Text(widget.title),
             actions: [
+              const InboxMessagesAction(iconColor: Colors.white),
               IconButton(
                 onPressed: () {
                   Navigator.push(
@@ -329,8 +334,9 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
                         children: [
                           if (!widget.hideBrandingBanner &&
                               AuthService.activeSchoolId != null &&
-                              SchoolRegistryService.instance
-                                      .lookup(AuthService.activeSchoolId) !=
+                              SchoolRegistryService.instance.lookup(
+                                    AuthService.activeSchoolId,
+                                  ) !=
                                   null)
                             Container(
                               width: double.infinity,
@@ -369,11 +375,7 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
                               compact,
                             )
                           else
-                            widget._buildCardGrid(
-                              cardList,
-                              crossAxis,
-                              compact,
-                            ),
+                            widget._buildCardGrid(cardList, crossAxis, compact),
                         ],
                       ),
                     ),

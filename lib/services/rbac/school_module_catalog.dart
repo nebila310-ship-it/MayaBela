@@ -15,6 +15,8 @@ abstract final class SchoolModuleCatalog {
     'profile',
     'settings',
     'logout',
+    'support',
+    'messages',
   };
 
   /// Mobile dashboard tiles whose ids are not ERP nav ids.

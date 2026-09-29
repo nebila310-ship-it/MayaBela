@@ -23,6 +23,7 @@ import 'package:mayabela/web_erp/widgets/web_cloud_sync_bar.dart';
 import 'package:mayabela/web_erp/widgets/web_global_search_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_session_timeout.dart';
 import 'package:mayabela/widgets/admin_educational_background.dart';
+import 'package:mayabela/widgets/inbox_login_reminder.dart';
 
 /// Shared school ERP shell — sidebar, top bar, routed content.
 /// Used on web and on the Admin/Staff APK so both show the same modules.
@@ -44,8 +45,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
     unawaited(WebErpPrefsService.instance.load());
   }
 
-  bool get _canGoBack =>
-      _routeStack.isNotEmpty || _routeId != 'dashboard';
+  bool get _canGoBack => _routeStack.isNotEmpty || _routeId != 'dashboard';
 
   void _navigate(String routeId) {
     if (routeId == 'logout') {
@@ -96,7 +96,12 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
           onBack: _canGoBack ? _goBack : null,
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(narrow ? 12 : 20, 12, narrow ? 12 : 20, 0),
+          padding: EdgeInsets.fromLTRB(
+            narrow ? 12 : 20,
+            12,
+            narrow ? 12 : 20,
+            0,
+          ),
           child: WebErpBreadcrumbs(
             routeId: _routeId,
             onNavigate: _navigate,
@@ -109,7 +114,10 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
         if (ModuleAccess.isReadOnly(_routeId))
           Padding(
             padding: EdgeInsets.fromLTRB(
-              narrow ? 12 : 20, 8, narrow ? 12 : 20, 0,
+              narrow ? 12 : 20,
+              8,
+              narrow ? 12 : 20,
+              0,
             ),
             child: Container(
               width: double.infinity,
@@ -121,8 +129,11 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.visibility_outlined,
-                      size: 16, color: Colors.amber.shade900),
+                  Icon(
+                    Icons.visibility_outlined,
+                    size: 16,
+                    color: Colors.amber.shade900,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -143,10 +154,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
             duration: const Duration(milliseconds: 200),
             child: KeyedSubtree(
               key: ValueKey(_routeId),
-              child: WebErpRouter.pageFor(
-                _routeId,
-                onNavigate: _navigate,
-              ),
+              child: WebErpRouter.pageFor(_routeId, onNavigate: _navigate),
             ),
           ),
         ),
@@ -177,76 +185,81 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
           onSelect: _navigate,
           onToggleCollapse: narrow
               ? () => _scaffoldKey.currentState?.closeDrawer()
-              : () => WebErpPrefsService.instance
-                  .setSidebarCollapsed(!collapsed),
+              : () =>
+                    WebErpPrefsService.instance.setSidebarCollapsed(!collapsed),
           inDrawer: narrow,
         );
 
-        return WebErpNavigationScope(
-          routeId: _routeId,
-          canGoBack: _canGoBack,
-          navigate: _navigate,
-          goBack: _goBack,
-          child: PopScope(
-            canPop: !_canGoBack,
-            onPopInvokedWithResult: (didPop, _) {
-              if (didPop) return;
-              _goBack();
-            },
-            child: WebSessionTimeoutWrapper(
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-                      _openSearch,
-                  const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
-                      _openSearch,
-                  const SingleActivator(LogicalKeyboardKey.slash, control: true):
-                      _openSearch,
-                },
-                child: Focus(
-                  autofocus: !narrow,
-                  child: narrow
-                      ? Scaffold(
-                          key: _scaffoldKey,
-                          backgroundColor: WebErpTheme.paperBackdrop,
-                          drawer: Drawer(
-                            child: SafeArea(child: sidebar),
-                          ),
-                          body: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              const AdminEducationalBackground(
-                                accentColor: WebErpTheme.primary,
-                              ),
-                              SafeArea(
-                                top: false,
-                                bottom: false,
-                                child: ClipRect(
-                                  child: _pageBody(narrow: true),
+        return InboxLoginReminder(
+          onOpenMessages: () => _navigate('support'),
+          child: WebErpNavigationScope(
+            routeId: _routeId,
+            canGoBack: _canGoBack,
+            navigate: _navigate,
+            goBack: _goBack,
+            child: PopScope(
+              canPop: !_canGoBack,
+              onPopInvokedWithResult: (didPop, _) {
+                if (didPop) return;
+                _goBack();
+              },
+              child: WebSessionTimeoutWrapper(
+                child: CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(
+                      LogicalKeyboardKey.keyK,
+                      control: true,
+                    ): _openSearch,
+                    const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+                        _openSearch,
+                    const SingleActivator(
+                      LogicalKeyboardKey.slash,
+                      control: true,
+                    ): _openSearch,
+                  },
+                  child: Focus(
+                    autofocus: !narrow,
+                    child: narrow
+                        ? Scaffold(
+                            key: _scaffoldKey,
+                            backgroundColor: WebErpTheme.paperBackdrop,
+                            drawer: Drawer(child: SafeArea(child: sidebar)),
+                            body: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                const AdminEducationalBackground(
+                                  accentColor: WebErpTheme.primary,
                                 ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : Scaffold(
-                          backgroundColor: WebErpTheme.paperBackdrop,
-                          body: Row(
-                            children: [
-                              sidebar,
-                              Expanded(
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    const AdminEducationalBackground(
-                                      accentColor: WebErpTheme.primary,
-                                    ),
-                                    _pageBody(narrow: false),
-                                  ],
+                                SafeArea(
+                                  top: false,
+                                  bottom: false,
+                                  child: ClipRect(
+                                    child: _pageBody(narrow: true),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          )
+                        : Scaffold(
+                            backgroundColor: WebErpTheme.paperBackdrop,
+                            body: Row(
+                              children: [
+                                sidebar,
+                                Expanded(
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      const AdminEducationalBackground(
+                                        accentColor: WebErpTheme.primary,
+                                      ),
+                                      _pageBody(narrow: false),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),

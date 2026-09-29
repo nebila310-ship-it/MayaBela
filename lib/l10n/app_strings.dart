@@ -501,6 +501,7 @@ class AppStrings implements AppStringsLike {
         'analytics' => 'ትንታኔ እና ሪፖርት',
         'attendance_insights' => 'የመገኘት ግንዛቤ',
         'messages' => 'መልዕክቶች',
+        'support' => 'መልዕክቶች',
         'announcements' => 'ማስታወቂያዎች',
         'homework' => 'የቤት ስራ',
         'exams' => 'ፈተናዎች',
@@ -571,6 +572,7 @@ class AppStrings implements AppStringsLike {
         'analytics' => 'Xiinxala fi gabaasa',
         'attendance_insights' => 'Hubannoo argamaa',
         'messages' => 'Ergaawwan',
+        'support' => 'Ergaawwan',
         'announcements' => 'Beeksisa',
         'homework' => 'Hojii Manaa',
         'exams' => 'Qormaata',
@@ -640,6 +642,7 @@ class AppStrings implements AppStringsLike {
       'analytics' => 'Analytics & exports',
       'attendance_insights' => 'Attendance insights',
       'messages' => 'Messages',
+      'support' => 'Messages',
       'announcements' => 'Announcements',
       'homework' => 'Homework',
       'exams' => 'Exams',
@@ -933,6 +936,22 @@ class AppStrings implements AppStringsLike {
   String get notifyHomeworkHint => t('When new homework is posted for your class or child', 'አዲስ የቤት ሥራ ሲቀርብ');
   String get notifyMessages => t('Messages', 'መልዕክቶች');
   String get notifyMessagesHint => t('From school, teachers, parents, or transport staff', 'ከትምህርት ቤት፣ መምህር፣ ወላጅ ወይም ትራንስፖርት');
+  String inboxUnreadOnLogin(int count) {
+    if (count <= 1) {
+      return t(
+        'You have a new message',
+        'አዲስ መልዕክት አለዎት',
+        'Ergaa haaraa qabda',
+      );
+    }
+    return t(
+      'You have $count unread messages',
+      '$count ያልተነበቡ መልዕክቶች አሉዎት',
+      'Ergaawwan $count hin dubbifamne qabda',
+    );
+  }
+
+  String get inboxOpenMessages => t('Open', 'ክፈት', 'Bani');
   String get notifyTransport => t('Transport arrival', 'ትራንስፖርት');
   String get notifyTransportHint => t('When your child reaches school on the bus', 'ልጅዎ ትምህርት ቤት ሲደርስ');
   String get notifyAnnouncements => t('Announcements', 'ማስታወቂያዎች');

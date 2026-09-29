@@ -60,11 +60,13 @@ void main() {
   });
 
   group('Multi-role staff (Procurement + Storekeeper + Transport Admin)', () {
-    setUp(() => signIn(AuthService.roleTeacher, [
-          StaffRoles.procurement,
-          StaffRoles.storekeeper,
-          StaffRoles.transportAdmin,
-        ]));
+    setUp(
+      () => signIn(AuthService.roleTeacher, [
+        StaffRoles.procurement,
+        StaffRoles.storekeeper,
+        StaffRoles.transportAdmin,
+      ]),
+    );
 
     test('sees only role modules plus chrome (not full ERP baseline)', () {
       expect(ModuleAccess.canView('inventory'), isTrue);
@@ -343,7 +345,10 @@ void main() {
       expect(ModuleAccess.normalize('employees'), 'hr');
       expect(ModuleAccess.normalize('payroll'), 'hr');
       // Classroom teachers is its own module now (item 7 allocation).
-      expect(ModuleAccess.normalize('classroom_teachers'), 'classroom_teachers');
+      expect(
+        ModuleAccess.normalize('classroom_teachers'),
+        'classroom_teachers',
+      );
       expect(ModuleAccess.normalize('add_teacher'), 'hr');
       expect(ModuleAccess.normalize('add_staff'), 'teachers');
       expect(ModuleAccess.normalize('grade_approvals'), 'examinations');
@@ -378,7 +383,10 @@ void main() {
       expect(ModuleAccess.normalize('observations'), 'quality_assurance');
       expect(ModuleAccess.normalize('academic_audits'), 'quality_assurance');
       expect(ModuleAccess.normalize('action_research'), 'quality_assurance');
-      expect(ModuleAccess.normalize('academic_monitoring'), 'quality_assurance');
+      expect(
+        ModuleAccess.normalize('academic_monitoring'),
+        'quality_assurance',
+      );
       expect(ModuleAccess.normalize('transport_buses'), 'transport');
       expect(ModuleAccess.normalize('transport_live_gps'), 'transport');
       expect(ModuleAccess.normalize('add_driver'), 'transport');
@@ -386,6 +394,29 @@ void main() {
       expect(ModuleAccess.normalize('grade_workflow_settings'), 'examinations');
       expect(ModuleAccess.normalize('student_portal_settings'), 'school');
       expect(ModuleAccess.normalize('student_password_resets'), 'students');
+      expect(ModuleAccess.normalize('messages'), 'support');
+    });
+  });
+
+  group('Messages for every staff role', () {
+    test('librarian and procurement see Messages', () {
+      signIn(AuthService.roleTeacher, [StaffRoles.librarian]);
+      expect(ModuleAccess.canView('support'), isTrue);
+      expect(ModuleAccess.canView('messages'), isTrue);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('support'),
+      );
+
+      signIn(AuthService.roleTeacher, [StaffRoles.procurement]);
+      expect(ModuleAccess.canView('support'), isTrue);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('support'),
+      );
+
+      signIn(AuthService.roleTeacher, [StaffRoles.storekeeper]);
+      expect(ModuleAccess.canView('support'), isTrue);
     });
   });
 }

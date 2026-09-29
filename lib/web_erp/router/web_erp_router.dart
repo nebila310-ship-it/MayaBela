@@ -194,6 +194,7 @@ class WebErpRouter {
       case 'reports':
         return const WebReportsPage();
       case 'support':
+      case 'messages':
         return const MessagesScreen(canCompose: true);
       case 'maya_assistant':
         return MayaAssistantScreen(
@@ -281,7 +282,8 @@ class WebErpRouter {
       }());
       return WebErpPlaceholderPage(
         title: title,
-        description: 'This page failed to load. Try another module from the sidebar.\n$e',
+        description:
+            'This page failed to load. Try another module from the sidebar.\n$e',
         icon: Icons.error_outline,
       );
     }

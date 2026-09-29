@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/screens/notifications_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
-import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
+import 'package:mayabela/widgets/inbox_messages_action.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -57,11 +57,11 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
     final school = schoolId == null
         ? null
         : SchoolRegistryService.instance.lookup(schoolId);
-    final schoolName = school?.name ??
+    final schoolName =
+        school?.name ??
         (schoolId != null
             ? AppLocale.instance.strings.schoolName(schoolId)
             : 'MaJo e-School Bridge');
-    final messages = DashboardBadgeService.instance.countFor('messages');
     final notifications = NotificationService.instance.unreadCount();
 
     return Container(
@@ -100,9 +100,9 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
             child: Text(
               schoolName,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: narrow ? 14 : null,
-                  ),
+                fontWeight: FontWeight.w800,
+                fontSize: narrow ? 14 : null,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -152,13 +152,13 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             ),
           ),
+          InboxMessagesAction(
+            onPressed: () => InboxMessagesAction.openInbox(
+              context,
+              onNavigate: widget.onNavigate,
+            ),
+          ),
           if (!narrow) ...[
-            if (ModuleAccess.canView('support'))
-              _iconBtn(
-                Icons.mail_outline,
-                messages > 0 ? messages : null,
-                () => widget.onNavigate('support'),
-              ),
             _iconBtn(Icons.task_alt_outlined, null, () {}),
             if (_quickAddItems.isNotEmpty)
               PopupMenuButton<String>(
@@ -205,8 +205,9 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
               builder: (context, _) {
                 return IconButton(
                   tooltip: 'Toggle dark mode',
-                  onPressed: () => UserPreferencesService.instance
-                      .setDarkMode(!UserPreferencesService.instance.darkMode),
+                  onPressed: () => UserPreferencesService.instance.setDarkMode(
+                    !UserPreferencesService.instance.darkMode,
+                  ),
                   icon: Icon(
                     UserPreferencesService.instance.darkMode
                         ? Icons.light_mode_outlined
@@ -226,9 +227,9 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
                 ),
                 Text(
                   '${_now.hour.toString().padLeft(2, '0')}:${_now.minute.toString().padLeft(2, '0')}',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -255,15 +256,13 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
 
   /// Quick-add entries the signed-in user is actually allowed to perform.
   List<(String, String)> get _quickAddItems => [
-        if (ModuleAccess.canManage('students'))
-          ('add_student', 'Add Student'),
-        if (ModuleAccess.canManage('add_staff'))
-          ('add_staff', 'Add Administration Staff'),
-        if (ModuleAccess.canManage('add_teacher'))
-          ('add_teacher', 'Add Teacher'),
-        if (ModuleAccess.canManage('announcements'))
-          ('announcements', 'Create Announcement'),
-      ];
+    if (ModuleAccess.canManage('students')) ('add_student', 'Add Student'),
+    if (ModuleAccess.canManage('add_staff'))
+      ('add_staff', 'Add Administration Staff'),
+    if (ModuleAccess.canManage('add_teacher')) ('add_teacher', 'Add Teacher'),
+    if (ModuleAccess.canManage('announcements'))
+      ('announcements', 'Create Announcement'),
+  ];
 
   String _campusLabel(String? schoolId) {
     final campuses = SchoolRegistryService.instance.campusesForSchool(schoolId);
@@ -293,10 +292,7 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        IconButton(
-          icon: Icon(icon),
-          onPressed: onTap,
-        ),
+        IconButton(icon: Icon(icon), onPressed: onTap),
         if (badge != null && badge > 0)
           Positioned(
             right: 6,

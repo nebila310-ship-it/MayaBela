@@ -212,7 +212,6 @@ List<DashboardEntry> _teacherEntries() {
       id: 'messages',
       icon: Icons.message,
       color: Colors.orange,
-      isVisible: () => access.canAccessTeacherDashboardTile('messages'),
       builder: (context) => DashboardCard(
         icon: Icons.message,
         title: _t('messages', role),
@@ -886,7 +885,6 @@ List<DashboardEntry> _studentEntries() {
       id: 'messages',
       icon: Icons.message,
       color: Colors.orange,
-      isVisible: () => settings.allowStudentMessaging,
       builder: (context) => DashboardCard(
         icon: Icons.message,
         title: _t('messages', role),
@@ -895,7 +893,11 @@ List<DashboardEntry> _studentEntries() {
         onTap: () => _openTile('messages', () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const MessagesScreen()),
+            MaterialPageRoute(
+              builder: (_) => MessagesScreen(
+                canCompose: settings.allowStudentMessaging,
+              ),
+            ),
           );
         }),
       ),
