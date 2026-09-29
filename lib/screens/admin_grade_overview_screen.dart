@@ -6,6 +6,7 @@ import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/grade_outreach_service.dart';
 import 'package:mayabela/services/grade_report_export_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class GradesOverviewPalette {
   GradesOverviewPalette._();
@@ -1105,6 +1106,13 @@ class _RankedStudentTile extends StatelessWidget {
                     ),
                   ),
           ),
+          const SizedBox(width: 10),
+          StudentPhotoAvatar(
+            studentId: entry.report.studentId,
+            name: entry.report.studentName,
+            radius: 16,
+            fallbackColor: GradesOverviewPalette.primary,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1183,7 +1191,12 @@ class _UnderperformerTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.trending_down_rounded, color: color, size: 22),
+          StudentPhotoAvatar(
+            studentId: report.studentId,
+            name: report.studentName,
+            radius: 18,
+            fallbackColor: color,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

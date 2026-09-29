@@ -6,6 +6,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Staff desk: absence patterns, grades vs attendance, rule-based at-risk.
 class WebAttendanceIntelligencePage extends StatefulWidget {
@@ -179,6 +180,11 @@ class _WebAttendanceIntelligencePageState
       child: DecoratedBox(
         decoration: WebErpTheme.cardDecoration(context),
         child: ListTile(
+          leading: StudentPhotoAvatar(
+            studentId: p.studentId,
+            name: p.studentName,
+            radius: 20,
+          ),
           title: Text(p.studentName),
           subtitle: Text(
             '${p.className} · ${_levelLabel(p.level)}\n'
@@ -222,6 +228,11 @@ class _WebAttendanceIntelligencePageState
                 decoration: WebErpTheme.cardDecoration(context),
                 child: ListTile(
                   dense: true,
+                  leading: StudentPhotoAvatar(
+                    studentId: p.studentId,
+                    name: p.studentName,
+                    radius: 16,
+                  ),
                   title: Text(p.studentName),
                   subtitle: Text(
                     '${p.className} · absence ${(p.absenceRate * 100).round()}% · '

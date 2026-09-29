@@ -7,6 +7,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/widgets/online_class_link_button.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Course hub built from existing lesson plans, homework, materials, and exams.
 class WebLmsHubPage extends StatelessWidget {
@@ -36,6 +37,12 @@ class WebLmsHubPage extends StatelessWidget {
                   children: [
                     for (final student in students)
                       ListTile(
+                        leading: StudentPhotoAvatar(
+                          studentId: student.studentId,
+                          name: student.fullName,
+                          photoPath: student.photoPath,
+                          radius: 18,
+                        ),
                         title: Text(student.fullName),
                         subtitle: Text(student.studentId),
                         onTap: () {

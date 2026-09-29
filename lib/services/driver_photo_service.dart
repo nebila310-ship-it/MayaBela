@@ -83,4 +83,13 @@ class DriverPhotoService {
       storedPath: storedPath,
     );
   }
+
+  Future<Uint8List?> hydrateBytes(String? driverId, {String? storedPath}) {
+    return ProfilePhotoCodec.hydrateBytes(
+      personId: driverId,
+      byteCache: _cachedBytes,
+      pathCache: _cachedPaths,
+      storedPath: storedPath,
+    );
+  }
 }

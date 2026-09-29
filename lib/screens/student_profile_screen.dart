@@ -1,13 +1,8 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
-import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
-import 'package:mayabela/widgets/profile_photo_view.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class StudentProfileScreen extends StatelessWidget {
   const StudentProfileScreen({super.key});
@@ -101,7 +96,12 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _Avatar(profile: profile),
+        StudentPhotoAvatar(
+          studentId: profile.studentId,
+          name: profile.fullName,
+          photoPath: profile.photoPath,
+          radius: 40,
+        ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -128,66 +128,6 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.profile});
-
-  final StudentPortalProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    const radius = 40.0;
-
-    if (profile.hasPhoto) {
-      final bytes = StudentPhotoService.instance.lookupBytes(
-        profile.studentId,
-        storedPath: profile.photoPath,
-      );
-      final provider = profilePhotoProvider(
-        bytes: bytes,
-        path: profile.photoPath,
-      );
-      if (provider != null) {
-        return GestureDetector(
-          onTap: () => showProfilePhotoViewer(
-            context,
-            bytes: bytes,
-            path: profile.photoPath,
-            title: profile.fullName,
-          ),
-          child: CircleAvatar(
-            radius: radius,
-            backgroundImage: provider,
-          ),
-        );
-      }
-    }
-
-    if (profile.hasSchoolLogo) {
-      final logoUrl = profile.schoolLogoUrl?.trim();
-      if (logoUrl != null && logoUrl.isNotEmpty) {
-        return CircleAvatar(
-          radius: radius,
-          backgroundImage: NetworkImage(logoUrl),
-        );
-      }
-      if (!kIsWeb) {
-        return CircleAvatar(
-          radius: radius,
-          backgroundImage: FileImage(File(profile.schoolLogoPath!)),
-        );
-      }
-    }
-
-    return CircleAvatar(
-      radius: radius,
-      child: Text(
-        profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : '?',
-        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-      ),
     );
   }
 }

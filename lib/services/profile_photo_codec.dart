@@ -7,6 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/utils/attachment_size_limit.dart';
@@ -16,6 +17,38 @@ class ProfilePhotoCodec {
   ProfilePhotoCodec._();
 
   static String? lastError;
+
+  static final Map<String, Future<Uint8List?>> _inflightDownloads = {};
+
+  static bool isRemoteUrl(String path) =>
+      path.startsWith('http://') || path.startsWith('https://');
+
+  /// Student/staff photos live in a private bucket. Only branding files are public.
+  static bool isPrivateSchoolFilesUrl(String path) {
+    if (!isRemoteUrl(path)) return false;
+    final objectPath = schoolFilesObjectPath(path);
+    if (objectPath == null) return false;
+    return !objectPath.contains('/branding/');
+  }
+
+  /// Turns a Supabase public/sign/authenticated URL into a storage object path.
+  static String? schoolFilesObjectPath(String url) {
+    const markers = [
+      '/object/public/school-files/',
+      '/object/sign/school-files/',
+      '/object/authenticated/school-files/',
+    ];
+    for (final marker in markers) {
+      final i = url.indexOf(marker);
+      if (i < 0) continue;
+      var rest = url.substring(i + marker.length);
+      final q = rest.indexOf('?');
+      if (q >= 0) rest = rest.substring(0, q);
+      if (rest.isEmpty) return null;
+      return Uri.decodeComponent(rest);
+    }
+    return null;
+  }
 
   /// File picker first (web + “choose file”), then gallery on native.
   static Future<Uint8List?> pickBytes() async {
@@ -105,8 +138,9 @@ class ProfilePhotoCodec {
       if (decoded.width == decoded.height) {
         square = decoded;
       } else {
-        final size =
-            decoded.width < decoded.height ? decoded.width : decoded.height;
+        final size = decoded.width < decoded.height
+            ? decoded.width
+            : decoded.height;
         if (size <= 0) return bytes;
         final left = (decoded.width - size) ~/ 2;
         final top = (decoded.height - size) ~/ 2;
@@ -157,12 +191,12 @@ class ProfilePhotoCodec {
 
     final cloud = await AnnouncementAttachmentService.instance
         .uploadSavedAttachment(
-      fileName: '$id.jpg',
-      bytes: encoded,
-      localPath: path,
-      subdir: folder,
-      attachmentId: id,
-    );
+          fileName: '$id.jpg',
+          bytes: encoded,
+          localPath: path,
+          subdir: folder,
+          attachmentId: id,
+        );
     if (cloud != null && cloud.isNotEmpty) {
       pathCache[id] = cloud;
       WebAttachmentCache.instance.remember(cloud, encoded);
@@ -209,6 +243,87 @@ class ProfilePhotoCodec {
       if (fromCache != null && fromCache.isNotEmpty) return fromCache;
     }
     return WebAttachmentCache.instance.read(storedPath);
+  }
+
+  /// Downloads a private school-files photo with the signed-in Storage client.
+  static Future<Uint8List?> fetchRemoteBytes(String? path) async {
+    if (path == null || path.trim().isEmpty) return null;
+    final cached = WebAttachmentCache.instance.read(path);
+    if (cached != null && cached.isNotEmpty) return cached;
+    if (!isRemoteUrl(path)) return null;
+    final objectPath = schoolFilesObjectPath(path);
+    if (objectPath == null) return null;
+    if (!SupabaseBootstrap.isInitialized) return null;
+
+    final inflight = _inflightDownloads[path];
+    if (inflight != null) return inflight;
+
+    final future = _downloadSchoolFile(path, objectPath);
+    _inflightDownloads[path] = future;
+    try {
+      return await future;
+    } finally {
+      _inflightDownloads.remove(path);
+    }
+  }
+
+  static Future<Uint8List?> _downloadSchoolFile(
+    String url,
+    String objectPath,
+  ) async {
+    try {
+      final bytes = await SupabaseBootstrap.client.storage
+          .from('school-files')
+          .download(objectPath)
+          .timeout(const Duration(seconds: 12));
+      if (bytes.isNotEmpty) {
+        WebAttachmentCache.instance.remember(url, bytes);
+        return bytes;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ProfilePhotoCodec download failed: $e');
+      }
+    }
+    return null;
+  }
+
+  /// Local cache first, then authenticated Storage download for private URLs.
+  static Future<Uint8List?> hydrateBytes({
+    required String? personId,
+    required Map<String, Uint8List> byteCache,
+    required Map<String, String> pathCache,
+    String? storedPath,
+  }) async {
+    final existing = lookupBytes(
+      personId: personId,
+      byteCache: byteCache,
+      pathCache: pathCache,
+      storedPath: storedPath,
+    );
+    if (existing != null && existing.isNotEmpty) {
+      if (personId != null && personId.trim().isNotEmpty) {
+        byteCache[personId.trim().toUpperCase()] = existing;
+      }
+      return existing;
+    }
+
+    String? path;
+    if (personId != null && personId.trim().isNotEmpty) {
+      path = pathCache[personId.trim().toUpperCase()] ?? storedPath;
+    } else {
+      path = storedPath;
+    }
+    if (path == null || path.trim().isEmpty) return null;
+
+    final remote = await fetchRemoteBytes(path);
+    if (remote != null &&
+        remote.isNotEmpty &&
+        personId != null &&
+        personId.trim().isNotEmpty) {
+      byteCache[personId.trim().toUpperCase()] = remote;
+    }
+    return remote;
   }
 
   static Future<String?> resolvePath({

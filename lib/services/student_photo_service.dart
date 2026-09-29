@@ -87,4 +87,13 @@ class StudentPhotoService {
       storedPath: storedPath,
     );
   }
+
+  Future<Uint8List?> hydrateBytes(String? studentId, {String? storedPath}) {
+    return ProfilePhotoCodec.hydrateBytes(
+      personId: studentId,
+      byteCache: _cachedBytes,
+      pathCache: _cachedPaths,
+      storedPath: storedPath,
+    );
+  }
 }

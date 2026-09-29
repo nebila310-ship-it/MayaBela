@@ -12,6 +12,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Weighted markbook grid and school category weights.
 class WebMarkbookPage extends StatefulWidget {
@@ -361,7 +362,19 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                     for (final student in students)
                       DataRow(
                         cells: [
-                          DataCell(Text(student.name)),
+                          DataCell(
+                            Row(
+                              children: [
+                                StudentPhotoAvatar(
+                                  studentId: student.id,
+                                  name: student.name,
+                                  radius: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(child: Text(student.name)),
+                              ],
+                            ),
+                          ),
                           for (final cat in cats)
                             DataCell(
                               SizedBox(

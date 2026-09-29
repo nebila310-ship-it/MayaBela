@@ -5,6 +5,7 @@ import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/material_access_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Admin/teacher dialog to unlock a paid learning material per student.
 Future<void> showMaterialAccessDialog({
@@ -78,6 +79,13 @@ Future<void> showMaterialAccessDialog({
                                   dense: true,
                                   activeColor: accent,
                                   value: has,
+                                  secondary: StudentPhotoAvatar(
+                                    studentId: student.studentId,
+                                    name: student.fullName,
+                                    photoPath: student.photoPath,
+                                    radius: 16,
+                                    fallbackColor: accent,
+                                  ),
                                   title: Text(student.fullName),
                                   subtitle: Text(student.studentId),
                                   onChanged: (value) {

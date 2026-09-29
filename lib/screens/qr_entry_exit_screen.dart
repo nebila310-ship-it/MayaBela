@@ -8,6 +8,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/advanced_qr_scanner_shell.dart';
 import 'package:mayabela/widgets/qr_scanner_theme.dart';
 import 'package:mayabela/widgets/student_qr_card.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 enum QrScreenRole { teacher, driver, parent }
 
@@ -168,19 +169,6 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
       case QrScanAction.absent:
       case QrScanAction.exit:
         return Colors.red;
-    }
-  }
-
-  IconData _teacherStatusIcon(QrScanAction action) {
-    switch (action) {
-      case QrScanAction.present:
-      case QrScanAction.entry:
-        return Icons.check;
-      case QrScanAction.late:
-        return Icons.schedule;
-      case QrScanAction.absent:
-      case QrScanAction.exit:
-        return Icons.close;
     }
   }
 
@@ -408,14 +396,13 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
         final statusColor = widget.role == QrScreenRole.teacher
             ? _teacherStatusColor(record.action)
             : (record.action == QrScanAction.entry ? Colors.green : Colors.orange);
-        final statusIcon = widget.role == QrScreenRole.teacher
-            ? _teacherStatusIcon(record.action)
-            : (record.action == QrScanAction.entry ? Icons.login : Icons.logout);
 
         return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: statusColor.withValues(alpha: 0.15),
-            child: Icon(statusIcon, color: statusColor),
+          leading: StudentPhotoAvatar(
+            studentId: record.studentId,
+            name: record.studentName,
+            radius: 20,
+            fallbackColor: statusColor,
           ),
           title: Text(record.studentName),
           subtitle: Text(

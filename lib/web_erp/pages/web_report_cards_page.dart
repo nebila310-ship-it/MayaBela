@@ -11,6 +11,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/term_report_card_view.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Term report cards — comments, attendance snapshot, publish to parents.
 class WebReportCardsPage extends StatefulWidget {
@@ -167,6 +168,11 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
               margin: const EdgeInsets.only(bottom: 8),
               decoration: WebErpTheme.cardDecoration(context),
               child: ListTile(
+                leading: StudentPhotoAvatar(
+                  studentId: report.studentId,
+                  name: report.studentName,
+                  radius: 20,
+                ),
                 title: Text(report.studentName,
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text(

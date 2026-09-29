@@ -9,6 +9,7 @@ import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({
@@ -257,10 +258,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           final entry = entries[index];
                           return Card(
                             child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: _statusColor(entry.status)
-                                    .withValues(alpha: 0.2),
-                                child: Text('${index + 1}'),
+                              leading: StudentPhotoAvatar(
+                                name: entry.studentName,
+                                radius: 20,
+                                fallbackColor: _statusColor(entry.status),
                               ),
                               title: Text(entry.studentName),
                               subtitle: Text(

@@ -9,6 +9,7 @@ import 'package:mayabela/services/section_teacher_assignment_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_classes_ui.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/school_grade_level_picker.dart';
 import 'package:mayabela/widgets/section_teacher_assign_dialogs.dart';
@@ -502,6 +503,13 @@ class _AdminSectionDetailScreenState extends State<AdminSectionDetailScreen> {
                     subtitle: student.studentId,
                     icon: Icons.person_outline,
                     color: Colors.blue,
+                    leading: StudentPhotoAvatar(
+                      studentId: student.studentId,
+                      name: student.fullName,
+                      photoPath: student.photoPath,
+                      radius: 23,
+                      fallbackColor: Colors.blue,
+                    ),
                     onTap: () => _openStudent(context, student.studentId),
                   ),
                 ),

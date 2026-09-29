@@ -5,6 +5,7 @@ import 'package:mayabela/services/attendance_export_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class AdminAttendanceReportsScreen extends StatefulWidget {
   const AdminAttendanceReportsScreen({super.key, this.embedded = false});
@@ -782,9 +783,10 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: _accentColor.withValues(alpha: 0.12),
-                        child: Icon(Icons.person_rounded, color: _accentColor),
+                      leading: StudentPhotoAvatar(
+                        name: student.studentName,
+                        radius: 20,
+                        fallbackColor: _accentColor,
                       ),
                       title: Text(
                         student.studentName,

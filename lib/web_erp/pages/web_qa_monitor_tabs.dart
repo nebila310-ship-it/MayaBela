@@ -6,6 +6,7 @@ import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Phase I tabs hosted on the existing QA desk.
 class QaMonitorTabs {
@@ -620,6 +621,11 @@ class _AnalyticsTab extends StatelessWidget {
           for (final row in flagged.take(20))
             ListTile(
               dense: true,
+              leading: StudentPhotoAvatar(
+                studentId: row.studentId,
+                name: row.studentName,
+                radius: 16,
+              ),
               title: Text('${row.studentName} · ${row.className}'),
               subtitle: Text(
                 '${row.level.name} · present ${row.attendanceRate.toStringAsFixed(0)}%',

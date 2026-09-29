@@ -5,6 +5,7 @@ import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
+import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
@@ -642,13 +643,50 @@ class StudentRegistryService {
   void replaceStudent(AdminStudentRecord updated) => updateStudent(updated);
 
   AdminStudentRecord? lookupByName(String fullName) {
-    final name = fullName.trim();
+    final name = fullName.trim().toLowerCase();
     if (name.isEmpty) return null;
     try {
-      return _students.firstWhere((s) => s.fullName == name && s.isActive);
+      return _students.firstWhere(
+        (s) => s.isActive && s.fullName.trim().toLowerCase() == name,
+      );
     } catch (_) {
       return null;
     }
+  }
+
+  AdminStudentRecord? lookupAnyByName(String fullName) {
+    final name = fullName.trim().toLowerCase();
+    if (name.isEmpty) return null;
+    try {
+      return _students.firstWhere(
+        (s) => s.fullName.trim().toLowerCase() == name,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Resolve a saved student for photo display by STU-id, slug, or name.
+  AdminStudentRecord? resolveForPhoto({String? studentId, String? name}) {
+    if (studentId != null && studentId.trim().isNotEmpty) {
+      final byId = lookupAnyById(studentId);
+      if (byId != null) return byId;
+    }
+    if (name != null && name.trim().isNotEmpty) {
+      final byName = lookupAnyByName(name);
+      if (byName != null) return byName;
+    }
+    if (studentId != null && studentId.trim().isNotEmpty) {
+      final slug = studentId.trim().toLowerCase();
+      for (final student in _students) {
+        final generated = student.fullName
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+            .replaceAll(RegExp(r'^-|-$'), '');
+        if (generated == slug) return student;
+      }
+    }
+    return null;
   }
 
   bool verifyStudent({
@@ -715,6 +753,7 @@ class StudentRegistryService {
     if (clamped > _nextId) {
       _nextId = clamped;
     }
+    StaffRegistryNotifier.instance.notifyChanged();
   }
 
   List<AdminStudentRecord> studentsForSchool(String schoolId) {
@@ -759,11 +798,12 @@ class StudentRegistryService {
   }
 
   void updatePhoto(String studentId, String photoPath, {bool persist = true}) {
-    final existing = lookupById(studentId);
+    final existing = lookupAnyById(studentId) ?? lookupById(studentId);
     if (existing == null) return;
     final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
     if (idx >= 0) _students[idx] = existing.copyWith(photoPath: photoPath);
-    if (persist) _persistRegistry(syncStudentId: studentId);
+    StaffRegistryNotifier.instance.notifyChanged();
+    if (persist) _persistRegistry(syncStudentId: existing.studentId);
   }
 
   void updateStudentPlacement({

@@ -4,6 +4,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/school_class.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/screens/my_children_screen.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Parent accent palette for child picker and hub.
 class ParentChildPalette {
@@ -167,20 +168,11 @@ class _ParentChildPickerSheet extends StatelessWidget {
                         padding: const EdgeInsets.all(14),
                         child: Row(
                           children: [
-                            CircleAvatar(
+                            StudentPhotoAvatar(
+                              studentId: child.studentId,
+                              name: child.name,
                               radius: 26,
-                              backgroundColor:
-                                  ParentChildPalette.primary.withValues(alpha: 0.15),
-                              child: Text(
-                                child.name.isNotEmpty
-                                    ? child.name[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  color: ParentChildPalette.deep,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
+                              fallbackColor: ParentChildPalette.primary,
                             ),
                             const SizedBox(width: 14),
                             Expanded(

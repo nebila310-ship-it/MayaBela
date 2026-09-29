@@ -5,17 +5,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 
 /// Resolves a person photo from in-memory bytes, web cache, network, or file.
-ImageProvider? profilePhotoProvider({
-  Uint8List? bytes,
-  String? path,
-}) {
+ImageProvider? profilePhotoProvider({Uint8List? bytes, String? path}) {
   if (bytes != null && bytes.isNotEmpty) return MemoryImage(bytes);
   if (path == null || path.trim().isEmpty) return null;
   final cached = WebAttachmentCache.instance.read(path);
   if (cached != null && cached.isNotEmpty) return MemoryImage(cached);
   if (path.startsWith('http://') || path.startsWith('https://')) {
+    // Private school-files objects 404 as NetworkImage; hydrate via Storage.
+    if (ProfilePhotoCodec.isPrivateSchoolFilesUrl(path)) return null;
     return NetworkImage(path);
   }
   if (WebAttachmentCache.instance.isWebPath(path)) return null;
