@@ -11,10 +11,14 @@ import 'package:mayabela/utils/phone_utils.dart';
 
 /// Role-scoped conversation visibility — direct threads are participant-only.
 abstract final class MessagingAccessService {
-  /// School owner, or staff granted messaging / support (e.g. Vice President).
+  /// Staff-to-staff school directory. Parents and students are excluded.
   static bool hasSchoolWideMessaging() {
     final role = AuthService.currentUser?.roleKey;
-    if (role == null || role == AuthService.roleStudent) return false;
+    if (role == null ||
+        role == AuthService.roleStudent ||
+        role == AuthService.roleParent) {
+      return false;
+    }
     return true;
   }
 
@@ -333,12 +337,15 @@ abstract final class MessagingAccessService {
   static bool canTeacherDirectToParent(String parentName) {
     final normalized = parentName.trim().toLowerCase();
     if (normalized.isEmpty) return false;
-    return parentsForSchool(
-      AuthService.activeSchoolId,
-    ).any((p) => p.parentName.trim().toLowerCase() == normalized);
+    return parentsForCurrentCompose().any(
+      (p) => p.parentName.trim().toLowerCase() == normalized,
+    );
   }
 
   static bool canTeacherDirectToStaff(String staffId) {
+    if (AuthService.currentUser?.roleKey == AuthService.roleParent) {
+      return false;
+    }
     final member = StaffMemberOption.resolve(staffId);
     if (member == null) return false;
     final me = StaffMemberOption.viewerCompositeStaffId(
@@ -349,18 +356,30 @@ abstract final class MessagingAccessService {
   }
 
   /// Parents list for compose UI based on the signed-in user's messaging scope.
+  ///
+  /// Classroom teachers may write their class families. School admin may write
+  /// any school parent. Other office roles stay on the internal staff mesh.
   static List<ParentRecipientOption> parentsForCurrentCompose() {
-    if (AuthService.currentUser?.roleKey == AuthService.roleParent) {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleStudent) {
       return const [];
     }
-    return parentsForSchool(AuthService.activeSchoolId);
+    if (role == AuthService.roleTeacher) {
+      return parentsForTeacherClasses();
+    }
+    if (role == AuthService.roleAdmin) {
+      return parentsForSchool(AuthService.activeSchoolId);
+    }
+    return const [];
   }
 
   /// Staff directory for compose — every school login except the viewer.
   static List<StaffMemberOption> staffForCurrentCompose() {
-    final me = StaffMemberOption.viewerCompositeStaffId(
-      AuthService.currentUser?.roleKey,
-    );
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleParent || role == AuthService.roleStudent) {
+      return const [];
+    }
+    final me = StaffMemberOption.viewerCompositeStaffId(role);
     return SchoolDataService.instance
         .getStaffForActiveSchool()
         .where((peer) => me == null || !StaffMemberOption.idsEqual(me, peer.id))

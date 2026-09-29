@@ -1217,18 +1217,18 @@ class AppStrings implements AppStringsLike {
   String get childHubTools =>
       t('School tools', 'የትምህርት መሳሪያዎች');
   String get parentComposeTitle => t(
-        'Message school staff',
-        'የትምህርት ቤት ሰራተኞችን መልእክት',
+        'Message homeroom teacher',
+        'የክፍል መምህርን መልእክት',
       );
   String get parentComposeMessageHint => t(
-        'Message any teacher, office, or staff member at the school',
-        'ማንኛውንም መምህር፣ ቢሮ ወይም ሰራተኛ ያግኙ',
+        'Parents can only write the homeroom teacher. School office chat is staff-only.',
+        'ወላጆች የክፍል መምህርን ብቻ መልዕክት ይልካሉ። የቢሮ ውይይት ለሰራተኞች ብቻ ነው።',
       );
   String get onlineNow => t('Online', 'መስመር ላይ', 'Sarara irratti');
   String get offlineNow => t('Offline', 'ከመስመር ውጪ', 'Sarara irraa');
   String get parentMessagesSubtitle => t(
-        'Chat with teachers and school staff',
-        'ከመምህራን እና ከትምህርት ቤት ሰራተኞች ጋር ይወያዩ',
+        'Chat with your child\'s homeroom teacher',
+        'ከልጅዎ የክፍል መምህር ጋር ይወያዩ',
       );
   String get parentMessageRecipientLabel =>
       t('Send to', 'ላክ ወደ');

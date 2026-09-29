@@ -652,33 +652,35 @@ class _CreateCommunityMessageScreenState
                           onRemove: () => setState(() => _photoPath = null),
                         ),
                         const SizedBox(height: 18),
-                        Text(
-                          s.messageParentsOptional,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                        if (_parents.isNotEmpty) ...[
+                          Text(
+                            s.messageParentsOptional,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.messageSearchParentHint,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            height: 1.35,
+                          const SizedBox(height: 6),
+                          Text(
+                            s.messageSearchParentHint,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.35,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        MessageParentPicker(
-                          parents: _parents,
-                          selectedNames: _selectedParentNames,
-                          onChanged: (value) => setState(() {
-                            _selectedParentNames
-                              ..clear()
-                              ..addAll(value);
-                            _error = '';
-                          }),
-                        ),
+                          const SizedBox(height: 12),
+                          MessageParentPicker(
+                            parents: _parents,
+                            selectedNames: _selectedParentNames,
+                            onChanged: (value) => setState(() {
+                              _selectedParentNames
+                                ..clear()
+                                ..addAll(value);
+                              _error = '';
+                            }),
+                          ),
+                        ],
                         if (widget.composeScope ==
                             MessageComposeScope.teacher) ...[
                           const SizedBox(height: 18),
@@ -925,27 +927,29 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Text(
-                          s.messageSelectParent,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                        if (_parents.isNotEmpty) ...[
+                          Text(
+                            s.messageSelectParent,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        MessageParentPicker(
-                          parents: _parents,
-                          selectedNames: _selectedParentNames,
-                          multiSelect: false,
-                          onChanged: (value) => setState(() {
-                            _selectedParentNames
-                              ..clear()
-                              ..addAll(value);
-                            if (value.isNotEmpty) _selectedStaffIds.clear();
-                            _error = '';
-                          }),
-                        ),
-                        const SizedBox(height: 18),
+                          const SizedBox(height: 12),
+                          MessageParentPicker(
+                            parents: _parents,
+                            selectedNames: _selectedParentNames,
+                            multiSelect: false,
+                            onChanged: (value) => setState(() {
+                              _selectedParentNames
+                                ..clear()
+                                ..addAll(value);
+                              if (value.isNotEmpty) _selectedStaffIds.clear();
+                              _error = '';
+                            }),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
                         Text(
                           s.messageSelectStaff,
                           style: const TextStyle(

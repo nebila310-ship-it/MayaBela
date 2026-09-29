@@ -1199,7 +1199,7 @@ class SchoolDataService {
   }
 
   List<ParentRecipientOption> _parentRecipientsForCommunityPicker() {
-    return getParentRecipientsForActiveSchool();
+    return MessagingAccessService.parentsForCurrentCompose();
   }
 
   List<StaffMemberOption> _staffRecipientsForCommunityPicker() {

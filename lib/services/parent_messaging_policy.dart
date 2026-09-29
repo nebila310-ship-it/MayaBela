@@ -6,7 +6,7 @@ import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
-/// Who parents may message / see in direct threads (homeroom + school leadership).
+/// Who parents may message / see in direct threads (homeroom teacher only).
 abstract final class ParentMessagingPolicy {
   static List<StaffMemberOption> adminContactsForSchool(String? schoolId) {
     final id = schoolId?.trim().toUpperCase();
@@ -136,13 +136,16 @@ abstract final class ParentMessagingPolicy {
   }
 
   static bool canMessageStaff({required String staffId, String? studentId}) {
-    return StaffMemberOption.resolve(staffId) != null;
+    if (studentId != null && studentId.trim().isNotEmpty) {
+      return isHomeroomStaffForStudent(staffId, studentId);
+    }
+    return isHomeroomStaffForAnyLinkedChild(staffId);
   }
 
   static bool canViewDirectStaffThread(Conversation conversation) {
     if (conversation.isStaffOnlyDirectThread) return false;
     final staffId = conversation.staffParticipantId;
     if (staffId == null || staffId.trim().isEmpty) return false;
-    return StaffMemberOption.resolve(staffId) != null;
+    return isHomeroomStaffForAnyLinkedChild(staffId);
   }
 }

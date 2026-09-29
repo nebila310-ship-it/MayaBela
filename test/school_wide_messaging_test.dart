@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
@@ -9,6 +10,7 @@ import 'package:mayabela/services/parent_messaging_policy.dart';
 import 'package:mayabela/services/presence_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
 void main() {
@@ -73,7 +75,7 @@ void main() {
     AuthService.currentUser = null;
   });
 
-  test('every non-student role can compose school-wide', () {
+  test('every staff role can compose internally; parents cannot', () {
     signIn(username: hrUsername, roleKey: AuthService.roleTeacher);
     expect(MessagingAccessService.hasSchoolWideMessaging(), isTrue);
 
@@ -81,7 +83,9 @@ void main() {
     expect(MessagingAccessService.hasSchoolWideMessaging(), isTrue);
 
     signIn(username: 'parent.1', roleKey: AuthService.roleParent);
-    expect(MessagingAccessService.hasSchoolWideMessaging(), isTrue);
+    expect(MessagingAccessService.hasSchoolWideMessaging(), isFalse);
+    expect(MessagingAccessService.staffForCurrentCompose(), isEmpty);
+    expect(MessagingAccessService.parentsForCurrentCompose(), isEmpty);
 
     signIn(username: 'admin.1', roleKey: AuthService.roleAdmin);
     expect(MessagingAccessService.hasSchoolWideMessaging(), isTrue);
@@ -158,36 +162,102 @@ void main() {
     );
   });
 
-  test('parents may message any school staff role', () {
+  test('parents may only write the homeroom teacher, not office staff', () {
+    const homeroomId = 'TCH-HRM-9913';
+    const studentId = 'STU-MESH-1';
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: homeroomId,
+        fullName: 'Helen Homeroom',
+        assignedClass: 'Grade 4A',
+        schoolId: schoolId,
+        subject: 'Homeroom',
+        loginUsername: 'helen.home',
+        classAssignments: const [
+          TeacherClassAssignment(
+            className: 'Grade 4A',
+            role: TeacherStaffRole.homeroomTeacher,
+          ),
+        ],
+      ),
+    ]);
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: studentId,
+        fullName: 'Maya Mesh',
+        grade: 'Grade 4',
+        className: 'Grade 4A',
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2016, 1, 1),
+        fatherName: 'Parent Mesh',
+        homeroomTeacherId: homeroomId,
+      ),
+    ]);
+
     expect(
       ParentMessagingPolicy.canMessageStaff(
         staffId: StaffMemberOption.teacherKey(procurementId),
       ),
-      isTrue,
+      isFalse,
     );
     expect(
       ParentMessagingPolicy.canMessageStaff(
         staffId: StaffMemberOption.teacherKey(hrId),
       ),
-      isTrue,
+      isFalse,
     );
 
     signIn(
       username: '0911990011',
       roleKey: AuthService.roleParent,
       fullName: 'Parent Mesh',
+      linkedStudentIds: const [studentId],
+    );
+
+    expect(
+      SchoolDataService.instance.sendParentDirectMessage(
+        body: 'Can finance share the fee letter?',
+        staffId: StaffMemberOption.teacherKey(hrId),
+        studentId: studentId,
+      ),
+      isEmpty,
+    );
+
+    expect(
+      ParentMessagingPolicy.canMessageStaff(
+        staffId: StaffMemberOption.teacherKey(homeroomId),
+        studentId: studentId,
+      ),
+      isTrue,
     );
     final ids = SchoolDataService.instance.sendParentDirectMessage(
-      body: 'Can finance share the fee letter?',
-      staffId: StaffMemberOption.teacherKey(hrId),
+      body: 'Maya will be late tomorrow',
+      staffId: StaffMemberOption.teacherKey(homeroomId),
+      studentId: studentId,
     );
     expect(ids, isNotEmpty);
-    final conversation = SchoolDataService.instance.getConversation(
-      ids.single,
-    )!;
     expect(
-      conversation.displayTitleForViewer(),
-      'Hanna Human (Human Resource)',
+      SchoolDataService.instance
+          .getConversation(ids.single)!
+          .displayTitleForViewer(),
+      contains('Helen Homeroom'),
+    );
+  });
+
+  test('HR cannot open a parent thread from office compose', () {
+    signIn(
+      username: hrUsername,
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: hrId,
+      staffRoles: const [StaffRoles.humanResource],
+    );
+    expect(MessagingAccessService.parentsForCurrentCompose(), isEmpty);
+    expect(
+      SchoolDataService.instance.sendAdminDirectMessage(
+        body: 'Office should not write parents from HR',
+        parentName: 'Parent Mesh',
+      ),
+      isEmpty,
     );
   });
 

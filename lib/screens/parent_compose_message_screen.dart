@@ -6,6 +6,7 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/school_class.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
 import 'package:mayabela/services/parent_messaging_policy.dart';
+import 'package:mayabela/services/presence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
@@ -29,7 +30,6 @@ class _ParentComposeMessageScreenState
   final _data = SchoolDataService.instance;
   final _subjectController = TextEditingController();
   final _bodyController = TextEditingController();
-  final Set<String> _selectedStaffIds = {};
 
   ChildProfile? _selectedChild;
   final List<AnnouncementAttachment> _attachments = [];
@@ -39,10 +39,6 @@ class _ParentComposeMessageScreenState
   void initState() {
     super.initState();
     _selectedChild = widget.child ?? _data.getChildren().firstOrNull;
-    final homeroom = _homeroomContact;
-    if (homeroom != null) {
-      _selectedStaffIds.add(homeroom.id);
-    }
   }
 
   @override
@@ -53,9 +49,6 @@ class _ParentComposeMessageScreenState
   }
 
   List<ChildProfile> get _children => _data.getChildren();
-
-  List<StaffMemberOption> get _staff =>
-      MessagingAccessService.staffForCurrentCompose();
 
   StaffMemberOption? get _homeroomContact {
     final studentId = _selectedChild?.studentId;
@@ -69,11 +62,6 @@ class _ParentComposeMessageScreenState
       _selectedChild?.className ?? '',
       homeroomTeacherName: _selectedChild?.teacher,
     );
-  }
-
-  StaffMemberOption? get _resolvedRecipient {
-    if (_selectedStaffIds.isEmpty) return null;
-    return StaffMemberOption.resolve(_selectedStaffIds.first);
   }
 
   Future<void> _pickAttachments() async {
@@ -90,7 +78,7 @@ class _ParentComposeMessageScreenState
 
   Future<void> _send() async {
     final s = AppLocale.instance.strings;
-    final recipient = _resolvedRecipient;
+    final recipient = _homeroomContact;
     if (recipient == null) {
       ScaffoldMessenger.of(
         context,
@@ -150,9 +138,16 @@ class _ParentComposeMessageScreenState
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: AppLocale.instance,
+      listenable: Listenable.merge([
+        AppLocale.instance,
+        PresenceService.instance,
+      ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
+        final homeroom = _homeroomContact;
+        final online =
+            homeroom != null &&
+            PresenceService.instance.isStaffOnline(homeroom);
         return Scaffold(
           backgroundColor: ParentChildPalette.surface,
           appBar: AppBar(
@@ -197,15 +192,14 @@ class _ParentComposeMessageScreenState
                 ),
               ),
               const SizedBox(height: 12),
-              MessageStaffPicker(
-                staff: _staff,
-                selectedIds: _selectedStaffIds,
-                multiSelect: false,
-                onChanged: (value) => setState(() {
-                  _selectedStaffIds
-                    ..clear()
-                    ..addAll(value);
-                }),
+              _HomeroomRecipientCard(
+                name:
+                    homeroom?.labeledName ??
+                    (_selectedChild?.teacher != null
+                        ? '${_selectedChild!.teacher} (${s.homeroomTeacherShort})'
+                        : '—'),
+                online: online,
+                available: homeroom != null,
               ),
               const SizedBox(height: 20),
               TextField(
@@ -241,6 +235,71 @@ class _ParentComposeMessageScreenState
           ),
         );
       },
+    );
+  }
+}
+
+class _HomeroomRecipientCard extends StatelessWidget {
+  const _HomeroomRecipientCard({
+    required this.name,
+    required this.online,
+    required this.available,
+  });
+
+  final String name;
+  final bool online;
+  final bool available;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppLocale.instance.strings;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: ParentChildPalette.secondary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                backgroundColor: ParentChildPalette.primary.withValues(
+                  alpha: 0.15,
+                ),
+                child: Text(
+                  name.isNotEmpty ? name[0] : '?',
+                  style: const TextStyle(color: ParentChildPalette.deep),
+                ),
+              ),
+              Positioned(
+                right: -1,
+                bottom: -1,
+                child: PresenceDot(online: available && online, size: 8),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  available
+                      ? '${s.homeroomTeacherShort} · ${online ? s.onlineNow : s.offlineNow}'
+                      : s.parentMessageNoRecipient,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
