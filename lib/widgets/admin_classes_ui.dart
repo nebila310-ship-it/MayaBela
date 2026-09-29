@@ -511,6 +511,7 @@ class AdminClassesPersonTile extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.badge,
+    this.leading,
   });
 
   final String name;
@@ -519,6 +520,7 @@ class AdminClassesPersonTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final String? badge;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -546,7 +548,8 @@ class AdminClassesPersonTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
-                  Container(
+                  leading ??
+                      Container(
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(

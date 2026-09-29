@@ -22,6 +22,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/parent_bus_link_card.dart';
 import 'package:mayabela/widgets/parent_child_picker.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class MyChildrenScreen extends StatelessWidget {
   const MyChildrenScreen({super.key});
@@ -138,7 +139,11 @@ class _ChildListCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              _ChildAvatar(name: child.name, size: 56),
+              _ChildAvatar(
+                name: child.name,
+                studentId: child.studentId,
+                size: 56,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -301,7 +306,11 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
                         right: 20,
                         child: Row(
                           children: [
-                            _ChildAvatar(name: child.name, size: 64),
+                            _ChildAvatar(
+                              name: child.name,
+                              studentId: child.studentId,
+                              size: 64,
+                            ),
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(
@@ -382,9 +391,14 @@ class _ChildDetailScreenState extends State<ChildDetailScreen> {
 }
 
 class _ChildAvatar extends StatelessWidget {
-  const _ChildAvatar({required this.name, required this.size});
+  const _ChildAvatar({
+    required this.name,
+    this.studentId,
+    required this.size,
+  });
 
   final String name;
+  final String? studentId;
   final double size;
 
   @override
@@ -404,16 +418,11 @@ class _ChildAvatar extends StatelessWidget {
           ),
         ],
       ),
-      child: CircleAvatar(
-        backgroundColor: ParentChildPalette.primary.withValues(alpha: 0.15),
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(
-            color: ParentChildPalette.deep,
-            fontWeight: FontWeight.bold,
-            fontSize: size * 0.38,
-          ),
-        ),
+      child: StudentPhotoAvatar(
+        studentId: studentId,
+        name: name,
+        radius: (size / 2) - 3,
+        fallbackColor: ParentChildPalette.primary,
       ),
     );
   }

@@ -12,6 +12,7 @@ import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 enum StudentTransferKind { section, grade, transport, campus }
 
@@ -72,6 +73,13 @@ class AdminTransferScreen extends StatelessWidget {
                   emptyRoster: s.transferNoStudents,
                   people: students,
                   personLabel: (st) => '${st.fullName} · ${st.className}',
+                  personLeading: (st) => StudentPhotoAvatar(
+                    studentId: st.studentId,
+                    name: st.fullName,
+                    photoPath: st.photoPath,
+                    radius: 20,
+                    fallbackColor: AdminFormTheme.student.primary,
+                  ),
                   onTransferPerson: (st) =>
                       showStudentTransferKindPicker(context, studentId: st.studentId),
                   options: [
@@ -403,6 +411,7 @@ class _TransferPeopleTab<T> extends StatelessWidget {
     required this.people,
     required this.personLabel,
     required this.onTransferPerson,
+    this.personLeading,
   });
 
   final Color accent;
@@ -412,6 +421,7 @@ class _TransferPeopleTab<T> extends StatelessWidget {
   final List<T> people;
   final String Function(T) personLabel;
   final ValueChanged<T> onTransferPerson;
+  final Widget Function(T person)? personLeading;
 
   @override
   Widget build(BuildContext context) {
@@ -459,10 +469,11 @@ class _TransferPeopleTab<T> extends StatelessWidget {
             (person) => Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: accent.withValues(alpha: 0.12),
-                  child: Icon(Icons.swap_horiz_rounded, color: accent, size: 20),
-                ),
+                leading: personLeading?.call(person) ??
+                    CircleAvatar(
+                      backgroundColor: accent.withValues(alpha: 0.12),
+                      child: Icon(Icons.swap_horiz_rounded, color: accent, size: 20),
+                    ),
                 title: Text(
                   personLabel(person),
                   style: const TextStyle(fontWeight: FontWeight.w600),

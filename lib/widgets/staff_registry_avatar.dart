@@ -64,14 +64,17 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
     String? fromRecord = widget.photoPath;
     if (fromRecord == null || fromRecord.trim().isEmpty) {
       if (widget.isStudent) {
-        fromRecord =
-            StudentRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+        fromRecord = StudentRegistryService.instance
+            .lookupAnyById(widget.staffId)
+            ?.photoPath;
       } else if (widget.isDriver) {
-        fromRecord =
-            DriverRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+        fromRecord = DriverRegistryService.instance
+            .lookupById(widget.staffId)
+            ?.photoPath;
       } else {
-        fromRecord =
-            TeacherRegistryService.instance.lookupById(widget.staffId)?.photoPath;
+        fromRecord = TeacherRegistryService.instance
+            .lookupById(widget.staffId)
+            ?.photoPath;
       }
     }
 
@@ -81,33 +84,51 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
             storedPath: fromRecord,
           )
         : widget.isDriver
-            ? await DriverPhotoService.instance.resolvePath(
-                widget.staffId,
-                storedPath: fromRecord,
-              )
-            : await TeacherPhotoService.instance.resolvePath(
-                widget.staffId,
-                storedPath: fromRecord,
-              );
+        ? await DriverPhotoService.instance.resolvePath(
+            widget.staffId,
+            storedPath: fromRecord,
+          )
+        : await TeacherPhotoService.instance.resolvePath(
+            widget.staffId,
+            storedPath: fromRecord,
+          );
 
-    final bytes = widget.isStudent
+    final stored = resolved ?? fromRecord;
+    var bytes = widget.isStudent
         ? StudentPhotoService.instance.lookupBytes(
             widget.staffId,
-            storedPath: resolved ?? fromRecord,
+            storedPath: stored,
           )
         : widget.isDriver
-            ? DriverPhotoService.instance.lookupBytes(
-                widget.staffId,
-                storedPath: resolved ?? fromRecord,
-              )
-            : TeacherPhotoService.instance.lookupBytes(
-                widget.staffId,
-                storedPath: resolved ?? fromRecord,
-              );
+        ? DriverPhotoService.instance.lookupBytes(
+            widget.staffId,
+            storedPath: stored,
+          )
+        : TeacherPhotoService.instance.lookupBytes(
+            widget.staffId,
+            storedPath: stored,
+          );
+
+    if (bytes == null || bytes.isEmpty) {
+      bytes = widget.isStudent
+          ? await StudentPhotoService.instance.hydrateBytes(
+              widget.staffId,
+              storedPath: stored,
+            )
+          : widget.isDriver
+          ? await DriverPhotoService.instance.hydrateBytes(
+              widget.staffId,
+              storedPath: stored,
+            )
+          : await TeacherPhotoService.instance.hydrateBytes(
+              widget.staffId,
+              storedPath: stored,
+            );
+    }
 
     if (mounted) {
       setState(() {
-        _photoPath = resolved ?? fromRecord;
+        _photoPath = stored;
         _photoBytes = bytes;
       });
     }
@@ -138,14 +159,15 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
     }
 
     return GestureDetector(
-      onTap: widget.onTap ??
+      onTap:
+          widget.onTap ??
           (widget.enableViewer && provider != null
               ? () => showProfilePhotoViewer(
-                    context,
-                    bytes: _photoBytes,
-                    path: _photoPath,
-                    title: widget.name,
-                  )
+                  context,
+                  bytes: _photoBytes,
+                  path: _photoPath,
+                  title: widget.name,
+                )
               : null),
       child: CircleAvatar(
         radius: widget.radius,

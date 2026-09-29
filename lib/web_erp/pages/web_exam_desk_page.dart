@@ -13,6 +13,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/course_attachment_picker.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Staff exam desk: question bank, papers, and scoring that writes Phase B.
 class WebExamDeskPage extends StatefulWidget {
@@ -406,6 +407,11 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
           for (final attempt in attempts)
             _card(
               child: ListTile(
+                leading: StudentPhotoAvatar(
+                  studentId: attempt.studentId,
+                  name: attempt.studentName,
+                  radius: 20,
+                ),
                 title: Text(attempt.studentName),
                 subtitle: Text(
                   '${_exams.paperById(attempt.paperId)?.title ?? attempt.paperId} · '

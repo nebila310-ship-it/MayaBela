@@ -37,6 +37,7 @@ import 'package:mayabela/widgets/school_branding_header.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/send_student_parent_invites.dart';
 import 'package:mayabela/widgets/student_qr_card.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 import 'package:mayabela/widgets/send_teacher_credentials.dart';
 import 'package:mayabela/widgets/staff_role_picker_table.dart';
 import 'package:mayabela/widgets/transport_driver_field.dart';
@@ -267,10 +268,12 @@ class _ParentPendingScreenState extends State<ParentPendingScreen> {
                       ),
                     ),
                     child: ListTile(
-                      leading: Icon(
-                        _statusIcon(link.status),
-                        color: _statusColor(link.status),
-                        size: 32,
+                      leading: StudentPhotoAvatar(
+                        studentId: link.studentId,
+                        name: student?.fullName ?? link.studentId,
+                        photoPath: student?.photoPath,
+                        radius: 20,
+                        fallbackColor: _statusColor(link.status),
                       ),
                       title: Text(student?.fullName ?? link.studentId),
                       subtitle: Column(

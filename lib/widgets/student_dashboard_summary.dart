@@ -1,17 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
-import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/widgets/dashboard_welcome_card.dart';
-import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
-import 'package:mayabela/widgets/profile_photo_view.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class StudentDashboardSummary extends StatelessWidget {
   const StudentDashboardSummary({super.key});
@@ -81,7 +77,13 @@ class StudentDashboardSummary extends StatelessWidget {
           accentLight: _accentLight,
           schoolLine: schoolLine,
           statsSectionTitle: 'At a glance',
-          leading: _StudentAvatar(profile: profile),
+          leading: StudentPhotoAvatar(
+            studentId: profile.studentId,
+            name: profile.fullName,
+            photoPath: profile.photoPath,
+            radius: 36,
+            fallbackColor: _accent,
+          ),
           detailLines: detailLines,
           chips: [
             DashboardStatChip(
@@ -128,68 +130,5 @@ class StudentDashboardSummary extends StatelessWidget {
     final suffix = time.hour >= 12 ? 'PM' : 'AM';
     return '${time.day}/${time.month} · '
         '$hour:${time.minute.toString().padLeft(2, '0')} $suffix';
-  }
-}
-
-class _StudentAvatar extends StatelessWidget {
-  const _StudentAvatar({required this.profile});
-
-  final StudentPortalProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    if (profile.hasPhoto) {
-      final bytes = StudentPhotoService.instance.lookupBytes(
-        profile.studentId,
-        storedPath: profile.photoPath,
-      );
-      final provider = profilePhotoProvider(
-        bytes: bytes,
-        path: profile.photoPath,
-      );
-      if (provider != null) {
-        return GestureDetector(
-          onTap: () => showProfilePhotoViewer(
-            context,
-            bytes: bytes,
-            path: profile.photoPath,
-            title: profile.fullName,
-          ),
-          child: CircleAvatar(
-            radius: 36,
-            backgroundImage: provider,
-          ),
-        );
-      }
-    }
-
-    if (profile.hasSchoolLogo) {
-      final logoUrl = profile.schoolLogoUrl?.trim();
-      if (logoUrl != null && logoUrl.isNotEmpty) {
-        return CircleAvatar(
-          radius: 36,
-          backgroundColor: StudentDashboardSummary._accent.withValues(alpha: 0.1),
-          backgroundImage: NetworkImage(logoUrl),
-        );
-      }
-      return CircleAvatar(
-        radius: 36,
-        backgroundColor: StudentDashboardSummary._accent.withValues(alpha: 0.1),
-        backgroundImage: FileImage(File(profile.schoolLogoPath!)),
-      );
-    }
-
-    return CircleAvatar(
-      radius: 36,
-      backgroundColor: StudentDashboardSummary._accent.withValues(alpha: 0.12),
-      child: Text(
-        profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : '?',
-        style: const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: StudentDashboardSummary._accent,
-        ),
-      ),
-    );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/web_erp/shell/web_erp_navigation_scope.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Shared colorful styling for admin enrollment forms.
@@ -43,20 +44,20 @@ class AdminFormTheme {
   );
 
   LinearGradient get headerGradient => LinearGradient(
-        colors: [primary, secondary, accent],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    colors: [primary, secondary, accent],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   LinearGradient get backgroundGradient => LinearGradient(
-        colors: [
-          primary.withValues(alpha: 0.08),
-          accent.withValues(alpha: 0.04),
-          Colors.white,
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      );
+    colors: [
+      primary.withValues(alpha: 0.08),
+      accent.withValues(alpha: 0.04),
+      Colors.white,
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
 }
 
 class AdminFormScaffold extends StatelessWidget {
@@ -170,9 +171,14 @@ class AdminFormSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
+                colors: [
+                  color.withValues(alpha: 0.15),
+                  color.withValues(alpha: 0.05),
+                ],
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
             child: Row(
               children: [
@@ -239,7 +245,7 @@ InputDecoration adminFieldDecoration({
   );
 }
 
-class AdminPhotoPicker extends StatelessWidget {
+class AdminPhotoPicker extends StatefulWidget {
   const AdminPhotoPicker({
     super.key,
     this.photo,
@@ -259,14 +265,49 @@ class AdminPhotoPicker extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onView;
 
+  @override
+  State<AdminPhotoPicker> createState() => _AdminPhotoPickerState();
+}
+
+class _AdminPhotoPickerState extends State<AdminPhotoPicker> {
+  Uint8List? _hydratedBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _hydrate();
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminPhotoPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoPath != widget.photoPath ||
+        oldWidget.photoBytes != widget.photoBytes) {
+      _hydrate();
+    }
+  }
+
+  Future<void> _hydrate() async {
+    if (widget.photoBytes != null && widget.photoBytes!.isNotEmpty) {
+      if (mounted) setState(() => _hydratedBytes = null);
+      return;
+    }
+    final path = widget.photoPath;
+    if (path == null || path.trim().isEmpty) return;
+    final bytes = await ProfilePhotoCodec.fetchRemoteBytes(path);
+    if (!mounted) return;
+    setState(() => _hydratedBytes = bytes);
+  }
+
   ImageProvider? get _image {
-    if (photoBytes != null && photoBytes!.isNotEmpty) {
-      return MemoryImage(photoBytes!);
+    final bytes = widget.photoBytes ?? _hydratedBytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return MemoryImage(bytes);
     }
-    if (photoPath != null && photoPath!.trim().isNotEmpty) {
-      return profilePhotoProvider(path: photoPath);
+    if (widget.photoPath != null && widget.photoPath!.trim().isNotEmpty) {
+      return profilePhotoProvider(path: widget.photoPath);
     }
-    if (!kIsWeb && photo != null) return FileImage(photo!);
+    if (!kIsWeb && widget.photo != null) return FileImage(widget.photo!);
     return null;
   }
 
@@ -279,17 +320,22 @@ class AdminPhotoPicker extends StatelessWidget {
           alignment: Alignment.bottomRight,
           children: [
             GestureDetector(
-              onTap: image != null && onView != null ? onView : onTap,
+              onTap: image != null && widget.onView != null
+                  ? widget.onView
+                  : widget.onTap,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [accent, accent.withValues(alpha: 0.6)],
+                    colors: [
+                      widget.accent,
+                      widget.accent.withValues(alpha: 0.6),
+                    ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: accent.withValues(alpha: 0.35),
+                      color: widget.accent.withValues(alpha: 0.35),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -303,18 +349,18 @@ class AdminPhotoPicker extends StatelessWidget {
                       ? Icon(
                           Icons.person,
                           size: 48,
-                          color: accent.withValues(alpha: 0.5),
+                          color: widget.accent.withValues(alpha: 0.5),
                         )
                       : null,
                 ),
               ),
             ),
             Material(
-              color: accent,
+              color: widget.accent,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: onTap,
+                onTap: widget.onTap,
                 child: const Padding(
                   padding: EdgeInsets.all(6),
                   child: Icon(
@@ -329,7 +375,7 @@ class AdminPhotoPicker extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          hint,
+          widget.hint,
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
         ),
@@ -375,9 +421,15 @@ Widget adminPrimaryButton({
           ? const SizedBox(
               height: 22,
               width: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             )
-          : Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          : Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
     ),
   );
 }

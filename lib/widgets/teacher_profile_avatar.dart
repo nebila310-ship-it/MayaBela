@@ -44,32 +44,41 @@ class _TeacherProfileAvatarState extends State<TeacherProfileAvatar> {
   }
 
   Future<void> _loadPhoto() async {
-    final resolvedId = widget.teacherId ?? TeacherAccessService.instance.teacherId;
+    final resolvedId =
+        widget.teacherId ?? TeacherAccessService.instance.teacherId;
     final id = resolvedId.isNotEmpty
         ? resolvedId
         : AuthService.currentUser?.linkedTeacherId;
     if (id == null || id.isEmpty) return;
 
-    final fromRecord = TeacherRegistryService.instance.lookupById(id)?.photoPath;
+    final fromRecord = TeacherRegistryService.instance
+        .lookupById(id)
+        ?.photoPath;
     final resolved = await TeacherPhotoService.instance.resolvePath(
       id,
       storedPath: fromRecord,
     );
-    final bytes = TeacherPhotoService.instance.lookupBytes(
+    final stored = resolved ?? fromRecord;
+    var bytes = TeacherPhotoService.instance.lookupBytes(
       id,
-      storedPath: resolved ?? fromRecord,
+      storedPath: stored,
     );
+    if (bytes == null || bytes.isEmpty) {
+      bytes = await TeacherPhotoService.instance.hydrateBytes(
+        id,
+        storedPath: stored,
+      );
+    }
     if (mounted) {
       setState(() {
-        _photoPath = resolved ?? fromRecord;
+        _photoPath = stored;
         _photoBytes = bytes;
       });
     }
   }
 
   String get _initial {
-    final n = widget.name ??
-        TeacherAccessService.instance.teacherName;
+    final n = widget.name ?? TeacherAccessService.instance.teacherName;
     return n.isNotEmpty ? n[0].toUpperCase() : '?';
   }
 

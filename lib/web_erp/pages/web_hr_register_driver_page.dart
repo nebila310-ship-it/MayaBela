@@ -8,6 +8,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// HR registers a driver login, creates their bus, and links students.
 class WebHrRegisterDriverPage extends StatefulWidget {
@@ -381,6 +382,12 @@ class _WebHrRegisterDriverPageState extends State<WebHrRegisterDriverPage> {
                                   return CheckboxListTile(
                                     dense: true,
                                     value: selected,
+                                    secondary: StudentPhotoAvatar(
+                                      studentId: student.studentId,
+                                      name: student.fullName,
+                                      photoPath: student.photoPath,
+                                      radius: 16,
+                                    ),
                                     onChanged: (v) {
                                       setState(() {
                                         if (v == true) {

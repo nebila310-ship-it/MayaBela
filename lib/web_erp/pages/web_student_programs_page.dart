@@ -7,6 +7,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// DoSA desk: clubs/Gojo, scholarships, grievances, internships, leadership.
 class WebStudentProgramsPage extends StatefulWidget {
@@ -167,6 +168,11 @@ class _WebStudentProgramsPageState extends State<WebStudentProgramsPage>
               for (final m in _svc.membershipsForClub(club.id))
                 ListTile(
                   dense: true,
+                  leading: StudentPhotoAvatar(
+                    studentId: m.studentId,
+                    name: m.studentName,
+                    radius: 16,
+                  ),
                   title: Text('${m.studentName} · ${m.status.name}'),
                   subtitle: Text(
                     'Gojo hours: ${m.gojoHours}'

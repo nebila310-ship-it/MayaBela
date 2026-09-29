@@ -10,6 +10,7 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
+import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/maya_floating_chat.dart';
@@ -65,6 +66,13 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: StaffRegistryNotifier.instance,
+      builder: (context, _) => _buildDirectory(context),
+    );
+  }
+
+  Widget _buildDirectory(BuildContext context) {
     final schoolId = AuthService.activeSchoolId;
     final campuses = SchoolRegistryService.instance.campusesForSchool(schoolId);
     final multiCampus = campuses.length > 1;

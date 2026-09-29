@@ -6730,9 +6730,12 @@ class SchoolDataService {
   }
 
   void updateStudentPhoto(String studentId, String? photoPath) {
+    final key = studentId.trim().toUpperCase();
     for (final roster in _classRosters.values) {
       for (final student in roster) {
-        if (student.id == studentId) {
+        if (student.id == studentId ||
+            student.inviteStudentId.toUpperCase() == key ||
+            (student.registryStudentId?.toUpperCase() == key)) {
           student.photoPath = photoPath;
           return;
         }

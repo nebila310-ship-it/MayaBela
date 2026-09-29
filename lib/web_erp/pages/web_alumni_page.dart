@@ -6,6 +6,7 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Graduated students — alumni list (TOR student lifecycle end state).
 class WebAlumniPage extends StatefulWidget {
@@ -100,10 +101,11 @@ class _WebAlumniPageState extends State<WebAlumniPage> {
                       itemBuilder: (context, i) {
                         final s = alumni[i];
                         return ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              s.fullName.isEmpty ? '?' : s.fullName[0],
-                            ),
+                          leading: StudentPhotoAvatar(
+                            studentId: s.studentId,
+                            name: s.fullName,
+                            photoPath: s.photoPath,
+                            radius: 20,
                           ),
                           title: Text(s.fullName),
                           subtitle: Text(

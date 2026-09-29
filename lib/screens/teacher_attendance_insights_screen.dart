@@ -7,6 +7,7 @@ import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Teacher view of class at-risk flags and academic/attendance insights.
 class TeacherAttendanceInsightsScreen extends StatefulWidget {
@@ -103,6 +104,11 @@ class _TeacherAttendanceInsightsScreenState
                         ))
                           Card(
                             child: ListTile(
+                              leading: StudentPhotoAvatar(
+                                studentId: p.studentId,
+                                name: p.studentName,
+                                radius: 20,
+                              ),
                               title: Text(p.studentName),
                               subtitle: Text(
                                 '${_level(p.level)} · absent ${p.absent}/${p.sessions}'

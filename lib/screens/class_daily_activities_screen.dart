@@ -6,6 +6,7 @@ import 'package:mayabela/screens/daily_activities_screen.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Homeroom hub — pick a student to log or review today's daily activity.
 class ClassDailyActivitiesScreen extends StatelessWidget {
@@ -116,15 +117,12 @@ class _StudentActivityTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(color: accent.withValues(alpha: 0.12)),
         ),
-        leading: CircleAvatar(
-          backgroundColor: accent.withValues(alpha: 0.12),
-          child: Text(
-            student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        leading: StudentPhotoAvatar(
+          studentId: student.inviteStudentId,
+          name: student.name,
+          photoPath: student.photoPath,
+          radius: 22,
+          fallbackColor: accent,
         ),
         title: Text(
           student.name,

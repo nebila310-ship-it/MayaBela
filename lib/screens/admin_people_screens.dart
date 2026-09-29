@@ -345,6 +345,7 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
                 avatar: StaffRegistryAvatar(
                   staffId: student.studentId,
                   name: student.fullName,
+                  photoPath: student.photoPath,
                   radius: 44,
                   isStudent: true,
                   fallbackColor: StaffPalette.students.primary,

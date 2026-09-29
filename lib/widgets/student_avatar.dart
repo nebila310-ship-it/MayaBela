@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
-import 'package:mayabela/widgets/profile_photo_view.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class StudentAvatar extends StatelessWidget {
   const StudentAvatar({
@@ -21,6 +22,8 @@ class StudentAvatar extends StatelessWidget {
   final bool allowEdit;
   final VoidCallback? onPhotoUpdated;
 
+  String get _photoId => student.inviteStudentId;
+
   Future<void> _pickPhoto(BuildContext context) async {
     if (AuthService.currentUser?.roleKey != AuthService.roleAdmin &&
         !AuthService.hasPermission(SchoolPermissions.manageStudents)) {
@@ -35,12 +38,16 @@ class StudentAvatar extends StatelessWidget {
     if (bytes == null) return;
 
     final path = await StudentPhotoService.instance.saveBytesForStudent(
-      student.id,
+      _photoId,
       bytes,
     );
     if (path == null) return;
 
-    SchoolDataService.instance.updateStudentPhoto(student.id, path);
+    SchoolDataService.instance.updateStudentPhoto(_photoId, path);
+    if (student.id != _photoId) {
+      SchoolDataService.instance.updateStudentPhoto(student.id, path);
+    }
+    StudentRegistryService.instance.updatePhoto(_photoId, path);
     onPhotoUpdated?.call();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,43 +61,11 @@ class StudentAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bytes = StudentPhotoService.instance.lookupBytes(
-      student.id,
-      storedPath: student.photoPath,
-    );
-    final provider = profilePhotoProvider(bytes: bytes, path: student.photoPath);
-
-    Widget avatar = CircleAvatar(
+    Widget avatar = StudentPhotoAvatar(
+      studentId: _photoId,
+      name: student.name,
+      photoPath: student.photoPath,
       radius: radius,
-      backgroundColor: Colors.indigo.withValues(alpha: 0.15),
-      child: provider != null
-          ? ClipOval(
-              child: ProfilePhotoImage(
-                bytes: bytes,
-                path: student.photoPath,
-                size: radius * 2,
-              ),
-            )
-          : Text(
-              student.name[0],
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: radius * 0.7,
-                color: Colors.indigo,
-              ),
-            ),
-    );
-
-    avatar = GestureDetector(
-      onTap: provider == null
-          ? (allowEdit ? () => _pickPhoto(context) : null)
-          : () => showProfilePhotoViewer(
-                context,
-                bytes: bytes,
-                path: student.photoPath,
-                title: student.name,
-              ),
-      child: avatar,
     );
 
     if (!allowEdit) return avatar;
@@ -107,7 +82,11 @@ class StudentAvatar extends StatelessWidget {
             child: CircleAvatar(
               radius: 12,
               backgroundColor: Colors.indigo,
-              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+              child: const Icon(
+                Icons.camera_alt,
+                size: 14,
+                color: Colors.white,
+              ),
             ),
           ),
         ),

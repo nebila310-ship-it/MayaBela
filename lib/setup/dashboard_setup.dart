@@ -42,6 +42,7 @@ import 'package:mayabela/widgets/report_issue_dialog.dart';
 import 'package:mayabela/widgets/dashboard_card.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 import 'package:mayabela/web_erp/shell/web_erp_open_route.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 String _t(String id, String roleKey) =>
     AppLocale.instance.strings.dashboardTitle(id, roleKey: roleKey);
@@ -1379,8 +1380,10 @@ Future<void> openParentAttendance(BuildContext context) async {
               const SizedBox(height: 12),
               ...children.map(
                 (child) => ListTile(
-                  leading: CircleAvatar(
-                    child: Text(child.name.isNotEmpty ? child.name[0] : '?'),
+                  leading: StudentPhotoAvatar(
+                    studentId: child.studentId,
+                    name: child.name,
+                    radius: 20,
                   ),
                   title: Text(child.name),
                   subtitle: Text('${child.className} · ${child.grade}'),

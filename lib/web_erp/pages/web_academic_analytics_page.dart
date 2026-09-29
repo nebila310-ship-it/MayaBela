@@ -12,6 +12,7 @@ import 'package:mayabela/services/teacher_performance_insights.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_chart_widgets.dart';
+import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// In-app analytics desk: at-risk rules, grade lists, spreadsheet exports.
 /// Not a BI suite and not predictive ML.
@@ -170,6 +171,11 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
             child: DecoratedBox(
               decoration: WebErpTheme.cardDecoration(context),
               child: ListTile(
+                leading: StudentPhotoAvatar(
+                  studentId: p.studentId,
+                  name: p.studentName,
+                  radius: 20,
+                ),
                 title: Text(p.studentName),
                 subtitle: Text(
                   '${p.className} · attendance '
@@ -207,6 +213,11 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
                 child: DecoratedBox(
                   decoration: WebErpTheme.cardDecoration(context),
                   child: ListTile(
+                    leading: StudentPhotoAvatar(
+                      studentId: student.studentId,
+                      name: student.studentName,
+                      radius: 20,
+                    ),
                     title: Text(student.studentName),
                     subtitle: Text(
                       _lowMarkSubtitle(
@@ -285,6 +296,10 @@ class _WebAcademicAnalyticsPageState extends State<WebAcademicAnalyticsPage>
               child: DecoratedBox(
                 decoration: WebErpTheme.cardDecoration(context),
                 child: ListTile(
+                  leading: StudentPhotoAvatar(
+                    name: row.studentName,
+                    radius: 18,
+                  ),
                   title: Text(row.studentName),
                   subtitle: Text(
                     '${row.className} · marks ${row.gradeAverage.toStringAsFixed(0)}%'
