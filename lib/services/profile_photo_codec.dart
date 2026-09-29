@@ -7,9 +7,11 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
-import 'package:mayabela/services/announcement_attachment_service.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/utils/attachment_size_limit.dart';
 
 /// Shared pick / normalize / save for student, teacher, staff, and driver photos.
@@ -23,9 +25,23 @@ class ProfilePhotoCodec {
   static bool isRemoteUrl(String path) =>
       path.startsWith('http://') || path.startsWith('https://');
 
+  /// `web://`, `data:`, or a native file path — not reachable from another device.
+  static bool isDeviceLocalPath(String? path) {
+    if (path == null) return true;
+    final trimmed = path.trim();
+    if (trimmed.isEmpty) return true;
+    if (WebAttachmentCache.instance.isWebPath(trimmed)) return true;
+    if (trimmed.startsWith('data:')) return true;
+    if (isRemoteUrl(trimmed)) return false;
+    if (trimmed.startsWith('schools/')) return false;
+    return true;
+  }
+
   /// Student/staff photos live in a private bucket. Only branding files are public.
   static bool isPrivateSchoolFilesUrl(String path) {
-    if (!isRemoteUrl(path)) return false;
+    if (!isRemoteUrl(path) && !path.trim().startsWith('schools/')) {
+      return false;
+    }
     final objectPath = schoolFilesObjectPath(path);
     if (objectPath == null) return false;
     return !objectPath.contains('/branding/');
@@ -33,6 +49,10 @@ class ProfilePhotoCodec {
 
   /// Turns a Supabase public/sign/authenticated URL into a storage object path.
   static String? schoolFilesObjectPath(String url) {
+    final trimmed = url.trim();
+    if (trimmed.startsWith('schools/') && !trimmed.contains('://')) {
+      return Uri.decodeComponent(trimmed);
+    }
     const markers = [
       '/object/public/school-files/',
       '/object/sign/school-files/',
@@ -48,6 +68,31 @@ class ProfilePhotoCodec {
       return Uri.decodeComponent(rest);
     }
     return null;
+  }
+
+  /// Stable school-files object for a person photo.
+  static String cloudObjectPath({
+    required String schoolId,
+    required String folder,
+    required String personId,
+  }) {
+    final school = schoolId.trim().toUpperCase();
+    final id = personId.trim().toUpperCase();
+    final safeFolder = folder.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    return 'schools/$school/$safeFolder/${id}_$id.jpg';
+  }
+
+  /// Drop laptop-only photo paths so they are not written into cloud registry rows.
+  static Map<String, dynamic> withoutDeviceLocalPhoto(
+    Map<String, dynamic> record,
+  ) {
+    final photo = record['photoPath'];
+    if (photo is String && isDeviceLocalPath(photo)) {
+      final copy = Map<String, dynamic>.from(record);
+      copy.remove('photoPath');
+      return copy;
+    }
+    return record;
   }
 
   /// File picker first (web + “choose file”), then gallery on native.
@@ -189,20 +234,100 @@ class ProfilePhotoCodec {
     pathCache[id] = path;
     WebAttachmentCache.instance.remember(path, encoded);
 
-    final cloud = await AnnouncementAttachmentService.instance
-        .uploadSavedAttachment(
-          fileName: '$id.jpg',
-          bytes: encoded,
-          localPath: path,
-          subdir: folder,
-          attachmentId: id,
-        );
+    final cloud = await uploadBytesToSchoolFiles(
+      personId: id,
+      folder: folder,
+      bytes: encoded,
+    );
     if (cloud != null && cloud.isNotEmpty) {
       pathCache[id] = cloud;
       WebAttachmentCache.instance.remember(cloud, encoded);
       return cloud;
     }
     return path;
+  }
+
+  /// Uploads JPEG bytes to private `school-files`. Skips the Storage probe
+  /// that previously blocked every person photo and left a laptop-only path.
+  static Future<String?> uploadBytesToSchoolFiles({
+    required String personId,
+    required String folder,
+    required Uint8List bytes,
+    bool reportError = true,
+  }) async {
+    final id = personId.trim().toUpperCase();
+    if (id.isEmpty || bytes.isEmpty || folder.trim().isEmpty) return null;
+
+    if (!SupabaseBootstrap.isInitialized) {
+      if (reportError) {
+        lastError =
+            'Cloud is not connected. The photo is only on this device until you save again.';
+      }
+      return null;
+    }
+
+    try {
+      await SupabaseBootstrap.ensureReadyForFirestore();
+    } catch (_) {}
+
+    final schoolId =
+        (AuthService.activeSchoolId ?? AuthService.currentUser?.schoolId ?? '')
+            .trim()
+            .toUpperCase();
+    if (schoolId.isEmpty) {
+      if (reportError) {
+        lastError =
+            'No school is signed in. The photo is only on this device until you save again.';
+      }
+      return null;
+    }
+
+    final storagePath = cloudObjectPath(
+      schoolId: schoolId,
+      folder: folder,
+      personId: id,
+    );
+
+    Future<String?> attempt() async {
+      await SupabaseBootstrap.client.storage
+          .from('school-files')
+          .uploadBinary(
+            storagePath,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          )
+          .timeout(const Duration(seconds: 25));
+      final url = SupabaseBootstrap.client.storage
+          .from('school-files')
+          .getPublicUrl(storagePath);
+      WebAttachmentCache.instance.remember(url, bytes);
+      WebAttachmentCache.instance.remember(storagePath, bytes);
+      return url;
+    }
+
+    try {
+      return await attempt();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ProfilePhotoCodec cloud upload retry: $e');
+      }
+      try {
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+        return await attempt();
+      } catch (e2) {
+        if (kDebugMode) {
+          debugPrint('ProfilePhotoCodec cloud upload failed: $e2');
+        }
+        if (reportError) {
+          lastError =
+              'Could not save the photo to the school cloud. It is only on this device until you try again.';
+        }
+        return null;
+      }
+    }
   }
 
   static Future<String?> _writeNativeFile({
@@ -250,7 +375,6 @@ class ProfilePhotoCodec {
     if (path == null || path.trim().isEmpty) return null;
     final cached = WebAttachmentCache.instance.read(path);
     if (cached != null && cached.isNotEmpty) return cached;
-    if (!isRemoteUrl(path)) return null;
     final objectPath = schoolFilesObjectPath(path);
     if (objectPath == null) return null;
     if (!SupabaseBootstrap.isInitialized) return null;
@@ -278,6 +402,7 @@ class ProfilePhotoCodec {
           .timeout(const Duration(seconds: 12));
       if (bytes.isNotEmpty) {
         WebAttachmentCache.instance.remember(url, bytes);
+        WebAttachmentCache.instance.remember(objectPath, bytes);
         return bytes;
       }
     } catch (e) {
@@ -294,6 +419,7 @@ class ProfilePhotoCodec {
     required Map<String, Uint8List> byteCache,
     required Map<String, String> pathCache,
     String? storedPath,
+    String? folder,
   }) async {
     final existing = lookupBytes(
       personId: personId,
@@ -314,16 +440,84 @@ class ProfilePhotoCodec {
     } else {
       path = storedPath;
     }
-    if (path == null || path.trim().isEmpty) return null;
 
-    final remote = await fetchRemoteBytes(path);
-    if (remote != null &&
-        remote.isNotEmpty &&
-        personId != null &&
-        personId.trim().isNotEmpty) {
-      byteCache[personId.trim().toUpperCase()] = remote;
+    if (path != null && path.trim().isNotEmpty) {
+      final remote = await fetchRemoteBytes(path);
+      if (remote != null && remote.isNotEmpty) {
+        _rememberHydrated(
+          personId: personId,
+          byteCache: byteCache,
+          pathCache: pathCache,
+          path: path,
+          bytes: remote,
+        );
+        return remote;
+      }
     }
-    return remote;
+
+    if (folder != null && personId != null && personId.trim().isNotEmpty) {
+      final known = await fetchKnownSchoolPhoto(
+        personId: personId,
+        folder: folder,
+      );
+      if (known != null && known.bytes.isNotEmpty) {
+        _rememberHydrated(
+          personId: personId,
+          byteCache: byteCache,
+          pathCache: pathCache,
+          path: known.url,
+          bytes: known.bytes,
+        );
+        return known.bytes;
+      }
+    }
+    return null;
+  }
+
+  static void _rememberHydrated({
+    required String? personId,
+    required Map<String, Uint8List> byteCache,
+    required Map<String, String> pathCache,
+    required String path,
+    required Uint8List bytes,
+  }) {
+    if (personId == null || personId.trim().isEmpty) return;
+    final id = personId.trim().toUpperCase();
+    byteCache[id] = bytes;
+    if (!isDeviceLocalPath(path)) {
+      pathCache[id] = path;
+    }
+  }
+
+  /// Downloads the deterministic school-files object even if the registry
+  /// still stores a laptop-only `web://` path.
+  static Future<({String url, Uint8List bytes})?> fetchKnownSchoolPhoto({
+    required String personId,
+    required String folder,
+  }) async {
+    final schoolId =
+        (AuthService.activeSchoolId ?? AuthService.currentUser?.schoolId ?? '')
+            .trim()
+            .toUpperCase();
+    if (schoolId.isEmpty) return null;
+    if (!SupabaseBootstrap.isInitialized) return null;
+    final objectPath = cloudObjectPath(
+      schoolId: schoolId,
+      folder: folder,
+      personId: personId,
+    );
+    final url = SupabaseBootstrap.client.storage
+        .from('school-files')
+        .getPublicUrl(objectPath);
+    final cached =
+        WebAttachmentCache.instance.read(url) ??
+        WebAttachmentCache.instance.read(objectPath);
+    if (cached != null && cached.isNotEmpty) {
+      return (url: url, bytes: cached);
+    }
+    final bytes = await _downloadSchoolFile(url, objectPath);
+    if (bytes == null || bytes.isEmpty) return null;
+    return (url: url, bytes: bytes);
   }
 
   static Future<String?> resolvePath({

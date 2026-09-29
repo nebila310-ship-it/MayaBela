@@ -108,6 +108,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/services/platform_audit_log_service.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -1422,18 +1423,21 @@ class CloudAppStore {
                 : AuthService.activeSchoolId ?? '')
             .trim()
             .toUpperCase();
+        final record = ProfilePhotoCodec.withoutDeviceLocalPhoto(
+          student.toMap(),
+        );
         final edge = await SchoolAuthCloudService.instance.upsertRegistryRecord(
           collection: AppCollections.studentRegistry,
           schoolId: schoolId,
           docId: student.studentId,
-          record: student.toMap(),
+          record: record,
         );
         if (edge.ok) return;
         if (edge.errorCode == 'cloud_required') {
           await _crud.createOrUpdate(
             collection: AppCollections.studentRegistry,
             docId: student.studentId,
-            data: student.toMap(),
+            data: record,
           );
           return;
         }
@@ -1502,8 +1506,10 @@ class CloudAppStore {
     await _pushSafe(
       () async {
         await _prepareCloudRead();
-        final data = Map<String, dynamic>.from(teacher.toMap())
-          ..remove('initialPassword');
+        final data = ProfilePhotoCodec.withoutDeviceLocalPhoto(
+          Map<String, dynamic>.from(teacher.toMap())
+            ..remove('initialPassword'),
+        );
         final schoolId = (teacher.schoolId.trim().isNotEmpty
                 ? teacher.schoolId
                 : AuthService.activeSchoolId ?? '')
@@ -1544,7 +1550,7 @@ class CloudAppStore {
     await _pushSafe(() => _crud.createOrUpdate(
           collection: AppCollections.driverRegistry,
           docId: driver.driverId,
-          data: driver.toMap(),
+          data: ProfilePhotoCodec.withoutDeviceLocalPhoto(driver.toMap()),
         ));
   }
 

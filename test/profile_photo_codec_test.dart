@@ -103,6 +103,51 @@ void main() {
     AuthService.currentUser = null;
   });
 
+  test('device-local photo paths are not treated as cloud urls', () {
+    expect(ProfilePhotoCodec.isDeviceLocalPath('web://123/STU-1.jpg'), isTrue);
+    expect(
+      ProfilePhotoCodec.isDeviceLocalPath('/tmp/student_photos/STU-1.jpg'),
+      isTrue,
+    );
+    expect(
+      ProfilePhotoCodec.isDeviceLocalPath('data:image/jpeg;base64,xx'),
+      isTrue,
+    );
+    expect(ProfilePhotoCodec.isDeviceLocalPath(null), isTrue);
+    expect(ProfilePhotoCodec.isDeviceLocalPath(''), isTrue);
+    const url =
+        'https://example.supabase.co/storage/v1/object/public/school-files/schools/TB-001/student_photos/STU-1_STU-1.jpg';
+    expect(ProfilePhotoCodec.isDeviceLocalPath(url), isFalse);
+    expect(
+      ProfilePhotoCodec.isDeviceLocalPath(
+        'schools/TB-001/student_photos/STU-1_STU-1.jpg',
+      ),
+      isFalse,
+    );
+    expect(
+      ProfilePhotoCodec.cloudObjectPath(
+        schoolId: 'tb-001',
+        folder: 'student_photos',
+        personId: 'stu-1',
+      ),
+      'schools/TB-001/student_photos/STU-1_STU-1.jpg',
+    );
+    expect(
+      ProfilePhotoCodec.withoutDeviceLocalPhoto({
+        'studentId': 'STU-1',
+        'photoPath': 'web://1/STU-1.jpg',
+      }),
+      {'studentId': 'STU-1'},
+    );
+    expect(
+      ProfilePhotoCodec.withoutDeviceLocalPhoto({
+        'studentId': 'STU-1',
+        'photoPath': url,
+      }),
+      {'studentId': 'STU-1', 'photoPath': url},
+    );
+  });
+
   test('undecodable bytes are kept so the preview can still show them', () {
     final raw = Uint8List.fromList([1, 2, 3, 4, 5]);
     expect(ProfilePhotoCodec.squareJpegOrOriginal(raw), raw);
@@ -123,6 +168,22 @@ void main() {
     expect(looked, isNotNull);
     expect(looked, isNotEmpty);
     expect(WebAttachmentCache.instance.read(path), isNotNull);
+  });
+
+  test('saved local student photo hydrates from this device cache', () async {
+    final bytes = Uint8List.fromList(List<int>.generate(48, (i) => 100 + i));
+    final path = await StudentPhotoService.instance.saveBytesForStudent(
+      'STU-LOCAL-1',
+      bytes,
+    );
+    expect(path, isNotNull);
+    expect(ProfilePhotoCodec.isDeviceLocalPath(path), isTrue);
+    final hydrated = await StudentPhotoService.instance.hydrateBytes(
+      'STU-LOCAL-1',
+      storedPath: path,
+    );
+    expect(hydrated, isNotNull);
+    expect(hydrated, isNotEmpty);
   });
 
   test('teacher photo save stores bytes for later display', () async {

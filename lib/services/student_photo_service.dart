@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,16 +7,18 @@ import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 /// Saves square student profile photos keyed by student ID.
 ///
-/// On web, bytes live in [WebAttachmentCache] under a `web://` path.
+/// Bytes are uploaded to private school-files so other devices can load them.
 class StudentPhotoService {
   StudentPhotoService._();
   static final instance = StudentPhotoService._();
 
   final Map<String, String> _cachedPaths = {};
   final Map<String, Uint8List> _cachedBytes = {};
+  final Set<String> _promoting = {};
 
   bool get _canPick =>
       AuthService.currentUser != null &&
@@ -88,12 +91,52 @@ class StudentPhotoService {
     );
   }
 
-  Future<Uint8List?> hydrateBytes(String? studentId, {String? storedPath}) {
-    return ProfilePhotoCodec.hydrateBytes(
+  Future<Uint8List?> hydrateBytes(
+    String? studentId, {
+    String? storedPath,
+  }) async {
+    final bytes = await ProfilePhotoCodec.hydrateBytes(
       personId: studentId,
       byteCache: _cachedBytes,
       pathCache: _cachedPaths,
       storedPath: storedPath,
+      folder: 'student_photos',
     );
+    if (bytes != null && bytes.isNotEmpty) {
+      unawaited(_promoteToCloud(studentId, bytes, storedPath: storedPath));
+    }
+    return bytes;
+  }
+
+  Future<void> _promoteToCloud(
+    String? studentId,
+    Uint8List bytes, {
+    String? storedPath,
+  }) async {
+    if (studentId == null || studentId.trim().isEmpty) return;
+    final id = studentId.trim().toUpperCase();
+    if (!_promoting.add(id)) return;
+    try {
+      var path = _cachedPaths[id] ?? storedPath;
+      if (path == null || ProfilePhotoCodec.isDeviceLocalPath(path)) {
+        final cloud = await ProfilePhotoCodec.uploadBytesToSchoolFiles(
+          personId: id,
+          folder: 'student_photos',
+          bytes: bytes,
+          reportError: false,
+        );
+        if (cloud == null || cloud.isEmpty) return;
+        rememberPath(id, cloud);
+        WebAttachmentCache.instance.remember(cloud, bytes);
+        path = cloud;
+      }
+      final current = StudentRegistryService.instance
+          .lookupAnyById(id)
+          ?.photoPath;
+      if (current == path) return;
+      StudentRegistryService.instance.updatePhoto(id, path);
+    } finally {
+      _promoting.remove(id);
+    }
   }
 }

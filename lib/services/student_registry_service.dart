@@ -800,6 +800,7 @@ class StudentRegistryService {
   void updatePhoto(String studentId, String photoPath, {bool persist = true}) {
     final existing = lookupAnyById(studentId) ?? lookupById(studentId);
     if (existing == null) return;
+    if (existing.photoPath == photoPath) return;
     final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
     if (idx >= 0) _students[idx] = existing.copyWith(photoPath: photoPath);
     StaffRegistryNotifier.instance.notifyChanged();

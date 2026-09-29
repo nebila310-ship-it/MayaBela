@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 
 /// Saves square teacher / staff profile photos keyed by teacher ID.
 class TeacherPhotoService {
@@ -13,6 +16,7 @@ class TeacherPhotoService {
 
   final Map<String, String> _cachedPaths = {};
   final Map<String, Uint8List> _cachedBytes = {};
+  final Set<String> _promoting = {};
 
   bool get _canPick =>
       AuthService.currentUser != null &&
@@ -89,12 +93,50 @@ class TeacherPhotoService {
     );
   }
 
-  Future<Uint8List?> hydrateBytes(String? teacherId, {String? storedPath}) {
-    return ProfilePhotoCodec.hydrateBytes(
+  Future<Uint8List?> hydrateBytes(
+    String? teacherId, {
+    String? storedPath,
+  }) async {
+    final bytes = await ProfilePhotoCodec.hydrateBytes(
       personId: teacherId,
       byteCache: _cachedBytes,
       pathCache: _cachedPaths,
       storedPath: storedPath,
+      folder: 'teacher_photos',
     );
+    if (bytes != null && bytes.isNotEmpty) {
+      unawaited(_promoteToCloud(teacherId, bytes, storedPath: storedPath));
+    }
+    return bytes;
+  }
+
+  Future<void> _promoteToCloud(
+    String? teacherId,
+    Uint8List bytes, {
+    String? storedPath,
+  }) async {
+    if (teacherId == null || teacherId.trim().isEmpty) return;
+    final id = teacherId.trim().toUpperCase();
+    if (!_promoting.add(id)) return;
+    try {
+      var path = _cachedPaths[id] ?? storedPath;
+      if (path == null || ProfilePhotoCodec.isDeviceLocalPath(path)) {
+        final cloud = await ProfilePhotoCodec.uploadBytesToSchoolFiles(
+          personId: id,
+          folder: 'teacher_photos',
+          bytes: bytes,
+          reportError: false,
+        );
+        if (cloud == null || cloud.isEmpty) return;
+        rememberPath(id, cloud);
+        WebAttachmentCache.instance.remember(cloud, bytes);
+        path = cloud;
+      }
+      final current = TeacherRegistryService.instance.lookupById(id)?.photoPath;
+      if (current == path) return;
+      TeacherRegistryService.instance.updatePhoto(id, path);
+    } finally {
+      _promoting.remove(id);
+    }
   }
 }

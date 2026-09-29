@@ -717,7 +717,11 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
         );
         if (path != null) {
           TeacherPhotoService.instance.rememberPath(teacher.teacherId, path);
-          TeacherRegistryService.instance.updatePhoto(teacher.teacherId, path);
+          TeacherRegistryService.instance.updatePhoto(
+            teacher.teacherId,
+            path,
+            persist: false,
+          );
           teacher =
               TeacherRegistryService.instance.lookupById(teacher.teacherId)!;
         }
