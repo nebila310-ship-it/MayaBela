@@ -1634,9 +1634,17 @@ class SchoolDataService {
         }
       }
       if (adminRecord != null) {
+        final sessionName = user?.fullName?.trim();
+        final registryName = adminRecord.fullName.trim();
+        final senderName =
+            (sessionName != null &&
+                sessionName.isNotEmpty &&
+                !isGenericRoleOwnerName(sessionName))
+            ? sessionName
+            : (registryName.isNotEmpty ? registryName : sessionName);
         return (
           senderStaffId: StaffMemberOption.adminKey(adminRecord.adminId),
-          senderDisplayName: adminRecord.fullName.trim(),
+          senderDisplayName: senderName,
           senderUsername: senderUsername,
           senderRelationshipLabel: null,
         );

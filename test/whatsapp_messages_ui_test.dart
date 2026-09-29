@@ -22,6 +22,7 @@ void main() {
 
   tearDown(() {
     PresenceService.instance.resetForTests();
+    AuthService.allUsers.remove('nabil');
     AuthService.currentUser = null;
   });
 
@@ -43,26 +44,52 @@ void main() {
     expect(profile.roleLabel.toLowerCase(), contains('parent'));
   });
 
-  test('inbox rows show the peer name with their role', () {
+  test('inbox rows show the other person, not a stuffed role title', () {
     AuthService.currentUser = AuthService.allUsers['teacher'];
     final conversation = SchoolDataService.instance.getConversation('1')!;
     final title = conversation.inboxTitleForViewer();
     expect(title, contains('Bekele'));
-    expect(title.toLowerCase(), contains('parent'));
+    expect(title, isNot(contains('(')));
     expect(conversation.inboxPeerRoleLabel(), 'Parent');
     final preview = conversation.lastMessagePreviewForViewer();
-    expect(preview, contains('Bekele'));
-    expect(preview, contains('Parent'));
-    expect(preview, contains(':'));
+    expect(preview, conversation.lastMessage);
+    expect(preview, isNot(contains('Bekele')));
+  });
+
+  test('when Nabil writes Belen, Belen sees Nabil — not School Admin', () {
+    AuthService.allUsers['nabil'] = RegisteredUser(
+      username: 'nabil',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+      fullName: 'Nabil Ahmed',
+      linkedAdminId: 'ADM-1001',
+    );
+    AuthService.currentUser = AuthService.allUsers['nabil'];
+
+    final ids = SchoolDataService.instance.sendAdminDirectMessage(
+      body: 'Belen, can we meet after class?',
+      staffId: StaffMemberOption.teacherKey('TCH-1001'),
+    );
+    expect(ids, isNotEmpty);
+
+    AuthService.currentUser = AuthService.allUsers['teacher'];
+    final conversation = SchoolDataService.instance.getConversation(
+      ids.single,
+    )!;
+    expect(conversation.inboxTitleForViewer(), 'Nabil Ahmed');
+    expect(conversation.inboxTitleForViewer(), isNot(contains('School Admin')));
+    expect(
+      conversation.lastMessagePreviewForViewer(),
+      'Belen, can we meet after class?',
+    );
   });
 
   test('staff inbox title uses the other person name and role', () {
     AuthService.currentUser = AuthService.allUsers['teacher'];
     final conversation = SchoolDataService.instance.getConversation('2')!;
-    final title = conversation.inboxTitleForViewer();
-    expect(title, contains('('));
+    expect(conversation.inboxTitleForViewer(), isNotEmpty);
     expect(conversation.inboxPeerRoleLabel(), isNotNull);
-    expect(conversation.lastMessagePreviewForViewer(), contains('('));
   });
 
   test('incoming parent message opens the parent contact details', () {

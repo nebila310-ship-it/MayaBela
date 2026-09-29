@@ -1760,6 +1760,7 @@ class AppStrings implements AppStringsLike {
   String get messageBroadcasts =>
       t('Broadcasts', 'የጅምላ መልዕክቶች', 'Beeksisa gurguddaa');
   String get messageChatsTab => t('Chats', 'ውይይቶች', 'Haasawaa');
+  String get youChatPreview => t('You', 'እርስዎ', 'Ati');
   String get messageDirectChats =>
       t('Direct chats', 'ቀጥታ ውይይቶች', 'Haasawa kallatti');
   String get messageGroupChats =>
