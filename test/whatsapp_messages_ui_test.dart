@@ -8,6 +8,7 @@ import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/presence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/widgets/app_floating_chrome.dart';
 import 'package:mayabela/widgets/chat_contact_profile.dart';
 import 'package:mayabela/widgets/messages_ui.dart';
 
@@ -113,5 +114,20 @@ void main() {
     expect(find.byKey(ChatContactProfileScreen.screenKey), findsOneWidget);
     expect(find.text('parent@mayaschool.et'), findsOneWidget);
     expect(find.text('0911000002'), findsOneWidget);
+  });
+
+  testWidgets('compose plus does not overlap the Maya AI launcher', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: AppFloatingChrome(child: MessagesScreen())),
+    );
+    await tester.pump();
+    final compose = tester.getRect(find.byKey(const Key('messages-compose-fab')));
+    final ai = tester.getRect(find.byIcon(Icons.auto_awesome));
+    expect(compose.overlaps(ai), isFalse);
+    expect(compose.bottom, lessThanOrEqualTo(ai.top - 8));
+    PresenceService.instance.resetForTests();
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

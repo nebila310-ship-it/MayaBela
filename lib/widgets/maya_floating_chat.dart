@@ -21,6 +21,9 @@ class MayaFloatingChat extends StatefulWidget {
   /// Trailing space page footers need so controls are not hidden under the FAB.
   static const double pageEndClearance = fabSize + fabEdgeInset;
 
+  /// Lift a page FAB so it stacks above the Maya launcher instead of covering it.
+  static const double stackedFabLift = fabSize + 12;
+
   @override
   State<MayaFloatingChat> createState() => _MayaFloatingChatState();
 }
