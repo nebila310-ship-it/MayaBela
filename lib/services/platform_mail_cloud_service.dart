@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -54,6 +56,24 @@ class PlatformMailCloudService {
   PlatformMailCloudService._();
   static final instance = PlatformMailCloudService._();
 
+  static const gmailSmtpBlocked =
+      'Gmail SMTP cannot be used from MayaBela cloud — that is the Failed to fetch error. Create a free Resend API key at resend.com, paste it in Resend API key, set From to MayaBela <onboarding@resend.dev>, Save, then Send test. It will arrive at the Gmail you used to sign up at Resend.';
+
+  static String _friendlyMailError(String raw, {String? code}) {
+    final text = raw.toLowerCase();
+    final codeKey = (code ?? '').toLowerCase();
+    if (codeKey == 'smtp_blocked' ||
+        codeKey == 'smtp_timeout' ||
+        text.contains('smtp_blocked') ||
+        text.contains('smtp_timeout') ||
+        text.contains('failed to fetch') ||
+        text.contains('clientexception') ||
+        text.contains('timeout')) {
+      return gmailSmtpBlocked;
+    }
+    return raw;
+  }
+
   Future<String?> _ownerPinOrNull() async {
     await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
     if (!SupabaseBootstrap.isInitialized) return null;
@@ -78,13 +98,15 @@ class PlatformMailCloudService {
       }
       if (ownerPin == null) return PlatformMailStatus.unauthorized;
 
-      final res = await SupabaseBootstrap.client.functions.invoke(
-        'platform-mail-config',
-        body: {
-          'ownerPin': ownerPin,
-          ...body,
-        },
-      );
+      final res = await SupabaseBootstrap.client.functions
+          .invoke(
+            'platform-mail-config',
+            body: {
+              'ownerPin': ownerPin,
+              ...body,
+            },
+          )
+          .timeout(const Duration(seconds: 20));
       final data = res.data;
       if (data is! Map) {
         return const PlatformMailStatus(
@@ -95,11 +117,15 @@ class PlatformMailCloudService {
         );
       }
       if (data['error'] != null) {
+        final code = (data['code'] as String?) ?? 'invalid';
         return PlatformMailStatus(
           ok: false,
           configured: false,
-          errorCode: (data['code'] as String?) ?? 'invalid',
-          errorMessage: data['error']?.toString() ?? 'Mail config failed.',
+          errorCode: code,
+          errorMessage: _friendlyMailError(
+            data['error']?.toString() ?? 'Mail config failed.',
+            code: code,
+          ),
         );
       }
       return PlatformMailStatus.fromMap(data);
@@ -124,7 +150,10 @@ class PlatformMailCloudService {
         ok: false,
         configured: false,
         errorCode: code ?? 'invalid',
-        errorMessage: message ?? 'Mail config failed (${e.status}).',
+        errorMessage: _friendlyMailError(
+          message ?? 'Mail config failed (${e.status}).',
+          code: code,
+        ),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -134,7 +163,7 @@ class PlatformMailCloudService {
         ok: false,
         configured: false,
         errorCode: 'invalid',
-        errorMessage: e.toString(),
+        errorMessage: _friendlyMailError(e.toString()),
       );
     }
   }

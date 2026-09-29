@@ -59,13 +59,14 @@ Password reset email (set SMTP **or** Resend; do not email the new password).
 The built-in Supabase Auth mailer does **not** reliably reach Gmail (spam, and
 since 26 Sep 2026 org-members only). Use a real sender.
 
-Owner console (no CLI): menu → **Password reset email**. Fastest path is a
-**Gmail App Password**: Google Account → Security → 2-Step Verification → App
-passwords. Then SMTP host `smtp.gmail.com`, port `587`, user your Gmail,
-password the 16-character app password, From `MayaBela <you@gmail.com>`.
+Owner console (no CLI): menu → **Password reset email**. Use **Resend**
+(HTTPS). Gmail SMTP (`smtp.gmail.com`) cannot be opened from MayaBela's
+cloud functions and shows `Failed to fetch`.
 
-Or Resend: paste an API key. `onboarding@resend.dev` only delivers to the
-email you used at resend.com until a domain is verified.
+Sign up at https://resend.com with the Gmail that should receive codes,
+paste the `re_...` API key, From `MayaBela <onboarding@resend.dev>`, Save,
+then Send test. That test sender only delivers to the signup Gmail until
+a domain is verified.
 
 Or set Edge Function secrets:
 

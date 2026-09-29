@@ -12,7 +12,7 @@ class PlatformMailSettingsScreen extends StatefulWidget {
 }
 
 class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen> {
-  final _from = TextEditingController(text: 'MayaBela <you@gmail.com>');
+  final _from = TextEditingController(text: 'MayaBela <onboarding@resend.dev>');
   final _resendKey = TextEditingController();
   final _smtpHost = TextEditingController();
   final _smtpPort = TextEditingController(text: '587');
@@ -59,7 +59,7 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
       if (status.from.trim().isNotEmpty) {
         _from.text = status.from;
       }
-      _showSmtp = status.hasSmtp || !status.configured;
+      _showSmtp = status.hasSmtp;
       if (!status.ok && status.errorMessage != null) {
         _message = status.errorMessage!;
         _messageOk = false;
@@ -77,7 +77,7 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
   Future<void> _save() async {
     if (!EmailUtils.isValidFromHeader(_from.text)) {
       _toast(
-          'From must be an email, e.g. MayaBela <you@gmail.com>',
+          'From must be an email, e.g. MayaBela <onboarding@resend.dev>',
         ok: false,
       );
       return;
@@ -148,21 +148,16 @@ class _PlatformMailSettingsScreenState extends State<PlatformMailSettingsScreen>
                 _statusCard(status),
                 const SizedBox(height: 16),
                 const Text(
-                  'Reset Password emails a 6-digit MayaBela code. Supabase’s built-in mailer does not reach most Gmail inboxes (spam, or org-members only). Add a sender here.',
+                  'Reset Password emails a 6-digit MayaBela code. Gmail SMTP (smtp.gmail.com) cannot be used from this cloud — that is the Failed to fetch error. Use Resend (HTTPS).',
                   style: TextStyle(color: Colors.white70, height: 1.4),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Fastest: Gmail App Password. Google Account → Security → 2-Step Verification → App passwords → generate. Then turn on “Use SMTP”, host smtp.gmail.com, port 587, user your Gmail, password the 16-character app password. From: MayaBela <yourgmail@gmail.com>.',
-                  style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Or Resend: paste an API key. onboarding@resend.dev only delivers to the email you used at resend.com until a domain is verified.',
+                  '1. Sign up at resend.com with the Gmail that should receive codes. 2. Copy the API key (re_...). 3. From: MayaBela <onboarding@resend.dev>. 4. Paste the key, Save, Send test. The test arrives at that same Gmail until you verify a domain.',
                   style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: 16),
-                _field('From address', _from, hint: 'MayaBela <you@gmail.com>'),
+                _field('From address', _from, hint: 'MayaBela <onboarding@resend.dev>'),
                 _field(
                   'Resend API key',
                   _resendKey,

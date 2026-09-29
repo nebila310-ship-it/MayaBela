@@ -135,17 +135,43 @@ function resetEmailHtml(opts: { schoolId: string; code: string }): string {
   );
 }
 
+export function smtpHostBlocked(host: string): boolean {
+  const h = host.trim().toLowerCase();
+  return (
+    h.includes("gmail.com") ||
+    h.includes("google.com") ||
+    h.includes("googlemail.com")
+  );
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: number | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export async function sendPlainEmail(
   payload: MailPayload,
   secrets: MailSecrets = mailSecretsFromEnv(),
 ): Promise<void> {
   assertMailConfigured(secrets);
-  if (secrets.smtpHost) {
-    await sendViaSmtp(secrets, payload);
-    return;
-  }
+  // HTTPS APIs work from Edge Functions. Consumer SMTP (Gmail) is blocked
+  // and hangs until the browser reports "Failed to fetch".
   if (secrets.resendApiKey) {
     await sendViaResend(secrets.resendApiKey, secrets.from, payload);
+    return;
+  }
+  if (secrets.smtpHost) {
+    if (smtpHostBlocked(secrets.smtpHost)) {
+      throw new Error("smtp_blocked");
+    }
+    await withTimeout(sendViaSmtp(secrets, payload), 8000, "smtp_timeout");
     return;
   }
   throw new Error("mail_not_configured");
@@ -166,13 +192,25 @@ export async function sendPasswordResetEmail(
   },
 ): Promise<"mail" | "auth"> {
   if (isMailReady(opts.mail)) {
-    await sendPlainEmail({
-      to: opts.to,
-      subject: "MayaBela password reset code",
-      text: resetEmailText(opts),
-      html: resetEmailHtml(opts),
-    }, opts.mail);
-    return "mail";
+    try {
+      await sendPlainEmail({
+        to: opts.to,
+        subject: "MayaBela password reset code",
+        text: resetEmailText(opts),
+        html: resetEmailHtml(opts),
+      }, opts.mail);
+      return "mail";
+    } catch (e) {
+      const msg = String((e as Error)?.message || e);
+      if (
+        !msg.includes("smtp_blocked") &&
+        !msg.includes("smtp_timeout") &&
+        !msg.includes("mail_send_failed")
+      ) {
+        throw e;
+      }
+      console.error("direct mail failed, trying Auth mailer", e);
+    }
   }
   // Built-in Auth SMTP (after 26 Sep 2026) only delivers to Supabase org
   // members, and Gmail often junks supabase.io. Still try it so the owner

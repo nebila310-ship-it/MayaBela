@@ -17,6 +17,7 @@ on:
       - "supabase/functions/platform-mail-config/**"
       - "supabase/functions/_shared/mailer.ts"
       - "supabase/functions/_shared/school_auth.ts"
+      - "supabase/functions/_shared/cors.ts"
       - ".github/workflows/deploy-edge-functions.yml"
 
 jobs:
