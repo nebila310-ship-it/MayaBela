@@ -237,13 +237,20 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
 
   Future<void> _changeStudentPhoto(AdminStudentRecord student) async {
     final bytes = await StudentPhotoService.instance.pickBytes();
-    if (bytes == null || !mounted) return;
+    if (bytes == null || !mounted) {
+      final err = StudentPhotoService.instance.lastError;
+      if (mounted && err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
     final path = await StudentPhotoService.instance.saveBytesForStudent(
       student.studentId,
       bytes,
     );
     if (path == null) return;
     StudentPhotoService.instance.rememberPath(student.studentId, path);
+    StudentPhotoService.instance.rememberBytes(student.studentId, bytes);
     StudentRegistryService.instance.updatePhoto(student.studentId, path);
     SchoolDataService.instance.syncChildFromRegistry(student.studentId);
     setState(() {});
@@ -541,14 +548,21 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
 
   Future<void> _changePhoto(AdminTeacherRecord teacher) async {
     if (!ModuleAccess.canHireStaff) return;
-    final file = await TeacherPhotoService.instance.pickFromGallery();
-    if (file == null || !mounted) return;
-    final path = await TeacherPhotoService.instance.saveForTeacher(
+    final bytes = await TeacherPhotoService.instance.pickBytes();
+    if (bytes == null || !mounted) {
+      final err = TeacherPhotoService.instance.lastError;
+      if (mounted && err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    final path = await TeacherPhotoService.instance.saveBytesForTeacher(
       teacher.teacherId,
-      file,
+      bytes,
     );
     if (path == null) return;
     TeacherPhotoService.instance.rememberPath(teacher.teacherId, path);
+    TeacherPhotoService.instance.rememberBytes(teacher.teacherId, bytes);
     TeacherRegistryService.instance.updatePhoto(teacher.teacherId, path);
     setState(() {});
   }
@@ -1011,14 +1025,21 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
   AppStrings get s => AppLocale.instance.strings;
 
   Future<void> _changePhoto(AdminDriverRecord driver) async {
-    final file = await DriverPhotoService.instance.pickFromGallery();
-    if (file == null || !mounted) return;
-    final path = await DriverPhotoService.instance.saveForDriver(
+    final bytes = await DriverPhotoService.instance.pickBytes();
+    if (bytes == null || !mounted) {
+      final err = DriverPhotoService.instance.lastError;
+      if (mounted && err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    final path = await DriverPhotoService.instance.saveBytesForDriver(
       driver.driverId,
-      file,
+      bytes,
     );
     if (path == null) return;
     DriverPhotoService.instance.rememberPath(driver.driverId, path);
+    DriverPhotoService.instance.rememberBytes(driver.driverId, bytes);
     DriverRegistryService.instance.updatePhoto(driver.driverId, path);
     setState(() {});
   }

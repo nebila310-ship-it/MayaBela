@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -568,7 +567,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
   final _phone = TextEditingController();
   final _employeeId = TextEditingController();
   String? _selectedCampus;
-  File? _pickedPhoto;
+  Uint8List? _pickedPhotoBytes;
   bool _saving = false;
   final Set<String> _selectedRoles = {};
 
@@ -594,8 +593,16 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final file = await TeacherPhotoService.instance.pickFromGallery();
-    if (file != null) setState(() => _pickedPhoto = file);
+    final bytes = await TeacherPhotoService.instance.pickBytes();
+    if (!mounted) return;
+    if (bytes == null) {
+      final err = TeacherPhotoService.instance.lastError;
+      if (err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    setState(() => _pickedPhotoBytes = bytes);
   }
 
   List<StaffRole> get _assignableRoles {
@@ -702,10 +709,10 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
     var loginCreated = false;
 
     try {
-      if (_pickedPhoto != null) {
-        final path = await TeacherPhotoService.instance.saveForTeacher(
+      if (_pickedPhotoBytes != null) {
+        final path = await TeacherPhotoService.instance.saveBytesForTeacher(
           teacher.teacherId,
-          _pickedPhoto!,
+          _pickedPhotoBytes!,
         );
         if (path != null) {
           TeacherPhotoService.instance.rememberPath(teacher.teacherId, path);
@@ -963,7 +970,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
           theme: theme,
           body: [
             AdminPhotoPicker(
-              photo: _pickedPhoto,
+              photoBytes: _pickedPhotoBytes,
               hint: s.teacherPhotoHint,
               accent: theme.primary,
               onTap: _pickPhoto,
@@ -1159,7 +1166,15 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
 
   Future<void> _pickPhoto() async {
     final bytes = await StudentPhotoService.instance.pickBytes();
-    if (bytes != null) setState(() => _pickedPhotoBytes = bytes);
+    if (!mounted) return;
+    if (bytes == null) {
+      final err = StudentPhotoService.instance.lastError;
+      if (err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    setState(() => _pickedPhotoBytes = bytes);
   }
 
   void _lookupHomeroomTeacher() {

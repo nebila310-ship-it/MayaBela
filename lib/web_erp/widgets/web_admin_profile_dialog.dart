@@ -112,6 +112,7 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
     );
     if (path == null) return;
     StudentPhotoService.instance.rememberPath(student.studentId, path);
+    StudentPhotoService.instance.rememberBytes(student.studentId, bytes);
     StudentRegistryService.instance.updatePhoto(student.studentId, path);
     SchoolDataService.instance.syncChildFromRegistry(student.studentId);
     if (!mounted) return;

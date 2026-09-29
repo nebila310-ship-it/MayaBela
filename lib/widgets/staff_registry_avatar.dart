@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -9,7 +7,7 @@ import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
-import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/widgets/profile_photo_view.dart';
 
 /// Profile avatar for teachers, drivers, or students in admin views.
 class StaffRegistryAvatar extends StatefulWidget {
@@ -65,36 +63,35 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
           TeacherRegistryService.instance.lookupById(widget.staffId)?.photoPath;
     }
 
-    Uint8List? bytes;
-    if (widget.isStudent) {
-      bytes = StudentPhotoService.instance.lookupBytes(widget.staffId);
-    }
-    if (bytes == null && WebAttachmentCache.instance.isWebPath(fromRecord)) {
-      bytes = WebAttachmentCache.instance.read(fromRecord);
-    }
-
-    if (fromRecord != null && !kIsWeb && File(fromRecord).existsSync()) {
-      if (mounted) {
-        setState(() {
-          _photoPath = fromRecord;
-          _photoBytes = bytes;
-        });
-      }
-      return;
-    }
-
     final resolved = widget.isStudent
-        ? await StudentPhotoService.instance.resolvePath(widget.staffId)
+        ? await StudentPhotoService.instance.resolvePath(
+            widget.staffId,
+            storedPath: fromRecord,
+          )
         : widget.isDriver
-            ? await DriverPhotoService.instance.resolvePath(widget.staffId)
-            : await TeacherPhotoService.instance.resolvePath(widget.staffId);
+            ? await DriverPhotoService.instance.resolvePath(
+                widget.staffId,
+                storedPath: fromRecord,
+              )
+            : await TeacherPhotoService.instance.resolvePath(
+                widget.staffId,
+                storedPath: fromRecord,
+              );
 
-    if (bytes == null && widget.isStudent) {
-      bytes = StudentPhotoService.instance.lookupBytes(widget.staffId);
-    }
-    if (bytes == null && WebAttachmentCache.instance.isWebPath(resolved)) {
-      bytes = WebAttachmentCache.instance.read(resolved);
-    }
+    final bytes = widget.isStudent
+        ? StudentPhotoService.instance.lookupBytes(
+            widget.staffId,
+            storedPath: resolved ?? fromRecord,
+          )
+        : widget.isDriver
+            ? DriverPhotoService.instance.lookupBytes(
+                widget.staffId,
+                storedPath: resolved ?? fromRecord,
+              )
+            : TeacherPhotoService.instance.lookupBytes(
+                widget.staffId,
+                storedPath: resolved ?? fromRecord,
+              );
 
     if (mounted) {
       setState(() {
@@ -107,28 +104,15 @@ class _StaffRegistryAvatarState extends State<StaffRegistryAvatar> {
   @override
   Widget build(BuildContext context) {
     final size = widget.radius * 2;
-    final bytes = _photoBytes;
-    final hasFilePhoto =
-        !kIsWeb && _photoPath != null && File(_photoPath!).existsSync();
-    final hasMemoryPhoto = bytes != null && bytes.isNotEmpty;
+    final provider = profilePhotoProvider(bytes: _photoBytes, path: _photoPath);
 
-    Widget? child;
-    if (hasMemoryPhoto) {
+    Widget child;
+    if (provider != null) {
       child = ClipOval(
-        child: Image.memory(
-          bytes,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (hasFilePhoto) {
-      child = ClipOval(
-        child: Image.file(
-          File(_photoPath!),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
+        child: ProfilePhotoImage(
+          bytes: _photoBytes,
+          path: _photoPath,
+          size: size,
         ),
       );
     } else if (widget.fallbackIcon != null) {

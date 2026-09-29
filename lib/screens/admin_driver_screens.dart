@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
@@ -31,7 +31,7 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
   final _routeThrough = TextEditingController();
   final _routeTo = TextEditingController();
   final _plateNumber = TextEditingController();
-  File? _pickedPhoto;
+  Uint8List? _pickedPhotoBytes;
   bool _saving = false;
 
   AppStrings get s => AppLocale.instance.strings;
@@ -50,8 +50,16 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final file = await DriverPhotoService.instance.pickFromGallery();
-    if (file != null) setState(() => _pickedPhoto = file);
+    final bytes = await DriverPhotoService.instance.pickBytes();
+    if (!mounted) return;
+    if (bytes == null) {
+      final err = DriverPhotoService.instance.lastError;
+      if (err != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
+      return;
+    }
+    setState(() => _pickedPhotoBytes = bytes);
   }
 
   Future<void> _save() async {
@@ -136,10 +144,10 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
     var loginCreated = false;
 
     try {
-      if (_pickedPhoto != null) {
-        final path = await DriverPhotoService.instance.saveForDriver(
+      if (_pickedPhotoBytes != null) {
+        final path = await DriverPhotoService.instance.saveBytesForDriver(
           driver.driverId,
-          _pickedPhoto!,
+          _pickedPhotoBytes!,
         );
         if (path != null) {
           DriverPhotoService.instance.rememberPath(driver.driverId, path);
@@ -324,7 +332,7 @@ class _AdminAddDriverScreenState extends State<AdminAddDriverScreen> {
           theme: theme,
           body: [
             AdminPhotoPicker(
-              photo: _pickedPhoto,
+              photoBytes: _pickedPhotoBytes,
               hint: s.driverPhotoHint,
               accent: theme.primary,
               onTap: _pickPhoto,

@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/services/student_profile_service.dart';
+import 'package:mayabela/widgets/profile_photo_view.dart';
 
 class StudentProfileScreen extends StatelessWidget {
   const StudentProfileScreen({super.key});
@@ -139,10 +141,20 @@ class _Avatar extends StatelessWidget {
     const radius = 40.0;
 
     if (profile.hasPhoto) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundImage: FileImage(File(profile.photoPath!)),
+      final bytes = StudentPhotoService.instance.lookupBytes(
+        profile.studentId,
+        storedPath: profile.photoPath,
       );
+      final provider = profilePhotoProvider(
+        bytes: bytes,
+        path: profile.photoPath,
+      );
+      if (provider != null) {
+        return CircleAvatar(
+          radius: radius,
+          backgroundImage: provider,
+        );
+      }
     }
 
     if (profile.hasSchoolLogo) {

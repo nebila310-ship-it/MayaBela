@@ -1,12 +1,10 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/widgets/profile_photo_view.dart';
 
 class StudentAvatar extends StatelessWidget {
   const StudentAvatar({
@@ -51,20 +49,21 @@ class StudentAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = !kIsWeb &&
-        student.photoPath != null &&
-        student.photoPath!.isNotEmpty;
+    final bytes = StudentPhotoService.instance.lookupBytes(
+      student.id,
+      storedPath: student.photoPath,
+    );
+    final provider = profilePhotoProvider(bytes: bytes, path: student.photoPath);
 
     Widget avatar = CircleAvatar(
       radius: radius,
       backgroundColor: Colors.indigo.withValues(alpha: 0.15),
-      child: hasPhoto
+      child: provider != null
           ? ClipOval(
-              child: Image.file(
-                File(student.photoPath!),
-                width: radius * 2,
-                height: radius * 2,
-                fit: BoxFit.cover,
+              child: ProfilePhotoImage(
+                bytes: bytes,
+                path: student.photoPath,
+                size: radius * 2,
               ),
             )
           : Text(
