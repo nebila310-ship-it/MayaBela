@@ -43,6 +43,28 @@ void main() {
     expect(profile.roleLabel.toLowerCase(), contains('parent'));
   });
 
+  test('inbox rows show the peer name with their role', () {
+    AuthService.currentUser = AuthService.allUsers['teacher'];
+    final conversation = SchoolDataService.instance.getConversation('1')!;
+    final title = conversation.inboxTitleForViewer();
+    expect(title, contains('Bekele'));
+    expect(title.toLowerCase(), contains('parent'));
+    expect(conversation.inboxPeerRoleLabel(), 'Parent');
+    final preview = conversation.lastMessagePreviewForViewer();
+    expect(preview, contains('Bekele'));
+    expect(preview, contains('Parent'));
+    expect(preview, contains(':'));
+  });
+
+  test('staff inbox title uses the other person name and role', () {
+    AuthService.currentUser = AuthService.allUsers['teacher'];
+    final conversation = SchoolDataService.instance.getConversation('2')!;
+    final title = conversation.inboxTitleForViewer();
+    expect(title, contains('('));
+    expect(conversation.inboxPeerRoleLabel(), isNotNull);
+    expect(conversation.lastMessagePreviewForViewer(), contains('('));
+  });
+
   test('incoming parent message opens the parent contact details', () {
     AuthService.currentUser = AuthService.allUsers['teacher'];
     final conversation = SchoolDataService.instance.getConversation('1');
@@ -97,6 +119,8 @@ void main() {
     expect(find.text(s.messageBroadcasts), findsOneWidget);
     expect(find.byType(TabBar), findsOneWidget);
     expect(find.byType(ConversationCard), findsWidgets);
+    expect(find.textContaining('Parent'), findsWidgets);
+    expect(find.textContaining('Bekele'), findsWidgets);
     PresenceService.instance.resetForTests();
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -123,7 +147,9 @@ void main() {
       const MaterialApp(home: AppFloatingChrome(child: MessagesScreen())),
     );
     await tester.pump();
-    final compose = tester.getRect(find.byKey(const Key('messages-compose-fab')));
+    final compose = tester.getRect(
+      find.byKey(const Key('messages-compose-fab')),
+    );
     final ai = tester.getRect(find.byIcon(Icons.auto_awesome));
     expect(compose.overlaps(ai), isFalse);
     expect(compose.bottom, lessThanOrEqualTo(ai.top - 8));

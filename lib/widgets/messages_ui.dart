@@ -1085,6 +1085,9 @@ class ConversationCard extends StatelessWidget {
         final peerOnline = showPresence
             ? PresenceService.instance.isConversationPeerOnline(chat)
             : false;
+        final title = chat.inboxTitleForViewer();
+        final roleLabel = chat.inboxPeerRoleLabel();
+        final preview = chat.lastMessagePreviewForViewer();
 
         return Material(
           color: Colors.white,
@@ -1096,7 +1099,7 @@ class ConversationCard extends StatelessWidget {
               child: Row(
                 children: [
                   ChatPersonAvatar(
-                    name: chat.displayTitleForViewer(),
+                    name: title,
                     photoPath: isCommunity ? chat.photoPath : null,
                     size: 52,
                     icon: isBroadcast
@@ -1116,7 +1119,7 @@ class ConversationCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                chat.displayTitleForViewer(),
+                                title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -1143,12 +1146,26 @@ class ConversationCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (roleLabel != null &&
+                            roleLabel.trim().isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            roleLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: MessagesPalette.secondary,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                chat.lastMessage,
+                                preview,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
