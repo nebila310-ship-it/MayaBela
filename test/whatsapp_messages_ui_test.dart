@@ -31,7 +31,7 @@ void main() {
       StaffMemberOption.teacherKey('TCH-1001'),
     );
     expect(profile.name, contains('Belen'));
-    expect(profile.email, 'belen@mayaschool.et');
+    expect(profile.email, 'teacher@mayaschool.et');
     expect(profile.phone, isNotNull);
     expect(profile.phone, isNotEmpty);
   });
@@ -83,6 +83,44 @@ void main() {
       conversation.lastMessagePreviewForViewer(),
       'Belen, can we meet after class?',
     );
+  });
+
+  test('sender profile shows Nabil contact, not School Admin', () {
+    AuthService.allUsers['nabil'] = RegisteredUser(
+      username: 'nabil',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+      fullName: 'Nabil Ahmed',
+      email: 'nabil.ahmed@mayaschool.et',
+      phone: '0911646444',
+      linkedAdminId: 'ADM-1001',
+    );
+    AuthService.currentUser = AuthService.allUsers['nabil'];
+    final ids = SchoolDataService.instance.sendAdminDirectMessage(
+      body: 'Belen, here is my number',
+      staffId: StaffMemberOption.teacherKey('TCH-1001'),
+    );
+    expect(ids, isNotEmpty);
+    final conversation = SchoolDataService.instance.getConversation(
+      ids.single,
+    )!;
+    AuthService.currentUser = AuthService.allUsers['teacher'];
+
+    final fromTap = ChatContactDirectory.fromMessage(
+      conversation.messages.last,
+      conversation: conversation,
+    );
+    expect(fromTap.name, 'Nabil Ahmed');
+    expect(fromTap.email, 'nabil.ahmed@mayaschool.et');
+    expect(fromTap.phone, '0911646444');
+    expect(fromTap.email, isNot('admin@mayaschool.et'));
+    expect(fromTap.phone, isNot('0911000003'));
+
+    final fromHeader = ChatContactDirectory.fromConversationPeer(conversation);
+    expect(fromHeader.name, 'Nabil Ahmed');
+    expect(fromHeader.email, 'nabil.ahmed@mayaschool.et');
+    expect(fromHeader.phone, '0911646444');
   });
 
   test('staff inbox title uses the other person name and role', () {
