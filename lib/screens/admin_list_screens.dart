@@ -73,9 +73,13 @@ class AdminStudentsScreen extends StatelessWidget {
               final student = students[index];
               return Card(
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue.shade50,
-                    child: Text(student.fullName[0]),
+                  leading: StaffRegistryAvatar(
+                    staffId: student.studentId,
+                    name: student.fullName,
+                    photoPath: student.photoPath,
+                    radius: 20,
+                    isStudent: true,
+                    fallbackColor: Colors.teal,
                   ),
                   title: Text(student.fullName),
                   subtitle: Text(

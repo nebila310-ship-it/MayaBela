@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -108,11 +109,15 @@ class _ProfilePhotoAlignDialogState extends State<ProfilePhotoAlignDialog> {
   static const _frame = 240.0;
   final _boundaryKey = GlobalKey();
   double _zoom = 1.2;
+  double _baseZoom = 1.2;
   Offset _pan = Offset.zero;
   var _saving = false;
 
   void _nudgeZoom(double delta) {
-    setState(() => _zoom = (_zoom + delta).clamp(1.0, 4.0));
+    setState(() {
+      _zoom = (_zoom + delta).clamp(1.0, 4.0);
+      _baseZoom = _zoom;
+    });
   }
 
   Future<void> _apply() async {
@@ -151,32 +156,45 @@ class _ProfilePhotoAlignDialogState extends State<ProfilePhotoAlignDialog> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            GestureDetector(
-              onPanUpdate: (details) => setState(() => _pan += details.delta),
-              child: Container(
-                width: _frame + 8,
-                height: _frame + 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.teal, width: 3),
-                ),
-                alignment: Alignment.center,
-                child: ClipOval(
-                  child: SizedBox(
-                    width: _frame,
-                    height: _frame,
-                    child: RepaintBoundary(
-                      key: _boundaryKey,
-                      child: Transform.translate(
-                        offset: _pan,
-                        child: Transform.scale(
-                          scale: _zoom,
-                          child: Image.memory(
-                            widget.bytes,
-                            width: _frame,
-                            height: _frame,
-                            fit: BoxFit.cover,
-                            gaplessPlayback: true,
+            Listener(
+              onPointerSignal: (event) {
+                if (event is PointerScrollEvent) {
+                  _nudgeZoom(event.scrollDelta.dy > 0 ? -0.15 : 0.15);
+                }
+              },
+              child: GestureDetector(
+                onScaleStart: (_) => _baseZoom = _zoom,
+                onScaleUpdate: (details) {
+                  setState(() {
+                    _zoom = (_baseZoom * details.scale).clamp(1.0, 4.0);
+                    _pan += details.focalPointDelta;
+                  });
+                },
+                child: Container(
+                  width: _frame + 8,
+                  height: _frame + 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.teal, width: 3),
+                  ),
+                  alignment: Alignment.center,
+                  child: ClipOval(
+                    child: SizedBox(
+                      width: _frame,
+                      height: _frame,
+                      child: RepaintBoundary(
+                        key: _boundaryKey,
+                        child: Transform.translate(
+                          offset: _pan,
+                          child: Transform.scale(
+                            scale: _zoom,
+                            child: Image.memory(
+                              widget.bytes,
+                              width: _frame,
+                              height: _frame,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                            ),
                           ),
                         ),
                       ),
@@ -198,7 +216,10 @@ class _ProfilePhotoAlignDialogState extends State<ProfilePhotoAlignDialog> {
                     min: 1,
                     max: 4,
                     value: _zoom,
-                    onChanged: (v) => setState(() => _zoom = v),
+                    onChanged: (v) => setState(() {
+                      _zoom = v;
+                      _baseZoom = v;
+                    }),
                   ),
                 ),
                 IconButton(

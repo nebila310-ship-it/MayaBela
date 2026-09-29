@@ -97,6 +97,7 @@ void main() {
   testWidgets('student directory photo column uses profile avatars', (
     tester,
   ) async {
+    final photoPath = WebAttachmentCache.instance.store('STU-LIST-1.jpg', tinyPng);
     StudentRegistryService.instance.applyPersistedStudents([
       AdminStudentRecord(
         studentId: 'STU-LIST-1',
@@ -105,8 +106,9 @@ void main() {
         className: 'Grade 3A',
         schoolId: 'TB-001',
         dateOfBirth: DateTime(2016, 3, 1),
+        photoPath: photoPath,
       ),
-    ]);
+    ], replace: true);
     await tester.binding.setSurfaceSize(const Size(1400, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -117,6 +119,32 @@ void main() {
 
     expect(find.byType(StaffRegistryAvatar), findsWidgets);
     expect(find.text('Photo'), findsOneWidget);
+    final avatar = tester.widget<StaffRegistryAvatar>(
+      find.byType(StaffRegistryAvatar).first,
+    );
+    expect(avatar.photoPath, photoPath);
+    expect(avatar.isStudent, isTrue);
+  });
+
+  testWidgets('registry avatar paints the stored photo in the circle', (
+    tester,
+  ) async {
+    final photoPath = WebAttachmentCache.instance.store('STU-AV-1.jpg', tinyPng);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StaffRegistryAvatar(
+            staffId: 'STU-AV-1',
+            name: 'Rayan',
+            photoPath: photoPath,
+            isStudent: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final circle = tester.widget<CircleAvatar>(find.byType(CircleAvatar));
+    expect(circle.backgroundImage, isNotNull);
   });
 
   testWidgets('align dialog exposes zoom in and zoom out', (tester) async {

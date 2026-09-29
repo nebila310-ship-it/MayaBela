@@ -290,12 +290,15 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                           final t = slice[index];
                           final roleText = _roleOrAssignmentText(t, s);
                           return ListTile(
-                            leading: CircleAvatar(
-                              child: Text(
-                                t.fullName.isEmpty
-                                    ? '?'
-                                    : t.fullName[0].toUpperCase(),
+                            leading: StaffRegistryAvatar(
+                              key: ValueKey(
+                                'tch-tile-${t.teacherId}-${t.photoPath ?? ''}',
                               ),
+                              staffId: t.teacherId,
+                              name: t.fullName,
+                              photoPath: t.photoPath,
+                              radius: 20,
+                              fallbackColor: AdminFormTheme.teacher.secondary,
                             ),
                             title: Text(
                               t.fullName,
@@ -435,6 +438,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                               ),
                               staffId: t.teacherId,
                               name: t.fullName,
+                              photoPath: t.photoPath,
                               radius: 20,
                               fallbackColor: AdminFormTheme.teacher.secondary,
                             ),

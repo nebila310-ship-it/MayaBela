@@ -300,6 +300,7 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                                       ),
                                       staffId: s.studentId,
                                       name: s.fullName,
+                                      photoPath: s.photoPath,
                                       radius: 20,
                                       isStudent: true,
                                       fallbackColor:
