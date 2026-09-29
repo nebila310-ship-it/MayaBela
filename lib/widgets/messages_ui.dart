@@ -1087,7 +1087,9 @@ class ConversationCard extends StatelessWidget {
             : false;
         final title = chat.inboxTitleForViewer();
         final roleLabel = chat.inboxPeerRoleLabel();
-        final preview = chat.lastMessagePreviewForViewer();
+        final preview = chat.lastMessagePreviewForViewer(
+          youLabel: AppLocale.instance.strings.youChatPreview,
+        );
 
         return Material(
           color: Colors.white,

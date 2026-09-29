@@ -540,21 +540,14 @@ class Conversation {
     return groupStaffIds.any((id) => id.trim() == viewerStaffId.trim());
   }
 
-  /// Inbox row title: peer or group name, with role on direct chats.
+  /// Inbox row title: the other person's name (WhatsApp), not a role-owner label.
   String inboxTitleForViewer({String? viewerRole}) {
     viewerRole ??= AuthService.currentUser?.roleKey;
-    if (isGroup) return displayTitleForViewer(viewerRole: viewerRole);
-    if (isBroadcast) {
-      final title = displayTitleForViewer(viewerRole: viewerRole);
-      if (_hasTrailingRoleSuffix(title)) return title;
-      return '$title (Broadcast)';
+    if (isGroup || isBroadcast) {
+      return displayTitleForViewer(viewerRole: viewerRole);
     }
-    final title = displayTitleForViewer(viewerRole: viewerRole);
-    if (_hasTrailingRoleSuffix(title)) return title;
-    final role = inboxPeerRoleLabel(viewerRole: viewerRole);
-    if (role == null || role.trim().isEmpty) return title;
-    if (title.toLowerCase() == role.toLowerCase()) return title;
-    return '$title ($role)';
+    return _peerPersonNameForViewer(viewerRole: viewerRole) ??
+        _stripRoleSuffix(displayTitleForViewer(viewerRole: viewerRole));
   }
 
   /// Role shown next to the conversation name (Teacher, Parent, …).
@@ -593,14 +586,68 @@ class Conversation {
     return counterpartyStaffId?.trim() ?? staffParticipantId?.trim();
   }
 
-  /// Last line on the inbox row: `Name (Role): message`.
-  String lastMessagePreviewForViewer() {
+  /// Last line on the inbox row. Direct chats match WhatsApp:
+  /// `You: …` when the viewer sent it, otherwise just the message.
+  String lastMessagePreviewForViewer({String youLabel = 'You'}) {
     if (messages.isEmpty) return lastMessage;
-    final sender = messages.last.resolveLabeledName();
+    final last = messages.last;
     final body = lastMessage;
-    if (body.isEmpty) return sender;
-    if (body.startsWith('$sender:')) return body;
-    return '$sender: $body';
+    if (isGroup || isBroadcast) {
+      final sender = last.resolveDisplayName();
+      if (body.isEmpty) return sender;
+      return '$sender: $body';
+    }
+    final viewerRole = AuthService.currentUser?.roleKey;
+    final outgoing = last.isOutgoingFor(
+      viewerRole,
+      viewerStaffId: viewerRole == null
+          ? null
+          : _compositeStaffIdForRole(viewerRole),
+      viewerUsername: AuthService.currentUser?.username,
+    );
+    if (outgoing) {
+      if (body.isEmpty) return youLabel;
+      return '$youLabel: $body';
+    }
+    return body;
+  }
+
+  String? _peerPersonNameForViewer({String? viewerRole}) {
+    viewerRole ??= AuthService.currentUser?.roleKey;
+    final viewerStaffId = viewerRole == null
+        ? null
+        : _compositeStaffIdForRole(viewerRole);
+    final viewerUsername = AuthService.currentUser?.username;
+
+    for (var i = messages.length - 1; i >= 0; i--) {
+      final msg = messages[i];
+      if (msg.isOutgoingFor(
+        viewerRole,
+        viewerStaffId: viewerStaffId,
+        viewerUsername: viewerUsername,
+      )) {
+        continue;
+      }
+      final fromMessage = _personNameOrNull(msg.senderDisplayName);
+      if (fromMessage != null) return fromMessage;
+      final fromUsername = _personNameFromUsername(msg.senderUsername);
+      if (fromUsername != null) return fromUsername;
+      final fromStaff = _personNameFromStaffId(msg.senderStaffId);
+      if (fromStaff != null) return fromStaff;
+    }
+
+    for (final username in parentParticipantUsernames) {
+      final fromUsername = _personNameFromUsername(username);
+      if (fromUsername != null) return fromUsername;
+    }
+    final parentName = _personNameOrNull(parentParticipantName);
+    if (parentName != null) return parentName;
+
+    final peerId = _peerStaffId(viewerRole);
+    final fromPeer = _personNameFromStaffId(peerId);
+    if (fromPeer != null) return fromPeer;
+
+    return _personNameOrNull(name);
   }
 
   /// Conversation list / chat header title for the signed-in viewer.
@@ -723,15 +770,6 @@ class Conversation {
         .map((n) => n.trim())
         .where((n) => n.isNotEmpty)
         .toList();
-    if (linkedStudentIds.isNotEmpty) {
-      final student = StudentRegistryService.instance.lookupById(
-        linkedStudentIds.first,
-      );
-      final registryParent = student?.primaryParentName?.trim();
-      if (registryParent != null && registryParent.isNotEmpty) {
-        parentName = registryParent;
-      }
-    }
     if (studentNames.length == 1) {
       return '$parentName (Parent · ${studentNames.first})';
     }
@@ -1130,6 +1168,10 @@ bool _hasTrailingRoleSuffix(String value) {
   return RegExp(r'\([^)]+\)\s*$').hasMatch(value);
 }
 
+String _stripRoleSuffix(String value) {
+  return value.replaceFirst(RegExp(r'\s*\([^)]+\)\s*$'), '').trim();
+}
+
 String _plainRoleLabel(String roleKey) {
   return switch (roleKey) {
     AuthService.roleParent => 'Parent',
@@ -1139,4 +1181,75 @@ String _plainRoleLabel(String roleKey) {
     AuthService.roleStudent => 'Student',
     _ => roleKey,
   };
+}
+
+bool isGenericRoleOwnerName(String value) {
+  final normalized = _stripRoleSuffix(value).trim().toLowerCase();
+  const generic = {
+    'school admin',
+    'admin',
+    'owner',
+    'school owner',
+    'platform owner',
+    'teacher',
+    'parent',
+    'parent/guardian',
+    'driver',
+    'transport',
+    'administration staff',
+    'staff',
+    'user',
+  };
+  return generic.contains(normalized);
+}
+
+String? _personNameOrNull(String? value) {
+  final name = value?.trim() ?? '';
+  if (name.isEmpty) return null;
+  final stripped = _stripRoleSuffix(name);
+  if (stripped.isEmpty || isGenericRoleOwnerName(stripped)) return null;
+  return stripped;
+}
+
+String? _personNameFromUsername(String? username) {
+  if (username == null || username.trim().isEmpty) return null;
+  return _personNameOrNull(AuthService.findUser(username)?.fullName);
+}
+
+String? _personNameFromStaffId(String? staffId) {
+  if (staffId == null || staffId.trim().isEmpty) return null;
+  final trimmed = staffId.trim();
+  final member = StaffMemberOption.resolve(trimmed);
+  if (member?.presenceUsername != null) {
+    final fromPresence = _personNameFromUsername(member!.presenceUsername);
+    if (fromPresence != null) return fromPresence;
+  }
+  final raw = trimmed.contains(':') ? trimmed.split(':').last : trimmed;
+  final kind = trimmed.contains(':')
+      ? trimmed.split(':').first.toLowerCase()
+      : '';
+  for (final user in AuthService.allUsers.values) {
+    if (kind == 'teacher' || kind.isEmpty) {
+      if ((user.linkedTeacherId ?? '').trim().toUpperCase() ==
+          raw.toUpperCase()) {
+        final name = _personNameOrNull(user.fullName);
+        if (name != null) return name;
+      }
+    }
+    if (kind == 'admin') {
+      if ((user.linkedAdminId ?? '').trim().toUpperCase() ==
+          raw.toUpperCase()) {
+        final name = _personNameOrNull(user.fullName);
+        if (name != null) return name;
+      }
+    }
+    if (kind == 'driver' || kind.isEmpty) {
+      if ((user.linkedDriverId ?? '').trim().toUpperCase() ==
+          raw.toUpperCase()) {
+        final name = _personNameOrNull(user.fullName);
+        if (name != null) return name;
+      }
+    }
+  }
+  return _personNameOrNull(member?.displayName);
 }
