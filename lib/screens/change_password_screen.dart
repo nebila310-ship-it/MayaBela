@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
-import 'package:mayabela/services/password_hash_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/settings_ui.dart';
@@ -24,6 +24,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _confirmController = TextEditingController();
 
   bool _saving = false;
+  bool _showCurrent = false;
+  bool _showNew = false;
+  bool _showConfirm = false;
   String? _error;
 
   AppStrings get s => AppLocale.instance.strings;
@@ -36,12 +39,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  bool _currentMatches(String stored, String entered) {
-    if (stored == entered) return true;
-    if (PasswordHashService.instance.isHashed(stored)) {
-      return PasswordHashService.instance.verifyPassword(entered, stored);
-    }
-    return false;
+  Future<bool> _currentPasswordIsCorrect(String current) async {
+    if (AuthService.currentPasswordMatches(current)) return true;
+    // Cloud logins do not keep the secret on this device.
+    final cloud = SchoolAuthCloudService.instance;
+    if (!cloud.isAvailable) return false;
+    return cloud.reauthenticateWithPassword(current);
   }
 
   Future<void> _save() async {
@@ -54,10 +57,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (!widget.forced) {
       if (current.isEmpty) {
         setState(() => _error = s.changePasswordCurrentRequired);
-        return;
-      }
-      if (!_currentMatches(user.password, current)) {
-        setState(() => _error = s.changePasswordCurrentWrong);
         return;
       }
     }
@@ -80,7 +79,22 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       _saving = true;
     });
 
-    AuthService.changePassword(password);
+    if (!widget.forced) {
+      final ok = await _currentPasswordIsCorrect(current);
+      if (!mounted) return;
+      if (!ok) {
+        setState(() {
+          _error = s.changePasswordCurrentWrong;
+          _saving = false;
+        });
+        return;
+      }
+    }
+
+    AuthService.changePassword(
+      password,
+      currentPassword: widget.forced ? null : current,
+    );
 
     if (!mounted) return;
     setState(() => _saving = false);
@@ -98,6 +112,35 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     } else {
       Navigator.pop(context);
     }
+  }
+
+  Widget _passwordField({
+    required Key fieldKey,
+    required TextEditingController controller,
+    required String label,
+    required bool visible,
+    required VoidCallback onToggle,
+  }) {
+    return TextField(
+      key: fieldKey,
+      controller: controller,
+      obscureText: !visible,
+      enableSuggestions: false,
+      autocorrect: false,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        suffixIcon: IconButton(
+          tooltip: visible ? 'Hide password' : 'Show password',
+          onPressed: onToggle,
+          icon: Icon(
+            visible
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -131,32 +174,31 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (!widget.forced) ...[
-                    TextField(
+                    _passwordField(
+                      fieldKey: const Key('change-password-current'),
                       controller: _currentController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: s.changePasswordCurrentLabel,
-                        border: const OutlineInputBorder(),
-                      ),
+                      label: s.changePasswordCurrentLabel,
+                      visible: _showCurrent,
+                      onToggle: () =>
+                          setState(() => _showCurrent = !_showCurrent),
                     ),
                     const SizedBox(height: 12),
                   ],
-                  TextField(
+                  _passwordField(
+                    fieldKey: const Key('change-password-new'),
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: s.changePasswordNewLabel,
-                      border: const OutlineInputBorder(),
-                    ),
+                    label: s.changePasswordNewLabel,
+                    visible: _showNew,
+                    onToggle: () => setState(() => _showNew = !_showNew),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
+                  _passwordField(
+                    fieldKey: const Key('change-password-confirm'),
                     controller: _confirmController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: s.changePasswordConfirmLabel,
-                      border: const OutlineInputBorder(),
-                    ),
+                    label: s.changePasswordConfirmLabel,
+                    visible: _showConfirm,
+                    onToggle: () =>
+                        setState(() => _showConfirm = !_showConfirm),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
