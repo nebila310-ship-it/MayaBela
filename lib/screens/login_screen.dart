@@ -702,6 +702,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
 
     return DomBackedTextField(
+      key: const Key('login-school-id'),
       controller: schoolId,
       focusNode: _schoolIdFocus,
       readOnly: settled,
@@ -866,7 +867,8 @@ class _LoginScreenState extends State<LoginScreen> {
     // Six login roles don't fit as tiles (esp. phone). Prefer dropdown.
     final useRoleDropdown =
         AuthService.loginRoles.length > 5 || (kIsWeb && WebViewport.isNarrow(context));
-    return Column(
+    return AutofillGroup(
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (useRoleDropdown)
@@ -942,24 +944,23 @@ class _LoginScreenState extends State<LoginScreen> {
             onFill: _fillTransportDemo,
           ),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         DomBackedTextField(
+          key: const Key('login-username'),
           controller: username,
           keyboardType: TextInputType.emailAddress,
           style: kIsWeb ? _webFieldTextStyle : null,
           autofillHint: 'username',
           decoration: _fieldDecoration(
             label: s.loginIdentifierLabel(selectedRole),
-            hint: selectedRole == AuthService.roleStudent
-                ? null
-                : s.emailPhone,
             prefixIcon: kIsWeb
                 ? const Icon(Icons.person_outline, color: Colors.white54)
                 : null,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         DomBackedTextField(
+          key: const Key('login-password'),
           controller: password,
           obscureText: !_showPassword,
           style: kIsWeb ? _webFieldTextStyle : null,
@@ -1040,6 +1041,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ],
+      ),
     );
   }
 
