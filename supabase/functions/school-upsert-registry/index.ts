@@ -166,13 +166,21 @@ Deno.serve(async (req) => {
     if (collection === "driver_registry" && !canDrivers) {
       return errorResponse("Not allowed to write driver registry.", 403, "denied");
     }
-    // Student Affairs cases: staff/teachers with student access only.
-    if (collection === "discipline_cases" && !canStudents) {
-      return errorResponse(
-        "Not allowed to write discipline cases.",
-        403,
-        "denied",
-      );
+    // Student Affairs cases: teachers file them; the desk (manage_students)
+    // records outcomes. A classroom teacher JWT must be able to upsert a
+    // report or it only exists on that laptop.
+    if (collection === "discipline_cases") {
+      const canDiscipline = isAdmin ||
+        canStudents ||
+        callerRole === "teacher" ||
+        callerRole === "staff";
+      if (!canDiscipline) {
+        return errorResponse(
+          "Not allowed to write discipline cases.",
+          403,
+          "denied",
+        );
+      }
     }
     // Leave requests: parents submit for their child; staff review.
     if (

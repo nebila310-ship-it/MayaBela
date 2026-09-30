@@ -66,6 +66,20 @@ void main() {
     expect(CloudAppStore.instance.studentIdReadsAreSchoolWideForTest(), isTrue);
   });
 
+  test('student affairs desk reads the whole school, not a homeroom', () {
+    signIn(
+      roleKey: AuthService.roleTeacher,
+      staffRoles: const [StaffRoles.studentAffairs],
+      username: 'affairs.desk',
+    );
+    expect(AuthService.isAdministrationStaff, isTrue);
+    expect(AuthService.mayReadAllSchoolData, isTrue);
+    expect(AuthService.usesScopedCloudReads, isFalse);
+    expect(AuthService.accessClassNamesForSync(), isEmpty);
+    expect(CloudAppStore.instance.classReadsAreSchoolWideForTest(), isTrue);
+    expect(CloudAppStore.instance.studentIdReadsAreSchoolWideForTest(), isTrue);
+  });
+
   test('principal and registrar match the JWT school-wide read rule', () {
     signIn(
       roleKey: AuthService.roleTeacher,

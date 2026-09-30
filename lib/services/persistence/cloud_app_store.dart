@@ -1711,15 +1711,44 @@ class CloudAppStore {
         ));
   }
 
-  /// Student Affairs cases — staff/teacher/admin writers pass the write guard.
+  /// Student Affairs cases — via the service-role registry edge so a
+  /// classroom teacher JWT can file a report that Student Affairs sees on
+  /// another PC. Client writeBatch is class-scoped and silently drops.
   Future<void> pushAllDisciplineCases() async {
     final items = DisciplineService.instance.snapshotMaps();
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.disciplineCases,
-          items: items,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
+        collection: AppCollections.disciplineCases,
+        records: items,
+      );
+      if (result.ok) return;
+      await _crud.writeBatch(
+        collection: AppCollections.disciplineCases,
+        items: items,
+        docIdFor: (item) => item['id'] as String,
+      );
+    }, immediate: true);
+  }
+
+  /// One newly filed / updated case — user action, not a background dump.
+  Future<void> pushDisciplineCaseNow(Map<String, dynamic> record) async {
+    final id = (record['id'] ?? '').toString().trim();
+    if (id.isEmpty) return;
+    await _pushSafe(() async {
+      final result = await SchoolAuthCloudService.instance.upsertRegistryRecord(
+        collection: AppCollections.disciplineCases,
+        record: record,
+        schoolId: record['schoolId']?.toString(),
+        docId: id,
+      );
+      if (result.ok) return;
+      await _crud.writeBatch(
+        collection: AppCollections.disciplineCases,
+        items: [record],
+        docIdFor: (item) => item['id'] as String,
+      );
+    }, immediate: true);
   }
 
   /// Admissions pipeline — registrar/admin writers pass the write guard.

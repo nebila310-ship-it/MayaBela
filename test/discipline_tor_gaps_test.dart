@@ -8,7 +8,9 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
+import 'package:mayabela/web_erp/pages/web_student_affairs_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -215,6 +217,49 @@ void main() {
     expect(find.textContaining('Warning issued'), findsOneWidget);
   });
 
+  testWidgets('student affairs open filter shows a teacher-filed case', (
+    tester,
+  ) async {
+    final now = DateTime.utc(2026, 9, 30);
+    AuthService.currentUser = RegisteredUser(
+      username: 'affairs.desk',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      fullName: 'Student Affairs',
+      staffRoles: const [StaffRoles.studentAffairs],
+    );
+    DisciplineService.instance.applyPersistedData([
+      DisciplineCase(
+        id: 'dc-open-other-pc',
+        schoolId: 'TB-001',
+        studentId: 'STU-1001',
+        studentName: 'Sara Bekele',
+        className: 'Grade 4A',
+        reporterId: 'teacher.disc',
+        reporterName: 'Ms Hana',
+        reporterRole: 'teacher',
+        kind: DisciplineCaseKind.incident,
+        title: 'Classroom disruption',
+        description: 'Talking over the lesson',
+        status: DisciplineCaseStatus.submitted,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: WebStudentAffairsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No discipline cases in this view.'), findsNothing);
+    expect(find.text('Sara Bekele — Grade 4A'), findsOneWidget);
+    expect(find.text('Classroom disruption'), findsOneWidget);
+    expect(find.text('Submitted'), findsOneWidget);
+    expect(find.textContaining('Reported by Ms Hana'), findsOneWidget);
+  });
+
   test('detention is a first-class outcome on the same case store', () {
     expect(
       DisciplineConductCodes.outcomeLabel(DisciplineOutcome.detention),
@@ -243,6 +288,50 @@ void main() {
     );
     expect(restored.outcome, DisciplineOutcome.detention);
     expect(restored.conductCode, 'Academic integrity');
+  });
+
+  test('student affairs on another session still sees a teacher report as open',
+      () async {
+    final filed = await DisciplineService.instance.fileReport(
+      studentId: 'STU-1001',
+      studentName: 'Sara Bekele',
+      className: 'Grade 4A',
+      kind: DisciplineCaseKind.incident,
+      title: 'Classroom disruption',
+      description: 'Talking over the lesson',
+      notifyParent: false,
+    );
+
+    expect(filed.schoolId, 'TB-001');
+    expect(filed.isOpen, isTrue);
+    expect(filed.status, DisciplineCaseStatus.submitted);
+    final snapshot = DisciplineService.instance.snapshotMaps().single;
+    expect(snapshot['id'], filed.id);
+    expect(snapshot['schoolId'], 'TB-001');
+    expect(snapshot['status'], 'submitted');
+
+    // Other PC / other login: Student Affairs desk, same in-memory school
+    // store after cloud pull. Must not be filtered to the teacher's own
+    // reports, and must show as an Open case.
+    AuthService.currentUser = RegisteredUser(
+      username: 'affairs.desk',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      fullName: 'Student Affairs',
+      staffRoles: const [StaffRoles.studentAffairs],
+    );
+    expect(AuthService.mayReadAllSchoolData, isTrue);
+    expect(AuthService.usesScopedCloudReads, isFalse);
+    expect(ModuleAccess.canManage('student_affairs'), isTrue);
+
+    final open = DisciplineService.instance
+        .forSchool('TB-001')
+        .where((c) => c.isOpen)
+        .toList();
+    expect(open, hasLength(1));
+    expect(open.single.id, filed.id);
+    expect(open.single.reporterId, 'teacher.disc');
   });
 
   test('student affairs stays on the existing discipline module', () {
