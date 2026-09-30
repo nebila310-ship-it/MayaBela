@@ -172,6 +172,10 @@ void main() {
       DisciplineCase.fromMap({'status': 'closed'}).status,
       DisciplineCaseStatus.resolved,
     );
+    expect(
+      DisciplineCase.fromMap({'status': 'hearingScheduled'}).status,
+      DisciplineCaseStatus.hearingScheduled,
+    );
   });
 
   testWidgets('teacher student affairs keeps a closed report on the list', (

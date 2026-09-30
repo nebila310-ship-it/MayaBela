@@ -222,7 +222,7 @@ class DisciplineCase {
       return DisciplineCaseStatus.resolved;
     }
     return DisciplineCaseStatus.values.firstWhere(
-      (s) => s.name == name,
+      (s) => s.name.toLowerCase() == name,
       orElse: () => DisciplineCaseStatus.submitted,
     );
   }
