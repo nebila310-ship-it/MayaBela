@@ -24,7 +24,7 @@ class MobileErpHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor ?? WebErpTheme.paperBackdrop,
+      backgroundColor: backgroundColor ?? WebErpTheme.paperBackdropOf(context),
       appBar: AppBar(
         title: Text(title),
         actions: actions,

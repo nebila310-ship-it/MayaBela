@@ -231,7 +231,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                     child: narrow
                         ? Scaffold(
                             key: _scaffoldKey,
-                            backgroundColor: WebErpTheme.paperBackdrop,
+                            backgroundColor: WebErpTheme.paperBackdropOf(context),
                             drawer: Drawer(child: SafeArea(child: sidebar)),
                             body: Stack(
                               fit: StackFit.expand,
@@ -250,7 +250,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                             ),
                           )
                         : Scaffold(
-                            backgroundColor: WebErpTheme.paperBackdrop,
+                            backgroundColor: WebErpTheme.paperBackdropOf(context),
                             body: Row(
                               children: [
                                 sidebar,

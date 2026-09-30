@@ -48,10 +48,10 @@ class _AppSecuritySettingsState extends State<AppSecuritySettings> {
             children: [
               Text(
                 s.backgroundLockSectionTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
-                  color: SettingsPalette.deep,
+                  color: SettingsPalette.deepOf(context),
                 ),
               ),
               const SizedBox(height: 12),

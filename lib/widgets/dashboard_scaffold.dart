@@ -240,9 +240,7 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
         );
 
         return Scaffold(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark
-              ? Theme.of(context).colorScheme.surface
-              : ClassroomPalette.stream,
+          backgroundColor: ClassroomPalette.streamOf(context),
           drawer: ClassroomSidebar(
             title: widget.title,
             accent: themeColor,
@@ -332,15 +330,21 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
                               margin: const EdgeInsets.only(bottom: 16),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.9),
+                                color: ClassroomPalette.cardOf(context),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: themeColor.withValues(alpha: 0.12),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: themeColor.withValues(alpha: 0.08),
-                                    blurRadius: 12,
+                                    color: themeColor.withValues(
+                                      alpha: ClassroomPalette.isDark(context)
+                                          ? 0.18
+                                          : 0.08,
+                                    ),
+                                    blurRadius: ClassroomPalette.isDark(context)
+                                        ? 6
+                                        : 12,
                                     offset: const Offset(0, 4),
                                   ),
                                 ],

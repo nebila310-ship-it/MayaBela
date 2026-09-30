@@ -35,12 +35,26 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: const Color(0xFF0B1220),
       cardColor: const Color(0xFF1E293B),
-      iconTheme: const IconThemeData(),
+      iconTheme: IconThemeData(color: scheme.onSurface),
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surfaceContainerHighest,
         foregroundColor: scheme.onSurface,
         elevation: 0,
       ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1E293B),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF1E293B),
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Color(0xFF1E293B),
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerColor: scheme.outlineVariant,
       brightness: Brightness.dark,
     );
   }

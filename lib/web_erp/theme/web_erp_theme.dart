@@ -20,15 +20,48 @@ abstract final class WebErpTheme {
   static const double sidebarCollapsed = 72;
   static const double topBarHeight = 56;
 
+  static Color paperOf(BuildContext context) =>
+      ClassroomPalette.cardOf(context);
+
+  static Color paperEdgeOf(BuildContext context) =>
+      ClassroomPalette.lineOf(context);
+
+  static Color paperInkOf(BuildContext context) =>
+      ClassroomPalette.inkOf(context);
+
+  static Color paperBackdropOf(BuildContext context) =>
+      ClassroomPalette.streamOf(context);
+
+  static Color sidebarBgOf(BuildContext context) =>
+      ClassroomPalette.cardOf(context);
+
+  static Color sidebarHoverOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClassroomPalette.isDark(context)
+        ? scheme.surfaceContainerHighest
+        : sidebarHover;
+  }
+
+  static Color sidebarActiveOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClassroomPalette.isDark(context)
+        ? scheme.primary.withValues(alpha: 0.22)
+        : sidebarActive;
+  }
+
   static BoxDecoration cardDecoration(BuildContext context) {
+    final dark = ClassroomPalette.isDark(context);
     return BoxDecoration(
+      // Keep the light paper fill so existing ink text stays readable.
       color: paper,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: paperEdge),
+      border: Border.all(
+        color: dark ? paperEdge.withValues(alpha: 0.35) : paperEdgeOf(context),
+      ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.06),
-          blurRadius: 10,
+          color: Colors.black.withValues(alpha: dark ? 0.42 : 0.06),
+          blurRadius: dark ? 6 : 10,
           offset: const Offset(0, 2),
         ),
       ],
@@ -38,10 +71,7 @@ abstract final class WebErpTheme {
   static BoxDecoration classBanner(Color color) {
     return BoxDecoration(
       gradient: LinearGradient(
-        colors: [
-          color,
-          Color.lerp(color, Colors.black, 0.18)!,
-        ],
+        colors: [color, Color.lerp(color, Colors.black, 0.18)!],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),

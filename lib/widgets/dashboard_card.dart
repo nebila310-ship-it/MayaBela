@@ -35,7 +35,7 @@ class DashboardCard extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: ClassroomPalette.card,
-                border: Border.all(color: ClassroomPalette.line),
+                border: Border.all(color: ClassroomPalette.lineOf(context)),
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: 0.18),
