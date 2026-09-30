@@ -29,4 +29,10 @@ class DisciplinePersistenceService {
       await CloudAppStore.instance.pushAllDisciplineCases();
     }
   }
+
+  /// Upload one case immediately so Student Affairs on another device
+  /// can open it. No-ops in unit tests (cloud not initialized).
+  Future<void> publishCaseNow(DisciplineCase c) async {
+    await CloudAppStore.instance.pushDisciplineCaseNow(c.toMap());
+  }
 }

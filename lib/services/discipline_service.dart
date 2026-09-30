@@ -95,6 +95,7 @@ class DisciplineService extends ChangeNotifier {
     _cases.insert(0, newCase);
     notifyListeners();
     await DisciplinePersistenceService.instance.saveFromService();
+    await DisciplinePersistenceService.instance.publishCaseNow(newCase);
     _pushStaffDeskNotification(newCase);
     if (notifyParent) {
       _pushParentNotification(newCase);
@@ -119,6 +120,7 @@ class DisciplineService extends ChangeNotifier {
     _cases[index] = updated;
     notifyListeners();
     await DisciplinePersistenceService.instance.saveFromService();
+    await DisciplinePersistenceService.instance.publishCaseNow(updated);
     if (notifyParent) {
       _pushParentNotification(updated);
     }
