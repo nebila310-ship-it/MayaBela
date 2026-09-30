@@ -37,11 +37,21 @@ class DisciplineService extends ChangeNotifier {
     return _cases.where((c) => ids.contains(c.studentId)).toList();
   }
 
-  List<DisciplineCase> reportedBy(String reporterId) {
-    final id = reporterId.trim().toLowerCase();
+  List<DisciplineCase> reportedBy(String reporterId, {String? teacherId}) {
+    final keys = <String>{
+      reporterId.trim().toLowerCase(),
+      (teacherId ?? '').trim().toLowerCase(),
+    }..removeWhere((s) => s.isEmpty);
     return _cases
-        .where((c) => c.reporterId.trim().toLowerCase() == id)
+        .where((c) => keys.contains(c.reporterId.trim().toLowerCase()))
         .toList();
+  }
+
+  /// Teacher's own behaviour / incident reports, including closed ones.
+  List<DisciplineCase> reportsForCurrentTeacher() {
+    final user = AuthService.currentUser;
+    if (user == null) return const [];
+    return reportedBy(user.username, teacherId: user.linkedTeacherId);
   }
 
   DisciplineCase? byId(String id) {
@@ -102,7 +112,8 @@ class DisciplineService extends ChangeNotifier {
     if (index < 0) return null;
     final updated = mutate(_cases[index]).copyWith(
       handledByName:
-          AuthService.currentUser?.fullName ?? AuthService.currentUser?.username,
+          AuthService.currentUser?.fullName ??
+          AuthService.currentUser?.username,
       updatedAt: DateTime.now(),
     );
     _cases[index] = updated;
@@ -124,8 +135,7 @@ class DisciplineService extends ChangeNotifier {
 
   void _pushReporterNotification(DisciplineCase c) {
     final reporter = c.reporterId.trim();
-    if (reporter.isEmpty ||
-        reporter == AuthService.currentUser?.username) {
+    if (reporter.isEmpty || reporter == AuthService.currentUser?.username) {
       return;
     }
     final closing = c.status == DisciplineCaseStatus.resolved
@@ -133,7 +143,8 @@ class DisciplineService extends ChangeNotifier {
         : 'dismissed';
     NotificationService.instance.push(
       title: 'Case update — ${c.studentName}',
-      body: 'Your ${c.kind == DisciplineCaseKind.behaviour ? 'behaviour' : 'incident'} '
+      body:
+          'Your ${c.kind == DisciplineCaseKind.behaviour ? 'behaviour' : 'incident'} '
           'report "${c.title}" was $closing.'
           '${c.outcomeNotes.isNotEmpty ? ' ${c.outcomeNotes}' : ''}',
       type: NotificationType.general,
@@ -145,13 +156,14 @@ class DisciplineService extends ChangeNotifier {
   }
 
   void _pushStaffDeskNotification(DisciplineCase c) {
-    final kindLabel =
-        c.kind == DisciplineCaseKind.behaviour ? 'behaviour' : 'incident';
+    final kindLabel = c.kind == DisciplineCaseKind.behaviour
+        ? 'behaviour'
+        : 'incident';
     final body = c.status == DisciplineCaseStatus.escalated
         ? '${c.studentName} (${c.className}) escalated to '
-            '${DisciplineConductCodes.escalationLabel(c.escalatedTo)}.'
+              '${DisciplineConductCodes.escalationLabel(c.escalatedTo)}.'
         : '${c.reporterName} filed a $kindLabel report for ${c.studentName} '
-            '(${c.className}): ${c.title}.';
+              '(${c.className}): ${c.title}.';
     NotificationService.instance.push(
       title: c.status == DisciplineCaseStatus.escalated
           ? 'Discipline case escalated'

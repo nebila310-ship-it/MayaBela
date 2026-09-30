@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/discipline_case.dart';
+import 'package:mayabela/screens/teacher_student_affairs_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/notification_service.dart';
@@ -28,45 +30,48 @@ void main() {
     DisciplineService.instance.resetForTests();
   });
 
-  test('filed report tags a conduct code and notifies parent plus desk', () async {
-    final filed = await DisciplineService.instance.fileReport(
-      studentId: 'STU-1001',
-      studentName: 'Sara Bekele',
-      className: 'Grade 4A',
-      kind: DisciplineCaseKind.incident,
-      title: 'Classroom disruption',
-      description: 'Talking over the lesson',
-      conductCode: 'Disruption',
-    );
+  test(
+    'filed report tags a conduct code and notifies parent plus desk',
+    () async {
+      final filed = await DisciplineService.instance.fileReport(
+        studentId: 'STU-1001',
+        studentName: 'Sara Bekele',
+        className: 'Grade 4A',
+        kind: DisciplineCaseKind.incident,
+        title: 'Classroom disruption',
+        description: 'Talking over the lesson',
+        conductCode: 'Disruption',
+      );
 
-    expect(filed.conductCode, 'Disruption');
-    expect(filed.parentNotified, isTrue);
-    expect(filed.status, DisciplineCaseStatus.submitted);
+      expect(filed.conductCode, 'Disruption');
+      expect(filed.parentNotified, isTrue);
+      expect(filed.status, DisciplineCaseStatus.submitted);
 
-    final copy = DisciplineCase.fromMap(filed.toMap());
-    expect(copy.conductCode, 'Disruption');
+      final copy = DisciplineCase.fromMap(filed.toMap());
+      expect(copy.conductCode, 'Disruption');
 
-    final notes = NotificationService.instance.itemsForTests();
-    expect(
-      notes.any(
-        (n) =>
-            n.recipientRole == AuthService.roleParent &&
-            n.targetStudentId == 'STU-1001' &&
-            n.body.contains('Classroom disruption') &&
-            n.body.contains('Disruption'),
-      ),
-      isTrue,
-    );
-    expect(
-      notes.any(
-        (n) =>
-            n.title == 'New discipline report' &&
-            n.recipientRole == AuthService.roleAdmin &&
-            n.body.contains('Sara Bekele'),
-      ),
-      isTrue,
-    );
-  });
+      final notes = NotificationService.instance.itemsForTests();
+      expect(
+        notes.any(
+          (n) =>
+              n.recipientRole == AuthService.roleParent &&
+              n.targetStudentId == 'STU-1001' &&
+              n.body.contains('Classroom disruption') &&
+              n.body.contains('Disruption'),
+        ),
+        isTrue,
+      );
+      expect(
+        notes.any(
+          (n) =>
+              n.title == 'New discipline report' &&
+              n.recipientRole == AuthService.roleAdmin &&
+              n.body.contains('Sara Bekele'),
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('escalation reaches section director and notifies parent', () async {
     final filed = await DisciplineService.instance.fileReport(
@@ -114,6 +119,100 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('resolved reports stay closed for the teacher and the desk', () async {
+    final filed = await DisciplineService.instance.fileReport(
+      studentId: 'STU-1001',
+      studentName: 'Sara Bekele',
+      className: 'Grade 4A',
+      kind: DisciplineCaseKind.behaviour,
+      title: 'Repeated disruption',
+      description: 'Talked over the lesson twice',
+      notifyParent: false,
+    );
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'affairs.desk',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+      fullName: 'Student Affairs',
+    );
+    final closed = await DisciplineService.instance.updateCase(
+      filed.id,
+      (cur) => cur.copyWith(
+        status: DisciplineCaseStatus.resolved,
+        outcome: DisciplineOutcome.warning,
+        outcomeNotes: 'Spoken to the student',
+      ),
+    );
+
+    expect(closed, isNotNull);
+    expect(closed!.isClosed, isTrue);
+    expect(closed.isOpen, isFalse);
+    expect(
+      DisciplineService.instance.forSchool('TB-001').where((c) => c.isClosed),
+      isNotEmpty,
+    );
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.disc',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      fullName: 'Ms Hana',
+    );
+    final mine = DisciplineService.instance.reportsForCurrentTeacher();
+    expect(mine, hasLength(1));
+    expect(mine.single.id, filed.id);
+    expect(mine.single.isClosed, isTrue);
+    expect(mine.single.outcome, DisciplineOutcome.warning);
+    expect(
+      DisciplineCase.fromMap({'status': 'closed'}).status,
+      DisciplineCaseStatus.resolved,
+    );
+    expect(
+      DisciplineCase.fromMap({'status': 'hearingScheduled'}).status,
+      DisciplineCaseStatus.hearingScheduled,
+    );
+  });
+
+  testWidgets('teacher student affairs keeps a closed report on the list', (
+    tester,
+  ) async {
+    final now = DateTime.utc(2026, 9, 30);
+    DisciplineService.instance.applyPersistedData([
+      DisciplineCase(
+        id: 'dc-closed-1',
+        schoolId: 'TB-001',
+        studentId: 'STU-1001',
+        studentName: 'Sara Bekele',
+        className: 'Grade 4A',
+        reporterId: 'teacher.disc',
+        reporterName: 'Ms Hana',
+        reporterRole: 'teacher',
+        kind: DisciplineCaseKind.incident,
+        title: 'Phone in class',
+        description: 'Used phone during exam review',
+        status: DisciplineCaseStatus.resolved,
+        outcome: DisciplineOutcome.warning,
+        outcomeNotes: 'Warning issued',
+        handledByName: 'Student Affairs',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: TeacherStudentAffairsScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Closed reports'), findsOneWidget);
+    expect(find.text('Sara Bekele — Phone in class'), findsOneWidget);
+    expect(find.textContaining('Closed'), findsWidgets);
+    expect(find.textContaining('Warning issued'), findsOneWidget);
   });
 
   test('detention is a first-class outcome on the same case store', () {

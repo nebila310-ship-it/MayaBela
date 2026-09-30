@@ -7,6 +7,7 @@ import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/discipline_conduct_code_chips.dart';
@@ -27,6 +28,9 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
   String _leaveFilter = 'pending';
 
   bool get _canManage => ModuleAccess.canManage('student_affairs');
+  bool get _isClassroomTeacher =>
+      AuthService.currentUser?.roleKey == AuthService.roleTeacher &&
+      !_canManage;
   String get _schoolId => AuthService.activeSchoolId ?? '';
 
   @override
@@ -34,6 +38,9 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
     super.initState();
     DisciplineService.instance.ensureLoaded();
     LeaveRequestService.instance.ensureLoaded();
+    if (_isClassroomTeacher) {
+      _caseFilter = 'all';
+    }
   }
 
   @override
@@ -49,19 +56,28 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(narrow ? 12 : 20, narrow ? 12 : 20, narrow ? 12 : 20, 0),
+          padding: EdgeInsets.fromLTRB(
+            narrow ? 12 : 20,
+            narrow ? 12 : 20,
+            narrow ? 12 : 20,
+            0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Student Affairs', style: WebErpTheme.sectionTitle(context)),
               const SizedBox(height: 4),
               Text(
-                'Behaviour & incident cases (investigation → hearing → outcome) '
-                'on the existing discipline register. Tag a code-of-conduct rule '
-                'when filing; parents are notified on new reports and escalation.',
+                _isClassroomTeacher
+                    ? 'Your behaviour and incident reports stay here after '
+                          'Student Affairs records an action, marked Closed.'
+                    : 'Behaviour & incident cases (investigation → hearing → outcome) '
+                          'on the existing discipline register. Tag a code-of-conduct rule '
+                          'when filing; parents are notified on new reports and escalation. '
+                          'Closed cases stay on this desk under Closed.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 8),
               TabBar(
@@ -91,16 +107,24 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
 
   // ---------------------------------------------------------------- cases
 
+  List<DisciplineCase> _deskCases() {
+    if (_isClassroomTeacher) {
+      return DisciplineService.instance.reportsForCurrentTeacher();
+    }
+    return DisciplineService.instance.forSchool(_schoolId);
+  }
+
   Widget _buildCasesTab(BuildContext context, bool narrow) {
     return ListenableBuilder(
       listenable: DisciplineService.instance,
       builder: (context, _) {
-        final all = DisciplineService.instance.forSchool(_schoolId);
-        var cases = all;
-        cases = switch (_caseFilter) {
-          'open' => cases.where((c) => c.isOpen).toList(),
-          'resolved' => cases.where((c) => !c.isOpen).toList(),
-          _ => cases,
+        final all = _deskCases();
+        final open = all.where((c) => c.isOpen).toList();
+        final closed = all.where((c) => c.isClosed).toList();
+        final cases = switch (_caseFilter) {
+          'open' => open,
+          'resolved' => closed,
+          _ => all,
         };
         return SingleChildScrollView(
           padding: EdgeInsets.all(narrow ? 12 : 20),
@@ -114,11 +138,13 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (_canManage)
+                  if (_canManage || _isClassroomTeacher)
                     FilledButton.icon(
                       onPressed: () => _showFileReportDialog(context),
                       icon: const Icon(Icons.note_add_outlined),
-                      label: const Text('File Report'),
+                      label: Text(
+                        _isClassroomTeacher ? 'Report' : 'File Report',
+                      ),
                     ),
                   for (final (value, label) in const [
                     ('open', 'Open'),
@@ -135,12 +161,33 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
               const SizedBox(height: 12),
               if (cases.isEmpty)
                 _emptyCard(context, 'No discipline cases in this view.')
-              else
+              else if (_caseFilter == 'all') ...[
+                if (open.isNotEmpty) ...[
+                  _sectionHeading(context, 'Open'),
+                  for (final c in open) _caseCard(context, c),
+                ],
+                if (closed.isNotEmpty) ...[
+                  _sectionHeading(context, 'Closed reports'),
+                  for (final c in closed) _caseCard(context, c),
+                ],
+              ] else
                 for (final c in cases) _caseCard(context, c),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _sectionHeading(BuildContext context, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 4),
+      child: Text(
+        label,
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
     );
   }
 
@@ -156,14 +203,25 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
     final hearings = all
         .where((c) => c.status == DisciplineCaseStatus.hearingScheduled)
         .length;
-    final escalated =
-        all.where((c) => c.status == DisciplineCaseStatus.escalated).length;
-    final resolved = all.where((c) => !c.isOpen).length;
+    final escalated = all
+        .where((c) => c.status == DisciplineCaseStatus.escalated)
+        .length;
+    final resolved = all.where((c) => c.isClosed).length;
     final cards = <(String, int, Color, Color)>[
       ('Open cases', open, scheme.primaryContainer, scheme.onPrimaryContainer),
-      ('Hearings', hearings, scheme.tertiaryContainer, scheme.onTertiaryContainer),
+      (
+        'Hearings',
+        hearings,
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+      ),
       ('Escalated', escalated, scheme.errorContainer, scheme.onErrorContainer),
-      ('Closed', resolved, scheme.secondaryContainer, scheme.onSecondaryContainer),
+      (
+        'Closed',
+        resolved,
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
     ];
     return Wrap(
       spacing: 10,
@@ -253,8 +311,10 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
           ),
           if (c.outcomeNotes.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text('Notes: ${c.outcomeNotes}',
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+            Text(
+              'Notes: ${c.outcomeNotes}',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ),
           ],
           if (_canManage && c.isOpen) ...[
             const SizedBox(height: 10),
@@ -264,10 +324,8 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
               children: [
                 if (c.status == DisciplineCaseStatus.submitted)
                   OutlinedButton.icon(
-                    onPressed: () => _updateStatus(
-                      c,
-                      DisciplineCaseStatus.investigating,
-                    ),
+                    onPressed: () =>
+                        _updateStatus(c, DisciplineCaseStatus.investigating),
                     icon: const Icon(Icons.search),
                     label: const Text('Start Investigation'),
                   ),
@@ -299,6 +357,11 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
     );
   }
 
+  Future<void> _showClosedQueue() async {
+    if (!mounted) return;
+    setState(() => _caseFilter = 'resolved');
+  }
+
   Future<void> _updateStatus(
     DisciplineCase c,
     DisciplineCaseStatus status,
@@ -315,17 +378,28 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       (cur) => cur.copyWith(status: DisciplineCaseStatus.dismissed),
       notifyParent: true,
     );
+    await _showClosedQueue();
   }
 
   Future<void> _showFileReportDialog(BuildContext context) async {
-    final students = StudentRegistryService.instance
-        .getAllStudents()
-        .where((s) =>
-            s.isActive &&
-            (_schoolId.isEmpty ||
-                s.schoolId.trim().toUpperCase() == _schoolId.toUpperCase()))
-        .toList()
-      ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    final classNames = _isClassroomTeacher
+        ? TeacherAccessService.instance.myClasses
+              .map((a) => a.className)
+              .toSet()
+        : <String>{};
+    final students = StudentRegistryService.instance.getAllStudents().where((
+      s,
+    ) {
+      if (!s.isActive) return false;
+      if (_schoolId.isNotEmpty &&
+          s.schoolId.trim().toUpperCase() != _schoolId.toUpperCase()) {
+        return false;
+      }
+      if (_isClassroomTeacher && !classNames.contains(s.className)) {
+        return false;
+      }
+      return true;
+    }).toList()..sort((a, b) => a.fullName.compareTo(b.fullName));
     if (students.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No active students found.')),
@@ -343,7 +417,11 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('File Student Affairs Report'),
+          title: Text(
+            _isClassroomTeacher
+                ? 'Report to Student Affairs'
+                : 'File Student Affairs Report',
+          ),
           content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
@@ -383,8 +461,7 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                   const SizedBox(height: 10),
                   DisciplineConductCodeChips(
                     selected: conductCode,
-                    onSelected: (v) =>
-                        setDialogState(() => conductCode = v),
+                    onSelected: (v) => setDialogState(() => conductCode = v),
                   ),
                   const SizedBox(height: 10),
                   TextField(
@@ -398,9 +475,7 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                   TextField(
                     controller: descCtrl,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Details',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Details'),
                   ),
                 ],
               ),
@@ -492,7 +567,10 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
     );
   }
 
-  Future<void> _showOutcomeDialog(BuildContext context, DisciplineCase c) async {
+  Future<void> _showOutcomeDialog(
+    BuildContext context,
+    DisciplineCase c,
+  ) async {
     var outcome = DisciplineOutcome.warning;
     final notesCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
@@ -565,9 +643,13 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       ),
       notifyParent: true,
     );
+    await _showClosedQueue();
   }
 
-  Future<void> _showEscalateDialog(BuildContext context, DisciplineCase c) async {
+  Future<void> _showEscalateDialog(
+    BuildContext context,
+    DisciplineCase c,
+  ) async {
     final target = await showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -608,8 +690,9 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       builder: (context, _) {
         var requests = LeaveRequestService.instance.forSchool(_schoolId);
         if (_leaveFilter != 'all') {
-          requests =
-              requests.where((r) => r.status.name == _leaveFilter).toList();
+          requests = requests
+              .where((r) => r.status.name == _leaveFilter)
+              .toList();
         }
         return SingleChildScrollView(
           padding: EdgeInsets.all(narrow ? 12 : 20),
@@ -649,17 +732,17 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
     final scheme = Theme.of(context).colorScheme;
     final (statusBg, statusFg) = switch (r.status) {
       LeaveRequestStatus.pending => (
-          Colors.orange.withValues(alpha: 0.15),
-          Colors.orange.shade800
-        ),
+        Colors.orange.withValues(alpha: 0.15),
+        Colors.orange.shade800,
+      ),
       LeaveRequestStatus.approved => (
-          Colors.green.withValues(alpha: 0.15),
-          Colors.green.shade800
-        ),
+        Colors.green.withValues(alpha: 0.15),
+        Colors.green.shade800,
+      ),
       LeaveRequestStatus.rejected => (
-          Colors.red.withValues(alpha: 0.12),
-          Colors.red.shade700
-        ),
+        Colors.red.withValues(alpha: 0.12),
+        Colors.red.shade700,
+      ),
     };
     return Container(
       width: double.infinity,
@@ -724,7 +807,9 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('${approve ? 'Approve' : 'Reject'} leave — ${r.studentName}'),
+        title: Text(
+          '${approve ? 'Approve' : 'Reject'} leave — ${r.studentName}',
+        ),
         content: TextField(
           controller: noteCtrl,
           decoration: const InputDecoration(
@@ -781,35 +866,35 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
   Widget _statusChip(BuildContext context, DisciplineCaseStatus status) {
     final (bg, fg, label) = switch (status) {
       DisciplineCaseStatus.submitted => (
-          Colors.blue.withValues(alpha: 0.12),
-          Colors.blue.shade800,
-          'Submitted'
-        ),
+        Colors.blue.withValues(alpha: 0.12),
+        Colors.blue.shade800,
+        'Submitted',
+      ),
       DisciplineCaseStatus.investigating => (
-          Colors.orange.withValues(alpha: 0.15),
-          Colors.orange.shade800,
-          'Investigating'
-        ),
+        Colors.orange.withValues(alpha: 0.15),
+        Colors.orange.shade800,
+        'Investigating',
+      ),
       DisciplineCaseStatus.hearingScheduled => (
-          Colors.purple.withValues(alpha: 0.12),
-          Colors.purple.shade700,
-          'Hearing scheduled'
-        ),
+        Colors.purple.withValues(alpha: 0.12),
+        Colors.purple.shade700,
+        'Hearing scheduled',
+      ),
       DisciplineCaseStatus.resolved => (
-          Colors.green.withValues(alpha: 0.15),
-          Colors.green.shade800,
-          'Resolved'
-        ),
+        Colors.green.withValues(alpha: 0.15),
+        Colors.green.shade800,
+        'Closed',
+      ),
       DisciplineCaseStatus.dismissed => (
-          Colors.grey.withValues(alpha: 0.2),
-          Colors.grey.shade700,
-          'Dismissed'
-        ),
+        Colors.grey.withValues(alpha: 0.2),
+        Colors.grey.shade700,
+        'Closed — dismissed',
+      ),
       DisciplineCaseStatus.escalated => (
-          Colors.red.withValues(alpha: 0.12),
-          Colors.red.shade700,
-          'Escalated'
-        ),
+        Colors.red.withValues(alpha: 0.12),
+        Colors.red.shade700,
+        'Escalated',
+      ),
     };
     return _chip(label, bg, fg);
   }
