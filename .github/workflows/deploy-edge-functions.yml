@@ -17,6 +17,7 @@ on:
       - "supabase/functions/school-upsert-account/**"
       - "supabase/functions/school-register-parent/**"
       - "supabase/functions/school-upsert-registry/**"
+      - "supabase/functions/school-change-password/**"
       - "supabase/functions/platform-mail-config/**"
       - "supabase/functions/_shared/mailer.ts"
       - "supabase/functions/_shared/school_auth.ts"
@@ -51,4 +52,5 @@ jobs:
           supabase functions deploy school-upsert-account --project-ref "$REF" --no-verify-jwt
           supabase functions deploy school-register-parent --project-ref "$REF" --no-verify-jwt
           supabase functions deploy school-upsert-registry --project-ref "$REF" --no-verify-jwt
+          supabase functions deploy school-change-password --project-ref "$REF" --no-verify-jwt
           supabase functions deploy platform-mail-config --project-ref "$REF" --no-verify-jwt

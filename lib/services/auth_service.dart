@@ -1230,6 +1230,20 @@ class AuthService {
     return PasswordHashService.instance.verifyPassword(password, user.password);
   }
 
+  /// Cloud sessions keep `__REDACTED__` / empty locally, so Settings cannot
+  /// prove the current password on-device. Those must go through school-login.
+  static bool isStoredPasswordVerifiable(String stored) {
+    final value = stored.trim();
+    return value.isNotEmpty && value != passwordRedactedMarker;
+  }
+
+  static bool currentPasswordMatches(String entered) {
+    final user = currentUser;
+    if (user == null || entered.isEmpty) return false;
+    if (!isStoredPasswordVerifiable(user.password)) return false;
+    return _passwordMatches(user, entered);
+  }
+
   static AdminStudentRecord? _studentRecordForUser(RegisteredUser user) {
     final linked = user.linkedStudentId?.trim().toUpperCase();
     if (linked != null && linked.isNotEmpty) {
@@ -1820,16 +1834,22 @@ class AuthService {
     return true;
   }
 
-  static void changePassword(String newPassword) {
+  static void changePassword(String newPassword, {String? currentPassword}) {
     final user = currentUser;
     if (user == null || newPassword.length < minPasswordLength) return;
     user.password = PasswordHashService.instance.hashPassword(newPassword);
     user.mustChangePassword = false;
-    _users[user.username]!.password = user.password;
-    _users[user.username]!.mustChangePassword = false;
-    unawaited(_persistUser(_users[user.username]!));
+    final stored = _users[user.username] ?? _users[user.username.toLowerCase()];
+    if (stored != null) {
+      stored.password = user.password;
+      stored.mustChangePassword = false;
+      unawaited(_persistUser(stored));
+    }
     unawaited(
-      SchoolAuthCloudService.instance.changePassword(newPassword: newPassword),
+      SchoolAuthCloudService.instance.changePassword(
+        newPassword: newPassword,
+        currentPassword: currentPassword,
+      ),
     );
 
     if (user.roleKey == roleStudent) {
