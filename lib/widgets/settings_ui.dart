@@ -20,6 +20,52 @@ class SettingsPalette {
     Color(0xFF475569),
     Color(0xFF64748B),
   ];
+
+  static const darkHeaderGradient = [
+    Color(0xFF1E293B),
+    Color(0xFF0F172A),
+    Color(0xFF020617),
+  ];
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color deepOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.onSurface : deep;
+  }
+
+  static Color mutedOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.onSurfaceVariant : muted;
+  }
+
+  static Color surfaceOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.surfaceContainerHighest : surface;
+  }
+
+  static Color cardOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.surfaceContainerHigh : card;
+  }
+
+  static Color borderOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.outlineVariant : border;
+  }
+
+  static Color accentSoftOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context)
+        ? scheme.primary.withValues(alpha: 0.22)
+        : accentSoft;
+  }
+
+  static Color accentOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.primary : accent;
+  }
 }
 
 class SettingsSectionCard extends StatelessWidget {
@@ -40,10 +86,14 @@ class SettingsSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? scheme.surfaceContainerHigh : SettingsPalette.card;
+    final cardColor = isDark
+        ? scheme.surfaceContainerHigh
+        : SettingsPalette.card;
     final borderColor = isDark ? scheme.outlineVariant : SettingsPalette.border;
     final titleColor = isDark ? scheme.onSurface : SettingsPalette.deep;
-    final subtitleColor = isDark ? scheme.onSurfaceVariant : SettingsPalette.muted;
+    final subtitleColor = isDark
+        ? scheme.onSurfaceVariant
+        : SettingsPalette.muted;
     final iconBg = isDark
         ? scheme.primaryContainer.withValues(alpha: 0.35)
         : SettingsPalette.accentSoft;
@@ -56,9 +106,10 @@ class SettingsSectionCard extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : SettingsPalette.deep)
-                .withValues(alpha: isDark ? 0.35 : 0.06),
-            blurRadius: 16,
+            color: (isDark ? Colors.black : SettingsPalette.deep).withValues(
+              alpha: isDark ? 0.28 : 0.06,
+            ),
+            blurRadius: isDark ? 8 : 16,
             offset: const Offset(0, 6),
           ),
         ],
@@ -135,10 +186,14 @@ class AnimatedSettingsSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = SettingsPalette.isDark(context);
     final active = enabled && onChanged != null;
     final trackColor = !active
-        ? Colors.grey.shade300
-        : (value ? SettingsPalette.accent : Colors.grey.shade400);
+        ? (isDark ? scheme.surfaceContainerHighest : Colors.grey.shade300)
+        : (value
+              ? SettingsPalette.accentOf(context)
+              : (isDark ? scheme.outline : Colors.grey.shade400));
 
     return GestureDetector(
       onTap: active ? () => onChanged!(!value) : null,
@@ -274,23 +329,20 @@ class AnimatedLanguageSelector extends StatelessWidget {
       builder: (context, _) {
         final s = AppLocale.instance.strings;
         final selected = AppLocale.instance.code;
-        final options = [
-          ('en', s.english),
-          ('am', s.amharic),
-          ('om', s.oromo),
-        ];
+        final options = [('en', s.english), ('am', s.amharic), ('om', s.oromo)];
         final index = options.indexWhere((o) => o.$1 == selected);
         final activeIndex = index < 0 ? 0 : index;
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final segmentWidth = constraints.maxWidth / options.length;
+            final unselected = SettingsPalette.deepOf(context);
             return Container(
               height: 48,
               decoration: BoxDecoration(
-                color: SettingsPalette.surface,
+                color: SettingsPalette.surfaceOf(context),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: SettingsPalette.border),
+                border: Border.all(color: SettingsPalette.borderOf(context)),
               ),
               child: Stack(
                 children: [
@@ -303,13 +355,15 @@ class AnimatedLanguageSelector extends StatelessWidget {
                     width: segmentWidth - 8,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: SettingsPalette.accent,
+                        color: SettingsPalette.accentOf(context),
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: SettingsPalette.accent.withValues(alpha: 0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                            color: SettingsPalette.accentOf(
+                              context,
+                            ).withValues(alpha: 0.28),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -332,7 +386,7 @@ class AnimatedLanguageSelector extends StatelessWidget {
                                     fontSize: 13,
                                     color: selected == code
                                         ? Colors.white
-                                        : SettingsPalette.deep,
+                                        : unselected,
                                   ),
                                   child: Text(label),
                                 ),
@@ -370,8 +424,10 @@ class SettingsActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final titleColor = SettingsPalette.deepOf(context);
+    final subtitleColor = SettingsPalette.mutedOf(context);
     return Material(
-      color: SettingsPalette.surface.withValues(alpha: 0.55),
+      color: SettingsPalette.surfaceOf(context),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -383,11 +439,15 @@ class SettingsActionTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: SettingsPalette.card,
+                  color: SettingsPalette.cardOf(context),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: SettingsPalette.border),
+                  border: Border.all(color: SettingsPalette.borderOf(context)),
                 ),
-                child: Icon(icon, size: 20, color: SettingsPalette.accent),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: SettingsPalette.accentOf(context),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -396,20 +456,17 @@ class SettingsActionTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                        color: SettingsPalette.deep,
+                        color: titleColor,
                       ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: SettingsPalette.muted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: subtitleColor),
                       ),
                     ],
                   ],
@@ -418,7 +475,7 @@ class SettingsActionTile extends StatelessWidget {
               trailing ??
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: Colors.grey.shade500,
+                    color: SettingsPalette.mutedOf(context),
                   ),
             ],
           ),
@@ -435,6 +492,9 @@ class SettingsFaqList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final titleColor = SettingsPalette.deepOf(context);
+    final answerColor = SettingsPalette.mutedOf(context);
+    final tileColor = SettingsPalette.surfaceOf(context);
     return Column(
       children: [
         for (var i = 0; i < items.length; i++) ...[
@@ -450,17 +510,16 @@ class SettingsFaqList extends StatelessWidget {
               collapsedShape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              backgroundColor: SettingsPalette.surface.withValues(alpha: 0.5),
-              collapsedBackgroundColor:
-                  SettingsPalette.surface.withValues(alpha: 0.35),
-              iconColor: SettingsPalette.accent,
-              collapsedIconColor: SettingsPalette.muted,
+              backgroundColor: tileColor,
+              collapsedBackgroundColor: tileColor,
+              iconColor: SettingsPalette.accentOf(context),
+              collapsedIconColor: SettingsPalette.mutedOf(context),
               title: Text(
                 items[i].question,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
-                  color: SettingsPalette.deep,
+                  color: titleColor,
                 ),
               ),
               children: [
@@ -468,10 +527,10 @@ class SettingsFaqList extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     items[i].answer,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       height: 1.45,
-                      color: SettingsPalette.muted,
+                      color: answerColor,
                     ),
                   ),
                 ),
@@ -498,6 +557,7 @@ class AnimatedLockTimeoutChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = SettingsPalette.accentOf(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -505,17 +565,17 @@ class AnimatedLockTimeoutChip extends StatelessWidget {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? SettingsPalette.accent : SettingsPalette.surface,
+          color: selected ? accent : SettingsPalette.surfaceOf(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? SettingsPalette.accent : SettingsPalette.border,
+            color: selected ? accent : SettingsPalette.borderOf(context),
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: SettingsPalette.accent.withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    color: accent.withValues(alpha: 0.22),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -525,7 +585,7 @@ class AnimatedLockTimeoutChip extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 13,
-            color: selected ? Colors.white : SettingsPalette.deep,
+            color: selected ? Colors.white : SettingsPalette.deepOf(context),
           ),
         ),
       ),

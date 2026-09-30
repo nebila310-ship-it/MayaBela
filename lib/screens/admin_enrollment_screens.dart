@@ -210,6 +210,7 @@ class _ParentPendingScreenState extends State<ParentPendingScreen> {
                   child: SchoolBrandingHeader(
                     schoolId: AuthService.activeSchoolId,
                     compact: true,
+                    titleColor: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 24),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/widgets/school_logo_display.dart';
 
 /// School name above logo cover — used on dashboards after sign-in.
@@ -13,6 +14,7 @@ class SchoolBrandingHeader extends StatefulWidget {
     this.compact = false,
     this.fallbackTitle,
     this.tagline,
+    this.titleColor,
   });
 
   final String? schoolId;
@@ -20,6 +22,7 @@ class SchoolBrandingHeader extends StatefulWidget {
   final bool compact;
   final String? fallbackTitle;
   final String? tagline;
+  final Color? titleColor;
 
   @override
   State<SchoolBrandingHeader> createState() => _SchoolBrandingHeaderState();
@@ -76,6 +79,9 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
     final hasSchool = record != null;
     final schoolName = hasSchool ? record.name : null;
 
+    final titleColor = widget.titleColor ?? ClassroomPalette.inkOf(context);
+    final mutedTitle = widget.titleColor ?? ClassroomPalette.mutedOf(context);
+
     if (widget.compact) {
       if (!hasSchool || schoolName == null) return const SizedBox.shrink();
       return Column(
@@ -83,10 +89,10 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
           Text(
             schoolName,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: titleColor,
             ),
           ),
           const SizedBox(height: 10),
@@ -104,7 +110,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
-              color: Colors.indigo.shade900,
+              color: titleColor,
             ),
           ),
           const SizedBox(height: 12),
@@ -117,10 +123,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
             Text(
               widget.tagline!,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.indigo.shade700.withValues(alpha: 0.85),
-              ),
+              style: TextStyle(fontSize: 13, color: mutedTitle),
             ),
           ],
         ],
@@ -131,7 +134,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
       children: [
         GestureDetector(
           onTap: widget.onSecretTap,
-          child: const Icon(Icons.school, size: 70, color: Colors.indigo),
+          child: Icon(Icons.school, size: 70, color: titleColor),
         ),
         const SizedBox(height: 14),
         Text(
@@ -140,7 +143,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
           style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w700,
-            color: Colors.indigo.shade900,
+            color: titleColor,
           ),
         ),
         if (widget.tagline != null) ...[
@@ -148,10 +151,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
           Text(
             widget.tagline!,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.indigo.shade700.withValues(alpha: 0.85),
-            ),
+            style: TextStyle(fontSize: 14, color: mutedTitle),
           ),
         ],
       ],
@@ -159,7 +159,9 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
   }
 
   Widget _logoWidget({required double height, required double width}) {
-    final record = SchoolRegistryService.instance.lookup(widget.schoolId?.trim());
+    final record = SchoolRegistryService.instance.lookup(
+      widget.schoolId?.trim(),
+    );
     final style = record?.logoStyle ?? SchoolLogoStyle.rectangular;
 
     if (style == SchoolLogoStyle.circular) {

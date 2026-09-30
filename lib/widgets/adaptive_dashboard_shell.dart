@@ -258,7 +258,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
         }
 
         return Scaffold(
-          backgroundColor: ClassroomPalette.stream,
+          backgroundColor: ClassroomPalette.streamOf(context),
           body: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -286,7 +286,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                 child: Column(
                   children: [
                     Material(
-                      color: WebErpTheme.paper.withValues(alpha: 0.92),
+                      color: WebErpTheme.paperOf(context),
                       child: SafeArea(
                         bottom: false,
                         child: Container(
@@ -294,9 +294,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                           decoration: BoxDecoration(
                             border: Border(
                               bottom: BorderSide(
-                                color: WebErpTheme.paperEdge.withValues(
-                                  alpha: 0.7,
-                                ),
+                                color: WebErpTheme.paperEdgeOf(context),
                               ),
                             ),
                           ),
@@ -313,7 +311,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                   collapsed
                                       ? Icons.menu_rounded
                                       : Icons.menu_open_rounded,
-                                  color: ClassroomPalette.ink,
+                                  color: ClassroomPalette.inkOf(context),
                                 ),
                               ),
                               Expanded(
@@ -321,15 +319,15 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                   widget.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: ClassroomPalette.ink,
+                                  style: TextStyle(
+                                    color: ClassroomPalette.inkOf(context),
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
-                              const InboxMessagesAction(
-                                iconColor: ClassroomPalette.ink,
+                              InboxMessagesAction(
+                                iconColor: ClassroomPalette.inkOf(context),
                               ),
                               IconButton(
                                 onPressed: () {
@@ -344,9 +342,9 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                 icon: Badge(
                                   isLabelVisible: unread > 0,
                                   label: Text(unread > 99 ? '99+' : '$unread'),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.notifications_outlined,
-                                    color: ClassroomPalette.ink,
+                                    color: ClassroomPalette.inkOf(context),
                                   ),
                                 ),
                               ),

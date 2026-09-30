@@ -138,15 +138,17 @@ class ClassroomSidebar extends StatelessWidget {
 
     return Material(
       key: const Key('classroom-sidebar'),
-      color: WebErpTheme.sidebarBg,
+      color: WebErpTheme.sidebarBgOf(context),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
         width: width,
         clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          color: WebErpTheme.sidebarBg,
-          border: Border(right: BorderSide(color: ClassroomPalette.line)),
+        decoration: BoxDecoration(
+          color: WebErpTheme.sidebarBgOf(context),
+          border: Border(
+            right: BorderSide(color: ClassroomPalette.lineOf(context)),
+          ),
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -304,8 +306,8 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 10, 12, 4),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          color: ClassroomPalette.muted,
+        style: TextStyle(
+          color: ClassroomPalette.mutedOf(context),
           fontSize: 10,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.1,
@@ -330,8 +332,12 @@ class _NavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? WebErpTheme.primary : ClassroomPalette.ink;
-    final bg = selected ? WebErpTheme.sidebarActive : Colors.transparent;
+    final fg = selected
+        ? WebErpTheme.primary
+        : ClassroomPalette.inkOf(context);
+    final bg = selected
+        ? WebErpTheme.sidebarActiveOf(context)
+        : Colors.transparent;
     final iconColor = selected ? WebErpTheme.primary : item.color;
     final iconBox = Badge(
       isLabelVisible: item.badge > 0 && collapsed,
@@ -364,7 +370,7 @@ class _NavTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          hoverColor: WebErpTheme.sidebarHover,
+          hoverColor: WebErpTheme.sidebarHoverOf(context),
           child: Tooltip(
             message: collapsed ? item.label : '',
             child: Padding(

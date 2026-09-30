@@ -40,13 +40,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _prefs.addListener(_rebuild);
     _roleKey = AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
     final defaults = DashboardRegistry.defaultOrderFor(_roleKey);
-    _order = _prefs
-        .getOrder(_roleKey, defaults)
-        .where((id) {
-          final entry = DashboardRegistry.find(_roleKey, id);
-          return entry != null && DashboardRegistry.shouldShow(entry);
-        })
-        .toList();
+    _order = _prefs.getOrder(_roleKey, defaults).where((id) {
+      final entry = DashboardRegistry.find(_roleKey, id);
+      return entry != null && DashboardRegistry.shouldShow(entry);
+    }).toList();
   }
 
   @override
@@ -65,109 +62,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(s.dashboardLayoutSaved),
-        backgroundColor: SettingsPalette.deep,
+        backgroundColor: SettingsPalette.deepOf(context),
       ),
     );
   }
 
   List<({String question, String answer})> get _faqItems => [
-        (question: s.settingsFaqLogin, answer: s.settingsFaqLoginAnswer),
-        (question: s.settingsFaqNotifications, answer: s.settingsFaqNotificationsAnswer),
-        (question: s.settingsFaqLanguage, answer: s.settingsFaqLanguageAnswer),
-        (question: s.settingsFaqDashboard, answer: s.settingsFaqDashboardAnswer),
-        (question: s.settingsFaqSupport, answer: s.settingsFaqSupportAnswer),
-      ];
+    (question: s.settingsFaqLogin, answer: s.settingsFaqLoginAnswer),
+    (
+      question: s.settingsFaqNotifications,
+      answer: s.settingsFaqNotificationsAnswer,
+    ),
+    (question: s.settingsFaqLanguage, answer: s.settingsFaqLanguageAnswer),
+    (question: s.settingsFaqDashboard, answer: s.settingsFaqDashboardAnswer),
+    (question: s.settingsFaqSupport, answer: s.settingsFaqSupportAnswer),
+  ];
 
   void _showAboutSheet() {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: SettingsPalette.card,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: listPagePadding(context).copyWith(top: 20, bottom: 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: SettingsPalette.headerGradient,
+      builder: (context) {
+        final sheetColor = SettingsPalette.cardOf(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: listPagePadding(context).copyWith(top: 20, bottom: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: SettingsPalette.borderOf(context),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.school_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: SettingsPalette.headerGradient,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppInfo.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppInfo.tagline,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 12,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.school_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppInfo.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            AppInfo.tagline,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _AboutRow(label: s.settingsAppVersion, value: AppInfo.versionLabel),
-            _AboutRow(label: s.settingsBuild, value: AppInfo.buildNumber),
-            _AboutRow(label: s.settingsSupportEmail, value: _supportEmailForDisplay()),
-            const SizedBox(height: 12),
-            Text(
-              s.settingsAboutDescription,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                color: SettingsPalette.muted,
+              const SizedBox(height: 16),
+              _AboutRow(
+                label: s.settingsAppVersion,
+                value: AppInfo.versionLabel,
               ),
-            ),
-          ],
-        ),
-      ),
+              _AboutRow(label: s.settingsBuild, value: AppInfo.buildNumber),
+              _AboutRow(
+                label: s.settingsSupportEmail,
+                value: _supportEmailForDisplay(),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                s.settingsAboutDescription,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: SettingsPalette.mutedOf(context),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -177,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(s.settingsEmailCopied),
-        backgroundColor: SettingsPalette.deep,
+        backgroundColor: SettingsPalette.deepOf(context),
       ),
     );
   }
@@ -193,39 +202,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _callSchoolAdmin() async {
     final contact = SchoolSupportContactService.instance.forActiveSchool();
     if (contact?.hasPhone != true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.settingsSchoolAdminUnavailable)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.settingsSchoolAdminUnavailable)));
       return;
     }
     final ok = await PhoneLaunchService.instance.dial(contact!.phone!);
     if (!mounted || ok) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.callFailed)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.callFailed)));
   }
 
   Future<void> _emailSchoolAdmin() async {
     final contact = SchoolSupportContactService.instance.forActiveSchool();
     if (contact?.hasEmail != true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.settingsSchoolAdminUnavailable)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.settingsSchoolAdminUnavailable)));
       return;
     }
     final uri = Uri(
       scheme: 'mailto',
       path: contact!.email,
-      queryParameters: {
-        'subject': 'Maya Edu — ${contact.schoolName} support',
-      },
+      queryParameters: {'subject': 'Maya Edu — ${contact.schoolName} support'},
     );
     if (!await launchUrl(uri)) {
       if (!mounted) return;
       Clipboard.setData(ClipboardData(text: contact.email!));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.settingsEmailCopied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.settingsEmailCopied)));
     }
   }
 
@@ -280,16 +287,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     ];
   }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final headerColors = isDark
-        ? [
-            scheme.surfaceContainerHighest,
-            scheme.surfaceContainerHigh,
-            scheme.surface,
-          ]
+        ? SettingsPalette.darkHeaderGradient
         : SettingsPalette.headerGradient;
 
     return Scaffold(
@@ -305,13 +309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 s.settings,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black26,
-                      blurRadius: 6,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
+                  color: Colors.white,
                 ),
               ),
               background: Container(
@@ -395,30 +393,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               key: ValueKey(id),
                               margin: const EdgeInsets.only(bottom: 8),
                               decoration: BoxDecoration(
-                                color: SettingsPalette.surface,
+                                color: SettingsPalette.surfaceOf(context),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: SettingsPalette.border),
+                                border: Border.all(
+                                  color: SettingsPalette.borderOf(context),
+                                ),
                               ),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor:
-                                      SettingsPalette.accentSoft,
+                                  backgroundColor: SettingsPalette.accentSoftOf(
+                                    context,
+                                  ),
                                   child: Icon(
                                     entry.icon,
-                                    color: SettingsPalette.accent,
+                                    color: SettingsPalette.accentOf(context),
                                     size: 20,
                                   ),
                                 ),
                                 title: Text(
                                   s.dashboardTitle(id, roleKey: _roleKey),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
+                                    color: SettingsPalette.deepOf(context),
                                   ),
                                 ),
                                 trailing: Icon(
                                   Icons.drag_indicator_rounded,
-                                  color: Colors.grey.shade500,
+                                  color: SettingsPalette.mutedOf(context),
                                 ),
                               ),
                             );
@@ -431,20 +433,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: OutlinedButton(
                                 onPressed: () {
                                   setState(() {
-                                    _order =
-                                        DashboardRegistry.defaultOrderFor(
-                                            _roleKey);
+                                    _order = DashboardRegistry.defaultOrderFor(
+                                      _roleKey,
+                                    );
                                   });
                                   _prefs.resetOrder(
                                     _roleKey,
-                                    DashboardRegistry.defaultOrderFor(
-                                        _roleKey),
+                                    DashboardRegistry.defaultOrderFor(_roleKey),
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: SettingsPalette.deep,
-                                  side: const BorderSide(
-                                    color: SettingsPalette.border,
+                                  foregroundColor: SettingsPalette.deepOf(
+                                    context,
+                                  ),
+                                  side: BorderSide(
+                                    color: SettingsPalette.borderOf(context),
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
@@ -552,7 +555,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: s.settingsHelpSupport,
-                    subtitle: SchoolSupportContactService.instance
+                    subtitle:
+                        SchoolSupportContactService
+                            .instance
                             .showSchoolAdminSupport
                         ? s.settingsContactSchoolAdminHint
                         : s.settingsHelpSupportHint,
@@ -641,7 +646,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(s.settingsCacheCleared),
-                                backgroundColor: SettingsPalette.deep,
+                                backgroundColor: SettingsPalette.deepOf(
+                                  context,
+                                ),
                               ),
                             );
                           },
@@ -675,18 +682,18 @@ class _AboutRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: SettingsPalette.muted,
+              style: TextStyle(
+                color: SettingsPalette.mutedOf(context),
                 fontSize: 13,
               ),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: SettingsPalette.deep,
+              color: SettingsPalette.deepOf(context),
             ),
           ),
         ],

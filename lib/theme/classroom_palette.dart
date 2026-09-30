@@ -21,6 +21,34 @@ abstract final class ClassroomPalette {
   static const muted = Color(0xFF5F6368);
   static const line = Color(0xFFDADCE0);
 
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color streamOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.surface : stream;
+  }
+
+  static Color cardOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.surfaceContainerHigh : card;
+  }
+
+  static Color inkOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.onSurface : ink;
+  }
+
+  static Color mutedOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.onSurfaceVariant : muted;
+  }
+
+  static Color lineOf(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return isDark(context) ? scheme.outlineVariant : line;
+  }
+
   static const List<Color> classes = [
     teal,
     blue,

@@ -5,6 +5,7 @@ import 'package:mayabela/screens/profile_screen.dart';
 import 'package:mayabela/screens/settings_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
 
 /// Modern account sheet — profile, settings, logout (all role dashboards).
@@ -31,6 +32,7 @@ Future<void> showDashboardAccountMenu(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (sheetContext) {
+      final dark = ClassroomPalette.isDark(sheetContext);
       return Padding(
         padding: EdgeInsets.fromLTRB(
           16,
@@ -40,12 +42,12 @@ Future<void> showDashboardAccountMenu(
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ClassroomPalette.cardOf(sheetContext),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: accent.withValues(alpha: 0.18),
-                blurRadius: 24,
+                color: accent.withValues(alpha: dark ? 0.22 : 0.18),
+                blurRadius: dark ? 10 : 24,
                 offset: const Offset(0, 8),
               ),
             ],
@@ -58,7 +60,7 @@ Future<void> showDashboardAccountMenu(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: ClassroomPalette.lineOf(sheetContext),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -85,9 +87,10 @@ Future<void> showDashboardAccountMenu(
                         children: [
                           Text(
                             name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
+                              color: ClassroomPalette.inkOf(sheetContext),
                             ),
                           ),
                           Text(
@@ -102,7 +105,7 @@ Future<void> showDashboardAccountMenu(
                             Text(
                               schoolId,
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: ClassroomPalette.mutedOf(sheetContext),
                                 fontSize: 12,
                               ),
                             ),
@@ -112,7 +115,7 @@ Future<void> showDashboardAccountMenu(
                   ],
                 ),
               ),
-              Divider(height: 1, color: Colors.grey.shade200),
+              Divider(height: 1, color: ClassroomPalette.lineOf(sheetContext)),
               _AccountMenuTile(
                 icon: Icons.person_outline_rounded,
                 label: s.profile,
@@ -148,7 +151,10 @@ Future<void> showDashboardAccountMenu(
                       Navigator.pop(sheetContext);
                       AuthNavigation.performLogout();
                     },
-                    icon: Icon(Icons.logout_rounded, color: Colors.red.shade700),
+                    icon: Icon(
+                      Icons.logout_rounded,
+                      color: Colors.red.shade700,
+                    ),
                     label: Text(
                       s.logout,
                       style: TextStyle(
@@ -215,22 +221,26 @@ class _AccountMenuTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
+                        color: ClassroomPalette.inkOf(context),
                       ),
                     ),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: ClassroomPalette.mutedOf(context),
                         fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.grey.shade400),
+              Icon(
+                Icons.chevron_right,
+                color: ClassroomPalette.mutedOf(context),
+              ),
             ],
           ),
         ),

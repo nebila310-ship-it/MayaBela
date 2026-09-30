@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
 
 /// Soft Classroom stream backdrop — light gray with colorful class orbs.
+/// In dark mode the wash is a solid slate so light text stays readable.
 class AdminEducationalBackground extends StatelessWidget {
   const AdminEducationalBackground({
     super.key,
@@ -13,23 +14,34 @@ class AdminEducationalBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final watermark = ClassroomPalette.ink.withValues(alpha: 0.045);
+    final dark = ClassroomPalette.isDark(context);
+    final watermark =
+        (dark ? Theme.of(context).colorScheme.onSurface : ClassroomPalette.ink)
+            .withValues(alpha: dark ? 0.06 : 0.045);
+    final orbScale = dark ? 0.28 : 1.0;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        const DecoratedBox(
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Color(0xFFF8F9FA),
-                Color(0xFFE8F0FE),
-                Color(0xFFE6F4EA),
-                Color(0xFFFEF7E0),
-              ],
+              colors: dark
+                  ? const [
+                      Color(0xFF0B1220),
+                      Color(0xFF0F172A),
+                      Color(0xFF111827),
+                      Color(0xFF0B1220),
+                    ]
+                  : const [
+                      Color(0xFFF8F9FA),
+                      Color(0xFFE8F0FE),
+                      Color(0xFFE6F4EA),
+                      Color(0xFFFEF7E0),
+                    ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              stops: [0.0, 0.38, 0.72, 1.0],
+              stops: const [0.0, 0.38, 0.72, 1.0],
             ),
           ),
         ),
@@ -37,9 +49,9 @@ class AdminEducationalBackground extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                accentColor.withValues(alpha: 0.06),
+                accentColor.withValues(alpha: dark ? 0.08 : 0.06),
                 Colors.transparent,
-                ClassroomPalette.pink.withValues(alpha: 0.04),
+                ClassroomPalette.pink.withValues(alpha: dark ? 0.04 : 0.04),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -50,7 +62,7 @@ class AdminEducationalBackground extends StatelessWidget {
           top: -40,
           right: -10,
           child: _SoftOrb(
-            color: ClassroomPalette.blue.withValues(alpha: 0.22),
+            color: ClassroomPalette.blue.withValues(alpha: 0.22 * orbScale),
             size: 200,
           ),
         ),
@@ -58,7 +70,7 @@ class AdminEducationalBackground extends StatelessWidget {
           top: 120,
           left: -50,
           child: _SoftOrb(
-            color: ClassroomPalette.teal.withValues(alpha: 0.18),
+            color: ClassroomPalette.teal.withValues(alpha: 0.18 * orbScale),
             size: 170,
           ),
         ),
@@ -66,7 +78,7 @@ class AdminEducationalBackground extends StatelessWidget {
           bottom: 90,
           right: -30,
           child: _SoftOrb(
-            color: ClassroomPalette.orange.withValues(alpha: 0.16),
+            color: ClassroomPalette.orange.withValues(alpha: 0.16 * orbScale),
             size: 160,
           ),
         ),
@@ -74,7 +86,7 @@ class AdminEducationalBackground extends StatelessWidget {
           bottom: -30,
           left: 40,
           child: _SoftOrb(
-            color: ClassroomPalette.purple.withValues(alpha: 0.14),
+            color: ClassroomPalette.purple.withValues(alpha: 0.14 * orbScale),
             size: 140,
           ),
         ),
@@ -82,7 +94,7 @@ class AdminEducationalBackground extends StatelessWidget {
           top: 280,
           right: 80,
           child: _SoftOrb(
-            color: ClassroomPalette.pink.withValues(alpha: 0.10),
+            color: ClassroomPalette.pink.withValues(alpha: 0.10 * orbScale),
             size: 110,
           ),
         ),
@@ -155,7 +167,9 @@ class _WatermarkIcon extends StatelessWidget {
       left: centerHorizontally ? 0 : left,
       right: centerHorizontally ? 0 : right,
       child: centerHorizontally
-          ? Center(child: Icon(icon, size: size, color: color))
+          ? Center(
+              child: Icon(icon, size: size, color: color),
+            )
           : Icon(icon, size: size, color: color),
     );
   }
@@ -174,9 +188,7 @@ class _SoftOrb extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color, color.withValues(alpha: 0)],
-        ),
+        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
       ),
     );
   }

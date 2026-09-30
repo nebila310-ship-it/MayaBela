@@ -134,9 +134,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           tooltip: visible ? 'Hide password' : 'Show password',
           onPressed: onToggle,
           icon: Icon(
-            visible
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
+            visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           ),
         ),
       ),
@@ -148,11 +146,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return PopScope(
       canPop: !widget.forced,
       child: Scaffold(
-        backgroundColor: SettingsPalette.surface,
+        backgroundColor: SettingsPalette.surfaceOf(context),
         appBar: AppBar(
           title: Text(s.changePassword),
-          backgroundColor: SettingsPalette.deep,
-          foregroundColor: Colors.white,
+          backgroundColor: SettingsPalette.isDark(context)
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : SettingsPalette.deep,
+          foregroundColor: SettingsPalette.isDark(context)
+              ? Theme.of(context).colorScheme.onSurface
+              : Colors.white,
           automaticallyImplyLeading: !widget.forced,
         ),
         body: ListView(
@@ -163,7 +165,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   'For security, change your temporary password before continuing.',
-                  style: TextStyle(color: Colors.grey.shade800),
+                  style: TextStyle(color: SettingsPalette.mutedOf(context)),
                 ),
               ),
             SettingsSectionCard(

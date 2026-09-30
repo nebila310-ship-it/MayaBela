@@ -28,7 +28,9 @@ class WebErpSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = inDrawer
         ? WebErpTheme.sidebarExpanded
-        : (collapsed ? WebErpTheme.sidebarCollapsed : WebErpTheme.sidebarExpanded);
+        : (collapsed
+              ? WebErpTheme.sidebarCollapsed
+              : WebErpTheme.sidebarExpanded);
     final items = webErpNavItemsForCurrentUser();
     final favorites = WebErpPrefsService.instance.favorites;
 
@@ -37,9 +39,11 @@ class WebErpSidebar extends StatelessWidget {
       curve: Curves.easeOutCubic,
       width: width,
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: WebErpTheme.sidebarBg,
-        border: Border(right: BorderSide(color: ClassroomPalette.line)),
+      decoration: BoxDecoration(
+        color: WebErpTheme.sidebarBgOf(context),
+        border: Border(
+          right: BorderSide(color: ClassroomPalette.lineOf(context)),
+        ),
       ),
       child: Column(
         children: [
@@ -49,7 +53,11 @@ class WebErpSidebar extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   ClassroomPalette.teal,
-                  Color.lerp(ClassroomPalette.teal, ClassroomPalette.blue, 0.45)!,
+                  Color.lerp(
+                    ClassroomPalette.teal,
+                    ClassroomPalette.blue,
+                    0.45,
+                  )!,
                 ],
               ),
             ),
@@ -76,15 +84,15 @@ class WebErpSidebar extends StatelessWidget {
                     tooltip: inDrawer
                         ? 'Close menu'
                         : collapsed
-                            ? 'Expand sidebar'
-                            : 'Collapse sidebar',
+                        ? 'Expand sidebar'
+                        : 'Collapse sidebar',
                     onPressed: onToggleCollapse,
                     icon: Icon(
                       inDrawer
                           ? Icons.close
                           : collapsed
-                              ? Icons.chevron_right
-                              : Icons.chevron_left,
+                          ? Icons.chevron_right
+                          : Icons.chevron_left,
                       color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
@@ -114,7 +122,8 @@ class WebErpSidebar extends StatelessWidget {
                   if (!collapsed) _sectionLabel('School bus', highlight: true),
                   if (ModuleAccess.canView('add_driver'))
                     _NavTile(
-                      item: webErpNavItemById('add_driver') ??
+                      item:
+                          webErpNavItemById('add_driver') ??
                           const WebErpNavItem(
                             id: 'add_driver',
                             label: 'Register Driver',
@@ -126,7 +135,8 @@ class WebErpSidebar extends StatelessWidget {
                     ),
                   if (ModuleAccess.canView('transport_live_gps'))
                     _NavTile(
-                      item: webErpNavItemById('transport_live_gps') ??
+                      item:
+                          webErpNavItemById('transport_live_gps') ??
                           const WebErpNavItem(
                             id: 'transport_live_gps',
                             label: 'Live GPS',
@@ -179,14 +189,20 @@ class WebErpSidebar extends StatelessWidget {
   Widget _sectionLabel(String text, {bool highlight = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          color: highlight ? ClassroomPalette.green : ClassroomPalette.muted,
-          fontSize: highlight ? 12 : 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.1,
-        ),
+      child: Builder(
+        builder: (context) {
+          return Text(
+            text.toUpperCase(),
+            style: TextStyle(
+              color: highlight
+                  ? ClassroomPalette.green
+                  : ClassroomPalette.mutedOf(context),
+              fontSize: highlight ? 12 : 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+          );
+        },
       ),
     );
   }
@@ -209,6 +225,7 @@ class _NavTile extends StatelessWidget {
   Widget build(BuildContext context) {
     if (item.isLogout) {
       return _tile(
+        context: context,
         icon: item.icon,
         label: item.label,
         color: ClassroomPalette.red,
@@ -221,6 +238,7 @@ class _NavTile extends StatelessWidget {
         : DashboardBadgeService.instance.countFor(item.badgeId!);
 
     return _tile(
+      context: context,
       icon: item.icon,
       label: item.label,
       badge: badge,
@@ -228,15 +246,19 @@ class _NavTile extends StatelessWidget {
   }
 
   Widget _tile({
+    required BuildContext context,
     required IconData icon,
     required String label,
     int badge = 0,
     Color? color,
   }) {
     final accent = ClassroomPalette.forKey(item.id);
-    final fg = color ??
-        (selected ? WebErpTheme.primary : ClassroomPalette.ink);
-    final bg = selected ? WebErpTheme.sidebarActive : Colors.transparent;
+    final fg =
+        color ??
+        (selected ? WebErpTheme.primary : ClassroomPalette.inkOf(context));
+    final bg = selected
+        ? WebErpTheme.sidebarActiveOf(context)
+        : Colors.transparent;
     final iconColor = color ?? (selected ? WebErpTheme.primary : accent);
 
     return Padding(
@@ -250,7 +272,7 @@ class _NavTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          hoverColor: WebErpTheme.sidebarHover,
+          hoverColor: WebErpTheme.sidebarHoverOf(context),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: collapsed ? 10 : 14,
@@ -282,8 +304,9 @@ class _NavTile extends StatelessWidget {
                       label,
                       style: TextStyle(
                         color: fg,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         fontSize: 13,
                       ),
                       overflow: TextOverflow.ellipsis,
