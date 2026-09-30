@@ -5,10 +5,11 @@ import 'package:mayabela/widgets/dom_backed_text_field_stub.dart'
     if (dart.library.html) 'package:mayabela/widgets/dom_backed_text_field_web.dart'
     as platform;
 
-/// Text field that uses a real HTML `<input>` on web so browser autofill,
-/// password managers, and UI automation can write into Flutter controllers.
+/// Login / form field used on every platform.
 ///
-/// Non-web builds use a normal [TextField].
+/// Web and native both use [TextField] so School ID and username stay in
+/// their own rows (stacked HTML platform views were painting on top of
+/// each other). Autofill still goes through [autofillHints].
 class DomBackedTextField extends StatelessWidget {
   const DomBackedTextField({
     super.key,

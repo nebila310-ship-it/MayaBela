@@ -287,16 +287,23 @@ InputDecoration webLoginFieldDecoration({
   Widget? suffixIcon,
 }) {
   const fieldBg = Color(0xFF1E2F45);
+  const iconBox = BoxConstraints(minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40);
   return InputDecoration(
     labelText: label,
     hintText: hint,
+    floatingLabelBehavior: FloatingLabelBehavior.always,
+    alignLabelWithHint: true,
+    isDense: true,
     labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+    floatingLabelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
     hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
     prefixIcon: prefixIcon,
     suffixIcon: suffixIcon,
+    prefixIconConstraints: iconBox,
+    suffixIconConstraints: iconBox,
     filled: true,
     fillColor: fieldBg,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    contentPadding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
       borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
