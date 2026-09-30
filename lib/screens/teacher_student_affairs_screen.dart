@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/models/leave_request.dart';
-import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -29,9 +28,8 @@ class _TeacherStudentAffairsScreenState
     LeaveRequestService.instance.ensureLoaded();
   }
 
-  Set<String> get _myClassNames => TeacherAccessService.instance.myClasses
-      .map((a) => a.className)
-      .toSet();
+  Set<String> get _myClassNames =>
+      TeacherAccessService.instance.myClasses.map((a) => a.className).toSet();
 
   bool get _isHomeroom => TeacherAccessService.instance.hasAnyHomeroomClass;
 
@@ -54,12 +52,7 @@ class _TeacherStudentAffairsScreenState
           icon: const Icon(Icons.note_add_outlined),
           label: const Text('Report'),
         ),
-        body: TabBarView(
-          children: [
-            _reportsTab(context),
-            _leaveTab(context),
-          ],
-        ),
+        body: TabBarView(children: [_reportsTab(context), _leaveTab(context)]),
       ),
     );
   }
@@ -68,8 +61,9 @@ class _TeacherStudentAffairsScreenState
     return ListenableBuilder(
       listenable: DisciplineService.instance,
       builder: (context, _) {
-        final username = AuthService.currentUser?.username ?? '';
-        final mine = DisciplineService.instance.reportedBy(username);
+        final mine = DisciplineService.instance.reportsForCurrentTeacher();
+        final open = mine.where((c) => c.isOpen).toList();
+        final closed = mine.where((c) => c.isClosed).toList();
         if (mine.isEmpty) {
           return const Center(
             child: Padding(
@@ -82,28 +76,56 @@ class _TeacherStudentAffairsScreenState
             ),
           );
         }
-        return ListView.builder(
+        return ListView(
           padding: const EdgeInsets.all(12),
-          itemCount: mine.length,
-          itemBuilder: (context, i) {
-            final c = mine[i];
-            return Card(
-              child: ListTile(
-                leading: Icon(
-                  c.kind == DisciplineCaseKind.behaviour
-                      ? Icons.psychology_alt_outlined
-                      : Icons.report_outlined,
-                ),
-                title: Text('${c.studentName} — ${c.title}'),
-                subtitle: Text(
-                  '${c.className} • ${_statusLabel(c.status)}'
-                  '${c.outcome != DisciplineOutcome.none ? ' • ${c.outcome.name}' : ''}',
+          children: [
+            if (open.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.fromLTRB(4, 4, 4, 8),
+                child: Text(
+                  'Open reports',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-            );
-          },
+              for (final c in open) _reportCard(c),
+            ],
+            if (closed.isNotEmpty) ...[
+              Padding(
+                padding: EdgeInsets.fromLTRB(4, open.isEmpty ? 4 : 16, 4, 8),
+                child: const Text(
+                  'Closed reports',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              for (final c in closed) _reportCard(c),
+            ],
+          ],
         );
       },
+    );
+  }
+
+  Widget _reportCard(DisciplineCase c) {
+    final closedBits = <String>[
+      _statusLabel(c.status),
+      if (c.outcome != DisciplineOutcome.none)
+        DisciplineConductCodes.outcomeLabel(c.outcome),
+      if (c.handledByName.isNotEmpty) 'Handled by ${c.handledByName}',
+    ];
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          c.kind == DisciplineCaseKind.behaviour
+              ? Icons.psychology_alt_outlined
+              : Icons.report_outlined,
+        ),
+        title: Text('${c.studentName} — ${c.title}'),
+        subtitle: Text(
+          '${c.className} • ${closedBits.join(' • ')}'
+          '${c.outcomeNotes.isNotEmpty ? '\n${c.outcomeNotes}' : ''}',
+        ),
+        isThreeLine: c.outcomeNotes.isNotEmpty,
+      ),
     );
   }
 
@@ -165,21 +187,15 @@ class _TeacherStudentAffairsScreenState
                       Row(
                         children: [
                           FilledButton.icon(
-                            onPressed: () =>
-                                LeaveRequestService.instance.review(
-                              r.id,
-                              approve: true,
-                            ),
+                            onPressed: () => LeaveRequestService.instance
+                                .review(r.id, approve: true),
                             icon: const Icon(Icons.check),
                             label: const Text('Approve'),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
-                            onPressed: () =>
-                                LeaveRequestService.instance.review(
-                              r.id,
-                              approve: false,
-                            ),
+                            onPressed: () => LeaveRequestService.instance
+                                .review(r.id, approve: false),
                             icon: const Icon(Icons.close),
                             label: const Text('Reject'),
                           ),
@@ -198,11 +214,12 @@ class _TeacherStudentAffairsScreenState
 
   Future<void> _showFileReportSheet(BuildContext context) async {
     final classes = _myClassNames;
-    final students = StudentRegistryService.instance
-        .getAllStudents()
-        .where((s) => s.isActive && classes.contains(s.className))
-        .toList()
-      ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    final students =
+        StudentRegistryService.instance
+            .getAllStudents()
+            .where((s) => s.isActive && classes.contains(s.className))
+            .toList()
+          ..sort((a, b) => a.fullName.compareTo(b.fullName));
     if (students.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No students found for your classes.')),
@@ -311,13 +328,13 @@ class _TeacherStudentAffairsScreenState
   }
 
   static String _statusLabel(DisciplineCaseStatus status) => switch (status) {
-        DisciplineCaseStatus.submitted => 'Submitted',
-        DisciplineCaseStatus.investigating => 'Under investigation',
-        DisciplineCaseStatus.hearingScheduled => 'Hearing scheduled',
-        DisciplineCaseStatus.resolved => 'Resolved',
-        DisciplineCaseStatus.dismissed => 'Dismissed',
-        DisciplineCaseStatus.escalated => 'Escalated',
-      };
+    DisciplineCaseStatus.submitted => 'Submitted',
+    DisciplineCaseStatus.investigating => 'Under investigation',
+    DisciplineCaseStatus.hearingScheduled => 'Hearing scheduled',
+    DisciplineCaseStatus.resolved => 'Closed',
+    DisciplineCaseStatus.dismissed => 'Closed — dismissed',
+    DisciplineCaseStatus.escalated => 'Escalated',
+  };
 
   static String _dateLabel(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

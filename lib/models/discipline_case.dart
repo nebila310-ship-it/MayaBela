@@ -110,9 +110,11 @@ class DisciplineCase {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  bool get isOpen =>
-      status != DisciplineCaseStatus.resolved &&
-      status != DisciplineCaseStatus.dismissed;
+  bool get isClosed =>
+      status == DisciplineCaseStatus.resolved ||
+      status == DisciplineCaseStatus.dismissed;
+
+  bool get isOpen => !isClosed;
 
   DisciplineCase copyWith({
     DisciplineCaseStatus? status,
@@ -153,29 +155,29 @@ class DisciplineCase {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'schoolId': schoolId,
-        'studentId': studentId,
-        'studentName': studentName,
-        'className': className,
-        'reporterId': reporterId,
-        'reporterName': reporterName,
-        'reporterRole': reporterRole,
-        'kind': kind.name,
-        'title': title,
-        'description': description,
-        'conductCode': conductCode,
-        'status': status.name,
-        'outcome': outcome.name,
-        'outcomeNotes': outcomeNotes,
-        'hearingAt': hearingAt?.toIso8601String(),
-        'parentInvited': parentInvited,
-        'parentNotified': parentNotified,
-        'escalatedTo': escalatedTo,
-        'handledByName': handledByName,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'schoolId': schoolId,
+    'studentId': studentId,
+    'studentName': studentName,
+    'className': className,
+    'reporterId': reporterId,
+    'reporterName': reporterName,
+    'reporterRole': reporterRole,
+    'kind': kind.name,
+    'title': title,
+    'description': description,
+    'conductCode': conductCode,
+    'status': status.name,
+    'outcome': outcome.name,
+    'outcomeNotes': outcomeNotes,
+    'hearingAt': hearingAt?.toIso8601String(),
+    'parentInvited': parentInvited,
+    'parentNotified': parentNotified,
+    'escalatedTo': escalatedTo,
+    'handledByName': handledByName,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   static DisciplineCase fromMap(Map<String, dynamic> map) {
     DateTime parseDate(Object? v) =>
@@ -196,10 +198,7 @@ class DisciplineCase {
       title: '${map['title'] ?? ''}',
       description: '${map['description'] ?? ''}',
       conductCode: '${map['conductCode'] ?? ''}',
-      status: DisciplineCaseStatus.values.firstWhere(
-        (s) => s.name == map['status'],
-        orElse: () => DisciplineCaseStatus.submitted,
-      ),
+      status: _parseStatus(map['status']),
       outcome: DisciplineOutcome.values.firstWhere(
         (o) => o.name == map['outcome'],
         orElse: () => DisciplineOutcome.none,
@@ -214,6 +213,17 @@ class DisciplineCase {
       handledByName: '${map['handledByName'] ?? ''}',
       createdAt: parseDate(map['createdAt']),
       updatedAt: parseDate(map['updatedAt']),
+    );
+  }
+
+  static DisciplineCaseStatus _parseStatus(Object? raw) {
+    final name = '$raw'.trim().toLowerCase();
+    if (name == 'closed' || name == 'resolved') {
+      return DisciplineCaseStatus.resolved;
+    }
+    return DisciplineCaseStatus.values.firstWhere(
+      (s) => s.name == name,
+      orElse: () => DisciplineCaseStatus.submitted,
     );
   }
 }
