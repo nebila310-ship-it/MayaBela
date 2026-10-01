@@ -26,6 +26,8 @@ enum LicenseHealth { valid, expiring, expired, none }
 
 enum CommitteeStatus { active, paused, dissolved }
 
+enum InstitutionStaffKind { teacher, employee }
+
 enum MeetingBodyKind { board, slt, committee, other }
 
 enum RiskLikelihood { low, medium, high }
@@ -57,6 +59,14 @@ enum PropertyStatus { inUse, planned, leased, disposed }
 enum ArchiveSeries { policies, minutes, licenses, sef, other }
 
 enum ArchiveStatus { current, archived, destroyed }
+
+List<String> institutionStringList(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final item in raw)
+      if ('$item'.trim().isNotEmpty) '$item'.trim(),
+  ];
+}
 
 class InstitutionProfile {
   const InstitutionProfile({
@@ -355,6 +365,7 @@ class InstitutionPolicy {
     this.status = PolicyStatus.draft,
     this.reviewDate = '',
     this.notes = '',
+    this.attachmentPaths = const [],
   });
 
   final String id;
@@ -364,6 +375,7 @@ class InstitutionPolicy {
   final PolicyStatus status;
   final String reviewDate;
   final String notes;
+  final List<String> attachmentPaths;
 
   bool get reviewDueSoon {
     final due = DateTime.tryParse(reviewDate);
@@ -381,6 +393,7 @@ class InstitutionPolicy {
     PolicyStatus? status,
     String? reviewDate,
     String? notes,
+    List<String>? attachmentPaths,
   }) {
     return InstitutionPolicy(
       id: id,
@@ -390,6 +403,7 @@ class InstitutionPolicy {
       status: status ?? this.status,
       reviewDate: reviewDate ?? this.reviewDate,
       notes: notes ?? this.notes,
+      attachmentPaths: attachmentPaths ?? this.attachmentPaths,
     );
   }
 
@@ -401,6 +415,7 @@ class InstitutionPolicy {
     'status': status.name,
     'reviewDate': reviewDate,
     'notes': notes,
+    'attachmentPaths': attachmentPaths,
   };
 
   static InstitutionPolicy fromMap(Map<String, dynamic> map) {
@@ -415,6 +430,7 @@ class InstitutionPolicy {
       ),
       reviewDate: '${map['reviewDate'] ?? ''}',
       notes: '${map['notes'] ?? ''}',
+      attachmentPaths: institutionStringList(map['attachmentPaths']),
     );
   }
 
@@ -470,6 +486,7 @@ class InstitutionLicense {
     this.expiresOn = '',
     this.campusScope = 'Institution-wide',
     this.notes = '',
+    this.attachmentPaths = const [],
   });
 
   final String id;
@@ -480,6 +497,7 @@ class InstitutionLicense {
   final String expiresOn;
   final String campusScope;
   final String notes;
+  final List<String> attachmentPaths;
 
   LicenseHealth get health {
     final expiry = DateTime.tryParse(expiresOn);
@@ -501,6 +519,7 @@ class InstitutionLicense {
     String? expiresOn,
     String? campusScope,
     String? notes,
+    List<String>? attachmentPaths,
   }) {
     return InstitutionLicense(
       id: id,
@@ -511,6 +530,7 @@ class InstitutionLicense {
       expiresOn: expiresOn ?? this.expiresOn,
       campusScope: campusScope ?? this.campusScope,
       notes: notes ?? this.notes,
+      attachmentPaths: attachmentPaths ?? this.attachmentPaths,
     );
   }
 
@@ -523,6 +543,7 @@ class InstitutionLicense {
     'expiresOn': expiresOn,
     'campusScope': campusScope,
     'notes': notes,
+    'attachmentPaths': attachmentPaths,
   };
 
   static InstitutionLicense fromMap(Map<String, dynamic> map) {
@@ -535,6 +556,7 @@ class InstitutionLicense {
       expiresOn: '${map['expiresOn'] ?? ''}',
       campusScope: '${map['campusScope'] ?? 'Institution-wide'}',
       notes: '${map['notes'] ?? ''}',
+      attachmentPaths: institutionStringList(map['attachmentPaths']),
     );
   }
 
@@ -640,22 +662,78 @@ class InstitutionResolution {
   };
 }
 
+class InstitutionStaffMember {
+  const InstitutionStaffMember({
+    required this.kind,
+    required this.personId,
+    required this.name,
+    this.title = '',
+  });
+
+  final InstitutionStaffKind kind;
+  final String personId;
+  final String name;
+  final String title;
+
+  String get key => '${kind.name}:$personId';
+
+  InstitutionStaffMember copyWith({
+    InstitutionStaffKind? kind,
+    String? personId,
+    String? name,
+    String? title,
+  }) {
+    return InstitutionStaffMember(
+      kind: kind ?? this.kind,
+      personId: personId ?? this.personId,
+      name: name ?? this.name,
+      title: title ?? this.title,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'kind': kind.name,
+    'personId': personId,
+    'name': name,
+    'title': title,
+  };
+
+  static InstitutionStaffMember fromMap(Map<String, dynamic> map) {
+    return InstitutionStaffMember(
+      kind: InstitutionStaffKind.values.firstWhere(
+        (v) => v.name == map['kind'],
+        orElse: () => InstitutionStaffKind.employee,
+      ),
+      personId: '${map['personId'] ?? ''}'.trim(),
+      name: '${map['name'] ?? ''}'.trim(),
+      title: '${map['title'] ?? ''}'.trim(),
+    );
+  }
+
+  static String kindLabel(InstitutionStaffKind kind) => switch (kind) {
+    InstitutionStaffKind.teacher => 'Teacher',
+    InstitutionStaffKind.employee => 'Employee',
+  };
+}
+
 class InstitutionCommittee {
-  const InstitutionCommittee({
+  InstitutionCommittee({
     required this.id,
     required this.name,
     this.chairName = '',
     this.chairSeatId = '',
-    this.members = '',
+    String members = '',
+    this.memberList = const [],
     this.termsOfReference = '',
     this.status = CommitteeStatus.active,
-  });
+  }) : members = memberList.isNotEmpty ? membersLabel(memberList) : members;
 
   final String id;
   final String name;
   final String chairName;
   final String chairSeatId;
   final String members;
+  final List<InstitutionStaffMember> memberList;
   final String termsOfReference;
   final CommitteeStatus status;
 
@@ -664,15 +742,20 @@ class InstitutionCommittee {
     String? chairName,
     String? chairSeatId,
     String? members,
+    List<InstitutionStaffMember>? memberList,
     String? termsOfReference,
     CommitteeStatus? status,
   }) {
+    final nextList = memberList ?? this.memberList;
     return InstitutionCommittee(
       id: id,
       name: name ?? this.name,
       chairName: chairName ?? this.chairName,
       chairSeatId: chairSeatId ?? this.chairSeatId,
-      members: members ?? this.members,
+      memberList: nextList,
+      members:
+          members ??
+          (memberList != null ? membersLabel(memberList) : this.members),
       termsOfReference: termsOfReference ?? this.termsOfReference,
       status: status ?? this.status,
     );
@@ -684,16 +767,24 @@ class InstitutionCommittee {
     'chairName': chairName,
     'chairSeatId': chairSeatId,
     'members': members,
+    'memberList': memberList.map((e) => e.toMap()).toList(),
     'termsOfReference': termsOfReference,
     'status': status.name,
   };
 
   static InstitutionCommittee fromMap(Map<String, dynamic> map) {
+    final parsed = <InstitutionStaffMember>[
+      for (final item
+          in (map['memberList'] is List ? map['memberList'] as List : const []))
+        if (item is Map)
+          InstitutionStaffMember.fromMap(Map<String, dynamic>.from(item)),
+    ].where((m) => m.personId.isNotEmpty).toList();
     return InstitutionCommittee(
       id: '${map['id'] ?? ''}',
       name: '${map['name'] ?? ''}',
       chairName: '${map['chairName'] ?? ''}',
       chairSeatId: '${map['chairSeatId'] ?? ''}',
+      memberList: parsed,
       members: '${map['members'] ?? ''}',
       termsOfReference: '${map['termsOfReference'] ?? ''}',
       status: CommitteeStatus.values.firstWhere(
@@ -702,6 +793,11 @@ class InstitutionCommittee {
       ),
     );
   }
+
+  static String membersLabel(List<InstitutionStaffMember> list) => list
+      .map((m) => m.name.trim())
+      .where((name) => name.isNotEmpty)
+      .join(', ');
 
   static String statusLabel(CommitteeStatus status) => switch (status) {
     CommitteeStatus.active => 'Active',

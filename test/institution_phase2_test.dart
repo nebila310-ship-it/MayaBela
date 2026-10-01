@@ -43,7 +43,7 @@ void main() {
   test('committee, meeting, risk and partner persist on the school', () async {
     final svc = InstitutionService.instance;
     await svc.upsertCommittee(
-      const InstitutionCommittee(
+      InstitutionCommittee(
         id: 'com-1',
         name: 'Safeguarding committee',
         chairName: 'Amina Bekele',

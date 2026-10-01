@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/institution_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/employee_registry_service.dart';
 import 'package:mayabela/services/persistence/institution_persistence_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 
 /// Institutional Management register — local + cloud snapshot.
 class InstitutionService extends ChangeNotifier {
@@ -28,6 +30,45 @@ class InstitutionService extends ChangeNotifier {
   String? get _schoolId {
     final sid = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
     return sid.isEmpty ? null : sid;
+  }
+
+  /// Teachers plus HR employees for the school, keyed by their IDs.
+  /// An HR row is skipped when a teacher already uses that employeeId.
+  List<InstitutionStaffMember> staffDirectory(String? schoolId) {
+    final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
+    if (sid.isEmpty) return const [];
+    final teachers = TeacherRegistryService.instance.teachersForSchool(sid);
+    final linkedEmployeeIds = <String>{
+      for (final teacher in teachers)
+        if ((teacher.employeeId ?? '').trim().isNotEmpty)
+          teacher.employeeId!.trim().toUpperCase(),
+    };
+    final staff = <InstitutionStaffMember>[
+      for (final teacher in teachers)
+        InstitutionStaffMember(
+          kind: InstitutionStaffKind.teacher,
+          personId: teacher.teacherId,
+          name: teacher.fullName,
+          title: teacher.subject,
+        ),
+    ];
+    for (final employee in EmployeeRegistryService.instance.employeesForSchool(
+      sid,
+    )) {
+      if (linkedEmployeeIds.contains(employee.employeeId.toUpperCase())) {
+        continue;
+      }
+      staff.add(
+        InstitutionStaffMember(
+          kind: InstitutionStaffKind.employee,
+          personId: employee.employeeId,
+          name: employee.fullName,
+          title: employee.jobTitle,
+        ),
+      );
+    }
+    staff.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return staff;
   }
 
   InstitutionRecord recordFor(String? schoolId) {

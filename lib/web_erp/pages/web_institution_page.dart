@@ -8,6 +8,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
+import 'package:mayabela/widgets/course_attachment_picker.dart';
 
 /// Institutional Management desk — grouped Identity, Governance, Improvement,
 /// and Estate. Not School / Campus / QA ops.
@@ -416,6 +417,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               if (committee.chairName.isNotEmpty)
                 'Chair: ${committee.chairName}',
               if (committee.members.isNotEmpty) committee.members,
+              if (committee.memberList.isNotEmpty)
+                '${committee.memberList.length} staff',
             ].join(' · '),
             onEdit: () => _editCommittee(committee),
             onDelete: () => _guarded(() async {
@@ -516,6 +519,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               if (policy.owner.isNotEmpty) policy.owner,
               if (policy.reviewDate.isNotEmpty) 'Review ${policy.reviewDate}',
               if (policy.reviewDueSoon) 'Review due soon',
+              if (policy.attachmentPaths.isNotEmpty)
+                _fileCountLabel(policy.attachmentPaths.length),
             ].join(' · '),
             onEdit: () => _editPolicy(policy),
             onDelete: () => _guarded(() async {
@@ -562,6 +567,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               if (license.number.isNotEmpty) license.number,
               if (license.expiresOn.isNotEmpty) 'Expires ${license.expiresOn}',
               license.campusScope,
+              if (license.attachmentPaths.isNotEmpty)
+                _fileCountLabel(license.attachmentPaths.length),
             ].join(' · '),
             tone: switch (license.health) {
               LicenseHealth.expired => Colors.red.shade700,
@@ -1141,6 +1148,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     });
   }
 
+  String _fileCountLabel(int count) => count == 1 ? '1 file' : '$count files';
+
   Future<void> _editPolicy([InstitutionPolicy? existing]) async {
     var status = existing?.status ?? PolicyStatus.draft;
     final number = TextEditingController(text: existing?.number ?? '');
@@ -1148,6 +1157,9 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     final owner = TextEditingController(text: existing?.owner ?? '');
     final review = TextEditingController(text: existing?.reviewDate ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    var attachmentPaths = List<String>.from(
+      existing?.attachmentPaths ?? const [],
+    );
     final saved = await _formDialog(
       title: existing == null ? 'Add policy' : 'Edit policy',
       builder: (setDialogState) => [
@@ -1190,6 +1202,18 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           maxLines: 2,
           decoration: const InputDecoration(labelText: 'Notes'),
         ),
+        CourseAttachmentPicker(
+          paths: attachmentPaths,
+          subdir: 'institution_policy_attachments',
+          sectionTitle: 'Policy files',
+          onChanged: (next) => setDialogState(() => attachmentPaths = next),
+        ),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Attach one or more files. Tap Add attachment again to add more.',
+          ),
+        ),
       ],
     );
     if (saved != true) return;
@@ -1203,6 +1227,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           status: status,
           reviewDate: review.text.trim(),
           notes: notes.text.trim(),
+          attachmentPaths: attachmentPaths,
         ),
         schoolId: _schoolId,
       );
@@ -1266,9 +1291,12 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       text: existing?.campusScope ?? 'Institution-wide',
     );
     final notes = TextEditingController(text: existing?.notes ?? '');
+    var attachmentPaths = List<String>.from(
+      existing?.attachmentPaths ?? const [],
+    );
     final saved = await _formDialog(
       title: existing == null ? 'Add license / accreditation' : 'Edit license',
-      builder: (_) => [
+      builder: (setDialogState) => [
         TextField(
           controller: title,
           decoration: const InputDecoration(
@@ -1308,6 +1336,18 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           maxLines: 2,
           decoration: const InputDecoration(labelText: 'Notes / conditions'),
         ),
+        CourseAttachmentPicker(
+          paths: attachmentPaths,
+          subdir: 'institution_license_attachments',
+          sectionTitle: 'License files',
+          onChanged: (next) => setDialogState(() => attachmentPaths = next),
+        ),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Attach one or more files. Tap Add attachment again to add more.',
+          ),
+        ),
       ],
     );
     if (saved != true) return;
@@ -1322,6 +1362,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           expiresOn: expires.text.trim(),
           campusScope: scope.text.trim(),
           notes: notes.text.trim(),
+          attachmentPaths: attachmentPaths,
         ),
         schoolId: _schoolId,
       );
@@ -1443,8 +1484,21 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     }
     final name = TextEditingController(text: existing?.name ?? '');
     final chair = TextEditingController(text: existing?.chairName ?? '');
-    final members = TextEditingController(text: existing?.members ?? '');
     final tor = TextEditingController(text: existing?.termsOfReference ?? '');
+    final search = TextEditingController();
+    final directory = _svc.staffDirectory(_schoolId);
+    final extras = [
+      for (final member
+          in existing?.memberList ?? const <InstitutionStaffMember>[])
+        if (directory.every((row) => row.key != member.key)) member,
+    ];
+    final staff = [...directory, ...extras];
+    final selected = {
+      for (final member
+          in existing?.memberList ?? const <InstitutionStaffMember>[])
+        member.key,
+    };
+    var query = '';
     final saved = await _formDialog(
       title: existing == null ? 'Add committee' : 'Edit committee',
       builder: (setDialogState) => [
@@ -1486,13 +1540,15 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           controller: chair,
           decoration: const InputDecoration(labelText: 'Chair name'),
         ),
-        TextField(
-          controller: members,
-          maxLines: 2,
-          decoration: const InputDecoration(
-            labelText: 'Members',
-            hintText: 'Names, comma separated',
-          ),
+        _CommitteeStaffPicker(
+          staff: staff,
+          selectedKeys: selected,
+          query: query,
+          search: search,
+          onQueryChanged: (value) => setDialogState(() => query = value),
+          onToggle: (member) => setDialogState(() {
+            if (!selected.add(member.key)) selected.remove(member.key);
+          }),
         ),
         TextField(
           controller: tor,
@@ -1515,6 +1571,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       ],
     );
     if (saved != true) return;
+    final memberList = [
+      for (final member in staff)
+        if (selected.contains(member.key)) member,
+    ];
     await _guarded(() async {
       await _svc.upsertCommittee(
         InstitutionCommittee(
@@ -1522,7 +1582,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           name: name.text.trim(),
           chairName: chair.text.trim(),
           chairSeatId: chairSeatId,
-          members: members.text.trim(),
+          memberList: memberList,
           termsOfReference: tor.text.trim(),
           status: status,
         ),
@@ -2241,7 +2301,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text(title),
           content: SizedBox(
-            width: 460,
+            width: 520,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -2274,6 +2334,102 @@ class _Action {
   const _Action({required this.label, required this.onTap});
   final String label;
   final VoidCallback onTap;
+}
+
+class _CommitteeStaffPicker extends StatelessWidget {
+  const _CommitteeStaffPicker({
+    required this.staff,
+    required this.selectedKeys,
+    required this.query,
+    required this.search,
+    required this.onQueryChanged,
+    required this.onToggle,
+  });
+
+  final List<InstitutionStaffMember> staff;
+  final Set<String> selectedKeys;
+  final String query;
+  final TextEditingController search;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<InstitutionStaffMember> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final needle = query.trim().toLowerCase();
+    final filtered = needle.isEmpty
+        ? staff
+        : staff
+              .where(
+                (member) =>
+                    member.name.toLowerCase().contains(needle) ||
+                    member.personId.toLowerCase().contains(needle) ||
+                    member.title.toLowerCase().contains(needle),
+              )
+              .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Members (from school staff)',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Select teachers and employees by ID. Add staff in Human Resource or Teachers first.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        TextField(
+          controller: search,
+          decoration: const InputDecoration(
+            labelText: 'Search staff',
+            hintText: 'Name or ID',
+            prefixIcon: Icon(Icons.search),
+          ),
+          onChanged: onQueryChanged,
+        ),
+        const SizedBox(height: 8),
+        if (staff.isEmpty)
+          const Text(
+            'No employees or teachers with an ID yet. Add them in Human Resource or Teachers first.',
+          )
+        else ...[
+          Text(
+            '${selectedKeys.length} selected',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 240),
+            child: filtered.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('No matching staff.'),
+                  )
+                : ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final member in filtered)
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: selectedKeys.contains(member.key),
+                          title: Text(member.name),
+                          subtitle: Text(
+                            [
+                              InstitutionStaffMember.kindLabel(member.kind),
+                              member.personId,
+                              if (member.title.isNotEmpty) member.title,
+                            ].join(' · '),
+                          ),
+                          onChanged: (_) => onToggle(member),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _ProfileForm extends StatefulWidget {
