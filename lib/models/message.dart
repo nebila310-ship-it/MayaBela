@@ -255,6 +255,17 @@ class Conversation {
     return count;
   }
 
+  DateTime get lastActivityAt {
+    if (messages.isEmpty) {
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+    var latest = messages.first.time;
+    for (final message in messages.skip(1)) {
+      if (message.time.isAfter(latest)) latest = message.time;
+    }
+    return latest;
+  }
+
   String get lastMessage {
     if (messages.isEmpty) return 'No messages yet';
     final last = messages.last;

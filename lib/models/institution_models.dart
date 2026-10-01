@@ -451,6 +451,8 @@ class InstitutionPolicy {
   };
 }
 
+enum CircularAudience { teachers, administrativeStaff, both }
+
 class OfficialCircular {
   const OfficialCircular({
     required this.id,
@@ -458,6 +460,8 @@ class OfficialCircular {
     required this.title,
     this.issuedOn = '',
     this.body = '',
+    this.audience = CircularAudience.both,
+    this.attachmentPaths = const [],
   });
 
   final String id;
@@ -465,6 +469,27 @@ class OfficialCircular {
   final String title;
   final String issuedOn;
   final String body;
+  final CircularAudience audience;
+  final List<String> attachmentPaths;
+
+  OfficialCircular copyWith({
+    String? number,
+    String? title,
+    String? issuedOn,
+    String? body,
+    CircularAudience? audience,
+    List<String>? attachmentPaths,
+  }) {
+    return OfficialCircular(
+      id: id,
+      number: number ?? this.number,
+      title: title ?? this.title,
+      issuedOn: issuedOn ?? this.issuedOn,
+      body: body ?? this.body,
+      audience: audience ?? this.audience,
+      attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+    );
+  }
 
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -472,6 +497,8 @@ class OfficialCircular {
     'title': title,
     'issuedOn': issuedOn,
     'body': body,
+    'audience': audience.name,
+    'attachmentPaths': attachmentPaths,
   };
 
   static OfficialCircular fromMap(Map<String, dynamic> map) {
@@ -481,8 +508,19 @@ class OfficialCircular {
       title: '${map['title'] ?? ''}',
       issuedOn: '${map['issuedOn'] ?? ''}',
       body: '${map['body'] ?? ''}',
+      audience: CircularAudience.values.firstWhere(
+        (v) => v.name == map['audience'],
+        orElse: () => CircularAudience.both,
+      ),
+      attachmentPaths: institutionStringList(map['attachmentPaths']),
     );
   }
+
+  static String audienceLabel(CircularAudience audience) => switch (audience) {
+    CircularAudience.teachers => 'Teachers',
+    CircularAudience.administrativeStaff => 'Administrative staff',
+    CircularAudience.both => 'Both',
+  };
 }
 
 class InstitutionLicense {
