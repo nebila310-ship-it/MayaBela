@@ -9,8 +9,8 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
-/// Phase 1 Institutional Management desk — profile, leadership, structure,
-/// policies, licenses, and resolutions. Not School / Campus / QA ops.
+/// Institutional Management desk — Phase 1 identity/governance plus Phase 2
+/// committees, meetings, risks, and partners. Not School / Campus / QA ops.
 class WebInstitutionPage extends StatefulWidget {
   const WebInstitutionPage({super.key});
 
@@ -20,7 +20,7 @@ class WebInstitutionPage extends StatefulWidget {
 
 class _WebInstitutionPageState extends State<WebInstitutionPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 7, vsync: this);
+  late final TabController _tabs = TabController(length: 11, vsync: this);
   final _svc = InstitutionService.instance;
 
   bool get _canManage => ModuleAccess.canManage('institution');
@@ -81,9 +81,9 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Governance of the institution: identity, leadership, policies, '
-                'licenses, and board decisions. Academic year, student campus '
-                'assignment, and teaching QA stay on their own desks.',
+                'Governance of the institution: identity, leadership, committees, '
+                'policies, licenses, meetings, risks, and partners. Academic year, '
+                'student campus assignment, and teaching QA stay on their own desks.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -97,10 +97,14 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   Tab(text: 'Overview'),
                   Tab(text: 'Profile'),
                   Tab(text: 'Leadership'),
+                  Tab(text: 'Committees'),
                   Tab(text: 'Structure'),
                   Tab(text: 'Policies'),
                   Tab(text: 'Licenses'),
+                  Tab(text: 'Meetings'),
                   Tab(text: 'Resolutions'),
+                  Tab(text: 'Risks'),
+                  Tab(text: 'Partners'),
                 ],
               ),
             ],
@@ -117,10 +121,14 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   _overviewTab(rec, narrow),
                   _profileTab(rec),
                   _leadershipTab(rec),
+                  _committeesTab(rec),
                   _structureTab(rec),
                   _policiesTab(rec),
                   _licensesTab(rec),
+                  _meetingsTab(rec),
                   _resolutionsTab(rec),
+                  _risksTab(rec),
+                  _partnersTab(rec),
                 ],
               );
             },
@@ -161,6 +169,18 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       (
         'Overdue resolutions',
         m.overdueResolutions,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+      ),
+      (
+        'Open risks',
+        m.openRisks,
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+      ),
+      (
+        'Risks due for review',
+        m.risksDueSoon,
         scheme.errorContainer,
         scheme.onErrorContainer,
       ),
@@ -224,7 +244,9 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   if (rec.profile.registrationNumber.isNotEmpty)
                     'Reg. ${rec.profile.registrationNumber}',
                   '${rec.leadership.length} leadership seats',
+                  '${m.activeCommittees} active committees',
                   '${rec.orgUnits.length} departments / divisions',
+                  '${m.activePartners} partners',
                 ].join(' · '),
               ),
             ],
@@ -287,6 +309,34 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             onEdit: () => _editLeadership(seat),
             onDelete: () => _guarded(() async {
               await _svc.deleteLeadership(seat.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _committeesTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No standing committees yet.',
+      onAdd: () => _editCommittee(),
+      children: [
+        Text(
+          'Terms of reference and membership. Teaching QA panels stay on the QA desk.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final committee in rec.committees)
+          _tile(
+            title: committee.name,
+            subtitle: [
+              InstitutionCommittee.statusLabel(committee.status),
+              if (committee.chairName.isNotEmpty)
+                'Chair: ${committee.chairName}',
+              if (committee.members.isNotEmpty) committee.members,
+            ].join(' · '),
+            onEdit: () => _editCommittee(committee),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteCommittee(committee.id, schoolId: _schoolId);
             }),
           ),
       ],
@@ -457,12 +507,114 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               if (row.isOverdue) 'Overdue',
               if (row.owner.isNotEmpty) row.owner,
               if (row.dueDate.isNotEmpty) 'Due ${row.dueDate}',
-              if (row.meetingTitle.isNotEmpty) row.meetingTitle,
+              if (rec.meetingTitleFor(row.meetingId).isNotEmpty)
+                rec.meetingTitleFor(row.meetingId)
+              else if (row.meetingTitle.isNotEmpty)
+                row.meetingTitle,
             ].join(' · '),
             tone: row.isOverdue ? Colors.red.shade700 : null,
             onEdit: () => _editResolution(row),
             onDelete: () => _guarded(() async {
               await _svc.deleteResolution(row.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _meetingsTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No board / SLT / committee meetings yet.',
+      onAdd: () => _editMeeting(),
+      extraAction: _Action(
+        label: 'Add resolution',
+        onTap: () => _editResolution(),
+      ),
+      children: [
+        Text(
+          'Attendance and body of the meeting. Decisions still live as resolutions.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final meeting in rec.meetings)
+          _tile(
+            title: meeting.title,
+            subtitle: [
+              InstitutionMeeting.bodyLabel(meeting.bodyKind),
+              if (meeting.bodyKind == MeetingBodyKind.committee &&
+                  rec.committeeNameFor(meeting.committeeId).isNotEmpty)
+                rec.committeeNameFor(meeting.committeeId),
+              if (meeting.heldOn.isNotEmpty) meeting.heldOn,
+              if (meeting.attendance.isNotEmpty) meeting.attendance,
+              '${rec.resolutions.where((r) => r.meetingId == meeting.id).length} resolutions',
+            ].join(' · '),
+            onEdit: () => _editMeeting(meeting),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteMeeting(meeting.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _risksTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No institutional risks recorded.',
+      onAdd: () => _editRisk(),
+      children: [
+        Text(
+          'Governance, licence, and reputation risks. Student discipline, health, '
+          'and store inventory stay on their own desks.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final risk in rec.risks)
+          _tile(
+            title: risk.title,
+            subtitle: [
+              InstitutionRisk.statusLabel(risk.status),
+              if (risk.isOverdue) 'Review overdue',
+              if (risk.reviewDueSoon && !risk.isOverdue) 'Review due soon',
+              'Likelihood ${InstitutionRisk.likelihoodLabel(risk.likelihood)}',
+              'Impact ${InstitutionRisk.impactLabel(risk.impact)}',
+              if (risk.owner.isNotEmpty) risk.owner,
+              if (risk.reviewDate.isNotEmpty) 'Review ${risk.reviewDate}',
+            ].join(' · '),
+            tone: risk.isOverdue
+                ? Colors.red.shade700
+                : (risk.reviewDueSoon ? Colors.orange.shade800 : null),
+            onEdit: () => _editRisk(risk),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteRisk(risk.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _partnersTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No partners or affiliations yet.',
+      onAdd: () => _editPartner(),
+      children: [
+        Text(
+          'Ministries, accreditors, sister schools, and MOUs. Vendors and payroll '
+          'suppliers stay in Finance / Inventory.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final partner in rec.partners)
+          _tile(
+            title: partner.name,
+            subtitle: [
+              InstitutionPartner.kindLabel(partner.kind),
+              InstitutionPartner.statusLabel(partner.status),
+              if (partner.contact.isNotEmpty) partner.contact,
+              if (partner.agreementRef.isNotEmpty) partner.agreementRef,
+            ].join(' · '),
+            onEdit: () => _editPartner(partner),
+            onDelete: () => _guarded(() async {
+              await _svc.deletePartner(partner.id, schoolId: _schoolId);
             }),
           ),
       ],
@@ -916,14 +1068,26 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     });
   }
 
-  Future<void> _editResolution([InstitutionResolution? existing]) async {
+  Future<void> _editResolution([
+    InstitutionResolution? existing,
+    InstitutionMeeting? fromMeeting,
+  ]) async {
+    final rec = _svc.recordFor(_schoolId);
     var status = existing?.status ?? ResolutionStatus.open;
+    var meetingId = existing?.meetingId ?? fromMeeting?.id ?? '';
+    if (meetingId.isNotEmpty && rec.meetings.every((m) => m.id != meetingId)) {
+      meetingId = '';
+    }
     final number = TextEditingController(text: existing?.number ?? '');
     final title = TextEditingController(text: existing?.title ?? '');
     final decision = TextEditingController(text: existing?.decision ?? '');
     final owner = TextEditingController(text: existing?.owner ?? '');
     final due = TextEditingController(text: existing?.dueDate ?? '');
-    final meeting = TextEditingController(text: existing?.meetingTitle ?? '');
+    final meeting = TextEditingController(
+      text: existing?.meetingTitle.isNotEmpty == true
+          ? existing!.meetingTitle
+          : (fromMeeting?.title ?? rec.meetingTitleFor(meetingId)),
+    );
     final saved = await _formDialog(
       title: existing == null ? 'Add resolution' : 'Edit resolution',
       builder: (setDialogState) => [
@@ -951,10 +1115,27 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           controller: due,
           decoration: const InputDecoration(labelText: 'Due date (YYYY-MM-DD)'),
         ),
+        if (rec.meetings.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: meetingId,
+            decoration: const InputDecoration(labelText: 'Meeting register'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None / other')),
+              for (final row in rec.meetings)
+                DropdownMenuItem(value: row.id, child: Text(row.title)),
+            ],
+            onChanged: (v) => setDialogState(() {
+              meetingId = v ?? '';
+              final selected = rec.meetings
+                  .where((m) => m.id == meetingId)
+                  .firstOrNull;
+              if (selected != null) meeting.text = selected.title;
+            }),
+          ),
         TextField(
           controller: meeting,
           decoration: const InputDecoration(
-            labelText: 'Meeting (optional)',
+            labelText: 'Meeting title (optional)',
             hintText: 'Board 12 Sep 2026',
           ),
         ),
@@ -985,6 +1166,360 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           dueDate: due.text.trim(),
           status: status,
           meetingTitle: meeting.text.trim(),
+          meetingId: meetingId,
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editCommittee([InstitutionCommittee? existing]) async {
+    final rec = _svc.recordFor(_schoolId);
+    var status = existing?.status ?? CommitteeStatus.active;
+    var chairSeatId = existing?.chairSeatId ?? '';
+    if (chairSeatId.isNotEmpty &&
+        rec.leadership.every((s) => s.id != chairSeatId)) {
+      chairSeatId = '';
+    }
+    final name = TextEditingController(text: existing?.name ?? '');
+    final chair = TextEditingController(text: existing?.chairName ?? '');
+    final members = TextEditingController(text: existing?.members ?? '');
+    final tor = TextEditingController(text: existing?.termsOfReference ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add committee' : 'Edit committee',
+      builder: (setDialogState) => [
+        TextField(
+          controller: name,
+          decoration: const InputDecoration(
+            labelText: 'Committee name',
+            hintText: 'Safeguarding committee',
+          ),
+        ),
+        if (rec.leadership.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: chairSeatId,
+            decoration: const InputDecoration(
+              labelText: 'Chair (from leadership)',
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: '',
+                child: Text('None / type name'),
+              ),
+              for (final seat in rec.leadership)
+                DropdownMenuItem(
+                  value: seat.id,
+                  child: Text(
+                    '${seat.personName} · ${LeadershipSeat.seatLabel(seat.seatType)}',
+                  ),
+                ),
+            ],
+            onChanged: (v) => setDialogState(() {
+              chairSeatId = v ?? '';
+              final seat = rec.leadership
+                  .where((s) => s.id == chairSeatId)
+                  .firstOrNull;
+              if (seat != null) chair.text = seat.personName;
+            }),
+          ),
+        TextField(
+          controller: chair,
+          decoration: const InputDecoration(labelText: 'Chair name'),
+        ),
+        TextField(
+          controller: members,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: 'Members',
+            hintText: 'Names, comma separated',
+          ),
+        ),
+        TextField(
+          controller: tor,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Terms of reference'),
+        ),
+        DropdownButtonFormField<CommitteeStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in CommitteeStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionCommittee.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => status = v ?? CommitteeStatus.active),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertCommittee(
+        InstitutionCommittee(
+          id: existing?.id ?? InstitutionService.newId('com'),
+          name: name.text.trim(),
+          chairName: chair.text.trim(),
+          chairSeatId: chairSeatId,
+          members: members.text.trim(),
+          termsOfReference: tor.text.trim(),
+          status: status,
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editMeeting([InstitutionMeeting? existing]) async {
+    final rec = _svc.recordFor(_schoolId);
+    var bodyKind = existing?.bodyKind ?? MeetingBodyKind.board;
+    var committeeId = existing?.committeeId ?? '';
+    if (committeeId.isNotEmpty &&
+        rec.committees.every((c) => c.id != committeeId)) {
+      committeeId = '';
+    }
+    final title = TextEditingController(text: existing?.title ?? '');
+    final heldOn = TextEditingController(text: existing?.heldOn ?? '');
+    final attendance = TextEditingController(text: existing?.attendance ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add meeting' : 'Edit meeting',
+      builder: (setDialogState) => [
+        TextField(
+          controller: title,
+          decoration: const InputDecoration(
+            labelText: 'Meeting title',
+            hintText: 'Board 12 Sep 2026',
+          ),
+        ),
+        TextField(
+          controller: heldOn,
+          decoration: const InputDecoration(labelText: 'Held on (YYYY-MM-DD)'),
+        ),
+        DropdownButtonFormField<MeetingBodyKind>(
+          initialValue: bodyKind,
+          decoration: const InputDecoration(labelText: 'Body'),
+          items: [
+            for (final v in MeetingBodyKind.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionMeeting.bodyLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => bodyKind = v ?? MeetingBodyKind.board),
+        ),
+        if (rec.committees.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: committeeId,
+            decoration: const InputDecoration(
+              labelText: 'Committee (if a committee meeting)',
+            ),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final committee in rec.committees)
+                DropdownMenuItem(
+                  value: committee.id,
+                  child: Text(committee.name),
+                ),
+            ],
+            onChanged: (v) => setDialogState(() {
+              committeeId = v ?? '';
+              if (committeeId.isNotEmpty) {
+                bodyKind = MeetingBodyKind.committee;
+              }
+            }),
+          ),
+        TextField(
+          controller: attendance,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Attendance'),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Notes / minutes summary',
+          ),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertMeeting(
+        InstitutionMeeting(
+          id: existing?.id ?? InstitutionService.newId('mtg'),
+          title: title.text.trim(),
+          heldOn: heldOn.text.trim(),
+          bodyKind: bodyKind,
+          committeeId: committeeId,
+          attendance: attendance.text.trim(),
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editRisk([InstitutionRisk? existing]) async {
+    var likelihood = existing?.likelihood ?? RiskLikelihood.medium;
+    var impact = existing?.impact ?? RiskImpact.medium;
+    var status = existing?.status ?? RiskStatus.open;
+    final title = TextEditingController(text: existing?.title ?? '');
+    final owner = TextEditingController(text: existing?.owner ?? '');
+    final review = TextEditingController(text: existing?.reviewDate ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add institutional risk' : 'Edit risk',
+      builder: (setDialogState) => [
+        TextField(
+          controller: title,
+          decoration: const InputDecoration(
+            labelText: 'Risk',
+            hintText: 'Operating licence lapses',
+          ),
+        ),
+        TextField(
+          controller: owner,
+          decoration: const InputDecoration(labelText: 'Owner'),
+        ),
+        DropdownButtonFormField<RiskLikelihood>(
+          initialValue: likelihood,
+          decoration: const InputDecoration(labelText: 'Likelihood'),
+          items: [
+            for (final v in RiskLikelihood.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionRisk.likelihoodLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => likelihood = v ?? RiskLikelihood.medium),
+        ),
+        DropdownButtonFormField<RiskImpact>(
+          initialValue: impact,
+          decoration: const InputDecoration(labelText: 'Impact'),
+          items: [
+            for (final v in RiskImpact.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionRisk.impactLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => impact = v ?? RiskImpact.medium),
+        ),
+        TextField(
+          controller: review,
+          decoration: const InputDecoration(
+            labelText: 'Review date (YYYY-MM-DD)',
+          ),
+        ),
+        DropdownButtonFormField<RiskStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in RiskStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionRisk.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) => setDialogState(() => status = v ?? RiskStatus.open),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Notes / controls'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertRisk(
+        InstitutionRisk(
+          id: existing?.id ?? InstitutionService.newId('rsk'),
+          title: title.text.trim(),
+          owner: owner.text.trim(),
+          likelihood: likelihood,
+          impact: impact,
+          reviewDate: review.text.trim(),
+          status: status,
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editPartner([InstitutionPartner? existing]) async {
+    var kind = existing?.kind ?? PartnerKind.mou;
+    var status = existing?.status ?? PartnerStatus.active;
+    final name = TextEditingController(text: existing?.name ?? '');
+    final contact = TextEditingController(text: existing?.contact ?? '');
+    final agreement = TextEditingController(text: existing?.agreementRef ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add partner / affiliation' : 'Edit partner',
+      builder: (setDialogState) => [
+        TextField(
+          controller: name,
+          decoration: const InputDecoration(labelText: 'Name'),
+        ),
+        DropdownButtonFormField<PartnerKind>(
+          initialValue: kind,
+          decoration: const InputDecoration(labelText: 'Kind'),
+          items: [
+            for (final v in PartnerKind.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionPartner.kindLabel(v)),
+              ),
+          ],
+          onChanged: (v) => setDialogState(() => kind = v ?? PartnerKind.mou),
+        ),
+        TextField(
+          controller: contact,
+          decoration: const InputDecoration(labelText: 'Contact'),
+        ),
+        TextField(
+          controller: agreement,
+          decoration: const InputDecoration(
+            labelText: 'Agreement / MOU reference',
+          ),
+        ),
+        DropdownButtonFormField<PartnerStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in PartnerStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionPartner.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => status = v ?? PartnerStatus.active),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Notes'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertPartner(
+        InstitutionPartner(
+          id: existing?.id ?? InstitutionService.newId('ptr'),
+          name: name.text.trim(),
+          kind: kind,
+          contact: contact.text.trim(),
+          agreementRef: agreement.text.trim(),
+          status: status,
+          notes: notes.text.trim(),
         ),
         schoolId: _schoolId,
       );
