@@ -543,7 +543,12 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         for (final circular in rec.circulars)
           _tile(
             title: '${circular.number}  ${circular.title}',
-            subtitle: circular.issuedOn,
+            subtitle: [
+              if (circular.issuedOn.isNotEmpty) circular.issuedOn,
+              OfficialCircular.audienceLabel(circular.audience),
+              if (circular.attachmentPaths.isNotEmpty)
+                _fileCountLabel(circular.attachmentPaths.length),
+            ].join(' · '),
             onEdit: () => _editCircular(circular),
             onDelete: () => _guarded(() async {
               await _svc.deleteCircular(circular.id, schoolId: _schoolId);
@@ -1242,13 +1247,17 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
   }
 
   Future<void> _editCircular([OfficialCircular? existing]) async {
+    var audience = existing?.audience ?? CircularAudience.both;
     final number = TextEditingController(text: existing?.number ?? '');
     final title = TextEditingController(text: existing?.title ?? '');
     final issued = TextEditingController(text: existing?.issuedOn ?? '');
     final body = TextEditingController(text: existing?.body ?? '');
+    var attachmentPaths = List<String>.from(
+      existing?.attachmentPaths ?? const [],
+    );
     final saved = await _formDialog(
       title: existing == null ? 'Add official circular' : 'Edit circular',
-      builder: (_) => [
+      builder: (setDialogState) => [
         TextField(
           controller: number,
           decoration: const InputDecoration(
@@ -1266,10 +1275,38 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             labelText: 'Issued on (YYYY-MM-DD)',
           ),
         ),
+        DropdownButtonFormField<CircularAudience>(
+          initialValue: audience,
+          decoration: const InputDecoration(labelText: 'Intended for'),
+          items: [
+            for (final v in CircularAudience.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(
+                  OfficialCircular.audienceLabel(v),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => audience = v ?? CircularAudience.both),
+        ),
         TextField(
           controller: body,
           maxLines: 4,
           decoration: const InputDecoration(labelText: 'Body'),
+        ),
+        CourseAttachmentPicker(
+          paths: attachmentPaths,
+          subdir: 'institution_circular_attachments',
+          sectionTitle: 'Circular files',
+          onChanged: (next) => setDialogState(() => attachmentPaths = next),
+        ),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Attach one or more files. Tap Add attachment again to add more.',
+          ),
         ),
       ],
     );
@@ -1282,6 +1319,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           title: title.text.trim(),
           issuedOn: issued.text.trim(),
           body: body.text.trim(),
+          audience: audience,
+          attachmentPaths: attachmentPaths,
         ),
         schoolId: _schoolId,
       );

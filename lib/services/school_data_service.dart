@@ -1010,10 +1010,12 @@ class SchoolDataService {
   }
 
   List<Conversation> getConversationsForRole(String? roleKey) {
-    return _conversations
+    final list = _conversations
         .where((c) => MessagingAccessService.canView(c, roleKey))
         .where((c) => !_isWeakerDuplicateParentTeacherThread(c))
-        .toList(growable: false);
+        .toList();
+    list.sort((a, b) => b.lastActivityAt.compareTo(a.lastActivityAt));
+    return List.unmodifiable(list);
   }
 
   int totalUnreadMessagesForRole(String? roleKey) {
