@@ -462,6 +462,7 @@ class OfficialCircular {
     this.body = '',
     this.audience = CircularAudience.both,
     this.attachmentPaths = const [],
+    this.deliveredKeys = const [],
   });
 
   final String id;
@@ -471,6 +472,15 @@ class OfficialCircular {
   final String body;
   final CircularAudience audience;
   final List<String> attachmentPaths;
+  final List<String> deliveredKeys;
+
+  bool includesKind(InstitutionStaffKind kind) => switch (audience) {
+    CircularAudience.teachers => kind == InstitutionStaffKind.teacher,
+    CircularAudience.administrativeStaff => kind == InstitutionStaffKind.admin,
+    CircularAudience.both =>
+      kind == InstitutionStaffKind.teacher ||
+          kind == InstitutionStaffKind.admin,
+  };
 
   OfficialCircular copyWith({
     String? number,
@@ -479,6 +489,7 @@ class OfficialCircular {
     String? body,
     CircularAudience? audience,
     List<String>? attachmentPaths,
+    List<String>? deliveredKeys,
   }) {
     return OfficialCircular(
       id: id,
@@ -488,7 +499,40 @@ class OfficialCircular {
       body: body ?? this.body,
       audience: audience ?? this.audience,
       attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      deliveredKeys: deliveredKeys ?? this.deliveredKeys,
     );
+  }
+
+  String noticeText({
+    String toName = 'colleague',
+    String schoolName = '',
+    String senderName = '',
+  }) {
+    final greeting = toName.trim().isEmpty ? 'colleague' : toName.trim();
+    final lines = <String>[
+      'Dear $greeting,',
+      '',
+      'Please find the following official circular.',
+      '',
+      if (number.trim().isNotEmpty) 'Number: ${number.trim()}',
+      'Title: $title',
+      if (issuedOn.trim().isNotEmpty) 'Issued on: ${issuedOn.trim()}',
+      'Intended for: ${audienceLabel(audience)}',
+      if (body.trim().isNotEmpty) ...[
+        '',
+        'Purpose / information:',
+        body.trim(),
+      ],
+      if (attachmentPaths.isNotEmpty)
+        'Attachments: ${attachmentPaths.length} file(s) included with this circular.',
+      '',
+      'Please read this circular and keep it for your records.',
+      '',
+      'Regards,',
+      if (senderName.trim().isNotEmpty) senderName.trim(),
+      if (schoolName.trim().isNotEmpty) schoolName.trim(),
+    ];
+    return lines.join('\n');
   }
 
   Map<String, dynamic> toMap() => {
@@ -499,6 +543,7 @@ class OfficialCircular {
     'body': body,
     'audience': audience.name,
     'attachmentPaths': attachmentPaths,
+    'deliveredKeys': deliveredKeys,
   };
 
   static OfficialCircular fromMap(Map<String, dynamic> map) {
@@ -513,6 +558,7 @@ class OfficialCircular {
         orElse: () => CircularAudience.both,
       ),
       attachmentPaths: institutionStringList(map['attachmentPaths']),
+      deliveredKeys: institutionStringList(map['deliveredKeys']),
     );
   }
 
