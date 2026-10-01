@@ -38,6 +38,26 @@ enum PartnerKind { ministry, accreditor, sisterSchool, mou, other }
 
 enum PartnerStatus { active, ended }
 
+enum SefJudgment { emerging, developing, good, outstanding }
+
+enum SefStatus { draft, inReview, published }
+
+enum CapaSource { sef, risk, license, resolution, other }
+
+enum CapaStatus { open, inProgress, done, vacated }
+
+enum KpiTheme { governance, compliance, safeguarding, community, estate, other }
+
+enum KpiStatus { onTrack, atRisk, offTrack }
+
+enum PropertyKind { land, building, facility, other }
+
+enum PropertyStatus { inUse, planned, leased, disposed }
+
+enum ArchiveSeries { policies, minutes, licenses, sef, other }
+
+enum ArchiveStatus { current, archived, destroyed }
+
 class InstitutionProfile {
   const InstitutionProfile({
     this.legalName = '',
@@ -955,6 +975,455 @@ class InstitutionPartner {
   };
 }
 
+class InstitutionSefEntry {
+  const InstitutionSefEntry({
+    required this.id,
+    required this.cycle,
+    required this.area,
+    this.judgment = SefJudgment.developing,
+    this.evidence = '',
+    this.owner = '',
+    this.status = SefStatus.draft,
+  });
+
+  final String id;
+  final String cycle;
+  final String area;
+  final SefJudgment judgment;
+  final String evidence;
+  final String owner;
+  final SefStatus status;
+
+  InstitutionSefEntry copyWith({
+    String? cycle,
+    String? area,
+    SefJudgment? judgment,
+    String? evidence,
+    String? owner,
+    SefStatus? status,
+  }) {
+    return InstitutionSefEntry(
+      id: id,
+      cycle: cycle ?? this.cycle,
+      area: area ?? this.area,
+      judgment: judgment ?? this.judgment,
+      evidence: evidence ?? this.evidence,
+      owner: owner ?? this.owner,
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'cycle': cycle,
+    'area': area,
+    'judgment': judgment.name,
+    'evidence': evidence,
+    'owner': owner,
+    'status': status.name,
+  };
+
+  static InstitutionSefEntry fromMap(Map<String, dynamic> map) {
+    return InstitutionSefEntry(
+      id: '${map['id'] ?? ''}',
+      cycle: '${map['cycle'] ?? ''}',
+      area: '${map['area'] ?? ''}',
+      judgment: SefJudgment.values.firstWhere(
+        (v) => v.name == map['judgment'],
+        orElse: () => SefJudgment.developing,
+      ),
+      evidence: '${map['evidence'] ?? ''}',
+      owner: '${map['owner'] ?? ''}',
+      status: SefStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => SefStatus.draft,
+      ),
+    );
+  }
+
+  static String judgmentLabel(SefJudgment v) => switch (v) {
+    SefJudgment.emerging => 'Emerging',
+    SefJudgment.developing => 'Developing',
+    SefJudgment.good => 'Good',
+    SefJudgment.outstanding => 'Outstanding',
+  };
+
+  static String statusLabel(SefStatus status) => switch (status) {
+    SefStatus.draft => 'Draft',
+    SefStatus.inReview => 'In review',
+    SefStatus.published => 'Published',
+  };
+}
+
+class InstitutionCapa {
+  const InstitutionCapa({
+    required this.id,
+    required this.number,
+    required this.title,
+    this.source = CapaSource.other,
+    this.sefId = '',
+    this.riskId = '',
+    this.owner = '',
+    this.dueDate = '',
+    this.status = CapaStatus.open,
+    this.notes = '',
+  });
+
+  final String id;
+  final String number;
+  final String title;
+  final CapaSource source;
+  final String sefId;
+  final String riskId;
+  final String owner;
+  final String dueDate;
+  final CapaStatus status;
+  final String notes;
+
+  bool get isOpen =>
+      status == CapaStatus.open || status == CapaStatus.inProgress;
+
+  bool get isOverdue {
+    if (!isOpen) return false;
+    final due = DateTime.tryParse(dueDate);
+    if (due == null) return false;
+    final now = DateTime.now();
+    return due.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  InstitutionCapa copyWith({
+    String? number,
+    String? title,
+    CapaSource? source,
+    String? sefId,
+    String? riskId,
+    String? owner,
+    String? dueDate,
+    CapaStatus? status,
+    String? notes,
+  }) {
+    return InstitutionCapa(
+      id: id,
+      number: number ?? this.number,
+      title: title ?? this.title,
+      source: source ?? this.source,
+      sefId: sefId ?? this.sefId,
+      riskId: riskId ?? this.riskId,
+      owner: owner ?? this.owner,
+      dueDate: dueDate ?? this.dueDate,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'number': number,
+    'title': title,
+    'source': source.name,
+    'sefId': sefId,
+    'riskId': riskId,
+    'owner': owner,
+    'dueDate': dueDate,
+    'status': status.name,
+    'notes': notes,
+  };
+
+  static InstitutionCapa fromMap(Map<String, dynamic> map) {
+    return InstitutionCapa(
+      id: '${map['id'] ?? ''}',
+      number: '${map['number'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      source: CapaSource.values.firstWhere(
+        (v) => v.name == map['source'],
+        orElse: () => CapaSource.other,
+      ),
+      sefId: '${map['sefId'] ?? ''}',
+      riskId: '${map['riskId'] ?? ''}',
+      owner: '${map['owner'] ?? ''}',
+      dueDate: '${map['dueDate'] ?? ''}',
+      status: CapaStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => CapaStatus.open,
+      ),
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String sourceLabel(CapaSource source) => switch (source) {
+    CapaSource.sef => 'SEF',
+    CapaSource.risk => 'Risk register',
+    CapaSource.license => 'Licence / accreditation',
+    CapaSource.resolution => 'Resolution',
+    CapaSource.other => 'Other',
+  };
+
+  static String statusLabel(CapaStatus status) => switch (status) {
+    CapaStatus.open => 'Open',
+    CapaStatus.inProgress => 'In progress',
+    CapaStatus.done => 'Done',
+    CapaStatus.vacated => 'Vacated',
+  };
+}
+
+class InstitutionKpi {
+  const InstitutionKpi({
+    required this.id,
+    required this.name,
+    this.theme = KpiTheme.governance,
+    this.target = '',
+    this.actual = '',
+    this.period = '',
+    this.status = KpiStatus.onTrack,
+    this.notes = '',
+  });
+
+  final String id;
+  final String name;
+  final KpiTheme theme;
+  final String target;
+  final String actual;
+  final String period;
+  final KpiStatus status;
+  final String notes;
+
+  InstitutionKpi copyWith({
+    String? name,
+    KpiTheme? theme,
+    String? target,
+    String? actual,
+    String? period,
+    KpiStatus? status,
+    String? notes,
+  }) {
+    return InstitutionKpi(
+      id: id,
+      name: name ?? this.name,
+      theme: theme ?? this.theme,
+      target: target ?? this.target,
+      actual: actual ?? this.actual,
+      period: period ?? this.period,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'theme': theme.name,
+    'target': target,
+    'actual': actual,
+    'period': period,
+    'status': status.name,
+    'notes': notes,
+  };
+
+  static InstitutionKpi fromMap(Map<String, dynamic> map) {
+    return InstitutionKpi(
+      id: '${map['id'] ?? ''}',
+      name: '${map['name'] ?? ''}',
+      theme: KpiTheme.values.firstWhere(
+        (v) => v.name == map['theme'],
+        orElse: () => KpiTheme.governance,
+      ),
+      target: '${map['target'] ?? ''}',
+      actual: '${map['actual'] ?? ''}',
+      period: '${map['period'] ?? ''}',
+      status: KpiStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => KpiStatus.onTrack,
+      ),
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String themeLabel(KpiTheme theme) => switch (theme) {
+    KpiTheme.governance => 'Governance',
+    KpiTheme.compliance => 'Compliance',
+    KpiTheme.safeguarding => 'Safeguarding',
+    KpiTheme.community => 'Community',
+    KpiTheme.estate => 'Estate',
+    KpiTheme.other => 'Other',
+  };
+
+  static String statusLabel(KpiStatus status) => switch (status) {
+    KpiStatus.onTrack => 'On track',
+    KpiStatus.atRisk => 'At risk',
+    KpiStatus.offTrack => 'Off track',
+  };
+}
+
+class InstitutionProperty {
+  const InstitutionProperty({
+    required this.id,
+    required this.name,
+    this.kind = PropertyKind.building,
+    this.campusScope = 'Institution-wide',
+    this.status = PropertyStatus.inUse,
+    this.acquiredOn = '',
+    this.notes = '',
+  });
+
+  final String id;
+  final String name;
+  final PropertyKind kind;
+  final String campusScope;
+  final PropertyStatus status;
+  final String acquiredOn;
+  final String notes;
+
+  InstitutionProperty copyWith({
+    String? name,
+    PropertyKind? kind,
+    String? campusScope,
+    PropertyStatus? status,
+    String? acquiredOn,
+    String? notes,
+  }) {
+    return InstitutionProperty(
+      id: id,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      campusScope: campusScope ?? this.campusScope,
+      status: status ?? this.status,
+      acquiredOn: acquiredOn ?? this.acquiredOn,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'kind': kind.name,
+    'campusScope': campusScope,
+    'status': status.name,
+    'acquiredOn': acquiredOn,
+    'notes': notes,
+  };
+
+  static InstitutionProperty fromMap(Map<String, dynamic> map) {
+    return InstitutionProperty(
+      id: '${map['id'] ?? ''}',
+      name: '${map['name'] ?? ''}',
+      kind: PropertyKind.values.firstWhere(
+        (v) => v.name == map['kind'],
+        orElse: () => PropertyKind.building,
+      ),
+      campusScope: '${map['campusScope'] ?? 'Institution-wide'}',
+      status: PropertyStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => PropertyStatus.inUse,
+      ),
+      acquiredOn: '${map['acquiredOn'] ?? ''}',
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String kindLabel(PropertyKind kind) => switch (kind) {
+    PropertyKind.land => 'Land',
+    PropertyKind.building => 'Building',
+    PropertyKind.facility => 'Facility',
+    PropertyKind.other => 'Other',
+  };
+
+  static String statusLabel(PropertyStatus status) => switch (status) {
+    PropertyStatus.inUse => 'In use',
+    PropertyStatus.planned => 'Planned',
+    PropertyStatus.leased => 'Leased',
+    PropertyStatus.disposed => 'Disposed',
+  };
+}
+
+class InstitutionArchiveItem {
+  const InstitutionArchiveItem({
+    required this.id,
+    required this.title,
+    this.series = ArchiveSeries.other,
+    this.retentionUntil = '',
+    this.location = '',
+    this.status = ArchiveStatus.current,
+    this.notes = '',
+  });
+
+  final String id;
+  final String title;
+  final ArchiveSeries series;
+  final String retentionUntil;
+  final String location;
+  final ArchiveStatus status;
+  final String notes;
+
+  bool get retentionLapsed {
+    if (status == ArchiveStatus.destroyed) return false;
+    final due = DateTime.tryParse(retentionUntil);
+    if (due == null) return false;
+    final now = DateTime.now();
+    return !due.isAfter(DateTime(now.year, now.month, now.day));
+  }
+
+  InstitutionArchiveItem copyWith({
+    String? title,
+    ArchiveSeries? series,
+    String? retentionUntil,
+    String? location,
+    ArchiveStatus? status,
+    String? notes,
+  }) {
+    return InstitutionArchiveItem(
+      id: id,
+      title: title ?? this.title,
+      series: series ?? this.series,
+      retentionUntil: retentionUntil ?? this.retentionUntil,
+      location: location ?? this.location,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    'series': series.name,
+    'retentionUntil': retentionUntil,
+    'location': location,
+    'status': status.name,
+    'notes': notes,
+  };
+
+  static InstitutionArchiveItem fromMap(Map<String, dynamic> map) {
+    return InstitutionArchiveItem(
+      id: '${map['id'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      series: ArchiveSeries.values.firstWhere(
+        (v) => v.name == map['series'],
+        orElse: () => ArchiveSeries.other,
+      ),
+      retentionUntil: '${map['retentionUntil'] ?? ''}',
+      location: '${map['location'] ?? ''}',
+      status: ArchiveStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => ArchiveStatus.current,
+      ),
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String seriesLabel(ArchiveSeries series) => switch (series) {
+    ArchiveSeries.policies => 'Policies',
+    ArchiveSeries.minutes => 'Minutes / resolutions',
+    ArchiveSeries.licenses => 'Licences',
+    ArchiveSeries.sef => 'SEF / self-evaluation',
+    ArchiveSeries.other => 'Other',
+  };
+
+  static String statusLabel(ArchiveStatus status) => switch (status) {
+    ArchiveStatus.current => 'Current',
+    ArchiveStatus.archived => 'Archived',
+    ArchiveStatus.destroyed => 'Destroyed / disposed',
+  };
+}
+
 class InstitutionRecord {
   const InstitutionRecord({
     required this.schoolId,
@@ -970,6 +1439,11 @@ class InstitutionRecord {
     this.meetings = const [],
     this.risks = const [],
     this.partners = const [],
+    this.sefEntries = const [],
+    this.capas = const [],
+    this.kpis = const [],
+    this.properties = const [],
+    this.archive = const [],
     required this.updatedAt,
   });
 
@@ -986,6 +1460,11 @@ class InstitutionRecord {
   final List<InstitutionMeeting> meetings;
   final List<InstitutionRisk> risks;
   final List<InstitutionPartner> partners;
+  final List<InstitutionSefEntry> sefEntries;
+  final List<InstitutionCapa> capas;
+  final List<InstitutionKpi> kpis;
+  final List<InstitutionProperty> properties;
+  final List<InstitutionArchiveItem> archive;
   final DateTime updatedAt;
 
   String get id => schoolId;
@@ -1006,6 +1485,22 @@ class InstitutionRecord {
     return '';
   }
 
+  String sefTitleFor(String sefId) {
+    if (sefId.isEmpty) return '';
+    for (final row in sefEntries) {
+      if (row.id == sefId) return '${row.cycle} · ${row.area}';
+    }
+    return '';
+  }
+
+  String riskTitleFor(String riskId) {
+    if (riskId.isEmpty) return '';
+    for (final row in risks) {
+      if (row.id == riskId) return row.title;
+    }
+    return '';
+  }
+
   InstitutionRecord copyWith({
     InstitutionProfile? profile,
     List<LeadershipSeat>? leadership,
@@ -1019,6 +1514,11 @@ class InstitutionRecord {
     List<InstitutionMeeting>? meetings,
     List<InstitutionRisk>? risks,
     List<InstitutionPartner>? partners,
+    List<InstitutionSefEntry>? sefEntries,
+    List<InstitutionCapa>? capas,
+    List<InstitutionKpi>? kpis,
+    List<InstitutionProperty>? properties,
+    List<InstitutionArchiveItem>? archive,
     DateTime? updatedAt,
   }) {
     return InstitutionRecord(
@@ -1035,6 +1535,11 @@ class InstitutionRecord {
       meetings: meetings ?? this.meetings,
       risks: risks ?? this.risks,
       partners: partners ?? this.partners,
+      sefEntries: sefEntries ?? this.sefEntries,
+      capas: capas ?? this.capas,
+      kpis: kpis ?? this.kpis,
+      properties: properties ?? this.properties,
+      archive: archive ?? this.archive,
       updatedAt: updatedAt ?? DateTime.now(),
     );
   }
@@ -1054,6 +1559,11 @@ class InstitutionRecord {
     'meetings': meetings.map((e) => e.toMap()).toList(),
     'risks': risks.map((e) => e.toMap()).toList(),
     'partners': partners.map((e) => e.toMap()).toList(),
+    'sefEntries': sefEntries.map((e) => e.toMap()).toList(),
+    'capas': capas.map((e) => e.toMap()).toList(),
+    'kpis': kpis.map((e) => e.toMap()).toList(),
+    'properties': properties.map((e) => e.toMap()).toList(),
+    'archive': archive.map((e) => e.toMap()).toList(),
     'updatedAt': updatedAt.toIso8601String(),
   };
 
@@ -1094,6 +1604,17 @@ class InstitutionRecord {
       meetings: list(map['meetings']).map(InstitutionMeeting.fromMap).toList(),
       risks: list(map['risks']).map(InstitutionRisk.fromMap).toList(),
       partners: list(map['partners']).map(InstitutionPartner.fromMap).toList(),
+      sefEntries: list(
+        map['sefEntries'],
+      ).map(InstitutionSefEntry.fromMap).toList(),
+      capas: list(map['capas']).map(InstitutionCapa.fromMap).toList(),
+      kpis: list(map['kpis']).map(InstitutionKpi.fromMap).toList(),
+      properties: list(
+        map['properties'],
+      ).map(InstitutionProperty.fromMap).toList(),
+      archive: list(
+        map['archive'],
+      ).map(InstitutionArchiveItem.fromMap).toList(),
       updatedAt: parseDate(map['updatedAt']),
     );
   }

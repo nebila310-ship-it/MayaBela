@@ -9,8 +9,8 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
-/// Institutional Management desk — Phase 1 identity/governance plus Phase 2
-/// committees, meetings, risks, and partners. Not School / Campus / QA ops.
+/// Institutional Management desk — identity, operating governance, SEF/CAPA,
+/// scorecard, property, and archive. Not School / Campus / QA ops.
 class WebInstitutionPage extends StatefulWidget {
   const WebInstitutionPage({super.key});
 
@@ -20,7 +20,7 @@ class WebInstitutionPage extends StatefulWidget {
 
 class _WebInstitutionPageState extends State<WebInstitutionPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 11, vsync: this);
+  late final TabController _tabs = TabController(length: 16, vsync: this);
   final _svc = InstitutionService.instance;
 
   bool get _canManage => ModuleAccess.canManage('institution');
@@ -81,9 +81,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Governance of the institution: identity, leadership, committees, '
-                'policies, licenses, meetings, risks, and partners. Academic year, '
-                'student campus assignment, and teaching QA stay on their own desks.',
+                'Governance of the institution: identity, committees, licences, '
+                'risks, self-evaluation, improvement actions, scorecard, property, '
+                'and archive. Academic year, campus assignment, teaching QA, '
+                'finance, and inventory stay on their own desks.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -105,6 +106,11 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   Tab(text: 'Resolutions'),
                   Tab(text: 'Risks'),
                   Tab(text: 'Partners'),
+                  Tab(text: 'SEF'),
+                  Tab(text: 'CAPA'),
+                  Tab(text: 'Scorecard'),
+                  Tab(text: 'Property'),
+                  Tab(text: 'Archive'),
                 ],
               ),
             ],
@@ -129,6 +135,11 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   _resolutionsTab(rec),
                   _risksTab(rec),
                   _partnersTab(rec),
+                  _sefTab(rec),
+                  _capaTab(rec),
+                  _scorecardTab(rec),
+                  _propertyTab(rec),
+                  _archiveTab(rec),
                 ],
               );
             },
@@ -183,6 +194,24 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         m.risksDueSoon,
         scheme.errorContainer,
         scheme.onErrorContainer,
+      ),
+      (
+        'Open CAPA',
+        m.openCapas,
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+      ),
+      (
+        'Overdue CAPA',
+        m.overdueCapas,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+      ),
+      (
+        'KPIs off track',
+        m.kpisOffTrack,
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
       ),
     ];
     return ListView(
@@ -247,6 +276,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   '${m.activeCommittees} active committees',
                   '${rec.orgUnits.length} departments / divisions',
                   '${m.activePartners} partners',
+                  '${rec.properties.length} property assets',
+                  '${m.retentionLapsed} archive items past retention',
                 ].join(' · '),
               ),
             ],
@@ -615,6 +646,162 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             onEdit: () => _editPartner(partner),
             onDelete: () => _guarded(() async {
               await _svc.deletePartner(partner.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _sefTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No institutional self-evaluation entries yet.',
+      onAdd: () => _editSef(),
+      extraAction: _Action(label: 'Add CAPA', onTap: () => _editCapa()),
+      children: [
+        Text(
+          'Institutional SEF judgments. Teaching observations stay on QA Findings.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final row in rec.sefEntries)
+          _tile(
+            title: '${row.cycle}  ${row.area}',
+            subtitle: [
+              InstitutionSefEntry.statusLabel(row.status),
+              InstitutionSefEntry.judgmentLabel(row.judgment),
+              if (row.owner.isNotEmpty) row.owner,
+            ].join(' · '),
+            onEdit: () => _editSef(row),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteSef(row.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _capaTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No corrective / preventive actions yet.',
+      onAdd: () => _editCapa(),
+      children: [
+        Text(
+          'Institutional improvement actions from SEF, risks, or licences. '
+          'Teaching QA action plans stay on the QA desk.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final row in rec.capas)
+          _tile(
+            title: '${row.number}  ${row.title}',
+            subtitle: [
+              InstitutionCapa.statusLabel(row.status),
+              if (row.isOverdue) 'Overdue',
+              InstitutionCapa.sourceLabel(row.source),
+              if (rec.sefTitleFor(row.sefId).isNotEmpty)
+                rec.sefTitleFor(row.sefId),
+              if (rec.riskTitleFor(row.riskId).isNotEmpty)
+                rec.riskTitleFor(row.riskId),
+              if (row.owner.isNotEmpty) row.owner,
+              if (row.dueDate.isNotEmpty) 'Due ${row.dueDate}',
+            ].join(' · '),
+            tone: row.isOverdue ? Colors.red.shade700 : null,
+            onEdit: () => _editCapa(row),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteCapa(row.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _scorecardTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No institutional KPIs yet.',
+      onAdd: () => _editKpi(),
+      children: [
+        Text(
+          'Strategy scorecard for the institution. Markbook and exam results stay '
+          'on academic desks.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final row in rec.kpis)
+          _tile(
+            title: row.name,
+            subtitle: [
+              InstitutionKpi.statusLabel(row.status),
+              InstitutionKpi.themeLabel(row.theme),
+              if (row.period.isNotEmpty) row.period,
+              if (row.target.isNotEmpty) 'Target ${row.target}',
+              if (row.actual.isNotEmpty) 'Actual ${row.actual}',
+            ].join(' · '),
+            tone: switch (row.status) {
+              KpiStatus.offTrack => Colors.red.shade700,
+              KpiStatus.atRisk => Colors.orange.shade800,
+              KpiStatus.onTrack => null,
+            },
+            onEdit: () => _editKpi(row),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteKpi(row.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _propertyTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No capital assets or property recorded.',
+      onAdd: () => _editProperty(),
+      children: [
+        Text(
+          'Land, buildings, and facilities. Furniture and store stock stay in Inventory.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final row in rec.properties)
+          _tile(
+            title: row.name,
+            subtitle: [
+              InstitutionProperty.kindLabel(row.kind),
+              InstitutionProperty.statusLabel(row.status),
+              row.campusScope,
+              if (row.acquiredOn.isNotEmpty) 'Acquired ${row.acquiredOn}',
+            ].join(' · '),
+            onEdit: () => _editProperty(row),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteProperty(row.id, schoolId: _schoolId);
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _archiveTab(InstitutionRecord rec) {
+    return _listTab(
+      empty: 'No archive or retention records yet.',
+      onAdd: () => _editArchive(),
+      children: [
+        Text(
+          'Retention for institutional records. Student files stay in SIS.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        for (final row in rec.archive)
+          _tile(
+            title: row.title,
+            subtitle: [
+              InstitutionArchiveItem.statusLabel(row.status),
+              InstitutionArchiveItem.seriesLabel(row.series),
+              if (row.retentionLapsed) 'Retention lapsed',
+              if (row.retentionUntil.isNotEmpty) 'Until ${row.retentionUntil}',
+              if (row.location.isNotEmpty) row.location,
+            ].join(' · '),
+            tone: row.retentionLapsed ? Colors.orange.shade800 : null,
+            onEdit: () => _editArchive(row),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteArchive(row.id, schoolId: _schoolId);
             }),
           ),
       ],
@@ -1518,6 +1705,451 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           kind: kind,
           contact: contact.text.trim(),
           agreementRef: agreement.text.trim(),
+          status: status,
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editSef([InstitutionSefEntry? existing]) async {
+    var judgment = existing?.judgment ?? SefJudgment.developing;
+    var status = existing?.status ?? SefStatus.draft;
+    final cycle = TextEditingController(text: existing?.cycle ?? '');
+    final area = TextEditingController(text: existing?.area ?? '');
+    final evidence = TextEditingController(text: existing?.evidence ?? '');
+    final owner = TextEditingController(text: existing?.owner ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add SEF judgment' : 'Edit SEF judgment',
+      builder: (setDialogState) => [
+        TextField(
+          controller: cycle,
+          decoration: const InputDecoration(
+            labelText: 'Cycle',
+            hintText: '2025/26',
+          ),
+        ),
+        TextField(
+          controller: area,
+          decoration: const InputDecoration(
+            labelText: 'Area / standard',
+            hintText: 'Leadership and management',
+          ),
+        ),
+        DropdownButtonFormField<SefJudgment>(
+          initialValue: judgment,
+          decoration: const InputDecoration(labelText: 'Judgment'),
+          items: [
+            for (final v in SefJudgment.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionSefEntry.judgmentLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => judgment = v ?? SefJudgment.developing),
+        ),
+        TextField(
+          controller: owner,
+          decoration: const InputDecoration(labelText: 'Owner'),
+        ),
+        DropdownButtonFormField<SefStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in SefStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionSefEntry.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) => setDialogState(() => status = v ?? SefStatus.draft),
+        ),
+        TextField(
+          controller: evidence,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Evidence summary'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertSef(
+        InstitutionSefEntry(
+          id: existing?.id ?? InstitutionService.newId('sef'),
+          cycle: cycle.text.trim(),
+          area: area.text.trim(),
+          judgment: judgment,
+          evidence: evidence.text.trim(),
+          owner: owner.text.trim(),
+          status: status,
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editCapa([InstitutionCapa? existing]) async {
+    final rec = _svc.recordFor(_schoolId);
+    var source = existing?.source ?? CapaSource.other;
+    var status = existing?.status ?? CapaStatus.open;
+    var sefId = existing?.sefId ?? '';
+    var riskId = existing?.riskId ?? '';
+    if (sefId.isNotEmpty && rec.sefEntries.every((e) => e.id != sefId)) {
+      sefId = '';
+    }
+    if (riskId.isNotEmpty && rec.risks.every((e) => e.id != riskId)) {
+      riskId = '';
+    }
+    final number = TextEditingController(text: existing?.number ?? '');
+    final title = TextEditingController(text: existing?.title ?? '');
+    final owner = TextEditingController(text: existing?.owner ?? '');
+    final due = TextEditingController(text: existing?.dueDate ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add CAPA' : 'Edit CAPA',
+      builder: (setDialogState) => [
+        TextField(
+          controller: number,
+          decoration: const InputDecoration(
+            labelText: 'Action number',
+            hintText: 'CAPA-2026-03',
+          ),
+        ),
+        TextField(
+          controller: title,
+          decoration: const InputDecoration(labelText: 'Title'),
+        ),
+        DropdownButtonFormField<CapaSource>(
+          initialValue: source,
+          decoration: const InputDecoration(labelText: 'Source'),
+          items: [
+            for (final v in CapaSource.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionCapa.sourceLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => source = v ?? CapaSource.other),
+        ),
+        if (rec.sefEntries.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: sefId,
+            decoration: const InputDecoration(labelText: 'Linked SEF'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final row in rec.sefEntries)
+                DropdownMenuItem(
+                  value: row.id,
+                  child: Text('${row.cycle} · ${row.area}'),
+                ),
+            ],
+            onChanged: (v) => setDialogState(() {
+              sefId = v ?? '';
+              if (sefId.isNotEmpty) source = CapaSource.sef;
+            }),
+          ),
+        if (rec.risks.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: riskId,
+            decoration: const InputDecoration(labelText: 'Linked risk'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final row in rec.risks)
+                DropdownMenuItem(value: row.id, child: Text(row.title)),
+            ],
+            onChanged: (v) => setDialogState(() {
+              riskId = v ?? '';
+              if (riskId.isNotEmpty) source = CapaSource.risk;
+            }),
+          ),
+        TextField(
+          controller: owner,
+          decoration: const InputDecoration(labelText: 'Owner'),
+        ),
+        TextField(
+          controller: due,
+          decoration: const InputDecoration(labelText: 'Due date (YYYY-MM-DD)'),
+        ),
+        DropdownButtonFormField<CapaStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in CapaStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionCapa.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) => setDialogState(() => status = v ?? CapaStatus.open),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Notes'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertCapa(
+        InstitutionCapa(
+          id: existing?.id ?? InstitutionService.newId('capa'),
+          number: number.text.trim(),
+          title: title.text.trim(),
+          source: source,
+          sefId: sefId,
+          riskId: riskId,
+          owner: owner.text.trim(),
+          dueDate: due.text.trim(),
+          status: status,
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editKpi([InstitutionKpi? existing]) async {
+    var theme = existing?.theme ?? KpiTheme.governance;
+    var status = existing?.status ?? KpiStatus.onTrack;
+    final name = TextEditingController(text: existing?.name ?? '');
+    final target = TextEditingController(text: existing?.target ?? '');
+    final actual = TextEditingController(text: existing?.actual ?? '');
+    final period = TextEditingController(text: existing?.period ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add institutional KPI' : 'Edit KPI',
+      builder: (setDialogState) => [
+        TextField(
+          controller: name,
+          decoration: const InputDecoration(
+            labelText: 'KPI',
+            hintText: 'Board meetings held on schedule',
+          ),
+        ),
+        DropdownButtonFormField<KpiTheme>(
+          initialValue: theme,
+          decoration: const InputDecoration(labelText: 'Theme'),
+          items: [
+            for (final v in KpiTheme.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionKpi.themeLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => theme = v ?? KpiTheme.governance),
+        ),
+        TextField(
+          controller: period,
+          decoration: const InputDecoration(
+            labelText: 'Period',
+            hintText: '2025/26 T1',
+          ),
+        ),
+        TextField(
+          controller: target,
+          decoration: const InputDecoration(labelText: 'Target'),
+        ),
+        TextField(
+          controller: actual,
+          decoration: const InputDecoration(labelText: 'Actual'),
+        ),
+        DropdownButtonFormField<KpiStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in KpiStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionKpi.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => status = v ?? KpiStatus.onTrack),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Notes'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertKpi(
+        InstitutionKpi(
+          id: existing?.id ?? InstitutionService.newId('kpi'),
+          name: name.text.trim(),
+          theme: theme,
+          target: target.text.trim(),
+          actual: actual.text.trim(),
+          period: period.text.trim(),
+          status: status,
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editProperty([InstitutionProperty? existing]) async {
+    var kind = existing?.kind ?? PropertyKind.building;
+    var status = existing?.status ?? PropertyStatus.inUse;
+    final name = TextEditingController(text: existing?.name ?? '');
+    final campus = TextEditingController(
+      text: existing?.campusScope ?? 'Institution-wide',
+    );
+    final acquired = TextEditingController(text: existing?.acquiredOn ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null
+          ? 'Add property / capital asset'
+          : 'Edit property',
+      builder: (setDialogState) => [
+        TextField(
+          controller: name,
+          decoration: const InputDecoration(
+            labelText: 'Name',
+            hintText: 'Main campus block A',
+          ),
+        ),
+        DropdownButtonFormField<PropertyKind>(
+          initialValue: kind,
+          decoration: const InputDecoration(labelText: 'Kind'),
+          items: [
+            for (final v in PropertyKind.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionProperty.kindLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => kind = v ?? PropertyKind.building),
+        ),
+        TextField(
+          controller: campus,
+          decoration: const InputDecoration(
+            labelText: 'Campus scope',
+            hintText: 'Institution-wide or a campus name',
+          ),
+        ),
+        TextField(
+          controller: acquired,
+          decoration: const InputDecoration(
+            labelText: 'Acquired on (YYYY-MM-DD)',
+          ),
+        ),
+        DropdownButtonFormField<PropertyStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in PropertyStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionProperty.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => status = v ?? PropertyStatus.inUse),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Notes / title details'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertProperty(
+        InstitutionProperty(
+          id: existing?.id ?? InstitutionService.newId('prop'),
+          name: name.text.trim(),
+          kind: kind,
+          campusScope: campus.text.trim(),
+          status: status,
+          acquiredOn: acquired.text.trim(),
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
+  Future<void> _editArchive([InstitutionArchiveItem? existing]) async {
+    var series = existing?.series ?? ArchiveSeries.other;
+    var status = existing?.status ?? ArchiveStatus.current;
+    final title = TextEditingController(text: existing?.title ?? '');
+    final until = TextEditingController(text: existing?.retentionUntil ?? '');
+    final location = TextEditingController(text: existing?.location ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null
+          ? 'Add archive / retention record'
+          : 'Edit archive',
+      builder: (setDialogState) => [
+        TextField(
+          controller: title,
+          decoration: const InputDecoration(labelText: 'Title'),
+        ),
+        DropdownButtonFormField<ArchiveSeries>(
+          initialValue: series,
+          decoration: const InputDecoration(labelText: 'Series'),
+          items: [
+            for (final v in ArchiveSeries.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionArchiveItem.seriesLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => series = v ?? ArchiveSeries.other),
+        ),
+        TextField(
+          controller: until,
+          decoration: const InputDecoration(
+            labelText: 'Retain until (YYYY-MM-DD)',
+          ),
+        ),
+        TextField(
+          controller: location,
+          decoration: const InputDecoration(
+            labelText: 'Location / box / system',
+          ),
+        ),
+        DropdownButtonFormField<ArchiveStatus>(
+          initialValue: status,
+          decoration: const InputDecoration(labelText: 'Status'),
+          items: [
+            for (final v in ArchiveStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionArchiveItem.statusLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => status = v ?? ArchiveStatus.current),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Notes'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertArchive(
+        InstitutionArchiveItem(
+          id: existing?.id ?? InstitutionService.newId('arc'),
+          title: title.text.trim(),
+          series: series,
+          retentionUntil: until.text.trim(),
+          location: location.text.trim(),
           status: status,
           notes: notes.text.trim(),
         ),
