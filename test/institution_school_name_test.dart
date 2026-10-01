@@ -69,6 +69,34 @@ void main() {
     },
   );
 
+  test(
+    'saving IM profile does not wipe school year, city, or grades',
+    () async {
+      SchoolRegistryService.instance.applyPersistedSchools([
+        SchoolRecord(
+          id: schoolId,
+          name: 'Maya School',
+          city: 'Addis Ababa',
+          academicYear: '2025/2026',
+          gradeLevels: const ['Grade 1', 'Grade 2'],
+          campuses: const ['Main Campus'],
+        ),
+      ]);
+
+      await InstitutionService.instance.saveProfile(
+        const InstitutionProfile(tradingName: 'Fenote Raey'),
+        schoolId: schoolId,
+      );
+
+      final school = SchoolRegistryService.instance.lookup(schoolId)!;
+      expect(school.name, 'Fenote Raey');
+      expect(school.city, 'Addis Ababa');
+      expect(school.academicYear, '2025/2026');
+      expect(school.gradeLevels, ['Grade 1', 'Grade 2']);
+      expect(school.campuses, ['Main Campus']);
+    },
+  );
+
   test('legal name is used when trading / display name is blank', () async {
     await InstitutionService.instance.saveProfile(
       const InstitutionProfile(legalName: 'Fenote Raey Academy'),
@@ -158,5 +186,36 @@ void main() {
 
     expect(find.text('Fenote Raey'), findsOneWidget);
     expect(find.text('Maya School'), findsNothing);
+  });
+
+  testWidgets(
+    'compact header without school id does not fill the admin top bar',
+    (tester) async {
+      await InstitutionService.instance.saveProfile(
+        const InstitutionProfile(tradingName: 'Fenote Raey'),
+        schoolId: schoolId,
+      );
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: SchoolBrandingHeader(compact: true)),
+        ),
+      );
+      expect(find.text('Fenote Raey'), findsNothing);
+    },
+  );
+
+  test('empty registry name still shows the saved IM school name', () async {
+    SchoolRegistryService.instance.applyPersistedSchools([
+      SchoolRecord(id: schoolId, name: ''),
+    ]);
+    await InstitutionService.instance.saveProfile(
+      const InstitutionProfile(tradingName: 'Fenote Raey'),
+      schoolId: schoolId,
+    );
+    expect(
+      InstitutionService.instance.displayNameFor(schoolId, fallback: ''),
+      'Fenote Raey',
+    );
+    expect(SchoolRegistryService.instance.displayName(schoolId), 'Fenote Raey');
   });
 }

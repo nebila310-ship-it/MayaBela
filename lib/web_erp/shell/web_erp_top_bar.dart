@@ -69,13 +69,14 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
     final school = schoolId == null
         ? null
         : SchoolRegistryService.instance.lookup(schoolId);
+    final registryName = school?.name.trim() ?? '';
     final schoolName = InstitutionService.instance.displayNameFor(
       schoolId,
-      fallback:
-          school?.name ??
-          (schoolId != null
-              ? AppLocale.instance.strings.schoolName(schoolId)
-              : 'MaJo e-School Bridge'),
+      fallback: registryName.isNotEmpty
+          ? registryName
+          : (schoolId != null
+                ? AppLocale.instance.strings.schoolName(schoolId)
+                : 'MaJo e-School Bridge'),
     );
     final notifications = NotificationService.instance.unreadCount();
 

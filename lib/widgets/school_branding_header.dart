@@ -84,9 +84,14 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
     final record = id != null && id.isNotEmpty
         ? SchoolRegistryService.instance.lookup(id)
         : null;
-    final savedName = InstitutionService.instance.savedPublicName(id);
-    final schoolName = savedName ?? record?.name;
-    final hasSchool = record != null || savedName != null;
+    final savedName = id != null && id.isNotEmpty
+        ? InstitutionService.instance.savedPublicName(id)
+        : null;
+    final registryName = record?.name.trim();
+    final schoolName =
+        savedName ??
+        (registryName != null && registryName.isNotEmpty ? registryName : null);
+    final hasSchool = schoolName != null;
 
     final titleColor = widget.titleColor ?? ClassroomPalette.inkOf(context);
     final mutedTitle = widget.titleColor ?? ClassroomPalette.mutedOf(context);
