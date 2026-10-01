@@ -947,9 +947,9 @@ class AppStrings implements AppStringsLike {
       );
     }
     return t(
-      'You have $count unread messages',
-      '$count ያልተነበቡ መልዕክቶች አሉዎት',
-      'Ergaawwan $count hin dubbifamne qabda',
+      'You have new messages',
+      'አዲስ መልዕክቶች አሉዎት',
+      'Ergaawwan haaraa qabda',
     );
   }
 
