@@ -9,8 +9,8 @@ import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
-/// Institutional Management desk — identity, operating governance, SEF/CAPA,
-/// scorecard, property, and archive. Not School / Campus / QA ops.
+/// Institutional Management desk — grouped Identity, Governance, Improvement,
+/// and Estate. Not School / Campus / QA ops.
 class WebInstitutionPage extends StatefulWidget {
   const WebInstitutionPage({super.key});
 
@@ -19,8 +19,12 @@ class WebInstitutionPage extends StatefulWidget {
 }
 
 class _WebInstitutionPageState extends State<WebInstitutionPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 16, vsync: this);
+    with TickerProviderStateMixin {
+  late final TabController _groups = TabController(length: 5, vsync: this);
+  late final TabController _identity = TabController(length: 2, vsync: this);
+  late final TabController _governance = TabController(length: 8, vsync: this);
+  late final TabController _improvement = TabController(length: 3, vsync: this);
+  late final TabController _estate = TabController(length: 2, vsync: this);
   final _svc = InstitutionService.instance;
 
   bool get _canManage => ModuleAccess.canManage('institution');
@@ -34,8 +38,28 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
 
   @override
   void dispose() {
-    _tabs.dispose();
+    _groups.dispose();
+    _identity.dispose();
+    _governance.dispose();
+    _improvement.dispose();
+    _estate.dispose();
     super.dispose();
+  }
+
+  void _open(int group, int sub) {
+    _groups.animateTo(group);
+    switch (group) {
+      case 1:
+        _identity.animateTo(sub);
+      case 2:
+        _governance.animateTo(sub);
+      case 3:
+        _improvement.animateTo(sub);
+      case 4:
+        _estate.animateTo(sub);
+      default:
+        break;
+    }
   }
 
   void _snack(String message, {bool error = false}) {
@@ -81,36 +105,24 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Governance of the institution: identity, committees, licences, '
-                'risks, self-evaluation, improvement actions, scorecard, property, '
-                'and archive. Academic year, campus assignment, teaching QA, '
-                'finance, and inventory stay on their own desks.',
+                'Identity, governance, improvement, and estate of the institution. '
+                'Academic year, campus assignment, teaching QA, finance, and '
+                'inventory stay on their own desks.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 12),
               TabBar(
-                controller: _tabs,
+                controller: _groups,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 tabs: const [
                   Tab(text: 'Overview'),
-                  Tab(text: 'Profile'),
-                  Tab(text: 'Leadership'),
-                  Tab(text: 'Committees'),
-                  Tab(text: 'Structure'),
-                  Tab(text: 'Policies'),
-                  Tab(text: 'Licenses'),
-                  Tab(text: 'Meetings'),
-                  Tab(text: 'Resolutions'),
-                  Tab(text: 'Risks'),
-                  Tab(text: 'Partners'),
-                  Tab(text: 'SEF'),
-                  Tab(text: 'CAPA'),
-                  Tab(text: 'Scorecard'),
-                  Tab(text: 'Property'),
-                  Tab(text: 'Archive'),
+                  Tab(text: 'Identity'),
+                  Tab(text: 'Governance'),
+                  Tab(text: 'Improvement'),
+                  Tab(text: 'Estate'),
                 ],
               ),
             ],
@@ -122,24 +134,47 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             builder: (context, _) {
               final rec = _svc.recordFor(_schoolId);
               return TabBarView(
-                controller: _tabs,
+                controller: _groups,
                 children: [
                   _overviewTab(rec, narrow),
-                  _profileTab(rec),
-                  _leadershipTab(rec),
-                  _committeesTab(rec),
-                  _structureTab(rec),
-                  _policiesTab(rec),
-                  _licensesTab(rec),
-                  _meetingsTab(rec),
-                  _resolutionsTab(rec),
-                  _risksTab(rec),
-                  _partnersTab(rec),
-                  _sefTab(rec),
-                  _capaTab(rec),
-                  _scorecardTab(rec),
-                  _propertyTab(rec),
-                  _archiveTab(rec),
+                  _nested(
+                    controller: _identity,
+                    labels: const ['Profile', 'Structure'],
+                    children: [_profileTab(rec), _structureTab(rec)],
+                  ),
+                  _nested(
+                    controller: _governance,
+                    labels: const [
+                      'Leadership',
+                      'Committees',
+                      'Policies',
+                      'Licenses',
+                      'Meetings',
+                      'Resolutions',
+                      'Risks',
+                      'Partners',
+                    ],
+                    children: [
+                      _leadershipTab(rec),
+                      _committeesTab(rec),
+                      _policiesTab(rec),
+                      _licensesTab(rec),
+                      _meetingsTab(rec),
+                      _resolutionsTab(rec),
+                      _risksTab(rec),
+                      _partnersTab(rec),
+                    ],
+                  ),
+                  _nested(
+                    controller: _improvement,
+                    labels: const ['SEF', 'CAPA', 'Scorecard'],
+                    children: [_sefTab(rec), _capaTab(rec), _scorecardTab(rec)],
+                  ),
+                  _nested(
+                    controller: _estate,
+                    labels: const ['Property', 'Archive'],
+                    children: [_propertyTab(rec), _archiveTab(rec)],
+                  ),
                 ],
               );
             },
@@ -152,66 +187,76 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
   Widget _overviewTab(InstitutionRecord rec, bool narrow) {
     final m = _svc.metricsFor(_schoolId);
     final scheme = Theme.of(context).colorScheme;
-    final cards = <(String, int, Color, Color)>[
+    final cards = <(String, int, Color, Color, VoidCallback)>[
       (
         'Active policies',
         m.activePolicies,
         scheme.secondaryContainer,
         scheme.onSecondaryContainer,
+        () => _open(2, 2),
       ),
       (
         'Licenses expiring',
         m.expiringLicenses,
         scheme.tertiaryContainer,
         scheme.onTertiaryContainer,
+        () => _open(2, 3),
       ),
       (
         'Licenses expired',
         m.expiredLicenses,
         scheme.errorContainer,
         scheme.onErrorContainer,
+        () => _open(2, 3),
       ),
       (
         'Open resolutions',
         m.openResolutions,
         scheme.primaryContainer,
         scheme.onPrimaryContainer,
+        () => _open(2, 5),
       ),
       (
         'Overdue resolutions',
         m.overdueResolutions,
         scheme.errorContainer,
         scheme.onErrorContainer,
+        () => _open(2, 5),
       ),
       (
         'Open risks',
         m.openRisks,
         scheme.primaryContainer,
         scheme.onPrimaryContainer,
+        () => _open(2, 6),
       ),
       (
         'Risks due for review',
         m.risksDueSoon,
         scheme.errorContainer,
         scheme.onErrorContainer,
+        () => _open(2, 6),
       ),
       (
         'Open CAPA',
         m.openCapas,
         scheme.primaryContainer,
         scheme.onPrimaryContainer,
+        () => _open(3, 1),
       ),
       (
         'Overdue CAPA',
         m.overdueCapas,
         scheme.errorContainer,
         scheme.onErrorContainer,
+        () => _open(3, 1),
       ),
       (
         'KPIs off track',
         m.kpisOffTrack,
         scheme.tertiaryContainer,
         scheme.onTertiaryContainer,
+        () => _open(3, 2),
       ),
     ];
     return ListView(
@@ -221,30 +266,34 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           spacing: 10,
           runSpacing: 10,
           children: [
-            for (final (label, count, bg, fg) in cards)
-              Container(
-                width: narrow ? 150 : 180,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: bg,
+            for (final (label, count, bg, fg, onTap) in cards)
+              Material(
+                color: bg,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: onTap,
                   borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$count',
-                      style: TextStyle(
-                        color: fg,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
+                  child: Container(
+                    width: narrow ? 150 : 180,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
                     ),
-                    Text(label, style: TextStyle(color: fg, fontSize: 12)),
-                  ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$count',
+                          style: TextStyle(
+                            color: fg,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(label, style: TextStyle(color: fg, fontSize: 12)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -254,33 +303,36 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: WebErpTheme.cardDecoration(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                rec.profile.legalName.isEmpty
-                    ? 'Legal identity not set yet'
-                    : rec.profile.legalName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
+          child: InkWell(
+            onTap: () => _open(1, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rec.profile.legalName.isEmpty
+                      ? 'Legal identity not set yet'
+                      : rec.profile.legalName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                [
-                  InstitutionProfile.legalFormLabel(rec.profile.legalForm),
-                  if (rec.profile.registrationNumber.isNotEmpty)
-                    'Reg. ${rec.profile.registrationNumber}',
-                  '${rec.leadership.length} leadership seats',
-                  '${m.activeCommittees} active committees',
-                  '${rec.orgUnits.length} departments / divisions',
-                  '${m.activePartners} partners',
-                  '${rec.properties.length} property assets',
-                  '${m.retentionLapsed} archive items past retention',
-                ].join(' · '),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    InstitutionProfile.legalFormLabel(rec.profile.legalForm),
+                    if (rec.profile.registrationNumber.isNotEmpty)
+                      'Reg. ${rec.profile.registrationNumber}',
+                    '${rec.leadership.length} leadership seats',
+                    '${m.activeCommittees} active committees',
+                    '${rec.orgUnits.length} departments / divisions',
+                    '${m.activePartners} partners',
+                    '${rec.properties.length} property assets',
+                    '${m.retentionLapsed} archive items past retention',
+                  ].join(' · '),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -804,6 +856,27 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               await _svc.deleteArchive(row.id, schoolId: _schoolId);
             }),
           ),
+      ],
+    );
+  }
+
+  Widget _nested({
+    required TabController controller,
+    required List<String> labels,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TabBar(
+          controller: controller,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          tabs: [for (final label in labels) Tab(text: label)],
+        ),
+        Expanded(
+          child: TabBarView(controller: controller, children: children),
+        ),
       ],
     );
   }
