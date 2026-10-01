@@ -123,6 +123,8 @@ void main() {
   testWidgets(
     'institution desk shows Phase 1 tabs and related operational desks',
     (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: WebInstitutionPage())),
       );

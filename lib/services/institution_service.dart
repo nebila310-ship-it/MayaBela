@@ -353,6 +353,128 @@ class InstitutionService extends ChangeNotifier {
     );
   }
 
+  Future<InstitutionRecord> upsertSef(
+    InstitutionSefEntry entry, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.sefEntries];
+      final i = next.indexWhere((e) => e.id == entry.id);
+      if (i < 0) {
+        next.insert(0, entry);
+      } else {
+        next[i] = entry;
+      }
+      return current.copyWith(sefEntries: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteSef(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        sefEntries: current.sefEntries.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertCapa(
+    InstitutionCapa capa, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.capas];
+      final i = next.indexWhere((e) => e.id == capa.id);
+      if (i < 0) {
+        next.insert(0, capa);
+      } else {
+        next[i] = capa;
+      }
+      return current.copyWith(capas: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteCapa(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        capas: current.capas.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertKpi(InstitutionKpi kpi, {String? schoolId}) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.kpis];
+      final i = next.indexWhere((e) => e.id == kpi.id);
+      if (i < 0) {
+        next.insert(0, kpi);
+      } else {
+        next[i] = kpi;
+      }
+      return current.copyWith(kpis: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteKpi(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        kpis: current.kpis.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertProperty(
+    InstitutionProperty property, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.properties];
+      final i = next.indexWhere((e) => e.id == property.id);
+      if (i < 0) {
+        next.insert(0, property);
+      } else {
+        next[i] = property;
+      }
+      return current.copyWith(properties: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteProperty(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        properties: current.properties.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertArchive(
+    InstitutionArchiveItem item, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.archive];
+      final i = next.indexWhere((e) => e.id == item.id);
+      if (i < 0) {
+        next.insert(0, item);
+      } else {
+        next[i] = item;
+      }
+      return current.copyWith(archive: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteArchive(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        archive: current.archive.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
   ({
     int activePolicies,
     int expiringLicenses,
@@ -363,6 +485,10 @@ class InstitutionService extends ChangeNotifier {
     int openRisks,
     int risksDueSoon,
     int activePartners,
+    int openCapas,
+    int overdueCapas,
+    int kpisOffTrack,
+    int retentionLapsed,
   })
   metricsFor(String? schoolId) {
     final rec = recordFor(schoolId);
@@ -388,6 +514,11 @@ class InstitutionService extends ChangeNotifier {
       if (risk.isOpen) openRisks++;
       if (risk.reviewDueSoon) risksDueSoon++;
     }
+    var openCapas = 0, overdueCapas = 0;
+    for (final row in rec.capas) {
+      if (row.isOpen) openCapas++;
+      if (row.isOverdue) overdueCapas++;
+    }
     return (
       activePolicies: rec.policies
           .where((p) => p.status == PolicyStatus.active)
@@ -404,6 +535,12 @@ class InstitutionService extends ChangeNotifier {
       activePartners: rec.partners
           .where((p) => p.status == PartnerStatus.active)
           .length,
+      openCapas: openCapas,
+      overdueCapas: overdueCapas,
+      kpisOffTrack: rec.kpis
+          .where((k) => k.status == KpiStatus.offTrack)
+          .length,
+      retentionLapsed: rec.archive.where((a) => a.retentionLapsed).length,
     );
   }
 
