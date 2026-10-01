@@ -79,7 +79,10 @@ class PendingNotificationStore {
     final prefService = NotificationPreferenceService.instance;
     for (final item in delivered) {
       final type = _typeFromName(item['type'] as String?);
-      if (!prefService.isEnabled(user.roleKey, NotificationPreferenceKey.master)) {
+      if (!prefService.isEnabled(
+        user.roleKey,
+        NotificationPreferenceKey.master,
+      )) {
         continue;
       }
       final category = preferenceKeyForType(type);
@@ -97,7 +100,9 @@ class PendingNotificationStore {
   bool _matchesCurrentUser(Map<String, dynamic> item, RegisteredUser user) {
     if (item['recipientRole'] != user.roleKey) return false;
 
-    final explicitUser = (item['recipientUsername'] as String?)?.trim().toLowerCase();
+    final explicitUser = (item['recipientUsername'] as String?)
+        ?.trim()
+        .toLowerCase();
     if (explicitUser != null &&
         explicitUser.isNotEmpty &&
         explicitUser != user.username.toLowerCase()) {
@@ -115,9 +120,11 @@ class PendingNotificationStore {
 
     final staffId = item['recipientStaffId'] as String?;
     if (staffId != null && staffId.trim().isNotEmpty) {
-      final viewerStaffId = StaffMemberOption.viewerStaffId(user.roleKey);
+      final viewerStaffId = StaffMemberOption.viewerCompositeStaffId(
+        user.roleKey,
+      );
       if (viewerStaffId == null ||
-          viewerStaffId.trim() != staffId.trim()) {
+          !StaffMemberOption.idsEqual(viewerStaffId, staffId)) {
         return false;
       }
     }
@@ -128,11 +135,11 @@ class PendingNotificationStore {
           .approvedStudentIdsForParent(user.username)
           .map((id) => id.toUpperCase())
           .toSet();
-      linked.addAll(
-        user.linkedStudentIds.map((id) => id.toUpperCase()),
-      );
+      linked.addAll(user.linkedStudentIds.map((id) => id.toUpperCase()));
 
-      final targetStudent = (item['targetStudentId'] as String?)?.trim().toUpperCase();
+      final targetStudent = (item['targetStudentId'] as String?)
+          ?.trim()
+          .toUpperCase();
       if (targetStudent != null &&
           targetStudent.isNotEmpty &&
           !linked.contains(targetStudent)) {

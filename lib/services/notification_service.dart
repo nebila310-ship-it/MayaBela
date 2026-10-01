@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/models/message.dart';
 import 'package:mayabela/platform/web_browser_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
@@ -49,10 +50,12 @@ class NotificationService extends ChangeNotifier {
       'notif_read_ids_v1_${username.trim().toLowerCase()}';
 
   static String _fingerprint(AppNotification item) =>
-      'fp:${item.type.name}|${item.title}|${item.body}|${item.recipientRole}';
+      'fp:${item.type.name}|${item.title}|${item.body}|${item.recipientRole}|'
+      '${item.recipientStaffId ?? ''}|${item.recipientUsername ?? ''}';
 
   Future<void> hydratePersistedReads() async {
-    final username = AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    final username =
+        AuthService.currentUser?.username.trim().toLowerCase() ?? '';
     if (username.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -67,7 +70,8 @@ class NotificationService extends ChangeNotifier {
   }
 
   Future<void> _saveReadIds() async {
-    final username = AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    final username =
+        AuthService.currentUser?.username.trim().toLowerCase() ?? '';
     if (username.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -113,6 +117,13 @@ class NotificationService extends ChangeNotifier {
 
   bool _matchesCurrentUser(AppNotification item, String role) {
     if (item.recipientRole != role) return false;
+    if (!_matchesPersonTarget(
+      recipientStaffId: item.recipientStaffId,
+      recipientUsername: item.recipientUsername,
+      recipientUsernames: item.recipientUsernames,
+    )) {
+      return false;
+    }
     if (role == AuthService.roleParent) {
       return _matchesLinkedStudentScope(
         item,
@@ -123,11 +134,49 @@ class NotificationService extends ChangeNotifier {
       );
     }
     if (role == AuthService.roleStudent) {
-      final linkedStudentId =
-          AuthService.currentUser?.linkedStudentId?.trim().toUpperCase();
+      final linkedStudentId = AuthService.currentUser?.linkedStudentId
+          ?.trim()
+          .toUpperCase();
       if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
       return _matchesLinkedStudentScope(item, {linkedStudentId});
     }
+    return true;
+  }
+
+  /// Direct staff/username notices stay with that person; role-wide
+  /// broadcasts (no person target) still reach the whole role.
+  bool _matchesPersonTarget({
+    String? recipientStaffId,
+    String? recipientUsername,
+    List<String>? recipientUsernames,
+  }) {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+
+    final explicitUser = recipientUsername?.trim().toLowerCase();
+    if (explicitUser != null && explicitUser.isNotEmpty) {
+      if (explicitUser != user.username.trim().toLowerCase()) return false;
+    }
+
+    if (recipientUsernames != null && recipientUsernames.isNotEmpty) {
+      final allowed = recipientUsernames
+          .map((u) => u.trim().toLowerCase())
+          .where((u) => u.isNotEmpty)
+          .toSet();
+      if (!allowed.contains(user.username.trim().toLowerCase())) return false;
+    }
+
+    final staffId = recipientStaffId?.trim();
+    if (staffId != null && staffId.isNotEmpty) {
+      final viewerStaffId = StaffMemberOption.viewerCompositeStaffId(
+        user.roleKey,
+      );
+      if (viewerStaffId == null ||
+          !StaffMemberOption.idsEqual(viewerStaffId, staffId)) {
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -167,10 +216,7 @@ class NotificationService extends ChangeNotifier {
         .length;
   }
 
-  int unreadCountForTypes(
-    List<NotificationType> types, {
-    String? roleKey,
-  }) {
+  int unreadCountForTypes(List<NotificationType> types, {String? roleKey}) {
     final role = roleKey ?? _currentRole;
     final typeSet = types.toSet();
     return _items
@@ -227,7 +273,24 @@ class NotificationService extends ChangeNotifier {
     String? recipientUsername,
     List<String>? recipientUsernames,
   }) {
-    if (recipientRole == fromRole &&
+    final usernames = [
+      if (recipientUsername != null && recipientUsername.trim().isNotEmpty)
+        recipientUsername.trim(),
+      ...?recipientUsernames?.where((u) => u.trim().isNotEmpty),
+    ];
+    final hasPersonTarget =
+        (recipientStaffId != null && recipientStaffId.trim().isNotEmpty) ||
+        usernames.isNotEmpty;
+    if (hasPersonTarget &&
+        _matchesPersonTarget(
+          recipientStaffId: recipientStaffId,
+          recipientUsername: recipientUsername,
+          recipientUsernames: usernames,
+        )) {
+      return;
+    }
+    if (!hasPersonTarget &&
+        recipientRole == fromRole &&
         AuthService.currentUser?.roleKey == fromRole) {
       return;
     }
@@ -246,6 +309,13 @@ class NotificationService extends ChangeNotifier {
         showOnMessagesBadge: showOnMessagesBadge,
         targetStudentId: targetStudentId,
         targetClassName: targetClassName,
+        recipientStaffId: recipientStaffId?.trim().isEmpty == true
+            ? null
+            : recipientStaffId?.trim(),
+        recipientUsername: recipientUsername?.trim().isEmpty == true
+            ? null
+            : recipientUsername?.trim(),
+        recipientUsernames: usernames,
       ),
     );
     final created = _items.first;
@@ -298,7 +368,8 @@ class NotificationService extends ChangeNotifier {
   /// Call after login / session restore to show queued phone notifications.
   Future<void> onSessionStarted() async {
     await hydratePersistedReads();
-    final delivered = await PendingNotificationStore.instance.deliverForCurrentUser();
+    final delivered = await PendingNotificationStore.instance
+        .deliverForCurrentUser();
     if (delivered.isEmpty) return;
 
     for (final item in delivered) {
@@ -329,10 +400,19 @@ class NotificationService extends ChangeNotifier {
         fromRole: item['fromRole'] as String? ?? '',
         fromName: item['fromName'] as String? ?? '',
         recipientRole: recipientRole,
-        createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
+        createdAt:
+            DateTime.tryParse(item['createdAt'] as String? ?? '') ??
             DateTime.now(),
         targetStudentId: item['targetStudentId'] as String?,
         targetClassName: item['targetClassName'] as String?,
+        recipientStaffId: item['recipientStaffId'] as String?,
+        recipientUsername: item['recipientUsername'] as String?,
+        recipientUsernames:
+            (item['recipientUsernames'] as List?)
+                ?.map((u) => u.toString())
+                .where((u) => u.trim().isNotEmpty)
+                .toList() ??
+            const [],
       );
       if (_wasRead(created)) {
         created.isRead = true;
@@ -378,10 +458,7 @@ class NotificationService extends ChangeNotifier {
       notifyListeners();
       if (kIsWeb && newest != null && !newest.isRead && !_wasRead(newest)) {
         unawaited(
-          showWebBrowserNotification(
-            title: newest.title,
-            body: newest.body,
-          ),
+          showWebBrowserNotification(title: newest.title, body: newest.body),
         );
       }
     }
@@ -398,10 +475,7 @@ class NotificationService extends ChangeNotifier {
     } catch (_) {}
   }
 
-  void markTypesRead(
-    List<NotificationType> types, {
-    String? roleKey,
-  }) {
+  void markTypesRead(List<NotificationType> types, {String? roleKey}) {
     final role = roleKey ?? _currentRole;
     final typeSet = types.toSet();
     var changed = false;

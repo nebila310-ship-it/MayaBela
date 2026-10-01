@@ -29,6 +29,9 @@ class AppNotification {
     this.isRead = false,
     this.targetStudentId,
     this.targetClassName,
+    this.recipientStaffId,
+    this.recipientUsername,
+    this.recipientUsernames = const [],
   });
 
   final String id;
@@ -41,10 +44,20 @@ class AppNotification {
   final DateTime createdAt;
   final bool showOnMessagesBadge;
   bool isRead;
+
   /// When set, parent accounts only see this if they are linked to the student.
   final String? targetStudentId;
 
   /// When set, parent/student accounts only see this if a linked child is
   /// in this class (`5B` and `Grade 5B` match).
   final String? targetClassName;
+
+  /// Composite staff id (e.g. `teacher:TCH-1001`) for a direct staff notice.
+  final String? recipientStaffId;
+
+  /// Single login username this notice is for.
+  final String? recipientUsername;
+
+  /// Allowed login usernames when several people share a parent thread.
+  final List<String> recipientUsernames;
 }

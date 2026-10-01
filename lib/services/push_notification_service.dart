@@ -31,8 +31,9 @@ class PushNotificationService {
   Future<void> init() async {
     if (_initialized || kIsWeb) return;
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -40,14 +41,13 @@ class PushNotificationService {
     );
 
     await _plugin.initialize(
-      const InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
-      ),
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
     );
 
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
         _channelId,
@@ -74,8 +74,10 @@ class PushNotificationService {
   Future<bool> ensurePermission() async {
     if (kIsWeb) return false;
 
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (android != null) {
       final granted = await android.requestNotificationsPermission();
       if (granted == true) return true;
@@ -83,8 +85,10 @@ class PushNotificationService {
       return enabled ?? false;
     }
 
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     if (ios != null) {
       final granted = await ios.requestPermissions(
         alert: true,
@@ -146,20 +150,19 @@ class PushNotificationService {
     }
 
     if (recipientRole == AuthService.roleStudent) {
-      final linkedStudentId =
-          user.linkedStudentId?.trim().toUpperCase();
+      final linkedStudentId = user.linkedStudentId?.trim().toUpperCase();
       if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
 
       final target = targetStudentId?.trim().toUpperCase();
-      if (target != null &&
-          target.isNotEmpty &&
-          target != linkedStudentId) {
+      if (target != null && target.isNotEmpty && target != linkedStudentId) {
         return false;
       }
 
       final className = targetClassName?.trim();
       if (className != null && className.isNotEmpty) {
-        final student = StudentRegistryService.instance.lookupById(linkedStudentId);
+        final student = StudentRegistryService.instance.lookupById(
+          linkedStudentId,
+        );
         if (student == null ||
             !StudentRegistryService.classNamesMatch(
               student.className,
@@ -184,9 +187,11 @@ class PushNotificationService {
     }
 
     if (recipientStaffId != null && recipientStaffId.trim().isNotEmpty) {
-      final viewerStaffId = StaffMemberOption.viewerStaffId(user.roleKey);
+      final viewerStaffId = StaffMemberOption.viewerCompositeStaffId(
+        user.roleKey,
+      );
       if (viewerStaffId == null ||
-          viewerStaffId.trim() != recipientStaffId.trim()) {
+          !StaffMemberOption.idsEqual(viewerStaffId, recipientStaffId)) {
         return false;
       }
     }
