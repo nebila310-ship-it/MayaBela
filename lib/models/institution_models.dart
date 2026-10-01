@@ -26,7 +26,7 @@ enum LicenseHealth { valid, expiring, expired, none }
 
 enum CommitteeStatus { active, paused, dissolved }
 
-enum InstitutionStaffKind { teacher, employee }
+enum InstitutionStaffKind { teacher, employee, admin }
 
 enum MeetingBodyKind { board, slt, committee, other }
 
@@ -66,6 +66,15 @@ List<String> institutionStringList(Object? raw) {
     for (final item in raw)
       if ('$item'.trim().isNotEmpty) '$item'.trim(),
   ];
+}
+
+List<InstitutionStaffMember> institutionStaffList(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final item in raw)
+      if (item is Map)
+        InstitutionStaffMember.fromMap(Map<String, dynamic>.from(item)),
+  ].where((m) => m.personId.isNotEmpty).toList();
 }
 
 class InstitutionProfile {
@@ -713,7 +722,13 @@ class InstitutionStaffMember {
   static String kindLabel(InstitutionStaffKind kind) => switch (kind) {
     InstitutionStaffKind.teacher => 'Teacher',
     InstitutionStaffKind.employee => 'Employee',
+    InstitutionStaffKind.admin => 'Administrative staff',
   };
+
+  static String namesLabel(List<InstitutionStaffMember> list) => list
+      .map((m) => m.name.trim())
+      .where((name) => name.isNotEmpty)
+      .join(', ');
 }
 
 class InstitutionCommittee {
@@ -773,12 +788,7 @@ class InstitutionCommittee {
   };
 
   static InstitutionCommittee fromMap(Map<String, dynamic> map) {
-    final parsed = <InstitutionStaffMember>[
-      for (final item
-          in (map['memberList'] is List ? map['memberList'] as List : const []))
-        if (item is Map)
-          InstitutionStaffMember.fromMap(Map<String, dynamic>.from(item)),
-    ].where((m) => m.personId.isNotEmpty).toList();
+    final parsed = institutionStaffList(map['memberList']);
     return InstitutionCommittee(
       id: '${map['id'] ?? ''}',
       name: '${map['name'] ?? ''}',
@@ -807,15 +817,23 @@ class InstitutionCommittee {
 }
 
 class InstitutionMeeting {
-  const InstitutionMeeting({
+  InstitutionMeeting({
     required this.id,
     required this.title,
     this.heldOn = '',
     this.bodyKind = MeetingBodyKind.board,
     this.committeeId = '',
-    this.attendance = '',
+    String attendance = '',
+    this.invitees = const [],
+    this.venue = '',
+    this.meetingLink = '',
+    this.agenda = '',
     this.notes = '',
-  });
+    this.attachmentPaths = const [],
+    this.invitedKeys = const [],
+  }) : attendance = invitees.isNotEmpty
+           ? InstitutionStaffMember.namesLabel(invitees)
+           : attendance;
 
   final String id;
   final String title;
@@ -823,7 +841,13 @@ class InstitutionMeeting {
   final MeetingBodyKind bodyKind;
   final String committeeId;
   final String attendance;
+  final List<InstitutionStaffMember> invitees;
+  final String venue;
+  final String meetingLink;
+  final String agenda;
   final String notes;
+  final List<String> attachmentPaths;
+  final List<String> invitedKeys;
 
   InstitutionMeeting copyWith({
     String? title,
@@ -831,17 +855,63 @@ class InstitutionMeeting {
     MeetingBodyKind? bodyKind,
     String? committeeId,
     String? attendance,
+    List<InstitutionStaffMember>? invitees,
+    String? venue,
+    String? meetingLink,
+    String? agenda,
     String? notes,
+    List<String>? attachmentPaths,
+    List<String>? invitedKeys,
   }) {
+    final nextInvitees = invitees ?? this.invitees;
     return InstitutionMeeting(
       id: id,
       title: title ?? this.title,
       heldOn: heldOn ?? this.heldOn,
       bodyKind: bodyKind ?? this.bodyKind,
       committeeId: committeeId ?? this.committeeId,
-      attendance: attendance ?? this.attendance,
+      invitees: nextInvitees,
+      attendance:
+          attendance ??
+          (invitees != null
+              ? InstitutionStaffMember.namesLabel(invitees)
+              : this.attendance),
+      venue: venue ?? this.venue,
+      meetingLink: meetingLink ?? this.meetingLink,
+      agenda: agenda ?? this.agenda,
       notes: notes ?? this.notes,
+      attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      invitedKeys: invitedKeys ?? this.invitedKeys,
     );
+  }
+
+  String invitationText({
+    String toName = 'colleague',
+    String schoolName = '',
+    String senderName = '',
+  }) {
+    final greeting = toName.trim().isEmpty ? 'colleague' : toName.trim();
+    final lines = <String>[
+      'Dear $greeting,',
+      '',
+      'You are invited to the following institutional meeting.',
+      '',
+      'Title: $title',
+      'Body: ${bodyLabel(bodyKind)}',
+      if (heldOn.trim().isNotEmpty) 'Date: ${heldOn.trim()}',
+      if (venue.trim().isNotEmpty) 'Venue: ${venue.trim()}',
+      if (meetingLink.trim().isNotEmpty) 'Join link: ${meetingLink.trim()}',
+      if (agenda.trim().isNotEmpty) ...['', 'Agenda:', agenda.trim()],
+      if (attachmentPaths.isNotEmpty)
+        'Attachments: ${attachmentPaths.length} file(s) included with this invitation.',
+      '',
+      'Please acknowledge that you will attend.',
+      '',
+      'Regards,',
+      if (senderName.trim().isNotEmpty) senderName.trim(),
+      if (schoolName.trim().isNotEmpty) schoolName.trim(),
+    ];
+    return lines.join('\n');
   }
 
   Map<String, dynamic> toMap() => {
@@ -851,7 +921,13 @@ class InstitutionMeeting {
     'bodyKind': bodyKind.name,
     'committeeId': committeeId,
     'attendance': attendance,
+    'invitees': invitees.map((e) => e.toMap()).toList(),
+    'venue': venue,
+    'meetingLink': meetingLink,
+    'agenda': agenda,
     'notes': notes,
+    'attachmentPaths': attachmentPaths,
+    'invitedKeys': invitedKeys,
   };
 
   static InstitutionMeeting fromMap(Map<String, dynamic> map) {
@@ -864,8 +940,14 @@ class InstitutionMeeting {
         orElse: () => MeetingBodyKind.board,
       ),
       committeeId: '${map['committeeId'] ?? ''}',
+      invitees: institutionStaffList(map['invitees']),
       attendance: '${map['attendance'] ?? ''}',
+      venue: '${map['venue'] ?? ''}',
+      meetingLink: '${map['meetingLink'] ?? ''}',
+      agenda: '${map['agenda'] ?? ''}',
       notes: '${map['notes'] ?? ''}',
+      attachmentPaths: institutionStringList(map['attachmentPaths']),
+      invitedKeys: institutionStringList(map['invitedKeys']),
     );
   }
 
