@@ -127,12 +127,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Improvement'), findsOneWidget);
+    expect(find.text('Estate'), findsOneWidget);
+    expect(find.text('Open CAPA'), findsOneWidget);
+
+    await tester.tap(find.text('Improvement'));
+    await tester.pumpAndSettle();
     expect(find.text('SEF'), findsOneWidget);
     expect(find.text('CAPA'), findsOneWidget);
     expect(find.text('Scorecard'), findsOneWidget);
+
+    await tester.tap(find.text('Estate'));
+    await tester.pumpAndSettle();
     expect(find.text('Property'), findsOneWidget);
     expect(find.text('Archive'), findsOneWidget);
-    expect(find.text('Open CAPA'), findsOneWidget);
-    expect(find.text('Partners'), findsOneWidget);
   });
 }

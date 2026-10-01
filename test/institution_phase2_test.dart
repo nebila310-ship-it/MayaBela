@@ -113,11 +113,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Governance'), findsOneWidget);
+    expect(find.text('Open risks'), findsOneWidget);
+
+    await tester.tap(find.text('Governance'));
+    await tester.pumpAndSettle();
     expect(find.text('Committees'), findsOneWidget);
     expect(find.text('Meetings'), findsOneWidget);
     expect(find.text('Risks'), findsOneWidget);
     expect(find.text('Partners'), findsOneWidget);
     expect(find.text('Resolutions'), findsOneWidget);
-    expect(find.text('Open risks'), findsOneWidget);
   });
 }

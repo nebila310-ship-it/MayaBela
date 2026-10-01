@@ -132,15 +132,25 @@ void main() {
 
       expect(find.text('Institutional Management'), findsOneWidget);
       expect(find.text('Overview'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
-      expect(find.text('Leadership'), findsOneWidget);
-      expect(find.text('Structure'), findsOneWidget);
-      expect(find.text('Policies'), findsOneWidget);
-      expect(find.text('Licenses'), findsOneWidget);
-      expect(find.text('Resolutions'), findsOneWidget);
+      expect(find.text('Identity'), findsOneWidget);
+      expect(find.text('Governance'), findsOneWidget);
+      expect(find.text('Improvement'), findsOneWidget);
+      expect(find.text('Estate'), findsOneWidget);
       expect(find.text('School Management'), findsOneWidget);
       expect(find.text('Campus Management'), findsOneWidget);
       expect(find.textContaining('Academic year'), findsWidgets);
+
+      await tester.tap(find.text('Identity'));
+      await tester.pumpAndSettle();
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Structure'), findsOneWidget);
+
+      await tester.tap(find.text('Governance'));
+      await tester.pumpAndSettle();
+      expect(find.text('Leadership'), findsOneWidget);
+      expect(find.text('Policies'), findsOneWidget);
+      expect(find.text('Licenses'), findsOneWidget);
+      expect(find.text('Resolutions'), findsOneWidget);
     },
   );
 }
