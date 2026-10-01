@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -234,6 +235,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
         SchoolContentSyncService.instance,
         ConversationRealtimeSync.instance,
         UserPreferencesService.instance,
+        InstitutionService.instance,
       ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
@@ -266,10 +268,7 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                 title: widget.title,
                 accent: themeColor,
                 destinations: destinations,
-                selectedIndex: _selectedIndex.clamp(
-                  0,
-                  destinations.length - 1,
-                ),
+                selectedIndex: _selectedIndex.clamp(0, destinations.length - 1),
                 collapsed: collapsed,
                 onToggle: toggleSidebar,
                 onSelect: (index) {

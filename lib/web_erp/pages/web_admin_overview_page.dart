@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/services/web_admin_stats_service.dart';
@@ -18,6 +20,13 @@ class WebAdminOverviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: InstitutionService.instance,
+      builder: (context, _) => _buildPage(context),
+    );
+  }
+
+  Widget _buildPage(BuildContext context) {
     final stats = WebAdminStatsService.instance.load();
     final events =
         SchoolDataService.instance.getUpcomingEvents(days: 45).take(5);
@@ -250,6 +259,13 @@ class WebAdminOverviewPage extends StatelessWidget {
 
   Widget _classroomWelcome(BuildContext context) {
     final name = AuthService.displayNameForRole(AuthService.roleAdmin);
+    final schoolId = AuthService.activeSchoolId;
+    final schoolName = InstitutionService.instance.displayNameFor(
+      schoolId,
+      fallback: AppLocale.instance.strings.schoolName(schoolId),
+    );
+    final schoolLine =
+        schoolId != null ? '$schoolName · $schoolId' : schoolName;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
@@ -295,6 +311,14 @@ class WebAdminOverviewPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
+              Text(
+                schoolLine,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
               Text(
                 "Today's summary — attendance, fees, transport, and pending approvals.",
                 style: TextStyle(

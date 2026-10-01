@@ -2643,7 +2643,7 @@ class _ProfileFormState extends State<_ProfileForm> {
                 decoration: const InputDecoration(
                   labelText: 'Trading / display name',
                   helperText:
-                      'Operational school name and academic year stay in School Management.',
+                      'Shown on every role dashboard after you save. Academic year stays in School Management.',
                   border: OutlineInputBorder(),
                 ),
               ),

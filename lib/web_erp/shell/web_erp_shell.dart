@@ -7,6 +7,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
@@ -181,6 +182,7 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
         DashboardBadgeService.instance,
         ConversationRealtimeSync.instance,
         AuthService.sessionListenable,
+        InstitutionService.instance,
       ]),
       builder: (context, _) {
         final narrow = WebViewport.isNarrow(context);
@@ -231,7 +233,9 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                     child: narrow
                         ? Scaffold(
                             key: _scaffoldKey,
-                            backgroundColor: WebErpTheme.paperBackdropOf(context),
+                            backgroundColor: WebErpTheme.paperBackdropOf(
+                              context,
+                            ),
                             drawer: Drawer(child: SafeArea(child: sidebar)),
                             body: Stack(
                               fit: StackFit.expand,
@@ -250,7 +254,9 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
                             ),
                           )
                         : Scaffold(
-                            backgroundColor: WebErpTheme.paperBackdropOf(context),
+                            backgroundColor: WebErpTheme.paperBackdropOf(
+                              context,
+                            ),
                             body: Row(
                               children: [
                                 sidebar,

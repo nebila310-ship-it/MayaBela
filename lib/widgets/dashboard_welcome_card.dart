@@ -4,6 +4,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
@@ -68,9 +69,7 @@ class DashboardWelcomeCard extends StatelessWidget {
           Container(
             height: 8,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [accent, accentLight],
-              ),
+              gradient: LinearGradient(colors: [accent, accentLight]),
             ),
           ),
           Padding(
@@ -82,7 +81,11 @@ class DashboardWelcomeCard extends StatelessWidget {
                     CircleAvatar(
                       radius: 36,
                       backgroundColor: accent.withValues(alpha: 0.12),
-                      child: Icon(Icons.person_outline, color: accent, size: 32),
+                      child: Icon(
+                        Icons.person_outline,
+                        color: accent,
+                        size: 32,
+                      ),
                     ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -112,14 +115,18 @@ class DashboardWelcomeCard extends StatelessWidget {
                       Text(
                         schoolLine,
                         style: TextStyle(
-                            color: Colors.grey.shade600, fontSize: 13),
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                        ),
                       ),
                       for (final line in detailLines) ...[
                         const SizedBox(height: 4),
                         Text(
                           line,
                           style: TextStyle(
-                              color: Colors.grey.shade700, fontSize: 13),
+                            color: Colors.grey.shade700,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -143,7 +150,9 @@ class DashboardWelcomeCard extends StatelessWidget {
                         Text(
                           footerLine!,
                           style: TextStyle(
-                              color: Colors.grey.shade600, fontSize: 12),
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ],
@@ -205,20 +214,30 @@ class TeacherDashboardSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: InstitutionService.instance,
+      builder: (context, _) => _buildCard(context),
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final access = TeacherAccessService.instance;
     final classes = access.myClasses;
     final homerooms = classes.where((c) => c.isHomeroom).toList();
-    final studentTotal =
-        classes.fold<int>(0, (sum, c) => sum + c.studentCount);
+    final studentTotal = classes.fold<int>(0, (sum, c) => sum + c.studentCount);
     final pending = EnrollmentService.instance.pendingCountForCurrentUser();
     final s = AppLocale.instance.strings;
     final name = access.teacherName;
     final teacherId = access.teacherId;
     final subject = access.teacherSubject;
-    final schoolName = s.schoolName(AuthService.activeSchoolId);
+    final schoolName = InstitutionService.instance.displayNameFor(
+      AuthService.activeSchoolId,
+      fallback: s.schoolName(AuthService.activeSchoolId),
+    );
     final schoolId = AuthService.activeSchoolId;
-    final schoolLine =
-        schoolId != null ? '$schoolName · $schoolId' : schoolName;
+    final schoolLine = schoolId != null
+        ? '$schoolName · $schoolId'
+        : schoolName;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -282,24 +301,38 @@ class AdminDashboardSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: InstitutionService.instance,
+      builder: (context, _) => _buildCard(context),
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final s = AppLocale.instance.strings;
     final schoolId = AuthService.activeSchoolId;
-    final schoolName = s.schoolName(schoolId);
-    final schoolLine =
-        schoolId != null ? '$schoolName · $schoolId' : schoolName;
+    final schoolName = InstitutionService.instance.displayNameFor(
+      schoolId,
+      fallback: s.schoolName(schoolId),
+    );
+    final schoolLine = schoolId != null
+        ? '$schoolName · $schoolId'
+        : schoolName;
     final name = AuthService.displayNameForRole(AuthService.roleAdmin);
 
     final teacherCount = TeacherRegistryService.instance
         .staffTeachersForSchool(schoolId)
         .length;
-    final transportCount =
-        DriverRegistryService.instance.driversForSchool(schoolId).length;
+    final transportCount = DriverRegistryService.instance
+        .driversForSchool(schoolId)
+        .length;
     final staffCount = teacherCount + transportCount;
     final studentCount = StudentRegistryService.instance
         .getAllStudents()
-        .where((student) =>
-            student.isActive &&
-            (schoolId == null || student.schoolId == schoolId))
+        .where(
+          (student) =>
+              student.isActive &&
+              (schoolId == null || student.schoolId == schoolId),
+        )
         .length;
 
     return DashboardWelcomeCard(
@@ -311,8 +344,11 @@ class AdminDashboardSummary extends StatelessWidget {
       leading: CircleAvatar(
         radius: 36,
         backgroundColor: _accent.withValues(alpha: 0.12),
-        child: const Icon(Icons.admin_panel_settings_outlined,
-            color: _accent, size: 32),
+        child: const Icon(
+          Icons.admin_panel_settings_outlined,
+          color: _accent,
+          size: 32,
+        ),
       ),
       chips: [
         DashboardStatChip(
@@ -338,11 +374,22 @@ class ParentDashboardSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: InstitutionService.instance,
+      builder: (context, _) => _buildCard(context),
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final s = AppLocale.instance.strings;
     final schoolId = AuthService.activeSchoolId;
-    final schoolName = s.schoolName(schoolId);
-    final schoolLine =
-        schoolId != null ? '$schoolName · $schoolId' : schoolName;
+    final schoolName = InstitutionService.instance.displayNameFor(
+      schoolId,
+      fallback: s.schoolName(schoolId),
+    );
+    final schoolLine = schoolId != null
+        ? '$schoolName · $schoolId'
+        : schoolName;
     final name = AuthService.displayNameForRole(AuthService.roleParent);
     final children = SchoolDataService.instance.getChildren();
     final childCount = children.length;
@@ -443,10 +490,7 @@ class _ParentChildrenFooter extends StatelessWidget {
                   backgroundColor: accent.withValues(alpha: 0.15),
                   child: Text(
                     child.name.isNotEmpty ? child.name[0] : '?',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: accent,
-                    ),
+                    style: TextStyle(fontSize: 11, color: accent),
                   ),
                 ),
                 label: Text(child.name),
@@ -510,8 +554,9 @@ class _AddChildSlot extends StatelessWidget {
             ),
           ),
           child: Row(
-            mainAxisAlignment:
-                expanded ? MainAxisAlignment.center : MainAxisAlignment.start,
+            mainAxisAlignment: expanded
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -519,7 +564,11 @@ class _AddChildSlot extends StatelessWidget {
                   color: accent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.person_add_alt_1_rounded, color: accent, size: 20),
+                child: Icon(
+                  Icons.person_add_alt_1_rounded,
+                  color: accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -562,10 +611,7 @@ class _AddChildSlot extends StatelessWidget {
     );
 
     if (expanded) return content;
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: content,
-    );
+    return Padding(padding: const EdgeInsets.only(left: 8), child: content);
   }
 }
 
@@ -657,17 +703,29 @@ class DriverDashboardSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: InstitutionService.instance,
+      builder: (context, _) => _buildCard(context),
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final s = AppLocale.instance.strings;
     final schoolId = AuthService.activeSchoolId;
-    final schoolName = s.schoolName(schoolId);
-    final schoolLine =
-        schoolId != null ? '$schoolName · $schoolId' : schoolName;
+    final schoolName = InstitutionService.instance.displayNameFor(
+      schoolId,
+      fallback: s.schoolName(schoolId),
+    );
+    final schoolLine = schoolId != null
+        ? '$schoolName · $schoolId'
+        : schoolName;
 
     final driverId = AuthService.resolvedLinkedDriverId ?? '';
     final driver = driverId.isNotEmpty
         ? DriverRegistryService.instance.lookupById(driverId)
         : null;
-    final name = driver?.fullName ??
+    final name =
+        driver?.fullName ??
         AuthService.displayNameForRole(AuthService.roleDriver);
     final passengers = driverId.isNotEmpty
         ? TransportService.instance.passengersForDriver(driverId)
@@ -682,7 +740,11 @@ class DriverDashboardSummary extends StatelessWidget {
       leading: CircleAvatar(
         radius: 36,
         backgroundColor: _accent.withValues(alpha: 0.12),
-        child: const Icon(Icons.directions_bus_filled, color: _accent, size: 32),
+        child: const Icon(
+          Icons.directions_bus_filled,
+          color: _accent,
+          size: 32,
+        ),
       ),
       detailLines: [
         if (driverId.isNotEmpty) '${s.driverIdLabel}: $driverId',

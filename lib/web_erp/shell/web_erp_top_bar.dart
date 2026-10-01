@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/screens/notifications_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -53,16 +54,29 @@ class _WebErpTopBarState extends State<WebErpTopBar> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        InstitutionService.instance,
+        AppLocale.instance,
+      ]),
+      builder: (context, _) => _buildBar(context),
+    );
+  }
+
+  Widget _buildBar(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
     final schoolId = AuthService.activeSchoolId;
     final school = schoolId == null
         ? null
         : SchoolRegistryService.instance.lookup(schoolId);
-    final schoolName =
-        school?.name ??
-        (schoolId != null
-            ? AppLocale.instance.strings.schoolName(schoolId)
-            : 'MaJo e-School Bridge');
+    final schoolName = InstitutionService.instance.displayNameFor(
+      schoolId,
+      fallback:
+          school?.name ??
+          (schoolId != null
+              ? AppLocale.instance.strings.schoolName(schoolId)
+              : 'MaJo e-School Bridge'),
+    );
     final notifications = NotificationService.instance.unreadCount();
 
     final ink = ClassroomPalette.inkOf(context);
