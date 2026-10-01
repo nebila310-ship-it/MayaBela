@@ -32,8 +32,9 @@ class WebErpRelatedToolsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visible =
-        tools.where((tool) => ModuleAccess.canView(tool.routeId)).toList();
+    final visible = tools
+        .where((tool) => ModuleAccess.canView(tool.routeId))
+        .toList();
     if (visible.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -49,18 +50,20 @@ class WebErpRelatedToolsCard extends StatelessWidget {
             child: Text(title, style: WebErpTheme.sectionTitle(context)),
           ),
           for (final tool in visible)
-            ListTile(
-              leading: Icon(tool.icon, color: WebErpTheme.primary),
-              title: Text(tool.label),
-              subtitle:
-                  tool.subtitle == null ? null : Text(tool.subtitle!),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                final scope = WebErpNavigationScope.maybeOf(context);
-                if (scope != null) {
-                  scope.navigate(tool.routeId);
-                }
-              },
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: Icon(tool.icon, color: WebErpTheme.primary),
+                title: Text(tool.label),
+                subtitle: tool.subtitle == null ? null : Text(tool.subtitle!),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  final scope = WebErpNavigationScope.maybeOf(context);
+                  if (scope != null) {
+                    scope.navigate(tool.routeId);
+                  }
+                },
+              ),
             ),
         ],
       ),

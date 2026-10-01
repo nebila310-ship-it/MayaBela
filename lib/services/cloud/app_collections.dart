@@ -14,6 +14,7 @@ abstract final class AppCollections {
   static const homework = 'homework';
   static const dailyActivities = 'daily_activities';
   static const conversations = 'conversations';
+
   /// Signed-in heartbeat for messaging online status.
   static const userPresence = 'user_presence';
   static const announcements = 'app_announcements';
@@ -83,6 +84,9 @@ abstract final class AppCollections {
 
   // Quality Assurance (EDUABA §2)
   static const qaFindings = 'qa_findings';
+
+  /// Phase 1 Institutional Management snapshot (one doc per school).
+  static const institutionRecords = 'institution_records';
 
   /// LIA Phase I QA monitoring (observations, audits, surveys, action research).
   static const teachingObservations = 'teaching_observations';
