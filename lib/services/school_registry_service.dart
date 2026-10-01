@@ -294,7 +294,9 @@ class SchoolRecord {
     return value.isEmpty ? null : value.toLowerCase();
   }
 
-  static Set<String>? _enabledModulesFromSettings(Map<String, dynamic>? settings) {
+  static Set<String>? _enabledModulesFromSettings(
+    Map<String, dynamic>? settings,
+  ) {
     if (settings == null || !settings.containsKey('enabledModules')) {
       return null;
     }
@@ -429,7 +431,9 @@ class SchoolRegistryService {
   }
 
   String displayName(String? schoolId) {
-    return lookup(schoolId)?.name ?? 'Maya School Management';
+    final name = lookup(schoolId)?.name.trim() ?? '';
+    if (name.isNotEmpty) return name;
+    return 'Maya School Management';
   }
 
   List<String> campusesForSchool(String? schoolId) {

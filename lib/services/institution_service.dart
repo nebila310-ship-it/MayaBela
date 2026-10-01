@@ -223,9 +223,10 @@ class InstitutionService extends ChangeNotifier {
   }
 
   /// Trading / display name from a *saved* Institutional Management profile.
+  /// [schoolId] must be explicit so compact headers without an id stay empty.
   /// Seeded unsaved records are ignored so locale defaults stay until save.
   String? savedPublicName(String? schoolId) {
-    final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ?? '').trim().toUpperCase();
     if (sid.isEmpty) return null;
     final rec = _bySchool[sid];
     if (rec == null) return null;
@@ -242,6 +243,11 @@ class InstitutionService extends ChangeNotifier {
     if (saved != null) return saved;
     final trimmed = fallback?.trim() ?? '';
     if (trimmed.isNotEmpty) return trimmed;
+    final registry = SchoolRegistryService.instance
+        .lookup(schoolId)
+        ?.name
+        .trim();
+    if (registry != null && registry.isNotEmpty) return registry;
     return SchoolRegistryService.instance.displayName(schoolId);
   }
 
@@ -299,22 +305,18 @@ class InstitutionService extends ChangeNotifier {
     final name = savedPublicName(rec.schoolId);
     if (name == null) return;
     final school = SchoolRegistryService.instance.lookup(rec.schoolId);
+    // In-memory only. Do not persist or push the full school row — that
+    // overwrites academic year, campuses, modules, and other ERP settings.
     if (school != null && school.name != name) {
-      try {
-        await SchoolRegistryService.instance.updateSchool(
-          school.copyWith(name: name),
-        );
-      } catch (_) {}
+      school.name = name;
     }
     try {
-      final brand =
-          SchoolRegistryService.instance.lookup(rec.schoolId) ?? school;
       await LoginPrefsService.instance.rememberSchoolBrand(
         schoolId: rec.schoolId,
         name: name,
-        logoUrl: brand?.logoUrl,
-        logoPath: brand?.logoPath,
-        logoStyle: brand?.logoStyle ?? SchoolLogoStyle.rectangular,
+        logoUrl: school?.logoUrl,
+        logoPath: school?.logoPath,
+        logoStyle: school?.logoStyle ?? SchoolLogoStyle.rectangular,
       );
     } catch (_) {}
   }
