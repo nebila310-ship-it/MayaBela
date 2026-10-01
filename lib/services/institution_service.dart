@@ -156,6 +156,70 @@ class InstitutionService extends ChangeNotifier {
     return sentKeys.length;
   }
 
+  /// Sends a formal circular notice to teachers and/or administrative staff
+  /// in Messages, matching the circular audience.
+  Future<int> deliverCircularNotices(
+    OfficialCircular circular, {
+    String? schoolId,
+  }) async {
+    final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
+    if (sid.isEmpty) return 0;
+    final already = circular.deliveredKeys.toSet();
+    final me = StaffMemberOption.viewerCompositeStaffId(
+      AuthService.currentUser?.roleKey,
+    );
+    final senderName =
+        AuthService.currentUser?.fullName?.trim().isNotEmpty == true
+        ? AuthService.currentUser!.fullName!.trim()
+        : AuthService.displayNameForRole(
+            AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
+          );
+    final rec = recordFor(sid);
+    final schoolName = rec.profile.legalName.trim().isNotEmpty
+        ? rec.profile.legalName.trim()
+        : rec.profile.tradingName.trim();
+    final attachments = [
+      for (final path in circular.attachmentPaths)
+        if (path.trim().isNotEmpty)
+          AnnouncementAttachment(
+            id: path,
+            fileName: _fileName(path),
+            filePath: path,
+          ),
+    ];
+    final sentKeys = <String>[];
+    final skipKeys = <String>[];
+    for (final member in staffDirectory(sid)) {
+      if (!circular.includesKind(member.kind)) continue;
+      if (already.contains(member.key)) continue;
+      final staffId = messagingStaffIdFor(member);
+      if (staffId == null) continue;
+      if (me != null && StaffMemberOption.idsEqual(me, staffId)) {
+        skipKeys.add(member.key);
+        continue;
+      }
+      final ids = SchoolDataService.instance.sendAdminDirectMessage(
+        body: circular.noticeText(
+          toName: member.name,
+          schoolName: schoolName,
+          senderName: senderName,
+        ),
+        subject: circular.number.trim().isEmpty
+            ? 'Official circular: ${circular.title}'
+            : 'Official circular ${circular.number}: ${circular.title}',
+        staffId: staffId,
+        attachments: attachments,
+      );
+      if (ids.isNotEmpty) sentKeys.add(member.key);
+    }
+    if (sentKeys.isEmpty && skipKeys.isEmpty) return 0;
+    await upsertCircular(
+      circular.copyWith(deliveredKeys: [...already, ...sentKeys, ...skipKeys]),
+      schoolId: sid,
+    );
+    return sentKeys.length;
+  }
+
   String _fileName(String path) {
     final parts = path.replaceAll('\\', '/').split('/');
     return parts.isEmpty || parts.last.isEmpty ? path : parts.last;

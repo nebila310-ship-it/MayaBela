@@ -1311,19 +1311,25 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       ],
     );
     if (saved != true) return;
+    final circular = OfficialCircular(
+      id: existing?.id ?? InstitutionService.newId('cir'),
+      number: number.text.trim(),
+      title: title.text.trim(),
+      issuedOn: issued.text.trim(),
+      body: body.text.trim(),
+      audience: audience,
+      attachmentPaths: attachmentPaths,
+      deliveredKeys: existing?.deliveredKeys ?? const [],
+    );
     await _guarded(() async {
-      await _svc.upsertCircular(
-        OfficialCircular(
-          id: existing?.id ?? InstitutionService.newId('cir'),
-          number: number.text.trim(),
-          title: title.text.trim(),
-          issuedOn: issued.text.trim(),
-          body: body.text.trim(),
-          audience: audience,
-          attachmentPaths: attachmentPaths,
-        ),
+      await _svc.upsertCircular(circular, schoolId: _schoolId);
+      final sent = await _svc.deliverCircularNotices(
+        circular,
         schoolId: _schoolId,
       );
+      if (sent > 0 && mounted) {
+        _snack('Circular sent to $sent staff in Messages.');
+      }
     });
   }
 
