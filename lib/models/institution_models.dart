@@ -1,0 +1,703 @@
+/// Phase 1 Institutional Management records — governance of the institution,
+/// not SIS / academic / HR / finance operations.
+
+enum InstitutionLegalForm { privateSchool, foundation, company, academy, other }
+
+enum LeadershipSeatType {
+  owner,
+  boardChair,
+  boardMember,
+  principal,
+  director,
+  vicePrincipal,
+  campusDirector,
+  other,
+}
+
+enum OrgUnitKind { academicDepartment, supportDivision }
+
+enum InstitutionSiteStatus { active, planned, suspended }
+
+enum PolicyStatus { draft, active, superseded, withdrawn }
+
+enum ResolutionStatus { open, inProgress, done, vacated }
+
+enum LicenseHealth { valid, expiring, expired, none }
+
+class InstitutionProfile {
+  const InstitutionProfile({
+    this.legalName = '',
+    this.tradingName = '',
+    this.legalForm = InstitutionLegalForm.privateSchool,
+    this.registrationNumber = '',
+    this.foundingDate = '',
+    this.registeredAddress = '',
+    this.operatingAddress = '',
+    this.motto = '',
+    this.vision = '',
+    this.mission = '',
+    this.officialLanguages = 'English',
+  });
+
+  final String legalName;
+  final String tradingName;
+  final InstitutionLegalForm legalForm;
+  final String registrationNumber;
+  final String foundingDate;
+  final String registeredAddress;
+  final String operatingAddress;
+  final String motto;
+  final String vision;
+  final String mission;
+  final String officialLanguages;
+
+  InstitutionProfile copyWith({
+    String? legalName,
+    String? tradingName,
+    InstitutionLegalForm? legalForm,
+    String? registrationNumber,
+    String? foundingDate,
+    String? registeredAddress,
+    String? operatingAddress,
+    String? motto,
+    String? vision,
+    String? mission,
+    String? officialLanguages,
+  }) {
+    return InstitutionProfile(
+      legalName: legalName ?? this.legalName,
+      tradingName: tradingName ?? this.tradingName,
+      legalForm: legalForm ?? this.legalForm,
+      registrationNumber: registrationNumber ?? this.registrationNumber,
+      foundingDate: foundingDate ?? this.foundingDate,
+      registeredAddress: registeredAddress ?? this.registeredAddress,
+      operatingAddress: operatingAddress ?? this.operatingAddress,
+      motto: motto ?? this.motto,
+      vision: vision ?? this.vision,
+      mission: mission ?? this.mission,
+      officialLanguages: officialLanguages ?? this.officialLanguages,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'legalName': legalName,
+    'tradingName': tradingName,
+    'legalForm': legalForm.name,
+    'registrationNumber': registrationNumber,
+    'foundingDate': foundingDate,
+    'registeredAddress': registeredAddress,
+    'operatingAddress': operatingAddress,
+    'motto': motto,
+    'vision': vision,
+    'mission': mission,
+    'officialLanguages': officialLanguages,
+  };
+
+  static InstitutionProfile fromMap(Map<String, dynamic>? map) {
+    if (map == null) return const InstitutionProfile();
+    return InstitutionProfile(
+      legalName: '${map['legalName'] ?? ''}',
+      tradingName: '${map['tradingName'] ?? ''}',
+      legalForm: InstitutionLegalForm.values.firstWhere(
+        (v) => v.name == map['legalForm'],
+        orElse: () => InstitutionLegalForm.privateSchool,
+      ),
+      registrationNumber: '${map['registrationNumber'] ?? ''}',
+      foundingDate: '${map['foundingDate'] ?? ''}',
+      registeredAddress: '${map['registeredAddress'] ?? ''}',
+      operatingAddress: '${map['operatingAddress'] ?? ''}',
+      motto: '${map['motto'] ?? ''}',
+      vision: '${map['vision'] ?? ''}',
+      mission: '${map['mission'] ?? ''}',
+      officialLanguages: '${map['officialLanguages'] ?? 'English'}',
+    );
+  }
+
+  static String legalFormLabel(InstitutionLegalForm form) => switch (form) {
+    InstitutionLegalForm.privateSchool => 'Private school',
+    InstitutionLegalForm.foundation => 'Foundation',
+    InstitutionLegalForm.company => 'Company',
+    InstitutionLegalForm.academy => 'Academy / international school',
+    InstitutionLegalForm.other => 'Other',
+  };
+}
+
+class LeadershipSeat {
+  const LeadershipSeat({
+    required this.id,
+    required this.seatType,
+    required this.personName,
+    this.title = '',
+    this.termStart = '',
+    this.termEnd = '',
+    this.isActing = false,
+    this.notes = '',
+  });
+
+  final String id;
+  final LeadershipSeatType seatType;
+  final String personName;
+  final String title;
+  final String termStart;
+  final String termEnd;
+  final bool isActing;
+  final String notes;
+
+  LeadershipSeat copyWith({
+    LeadershipSeatType? seatType,
+    String? personName,
+    String? title,
+    String? termStart,
+    String? termEnd,
+    bool? isActing,
+    String? notes,
+  }) {
+    return LeadershipSeat(
+      id: id,
+      seatType: seatType ?? this.seatType,
+      personName: personName ?? this.personName,
+      title: title ?? this.title,
+      termStart: termStart ?? this.termStart,
+      termEnd: termEnd ?? this.termEnd,
+      isActing: isActing ?? this.isActing,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'seatType': seatType.name,
+    'personName': personName,
+    'title': title,
+    'termStart': termStart,
+    'termEnd': termEnd,
+    'isActing': isActing,
+    'notes': notes,
+  };
+
+  static LeadershipSeat fromMap(Map<String, dynamic> map) {
+    return LeadershipSeat(
+      id: '${map['id'] ?? ''}',
+      seatType: LeadershipSeatType.values.firstWhere(
+        (v) => v.name == map['seatType'],
+        orElse: () => LeadershipSeatType.other,
+      ),
+      personName: '${map['personName'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      termStart: '${map['termStart'] ?? ''}',
+      termEnd: '${map['termEnd'] ?? ''}',
+      isActing: map['isActing'] == true,
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String seatLabel(LeadershipSeatType type) => switch (type) {
+    LeadershipSeatType.owner => 'Owner / proprietor',
+    LeadershipSeatType.boardChair => 'Board chair',
+    LeadershipSeatType.boardMember => 'Board member',
+    LeadershipSeatType.principal => 'Principal',
+    LeadershipSeatType.director => 'Director',
+    LeadershipSeatType.vicePrincipal => 'Vice principal',
+    LeadershipSeatType.campusDirector => 'Campus director',
+    LeadershipSeatType.other => 'Other seat',
+  };
+}
+
+class OrgUnit {
+  const OrgUnit({
+    required this.id,
+    required this.name,
+    required this.kind,
+    this.headName = '',
+    this.mandate = '',
+  });
+
+  final String id;
+  final String name;
+  final OrgUnitKind kind;
+  final String headName;
+  final String mandate;
+
+  OrgUnit copyWith({
+    String? name,
+    OrgUnitKind? kind,
+    String? headName,
+    String? mandate,
+  }) {
+    return OrgUnit(
+      id: id,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      headName: headName ?? this.headName,
+      mandate: mandate ?? this.mandate,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'kind': kind.name,
+    'headName': headName,
+    'mandate': mandate,
+  };
+
+  static OrgUnit fromMap(Map<String, dynamic> map) {
+    return OrgUnit(
+      id: '${map['id'] ?? ''}',
+      name: '${map['name'] ?? ''}',
+      kind: OrgUnitKind.values.firstWhere(
+        (v) => v.name == map['kind'],
+        orElse: () => OrgUnitKind.academicDepartment,
+      ),
+      headName: '${map['headName'] ?? ''}',
+      mandate: '${map['mandate'] ?? ''}',
+    );
+  }
+
+  static String kindLabel(OrgUnitKind kind) => switch (kind) {
+    OrgUnitKind.academicDepartment => 'Academic department',
+    OrgUnitKind.supportDivision => 'Support division',
+  };
+}
+
+class InstitutionSite {
+  const InstitutionSite({
+    required this.id,
+    required this.campusName,
+    this.isHeadquarters = false,
+    this.status = InstitutionSiteStatus.active,
+    this.notes = '',
+  });
+
+  final String id;
+  final String campusName;
+  final bool isHeadquarters;
+  final InstitutionSiteStatus status;
+  final String notes;
+
+  InstitutionSite copyWith({
+    String? campusName,
+    bool? isHeadquarters,
+    InstitutionSiteStatus? status,
+    String? notes,
+  }) {
+    return InstitutionSite(
+      id: id,
+      campusName: campusName ?? this.campusName,
+      isHeadquarters: isHeadquarters ?? this.isHeadquarters,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'campusName': campusName,
+    'isHeadquarters': isHeadquarters,
+    'status': status.name,
+    'notes': notes,
+  };
+
+  static InstitutionSite fromMap(Map<String, dynamic> map) {
+    return InstitutionSite(
+      id: '${map['id'] ?? ''}',
+      campusName: '${map['campusName'] ?? ''}',
+      isHeadquarters: map['isHeadquarters'] == true,
+      status: InstitutionSiteStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => InstitutionSiteStatus.active,
+      ),
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+}
+
+class InstitutionPolicy {
+  const InstitutionPolicy({
+    required this.id,
+    required this.number,
+    required this.title,
+    this.owner = '',
+    this.status = PolicyStatus.draft,
+    this.reviewDate = '',
+    this.notes = '',
+  });
+
+  final String id;
+  final String number;
+  final String title;
+  final String owner;
+  final PolicyStatus status;
+  final String reviewDate;
+  final String notes;
+
+  bool get reviewDueSoon {
+    final due = DateTime.tryParse(reviewDate);
+    if (due == null || status != PolicyStatus.active) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return !due.isBefore(today) &&
+        !due.isAfter(today.add(const Duration(days: 60)));
+  }
+
+  InstitutionPolicy copyWith({
+    String? number,
+    String? title,
+    String? owner,
+    PolicyStatus? status,
+    String? reviewDate,
+    String? notes,
+  }) {
+    return InstitutionPolicy(
+      id: id,
+      number: number ?? this.number,
+      title: title ?? this.title,
+      owner: owner ?? this.owner,
+      status: status ?? this.status,
+      reviewDate: reviewDate ?? this.reviewDate,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'number': number,
+    'title': title,
+    'owner': owner,
+    'status': status.name,
+    'reviewDate': reviewDate,
+    'notes': notes,
+  };
+
+  static InstitutionPolicy fromMap(Map<String, dynamic> map) {
+    return InstitutionPolicy(
+      id: '${map['id'] ?? ''}',
+      number: '${map['number'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      owner: '${map['owner'] ?? ''}',
+      status: PolicyStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => PolicyStatus.draft,
+      ),
+      reviewDate: '${map['reviewDate'] ?? ''}',
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String statusLabel(PolicyStatus status) => switch (status) {
+    PolicyStatus.draft => 'Draft',
+    PolicyStatus.active => 'Active',
+    PolicyStatus.superseded => 'Superseded',
+    PolicyStatus.withdrawn => 'Withdrawn',
+  };
+}
+
+class OfficialCircular {
+  const OfficialCircular({
+    required this.id,
+    required this.number,
+    required this.title,
+    this.issuedOn = '',
+    this.body = '',
+  });
+
+  final String id;
+  final String number;
+  final String title;
+  final String issuedOn;
+  final String body;
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'number': number,
+    'title': title,
+    'issuedOn': issuedOn,
+    'body': body,
+  };
+
+  static OfficialCircular fromMap(Map<String, dynamic> map) {
+    return OfficialCircular(
+      id: '${map['id'] ?? ''}',
+      number: '${map['number'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      issuedOn: '${map['issuedOn'] ?? ''}',
+      body: '${map['body'] ?? ''}',
+    );
+  }
+}
+
+class InstitutionLicense {
+  const InstitutionLicense({
+    required this.id,
+    required this.title,
+    this.issuer = '',
+    this.number = '',
+    this.issuedOn = '',
+    this.expiresOn = '',
+    this.campusScope = 'Institution-wide',
+    this.notes = '',
+  });
+
+  final String id;
+  final String title;
+  final String issuer;
+  final String number;
+  final String issuedOn;
+  final String expiresOn;
+  final String campusScope;
+  final String notes;
+
+  LicenseHealth get health {
+    final expiry = DateTime.tryParse(expiresOn);
+    if (expiry == null) return LicenseHealth.none;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (expiry.isBefore(today)) return LicenseHealth.expired;
+    if (!expiry.isAfter(today.add(const Duration(days: 60)))) {
+      return LicenseHealth.expiring;
+    }
+    return LicenseHealth.valid;
+  }
+
+  InstitutionLicense copyWith({
+    String? title,
+    String? issuer,
+    String? number,
+    String? issuedOn,
+    String? expiresOn,
+    String? campusScope,
+    String? notes,
+  }) {
+    return InstitutionLicense(
+      id: id,
+      title: title ?? this.title,
+      issuer: issuer ?? this.issuer,
+      number: number ?? this.number,
+      issuedOn: issuedOn ?? this.issuedOn,
+      expiresOn: expiresOn ?? this.expiresOn,
+      campusScope: campusScope ?? this.campusScope,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    'issuer': issuer,
+    'number': number,
+    'issuedOn': issuedOn,
+    'expiresOn': expiresOn,
+    'campusScope': campusScope,
+    'notes': notes,
+  };
+
+  static InstitutionLicense fromMap(Map<String, dynamic> map) {
+    return InstitutionLicense(
+      id: '${map['id'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      issuer: '${map['issuer'] ?? ''}',
+      number: '${map['number'] ?? ''}',
+      issuedOn: '${map['issuedOn'] ?? ''}',
+      expiresOn: '${map['expiresOn'] ?? ''}',
+      campusScope: '${map['campusScope'] ?? 'Institution-wide'}',
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String healthLabel(LicenseHealth health) => switch (health) {
+    LicenseHealth.valid => 'Valid',
+    LicenseHealth.expiring => 'Expiring',
+    LicenseHealth.expired => 'Expired',
+    LicenseHealth.none => 'No expiry',
+  };
+}
+
+class InstitutionResolution {
+  const InstitutionResolution({
+    required this.id,
+    required this.number,
+    required this.title,
+    this.decision = '',
+    this.owner = '',
+    this.dueDate = '',
+    this.status = ResolutionStatus.open,
+    this.meetingTitle = '',
+  });
+
+  final String id;
+  final String number;
+  final String title;
+  final String decision;
+  final String owner;
+  final String dueDate;
+  final ResolutionStatus status;
+  final String meetingTitle;
+
+  bool get isOpen =>
+      status == ResolutionStatus.open || status == ResolutionStatus.inProgress;
+
+  bool get isOverdue {
+    if (!isOpen) return false;
+    final due = DateTime.tryParse(dueDate);
+    if (due == null) return false;
+    final now = DateTime.now();
+    return due.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  InstitutionResolution copyWith({
+    String? number,
+    String? title,
+    String? decision,
+    String? owner,
+    String? dueDate,
+    ResolutionStatus? status,
+    String? meetingTitle,
+  }) {
+    return InstitutionResolution(
+      id: id,
+      number: number ?? this.number,
+      title: title ?? this.title,
+      decision: decision ?? this.decision,
+      owner: owner ?? this.owner,
+      dueDate: dueDate ?? this.dueDate,
+      status: status ?? this.status,
+      meetingTitle: meetingTitle ?? this.meetingTitle,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'number': number,
+    'title': title,
+    'decision': decision,
+    'owner': owner,
+    'dueDate': dueDate,
+    'status': status.name,
+    'meetingTitle': meetingTitle,
+  };
+
+  static InstitutionResolution fromMap(Map<String, dynamic> map) {
+    return InstitutionResolution(
+      id: '${map['id'] ?? ''}',
+      number: '${map['number'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      decision: '${map['decision'] ?? ''}',
+      owner: '${map['owner'] ?? ''}',
+      dueDate: '${map['dueDate'] ?? ''}',
+      status: ResolutionStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => ResolutionStatus.open,
+      ),
+      meetingTitle: '${map['meetingTitle'] ?? ''}',
+    );
+  }
+
+  static String statusLabel(ResolutionStatus status) => switch (status) {
+    ResolutionStatus.open => 'Open',
+    ResolutionStatus.inProgress => 'In progress',
+    ResolutionStatus.done => 'Done',
+    ResolutionStatus.vacated => 'Vacated',
+  };
+}
+
+class InstitutionRecord {
+  const InstitutionRecord({
+    required this.schoolId,
+    required this.profile,
+    this.leadership = const [],
+    this.orgUnits = const [],
+    this.sites = const [],
+    this.policies = const [],
+    this.circulars = const [],
+    this.licenses = const [],
+    this.resolutions = const [],
+    required this.updatedAt,
+  });
+
+  final String schoolId;
+  final InstitutionProfile profile;
+  final List<LeadershipSeat> leadership;
+  final List<OrgUnit> orgUnits;
+  final List<InstitutionSite> sites;
+  final List<InstitutionPolicy> policies;
+  final List<OfficialCircular> circulars;
+  final List<InstitutionLicense> licenses;
+  final List<InstitutionResolution> resolutions;
+  final DateTime updatedAt;
+
+  String get id => schoolId;
+
+  InstitutionRecord copyWith({
+    InstitutionProfile? profile,
+    List<LeadershipSeat>? leadership,
+    List<OrgUnit>? orgUnits,
+    List<InstitutionSite>? sites,
+    List<InstitutionPolicy>? policies,
+    List<OfficialCircular>? circulars,
+    List<InstitutionLicense>? licenses,
+    List<InstitutionResolution>? resolutions,
+    DateTime? updatedAt,
+  }) {
+    return InstitutionRecord(
+      schoolId: schoolId,
+      profile: profile ?? this.profile,
+      leadership: leadership ?? this.leadership,
+      orgUnits: orgUnits ?? this.orgUnits,
+      sites: sites ?? this.sites,
+      policies: policies ?? this.policies,
+      circulars: circulars ?? this.circulars,
+      licenses: licenses ?? this.licenses,
+      resolutions: resolutions ?? this.resolutions,
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': schoolId,
+    'schoolId': schoolId,
+    'profile': profile.toMap(),
+    'leadership': leadership.map((e) => e.toMap()).toList(),
+    'orgUnits': orgUnits.map((e) => e.toMap()).toList(),
+    'sites': sites.map((e) => e.toMap()).toList(),
+    'policies': policies.map((e) => e.toMap()).toList(),
+    'circulars': circulars.map((e) => e.toMap()).toList(),
+    'licenses': licenses.map((e) => e.toMap()).toList(),
+    'resolutions': resolutions.map((e) => e.toMap()).toList(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+
+  static InstitutionRecord fromMap(Map<String, dynamic> map) {
+    List<Map<String, dynamic>> list(Object? raw) {
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
+    DateTime parseDate(Object? v) =>
+        DateTime.tryParse('${v ?? ''}') ?? DateTime.now();
+
+    final schoolId = '${map['schoolId'] ?? map['id'] ?? ''}'
+        .trim()
+        .toUpperCase();
+    return InstitutionRecord(
+      schoolId: schoolId,
+      profile: InstitutionProfile.fromMap(
+        map['profile'] is Map
+            ? Map<String, dynamic>.from(map['profile'] as Map)
+            : null,
+      ),
+      leadership: list(map['leadership']).map(LeadershipSeat.fromMap).toList(),
+      orgUnits: list(map['orgUnits']).map(OrgUnit.fromMap).toList(),
+      sites: list(map['sites']).map(InstitutionSite.fromMap).toList(),
+      policies: list(map['policies']).map(InstitutionPolicy.fromMap).toList(),
+      circulars: list(map['circulars']).map(OfficialCircular.fromMap).toList(),
+      licenses: list(map['licenses']).map(InstitutionLicense.fromMap).toList(),
+      resolutions: list(
+        map['resolutions'],
+      ).map(InstitutionResolution.fromMap).toList(),
+      updatedAt: parseDate(map['updatedAt']),
+    );
+  }
+}

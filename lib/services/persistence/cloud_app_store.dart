@@ -29,6 +29,7 @@ import 'package:mayabela/models/qa_monitor_models.dart';
 import 'package:mayabela/models/golive_models.dart';
 import 'package:mayabela/models/digital_ops_models.dart';
 import 'package:mayabela/models/qa_finding.dart';
+import 'package:mayabela/models/institution_models.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/models/transport_passenger.dart';
@@ -59,6 +60,7 @@ import 'package:mayabela/services/persistence/discipline_persistence_service.dar
 import 'package:mayabela/services/persistence/leave_request_persistence_service.dart';
 import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/qa_findings_persistence_service.dart';
+import 'package:mayabela/services/persistence/institution_persistence_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_audit_persistence_service.dart';
 import 'package:mayabela/services/procurement_service.dart';
@@ -85,6 +87,7 @@ import 'package:mayabela/services/digital_ops_service.dart';
 import 'package:mayabela/services/payroll_service.dart';
 import 'package:mayabela/models/payroll_models.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/transfer_workflow_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/school_audit_log_service.dart';
@@ -333,6 +336,8 @@ class CloudAppStore {
         return 'leave';
       case AppCollections.qaFindings:
         return 'qa_findings';
+      case AppCollections.institutionRecords:
+        return 'institution';
       case AppCollections.admissionApplications:
         return 'admissions';
       case AppCollections.examQuestions:
@@ -461,6 +466,8 @@ class CloudAppStore {
         await _pullLeaveRequests();
       case 'qa_findings':
         await _pullQaFindings();
+      case 'institution':
+        await _pullInstitutionRecords();
       case 'admissions':
         await _pullAdmissionApplications();
       case 'exam_bank':
@@ -728,6 +735,7 @@ class CloudAppStore {
     await pushAllDisciplineCases();
     await pushAllLeaveRequests();
     await pushAllQaFindings();
+    await pushAllInstitutionRecords();
     await pushAllAdmissionApplications();
     await pushAllExamBank();
     await pushAllLessonPlans();
@@ -1036,6 +1044,7 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullInstitutionRecords(),
         _pullAdmissionApplications(),
         _pullExamBank(),
         _pullLessonPlans(),
@@ -1097,6 +1106,7 @@ class CloudAppStore {
         _pullDisciplineCases(),
         _pullLeaveRequests(),
         _pullQaFindings(),
+        _pullInstitutionRecords(),
         _pullAdmissionApplications(),
         _pullExamBank(),
         _pullLessonPlans(),
@@ -1768,6 +1778,16 @@ class CloudAppStore {
     if (items.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.qaFindings,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
+  Future<void> pushAllInstitutionRecords() async {
+    final items = InstitutionService.instance.snapshotMaps();
+    if (items.isEmpty) return;
+    await _pushSafe(() => _crud.writeBatch(
+          collection: AppCollections.institutionRecords,
           items: items,
           docIdFor: (item) => item['id'] as String,
         ));
@@ -3793,6 +3813,26 @@ class CloudAppStore {
     if (findings.isEmpty) return;
     QaFindingsService.instance.applyPersistedData(findings, merge: true);
     await QaFindingsPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
+  }
+
+  Future<void> _pullInstitutionRecords() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin && role != AuthService.roleTeacher) {
+      return;
+    }
+    final rows = await _schoolRead(AppCollections.institutionRecords);
+    if (rows.isEmpty) return;
+    final records = <InstitutionRecord>[];
+    for (final map in rows) {
+      try {
+        records.add(InstitutionRecord.fromMap(map));
+      } catch (_) {}
+    }
+    if (records.isEmpty) return;
+    InstitutionService.instance.applyPersistedData(records, merge: true);
+    await InstitutionPersistenceService.instance.saveFromService(
       pushCloud: false,
     );
   }
