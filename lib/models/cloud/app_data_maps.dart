@@ -331,6 +331,10 @@ abstract final class AppDataMaps {
     'isRead': n.isRead,
     if (n.targetStudentId != null) 'targetStudentId': n.targetStudentId,
     if (n.targetClassName != null) 'targetClassName': n.targetClassName,
+    if (n.recipientStaffId != null) 'recipientStaffId': n.recipientStaffId,
+    if (n.recipientUsername != null) 'recipientUsername': n.recipientUsername,
+    if (n.recipientUsernames.isNotEmpty)
+      'recipientUsernames': n.recipientUsernames,
   };
 
   static AppNotification appNotificationFromMap(
@@ -349,6 +353,14 @@ abstract final class AppDataMaps {
     isRead: map['isRead'] as bool? ?? false,
     targetStudentId: map['targetStudentId'] as String?,
     targetClassName: map['targetClassName'] as String?,
+    recipientStaffId: map['recipientStaffId'] as String?,
+    recipientUsername: map['recipientUsername'] as String?,
+    recipientUsernames:
+        (map['recipientUsernames'] as List?)
+            ?.map((u) => u.toString())
+            .where((u) => u.trim().isNotEmpty)
+            .toList() ??
+        const [],
   );
 
   // —— Class timetables ——

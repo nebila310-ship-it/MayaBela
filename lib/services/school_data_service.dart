@@ -1682,26 +1682,59 @@ class SchoolDataService {
     required String title,
     required String body,
   }) {
-    final roles = <String>{AuthService.roleAdmin};
-    if (conversation.groupParentNames.isNotEmpty) {
-      roles.add(AuthService.roleParent);
-    }
-    if (conversation.linkedStudentIds.isNotEmpty) {
-      roles.add(AuthService.roleStudent);
-    }
+    final me = StaffMemberOption.viewerCompositeStaffId(senderRole);
+    final senderUsername =
+        AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+
     for (final staffId in conversation.groupStaffIds) {
+      if (StaffMemberOption.idsEqual(me, staffId)) continue;
       final member = StaffMemberOption.resolve(staffId);
-      if (member != null) roles.add(member.roleKey);
-    }
-    roles.remove(senderRole);
-    for (final role in roles) {
       NotificationService.instance.push(
         title: title,
         body: body,
         type: NotificationType.message,
         fromRole: senderRole,
         fromName: senderName,
-        recipientRole: role,
+        recipientRole: member?.roleKey ?? AuthService.roleTeacher,
+        recipientStaffId: staffId,
+      );
+    }
+
+    if (conversation.groupParentNames.isNotEmpty) {
+      final usernames = <String>{};
+      for (final name in conversation.groupParentNames) {
+        final recipient = MessagingAccessService.findParentRecipient(
+          name,
+          schoolId: AuthService.activeSchoolId,
+        );
+        usernames.addAll(MessagingAccessService.usernamesOf(recipient));
+      }
+      usernames.removeWhere(
+        (u) => u.trim().isEmpty || u.trim().toLowerCase() == senderUsername,
+      );
+      if (usernames.isNotEmpty) {
+        NotificationService.instance.push(
+          title: title,
+          body: body,
+          type: NotificationType.message,
+          fromRole: senderRole,
+          fromName: senderName,
+          recipientRole: AuthService.roleParent,
+          recipientUsernames: usernames.toList(),
+        );
+      }
+    }
+
+    for (final studentId in conversation.linkedStudentIds) {
+      if (studentId.trim().isEmpty) continue;
+      NotificationService.instance.push(
+        title: title,
+        body: body,
+        type: NotificationType.message,
+        fromRole: senderRole,
+        fromName: senderName,
+        recipientRole: AuthService.roleStudent,
+        targetStudentId: studentId,
       );
     }
   }
@@ -2094,14 +2127,6 @@ class SchoolDataService {
     Conversation conversation,
     String recipientRole,
   ) {
-    if (recipientRole == AuthService.roleTeacher) {
-      final staffId = conversation.staffParticipantId?.trim();
-      return (
-        recipientStaffId: staffId == null || staffId.isEmpty ? null : staffId,
-        recipientUsernames: null,
-        targetStudentId: null,
-      );
-    }
     if (recipientRole == AuthService.roleParent) {
       final usernames = conversation.parentParticipantUsernames
           .map((u) => u.trim())
@@ -2116,8 +2141,32 @@ class SchoolDataService {
         targetStudentId: studentId,
       );
     }
+
+    final senderStaff = StaffMemberOption.viewerCompositeStaffId(
+      AuthService.currentUser?.roleKey,
+    );
+    final staff = conversation.staffParticipantId?.trim();
+    final peer = conversation.counterpartyStaffId?.trim();
+    String? recipientStaff;
+    if (staff != null &&
+        staff.isNotEmpty &&
+        peer != null &&
+        peer.isNotEmpty) {
+      if (StaffMemberOption.idsEqual(senderStaff, staff)) {
+        recipientStaff = peer;
+      } else if (StaffMemberOption.idsEqual(senderStaff, peer)) {
+        recipientStaff = staff;
+      } else {
+        recipientStaff = staff;
+      }
+    } else if (staff != null && staff.isNotEmpty) {
+      recipientStaff = staff;
+    }
     return (
-      recipientStaffId: null,
+      recipientStaffId:
+          recipientStaff == null || recipientStaff.isEmpty
+          ? null
+          : recipientStaff,
       recipientUsernames: null,
       targetStudentId: null,
     );
@@ -2127,7 +2176,29 @@ class SchoolDataService {
     Conversation conversation,
     String senderRole,
   ) {
+    final senderStaff = StaffMemberOption.viewerCompositeStaffId(senderRole);
+    final staff = conversation.staffParticipantId?.trim();
+    final peer = conversation.counterpartyStaffId?.trim();
+    String? recipientStaffId;
+    if (staff != null &&
+        staff.isNotEmpty &&
+        peer != null &&
+        peer.isNotEmpty) {
+      recipientStaffId = StaffMemberOption.idsEqual(senderStaff, staff)
+          ? peer
+          : staff;
+    }
+    final member = recipientStaffId == null
+        ? null
+        : StaffMemberOption.resolve(recipientStaffId);
+    if (member != null) return member.roleKey;
+
     final contactRole = conversation.role.toLowerCase();
+    if (contactRole.contains('parent')) return AuthService.roleParent;
+    if (contactRole.contains('driver')) return AuthService.roleDriver;
+    if (contactRole.contains('admin')) return AuthService.roleAdmin;
+    if (contactRole.contains('teacher')) return AuthService.roleTeacher;
+
     if (senderRole == AuthService.roleTeacher) {
       return switch (contactRole) {
         'parent' => AuthService.roleParent,
