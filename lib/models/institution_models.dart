@@ -24,6 +24,20 @@ enum ResolutionStatus { open, inProgress, done, vacated }
 
 enum LicenseHealth { valid, expiring, expired, none }
 
+enum CommitteeStatus { active, paused, dissolved }
+
+enum MeetingBodyKind { board, slt, committee, other }
+
+enum RiskLikelihood { low, medium, high }
+
+enum RiskImpact { low, medium, high }
+
+enum RiskStatus { open, monitoring, closed }
+
+enum PartnerKind { ministry, accreditor, sisterSchool, mou, other }
+
+enum PartnerStatus { active, ended }
+
 class InstitutionProfile {
   const InstitutionProfile({
     this.legalName = '',
@@ -522,6 +536,7 @@ class InstitutionResolution {
     this.dueDate = '',
     this.status = ResolutionStatus.open,
     this.meetingTitle = '',
+    this.meetingId = '',
   });
 
   final String id;
@@ -532,6 +547,7 @@ class InstitutionResolution {
   final String dueDate;
   final ResolutionStatus status;
   final String meetingTitle;
+  final String meetingId;
 
   bool get isOpen =>
       status == ResolutionStatus.open || status == ResolutionStatus.inProgress;
@@ -552,6 +568,7 @@ class InstitutionResolution {
     String? dueDate,
     ResolutionStatus? status,
     String? meetingTitle,
+    String? meetingId,
   }) {
     return InstitutionResolution(
       id: id,
@@ -562,6 +579,7 @@ class InstitutionResolution {
       dueDate: dueDate ?? this.dueDate,
       status: status ?? this.status,
       meetingTitle: meetingTitle ?? this.meetingTitle,
+      meetingId: meetingId ?? this.meetingId,
     );
   }
 
@@ -574,6 +592,7 @@ class InstitutionResolution {
     'dueDate': dueDate,
     'status': status.name,
     'meetingTitle': meetingTitle,
+    'meetingId': meetingId,
   };
 
   static InstitutionResolution fromMap(Map<String, dynamic> map) {
@@ -589,6 +608,7 @@ class InstitutionResolution {
         orElse: () => ResolutionStatus.open,
       ),
       meetingTitle: '${map['meetingTitle'] ?? ''}',
+      meetingId: '${map['meetingId'] ?? ''}',
     );
   }
 
@@ -597,6 +617,341 @@ class InstitutionResolution {
     ResolutionStatus.inProgress => 'In progress',
     ResolutionStatus.done => 'Done',
     ResolutionStatus.vacated => 'Vacated',
+  };
+}
+
+class InstitutionCommittee {
+  const InstitutionCommittee({
+    required this.id,
+    required this.name,
+    this.chairName = '',
+    this.chairSeatId = '',
+    this.members = '',
+    this.termsOfReference = '',
+    this.status = CommitteeStatus.active,
+  });
+
+  final String id;
+  final String name;
+  final String chairName;
+  final String chairSeatId;
+  final String members;
+  final String termsOfReference;
+  final CommitteeStatus status;
+
+  InstitutionCommittee copyWith({
+    String? name,
+    String? chairName,
+    String? chairSeatId,
+    String? members,
+    String? termsOfReference,
+    CommitteeStatus? status,
+  }) {
+    return InstitutionCommittee(
+      id: id,
+      name: name ?? this.name,
+      chairName: chairName ?? this.chairName,
+      chairSeatId: chairSeatId ?? this.chairSeatId,
+      members: members ?? this.members,
+      termsOfReference: termsOfReference ?? this.termsOfReference,
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'chairName': chairName,
+    'chairSeatId': chairSeatId,
+    'members': members,
+    'termsOfReference': termsOfReference,
+    'status': status.name,
+  };
+
+  static InstitutionCommittee fromMap(Map<String, dynamic> map) {
+    return InstitutionCommittee(
+      id: '${map['id'] ?? ''}',
+      name: '${map['name'] ?? ''}',
+      chairName: '${map['chairName'] ?? ''}',
+      chairSeatId: '${map['chairSeatId'] ?? ''}',
+      members: '${map['members'] ?? ''}',
+      termsOfReference: '${map['termsOfReference'] ?? ''}',
+      status: CommitteeStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => CommitteeStatus.active,
+      ),
+    );
+  }
+
+  static String statusLabel(CommitteeStatus status) => switch (status) {
+    CommitteeStatus.active => 'Active',
+    CommitteeStatus.paused => 'Paused',
+    CommitteeStatus.dissolved => 'Dissolved',
+  };
+}
+
+class InstitutionMeeting {
+  const InstitutionMeeting({
+    required this.id,
+    required this.title,
+    this.heldOn = '',
+    this.bodyKind = MeetingBodyKind.board,
+    this.committeeId = '',
+    this.attendance = '',
+    this.notes = '',
+  });
+
+  final String id;
+  final String title;
+  final String heldOn;
+  final MeetingBodyKind bodyKind;
+  final String committeeId;
+  final String attendance;
+  final String notes;
+
+  InstitutionMeeting copyWith({
+    String? title,
+    String? heldOn,
+    MeetingBodyKind? bodyKind,
+    String? committeeId,
+    String? attendance,
+    String? notes,
+  }) {
+    return InstitutionMeeting(
+      id: id,
+      title: title ?? this.title,
+      heldOn: heldOn ?? this.heldOn,
+      bodyKind: bodyKind ?? this.bodyKind,
+      committeeId: committeeId ?? this.committeeId,
+      attendance: attendance ?? this.attendance,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    'heldOn': heldOn,
+    'bodyKind': bodyKind.name,
+    'committeeId': committeeId,
+    'attendance': attendance,
+    'notes': notes,
+  };
+
+  static InstitutionMeeting fromMap(Map<String, dynamic> map) {
+    return InstitutionMeeting(
+      id: '${map['id'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      heldOn: '${map['heldOn'] ?? ''}',
+      bodyKind: MeetingBodyKind.values.firstWhere(
+        (v) => v.name == map['bodyKind'],
+        orElse: () => MeetingBodyKind.board,
+      ),
+      committeeId: '${map['committeeId'] ?? ''}',
+      attendance: '${map['attendance'] ?? ''}',
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String bodyLabel(MeetingBodyKind kind) => switch (kind) {
+    MeetingBodyKind.board => 'Board',
+    MeetingBodyKind.slt => 'Senior leadership team',
+    MeetingBodyKind.committee => 'Committee',
+    MeetingBodyKind.other => 'Other body',
+  };
+}
+
+class InstitutionRisk {
+  const InstitutionRisk({
+    required this.id,
+    required this.title,
+    this.owner = '',
+    this.likelihood = RiskLikelihood.medium,
+    this.impact = RiskImpact.medium,
+    this.reviewDate = '',
+    this.status = RiskStatus.open,
+    this.notes = '',
+  });
+
+  final String id;
+  final String title;
+  final String owner;
+  final RiskLikelihood likelihood;
+  final RiskImpact impact;
+  final String reviewDate;
+  final RiskStatus status;
+  final String notes;
+
+  bool get isOpen =>
+      status == RiskStatus.open || status == RiskStatus.monitoring;
+
+  bool get isOverdue {
+    if (!isOpen) return false;
+    final due = DateTime.tryParse(reviewDate);
+    if (due == null) return false;
+    final now = DateTime.now();
+    return due.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  bool get reviewDueSoon {
+    if (!isOpen) return false;
+    final due = DateTime.tryParse(reviewDate);
+    if (due == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return !due.isAfter(today.add(const Duration(days: 60)));
+  }
+
+  InstitutionRisk copyWith({
+    String? title,
+    String? owner,
+    RiskLikelihood? likelihood,
+    RiskImpact? impact,
+    String? reviewDate,
+    RiskStatus? status,
+    String? notes,
+  }) {
+    return InstitutionRisk(
+      id: id,
+      title: title ?? this.title,
+      owner: owner ?? this.owner,
+      likelihood: likelihood ?? this.likelihood,
+      impact: impact ?? this.impact,
+      reviewDate: reviewDate ?? this.reviewDate,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    'owner': owner,
+    'likelihood': likelihood.name,
+    'impact': impact.name,
+    'reviewDate': reviewDate,
+    'status': status.name,
+    'notes': notes,
+  };
+
+  static InstitutionRisk fromMap(Map<String, dynamic> map) {
+    return InstitutionRisk(
+      id: '${map['id'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      owner: '${map['owner'] ?? ''}',
+      likelihood: RiskLikelihood.values.firstWhere(
+        (v) => v.name == map['likelihood'],
+        orElse: () => RiskLikelihood.medium,
+      ),
+      impact: RiskImpact.values.firstWhere(
+        (v) => v.name == map['impact'],
+        orElse: () => RiskImpact.medium,
+      ),
+      reviewDate: '${map['reviewDate'] ?? ''}',
+      status: RiskStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => RiskStatus.open,
+      ),
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String likelihoodLabel(RiskLikelihood v) => switch (v) {
+    RiskLikelihood.low => 'Low',
+    RiskLikelihood.medium => 'Medium',
+    RiskLikelihood.high => 'High',
+  };
+
+  static String impactLabel(RiskImpact v) => switch (v) {
+    RiskImpact.low => 'Low',
+    RiskImpact.medium => 'Medium',
+    RiskImpact.high => 'High',
+  };
+
+  static String statusLabel(RiskStatus status) => switch (status) {
+    RiskStatus.open => 'Open',
+    RiskStatus.monitoring => 'Monitoring',
+    RiskStatus.closed => 'Closed',
+  };
+}
+
+class InstitutionPartner {
+  const InstitutionPartner({
+    required this.id,
+    required this.name,
+    this.kind = PartnerKind.mou,
+    this.contact = '',
+    this.agreementRef = '',
+    this.status = PartnerStatus.active,
+    this.notes = '',
+  });
+
+  final String id;
+  final String name;
+  final PartnerKind kind;
+  final String contact;
+  final String agreementRef;
+  final PartnerStatus status;
+  final String notes;
+
+  InstitutionPartner copyWith({
+    String? name,
+    PartnerKind? kind,
+    String? contact,
+    String? agreementRef,
+    PartnerStatus? status,
+    String? notes,
+  }) {
+    return InstitutionPartner(
+      id: id,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      contact: contact ?? this.contact,
+      agreementRef: agreementRef ?? this.agreementRef,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'kind': kind.name,
+    'contact': contact,
+    'agreementRef': agreementRef,
+    'status': status.name,
+    'notes': notes,
+  };
+
+  static InstitutionPartner fromMap(Map<String, dynamic> map) {
+    return InstitutionPartner(
+      id: '${map['id'] ?? ''}',
+      name: '${map['name'] ?? ''}',
+      kind: PartnerKind.values.firstWhere(
+        (v) => v.name == map['kind'],
+        orElse: () => PartnerKind.mou,
+      ),
+      contact: '${map['contact'] ?? ''}',
+      agreementRef: '${map['agreementRef'] ?? ''}',
+      status: PartnerStatus.values.firstWhere(
+        (v) => v.name == map['status'],
+        orElse: () => PartnerStatus.active,
+      ),
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+
+  static String kindLabel(PartnerKind kind) => switch (kind) {
+    PartnerKind.ministry => 'Ministry / regulator',
+    PartnerKind.accreditor => 'Accreditor',
+    PartnerKind.sisterSchool => 'Sister school',
+    PartnerKind.mou => 'MOU / affiliation',
+    PartnerKind.other => 'Other',
+  };
+
+  static String statusLabel(PartnerStatus status) => switch (status) {
+    PartnerStatus.active => 'Active',
+    PartnerStatus.ended => 'Ended',
   };
 }
 
@@ -611,6 +966,10 @@ class InstitutionRecord {
     this.circulars = const [],
     this.licenses = const [],
     this.resolutions = const [],
+    this.committees = const [],
+    this.meetings = const [],
+    this.risks = const [],
+    this.partners = const [],
     required this.updatedAt,
   });
 
@@ -623,9 +982,29 @@ class InstitutionRecord {
   final List<OfficialCircular> circulars;
   final List<InstitutionLicense> licenses;
   final List<InstitutionResolution> resolutions;
+  final List<InstitutionCommittee> committees;
+  final List<InstitutionMeeting> meetings;
+  final List<InstitutionRisk> risks;
+  final List<InstitutionPartner> partners;
   final DateTime updatedAt;
 
   String get id => schoolId;
+
+  String meetingTitleFor(String meetingId) {
+    if (meetingId.isEmpty) return '';
+    for (final meeting in meetings) {
+      if (meeting.id == meetingId) return meeting.title;
+    }
+    return '';
+  }
+
+  String committeeNameFor(String committeeId) {
+    if (committeeId.isEmpty) return '';
+    for (final committee in committees) {
+      if (committee.id == committeeId) return committee.name;
+    }
+    return '';
+  }
 
   InstitutionRecord copyWith({
     InstitutionProfile? profile,
@@ -636,6 +1015,10 @@ class InstitutionRecord {
     List<OfficialCircular>? circulars,
     List<InstitutionLicense>? licenses,
     List<InstitutionResolution>? resolutions,
+    List<InstitutionCommittee>? committees,
+    List<InstitutionMeeting>? meetings,
+    List<InstitutionRisk>? risks,
+    List<InstitutionPartner>? partners,
     DateTime? updatedAt,
   }) {
     return InstitutionRecord(
@@ -648,6 +1031,10 @@ class InstitutionRecord {
       circulars: circulars ?? this.circulars,
       licenses: licenses ?? this.licenses,
       resolutions: resolutions ?? this.resolutions,
+      committees: committees ?? this.committees,
+      meetings: meetings ?? this.meetings,
+      risks: risks ?? this.risks,
+      partners: partners ?? this.partners,
       updatedAt: updatedAt ?? DateTime.now(),
     );
   }
@@ -663,6 +1050,10 @@ class InstitutionRecord {
     'circulars': circulars.map((e) => e.toMap()).toList(),
     'licenses': licenses.map((e) => e.toMap()).toList(),
     'resolutions': resolutions.map((e) => e.toMap()).toList(),
+    'committees': committees.map((e) => e.toMap()).toList(),
+    'meetings': meetings.map((e) => e.toMap()).toList(),
+    'risks': risks.map((e) => e.toMap()).toList(),
+    'partners': partners.map((e) => e.toMap()).toList(),
     'updatedAt': updatedAt.toIso8601String(),
   };
 
@@ -697,6 +1088,12 @@ class InstitutionRecord {
       resolutions: list(
         map['resolutions'],
       ).map(InstitutionResolution.fromMap).toList(),
+      committees: list(
+        map['committees'],
+      ).map(InstitutionCommittee.fromMap).toList(),
+      meetings: list(map['meetings']).map(InstitutionMeeting.fromMap).toList(),
+      risks: list(map['risks']).map(InstitutionRisk.fromMap).toList(),
+      partners: list(map['partners']).map(InstitutionPartner.fromMap).toList(),
       updatedAt: parseDate(map['updatedAt']),
     );
   }

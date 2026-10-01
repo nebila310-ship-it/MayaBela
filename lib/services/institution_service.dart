@@ -5,7 +5,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/institution_persistence_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 
-/// Phase 1 Institutional Management register — local + cloud snapshot.
+/// Institutional Management register — local + cloud snapshot.
 class InstitutionService extends ChangeNotifier {
   InstitutionService._();
   static final instance = InstitutionService._();
@@ -253,12 +253,116 @@ class InstitutionService extends ChangeNotifier {
     );
   }
 
+  Future<InstitutionRecord> upsertCommittee(
+    InstitutionCommittee committee, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.committees];
+      final i = next.indexWhere((e) => e.id == committee.id);
+      if (i < 0) {
+        next.insert(0, committee);
+      } else {
+        next[i] = committee;
+      }
+      return current.copyWith(committees: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteCommittee(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        committees: current.committees.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertMeeting(
+    InstitutionMeeting meeting, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.meetings];
+      final i = next.indexWhere((e) => e.id == meeting.id);
+      if (i < 0) {
+        next.insert(0, meeting);
+      } else {
+        next[i] = meeting;
+      }
+      return current.copyWith(meetings: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteMeeting(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        meetings: current.meetings.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertRisk(
+    InstitutionRisk risk, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.risks];
+      final i = next.indexWhere((e) => e.id == risk.id);
+      if (i < 0) {
+        next.insert(0, risk);
+      } else {
+        next[i] = risk;
+      }
+      return current.copyWith(risks: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteRisk(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        risks: current.risks.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertPartner(
+    InstitutionPartner partner, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.partners];
+      final i = next.indexWhere((e) => e.id == partner.id);
+      if (i < 0) {
+        next.insert(0, partner);
+      } else {
+        next[i] = partner;
+      }
+      return current.copyWith(partners: next);
+    });
+  }
+
+  Future<InstitutionRecord> deletePartner(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        partners: current.partners.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
   ({
     int activePolicies,
     int expiringLicenses,
     int expiredLicenses,
     int openResolutions,
     int overdueResolutions,
+    int activeCommittees,
+    int openRisks,
+    int risksDueSoon,
+    int activePartners,
   })
   metricsFor(String? schoolId) {
     final rec = recordFor(schoolId);
@@ -279,6 +383,11 @@ class InstitutionService extends ChangeNotifier {
       if (row.isOpen) open++;
       if (row.isOverdue) overdue++;
     }
+    var openRisks = 0, risksDueSoon = 0;
+    for (final risk in rec.risks) {
+      if (risk.isOpen) openRisks++;
+      if (risk.reviewDueSoon) risksDueSoon++;
+    }
     return (
       activePolicies: rec.policies
           .where((p) => p.status == PolicyStatus.active)
@@ -287,6 +396,14 @@ class InstitutionService extends ChangeNotifier {
       expiredLicenses: expired,
       openResolutions: open,
       overdueResolutions: overdue,
+      activeCommittees: rec.committees
+          .where((c) => c.status == CommitteeStatus.active)
+          .length,
+      openRisks: openRisks,
+      risksDueSoon: risksDueSoon,
+      activePartners: rec.partners
+          .where((p) => p.status == PartnerStatus.active)
+          .length,
     );
   }
 
