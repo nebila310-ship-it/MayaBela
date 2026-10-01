@@ -52,7 +52,7 @@ void main() {
       schoolId: schoolId,
     );
     await svc.upsertMeeting(
-      const InstitutionMeeting(
+      InstitutionMeeting(
         id: 'mtg-1',
         title: 'Board 12 Sep 2026',
         heldOn: '2026-09-12',

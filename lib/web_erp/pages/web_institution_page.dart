@@ -622,7 +622,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       ),
       children: [
         Text(
-          'Attendance and body of the meeting. Decisions still live as resolutions.',
+          'Invite staff, set the venue or join link, and attach papers. '
+          'Decisions still live as resolutions.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
@@ -635,7 +636,13 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                   rec.committeeNameFor(meeting.committeeId).isNotEmpty)
                 rec.committeeNameFor(meeting.committeeId),
               if (meeting.heldOn.isNotEmpty) meeting.heldOn,
+              if (meeting.venue.isNotEmpty) meeting.venue,
+              if (meeting.meetingLink.isNotEmpty) 'Join link',
               if (meeting.attendance.isNotEmpty) meeting.attendance,
+              if (meeting.invitees.isNotEmpty)
+                '${meeting.invitees.length} invited',
+              if (meeting.attachmentPaths.isNotEmpty)
+                _fileCountLabel(meeting.attachmentPaths.length),
               '${rec.resolutions.where((r) => r.meetingId == meeting.id).length} resolutions',
             ].join(' · '),
             onEdit: () => _editMeeting(meeting),
@@ -1540,7 +1547,12 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           controller: chair,
           decoration: const InputDecoration(labelText: 'Chair name'),
         ),
-        _CommitteeStaffPicker(
+        _StaffPicker(
+          heading: 'Members (from school staff)',
+          hint:
+              'Select teachers and employees by ID. Add staff in Human Resource or Teachers first.',
+          emptyMessage:
+              'No employees or teachers with an ID yet. Add them in Human Resource or Teachers first.',
           staff: staff,
           selectedKeys: selected,
           query: query,
@@ -1601,8 +1613,29 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     }
     final title = TextEditingController(text: existing?.title ?? '');
     final heldOn = TextEditingController(text: existing?.heldOn ?? '');
-    final attendance = TextEditingController(text: existing?.attendance ?? '');
+    final venue = TextEditingController(text: existing?.venue ?? '');
+    final meetingLink = TextEditingController(
+      text: existing?.meetingLink ?? '',
+    );
+    final agenda = TextEditingController(text: existing?.agenda ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final search = TextEditingController();
+    var attachmentPaths = List<String>.from(
+      existing?.attachmentPaths ?? const [],
+    );
+    final directory = _svc.staffDirectory(_schoolId);
+    final extras = [
+      for (final member
+          in existing?.invitees ?? const <InstitutionStaffMember>[])
+        if (directory.every((row) => row.key != member.key)) member,
+    ];
+    final staff = [...directory, ...extras];
+    final selected = {
+      for (final member
+          in existing?.invitees ?? const <InstitutionStaffMember>[])
+        member.key,
+    };
+    var query = '';
     final saved = await _formDialog(
       title: existing == null ? 'Add meeting' : 'Edit meeting',
       builder: (setDialogState) => [
@@ -1615,7 +1648,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         ),
         TextField(
           controller: heldOn,
-          decoration: const InputDecoration(labelText: 'Held on (YYYY-MM-DD)'),
+          decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
         ),
         DropdownButtonFormField<MeetingBodyKind>(
           initialValue: bodyKind,
@@ -1652,9 +1685,39 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             }),
           ),
         TextField(
-          controller: attendance,
-          maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Attendance'),
+          controller: venue,
+          decoration: const InputDecoration(
+            labelText: 'Venue',
+            hintText: 'Board room, Main Campus',
+          ),
+        ),
+        TextField(
+          controller: meetingLink,
+          decoration: const InputDecoration(
+            labelText: 'Join link (Zoom or similar)',
+            hintText: 'https://zoom.us/j/...',
+          ),
+        ),
+        _StaffPicker(
+          heading: 'Invitees (attendance)',
+          hint:
+              'Select teachers, administrative staff, and employees by ID. '
+              'Teachers and admin receive the invitation in Messages.',
+          emptyMessage:
+              'No staff with an ID yet. Add them in Human Resource, Teachers, or Admin first.',
+          staff: staff,
+          selectedKeys: selected,
+          query: query,
+          search: search,
+          onQueryChanged: (value) => setDialogState(() => query = value),
+          onToggle: (member) => setDialogState(() {
+            if (!selected.add(member.key)) selected.remove(member.key);
+          }),
+        ),
+        TextField(
+          controller: agenda,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Agenda'),
         ),
         TextField(
           controller: notes,
@@ -1663,22 +1726,48 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             labelText: 'Notes / minutes summary',
           ),
         ),
+        CourseAttachmentPicker(
+          paths: attachmentPaths,
+          subdir: 'institution_meeting_attachments',
+          sectionTitle: 'Meeting files',
+          onChanged: (next) => setDialogState(() => attachmentPaths = next),
+        ),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Attach one or more files. Tap Add attachment again to add more.',
+          ),
+        ),
       ],
     );
     if (saved != true) return;
+    final invitees = [
+      for (final member in staff)
+        if (selected.contains(member.key)) member,
+    ];
+    final meeting = InstitutionMeeting(
+      id: existing?.id ?? InstitutionService.newId('mtg'),
+      title: title.text.trim(),
+      heldOn: heldOn.text.trim(),
+      bodyKind: bodyKind,
+      committeeId: committeeId,
+      invitees: invitees,
+      venue: venue.text.trim(),
+      meetingLink: meetingLink.text.trim(),
+      agenda: agenda.text.trim(),
+      notes: notes.text.trim(),
+      attachmentPaths: attachmentPaths,
+      invitedKeys: existing?.invitedKeys ?? const [],
+    );
     await _guarded(() async {
-      await _svc.upsertMeeting(
-        InstitutionMeeting(
-          id: existing?.id ?? InstitutionService.newId('mtg'),
-          title: title.text.trim(),
-          heldOn: heldOn.text.trim(),
-          bodyKind: bodyKind,
-          committeeId: committeeId,
-          attendance: attendance.text.trim(),
-          notes: notes.text.trim(),
-        ),
+      await _svc.upsertMeeting(meeting, schoolId: _schoolId);
+      final sent = await _svc.deliverMeetingInvites(
+        meeting,
         schoolId: _schoolId,
       );
+      if (sent > 0 && mounted) {
+        _snack('Invitation sent to $sent staff in Messages.');
+      }
     });
   }
 
@@ -2336,8 +2425,11 @@ class _Action {
   final VoidCallback onTap;
 }
 
-class _CommitteeStaffPicker extends StatelessWidget {
-  const _CommitteeStaffPicker({
+class _StaffPicker extends StatelessWidget {
+  const _StaffPicker({
+    required this.heading,
+    required this.hint,
+    required this.emptyMessage,
     required this.staff,
     required this.selectedKeys,
     required this.query,
@@ -2346,6 +2438,9 @@ class _CommitteeStaffPicker extends StatelessWidget {
     required this.onToggle,
   });
 
+  final String heading;
+  final String hint;
+  final String emptyMessage;
   final List<InstitutionStaffMember> staff;
   final Set<String> selectedKeys;
   final String query;
@@ -2369,15 +2464,9 @@ class _CommitteeStaffPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Members (from school staff)',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+        Text(heading, style: const TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        Text(
-          'Select teachers and employees by ID. Add staff in Human Resource or Teachers first.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text(hint, style: Theme.of(context).textTheme.bodySmall),
         TextField(
           controller: search,
           decoration: const InputDecoration(
@@ -2389,9 +2478,7 @@ class _CommitteeStaffPicker extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (staff.isEmpty)
-          const Text(
-            'No employees or teachers with an ID yet. Add them in Human Resource or Teachers first.',
-          )
+          Text(emptyMessage)
         else ...[
           Text(
             '${selectedKeys.length} selected',

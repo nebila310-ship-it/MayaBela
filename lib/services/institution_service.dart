@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/institution_models.dart';
+import 'package:mayabela/models/message.dart';
+import 'package:mayabela/services/admin_registry_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/employee_registry_service.dart';
 import 'package:mayabela/services/persistence/institution_persistence_service.dart';
+import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
@@ -67,8 +71,94 @@ class InstitutionService extends ChangeNotifier {
         ),
       );
     }
+    for (final admin in AdminRegistryService.instance.getAllAdmins()) {
+      if (admin.schoolId.trim().toUpperCase() != sid) continue;
+      staff.add(
+        InstitutionStaffMember(
+          kind: InstitutionStaffKind.admin,
+          personId: admin.adminId,
+          name: admin.fullName,
+          title: admin.position,
+        ),
+      );
+    }
     staff.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return staff;
+  }
+
+  String? messagingStaffIdFor(InstitutionStaffMember member) {
+    return switch (member.kind) {
+      InstitutionStaffKind.teacher => StaffMemberOption.teacherKey(
+        member.personId,
+      ),
+      InstitutionStaffKind.admin => StaffMemberOption.adminKey(member.personId),
+      InstitutionStaffKind.employee => null,
+    };
+  }
+
+  /// Sends a formal invitation to newly added teachers and administrative
+  /// staff via in-app Messages. HR-only employees stay on the attendance list.
+  Future<int> deliverMeetingInvites(
+    InstitutionMeeting meeting, {
+    String? schoolId,
+  }) async {
+    final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
+    if (sid.isEmpty) return 0;
+    final already = meeting.invitedKeys.toSet();
+    final me = StaffMemberOption.viewerCompositeStaffId(
+      AuthService.currentUser?.roleKey,
+    );
+    final senderName =
+        AuthService.currentUser?.fullName?.trim().isNotEmpty == true
+        ? AuthService.currentUser!.fullName!.trim()
+        : AuthService.displayNameForRole(
+            AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
+          );
+    final schoolName = recordFor(sid).profile.legalName.trim().isNotEmpty
+        ? recordFor(sid).profile.legalName.trim()
+        : (recordFor(sid).profile.tradingName.trim());
+    final attachments = [
+      for (final path in meeting.attachmentPaths)
+        if (path.trim().isNotEmpty)
+          AnnouncementAttachment(
+            id: path,
+            fileName: _fileName(path),
+            filePath: path,
+          ),
+    ];
+    final sentKeys = <String>[];
+    final skipKeys = <String>[];
+    for (final member in meeting.invitees) {
+      if (already.contains(member.key)) continue;
+      final staffId = messagingStaffIdFor(member);
+      if (staffId == null) continue;
+      if (me != null && StaffMemberOption.idsEqual(me, staffId)) {
+        skipKeys.add(member.key);
+        continue;
+      }
+      final ids = SchoolDataService.instance.sendAdminDirectMessage(
+        body: meeting.invitationText(
+          toName: member.name,
+          schoolName: schoolName,
+          senderName: senderName,
+        ),
+        subject: 'Meeting invitation: ${meeting.title}',
+        staffId: staffId,
+        attachments: attachments,
+      );
+      if (ids.isNotEmpty) sentKeys.add(member.key);
+    }
+    if (sentKeys.isEmpty && skipKeys.isEmpty) return 0;
+    await upsertMeeting(
+      meeting.copyWith(invitedKeys: [...already, ...sentKeys, ...skipKeys]),
+      schoolId: sid,
+    );
+    return sentKeys.length;
+  }
+
+  String _fileName(String path) {
+    final parts = path.replaceAll('\\', '/').split('/');
+    return parts.isEmpty || parts.last.isEmpty ? path : parts.last;
   }
 
   InstitutionRecord recordFor(String? schoolId) {
