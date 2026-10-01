@@ -10,6 +10,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/widgets/inbox_messages_action.dart';
 
 /// Remind about unread mail once. Seeing or reading it never repeats that mail.
@@ -26,6 +27,9 @@ class InboxLoginReminder extends StatefulWidget {
   static const _prefsPrefix = 'inbox_ack_v3_';
   static int? shownForGeneration;
   static final Set<String> _rememberedKeys = {};
+
+  @visibleForTesting
+  static const displayDuration = Duration(seconds: 5);
 
   @visibleForTesting
   static void reset() {
@@ -47,8 +51,9 @@ class InboxLoginReminder extends StatefulWidget {
   }
 
   static String _storageKey() {
-    final username =
-        (AuthService.currentUser?.username ?? '').trim().toLowerCase();
+    final username = (AuthService.currentUser?.username ?? '')
+        .trim()
+        .toLowerCase();
     final role = AuthService.currentUser?.roleKey ?? '';
     return '$_prefsPrefix${username.isEmpty ? role : username}';
   }
@@ -116,10 +121,7 @@ class InboxLoginReminder extends StatefulWidget {
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getStringList(scope) ?? const [];
-      await prefs.setStringList(
-        scope,
-        {...stored, ...unseen}.toList()..sort(),
-      );
+      await prefs.setStringList(scope, {...stored, ...unseen}.toList()..sort());
     } catch (_) {}
   }
 
@@ -146,12 +148,39 @@ class InboxLoginReminder extends StatefulWidget {
 }
 
 class _InboxLoginReminderState extends State<InboxLoginReminder> {
+  Timer? _hideTimer;
+  bool _visible = false;
+  int _unread = 0;
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_maybeRemind());
     });
+  }
+
+  void _hideToast() {
+    _hideTimer?.cancel();
+    _hideTimer = null;
+    if (!mounted || !_visible) return;
+    setState(() => _visible = false);
+  }
+
+  void _openInbox() {
+    _hideToast();
+    unawaited(InboxLoginReminder.acknowledgeCurrent());
+    if (widget.onOpenMessages != null) {
+      widget.onOpenMessages!();
+      return;
+    }
+    InboxMessagesAction.openInbox(context);
   }
 
   Future<void> _maybeRemind() async {
@@ -179,28 +208,76 @@ class _InboxLoginReminderState extends State<InboxLoginReminder> {
     NotificationService.instance.markMessagesBadgeRead();
 
     if (!mounted) return;
-    final s = AppLocale.instance.strings;
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.showSnackBar(
-      SnackBar(
-        key: const Key('inbox-login-reminder'),
-        content: Text(s.inboxUnreadOnLogin(unread)),
-        action: SnackBarAction(
-          label: s.inboxOpenMessages,
-          onPressed: () {
-            unawaited(InboxLoginReminder.acknowledgeCurrent());
-            if (widget.onOpenMessages != null) {
-              widget.onOpenMessages!();
-              return;
-            }
-            InboxMessagesAction.openInbox(context);
-          },
-        ),
-        duration: const Duration(seconds: 8),
-      ),
-    );
+    setState(() {
+      _unread = unread;
+      _visible = true;
+    });
+    _hideTimer?.cancel();
+    _hideTimer = Timer(InboxLoginReminder.displayDuration, _hideToast);
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    final maxWidth = (MediaQuery.sizeOf(context).width - 32).clamp(
+      180.0,
+      340.0,
+    );
+    return Stack(
+      children: [
+        widget.child,
+        if (_visible)
+          Positioned(
+            top: padding.top + 16,
+            right: 16,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Material(
+                key: const Key('inbox-login-reminder'),
+                color: Colors.white,
+                elevation: 10,
+                shadowColor: ClassroomPalette.green.withValues(alpha: 0.32),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: ClassroomPalette.green.withValues(alpha: 0.55),
+                  ),
+                ),
+                child: InkWell(
+                  onTap: _openInbox,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.mark_email_unread_rounded,
+                          color: ClassroomPalette.green,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            AppLocale.instance.strings.inboxUnreadOnLogin(
+                              _unread,
+                            ),
+                            style: const TextStyle(
+                              color: ClassroomPalette.green,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

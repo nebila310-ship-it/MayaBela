@@ -147,11 +147,23 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.byKey(const Key('inbox-login-reminder')), findsOneWidget);
     expect(
-      find.text(AppLocale.instance.strings.inboxOpenMessages),
+      find.text(AppLocale.instance.strings.inboxUnreadOnLogin(unread)),
       findsOneWidget,
     );
+    expect(
+      tester
+          .widget<Material>(find.byKey(const Key('inbox-login-reminder')))
+          .color,
+      Colors.white,
+    );
+
+    final toast = tester.getRect(find.byKey(const Key('inbox-login-reminder')));
+    final screen = tester.getRect(find.byType(MaterialApp));
+    expect(toast.top, lessThan(80));
+    expect(toast.right, closeTo(screen.right - 16, 0.5));
   });
 
   testWidgets('login reminder does not repeat after it has been shown', (
@@ -160,22 +172,18 @@ void main() {
     signIn(AuthService.roleTeacher);
 
     Widget reminder() => MaterialApp(
-          home: InboxLoginReminder(
-            child: Scaffold(
-              body: Text(AppLocale.instance.strings.notifyMessages),
-            ),
-          ),
-        );
+      home: InboxLoginReminder(
+        child: Scaffold(body: Text(AppLocale.instance.strings.notifyMessages)),
+      ),
+    );
 
     await tester.pumpWidget(reminder());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byKey(const Key('inbox-login-reminder')), findsOneWidget);
 
-    ScaffoldMessenger.of(tester.element(find.byType(Scaffold)))
-        .hideCurrentSnackBar();
+    await tester.pump(InboxLoginReminder.displayDuration);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
 
     InboxLoginReminder.reset();
@@ -185,35 +193,34 @@ void main() {
     expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
   });
 
-  testWidgets('login reminder stays hidden after a later login for the same user', (
-    tester,
-  ) async {
-    signIn(AuthService.roleAdmin);
+  testWidgets(
+    'login reminder stays hidden after a later login for the same user',
+    (tester) async {
+      signIn(AuthService.roleAdmin);
 
-    Widget reminder() => MaterialApp(
-          home: InboxLoginReminder(
-            child: Scaffold(
-              body: Text(AppLocale.instance.strings.notifyMessages),
-            ),
+      Widget reminder() => MaterialApp(
+        home: InboxLoginReminder(
+          child: Scaffold(
+            body: Text(AppLocale.instance.strings.notifyMessages),
           ),
-        );
+        ),
+      );
 
-    await tester.pumpWidget(reminder());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpWidget(reminder());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    ScaffoldMessenger.of(tester.element(find.byType(Scaffold)))
-        .hideCurrentSnackBar();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(InboxLoginReminder.displayDuration);
+      await tester.pump();
 
-    InboxLoginReminder.reset();
-    NotificationService.instance.clearForLogout();
-    signIn(AuthService.roleAdmin);
+      InboxLoginReminder.reset();
+      NotificationService.instance.clearForLogout();
+      signIn(AuthService.roleAdmin);
 
-    await tester.pumpWidget(reminder());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
-  });
+      await tester.pumpWidget(reminder());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(const Key('inbox-login-reminder')), findsNothing);
+    },
+  );
 }
