@@ -6,6 +6,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/school_class.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_account_service.dart';
@@ -85,7 +86,10 @@ abstract final class StudentProfileService {
     if (record == null) return null;
 
     final school = SchoolRegistryService.instance.lookup(record.schoolId);
-    final schoolName = AppLocale.instance.strings.schoolName(record.schoolId);
+    final schoolName = InstitutionService.instance.displayNameFor(
+      record.schoolId,
+      fallback: AppLocale.instance.strings.schoolName(record.schoolId),
+    );
     final child = SchoolDataService.instance.getChildById(record.studentId);
     final section = child?.displaySection.isNotEmpty == true
         ? child!.displaySection

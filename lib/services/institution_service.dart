@@ -4,8 +4,10 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/institution_models.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/admin_registry_service.dart';
+import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/employee_registry_service.dart';
+import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/persistence/institution_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -114,9 +116,7 @@ class InstitutionService extends ChangeNotifier {
         : AuthService.displayNameForRole(
             AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
           );
-    final schoolName = recordFor(sid).profile.legalName.trim().isNotEmpty
-        ? recordFor(sid).profile.legalName.trim()
-        : (recordFor(sid).profile.tradingName.trim());
+    final schoolName = displayNameFor(sid);
     final attachments = [
       for (final path in meeting.attachmentPaths)
         if (path.trim().isNotEmpty)
@@ -174,10 +174,7 @@ class InstitutionService extends ChangeNotifier {
         : AuthService.displayNameForRole(
             AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
           );
-    final rec = recordFor(sid);
-    final schoolName = rec.profile.legalName.trim().isNotEmpty
-        ? rec.profile.legalName.trim()
-        : rec.profile.tradingName.trim();
+    final schoolName = displayNameFor(sid);
     final attachments = [
       for (final path in circular.attachmentPaths)
         if (path.trim().isNotEmpty)
@@ -225,6 +222,29 @@ class InstitutionService extends ChangeNotifier {
     return parts.isEmpty || parts.last.isEmpty ? path : parts.last;
   }
 
+  /// Trading / display name from a *saved* Institutional Management profile.
+  /// Seeded unsaved records are ignored so locale defaults stay until save.
+  String? savedPublicName(String? schoolId) {
+    final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
+    if (sid.isEmpty) return null;
+    final rec = _bySchool[sid];
+    if (rec == null) return null;
+    final trading = rec.profile.tradingName.trim();
+    if (trading.isNotEmpty) return trading;
+    final legal = rec.profile.legalName.trim();
+    if (legal.isNotEmpty) return legal;
+    return null;
+  }
+
+  /// School name shown on role dashboards after an IM profile save.
+  String displayNameFor(String? schoolId, {String? fallback}) {
+    final saved = savedPublicName(schoolId);
+    if (saved != null) return saved;
+    final trimmed = fallback?.trim() ?? '';
+    if (trimmed.isNotEmpty) return trimmed;
+    return SchoolRegistryService.instance.displayName(schoolId);
+  }
+
   InstitutionRecord recordFor(String? schoolId) {
     final sid = (schoolId ?? _schoolId ?? '').trim().toUpperCase();
     if (sid.isEmpty) {
@@ -266,8 +286,37 @@ class InstitutionService extends ChangeNotifier {
   Future<InstitutionRecord> saveProfile(
     InstitutionProfile profile, {
     String? schoolId,
-  }) {
-    return _mutate(schoolId, (current) => current.copyWith(profile: profile));
+  }) async {
+    final next = await _mutate(
+      schoolId,
+      (current) => current.copyWith(profile: profile),
+    );
+    await _syncDashboardSchoolName(next);
+    return next;
+  }
+
+  Future<void> _syncDashboardSchoolName(InstitutionRecord rec) async {
+    final name = savedPublicName(rec.schoolId);
+    if (name == null) return;
+    final school = SchoolRegistryService.instance.lookup(rec.schoolId);
+    if (school != null && school.name != name) {
+      try {
+        await SchoolRegistryService.instance.updateSchool(
+          school.copyWith(name: name),
+        );
+      } catch (_) {}
+    }
+    try {
+      final brand =
+          SchoolRegistryService.instance.lookup(rec.schoolId) ?? school;
+      await LoginPrefsService.instance.rememberSchoolBrand(
+        schoolId: rec.schoolId,
+        name: name,
+        logoUrl: brand?.logoUrl,
+        logoPath: brand?.logoPath,
+        logoStyle: brand?.logoStyle ?? SchoolLogoStyle.rectangular,
+      );
+    } catch (_) {}
   }
 
   Future<InstitutionRecord> upsertLeadership(

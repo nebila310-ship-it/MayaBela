@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
@@ -72,12 +73,20 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: InstitutionService.instance,
+      builder: (context, _) => _buildHeader(context),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
     final id = widget.schoolId?.trim();
     final record = id != null && id.isNotEmpty
         ? SchoolRegistryService.instance.lookup(id)
         : null;
-    final hasSchool = record != null;
-    final schoolName = hasSchool ? record.name : null;
+    final savedName = InstitutionService.instance.savedPublicName(id);
+    final schoolName = savedName ?? record?.name;
+    final hasSchool = record != null || savedName != null;
 
     final titleColor = widget.titleColor ?? ClassroomPalette.inkOf(context);
     final mutedTitle = widget.titleColor ?? ClassroomPalette.mutedOf(context);

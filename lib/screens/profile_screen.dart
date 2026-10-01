@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/screens/settings_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_credentials_service.dart';
@@ -14,13 +15,19 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: AppLocale.instance,
+      listenable: Listenable.merge([
+        AppLocale.instance,
+        InstitutionService.instance,
+      ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
         final user = AuthService.currentUser;
         final roleKey = user?.roleKey ?? AuthService.roleTeacher;
         final schoolId = AuthService.activeSchoolId;
-        final schoolName = SchoolRegistryService.instance.displayName(schoolId);
+        final schoolName = InstitutionService.instance.displayNameFor(
+          schoolId,
+          fallback: SchoolRegistryService.instance.displayName(schoolId),
+        );
         final isTeacher = roleKey == AuthService.roleTeacher;
         final teacherRecord = isTeacher
             ? TeacherCredentialsService.instance.recordForCurrentUser()
@@ -64,7 +71,10 @@ class ProfileScreen extends StatelessWidget {
               Text(
                 name,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(

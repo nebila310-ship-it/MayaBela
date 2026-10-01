@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -22,6 +23,7 @@ class StudentDashboardSummary extends StatelessWidget {
         StudentPortalSyncService.instance,
         NotificationService.instance,
         SchoolContentSyncService.instance,
+        InstitutionService.instance,
       ]),
       builder: (context, _) {
         final profile = StudentProfileService.profileForCurrentUser();
@@ -51,21 +53,29 @@ class StudentDashboardSummary extends StatelessWidget {
         final announcementCount = data
             .getAnnouncementsForRole(AuthService.roleStudent)
             .length;
-        final unreadNotifications = NotificationService.instance
-            .unreadCount(roleKey: AuthService.roleStudent);
+        final unreadNotifications = NotificationService.instance.unreadCount(
+          roleKey: AuthService.roleStudent,
+        );
         final upcomingEvents = data
             .getVisibleCalendarEventsForRole(AuthService.roleStudent)
             .where((event) {
               final today = DateTime.now();
               final day = DateTime(today.year, today.month, today.day);
-              final eventDay =
-                  DateTime(event.date.year, event.date.month, event.date.day);
+              final eventDay = DateTime(
+                event.date.year,
+                event.date.month,
+                event.date.day,
+              );
               return !eventDay.isBefore(day);
             })
             .take(3)
             .length;
 
-        final schoolLine = '${profile.schoolName} · ${profile.schoolId}';
+        final schoolName = InstitutionService.instance.displayNameFor(
+          profile.schoolId,
+          fallback: profile.schoolName,
+        );
+        final schoolLine = '$schoolName · ${profile.schoolId}';
         final detailLines = <String>[
           '${profile.grade} · ${profile.className}',
           if (profile.section.isNotEmpty) 'Section ${profile.section}',
@@ -117,9 +127,9 @@ class StudentDashboardSummary extends StatelessWidget {
           footerLine: sync.isSyncing
               ? 'Syncing latest school data…'
               : sync.error ??
-                  (sync.lastSyncedAt != null
-                      ? 'Updated ${_formatTime(sync.lastSyncedAt!)}'
-                      : null),
+                    (sync.lastSyncedAt != null
+                        ? 'Updated ${_formatTime(sync.lastSyncedAt!)}'
+                        : null),
         );
       },
     );

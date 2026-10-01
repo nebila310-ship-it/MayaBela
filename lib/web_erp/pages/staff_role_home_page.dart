@@ -14,6 +14,7 @@ import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
@@ -128,6 +129,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         GoliveService.instance,
         SchoolContentSyncService.instance,
         ConversationRealtimeSync.instance,
+        InstitutionService.instance,
       ]),
       builder: (context, _) {
         final stats = _buildStats();
@@ -219,6 +221,15 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     ];
     final dateLabel =
         '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+    final schoolName = InstitutionService.instance.displayNameFor(
+      _schoolId,
+      fallback: s.schoolName(_schoolId),
+    );
+    final schoolLine = [
+      dateLabel,
+      if (schoolName.isNotEmpty) schoolName,
+      ?_schoolId,
+    ].join('  ·  ');
 
     return Container(
       width: double.infinity,
@@ -250,8 +261,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  dateLabel +
-                      (_schoolId == null ? '' : '  ·  ${_schoolId!}'),
+                  schoolLine,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 13,

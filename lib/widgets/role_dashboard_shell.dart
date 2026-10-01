@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/cloud/conversation_realtime_sync.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
@@ -58,18 +59,24 @@ class RoleDashboardShell extends StatelessWidget {
         UserPreferencesService.instance,
         StaffRegistryNotifier.instance,
         StudentPortalSyncService.instance,
+        InstitutionService.instance,
       ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
         final name = roleKey == AuthService.roleTeacher
             ? TeacherAccessService.instance.teacherName
             : roleKey == AuthService.roleStaff
-                ? (AuthService.currentUser?.fullName ??
-                    AuthService.displayNameForRole(AuthService.roleTeacher))
-                : AuthService.displayNameForRole(roleKey);
-        final schoolName = s.schoolName(AuthService.activeSchoolId);
+            ? (AuthService.currentUser?.fullName ??
+                  AuthService.displayNameForRole(AuthService.roleTeacher))
+            : AuthService.displayNameForRole(roleKey);
+        final schoolName = InstitutionService.instance.displayNameFor(
+          AuthService.activeSchoolId,
+          fallback: s.schoolName(AuthService.activeSchoolId),
+        );
         final schoolId = AuthService.activeSchoolId;
-        final subtitle = schoolId != null ? '$schoolName · $schoolId' : schoolName;
+        final subtitle = schoolId != null
+            ? '$schoolName · $schoolId'
+            : schoolName;
 
         return AdaptiveDashboardShell(
           title: _portalTitle(s, schoolName),
@@ -78,12 +85,10 @@ class RoleDashboardShell extends StatelessWidget {
           welcomeName: name,
           welcomeSubtitle: subtitle,
           welcomeEmoji: welcomeEmoji,
-          welcomeLeading: roleKey == AuthService.roleTeacher ||
+          welcomeLeading:
+              roleKey == AuthService.roleTeacher ||
                   roleKey == AuthService.roleStaff
-              ? TeacherProfileAvatar(
-                  name: name,
-                  radius: 28,
-                )
+              ? TeacherProfileAvatar(name: name, radius: 28)
               : null,
           gradientColors: gradientColors,
           roleKey: roleKey,
