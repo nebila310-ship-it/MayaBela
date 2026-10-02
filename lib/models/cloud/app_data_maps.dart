@@ -154,8 +154,20 @@ abstract final class AppDataMaps {
     'className': session.className,
     'date': session.date.toIso8601String(),
     'conductedBy': session.conductedBy,
+    'locked': session.locked,
+    if (session.lockedBy != null && session.lockedBy!.trim().isNotEmpty)
+      'lockedBy': session.lockedBy,
+    if (session.lockedAt != null)
+      'lockedAt': session.lockedAt!.toIso8601String(),
     'entries': session.entries
-        .map((e) => {'studentName': e.studentName, 'status': e.status.name})
+        .map(
+          (e) => {
+            'studentName': e.studentName,
+            'status': e.status.name,
+            if (e.studentId != null && e.studentId!.trim().isNotEmpty)
+              'studentId': e.studentId,
+          },
+        )
         .toList(),
   };
 
@@ -164,10 +176,16 @@ abstract final class AppDataMaps {
         className: map['className'] as String? ?? '',
         date: DateTime.parse(map['date'] as String),
         conductedBy: map['conductedBy'] as String? ?? '',
+        locked: map['locked'] == true,
+        lockedBy: map['lockedBy'] as String?,
+        lockedAt: map['lockedAt'] is String
+            ? DateTime.tryParse(map['lockedAt'] as String)
+            : null,
         entries: (map['entries'] as List<dynamic>? ?? const [])
             .map(
               (e) => StudentAttendanceEntry(
                 studentName: (e as Map)['studentName'] as String? ?? '',
+                studentId: e['studentId'] as String?,
                 status: AttendanceStatus.values.byName(
                   e['status'] as String? ?? 'present',
                 ),

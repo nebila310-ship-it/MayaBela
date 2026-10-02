@@ -39,6 +39,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   List<StudentAttendanceEntry> entries = [];
   String? conductedBy;
   bool _showHistory = false;
+  bool _locked = false;
 
   List<String> get _classOptions {
     if (widget.readOnly) {
@@ -63,10 +64,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   bool get _canMarkSelectedClass {
     if (widget.readOnly || selectedClass.trim().isEmpty) return false;
-    if (_access.canTakeAttendance(selectedClass)) return true;
-    return AuthService.mayReadAllSchoolData ||
-        ModuleAccess.canManage('attendance');
+    return _data.canWriteAttendanceRegister(selectedClass);
   }
+
+  bool get _canEditRegister =>
+      _canMarkSelectedClass &&
+      (!_locked || _data.canUnlockAttendanceRegister());
 
   void _loadAttendance() {
     final session = _data.getAttendanceSession(selectedClass, selectedDate);
@@ -75,28 +78,49 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (session != null) {
       entries = session.entries
           .map(
-            (entry) => StudentAttendanceEntry(
-              studentName: entry.studentName,
-              status: entry.status,
-            ),
+            (entry) {
+              String? id = entry.studentId;
+              if (id == null || id.trim().isEmpty) {
+                for (final student in roster) {
+                  if (student.name == entry.studentName) {
+                    id = student.inviteStudentId;
+                    break;
+                  }
+                }
+              }
+              return StudentAttendanceEntry(
+                studentName: entry.studentName,
+                studentId: id,
+                status: entry.status,
+              );
+            },
           )
           .toList();
       conductedBy = session.conductedBy;
+      _locked = session.locked;
     } else {
       entries = roster
           .map(
             (student) => StudentAttendanceEntry(
               studentName: student.name,
+              studentId: student.inviteStudentId,
               status: AttendanceStatus.present,
             ),
           )
           .toList();
       conductedBy = null;
+      _locked = false;
     }
 
     if (widget.readOnly && widget.childName != null) {
+      final child = _data.getChildByName(widget.childName!);
       entries = entries
-          .where((entry) => entry.studentName == widget.childName)
+          .where(
+            (entry) => entry.matches(
+              studentId: child?.studentId,
+              studentName: widget.childName,
+            ),
+          )
           .toList();
     }
 
@@ -135,10 +159,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   void _setStatus(int index, AttendanceStatus status) {
+    if (!_canEditRegister) return;
     setState(() => entries[index].status = status);
   }
 
   void _markAllPresent() {
+    if (!_canEditRegister) return;
     setState(() {
       for (final entry in entries) {
         entry.status = AttendanceStatus.present;
@@ -146,16 +172,75 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
   }
 
+  Widget _lockButton(AppStrings s) {
+    final canToggle = _locked
+        ? _data.canUnlockAttendanceRegister()
+        : _canMarkSelectedClass;
+    return IconButton(
+      icon: Icon(_locked ? Icons.lock : Icons.lock_open_outlined),
+      tooltip: _locked
+          ? s.unlockAttendanceRegister
+          : s.lockAttendanceRegister,
+      onPressed: canToggle ? _toggleLock : null,
+    );
+  }
+
+  Future<void> _toggleLock() async {
+    if (selectedClass.trim().isEmpty) return;
+    final s = AppLocale.instance.strings;
+    if (!_locked &&
+        _data.getAttendanceSession(selectedClass, selectedDate) == null) {
+      final saved = _data.saveAttendanceSession(
+        className: selectedClass,
+        date: selectedDate,
+        conductedBy: AuthService.displayNameForRole(AuthService.roleTeacher),
+        entries: entries,
+        notifyParents: false,
+      );
+      if (!saved) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(s.attendanceSaveDenied)),
+        );
+        return;
+      }
+    }
+    final ok = _locked
+        ? _data.unlockAttendanceSession(
+            className: selectedClass,
+            date: selectedDate,
+          )
+        : _data.lockAttendanceSession(
+            className: selectedClass,
+            date: selectedDate,
+          );
+    if (!ok) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.attendanceSaveDenied)),
+      );
+      return;
+    }
+    _loadAttendance();
+  }
+
   Future<void> _saveAttendance() async {
-    if (!_canMarkSelectedClass) return;
+    if (!_canEditRegister) return;
     final s = AppLocale.instance.strings;
     final conductor = AuthService.displayNameForRole(AuthService.roleTeacher);
-    _data.saveAttendanceSession(
+    final saved = _data.saveAttendanceSession(
       className: selectedClass,
       date: selectedDate,
       conductedBy: conductor,
       entries: entries,
     );
+    if (!saved) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.attendanceSaveDenied)),
+      );
+      return;
+    }
     conductedBy = conductor;
     final outcome = await CloudSaveHonesty.settle(
       persist: SchoolContentPersistenceService.instance.saveFromService(),
@@ -257,6 +342,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     child: Text(s.change),
                                   ),
                           ),
+                          if (_locked && !widget.readOnly) ...[
+                            const SizedBox(height: 8),
+                            ListTile(
+                              dense: true,
+                              tileColor: TeacherTheme.primaryDark.withValues(
+                                alpha: 0.08,
+                              ),
+                              leading: const Icon(Icons.lock_outline),
+                              title: Text(s.attendanceRegisterLocked),
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -329,7 +425,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           if (!widget.readOnly)
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: _markAllPresent,
+                                onPressed:
+                                    _canEditRegister ? _markAllPresent : null,
                                 child: Text(s.markAllPresent),
                               ),
                             ),
@@ -338,7 +435,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             child: ElevatedButton(
                               onPressed: widget.readOnly
                                   ? () => Navigator.pop(context)
-                                  : (_canMarkSelectedClass
+                                  : (_canEditRegister
                                       ? _saveAttendance
                                       : null),
                               style: ElevatedButton.styleFrom(
@@ -371,6 +468,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
+                      _lockButton(s),
                       IconButton(
                         icon: Icon(_showHistory ? Icons.edit : Icons.history),
                         onPressed: () =>
@@ -393,6 +491,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             backgroundColor: TeacherTheme.primaryDark,
             title: Text(title),
             actions: [
+              if (!widget.readOnly) _lockButton(s),
               if (!widget.readOnly)
                 IconButton(
                   icon: Icon(_showHistory ? Icons.edit : Icons.history),

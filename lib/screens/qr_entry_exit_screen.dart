@@ -93,6 +93,8 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
         if (error.startsWith('wrong_class:')) {
           final className = error.substring('wrong_class:'.length);
           _lastMessage = s.qrWrongClassError(className);
+        } else if (error == 'locked') {
+          _lastMessage = s.qrAttendanceLocked;
         } else {
           _lastMessage = error;
         }
