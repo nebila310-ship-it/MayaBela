@@ -1,9 +1,5 @@
 class Student {
-  Student({
-    required this.name,
-    required this.grade,
-    this.parentName,
-  });
+  Student({required this.name, required this.grade, this.parentName});
 
   final String name;
   final String grade;
@@ -59,5 +55,17 @@ class ChildProfile {
   static String sectionFromClassName(String className) {
     final match = RegExp(r'([A-Za-z])$').firstMatch(className.trim());
     return match?.group(1)?.toUpperCase() ?? '';
+  }
+
+  ChildProfile copyWith({double? attendanceRate}) {
+    return ChildProfile(
+      name: name,
+      grade: grade,
+      className: className,
+      teacher: teacher,
+      attendanceRate: attendanceRate ?? this.attendanceRate,
+      studentId: studentId,
+      section: section,
+    );
   }
 }

@@ -4,6 +4,7 @@ import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -45,10 +46,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       if (children.isNotEmpty) {
         return children.map((c) => c.className).toSet().toList();
       }
-      if (widget.initialClass != null) return [widget.initialClass!];
-      return ['Grade 4A'];
+      if (widget.initialClass != null &&
+          widget.initialClass!.trim().isNotEmpty) {
+        return [widget.initialClass!];
+      }
+      return const [];
     }
-    return _access.myClasses.map((a) => a.className).toList();
+    final mine = _access.myClasses.map((a) => a.className).toList();
+    if (mine.isNotEmpty) return mine;
+    if (AuthService.mayReadAllSchoolData ||
+        ModuleAccess.canManage('attendance')) {
+      return _data.getAllClassNames();
+    }
+    return mine;
+  }
+
+  bool get _canMarkSelectedClass {
+    if (widget.readOnly || selectedClass.trim().isEmpty) return false;
+    if (_access.canTakeAttendance(selectedClass)) return true;
+    return AuthService.mayReadAllSchoolData ||
+        ModuleAccess.canManage('attendance');
   }
 
   void _loadAttendance() {
@@ -91,7 +108,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     super.initState();
     final options = _classOptions;
     selectedClass = widget.initialClass ??
-        (options.isNotEmpty ? options.first : 'Grade 4A');
+        (options.isNotEmpty ? options.first : '');
     _loadAttendance();
   }
 
@@ -130,6 +147,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _saveAttendance() async {
+    if (!_canMarkSelectedClass) return;
     final s = AppLocale.instance.strings;
     final conductor = AuthService.displayNameForRole(AuthService.roleTeacher);
     _data.saveAttendanceSession(
@@ -194,6 +212,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     history: history,
                     className: selectedClass,
                   )
+                : selectedClass.trim().isEmpty
+                ? Center(child: Text(s.noClassesAssigned))
                 : Column(
                     children: [
                       if (!widget.readOnly && _classOptions.isNotEmpty)
@@ -318,7 +338,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             child: ElevatedButton(
                               onPressed: widget.readOnly
                                   ? () => Navigator.pop(context)
-                                  : _saveAttendance,
+                                  : (_canMarkSelectedClass
+                                      ? _saveAttendance
+                                      : null),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: TeacherTheme.primaryDark,
                                 foregroundColor: Colors.white,

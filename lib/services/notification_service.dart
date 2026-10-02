@@ -5,8 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/message.dart';
+import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/platform/web_browser_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/pending_notification_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
@@ -292,6 +294,13 @@ class NotificationService extends ChangeNotifier {
     if (!hasPersonTarget &&
         recipientRole == fromRole &&
         AuthService.currentUser?.roleKey == fromRole) {
+      return;
+    }
+    if (type == NotificationType.attendance &&
+        !NotificationPreferenceService.instance.isEnabled(
+          recipientRole,
+          NotificationPreferenceKey.attendance,
+        )) {
       return;
     }
 
