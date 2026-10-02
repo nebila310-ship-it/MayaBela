@@ -5158,6 +5158,7 @@ class SchoolDataService {
       if (studentId == null || studentId.isEmpty) return const [];
       return _children
           .where((child) => child.studentId?.toUpperCase() == studentId)
+          .map(_withLiveAttendance)
           .toList();
     }
     if (user?.roleKey == AuthService.roleParent) {
@@ -5172,11 +5173,21 @@ class SchoolDataService {
                   child.studentId != null &&
                   ids.contains(child.studentId!.toUpperCase()),
             )
+            .map(_withLiveAttendance)
             .toList();
       }
       return const [];
     }
-    return List.unmodifiable(_children);
+    return _children.map(_withLiveAttendance).toList(growable: false);
+  }
+
+  ChildProfile _withLiveAttendance(ChildProfile child) {
+    final snap = attendanceSnapshotForStudent(
+      studentName: child.name,
+      className: child.className,
+    );
+    if (snap.sessions == 0) return child;
+    return child.copyWith(attendanceRate: snap.rate);
   }
 
   /// Class rank by average grade (1 = highest). Returns null if no report exists.
@@ -5857,8 +5868,10 @@ class SchoolDataService {
   ChildProfile? getChildById(String studentId) {
     final normalized = studentId.trim().toUpperCase();
     try {
-      return _children.firstWhere(
-        (c) => c.studentId?.toUpperCase() == normalized,
+      return _withLiveAttendance(
+        _children.firstWhere(
+          (c) => c.studentId?.toUpperCase() == normalized,
+        ),
       );
     } catch (_) {
       return null;
@@ -5867,7 +5880,7 @@ class SchoolDataService {
 
   ChildProfile? getChildByName(String name) {
     for (final child in _children) {
-      if (child.name == name) return child;
+      if (child.name == name) return _withLiveAttendance(child);
     }
     final record = StudentRegistryService.instance.lookupByName(name);
     if (record != null) return getChildById(record.studentId);
@@ -6691,7 +6704,10 @@ class SchoolDataService {
 
     if (allowedClassName != null &&
         allowedClassName.trim().isNotEmpty &&
-        student.className != allowedClassName) {
+        !StudentRegistryService.classNamesMatch(
+          student.className,
+          allowedClassName,
+        )) {
       return 'wrong_class:$allowedClassName';
     }
 
@@ -6757,7 +6773,7 @@ class SchoolDataService {
             .map(
               (student) => StudentAttendanceEntry(
                 studentName: student.name,
-                status: AttendanceStatus.absent,
+                status: AttendanceStatus.present,
               ),
             )
             .toList();
