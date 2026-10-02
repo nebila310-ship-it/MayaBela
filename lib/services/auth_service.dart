@@ -902,6 +902,33 @@ class AuthService {
     };
   }
 
+  /// The signed-in person's own name. Never another role's directory entry
+  /// or a generic role label when the account has a name or username.
+  static String currentPersonName() {
+    final user = currentUser;
+    if (user == null) return 'User';
+
+    final own = user.fullName?.trim();
+    if (own != null && own.isNotEmpty) return own;
+
+    final fromRole = displayNameForRole(user.roleKey).trim();
+    const roleLabels = {
+      'Administration Staff',
+      'Parent',
+      'Admin',
+      'Transport',
+      'Student',
+      'User',
+    };
+    if (fromRole.isNotEmpty && !roleLabels.contains(fromRole)) {
+      return fromRole;
+    }
+
+    final username = user.username.trim();
+    if (username.isNotEmpty) return username;
+    return fromRole.isNotEmpty ? fromRole : 'User';
+  }
+
   /// Keeps login session aligned with the teacher staff registry.
   static void alignTeacherSessionWithRegistry() {
     final user = currentUser;

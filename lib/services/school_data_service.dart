@@ -3066,6 +3066,13 @@ class SchoolDataService {
       }).toList();
     }
 
+    final sid = schoolId ?? AuthService.activeSchoolId;
+    if (sid != null &&
+        sid.trim().isNotEmpty &&
+        StudentRegistryService.instance.studentsForSchool(sid).isNotEmpty) {
+      return const [];
+    }
+
     return List.unmodifiable(rosterCache);
   }
 
@@ -6286,7 +6293,27 @@ class SchoolDataService {
   }
 
   List<String> getAllClassNames() {
-    final names = _classRosters.keys.toList();
+    final names = <String>[];
+    void add(String raw) {
+      final className = raw.trim();
+      if (className.isEmpty) return;
+      if (names.any((existing) => _classNamesMatch(existing, className))) {
+        return;
+      }
+      names.add(className);
+    }
+
+    final schoolId = AuthService.activeSchoolId?.trim();
+    for (final className in StudentRegistryService.instance.classNamesForSchool(
+      (schoolId == null || schoolId.isEmpty) ? null : schoolId,
+    )) {
+      add(className);
+    }
+    if (names.isEmpty) {
+      for (final key in _classRosters.keys) {
+        add(key);
+      }
+    }
     names.sort();
     return names;
   }

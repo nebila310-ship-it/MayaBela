@@ -35,16 +35,7 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
   bool _lastSuccess = false;
   String? _selectedManualStudentId;
 
-  String get _scannedBy {
-    switch (widget.role) {
-      case QrScreenRole.teacher:
-        return AuthService.displayNameForRole(AuthService.roleTeacher);
-      case QrScreenRole.driver:
-        return AuthService.displayNameForRole(AuthService.roleDriver);
-      case QrScreenRole.parent:
-        return AuthService.displayNameForRole(AuthService.roleParent);
-    }
-  }
+  String get _scannedBy => AuthService.currentPersonName();
 
   List<StudentQrProfile> get _scannableStudents {
     final scoped = widget.scopedClassName?.trim();

@@ -479,16 +479,10 @@ void main() {
     );
     data.syncChildFromRegistry(maya.studentId);
 
-    final view = data.attendanceRegisterView(
-      className: className,
-      date: day,
-    );
+    final view = data.attendanceRegisterView(className: className, date: day);
     expect(view.entries.map((e) => e.studentName), ['Maya Live']);
     expect(view.conductedBy, isNull);
-    expect(
-      view.entries.any((e) => e.studentName == 'Kidus Bekele'),
-      isFalse,
-    );
+    expect(view.entries.any((e) => e.studentName == 'Kidus Bekele'), isFalse);
 
     expect(
       data.saveAttendanceSession(
@@ -509,7 +503,9 @@ void main() {
     );
   });
 
-  testWidgets('register shows excused and a daily period picker', (tester) async {
+  testWidgets('register shows excused and a daily period picker', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -526,5 +522,110 @@ void main() {
     expect(find.text('Excused'), findsWidgets);
     expect(find.text('Daily register'), findsOneWidget);
     expect(find.byIcon(Icons.event_available), findsWidgets);
+  });
+
+  test('taker name is the signed-in person, not another teacher or role', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.taker',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+      fullName: 'Nabil Ahmed',
+      phone: '0911334455',
+    );
+
+    expect(AuthService.currentPersonName(), 'Nabil Ahmed');
+    expect(
+      AuthService.displayNameForRole(AuthService.roleTeacher),
+      'Mr. Samuel',
+    );
+
+    const className = 'Grade 2C-TAKER';
+    final maya = StudentRegistryService.instance.addStudent(
+      schoolId: 'TB-001',
+      fullName: 'Maya AdminClass',
+      grade: '2',
+      className: className,
+      dateOfBirth: DateTime(2018, 5, 1),
+    );
+    SchoolDataService.instance.syncChildFromRegistry(maya.studentId);
+
+    expect(SchoolDataService.instance.getAllClassNames(), contains(className));
+    expect(
+      SchoolDataService.instance
+          .getStudentsForClass(className)
+          .map((s) => s.name),
+      ['Maya AdminClass'],
+    );
+
+    final view = SchoolDataService.instance.attendanceRegisterView(
+      className: className,
+      date: DateTime.utc(2026, 10, 2),
+    );
+    expect(view.entries.map((e) => e.studentName), ['Maya AdminClass']);
+
+    expect(
+      SchoolDataService.instance.saveAttendanceSession(
+        className: className,
+        date: DateTime.utc(2026, 10, 2),
+        conductedBy: AuthService.currentPersonName(),
+        notifyParents: false,
+        entries: view.entries,
+      ),
+      isTrue,
+    );
+    expect(
+      SchoolDataService.instance
+          .getAttendanceSession(className, DateTime.utc(2026, 10, 2))!
+          .conductedBy,
+      'Nabil Ahmed',
+    );
+  });
+
+  test('taker name falls back to username, not a role label', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.nabil',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'SCH-TAKER2',
+      phone: '0911334455',
+    );
+    expect(AuthService.currentPersonName(), 'admin.nabil');
+    expect(AuthService.currentPersonName(), isNot('Admin'));
+    expect(AuthService.currentPersonName(), isNot('Administration Staff'));
+    expect(AuthService.currentPersonName(), isNot('Mr. Samuel'));
+  });
+
+  testWidgets('admin attendance opens on the school class list', (
+    tester,
+  ) async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.list',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'SCH-ALIST',
+      fullName: 'School Admin Nabil',
+    );
+    const className = 'Grade 2C-ALIST';
+    final maya = StudentRegistryService.instance.addStudent(
+      schoolId: 'SCH-ALIST',
+      fullName: 'Maya ListKid',
+      grade: '2',
+      className: className,
+      dateOfBirth: DateTime(2018, 5, 1),
+    );
+    SchoolDataService.instance.syncChildFromRegistry(maya.studentId);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(width: 800, height: 1200, child: AttendanceScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Maya ListKid'), findsOneWidget);
+    expect(find.textContaining(className), findsWidgets);
   });
 }
