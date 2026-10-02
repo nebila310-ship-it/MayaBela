@@ -115,48 +115,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   void _loadAttendance() {
     final s = AppLocale.instance.strings;
     _syncPeriodSelection(s);
-    final session = _data.getAttendanceSession(
-      selectedClass,
-      selectedDate,
+    final view = _data.attendanceRegisterView(
+      className: selectedClass,
+      date: selectedDate,
       periodKey: selectedPeriodKey,
     );
-    final roster = _data.getStudentsForClass(selectedClass);
-
-    if (session != null) {
-      entries = session.entries.map((entry) {
-        String? id = entry.studentId;
-        if (id == null || id.trim().isEmpty) {
-          for (final student in roster) {
-            if (student.name == entry.studentName) {
-              id = student.inviteStudentId;
-              break;
-            }
-          }
-        }
-        return StudentAttendanceEntry(
-          studentName: entry.studentName,
-          studentId: id,
-          status: entry.status,
-          updatedAt: entry.updatedAt,
-        );
-      }).toList();
-      conductedBy = session.conductedBy;
-      _locked = session.locked;
-      if (session.periodLabel.trim().isNotEmpty) {
-        selectedPeriodLabel = session.periodLabel;
-      }
-    } else {
-      entries = roster
-          .map(
-            (student) => StudentAttendanceEntry(
-              studentName: student.name,
-              studentId: student.inviteStudentId,
-              status: AttendanceStatus.present,
-            ),
-          )
-          .toList();
-      conductedBy = null;
-      _locked = false;
+    entries = view.entries;
+    conductedBy = view.conductedBy;
+    _locked = view.locked;
+    if (view.periodLabel.trim().isNotEmpty) {
+      selectedPeriodLabel = view.periodLabel;
     }
     _data.overlayApprovedLeaveOnEntries(
       entries: entries,

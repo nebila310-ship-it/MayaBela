@@ -11,6 +11,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 /// Attendance Phase 3: excused/leave, period rolls, safer same-day merge.
 void main() {
@@ -443,6 +444,70 @@ void main() {
       );
     },
   );
+
+  test('register follows the class list, not a leftover seed session', () {
+    final data = SchoolDataService.instance;
+    const className = 'Grade 9Z-P3MAYA';
+    final day = DateTime.utc(2026, 10, 2);
+
+    expect(
+      data.saveAttendanceSession(
+        className: className,
+        date: day,
+        conductedBy: 'Mr. Samuel',
+        notifyParents: false,
+        entries: [
+          StudentAttendanceEntry(
+            studentName: 'Kidus Bekele',
+            status: AttendanceStatus.late,
+          ),
+        ],
+      ),
+      isTrue,
+    );
+    expect(
+      data.getAttendanceSession(className, day)!.entries.single.studentName,
+      'Kidus Bekele',
+    );
+
+    final maya = StudentRegistryService.instance.addStudent(
+      schoolId: 'TB-001',
+      fullName: 'Maya Live',
+      grade: '2',
+      className: className,
+      dateOfBirth: DateTime(2018, 5, 1),
+    );
+    data.syncChildFromRegistry(maya.studentId);
+
+    final view = data.attendanceRegisterView(
+      className: className,
+      date: day,
+    );
+    expect(view.entries.map((e) => e.studentName), ['Maya Live']);
+    expect(view.conductedBy, isNull);
+    expect(
+      view.entries.any((e) => e.studentName == 'Kidus Bekele'),
+      isFalse,
+    );
+
+    expect(
+      data.saveAttendanceSession(
+        className: className,
+        date: day,
+        conductedBy: 'Homeroom',
+        notifyParents: false,
+        entries: view.entries,
+      ),
+      isTrue,
+    );
+    expect(
+      data
+          .getAttendanceSession(className, day)!
+          .entries
+          .map((e) => e.studentName),
+      ['Maya Live'],
+    );
+  });
 
   testWidgets('register shows excused and a daily period picker', (tester) async {
     await tester.pumpWidget(

@@ -3960,8 +3960,13 @@ class SchoolDataService {
       var sessionLate = 0;
       var sessionAbsent = 0;
       var sessionExcused = 0;
+      final roster = getStudentsForClass(session.className);
 
       for (final entry in session.entries) {
+        if (roster.isNotEmpty &&
+            !_attendanceEntryOnRoster(entry, roster)) {
+          continue;
+        }
         switch (entry.status) {
           case AttendanceStatus.present:
             sessionPresent++;
@@ -4063,6 +4068,92 @@ class SchoolDataService {
         )
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  bool _attendanceEntryOnRoster(
+    StudentAttendanceEntry entry,
+    List<StudentRef> roster,
+  ) {
+    for (final student in roster) {
+      if (entry.matches(
+        studentId: student.inviteStudentId,
+        studentName: student.name,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<StudentAttendanceEntry> _keepRosterAttendanceEntries(
+    String className,
+    List<StudentAttendanceEntry> entries,
+  ) {
+    final roster = getStudentsForClass(className);
+    if (roster.isEmpty) return entries;
+    return [
+      for (final entry in entries)
+        if (_attendanceEntryOnRoster(entry, roster)) entry,
+    ];
+  }
+
+  /// Class list is the register. Saved marks overlay matching students;
+  /// leftover names from another school or demo seed are dropped.
+  ({
+    List<StudentAttendanceEntry> entries,
+    String? conductedBy,
+    bool locked,
+    String periodLabel,
+  }) attendanceRegisterView({
+    required String className,
+    required DateTime date,
+    String periodKey = '',
+  }) {
+    final roster = getStudentsForClass(className);
+    final session = getAttendanceSession(
+      className,
+      date,
+      periodKey: periodKey,
+    );
+    if (roster.isEmpty) {
+      return (
+        entries: [
+          for (final entry in session?.entries ?? const <StudentAttendanceEntry>[])
+            _copyAttendanceEntry(entry),
+        ],
+        conductedBy: session?.conductedBy,
+        locked: session?.locked ?? false,
+        periodLabel: session?.periodLabel ?? '',
+      );
+    }
+    final belongs = session != null &&
+        session.entries.any((entry) => _attendanceEntryOnRoster(entry, roster));
+    final entries = roster.map((student) {
+      StudentAttendanceEntry? match;
+      if (session != null) {
+        for (final entry in session.entries) {
+          if (entry.matches(
+            studentId: student.inviteStudentId,
+            studentName: student.name,
+          )) {
+            match = entry;
+            break;
+          }
+        }
+      }
+      return StudentAttendanceEntry(
+        studentName: student.name,
+        studentId: student.inviteStudentId,
+        status: match?.status ?? AttendanceStatus.present,
+        updatedAt: match?.updatedAt,
+      );
+    }).toList();
+    return (
+      entries: entries,
+      conductedBy: belongs ? session!.conductedBy : null,
+      locked: belongs && session!.locked,
+      periodLabel: belongs ? session!.periodLabel : '',
+    );
   }
 
   bool canWriteAttendanceRegister(String className) {
@@ -4292,8 +4383,9 @@ class SchoolDataService {
     final merged = existing == null
         ? hydrated
         : _mergeAttendanceEntries(existing.entries, hydrated);
+    final rosterAligned = _keepRosterAttendanceEntries(className, merged);
     overlayApprovedLeaveOnEntries(
-      entries: merged,
+      entries: rosterAligned,
       className: className,
       date: date,
       periodKey: key,
@@ -4306,7 +4398,7 @@ class SchoolDataService {
         className: className,
         date: date,
         conductedBy: conductedBy,
-        entries: merged,
+        entries: rosterAligned,
         locked: nextLocked,
         lockedBy: nextLocked
             ? (lockedBy ?? existing?.lockedBy ?? conductedBy)
@@ -4323,14 +4415,14 @@ class SchoolDataService {
       _notifyParentsOfAttendanceChanges(
         className: className,
         conductedBy: conductedBy,
-        entries: merged,
+        entries: rosterAligned,
         previousByKey: previousByKey,
       );
     }
     _alertStaffWhenAbsenceStreakStarts(
       className: className,
       conductedBy: conductedBy,
-      entries: merged,
+      entries: rosterAligned,
     );
     _persistSchoolContent();
     return true;
