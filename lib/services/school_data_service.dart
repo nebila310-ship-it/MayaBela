@@ -3960,13 +3960,8 @@ class SchoolDataService {
       var sessionLate = 0;
       var sessionAbsent = 0;
       var sessionExcused = 0;
-      final roster = getStudentsForClass(session.className);
 
       for (final entry in session.entries) {
-        if (roster.isNotEmpty &&
-            !_attendanceEntryOnRoster(entry, roster)) {
-          continue;
-        }
         switch (entry.status) {
           case AttendanceStatus.present:
             sessionPresent++;
@@ -4085,15 +4080,21 @@ class SchoolDataService {
     return false;
   }
 
-  List<StudentAttendanceEntry> _keepRosterAttendanceEntries(
-    String className,
-    List<StudentAttendanceEntry> entries,
-  ) {
+  List<StudentAttendanceEntry> _keepIncomingAndRosterEntries(
+    String className, {
+    required List<StudentAttendanceEntry> incoming,
+    required List<StudentAttendanceEntry> merged,
+  }) {
     final roster = getStudentsForClass(className);
-    if (roster.isEmpty) return entries;
+    if (roster.isEmpty) return merged;
+    final incomingKeys = {
+      for (final entry in incoming) _attendanceEntryKey(entry),
+    };
     return [
-      for (final entry in entries)
-        if (_attendanceEntryOnRoster(entry, roster)) entry,
+      for (final entry in merged)
+        if (incomingKeys.contains(_attendanceEntryKey(entry)) ||
+            _attendanceEntryOnRoster(entry, roster))
+          entry,
     ];
   }
 
@@ -4383,7 +4384,11 @@ class SchoolDataService {
     final merged = existing == null
         ? hydrated
         : _mergeAttendanceEntries(existing.entries, hydrated);
-    final rosterAligned = _keepRosterAttendanceEntries(className, merged);
+    final rosterAligned = _keepIncomingAndRosterEntries(
+      className,
+      incoming: hydrated,
+      merged: merged,
+    );
     overlayApprovedLeaveOnEntries(
       entries: rosterAligned,
       className: className,
