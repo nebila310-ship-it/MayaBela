@@ -227,11 +227,13 @@ class StudentAttendanceSnapshot {
     this.present = 0,
     this.late = 0,
     this.absent = 0,
+    this.excused = 0,
   });
 
   final int present;
   final int late;
   final int absent;
+  final int excused;
 
   int get sessions => present + late + absent;
 
@@ -241,17 +243,20 @@ class StudentAttendanceSnapshot {
         'present': present,
         'late': late,
         'absent': absent,
+        'excused': excused,
       };
 
   factory StudentAttendanceSnapshot.fromCounts({
     int? present,
     int? late,
     int? absent,
+    int? excused,
   }) {
     return StudentAttendanceSnapshot(
       present: present ?? 0,
       late: late ?? 0,
       absent: absent ?? 0,
+      excused: excused ?? 0,
     );
   }
 }

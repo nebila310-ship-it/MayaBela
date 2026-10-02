@@ -142,10 +142,11 @@ abstract final class AppDataMaps {
 
   static String attendanceDocId(AttendanceSession session) {
     final day = session.date.toIso8601String().split('T').first;
-    return '${session.className}_$day'.replaceAll(
-      RegExp(r'[^a-zA-Z0-9_-]'),
-      '_',
-    );
+    final period = session.periodKey.trim();
+    final raw = period.isEmpty
+        ? '${session.className}_$day'
+        : '${session.className}_${day}_$period';
+    return raw.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
   }
 
   static Map<String, dynamic> attendanceSessionToMap(
@@ -159,6 +160,9 @@ abstract final class AppDataMaps {
       'lockedBy': session.lockedBy,
     if (session.lockedAt != null)
       'lockedAt': session.lockedAt!.toIso8601String(),
+    if (session.periodKey.trim().isNotEmpty) 'periodKey': session.periodKey,
+    if (session.periodLabel.trim().isNotEmpty)
+      'periodLabel': session.periodLabel,
     'entries': session.entries
         .map(
           (e) => {
@@ -166,6 +170,7 @@ abstract final class AppDataMaps {
             'status': e.status.name,
             if (e.studentId != null && e.studentId!.trim().isNotEmpty)
               'studentId': e.studentId,
+            if (e.updatedAt != null) 'updatedAt': e.updatedAt!.toIso8601String(),
           },
         )
         .toList(),
@@ -181,6 +186,8 @@ abstract final class AppDataMaps {
         lockedAt: map['lockedAt'] is String
             ? DateTime.tryParse(map['lockedAt'] as String)
             : null,
+        periodKey: map['periodKey'] as String? ?? '',
+        periodLabel: map['periodLabel'] as String? ?? '',
         entries: (map['entries'] as List<dynamic>? ?? const [])
             .map(
               (e) => StudentAttendanceEntry(
@@ -189,6 +196,9 @@ abstract final class AppDataMaps {
                 status: AttendanceStatus.values.byName(
                   e['status'] as String? ?? 'present',
                 ),
+                updatedAt: e['updatedAt'] is String
+                    ? DateTime.tryParse(e['updatedAt'] as String)
+                    : null,
               ),
             )
             .toList(),

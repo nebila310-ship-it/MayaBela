@@ -186,6 +186,15 @@ class _AdminAttendanceReportsScreenState
                   gradient: const [Color(0xFF1B5E20), Color(0xFF43A047), Color(0xFF66BB6A)],
                   onTap: () => _openStatusReport(AttendanceStatus.present, report),
                 ),
+                const SizedBox(height: 14),
+                _StatusReportButton(
+                  label: s.excusedToday,
+                  count: report.excusedCount,
+                  subtitle: s.tapGradeToInvestigate,
+                  icon: Icons.event_available_rounded,
+                  gradient: const [Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF42A5F5)],
+                  onTap: () => _openStatusReport(AttendanceStatus.excused, report),
+                ),
                 const SizedBox(height: 24),
                 _TeachersRecordedCard(report: report),
               ] else
@@ -367,6 +376,7 @@ class _ReportHeaderCard extends StatelessWidget {
                   report.absentCount,
                   report.lateCount,
                   report.presentCount,
+                  report.excusedCount,
                 ),
                 style: const TextStyle(
                   color: Colors.white,
@@ -540,6 +550,7 @@ class _TeachersRecordedCard extends StatelessWidget {
                           session.presentCount,
                           session.lateCount,
                           session.absentCount,
+                          session.excusedCount,
                         ),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
@@ -605,6 +616,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return const Color(0xFFEF6C00);
       case AttendanceStatus.present:
         return const Color(0xFF2E7D32);
+      case AttendanceStatus.excused:
+        return const Color(0xFF1565C0);
     }
   }
 
@@ -616,6 +629,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return s.lateArrivals;
       case AttendanceStatus.present:
         return s.presentToday;
+      case AttendanceStatus.excused:
+        return s.excusedToday;
     }
   }
 
@@ -627,6 +642,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return s.gradeLateCount(grade, count);
       case AttendanceStatus.present:
         return s.gradePresentCount(grade, count);
+      case AttendanceStatus.excused:
+        return s.gradeExcusedCount(grade, count);
     }
   }
 
@@ -738,6 +755,8 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
         return const Color(0xFFEF6C00);
       case AttendanceStatus.present:
         return const Color(0xFF2E7D32);
+      case AttendanceStatus.excused:
+        return const Color(0xFF1565C0);
     }
   }
 
@@ -818,6 +837,8 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
         return s.lateArrivals.toLowerCase();
       case AttendanceStatus.present:
         return s.presentToday.toLowerCase();
+      case AttendanceStatus.excused:
+        return s.excusedToday.toLowerCase();
     }
   }
 }
@@ -1116,6 +1137,7 @@ class _AttendanceShareSheet extends StatelessWidget {
                 export.report.absentCount,
                 export.report.lateCount,
                 export.report.presentCount,
+                export.report.excusedCount,
               ),
               style: const TextStyle(
                 color: Colors.white,

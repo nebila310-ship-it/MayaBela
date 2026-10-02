@@ -5,6 +5,8 @@ import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/leave_request_persistence_service.dart';
+import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 /// EDUABA — parent leave requests routed to the homeroom teacher.
 ///
@@ -41,6 +43,47 @@ class LeaveRequestService extends ChangeNotifier {
   List<LeaveRequest> forClasses(Iterable<String> classNames) {
     final names = classNames.map((c) => c.trim()).toSet();
     return _requests.where((r) => names.contains(r.className.trim())).toList();
+  }
+
+  List<LeaveRequest> approvedCovering({
+    required String className,
+    required DateTime date,
+    String? studentId,
+    String? studentName,
+  }) {
+    final day = DateTime(date.year, date.month, date.day);
+    return _requests.where((request) {
+      if (request.status != LeaveRequestStatus.approved) return false;
+      if (!StudentRegistryService.classNamesMatch(
+        request.className,
+        className,
+      )) {
+        return false;
+      }
+      final start = DateTime(
+        request.startDate.year,
+        request.startDate.month,
+        request.startDate.day,
+      );
+      final end = DateTime(
+        request.endDate.year,
+        request.endDate.month,
+        request.endDate.day,
+      );
+      if (day.isBefore(start) || day.isAfter(end)) return false;
+      if (studentId != null || studentName != null) {
+        final id = studentId?.trim();
+        if (id != null &&
+            id.isNotEmpty &&
+            request.studentId.trim().isNotEmpty) {
+          return request.studentId.trim().toUpperCase() == id.toUpperCase();
+        }
+        if (studentName == null || studentName.trim().isEmpty) return false;
+        return request.studentName.trim().toLowerCase() ==
+            studentName.trim().toLowerCase();
+      }
+      return true;
+    }).toList();
   }
 
   Future<LeaveRequest> submit({
@@ -120,6 +163,9 @@ class LeaveRequestService extends ChangeNotifier {
       targetStudentId: updated.studentId,
       recipientUsername: updated.parentUsername,
     );
+    if (approve) {
+      SchoolDataService.instance.applyApprovedLeave(updated);
+    }
     return updated;
   }
 

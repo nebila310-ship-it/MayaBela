@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
@@ -7,6 +8,7 @@ import 'package:mayabela/services/persistence/school_content_persistence_service
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
+import 'package:mayabela/services/timetable_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
@@ -36,6 +38,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   late String selectedClass;
   DateTime selectedDate = DateTime.now();
+  String selectedPeriodKey = '';
+  String selectedPeriodLabel = '';
   List<StudentAttendanceEntry> entries = [];
   String? conductedBy;
   bool _showHistory = false;
@@ -71,33 +75,76 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       _canMarkSelectedClass &&
       (!_locked || _data.canUnlockAttendanceRegister());
 
+  List<({String key, String label})> _periodOptions(AppStrings s) {
+    final options = <({String key, String label})>[
+      (key: '', label: s.dailyRegister),
+    ];
+    if (selectedClass.trim().isEmpty) return options;
+    final weekday = selectedDate.weekday;
+    if (weekday < DateTime.monday || weekday > DateTime.friday) {
+      return options;
+    }
+    final dayKey = kTimetableWeekdayKeys[weekday - DateTime.monday];
+    final timetable = TimetableService.instance.getOrCreateForClass(
+      selectedClass,
+    );
+    final day = timetable.day(dayKey);
+    for (var i = 0; i < day.slots.length; i++) {
+      final period = lessonPeriodAt(day.slots, i);
+      if (period == null) continue;
+      final slot = day.slots[i];
+      final subject = slot.subject?.trim().isNotEmpty == true
+          ? slot.subject!.trim()
+          : s.timetableUntitledLesson;
+      options.add((key: slot.id, label: s.periodLessonLabel(period, subject)));
+    }
+    return options;
+  }
+
+  void _syncPeriodSelection(AppStrings s) {
+    final options = _periodOptions(s);
+    final match = options.where((item) => item.key == selectedPeriodKey);
+    if (match.isEmpty) {
+      selectedPeriodKey = '';
+      selectedPeriodLabel = s.dailyRegister;
+      return;
+    }
+    selectedPeriodLabel = match.first.label;
+  }
+
   void _loadAttendance() {
-    final session = _data.getAttendanceSession(selectedClass, selectedDate);
+    final s = AppLocale.instance.strings;
+    _syncPeriodSelection(s);
+    final session = _data.getAttendanceSession(
+      selectedClass,
+      selectedDate,
+      periodKey: selectedPeriodKey,
+    );
     final roster = _data.getStudentsForClass(selectedClass);
 
     if (session != null) {
-      entries = session.entries
-          .map(
-            (entry) {
-              String? id = entry.studentId;
-              if (id == null || id.trim().isEmpty) {
-                for (final student in roster) {
-                  if (student.name == entry.studentName) {
-                    id = student.inviteStudentId;
-                    break;
-                  }
-                }
-              }
-              return StudentAttendanceEntry(
-                studentName: entry.studentName,
-                studentId: id,
-                status: entry.status,
-              );
-            },
-          )
-          .toList();
+      entries = session.entries.map((entry) {
+        String? id = entry.studentId;
+        if (id == null || id.trim().isEmpty) {
+          for (final student in roster) {
+            if (student.name == entry.studentName) {
+              id = student.inviteStudentId;
+              break;
+            }
+          }
+        }
+        return StudentAttendanceEntry(
+          studentName: entry.studentName,
+          studentId: id,
+          status: entry.status,
+          updatedAt: entry.updatedAt,
+        );
+      }).toList();
       conductedBy = session.conductedBy;
       _locked = session.locked;
+      if (session.periodLabel.trim().isNotEmpty) {
+        selectedPeriodLabel = session.periodLabel;
+      }
     } else {
       entries = roster
           .map(
@@ -111,6 +158,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       conductedBy = null;
       _locked = false;
     }
+    _data.overlayApprovedLeaveOnEntries(
+      entries: entries,
+      className: selectedClass,
+      date: selectedDate,
+      periodKey: selectedPeriodKey,
+    );
 
     if (widget.readOnly && widget.childName != null) {
       final child = _data.getChildByName(widget.childName!);
@@ -131,8 +184,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   void initState() {
     super.initState();
     final options = _classOptions;
-    selectedClass = widget.initialClass ??
-        (options.isNotEmpty ? options.first : '');
+    selectedClass =
+        widget.initialClass ?? (options.isNotEmpty ? options.first : '');
     _loadAttendance();
   }
 
@@ -144,6 +197,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   int get lateCount =>
       entries.where((entry) => entry.status == AttendanceStatus.late).length;
+
+  int get excusedCount =>
+      entries.where((entry) => entry.status == AttendanceStatus.excused).length;
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -160,14 +216,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   void _setStatus(int index, AttendanceStatus status) {
     if (!_canEditRegister) return;
-    setState(() => entries[index].status = status);
+    final entry = entries[index];
+    if (entry.status == status) return;
+    setState(() {
+      entry.status = status;
+      entry.updatedAt = DateTime.now();
+    });
   }
 
   void _markAllPresent() {
     if (!_canEditRegister) return;
+    final now = DateTime.now();
     setState(() {
       for (final entry in entries) {
+        if (entry.status == AttendanceStatus.present) continue;
         entry.status = AttendanceStatus.present;
+        entry.updatedAt = now;
       }
     });
   }
@@ -178,9 +242,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         : _canMarkSelectedClass;
     return IconButton(
       icon: Icon(_locked ? Icons.lock : Icons.lock_open_outlined),
-      tooltip: _locked
-          ? s.unlockAttendanceRegister
-          : s.lockAttendanceRegister,
+      tooltip: _locked ? s.unlockAttendanceRegister : s.lockAttendanceRegister,
       onPressed: canToggle ? _toggleLock : null,
     );
   }
@@ -189,19 +251,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (selectedClass.trim().isEmpty) return;
     final s = AppLocale.instance.strings;
     if (!_locked &&
-        _data.getAttendanceSession(selectedClass, selectedDate) == null) {
+        _data.getAttendanceSession(
+              selectedClass,
+              selectedDate,
+              periodKey: selectedPeriodKey,
+            ) ==
+            null) {
       final saved = _data.saveAttendanceSession(
         className: selectedClass,
         date: selectedDate,
         conductedBy: AuthService.displayNameForRole(AuthService.roleTeacher),
         entries: entries,
         notifyParents: false,
+        periodKey: selectedPeriodKey,
+        periodLabel: selectedPeriodLabel,
       );
       if (!saved) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.attendanceSaveDenied)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(s.attendanceSaveDenied)));
         return;
       }
     }
@@ -209,16 +278,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ? _data.unlockAttendanceSession(
             className: selectedClass,
             date: selectedDate,
+            periodKey: selectedPeriodKey,
           )
         : _data.lockAttendanceSession(
             className: selectedClass,
             date: selectedDate,
+            periodKey: selectedPeriodKey,
           );
     if (!ok) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.attendanceSaveDenied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.attendanceSaveDenied)));
       return;
     }
     _loadAttendance();
@@ -233,12 +304,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       date: selectedDate,
       conductedBy: conductor,
       entries: entries,
+      periodKey: selectedPeriodKey,
+      periodLabel: selectedPeriodLabel,
     );
     if (!saved) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.attendanceSaveDenied)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.attendanceSaveDenied)));
       return;
     }
     conductedBy = conductor;
@@ -264,6 +337,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return Colors.red;
       case AttendanceStatus.late:
         return Colors.orange;
+      case AttendanceStatus.excused:
+        return const Color(0xFF1565C0);
     }
   }
 
@@ -275,12 +350,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return s.absent;
       case AttendanceStatus.late:
         return s.late;
+      case AttendanceStatus.excused:
+        return s.excused;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final history = _data.getAttendanceHistory(selectedClass);
+    final history = _data.getAttendanceHistory(selectedClass, dailyOnly: false);
 
     return ListenableBuilder(
       listenable: AppLocale.instance,
@@ -291,44 +368,43 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             : s.takeAttendance;
 
         final body = WarmScreenBody(
-            accentColor: TeacherTheme.primaryDark,
-            child: _showHistory && !widget.readOnly
-                ? _HistoryView(
-                    history: history,
-                    className: selectedClass,
-                  )
-                : selectedClass.trim().isEmpty
-                ? Center(child: Text(s.noClassesAssigned))
-                : Column(
-                    children: [
-                      if (!widget.readOnly && _classOptions.isNotEmpty)
-                        ClassPickerBar(
-                          label: s.className,
-                          options: _classOptions,
-                          selected: selectedClass,
-                          accent: TeacherTheme.primaryDark,
-                          onSelected: (value) {
-                            selectedClass = value;
-                            _loadAttendance();
-                          },
-                        ),
-                      Container(
-                        width: double.infinity,
-                        padding: listPagePadding(context),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              tileColor: Colors.white.withValues(alpha: 0.92),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: TeacherTheme.primaryDark.withValues(alpha: 0.12),
+          accentColor: TeacherTheme.primaryDark,
+          child: _showHistory && !widget.readOnly
+              ? _HistoryView(history: history, className: selectedClass)
+              : selectedClass.trim().isEmpty
+              ? Center(child: Text(s.noClassesAssigned))
+              : Column(
+                  children: [
+                    if (!widget.readOnly && _classOptions.isNotEmpty)
+                      ClassPickerBar(
+                        label: s.className,
+                        options: _classOptions,
+                        selected: selectedClass,
+                        accent: TeacherTheme.primaryDark,
+                        onSelected: (value) {
+                          selectedClass = value;
+                          _loadAttendance();
+                        },
+                      ),
+                    Container(
+                      width: double.infinity,
+                      padding: listPagePadding(context),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            tileColor: Colors.white.withValues(alpha: 0.92),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: TeacherTheme.primaryDark.withValues(
+                                  alpha: 0.12,
                                 ),
                               ),
-                              leading: const Icon(
-                                Icons.calendar_today,
-                                color: TeacherTheme.primaryDark,
-                              ),
+                            ),
+                            leading: const Icon(
+                              Icons.calendar_today,
+                              color: TeacherTheme.primaryDark,
+                            ),
                             title: Text(
                               '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
                             ),
@@ -342,6 +418,35 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     child: Text(s.change),
                                   ),
                           ),
+                          if (!widget.readOnly) ...[
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              initialValue:
+                                  _periodOptions(
+                                    s,
+                                  ).any((item) => item.key == selectedPeriodKey)
+                                  ? selectedPeriodKey
+                                  : '',
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.92),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              items: [
+                                for (final option in _periodOptions(s))
+                                  DropdownMenuItem(
+                                    value: option.key,
+                                    child: Text(option.label),
+                                  ),
+                              ],
+                              onChanged: (value) {
+                                selectedPeriodKey = value ?? '';
+                                _loadAttendance();
+                              },
+                            ),
+                          ],
                           if (_locked && !widget.readOnly) ...[
                             const SizedBox(height: 8),
                             ListTile(
@@ -354,12 +459,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             ),
                           ],
                           const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          Wrap(
+                            alignment: WrapAlignment.spaceEvenly,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
-                              _summaryChip(s.present, presentCount, Colors.green),
+                              _summaryChip(
+                                s.present,
+                                presentCount,
+                                Colors.green,
+                              ),
                               _summaryChip(s.absent, absentCount, Colors.red),
                               _summaryChip(s.late, lateCount, Colors.orange),
+                              _summaryChip(
+                                s.excused,
+                                excusedCount,
+                                const Color(0xFF1565C0),
+                              ),
                             ],
                           ),
                         ],
@@ -393,25 +509,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       color: _statusColor(entry.status),
                                       size: 14,
                                     )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _statusButton(
-                                          index,
-                                          AttendanceStatus.present,
-                                          Icons.check,
-                                        ),
-                                        _statusButton(
-                                          index,
-                                          AttendanceStatus.late,
-                                          Icons.schedule,
-                                        ),
-                                        _statusButton(
-                                          index,
-                                          AttendanceStatus.absent,
-                                          Icons.close,
-                                        ),
-                                      ],
+                                  : FittedBox(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _statusButton(
+                                            index,
+                                            AttendanceStatus.present,
+                                            Icons.check,
+                                          ),
+                                          _statusButton(
+                                            index,
+                                            AttendanceStatus.late,
+                                            Icons.schedule,
+                                          ),
+                                          _statusButton(
+                                            index,
+                                            AttendanceStatus.absent,
+                                            Icons.close,
+                                          ),
+                                          _statusButton(
+                                            index,
+                                            AttendanceStatus.excused,
+                                            Icons.event_available,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                             ),
                           );
@@ -425,8 +548,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           if (!widget.readOnly)
                             Expanded(
                               child: OutlinedButton(
-                                onPressed:
-                                    _canEditRegister ? _markAllPresent : null,
+                                onPressed: _canEditRegister
+                                    ? _markAllPresent
+                                    : null,
                                 child: Text(s.markAllPresent),
                               ),
                             ),
@@ -435,9 +559,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             child: ElevatedButton(
                               onPressed: widget.readOnly
                                   ? () => Navigator.pop(context)
-                                  : (_canEditRegister
-                                      ? _saveAttendance
-                                      : null),
+                                  : (_canEditRegister ? _saveAttendance : null),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: TeacherTheme.primaryDark,
                                 foregroundColor: Colors.white,
@@ -512,7 +634,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Chip(
       avatar: CircleAvatar(
         backgroundColor: color,
-        child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 12)),
+        child: Text(
+          '$count',
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+        ),
       ),
       label: Text(label),
     );
@@ -529,10 +654,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 }
 
 class _HistoryView extends StatelessWidget {
-  const _HistoryView({
-    required this.history,
-    required this.className,
-  });
+  const _HistoryView({required this.history, required this.className});
 
   final List<AttendanceSession> history;
   final String className;
@@ -562,18 +684,25 @@ class _HistoryView extends StatelessWidget {
             final late = session.entries
                 .where((entry) => entry.status == AttendanceStatus.late)
                 .length;
+            final excused = session.entries
+                .where((entry) => entry.status == AttendanceStatus.excused)
+                .length;
+            final period = session.isDaily
+                ? s.dailyRegister
+                : (session.periodLabel.trim().isNotEmpty
+                      ? session.periodLabel
+                      : session.periodKey);
 
             return Card(
               child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.check_circle),
-                ),
+                leading: const CircleAvatar(child: Icon(Icons.check_circle)),
                 title: Text(
-                  '${session.date.day}/${session.date.month}/${session.date.year}',
+                  '${session.date.day}/${session.date.month}/${session.date.year}'
+                  ' · $period',
                 ),
                 subtitle: Text(
                   '${s.historyConductedBy(session.conductedBy)}\n'
-                  '${s.historyPresentLateAbsent(present, late, absent)}',
+                  '${s.historyPresentLateAbsent(present, late, absent, excused)}',
                 ),
                 isThreeLine: true,
               ),
