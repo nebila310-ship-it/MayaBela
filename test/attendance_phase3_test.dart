@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -5,6 +6,7 @@ import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/cloud/app_data_maps.dart';
 import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/models/teacher_features.dart';
+import 'package:mayabela/screens/attendance_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/notification_service.dart';
@@ -441,4 +443,23 @@ void main() {
       );
     },
   );
+
+  testWidgets('register shows excused and a daily period picker', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            height: 1200,
+            child: AttendanceScreen(initialClass: 'Grade 4A'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Excused'), findsWidgets);
+    expect(find.text('Daily register'), findsOneWidget);
+    expect(find.byIcon(Icons.event_available), findsWidgets);
+  });
 }

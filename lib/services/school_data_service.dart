@@ -3903,6 +3903,12 @@ class SchoolDataService {
   String _normalizeAttendancePeriodKey(String? periodKey) =>
       (periodKey ?? '').trim();
 
+  DateTime _attendanceWriteTime(DateTime? previous) {
+    final now = DateTime.now();
+    if (previous == null || now.isAfter(previous)) return now;
+    return previous.add(const Duration(milliseconds: 1));
+  }
+
   AttendanceSession? getAttendanceSession(
     String className,
     DateTime date, {
@@ -4184,7 +4190,6 @@ class SchoolDataService {
       date: date,
     );
     if (leaves.isEmpty) return;
-    final now = DateTime.now();
     for (final entry in entries) {
       if (entry.status == AttendanceStatus.late ||
           entry.status == AttendanceStatus.excused) {
@@ -4200,7 +4205,7 @@ class SchoolDataService {
       if (entry.status == AttendanceStatus.present ||
           entry.status == AttendanceStatus.absent) {
         entry.status = AttendanceStatus.excused;
-        entry.updatedAt = now;
+        entry.updatedAt = _attendanceWriteTime(entry.updatedAt);
       }
     }
   }
@@ -4225,11 +4230,26 @@ class SchoolDataService {
       final session = getAttendanceSession(leave.className, day);
       if (session == null || session.locked) continue;
       final entries = session.entries.map(_copyAttendanceEntry).toList();
-      overlayApprovedLeaveOnEntries(
-        entries: entries,
-        className: session.className,
-        date: day,
-      );
+      var changed = false;
+      for (final entry in entries) {
+        if (!entry.matches(
+          studentId: leave.studentId,
+          studentName: leave.studentName,
+        )) {
+          continue;
+        }
+        if (entry.status == AttendanceStatus.late ||
+            entry.status == AttendanceStatus.excused) {
+          continue;
+        }
+        if (entry.status == AttendanceStatus.present ||
+            entry.status == AttendanceStatus.absent) {
+          entry.status = AttendanceStatus.excused;
+          entry.updatedAt = _attendanceWriteTime(entry.updatedAt);
+          changed = true;
+        }
+      }
+      if (!changed) continue;
       saveAttendanceSession(
         className: session.className,
         date: session.date,

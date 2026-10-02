@@ -408,9 +408,41 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             title: Text(
                               '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
                             ),
-                            subtitle: conductedBy != null
-                                ? Text(s.conductedByName(conductedBy!))
-                                : Text(s.selectedDate),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  conductedBy != null
+                                      ? s.conductedByName(conductedBy!)
+                                      : s.selectedDate,
+                                ),
+                                if (!widget.readOnly)
+                                  DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      isDense: true,
+                                      isExpanded: true,
+                                      value: _periodOptions(s).any(
+                                            (item) =>
+                                                item.key == selectedPeriodKey,
+                                          )
+                                          ? selectedPeriodKey
+                                          : '',
+                                      items: [
+                                        for (final option in _periodOptions(s))
+                                          DropdownMenuItem(
+                                            value: option.key,
+                                            child: Text(option.label),
+                                          ),
+                                      ],
+                                      onChanged: (value) {
+                                        selectedPeriodKey = value ?? '';
+                                        _loadAttendance();
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            isThreeLine: !widget.readOnly,
                             trailing: widget.readOnly
                                 ? null
                                 : TextButton(
@@ -418,35 +450,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     child: Text(s.change),
                                   ),
                           ),
-                          if (!widget.readOnly) ...[
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              initialValue:
-                                  _periodOptions(
-                                    s,
-                                  ).any((item) => item.key == selectedPeriodKey)
-                                  ? selectedPeriodKey
-                                  : '',
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: Colors.white.withValues(alpha: 0.92),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              items: [
-                                for (final option in _periodOptions(s))
-                                  DropdownMenuItem(
-                                    value: option.key,
-                                    child: Text(option.label),
-                                  ),
-                              ],
-                              onChanged: (value) {
-                                selectedPeriodKey = value ?? '';
-                                _loadAttendance();
-                              },
-                            ),
-                          ],
                           if (_locked && !widget.readOnly) ...[
                             const SizedBox(height: 8),
                             ListTile(
