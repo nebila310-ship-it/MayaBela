@@ -57,13 +57,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       }
       return const [];
     }
-    final mine = _access.myClasses.map((a) => a.className).toList();
-    if (mine.isNotEmpty) return mine;
     if (AuthService.mayReadAllSchoolData ||
         ModuleAccess.canManage('attendance')) {
       return _data.getAllClassNames();
     }
-    return mine;
+    return _access.myClasses.map((a) => a.className).toList();
   }
 
   bool get _canMarkSelectedClass {
@@ -148,12 +146,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() {});
   }
 
+  String _preferredClass(List<String> options) {
+    if (options.isEmpty) return '';
+    for (final name in options) {
+      if (_data.getStudentsForClass(name).isNotEmpty) return name;
+    }
+    return options.first;
+  }
+
   @override
   void initState() {
     super.initState();
     final options = _classOptions;
-    selectedClass =
-        widget.initialClass ?? (options.isNotEmpty ? options.first : '');
+    final initial = widget.initialClass?.trim();
+    selectedClass = (initial != null && initial.isNotEmpty)
+        ? initial
+        : _preferredClass(options);
     _loadAttendance();
   }
 
@@ -228,7 +236,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final saved = _data.saveAttendanceSession(
         className: selectedClass,
         date: selectedDate,
-        conductedBy: AuthService.displayNameForRole(AuthService.roleTeacher),
+        conductedBy: AuthService.currentPersonName(),
         entries: entries,
         notifyParents: false,
         periodKey: selectedPeriodKey,
@@ -266,7 +274,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _saveAttendance() async {
     if (!_canEditRegister) return;
     final s = AppLocale.instance.strings;
-    final conductor = AuthService.displayNameForRole(AuthService.roleTeacher);
+    final conductor = AuthService.currentPersonName();
     final saved = _data.saveAttendanceSession(
       className: selectedClass,
       date: selectedDate,
@@ -389,7 +397,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     child: DropdownButton<String>(
                                       isDense: true,
                                       isExpanded: true,
-                                      value: _periodOptions(s).any(
+                                      value:
+                                          _periodOptions(s).any(
                                             (item) =>
                                                 item.key == selectedPeriodKey,
                                           )

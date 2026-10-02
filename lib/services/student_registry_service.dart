@@ -709,6 +709,25 @@ class StudentRegistryService {
   List<AdminStudentRecord> getAllStudents() =>
       List.unmodifiable(_students.where((s) => s.isActive));
 
+  /// Distinct class names with enrolled students, scoped to [schoolId]
+  /// when it is set.
+  List<String> classNamesForSchool(String? schoolId) {
+    final students = (schoolId == null || schoolId.trim().isEmpty)
+        ? getAllStudents()
+        : studentsForSchool(schoolId);
+    final names = <String>[];
+    for (final student in students) {
+      final className = student.className.trim();
+      if (className.isEmpty) continue;
+      if (names.any((existing) => classNamesMatch(existing, className))) {
+        continue;
+      }
+      names.add(className);
+    }
+    names.sort();
+    return names;
+  }
+
   List<AdminStudentRecord> registrySnapshot() =>
       List.unmodifiable(_students);
 
