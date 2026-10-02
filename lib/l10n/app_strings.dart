@@ -1694,6 +1694,7 @@ class AppStrings implements AppStringsLike {
   String get present => t('Present', 'ተገኝቷል');
   String get absent => t('Absent', 'ጠፍቷል');
   String get late => t('Late', 'ዘግይቷል');
+  String get excused => t('Excused', 'በፈቃድ', 'Hayyamame');
   String get saveAttendance => t('Save Attendance', 'መገኘት አስቀምጥ');
   String get conductedBy => t('Conducted by', 'የተመዘገበ በ');
   String get feesTitle => t('Fees & Payments', 'ክፍያዎች');
@@ -2791,8 +2792,29 @@ class AppStrings implements AppStringsLike {
         'ይህ መዝገብ ተቆልፏል። እንዲከፈት አስተዳዳሪን ይጠይቁ።',
         'Galmeen kun cufameera. Bulchaa gaafadhu akka bannu.',
       );
-  String historyPresentLateAbsent(int present, int late, int absent) =>
-      t('Present: $present · Late: $late · Absent: $absent', 'ተገኝ: $present · ዘግ: $late · ጠፍ: $absent');
+  String historyPresentLateAbsent(
+    int present,
+    int late,
+    int absent, [
+    int excused = 0,
+  ]) =>
+      excused <= 0
+          ? t(
+              'Present: $present · Late: $late · Absent: $absent',
+              'ተገኝ: $present · ዘግ: $late · ጠፍ: $absent',
+            )
+          : t(
+              'Present: $present · Late: $late · Absent: $absent · Excused: $excused',
+              'ተገኝ: $present · ዘግ: $late · ጠፍ: $absent · በፈቃድ: $excused',
+              'Argama: $present · Debi\'aa: $late · Hin argamne: $absent · Hayyamame: $excused',
+            );
+  String get dailyRegister =>
+      t('Daily register', 'የቀን መዝገብ', 'Galmee guyyaa');
+  String periodLessonLabel(int period, String subject) => t(
+        'Period $period · $subject',
+        'ክፍለ ጊዜ $period · $subject',
+        'Yeroo $period · $subject',
+      );
   String historyConductedBy(String name) =>
       t('Conducted by $name', 'የተመዘገበ በ $name');
 
@@ -3018,11 +3040,24 @@ class AppStrings implements AppStringsLike {
   String get absents => t('Absents', 'የጠፉ', 'Hin argamne');
   String get lateArrivals => t('Late', 'ዘግይተው', 'Deebi\'aa');
   String get presentToday => t('Present', 'ተገኝተዋል', 'Argaman');
-  String attendanceSummaryCounts(int absent, int late, int present) => t(
-        '$absent absent · $late late · $present present',
-        '$absent ጠፍ · $late ዘግ · $present ተገኝ',
-        '$absent hin argamne · $late debi\'aa · $present argaman',
-      );
+  String get excusedToday => t('Excused', 'በፈቃድ', 'Hayyamame');
+  String attendanceSummaryCounts(
+    int absent,
+    int late,
+    int present, [
+    int excused = 0,
+  ]) =>
+      excused <= 0
+          ? t(
+              '$absent absent · $late late · $present present',
+              '$absent ጠፍ · $late ዘግ · $present ተገኝ',
+              '$absent hin argamne · $late debi\'aa · $present argaman',
+            )
+          : t(
+              '$absent absent · $late late · $present present · $excused excused',
+              '$absent ጠፍ · $late ዘግ · $present ተገኝ · $excused በፈቃድ',
+              '$absent hin argamne · $late debi\'aa · $present argaman · $excused hayyamame',
+            );
   String gradeAbsentCount(String grade, int count) => t(
         '$grade · $count absent',
         '$grade · $count ጠፍ',
@@ -3037,6 +3072,11 @@ class AppStrings implements AppStringsLike {
         '$grade · $count present',
         '$grade · $count ተገኝ',
         '$grade · $count argaman',
+      );
+  String gradeExcusedCount(String grade, int count) => t(
+        '$grade · $count excused',
+        '$grade · $count በፈቃድ',
+        '$grade · $count hayyamame',
       );
   String studentsWithStatus(int count, String statusLabel) => t(
         '$count students $statusLabel',

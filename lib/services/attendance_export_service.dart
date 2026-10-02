@@ -30,6 +30,7 @@ class AttendanceExportLabels {
     required this.absents,
     required this.late,
     required this.present,
+    required this.excused,
     required this.teachersRecorded,
     required this.className,
     required this.teacherColumn,
@@ -53,6 +54,7 @@ class AttendanceExportLabels {
       absents: s.absents,
       late: s.lateArrivals,
       present: s.presentToday,
+      excused: s.excusedToday,
       teachersRecorded: s.teachersRecordedAttendance,
       className: s.className,
       teacherColumn: s.exportTeacherColumn,
@@ -75,6 +77,7 @@ class AttendanceExportLabels {
   final String absents;
   final String late;
   final String present;
+  final String excused;
   final String teachersRecorded;
   final String className;
   final String teacherColumn;
@@ -139,6 +142,8 @@ class AttendanceExportService {
         return labels.late;
       case AttendanceStatus.absent:
         return labels.absents;
+      case AttendanceStatus.excused:
+        return labels.excused;
     }
   }
 
@@ -153,7 +158,8 @@ class AttendanceExportService {
         '$range\n'
         '${labels.absents}: ${report.absentCount} · '
         '${labels.late}: ${report.lateCount} · '
-        '${labels.present}: ${report.presentCount}\n'
+        '${labels.present}: ${report.presentCount} · '
+        '${labels.excused}: ${report.excusedCount}\n'
         '${labels.readOnlyHint}';
   }
 
@@ -302,6 +308,7 @@ class AttendanceExportService {
     write(row++, 0, '${labels.absents}: ${report.absentCount}');
     write(row++, 0, '${labels.late}: ${report.lateCount}');
     write(row++, 0, '${labels.present}: ${report.presentCount}');
+    write(row++, 0, '${labels.excused}: ${report.excusedCount}');
     row++;
 
     write(row++, 0, labels.teachersRecorded, bold: true);
@@ -319,6 +326,7 @@ class AttendanceExportService {
     write(row, 3, labels.present, bold: true);
     write(row, 4, labels.late, bold: true);
     write(row, 5, labels.absents, bold: true);
+    write(row, 6, labels.excused, bold: true);
     row++;
 
     for (final daily in report.dailyReports) {
@@ -329,6 +337,7 @@ class AttendanceExportService {
         write(row, 3, '${session.presentCount}');
         write(row, 4, '${session.lateCount}');
         write(row, 5, '${session.absentCount}');
+        write(row, 6, '${session.excusedCount}');
         row++;
       }
     }
@@ -352,7 +361,8 @@ class AttendanceExportService {
     write(row, 1, labels.present, bold: true);
     write(row, 2, labels.late, bold: true);
     write(row, 3, labels.absents, bold: true);
-    write(row, 4, labels.totalLabel, bold: true);
+    write(row, 4, labels.excused, bold: true);
+    write(row, 5, labels.totalLabel, bold: true);
     row++;
 
     for (final daily in report.dailyReports) {
@@ -361,7 +371,8 @@ class AttendanceExportService {
       write(row, 1, '${daily.presentCount}');
       write(row, 2, '${daily.lateCount}');
       write(row, 3, '${daily.absentCount}');
-      write(row, 4, '${daily.totalCount}');
+      write(row, 4, '${daily.excusedCount}');
+      write(row, 5, '${daily.totalCount}');
       row++;
     }
 

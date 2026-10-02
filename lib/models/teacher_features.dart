@@ -44,18 +44,20 @@ class StudentRef {
   String get inviteStudentId => registryStudentId ?? id;
 }
 
-enum AttendanceStatus { present, absent, late }
+enum AttendanceStatus { present, absent, late, excused }
 
 class StudentAttendanceEntry {
   StudentAttendanceEntry({
     required this.studentName,
     required this.status,
     this.studentId,
+    this.updatedAt,
   });
 
   final String studentName;
   final String? studentId;
   AttendanceStatus status;
+  DateTime? updatedAt;
 
   bool matches({String? studentId, String? studentName}) {
     final mine = this.studentId?.trim();
@@ -81,6 +83,8 @@ class AttendanceSession {
     this.locked = false,
     this.lockedBy,
     this.lockedAt,
+    this.periodKey = '',
+    this.periodLabel = '',
   });
 
   final String className;
@@ -90,6 +94,10 @@ class AttendanceSession {
   final bool locked;
   final String? lockedBy;
   final DateTime? lockedAt;
+  final String periodKey;
+  final String periodLabel;
+
+  bool get isDaily => periodKey.trim().isEmpty;
 }
 
 class AttendanceSessionSummary {
@@ -99,6 +107,7 @@ class AttendanceSessionSummary {
     required this.presentCount,
     required this.lateCount,
     required this.absentCount,
+    this.excusedCount = 0,
   });
 
   final String className;
@@ -106,6 +115,7 @@ class AttendanceSessionSummary {
   final int presentCount;
   final int lateCount;
   final int absentCount;
+  final int excusedCount;
 }
 
 class StudentAttendanceRecord {
@@ -135,6 +145,7 @@ class AttendanceDateRangeReport {
     required this.absentCount,
     required this.dailyReports,
     required this.records,
+    this.excusedCount = 0,
   });
 
   final DateTime fromDate;
@@ -142,10 +153,11 @@ class AttendanceDateRangeReport {
   final int presentCount;
   final int lateCount;
   final int absentCount;
+  final int excusedCount;
   final List<DailyAttendanceReport> dailyReports;
   final List<StudentAttendanceRecord> records;
 
-  int get totalCount => presentCount + lateCount + absentCount;
+  int get totalCount => presentCount + lateCount + absentCount + excusedCount;
 
   int get dayCount => dailyReports.where((d) => d.totalCount > 0).length;
 }
@@ -158,16 +170,18 @@ class DailyAttendanceReport {
     required this.absentCount,
     required this.sessions,
     required this.records,
+    this.excusedCount = 0,
   });
 
   final DateTime date;
   final int presentCount;
   final int lateCount;
   final int absentCount;
+  final int excusedCount;
   final List<AttendanceSessionSummary> sessions;
   final List<StudentAttendanceRecord> records;
 
-  int get totalCount => presentCount + lateCount + absentCount;
+  int get totalCount => presentCount + lateCount + absentCount + excusedCount;
 
   List<StudentAttendanceRecord> recordsForStatus(AttendanceStatus status) {
     return records.where((r) => r.status == status).toList();

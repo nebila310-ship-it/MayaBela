@@ -44,6 +44,8 @@ import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/models/leave_request.dart';
+import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
@@ -3898,12 +3900,27 @@ class SchoolDataService {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  AttendanceSession? getAttendanceSession(String className, DateTime date) {
+  String _normalizeAttendancePeriodKey(String? periodKey) =>
+      (periodKey ?? '').trim();
+
+  DateTime _attendanceWriteTime(DateTime? previous) {
+    final now = DateTime.now();
+    if (previous == null || now.isAfter(previous)) return now;
+    return previous.add(const Duration(milliseconds: 1));
+  }
+
+  AttendanceSession? getAttendanceSession(
+    String className,
+    DateTime date, {
+    String? periodKey,
+  }) {
+    final key = _normalizeAttendancePeriodKey(periodKey);
     try {
       return _attendanceSessions.firstWhere(
         (session) =>
             _classNamesMatch(session.className, className) &&
-            _isSameDay(session.date, date),
+            _isSameDay(session.date, date) &&
+            session.periodKey.trim() == key,
       );
     } catch (_) {
       return null;
@@ -3912,7 +3929,7 @@ class SchoolDataService {
 
   List<AttendanceSession> getAttendanceSessionsForDate(DateTime date) {
     return _attendanceSessions
-        .where((session) => _isSameDay(session.date, date))
+        .where((session) => _isSameDay(session.date, date) && session.isDaily)
         .toList()
       ..sort((a, b) => a.className.compareTo(b.className));
   }
@@ -3936,11 +3953,13 @@ class SchoolDataService {
     var present = 0;
     var late = 0;
     var absent = 0;
+    var excused = 0;
 
     for (final session in sessions) {
       var sessionPresent = 0;
       var sessionLate = 0;
       var sessionAbsent = 0;
+      var sessionExcused = 0;
 
       for (final entry in session.entries) {
         switch (entry.status) {
@@ -3953,6 +3972,9 @@ class SchoolDataService {
           case AttendanceStatus.absent:
             sessionAbsent++;
             absent++;
+          case AttendanceStatus.excused:
+            sessionExcused++;
+            excused++;
         }
         records.add(
           StudentAttendanceRecord(
@@ -3973,6 +3995,7 @@ class SchoolDataService {
           presentCount: sessionPresent,
           lateCount: sessionLate,
           absentCount: sessionAbsent,
+          excusedCount: sessionExcused,
         ),
       );
     }
@@ -3982,6 +4005,7 @@ class SchoolDataService {
       presentCount: present,
       lateCount: late,
       absentCount: absent,
+      excusedCount: excused,
       sessions: summaries,
       records: records,
     );
@@ -4001,6 +4025,7 @@ class SchoolDataService {
     var present = 0;
     var late = 0;
     var absent = 0;
+    var excused = 0;
 
     for (var day = start;
         !day.isAfter(end);
@@ -4010,6 +4035,7 @@ class SchoolDataService {
       present += daily.presentCount;
       late += daily.lateCount;
       absent += daily.absentCount;
+      excused += daily.excusedCount;
       records.addAll(daily.records);
     }
 
@@ -4019,16 +4045,116 @@ class SchoolDataService {
       presentCount: present,
       lateCount: late,
       absentCount: absent,
+      excusedCount: excused,
       dailyReports: dailyReports,
       records: records,
     );
   }
 
-  List<AttendanceSession> getAttendanceHistory(String className) {
+  List<AttendanceSession> getAttendanceHistory(
+    String className, {
+    bool dailyOnly = true,
+  }) {
     return _attendanceSessions
-        .where((session) => _classNamesMatch(session.className, className))
+        .where(
+          (session) =>
+              _classNamesMatch(session.className, className) &&
+              (!dailyOnly || session.isDaily),
+        )
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  bool _attendanceEntryOnRoster(
+    StudentAttendanceEntry entry,
+    List<StudentRef> roster,
+  ) {
+    for (final student in roster) {
+      if (entry.matches(
+        studentId: student.inviteStudentId,
+        studentName: student.name,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<StudentAttendanceEntry> _keepIncomingAndRosterEntries(
+    String className, {
+    required List<StudentAttendanceEntry> incoming,
+    required List<StudentAttendanceEntry> merged,
+  }) {
+    final roster = getStudentsForClass(className);
+    if (roster.isEmpty) return merged;
+    final incomingKeys = {
+      for (final entry in incoming) _attendanceEntryKey(entry),
+    };
+    return [
+      for (final entry in merged)
+        if (incomingKeys.contains(_attendanceEntryKey(entry)) ||
+            _attendanceEntryOnRoster(entry, roster))
+          entry,
+    ];
+  }
+
+  /// Class list is the register. Saved marks overlay matching students;
+  /// leftover names from another school or demo seed are dropped.
+  ({
+    List<StudentAttendanceEntry> entries,
+    String? conductedBy,
+    bool locked,
+    String periodLabel,
+  }) attendanceRegisterView({
+    required String className,
+    required DateTime date,
+    String periodKey = '',
+  }) {
+    final roster = getStudentsForClass(className);
+    final session = getAttendanceSession(
+      className,
+      date,
+      periodKey: periodKey,
+    );
+    if (roster.isEmpty) {
+      return (
+        entries: [
+          for (final entry in session?.entries ?? const <StudentAttendanceEntry>[])
+            _copyAttendanceEntry(entry),
+        ],
+        conductedBy: session?.conductedBy,
+        locked: session?.locked ?? false,
+        periodLabel: session?.periodLabel ?? '',
+      );
+    }
+    final belongs = session != null &&
+        session.entries.any((entry) => _attendanceEntryOnRoster(entry, roster));
+    final entries = roster.map((student) {
+      StudentAttendanceEntry? match;
+      if (session != null) {
+        for (final entry in session.entries) {
+          if (entry.matches(
+            studentId: student.inviteStudentId,
+            studentName: student.name,
+          )) {
+            match = entry;
+            break;
+          }
+        }
+      }
+      return StudentAttendanceEntry(
+        studentName: student.name,
+        studentId: student.inviteStudentId,
+        status: match?.status ?? AttendanceStatus.present,
+        updatedAt: match?.updatedAt,
+      );
+    }).toList();
+    return (
+      entries: entries,
+      conductedBy: belongs ? session!.conductedBy : null,
+      locked: belongs && session!.locked,
+      periodLabel: belongs ? session!.periodLabel : '',
+    );
   }
 
   bool canWriteAttendanceRegister(String className) {
@@ -4081,6 +4207,7 @@ class SchoolDataService {
       studentName: entry.studentName,
       studentId: (id == null || id.trim().isEmpty) ? null : id,
       status: entry.status,
+      updatedAt: entry.updatedAt,
     );
   }
 
@@ -4088,6 +4215,143 @@ class SchoolDataService {
     final id = entry.studentId?.trim();
     if (id != null && id.isNotEmpty) return 'id:${id.toUpperCase()}';
     return 'name:${entry.studentName.trim().toLowerCase()}';
+  }
+
+  StudentAttendanceEntry _copyAttendanceEntry(StudentAttendanceEntry entry) {
+    return StudentAttendanceEntry(
+      studentName: entry.studentName,
+      studentId: entry.studentId,
+      status: entry.status,
+      updatedAt: entry.updatedAt,
+    );
+  }
+
+  StudentAttendanceEntry _pickAttendanceEntry(
+    StudentAttendanceEntry? existing,
+    StudentAttendanceEntry incoming,
+  ) {
+    if (existing == null) return incoming;
+    if (incoming.updatedAt == null) {
+      return StudentAttendanceEntry(
+        studentName: existing.studentName,
+        studentId: existing.studentId ?? incoming.studentId,
+        status: existing.status,
+        updatedAt: existing.updatedAt,
+      );
+    }
+    if (existing.updatedAt == null ||
+        incoming.updatedAt!.isAfter(existing.updatedAt!)) {
+      return incoming;
+    }
+    return existing;
+  }
+
+  List<StudentAttendanceEntry> _mergeAttendanceEntries(
+    List<StudentAttendanceEntry> existing,
+    List<StudentAttendanceEntry> incoming,
+  ) {
+    final byKey = <String, StudentAttendanceEntry>{
+      for (final entry in existing) _attendanceEntryKey(entry): entry,
+    };
+    for (final entry in incoming) {
+      final key = _attendanceEntryKey(entry);
+      byKey[key] = _pickAttendanceEntry(byKey[key], entry);
+    }
+    final seen = <String>{};
+    final merged = <StudentAttendanceEntry>[];
+    for (final entry in incoming) {
+      final key = _attendanceEntryKey(entry);
+      if (seen.add(key)) merged.add(byKey[key]!);
+    }
+    for (final entry in existing) {
+      final key = _attendanceEntryKey(entry);
+      if (seen.add(key)) merged.add(byKey[key]!);
+    }
+    return merged;
+  }
+
+  void overlayApprovedLeaveOnEntries({
+    required List<StudentAttendanceEntry> entries,
+    required String className,
+    required DateTime date,
+    String periodKey = '',
+  }) {
+    if (_normalizeAttendancePeriodKey(periodKey).isNotEmpty) return;
+    final leaves = LeaveRequestService.instance.approvedCovering(
+      className: className,
+      date: date,
+    );
+    if (leaves.isEmpty) return;
+    for (final entry in entries) {
+      if (entry.status == AttendanceStatus.late ||
+          entry.status == AttendanceStatus.excused) {
+        continue;
+      }
+      final covered = leaves.any(
+        (leave) => entry.matches(
+          studentId: leave.studentId,
+          studentName: leave.studentName,
+        ),
+      );
+      if (!covered) continue;
+      if (entry.status == AttendanceStatus.present ||
+          entry.status == AttendanceStatus.absent) {
+        entry.status = AttendanceStatus.excused;
+        entry.updatedAt = _attendanceWriteTime(entry.updatedAt);
+      }
+    }
+  }
+
+  void applyApprovedLeave(LeaveRequest leave) {
+    if (leave.status != LeaveRequestStatus.approved) return;
+    final start = DateTime(
+      leave.startDate.year,
+      leave.startDate.month,
+      leave.startDate.day,
+    );
+    final end = DateTime(
+      leave.endDate.year,
+      leave.endDate.month,
+      leave.endDate.day,
+    );
+    for (
+      var day = start;
+      !day.isAfter(end);
+      day = day.add(const Duration(days: 1))
+    ) {
+      final session = getAttendanceSession(leave.className, day);
+      if (session == null || session.locked) continue;
+      final entries = session.entries.map(_copyAttendanceEntry).toList();
+      var changed = false;
+      for (final entry in entries) {
+        if (!entry.matches(
+          studentId: leave.studentId,
+          studentName: leave.studentName,
+        )) {
+          continue;
+        }
+        if (entry.status == AttendanceStatus.late ||
+            entry.status == AttendanceStatus.excused) {
+          continue;
+        }
+        if (entry.status == AttendanceStatus.present ||
+            entry.status == AttendanceStatus.absent) {
+          entry.status = AttendanceStatus.excused;
+          entry.updatedAt = _attendanceWriteTime(entry.updatedAt);
+          changed = true;
+        }
+      }
+      if (!changed) continue;
+      saveAttendanceSession(
+        className: session.className,
+        date: session.date,
+        conductedBy: session.conductedBy,
+        entries: entries,
+        notifyParents: false,
+        periodKey: session.periodKey,
+        periodLabel: session.periodLabel,
+      );
+    }
   }
 
   bool saveAttendanceSession({
@@ -4098,12 +4362,13 @@ class SchoolDataService {
     bool notifyParents = true,
     bool? locked,
     String? lockedBy,
+    String periodKey = '',
+    String periodLabel = '',
   }) {
     if (!canWriteAttendanceRegister(className)) return false;
-    final existing = getAttendanceSession(className, date);
-    if (existing != null &&
-        existing.locked &&
-        !canUnlockAttendanceRegister()) {
+    final key = _normalizeAttendancePeriodKey(periodKey);
+    final existing = getAttendanceSession(className, date, periodKey: key);
+    if (existing != null && existing.locked && !canUnlockAttendanceRegister()) {
       return false;
     }
 
@@ -4111,27 +4376,43 @@ class SchoolDataService {
       for (final entry in existing?.entries ?? const <StudentAttendanceEntry>[])
         _attendanceEntryKey(entry): entry.status,
     };
-    if (existing != null) {
-      _attendanceSessions.remove(existing);
-    }
 
     final nextLocked = locked ?? existing?.locked ?? false;
     final hydrated = entries
         .map((entry) => _hydrateAttendanceEntry(entry, className))
         .toList();
+    final merged = existing == null
+        ? hydrated
+        : _mergeAttendanceEntries(existing.entries, hydrated);
+    final rosterAligned = _keepIncomingAndRosterEntries(
+      className,
+      incoming: hydrated,
+      merged: merged,
+    );
+    overlayApprovedLeaveOnEntries(
+      entries: rosterAligned,
+      className: className,
+      date: date,
+      periodKey: key,
+    );
+    if (existing != null) {
+      _attendanceSessions.remove(existing);
+    }
     _attendanceSessions.add(
       AttendanceSession(
         className: className,
         date: date,
         conductedBy: conductedBy,
-        entries: hydrated,
+        entries: rosterAligned,
         locked: nextLocked,
         lockedBy: nextLocked
             ? (lockedBy ?? existing?.lockedBy ?? conductedBy)
             : null,
-        lockedAt: nextLocked
-            ? (existing?.lockedAt ?? DateTime.now())
-            : null,
+        lockedAt: nextLocked ? (existing?.lockedAt ?? DateTime.now()) : null,
+        periodKey: key,
+        periodLabel: periodLabel.trim().isNotEmpty
+            ? periodLabel.trim()
+            : (existing?.periodLabel ?? ''),
       ),
     );
 
@@ -4139,14 +4420,14 @@ class SchoolDataService {
       _notifyParentsOfAttendanceChanges(
         className: className,
         conductedBy: conductedBy,
-        entries: hydrated,
+        entries: rosterAligned,
         previousByKey: previousByKey,
       );
     }
     _alertStaffWhenAbsenceStreakStarts(
       className: className,
       conductedBy: conductedBy,
-      entries: hydrated,
+      entries: rosterAligned,
     );
     _persistSchoolContent();
     return true;
@@ -4156,8 +4437,13 @@ class SchoolDataService {
     required String className,
     required DateTime date,
     String? lockedBy,
+    String periodKey = '',
   }) {
-    final existing = getAttendanceSession(className, date);
+    final existing = getAttendanceSession(
+      className,
+      date,
+      periodKey: periodKey,
+    );
     if (existing == null) return false;
     return saveAttendanceSession(
       className: className,
@@ -4167,15 +4453,22 @@ class SchoolDataService {
       notifyParents: false,
       locked: true,
       lockedBy: lockedBy,
+      periodKey: existing.periodKey,
+      periodLabel: existing.periodLabel,
     );
   }
 
   bool unlockAttendanceSession({
     required String className,
     required DateTime date,
+    String periodKey = '',
   }) {
     if (!canUnlockAttendanceRegister()) return false;
-    final existing = getAttendanceSession(className, date);
+    final existing = getAttendanceSession(
+      className,
+      date,
+      periodKey: periodKey,
+    );
     if (existing == null) return false;
     return saveAttendanceSession(
       className: className,
@@ -4184,6 +4477,8 @@ class SchoolDataService {
       entries: existing.entries,
       notifyParents: false,
       locked: false,
+      periodKey: existing.periodKey,
+      periodLabel: existing.periodLabel,
     );
   }
 
@@ -5060,6 +5355,7 @@ class SchoolDataService {
     var present = 0;
     var late = 0;
     var absent = 0;
+    var excused = 0;
     for (final session in getAttendanceHistory(className)) {
       for (final entry in session.entries) {
         if (!entry.matches(studentId: studentId, studentName: studentName)) {
@@ -5072,6 +5368,8 @@ class SchoolDataService {
             late++;
           case AttendanceStatus.absent:
             absent++;
+          case AttendanceStatus.excused:
+            excused++;
         }
       }
     }
@@ -5079,6 +5377,7 @@ class SchoolDataService {
       present: present,
       late: late,
       absent: absent,
+      excused: excused,
     );
   }
 
@@ -6891,15 +7190,7 @@ class SchoolDataService {
       QrScanAction.absent || QrScanAction.exit => AttendanceStatus.absent,
     };
 
-    final entries = session?.entries
-            .map(
-              (entry) => StudentAttendanceEntry(
-                studentName: entry.studentName,
-                studentId: entry.studentId,
-                status: entry.status,
-              ),
-            )
-            .toList() ??
+    final entries = session?.entries.map(_copyAttendanceEntry).toList() ??
         roster
             .map(
               (student) => StudentAttendanceEntry(
@@ -6917,13 +7208,17 @@ class SchoolDataService {
       ),
     );
     if (index >= 0) {
-      entries[index].status = targetStatus;
+      if (entries[index].status != targetStatus) {
+        entries[index].status = targetStatus;
+        entries[index].updatedAt = DateTime.now();
+      }
     } else {
       entries.add(
         StudentAttendanceEntry(
           studentName: studentName,
           studentId: studentId,
           status: targetStatus,
+          updatedAt: DateTime.now(),
         ),
       );
     }
@@ -7330,12 +7625,36 @@ class SchoolDataService {
       List.unmodifiable(_attendanceSessions);
 
   void applyPersistedAttendance(List<AttendanceSession> sessions) {
-    for (final session in sessions) {
-      final existing = getAttendanceSession(session.className, session.date);
-      if (existing != null) {
-        _attendanceSessions.remove(existing);
+    for (final incoming in sessions) {
+      final existing = getAttendanceSession(
+        incoming.className,
+        incoming.date,
+        periodKey: incoming.periodKey,
+      );
+      if (existing == null) {
+        _attendanceSessions.add(incoming);
+        continue;
       }
-      _attendanceSessions.add(session);
+      _attendanceSessions.remove(existing);
+      _attendanceSessions.add(
+        AttendanceSession(
+          className: incoming.className.isNotEmpty
+              ? incoming.className
+              : existing.className,
+          date: incoming.date,
+          conductedBy: incoming.conductedBy.isNotEmpty
+              ? incoming.conductedBy
+              : existing.conductedBy,
+          entries: _mergeAttendanceEntries(existing.entries, incoming.entries),
+          locked: incoming.locked,
+          lockedBy: incoming.lockedBy ?? existing.lockedBy,
+          lockedAt: incoming.lockedAt ?? existing.lockedAt,
+          periodKey: incoming.periodKey,
+          periodLabel: incoming.periodLabel.trim().isNotEmpty
+              ? incoming.periodLabel
+              : existing.periodLabel,
+        ),
+      );
     }
   }
 }
