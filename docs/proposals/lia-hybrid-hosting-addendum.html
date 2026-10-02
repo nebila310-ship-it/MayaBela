@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Addendum A — Hybrid Hosting for Lebawi International Academy</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --gold: #b8943a;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+      --school: #eef4fb;
+      --cloud: #eef8f2;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.8pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(20, 32, 51, 0.92);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .toolbar .dl {
+      background: #1f8a4c;
+      color: #fff !important;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 14mm 16mm 18mm;
+    }
+    .cover-flag {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      border-bottom: 3px solid var(--blue);
+      box-shadow: 0 3px 0 var(--gold);
+      padding: 0 0 14px 0;
+    }
+    .cover-flag .brand-mark {
+      width: 46mm;
+      max-width: 42%;
+      height: auto;
+      flex: 0 0 auto;
+    }
+    .brand-sub {
+      margin: 0 0 4px;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .contact-line {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 9.2pt;
+      line-height: 1.45;
+    }
+    .contact-line a { color: var(--blue); text-decoration: none; font-weight: 700; }
+    .doc-kicker {
+      margin: 18px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9pt;
+      font-weight: 700;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 18pt;
+      line-height: 1.22;
+      color: var(--ink);
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12.2pt;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 8.2pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .banner {
+      background: var(--ok-bg);
+      border: 1px solid #b7e2c6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 12px 0 6px;
+    }
+    .banner strong { color: var(--ok); }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    h2 {
+      margin: 20px 0 8px;
+      font-size: 13pt;
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px;
+      font-size: 11.2pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 11px 0 5px;
+      font-size: 10.4pt;
+      color: var(--ink);
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    .toc { list-style: none; padding-left: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.1pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 5px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--wash);
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0 12px;
+    }
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      page-break-inside: avoid;
+    }
+    .box.school { background: linear-gradient(180deg, var(--school) 0%, #fff 75%); }
+    .box.cloud { background: linear-gradient(180deg, var(--cloud) 0%, #fff 75%); }
+    .box h3 { margin-top: 0; border: 0; padding-left: 0; }
+    .flow {
+      background: var(--wash);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 10px 0 12px;
+      page-break-inside: avoid;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 0 0 10px;
+      background: linear-gradient(180deg, #f7fafc 0%, #fff 70%);
+      page-break-inside: avoid;
+    }
+    .card h3 { margin-top: 0; border: 0; padding-left: 0; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 22px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 78px;
+    }
+    .sig .who { font-weight: 700; margin-top: 28px; }
+    .sig .role { color: var(--muted); font-size: 9.3pt; }
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8.2pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    @media print {
+      html, body { background: #fff !important; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+      a { color: inherit; text-decoration: none; }
+      .cover-flag, .sig, .box, .card, table, .banner, .note, .flow { break-inside: avoid; }
+      .cover-flag, .banner, .meta-card, .box, .card {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    @page { size: A4; margin: 14mm 16mm 18mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a class="dl" href="MaJo_Bridge_LIA_Hybrid_Hosting_Addendum.pdf" download="MaJo_Bridge_LIA_Hybrid_Hosting_Addendum.pdf">Download PDF</a>
+    Addendum A to the LIA technical proposal ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+    <header class="cover-flag">
+      <img class="brand-mark" src="assets/majo_bridge_logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+      <div>
+        <p class="brand-sub">Prepared by MaJo-Bridge Technology and Events PLC</p>
+        <p class="contact-line">
+          Product: <b>MaJo Bridge e-School OS</b> (MayaBela platform)<br />
+          Live system: <a href="https://mayabela.pages.dev">https://mayabela.pages.dev</a><br />
+          Email: <a href="mailto:majobridgetech@gmail.com">majobridgetech@gmail.com</a>
+          · <a href="mailto:nabilmaya6464@gmail.com">nabilmaya6464@gmail.com</a><br />
+          Phone / WhatsApp: <b>+251 911 646 444</b> · <b>+251 911 133 548</b>
+        </p>
+      </div>
+    </header>
+
+    <p class="doc-kicker">Addendum A · Continues the LIA Technical Proposal (FINAL v1.0)</p>
+    <h1 class="doc-title">Hybrid hosting for Lebawi International Academy: sensitive records on the school server, other work on the MaJo-Bridge cloud</h1>
+    <p class="doc-for">Prepared for Lebawi International Academy (LIA) · Continues <i>MaJo_Bridge_LIA_Technical_Proposal FINAL</i></p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Parent document</strong>
+        MaJo Bridge e-School OS Technical Proposal for Lebawi International Academy · Version 1.0 FINAL (12–14 September 2026). That paper mapped the TOR to 55+ live desks. <b>This paper does not replace it.</b>
+      </div>
+      <div class="meta-card">
+        <strong>This document</strong>
+        Addendum A · Hybrid hosting and company experience · 15 September 2026 · Version 1.0-A
+      </div>
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Lebawi International Academy<br />
+        Academic leadership, DoES / DoMS / DoHS, DoSA, QA, IT, and the Board
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        MaJo-Bridge Technology and Events PLC<br />
+        +251 911 646 444 · +251 911 133 548<br />
+        majobridgetech@gmail.com · nabilmaya6464@gmail.com
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>What this addendum answers.</strong>
+      LIA asked that school-sensitive student data live on a server the Academy controls, while the rest of the system may use the MaJo-Bridge cloud.
+      That is a <b>hybrid architecture</b>: two machines, one school, one login. The parent proposal still stands for modules, roles, TOR mapping, training, and go-live.
+      This paper states, in school language, what sits in the LIA server room, what sits in the cloud, how the two talk, and why MaJo-Bridge can deliver it.
+    </div>
+
+    <h2>1. How to read this addendum</h2>
+    <p>Read this after the FINAL technical proposal. Keep that document for the 55+ desks and the TOR map. Use this document for hosting.</p>
+    <ol>
+      <li><b>Hybrid hosting</b> — sensitive records on the LIA school server; other data and services on the MaJo-Bridge cloud.</li>
+      <li><b>Experience</b> — the same company already delivers school and non-school systems: Fenote Raey Academy, GYMOS, Post Printing Company ERP, Tena, websites, and ongoing projects.</li>
+    </ol>
+    <p>Commercial price is not in this paper. Terms stay with the parent proposal and any later commercial agreement. After a live-site update, hard-refresh with <b>Ctrl+Shift+R</b>.</p>
+
+    <h3>Contents</h3>
+    <ol class="toc">
+      <li>1. How to read this addendum</li>
+      <li>2. Why LIA asked for hybrid hosting</li>
+      <li>3. The hybrid picture in one page</li>
+      <li>4. What stays on the LIA school server</li>
+      <li>5. What stays on the MaJo-Bridge cloud</li>
+      <li>6. How the two servers work together</li>
+      <li>7. Security, backups, and who holds the keys</li>
+      <li>8. What LIA provides and what MaJo-Bridge provides</li>
+      <li>9. How we implement hybrid for LIA</li>
+      <li>10. Company experience that continues from the parent proposal</li>
+      <li>11. Closing and signatures</li>
+    </ol>
+
+    <h2>2. Why LIA asked for hybrid hosting</h2>
+    <p>
+      The parent proposal (Section 10) already said: the school remains the owner of its student data; another school cannot open LIA records; snapshots do not copy passwords.
+      LIA has now made the hosting rule sharper:
+    </p>
+    <p>
+      <b>Records that can identify a child, a medical fact, a mark, or a protection case must sit on a server in the Academy — not as the master copy in a public cloud.</b>
+      Everything else — the app people download, the live bus map, notices the school chooses to publish, system updates — may live on the MaJo-Bridge cloud so phones and home internet still work.
+    </p>
+    <p>
+      That is a normal request for an international school. It is not a second product. It is a <b>placement</b> of the same desks the FINAL proposal already listed.
+    </p>
+    <div class="note">
+      <b>Plain sentence for the Board.</b>
+      The markbook, the safeguarding file, and the child’s date of birth live in LIA’s server room.
+      The parent still opens the same app. The cloud carries the road to that app; it does not become the school’s filing cabinet.
+    </div>
+
+    <h2>3. The hybrid picture in one page</h2>
+    <p>Think of two rooms connected by a locked corridor.</p>
+    <div class="split">
+      <div class="box school">
+        <h3>LIA school server (on campus)</h3>
+        <p>A computer (or small server pair) that LIA owns, in a locked room LIA controls. This is the <b>vault</b>.</p>
+        <ul>
+          <li>Source of truth for student identity, marks, health, safeguarding, discipline, and counseling.</li>
+          <li>Teachers on campus can keep working if the internet to the outside world is slow.</li>
+          <li>LIA IT can see the machine, the power, and the Friday snapshot.</li>
+        </ul>
+      </div>
+      <div class="box cloud">
+        <h3>MaJo-Bridge cloud server</h3>
+        <p>The hosted platform the Academy already inspected at <b>https://mayabela.pages.dev</b>. This is the <b>road and the workshop</b>.</p>
+        <ul>
+          <li>App updates, login routing by School ID, support tools.</li>
+          <li>Services that need the public internet (live bus GPS, parent phones off campus).</li>
+          <li>Only the data LIA has allowed to leave the vault — never a second master of marks or safeguarding.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flow">
+      <b>One login, two rooms.</b>
+      A teacher, parent, or director still signs in with School ID + phone/username + password.
+      The product then asks one question: “Is this a sensitive LIA record?”
+      If yes, it reads and writes the school server.
+      If no, it uses the cloud.
+      Nobody is asked to keep two systems or two student ids.
+    </div>
+    <table>
+      <tr><th>Everyday action</th><th>Where the master record lives</th><th>What the cloud does</th></tr>
+      <tr><td>Create or edit a student</td><td>LIA school server (SIS)</td><td>Routes the signed-in person; does not keep a second SIS master</td></tr>
+      <tr><td>Enter or approve a mark</td><td>LIA school server (markbook)</td><td>Delivers the app; may show a parent only what the school has published</td></tr>
+      <tr><td>Open a safeguarding case</td><td>LIA school server only</td><td>Nothing. The cloud does not store the case file</td></tr>
+      <tr><td>Send a school announcement</td><td>LIA chooses: school server, or a cloud copy LIA approved</td><td>Helps phones receive the notice</td></tr>
+      <tr><td>See the bus on a map</td><td>Live point is short-lived</td><td>Map tiles and the live share while the driver is sharing</td></tr>
+      <tr><td>Install or update the Android app</td><td>—</td><td>Cloud delivers the installer and updates</td></tr>
+      <tr><td>Admin CCTV</td><td>School NVR / cameras already on campus</td><td>The desk in the sidebar; footage stays on LIA hardware</td></tr>
+    </table>
+
+    <h2>4. What stays on the LIA school server</h2>
+    <p>
+      “Sensitive” here means: a record that names a child or a family, a medical or protection fact, a mark, or a staff file LIA treats as internal.
+      These collections have their <b>master copy on the Academy server</b>. The cloud is not allowed to become a second filing cabinet for them.
+    </p>
+    <h3>4.1 Student identity and family (SIS)</h3>
+    <ul>
+      <li>Legal name, preferred name, student id, date of birth, sex, house, class, campus.</li>
+      <li>Parent and guardian names, phones, emails, and the approved parent-link.</li>
+      <li>Medical flag and the health record the nurse or counselor keeps.</li>
+      <li>Admissions file until the child is enrolled; alumni file after they leave.</li>
+    </ul>
+    <h3>4.2 Academic record</h3>
+    <ul>
+      <li>Weighted markbook: homework, quiz, midterm, exam — the numbers themselves.</li>
+      <li>Exam papers and attempts that carry a score into the markbook.</li>
+      <li>Report cards and the approve → publish trail (who entered, who approved, when the parent may see it).</li>
+      <li>Attendance register (present, late, absent) and the at-risk flag that is computed from marks + absence.</li>
+      <li>Lesson-plan comments that name a class or a teacher evaluation score, if LIA classifies those as internal.</li>
+    </ul>
+    <h3>4.3 Care, conduct, and protection</h3>
+    <ul>
+      <li>Safeguarding / child-protection cases — school server only. Not copied to the cloud. Not visible to parents, students, or classroom teachers.</li>
+      <li>Counseling notes, IEP / special-needs files, college-guidance notes.</li>
+      <li>Discipline and grievance files on the DoSA register.</li>
+      <li>Student documents the school uploaded (passport copy, transfer letter) if LIA marks them sensitive.</li>
+    </ul>
+    <h3>4.4 Staff files LIA treats as sensitive</h3>
+    <ul>
+      <li>HR records and payroll numbers, if the Academy does not want salary or tax files off campus.</li>
+      <li>Role allocations still follow the parent proposal: a teacher does not open safeguarding even on the school server.</li>
+    </ul>
+    <h3>4.5 Cameras</h3>
+    <p>
+      CCTV footage stays on the NVR / cameras LIA already owns. The Admin CCTV desk is a window, not a second video archive in the cloud.
+    </p>
+    <div class="note">
+      <b>If the internet to the outside world fails for an hour.</b>
+      Homeroom can still take attendance and a teacher can still enter marks, because those writes land on the school server inside the campus network.
+      Parents at home will wait until the corridor to the cloud is open again. That is the honest trade of a vault: the school keeps working; the home app waits.
+    </div>
+
+    <h2>5. What stays on the MaJo-Bridge cloud</h2>
+    <p>
+      The cloud is the part of the system that must meet the public internet — phones, the live site, updates, and support.
+      It holds <b>services and non-sensitive or explicitly published copies</b>, not the school’s master student file.
+    </p>
+    <table>
+      <tr><th>Cloud item</th><th>Why it is in the cloud</th><th>What it must not become</th></tr>
+      <tr><td>Web app and Android updates</td><td>Parents and teachers install from outside campus</td><td>A place that stores raw marks</td></tr>
+      <tr><td>School ID login routing</td><td>The sign-in page must be reachable from home</td><td>A directory of children’s dates of birth</td></tr>
+      <tr><td>Published parent view</td><td>A parent at home needs a page that works on a phone</td><td>A copy of draft marks or unpublished report cards</td></tr>
+      <tr><td>Announcements LIA chooses to publish</td><td>Notices need to reach phones</td><td>A second SIS</td></tr>
+      <tr><td>Gallery items LIA approves for the cloud</td><td>Photos are large; LIA may keep originals on campus and publish a set</td><td>A dump of every student document</td></tr>
+      <tr><td>Live bus GPS (while the driver is sharing)</td><td>Maps need live internet</td><td>A permanent track of every child after the trip</td></tr>
+      <tr><td>Training manuals and go-live articles</td><td>Staff read them on any browser</td><td>Student data</td></tr>
+      <tr><td>System health (disk, uptime, errors)</td><td>MaJo support must see if the school cannot log in</td><td>Named student rows</td></tr>
+    </table>
+    <p>
+      LIA may tighten this list in the kickoff workshop. Example: “gallery stays on the school server only.” That is a switch, not a rewrite.
+      The rule does not change: <b>if it can harm a child when leaked, the master is on campus.</b>
+    </p>
+
+    <h2>6. How the two servers work together</h2>
+    <h3>6.1 The locked corridor</h3>
+    <p>
+      The school server and the cloud talk only over an encrypted link (HTTPS).
+      The cloud cannot browse the vault like a shared folder.
+      It may ask for a specific published page — “show this parent the report card the Section Director already approved” — and the school server answers yes or no.
+    </p>
+    <h3>6.2 One student id</h3>
+    <p>
+      Creating a child still happens once, on the SIS that lives on the school server.
+      LMS, attendance, markbook, fees, bus list, and support all use that id — the same integration story as Section 9 of the parent proposal.
+      Hybrid does not split the child into “cloud student” and “campus student.”
+    </p>
+    <h3>6.3 Approve-and-publish still holds</h3>
+    <p>
+      A teacher enters a mark on the school server. Leadership approves on the school server.
+      Only then may a limited published copy be visible to the linked parent through the cloud door.
+      Draft marks never sit in the cloud waiting to leak.
+    </p>
+    <h3>6.4 Roles do not get weaker</h3>
+    <p>
+      Hybrid is not a shortcut around Section 8 of the parent proposal.
+      A Grade 8 teacher still does not open safeguarding — whether she is on campus Wi-Fi or at home.
+      A parent still sees only approved children.
+      Another school on the same cloud still cannot open LIA.
+    </p>
+    <h3>6.5 What a morning looks like</h3>
+    <ul>
+      <li><b>On campus.</b> Homeroom opens the same attendance desk. The write lands on the LIA server. DoSA oversight reads the same register.</li>
+      <li><b>Marking.</b> Scores go into the on-campus markbook. The Section Director approves there. The parent app shows the mark only after publish.</li>
+      <li><b>At home.</b> The parent opens the same Android app or web door. The cloud checks the login, then asks the school server for the published page only.</li>
+      <li><b>Bus.</b> The driver shares GPS through the cloud map. The passenger list that names children is still an LIA-server list.</li>
+    </ul>
+
+    <h2>7. Security, backups, and who holds the keys</h2>
+    <table>
+      <tr><th>Question the Board will ask</th><th>Answer in this hybrid</th></tr>
+      <tr><td>Who owns the student data?</td><td>Lebawi International Academy. MaJo-Bridge operates the software. The school owns the records. That sentence from the parent proposal does not change.</td></tr>
+      <tr><td>Where is the master copy?</td><td>On the LIA school server for every collection listed in Section 4.</td></tr>
+      <tr><td>Can MaJo staff open a child’s mark from the cloud console?</td><td>No. Support sees health and login issues. Opening a named student row on campus needs LIA’s named officer and the school-server role — not a cloud browse.</td></tr>
+      <tr><td>What if the school server disk fails?</td><td>LIA IT writes the Friday snapshot from Go-live (parent proposal Sections 10 and 14). We add a second copy on a second disk or school PC that LIA controls. Platform-owner restore is a drill LIA schedules — it does not move the master into the public cloud.</td></tr>
+      <tr><td>What if someone steals a laptop?</td><td>The vault is the server, not the teacher’s laptop. The laptop holds a session, not the whole SIS. MFA remains available for leadership and finance (parent proposal Section 10).</td></tr>
+      <tr><td>Encryption?</td><td>HTTPS on the corridor. Disk encryption on the school server. The hosted cloud encrypts what it is allowed to hold (sessions, published pages, health signals).</td></tr>
+      <tr><td>Audit?</td><td>Who changed a mark or opened a safeguarding file is logged on the school server. Leadership and QA open that log as in the parent proposal.</td></tr>
+    </table>
+    <p>
+      Consent, access requests, and erasure requests stay on the Go-live desk. If a parent asks to erase a file, staff process it on the school server — the place the file actually lives.
+    </p>
+
+    <h2>8. What LIA provides and what MaJo-Bridge provides</h2>
+    <table>
+      <tr><th>LIA provides</th><th>MaJo-Bridge provides</th></tr>
+      <tr><td>A locked room or cabinet, power, and (recommended) a simple backup power pack</td><td>The school-server software, the cloud software, and the encrypted corridor between them</td></tr>
+      <tr><td>A campus network so classrooms can reach the school server</td><td>Installation, hardening checklist, and the role map from the parent proposal</td></tr>
+      <tr><td>One IT / Administration Staff lead who can restart the machine and write the Friday snapshot</td><td>Training for that person, plus Mon–Sat support 09:00–18:00 EAT</td></tr>
+      <tr><td>A written list, at kickoff, of any extra collection LIA wants only on campus (for example gallery originals)</td><td>The switches that place those collections on the school server</td></tr>
+      <tr><td>Lawful parent consent, as in the parent proposal</td><td>The same five doors: administration, teacher, parent, student, driver — still one School ID</td></tr>
+    </table>
+    <p>
+      LIA does not need to hire a second software company for the vault.
+      The 55+ desks stay the desks in the FINAL proposal. Only their <b>home address</b> changes for the sensitive ones.
+    </p>
+
+    <h2>9. How we implement hybrid for LIA</h2>
+    <table>
+      <tr><th>Phase</th><th>What happens</th></tr>
+      <tr><td>A. Confirm the split</td><td>Workshop with IT, Registrar, Section Directors, DoSA, QA. Tick Section 4 and Section 5. Write any extra “campus-only” items.</td></tr>
+      <tr><td>B. Place the school server</td><td>MaJo-Bridge installs the vault software on the LIA machine. LIA IT confirms lock, power, and classroom reach.</td></tr>
+      <tr><td>C. Open the corridor</td><td>Encrypted link to the MaJo-Bridge cloud. Login still uses School ID. A dry-run: enter a test mark on campus; confirm it is absent from the cloud master; publish; confirm the test parent sees only the published copy.</td></tr>
+      <tr><td>D. Cut over people</td><td>Same as parent proposal Phase 4–5: import students onto the school-server SIS, create staff, approve first parent links, first week of attendance and markbook.</td></tr>
+      <tr><td>E. Friday rhythm</td><td>Snapshot on the school server. Cloud health check for the corridor. Support line if the whole school cannot log in.</td></tr>
+    </table>
+    <p>
+      Phases 1–3 of the parent proposal (product, configuration of the 55+ desks, testing) remain complete.
+      This addendum is the hosting cutover LIA asked for — not a new TOR and not a second academic system.
+    </p>
+
+    <h2>10. Company experience that continues from the parent proposal</h2>
+    <p>
+      The FINAL proposal introduced Majo Bridge Technologies and Events as the designer and operator of MaJo Bridge e-School OS.
+      This addendum continues that introduction with the work the same company already delivers — so LIA can see that hybrid hosting and new desks are not a first experiment.
+    </p>
+
+    <div class="card">
+      <h3>10.1 Fenote Raey Academy</h3>
+      <p>
+        Fenote Raey Academy (ፍኖተ ራእይ አካዳሚ) is a school implementation of the same MaJo e-School Bridge family: administration, teachers, parents, students, and drivers on one School ID.
+        That work is how we practise a full school operating system for a second academy — branding, roles, module mix — without writing a second product.
+        LIA remains its own isolated tenant. Fenote Raey cannot open LIA records; LIA cannot open Fenote Raey records.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>10.2 GYMOS — gym software</h3>
+      <p>
+        GYMOS is membership and gym-floor software: who belongs, who visited, who is allowed on the floor.
+        It is a different industry from a school, and that is the point. The habit is the same as LIA’s SIS: one record, roles, a live desk instead of a spreadsheet.
+        When a gym asks for “member files on our machine, the app in the cloud,” that is the same hybrid sentence LIA is asking now.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>10.3 Post Printing Company — ERP</h3>
+      <p>
+        For Post Printing Company we deliver an ERP-style operational system: orders, production, and the screens a print house actually uses.
+        Printing is not education, but it is a business that also keeps customer jobs and files it does not want as a public-cloud master.
+        That delivery is evidence we place ledgers on the machine the client controls, and keep the shared tools where they belong.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>10.4 Tena — health and fitness app</h3>
+      <p>
+        Tena is a health and wellbeing / fitness app for people who train and track how they feel.
+        It is a consumer product beside the school ERP. It shows the company can ship a phone app that people use every day — the same kind of door LIA parents will open — while keeping health-type facts under a clear rule.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>10.5 Websites and other ongoing projects</h3>
+      <p>
+        MaJo-Bridge designs, builds, and maintains client websites — public pages and the back-office those sites need.
+        Further builds are in delivery now. LIA is not the last item on a finished list. The company is actively shipping, which is why a hybrid cutover and a later new desk can be scheduled instead of promised as a future rewrite.
+      </p>
+    </div>
+    <p>
+      <b>What this means for LIA.</b>
+      The FINAL proposal showed the academic system is already built.
+      This addendum shows the company that built it also runs another school (Fenote Raey Academy), a gym product (GYMOS), a printing ERP (Post Printing Company), a health and fitness app (Tena), websites, and ongoing work.
+      Hybrid hosting is therefore a configuration we stand behind with a team that already splits “what the client must hold” from “what the cloud may carry.”
+    </p>
+
+    <h2>11. Closing statement</h2>
+    <p>
+      MaJo-Bridge Technology and Events PLC submits this Addendum A as a continuation of the LIA Technical Proposal FINAL (Version 1.0).
+    </p>
+    <p>
+      <b>The 55+ desks stay as written.</b>
+      LIA’s new hosting rule is also written: sensitive records live on the Academy’s own server; other data and services live on the MaJo-Bridge cloud; staff and parents still use one login.
+      We are ready to place the vault, open the corridor, and walk IT and the first offices through the dry-run on the live product.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For MaJo-Bridge Technology and Events PLC</div>
+        <div class="role">Name / title · Date · Signature</div>
+      </div>
+      <div class="sig">
+        <div class="who">For Lebawi International Academy</div>
+        <div class="role">Name / title · Date · Signature</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Document: MaJo Bridge e-School OS — Addendum A (Hybrid Hosting) for Lebawi International Academy · 15 September 2026 · Version 1.0-A.
+      Continues MaJo_Bridge_LIA_Technical_Proposal FINAL Version 1.0 (12–14 September 2026).
+      MaJo-Bridge Technology and Events PLC · majobridgetech@gmail.com · nabilmaya6464@gmail.com · +251 911 646 444 · +251 911 133 548 · https://mayabela.pages.dev.
+      This paper describes the hybrid placement of the shipped system. It is not a government product and does not replace LIA policy.
+      Commercial terms are agreed separately. Hard-refresh the live site with Ctrl+Shift+R after a release.
+    </p>
+  </article>
+</body>
+</html>
