@@ -113,6 +113,37 @@ class DocumentStore {
     return s.contains('stale_write') || s.contains('updated elsewhere');
   }
 
+  /// RLS WITH CHECK / RAISE write_denied — retrying a full dump cannot fix this.
+  @visibleForTesting
+  static bool isWritePolicyDenied(Object e) {
+    final s = '$e'.toLowerCase();
+    return s.contains('write_denied') ||
+        s.contains('row-level security') ||
+        s.contains('42501');
+  }
+
+  /// Postgres 21000: the same (collection, school_id, doc_id) twice in one upsert.
+  @visibleForTesting
+  static bool isDuplicateUpsert(Object e) {
+    final s = '$e'.toLowerCase();
+    return s.contains('affect row a second time') || s.contains('21000');
+  }
+
+  /// Last write wins. Postgres rejects a single UPSERT that touches one key twice.
+  @visibleForTesting
+  static List<Map<String, dynamic>> dedupeByDocId(
+    List<Map<String, dynamic>> items,
+    String Function(Map<String, dynamic> item) docIdFor,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final item in items) {
+      final id = docIdFor(item).trim();
+      if (id.isEmpty) continue;
+      byId[id] = item;
+    }
+    return byId.values.toList();
+  }
+
   static bool _isGuardError(Object e) {
     final s = '$e'.toLowerCase();
     return isStaleWrite(e) || s.contains('write_denied');
@@ -435,6 +466,8 @@ class DocumentStore {
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
+    items = dedupeByDocId(items, docIdFor);
+    if (items.isEmpty) return;
     final loaded = await _existingDocsById(collection);
     if (_isVersioned(collection) && loaded.loadFailed) {
       if (kDebugMode) {
