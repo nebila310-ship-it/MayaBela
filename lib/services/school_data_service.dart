@@ -43,6 +43,8 @@ import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
 class SchoolDataService {
@@ -4029,35 +4031,107 @@ class SchoolDataService {
       ..sort((a, b) => b.date.compareTo(a.date));
   }
 
-  void saveAttendanceSession({
+  bool canWriteAttendanceRegister(String className) {
+    final user = AuthService.currentUser;
+    if (user == null) return true;
+    if (user.roleKey == AuthService.roleParent ||
+        user.roleKey == AuthService.roleStudent ||
+        user.roleKey == AuthService.roleDriver) {
+      return false;
+    }
+    if (AuthService.mayReadAllSchoolData ||
+        ModuleAccess.canManage('attendance')) {
+      return true;
+    }
+    final access = TeacherAccessService.instance;
+    if (access.teacherId.isNotEmpty) {
+      return access.canTakeAttendance(className);
+    }
+    if (user.roleKey == AuthService.roleTeacher) return true;
+    return ModuleAccess.canView('attendance');
+  }
+
+  bool canUnlockAttendanceRegister() {
+    final user = AuthService.currentUser;
+    if (user == null) return true;
+    return AuthService.mayReadAllSchoolData ||
+        ModuleAccess.canManage('attendance');
+  }
+
+  StudentAttendanceEntry _hydrateAttendanceEntry(
+    StudentAttendanceEntry entry,
+    String className,
+  ) {
+    var id = entry.studentId?.trim();
+    if (id == null || id.isEmpty) {
+      id = StudentRegistryService.instance
+          .lookupByName(entry.studentName)
+          ?.studentId;
+    }
+    if (id == null || id.isEmpty) {
+      for (final student in getStudentsForClass(className)) {
+        if (student.name.trim().toLowerCase() ==
+            entry.studentName.trim().toLowerCase()) {
+          id = student.inviteStudentId;
+          break;
+        }
+      }
+    }
+    return StudentAttendanceEntry(
+      studentName: entry.studentName,
+      studentId: (id == null || id.trim().isEmpty) ? null : id,
+      status: entry.status,
+    );
+  }
+
+  String _attendanceEntryKey(StudentAttendanceEntry entry) {
+    final id = entry.studentId?.trim();
+    if (id != null && id.isNotEmpty) return 'id:${id.toUpperCase()}';
+    return 'name:${entry.studentName.trim().toLowerCase()}';
+  }
+
+  bool saveAttendanceSession({
     required String className,
     required DateTime date,
     required String conductedBy,
     required List<StudentAttendanceEntry> entries,
     bool notifyParents = true,
+    bool? locked,
+    String? lockedBy,
   }) {
+    if (!canWriteAttendanceRegister(className)) return false;
     final existing = getAttendanceSession(className, date);
-    final previousByName = {
+    if (existing != null &&
+        existing.locked &&
+        !canUnlockAttendanceRegister()) {
+      return false;
+    }
+
+    final previousByKey = {
       for (final entry in existing?.entries ?? const <StudentAttendanceEntry>[])
-        entry.studentName: entry.status,
+        _attendanceEntryKey(entry): entry.status,
     };
     if (existing != null) {
       _attendanceSessions.remove(existing);
     }
 
+    final nextLocked = locked ?? existing?.locked ?? false;
+    final hydrated = entries
+        .map((entry) => _hydrateAttendanceEntry(entry, className))
+        .toList();
     _attendanceSessions.add(
       AttendanceSession(
         className: className,
         date: date,
         conductedBy: conductedBy,
-        entries: entries
-            .map(
-              (entry) => StudentAttendanceEntry(
-                studentName: entry.studentName,
-                status: entry.status,
-              ),
-            )
-            .toList(),
+        entries: hydrated,
+        locked: nextLocked,
+        lockedBy: nextLocked
+            ? (lockedBy ?? existing?.lockedBy ?? conductedBy)
+            : null,
+        lockedAt: nextLocked
+            ? (existing?.lockedAt ?? DateTime.now())
+            : null,
       ),
     );
 
@@ -4065,34 +4139,75 @@ class SchoolDataService {
       _notifyParentsOfAttendanceChanges(
         className: className,
         conductedBy: conductedBy,
-        entries: entries,
-        previousByName: previousByName,
+        entries: hydrated,
+        previousByKey: previousByKey,
       );
     }
     _alertStaffWhenAbsenceStreakStarts(
       className: className,
       conductedBy: conductedBy,
-      entries: entries,
+      entries: hydrated,
     );
     _persistSchoolContent();
+    return true;
+  }
+
+  bool lockAttendanceSession({
+    required String className,
+    required DateTime date,
+    String? lockedBy,
+  }) {
+    final existing = getAttendanceSession(className, date);
+    if (existing == null) return false;
+    return saveAttendanceSession(
+      className: className,
+      date: date,
+      conductedBy: existing.conductedBy,
+      entries: existing.entries,
+      notifyParents: false,
+      locked: true,
+      lockedBy: lockedBy,
+    );
+  }
+
+  bool unlockAttendanceSession({
+    required String className,
+    required DateTime date,
+  }) {
+    if (!canUnlockAttendanceRegister()) return false;
+    final existing = getAttendanceSession(className, date);
+    if (existing == null) return false;
+    return saveAttendanceSession(
+      className: className,
+      date: date,
+      conductedBy: existing.conductedBy,
+      entries: existing.entries,
+      notifyParents: false,
+      locked: false,
+    );
   }
 
   void _notifyParentsOfAttendanceChanges({
     required String className,
     required String conductedBy,
     required List<StudentAttendanceEntry> entries,
-    required Map<String, AttendanceStatus> previousByName,
+    required Map<String, AttendanceStatus> previousByKey,
   }) {
     for (final entry in entries) {
       if (entry.status != AttendanceStatus.absent &&
           entry.status != AttendanceStatus.late) {
         continue;
       }
-      if (previousByName[entry.studentName] == entry.status) continue;
+      final previous = previousByKey[_attendanceEntryKey(entry)] ??
+          previousByKey['name:${entry.studentName.trim().toLowerCase()}'];
+      if (previous == entry.status) continue;
 
-      final student = StudentRegistryService.instance.lookupByName(
-        entry.studentName,
-      );
+      final student = entry.studentId != null &&
+              entry.studentId!.trim().isNotEmpty
+          ? StudentRegistryService.instance.lookupById(entry.studentId!)
+          : StudentRegistryService.instance.lookupByName(
+              entry.studentName,
+            );
       final late = entry.status == AttendanceStatus.late;
       NotificationService.instance.push(
         title: late ? 'Late arrival recorded' : 'Absence recorded',
@@ -4103,7 +4218,7 @@ class SchoolDataService {
         fromRole: AuthService.roleTeacher,
         fromName: conductedBy,
         recipientRole: AuthService.roleParent,
-        targetStudentId: student?.studentId,
+        targetStudentId: entry.studentId ?? student?.studentId,
         targetClassName: className,
       );
     }
@@ -4118,7 +4233,11 @@ class SchoolDataService {
         AttendanceIntelligenceThresholds.consecutiveAbsenceThreshold;
     for (final entry in entries) {
       if (entry.status != AttendanceStatus.absent) continue;
-      final streak = _consecutiveAbsences(entry.studentName, className);
+      final streak = _consecutiveAbsences(
+        studentName: entry.studentName,
+        className: className,
+        studentId: entry.studentId,
+      );
       if (streak != threshold) continue;
       NotificationService.instance.push(
         title: 'Absence pattern detected',
@@ -4134,12 +4253,16 @@ class SchoolDataService {
     }
   }
 
-  int _consecutiveAbsences(String studentName, String className) {
+  int _consecutiveAbsences({
+    required String studentName,
+    required String className,
+    String? studentId,
+  }) {
     var streak = 0;
     for (final session in getAttendanceHistory(className)) {
       StudentAttendanceEntry? match;
       for (final entry in session.entries) {
-        if (entry.studentName == studentName) {
+        if (entry.matches(studentId: studentId, studentName: studentName)) {
           match = entry;
           break;
         }
@@ -4932,13 +5055,16 @@ class SchoolDataService {
   StudentAttendanceSnapshot attendanceSnapshotForStudent({
     required String studentName,
     required String className,
+    String? studentId,
   }) {
     var present = 0;
     var late = 0;
     var absent = 0;
     for (final session in getAttendanceHistory(className)) {
       for (final entry in session.entries) {
-        if (entry.studentName != studentName) continue;
+        if (!entry.matches(studentId: studentId, studentName: studentName)) {
+          continue;
+        }
         switch (entry.status) {
           case AttendanceStatus.present:
             present++;
@@ -5185,6 +5311,7 @@ class SchoolDataService {
     final snap = attendanceSnapshotForStudent(
       studentName: child.name,
       className: child.className,
+      studentId: child.studentId,
     );
     if (snap.sessions == 0) return child;
     return child.copyWith(attendanceRate: snap.rate);
@@ -6715,6 +6842,7 @@ class SchoolDataService {
       final attendanceError = _syncAttendanceFromQrScan(
         studentName: student.name,
         className: student.className,
+        studentId: student.id,
         action: action,
         scannedBy: scannedBy,
       );
@@ -6751,9 +6879,11 @@ class SchoolDataService {
     required String className,
     required QrScanAction action,
     required String scannedBy,
+    String? studentId,
   }) {
     final today = DateTime.now();
     final session = getAttendanceSession(className, today);
+    if (session != null && session.locked) return 'locked';
     final roster = getStudentsForClass(className);
     final targetStatus = switch (action) {
       QrScanAction.present || QrScanAction.entry => AttendanceStatus.present,
@@ -6765,6 +6895,7 @@ class SchoolDataService {
             .map(
               (entry) => StudentAttendanceEntry(
                 studentName: entry.studentName,
+                studentId: entry.studentId,
                 status: entry.status,
               ),
             )
@@ -6773,14 +6904,17 @@ class SchoolDataService {
             .map(
               (student) => StudentAttendanceEntry(
                 studentName: student.name,
+                studentId: student.inviteStudentId,
                 status: AttendanceStatus.present,
               ),
             )
             .toList();
 
-    final normalized = studentName.trim().toLowerCase();
     final index = entries.indexWhere(
-      (entry) => entry.studentName.trim().toLowerCase() == normalized,
+      (entry) => entry.matches(
+        studentId: studentId,
+        studentName: studentName,
+      ),
     );
     if (index >= 0) {
       entries[index].status = targetStatus;
@@ -6788,6 +6922,7 @@ class SchoolDataService {
       entries.add(
         StudentAttendanceEntry(
           studentName: studentName,
+          studentId: studentId,
           status: targetStatus,
         ),
       );

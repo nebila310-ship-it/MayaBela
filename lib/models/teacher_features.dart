@@ -50,10 +50,26 @@ class StudentAttendanceEntry {
   StudentAttendanceEntry({
     required this.studentName,
     required this.status,
+    this.studentId,
   });
 
   final String studentName;
+  final String? studentId;
   AttendanceStatus status;
+
+  bool matches({String? studentId, String? studentName}) {
+    final mine = this.studentId?.trim();
+    final other = studentId?.trim();
+    if (mine != null &&
+        mine.isNotEmpty &&
+        other != null &&
+        other.isNotEmpty) {
+      return mine.toUpperCase() == other.toUpperCase();
+    }
+    if (studentName == null || studentName.trim().isEmpty) return false;
+    return this.studentName.trim().toLowerCase() ==
+        studentName.trim().toLowerCase();
+  }
 }
 
 class AttendanceSession {
@@ -62,12 +78,18 @@ class AttendanceSession {
     required this.date,
     required this.conductedBy,
     required this.entries,
+    this.locked = false,
+    this.lockedBy,
+    this.lockedAt,
   });
 
   final String className;
   final DateTime date;
   final String conductedBy;
   final List<StudentAttendanceEntry> entries;
+  final bool locked;
+  final String? lockedBy;
+  final DateTime? lockedAt;
 }
 
 class AttendanceSessionSummary {

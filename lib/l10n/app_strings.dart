@@ -2775,6 +2775,22 @@ class AppStrings implements AppStringsLike {
   String get close => t('Close', 'ዝጋ');
   String noAttendanceHistory(String className) => t('No attendance history for $className', 'ለ$className የመገኘት ታሪክ የለም');
   String attendanceSavedFor(String className, String conductor) => t('Attendance saved for $className by $conductor', 'መገኘት ለ $className በ $conductor ተቀምጧል');
+  String get lockAttendanceRegister =>
+      t('Lock register', 'መዝገቡን ቆልፍ', 'Galmee cufi');
+  String get unlockAttendanceRegister =>
+      t('Unlock register', 'መዝገቡን ክፈት', 'Galmee bani');
+  String get attendanceRegisterLocked =>
+      t('This register is locked', 'ይህ መዝገብ ተቆልፏል', 'Galmeen kun cufameera');
+  String get attendanceSaveDenied => t(
+        'You cannot change this attendance register',
+        'ይህን የመገኘት መዝገብ መቀየር አይችሉም',
+        'Galmee argama kana jijjiiruu hin dandeessu',
+      );
+  String get qrAttendanceLocked => t(
+        'This register is locked. Ask an administrator to unlock it.',
+        'ይህ መዝገብ ተቆልፏል። እንዲከፈት አስተዳዳሪን ይጠይቁ።',
+        'Galmeen kun cufameera. Bulchaa gaafadhu akka bannu.',
+      );
   String historyPresentLateAbsent(int present, int late, int absent) =>
       t('Present: $present · Late: $late · Absent: $absent', 'ተገኝ: $present · ዘግ: $late · ጠፍ: $absent');
   String historyConductedBy(String name) =>
