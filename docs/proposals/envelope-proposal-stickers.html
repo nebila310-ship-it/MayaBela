@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Envelope stickers — Financial and Technical Proposal</title>
+  <style>
+    :root {
+      --navy: #0f2d5c;
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --gold: #c4a04a;
+      --cream: #f7f3e8;
+      --ink: #142033;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #d9e0ea;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(15, 45, 92, 0.95);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .toolbar .dl {
+      background: #1f8a4c;
+      color: #fff !important;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 16px auto;
+      background: #fff;
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.14);
+      position: relative;
+      page-break-after: always;
+    }
+    .sheet:last-of-type { page-break-after: auto; }
+    .hint {
+      position: absolute;
+      top: 12mm;
+      left: 14mm;
+      right: 14mm;
+      text-align: center;
+      color: #6b7280;
+      font-size: 8.5pt;
+      letter-spacing: 0.3px;
+    }
+    .stage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cut {
+      position: relative;
+      width: 160mm;
+      height: 100mm;
+    }
+    .cut::before, .cut::after {
+      content: "";
+      position: absolute;
+      border-color: #94a3b8;
+    }
+    .sticker {
+      width: 160mm;
+      height: 100mm;
+      border-radius: 6mm;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 7mm 10mm 8mm;
+      position: relative;
+    }
+    .sticker img {
+      width: 42mm;
+      height: auto;
+      display: block;
+      margin: 0 auto 3mm;
+    }
+    .kicker {
+      margin: 0 0 2mm;
+      font-size: 8.4pt;
+      font-weight: 800;
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
+    }
+    .title {
+      margin: 0 0 3mm;
+      font-size: 20pt;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      line-height: 1.15;
+    }
+    .rule {
+      width: 48mm;
+      height: 0;
+      border-top: 1.6px solid currentColor;
+      margin: 0 auto 3.5mm;
+      opacity: 0.85;
+    }
+    .company {
+      margin: 0;
+      font-size: 11.2pt;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      line-height: 1.3;
+    }
+    .plc {
+      margin: 1mm 0 0;
+      font-size: 8.6pt;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .confidential {
+      margin: 4mm 0 0;
+      font-size: 7.6pt;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    /* 1 — Financial: navy field, gold + cream */
+    .finance {
+      background:
+        radial-gradient(circle at 18% 20%, rgba(196, 160, 74, 0.18), transparent 42%),
+        linear-gradient(160deg, #0c244c 0%, #163a6e 55%, #0f2d5c 100%);
+      color: #f7f3e8;
+      box-shadow: inset 0 0 0 2.2mm #c4a04a;
+    }
+    .finance .kicker { color: #e8c56a; }
+    .finance .title { color: #fffdf6; }
+    .finance .rule { border-color: #c4a04a; }
+    .finance .company { color: #f3ead0; }
+    .finance .plc { color: #e8c56a; }
+    .finance .confidential { color: #d4b56a; }
+    .finance img {
+      background: #fff;
+      border-radius: 4mm;
+      padding: 2mm 3mm;
+    }
+    /* 2 — Technical: cream card, navy + green */
+    .tech {
+      background:
+        radial-gradient(circle at 82% 18%, rgba(31, 138, 76, 0.12), transparent 40%),
+        linear-gradient(165deg, #fbf8ef 0%, #f3efe3 100%);
+      color: #0f2d5c;
+      box-shadow: inset 0 0 0 1.6mm #0f2d5c, inset 0 0 0 2.4mm #c4a04a;
+    }
+    .tech .kicker { color: #1f8a4c; }
+    .tech .title { color: #0f2d5c; }
+    .tech .rule { border-color: #1f8a4c; }
+    .tech .company { color: #1a4f9c; }
+    .tech .plc { color: #1f8a4c; }
+    .tech .confidential { color: #6b5a2c; }
+    .size-note {
+      position: absolute;
+      bottom: 12mm;
+      left: 14mm;
+      right: 14mm;
+      text-align: center;
+      color: #6b7280;
+      font-size: 8pt;
+    }
+    @media print {
+      html, body { background: #fff !important; }
+      .toolbar { display: none !important; }
+      .sheet {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: always;
+      }
+      .sheet:last-of-type { page-break-after: auto; }
+      .finance, .tech {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    @page { size: A4; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a class="dl" href="MaJo_Bridge_Envelope_Proposal_Stickers.pdf" download="MaJo_Bridge_Envelope_Proposal_Stickers.pdf">Download PDF</a>
+    Two A4 pages · cut the 160 × 100 mm sticker · place in the centre of a C4 / A4 envelope
+  </div>
+
+  <section class="sheet" aria-label="Financial proposal sticker">
+    <p class="hint">Page 1 of 2 · Print in colour · Cut along the sticker edge · Affix to the centre of the sealed envelope</p>
+    <div class="stage">
+      <div class="cut">
+        <div class="sticker finance">
+          <img src="assets/majo_bridge_logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+          <p class="kicker">Sealed envelope</p>
+          <h1 class="title">Financial Proposal</h1>
+          <div class="rule" aria-hidden="true"></div>
+          <p class="company">MaJo Bridge Technologies and Events PLC</p>
+          <p class="plc">MaJo-Bridge · Technology and Events</p>
+          <p class="confidential">Confidential · Do not open except by the evaluation committee</p>
+        </div>
+      </div>
+    </div>
+    <p class="size-note">Sticker size: 160 mm × 100 mm · Envelope: C4 / A4 (place in the middle)</p>
+  </section>
+
+  <section class="sheet" aria-label="Technical proposal sticker">
+    <p class="hint">Page 2 of 2 · Print in colour · Cut along the sticker edge · Affix to the centre of the sealed envelope</p>
+    <div class="stage">
+      <div class="cut">
+        <div class="sticker tech">
+          <img src="assets/majo_bridge_logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+          <p class="kicker">Sealed envelope</p>
+          <h1 class="title">Technical Proposal</h1>
+          <div class="rule" aria-hidden="true"></div>
+          <p class="company">MaJo Bridge Technologies and Events PLC</p>
+          <p class="plc">MaJo-Bridge · Technology and Events</p>
+          <p class="confidential">Confidential · Do not open except by the evaluation committee</p>
+        </div>
+      </div>
+    </div>
+    <p class="size-note">Sticker size: 160 mm × 100 mm · Envelope: C4 / A4 (place in the middle)</p>
+  </section>
+</body>
+</html>
