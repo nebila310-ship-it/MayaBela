@@ -175,9 +175,28 @@ class _WebAttendanceHubPageState extends State<WebAttendanceHubPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Attendance',
-                style: WebErpTheme.sectionTitle(context),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Attendance',
+                      style: WebErpTheme.sectionTitle(context),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Export class CSV',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _exportCsv,
+                    icon: const Icon(Icons.download_outlined),
+                  ),
+                  if (_canManage)
+                    IconButton(
+                      tooltip: 'Import class CSV',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _importCsv,
+                      icon: const Icon(Icons.upload_file_outlined),
+                    ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -188,29 +207,16 @@ class _WebAttendanceHubPageState extends State<WebAttendanceHubPage>
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _exportCsv,
-                    icon: const Icon(Icons.download_outlined),
-                    label: const Text('Export class CSV'),
+              if (widget.onNavigate != null) ...[
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => widget.onNavigate!('at_risk'),
+                    child: const Text('Absence patterns & at-risk'),
                   ),
-                  if (_canManage)
-                    OutlinedButton.icon(
-                      onPressed: _importCsv,
-                      icon: const Icon(Icons.upload_file_outlined),
-                      label: const Text('Import class CSV'),
-                    ),
-                  if (widget.onNavigate != null)
-                    TextButton(
-                      onPressed: () => widget.onNavigate!('at_risk'),
-                      child: const Text('Absence patterns & at-risk'),
-                    ),
-                ],
-              ),
+                ),
+              ],
               TabBar(
                 controller: _tabs,
                 isScrollable: true,
