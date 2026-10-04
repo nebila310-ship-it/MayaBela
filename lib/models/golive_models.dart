@@ -328,6 +328,173 @@ class SchoolBackupRecord {
   }
 }
 
+enum DryRunStatus { pending, pass, fail }
+
+class DryRunItem {
+  const DryRunItem({
+    required this.id,
+    required this.section,
+    required this.title,
+    required this.expected,
+    this.status = DryRunStatus.pending,
+    this.note = '',
+    this.signedBy = '',
+    this.signedAt,
+  });
+
+  final String id;
+  final String section;
+  final String title;
+  final String expected;
+  final DryRunStatus status;
+  final String note;
+  final String signedBy;
+  final DateTime? signedAt;
+
+  bool get passed => status == DryRunStatus.pass;
+
+  DryRunItem copyWith({
+    DryRunStatus? status,
+    String? note,
+    String? signedBy,
+    DateTime? signedAt,
+    bool clearSignedAt = false,
+  }) {
+    return DryRunItem(
+      id: id,
+      section: section,
+      title: title,
+      expected: expected,
+      status: status ?? this.status,
+      note: note ?? this.note,
+      signedBy: signedBy ?? this.signedBy,
+      signedAt: clearSignedAt ? null : (signedAt ?? this.signedAt),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'section': section,
+        'title': title,
+        'expected': expected,
+        'status': status.name,
+        'note': note,
+        'signedBy': signedBy,
+        'signedAt': signedAt?.toIso8601String(),
+      };
+
+  factory DryRunItem.fromMap(Map<String, dynamic> map) {
+    return DryRunItem(
+      id: (map['id'] ?? '').toString(),
+      section: (map['section'] ?? '').toString(),
+      title: (map['title'] ?? '').toString(),
+      expected: (map['expected'] ?? '').toString(),
+      status: DryRunStatus.values.firstWhere(
+        (item) => item.name == map['status'],
+        orElse: () => DryRunStatus.pending,
+      ),
+      note: (map['note'] ?? '').toString(),
+      signedBy: (map['signedBy'] ?? '').toString(),
+      signedAt: DateTime.tryParse('${map['signedAt']}'),
+    );
+  }
+}
+
+class GoLiveSignOff {
+  const GoLiveSignOff({
+    required this.id,
+    required this.schoolId,
+    required this.items,
+    required this.updatedAt,
+    this.updatedBy = '',
+    this.supabaseConfirmedAt,
+    this.supabaseConfirmedBy = '',
+    this.supabaseKind = 'daily_snapshots',
+    this.supabaseProjectRef = '',
+    this.supabaseNote = '',
+  });
+
+  final String id;
+  final String schoolId;
+  final List<DryRunItem> items;
+  final DateTime updatedAt;
+  final String updatedBy;
+  final DateTime? supabaseConfirmedAt;
+  final String supabaseConfirmedBy;
+  final String supabaseKind;
+  final String supabaseProjectRef;
+  final String supabaseNote;
+
+  bool get dryRunComplete =>
+      items.isNotEmpty && items.every((item) => item.passed);
+
+  int get dryRunPassed => items.where((item) => item.passed).length;
+
+  bool get supabaseBackupConfirmed => supabaseConfirmedAt != null;
+
+  GoLiveSignOff copyWith({
+    List<DryRunItem>? items,
+    DateTime? updatedAt,
+    String? updatedBy,
+    DateTime? supabaseConfirmedAt,
+    String? supabaseConfirmedBy,
+    String? supabaseKind,
+    String? supabaseProjectRef,
+    String? supabaseNote,
+    bool clearSupabase = false,
+  }) {
+    return GoLiveSignOff(
+      id: id,
+      schoolId: schoolId,
+      items: items ?? List<DryRunItem>.from(this.items),
+      updatedAt: updatedAt ?? this.updatedAt,
+      updatedBy: updatedBy ?? this.updatedBy,
+      supabaseConfirmedAt:
+          clearSupabase ? null : (supabaseConfirmedAt ?? this.supabaseConfirmedAt),
+      supabaseConfirmedBy: clearSupabase
+          ? ''
+          : (supabaseConfirmedBy ?? this.supabaseConfirmedBy),
+      supabaseKind: supabaseKind ?? this.supabaseKind,
+      supabaseProjectRef: supabaseProjectRef ?? this.supabaseProjectRef,
+      supabaseNote: clearSupabase ? '' : (supabaseNote ?? this.supabaseNote),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'schoolId': schoolId,
+        'items': items.map((item) => item.toMap()).toList(),
+        'updatedAt': updatedAt.toIso8601String(),
+        'updatedBy': updatedBy,
+        'supabaseConfirmedAt': supabaseConfirmedAt?.toIso8601String(),
+        'supabaseConfirmedBy': supabaseConfirmedBy,
+        'supabaseKind': supabaseKind,
+        'supabaseProjectRef': supabaseProjectRef,
+        'supabaseNote': supabaseNote,
+      };
+
+  factory GoLiveSignOff.fromMap(Map<String, dynamic> map) {
+    final raw = map['items'];
+    return GoLiveSignOff(
+      id: (map['id'] ?? '').toString(),
+      schoolId: (map['schoolId'] ?? '').toString().toUpperCase(),
+      items: raw is List
+          ? raw
+              .whereType<Map>()
+              .map((row) => DryRunItem.fromMap(Map<String, dynamic>.from(row)))
+              .toList()
+          : const [],
+      updatedAt: DateTime.tryParse('${map['updatedAt']}') ?? DateTime.now(),
+      updatedBy: (map['updatedBy'] ?? '').toString(),
+      supabaseConfirmedAt: DateTime.tryParse('${map['supabaseConfirmedAt']}'),
+      supabaseConfirmedBy: (map['supabaseConfirmedBy'] ?? '').toString(),
+      supabaseKind: (map['supabaseKind'] ?? 'daily_snapshots').toString(),
+      supabaseProjectRef: (map['supabaseProjectRef'] ?? '').toString(),
+      supabaseNote: (map['supabaseNote'] ?? '').toString(),
+    );
+  }
+}
+
 class StudentImportRow {
   const StudentImportRow({
     required this.fullName,
@@ -374,6 +541,10 @@ class GoLiveCapacitySnapshot {
     required this.openDataRights,
     this.mfaRequired = true,
     this.currentUserMustEnroll = false,
+    this.dryRunPassed = 0,
+    this.dryRunTotal = 0,
+    this.dryRunComplete = false,
+    this.supabaseBackupConfirmed = false,
   });
 
   final bool cloudReady;
@@ -384,4 +555,8 @@ class GoLiveCapacitySnapshot {
   final int openDataRights;
   final bool mfaRequired;
   final bool currentUserMustEnroll;
+  final int dryRunPassed;
+  final int dryRunTotal;
+  final bool dryRunComplete;
+  final bool supabaseBackupConfirmed;
 }

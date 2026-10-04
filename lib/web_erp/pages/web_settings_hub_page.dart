@@ -81,6 +81,16 @@ class WebSettingsHubPage extends StatelessWidget {
                   cap.mfaRequired ? 'MFA required' : 'MFA optional',
                   !cap.currentUserMustEnroll,
                 ),
+                _statusChip(
+                  context,
+                  'Live dry-run',
+                  cap.dryRunComplete,
+                ),
+                _statusChip(
+                  context,
+                  'Supabase backup',
+                  cap.supabaseBackupConfirmed,
+                ),
                 const MailPreflightCard(),
               ],
             ),

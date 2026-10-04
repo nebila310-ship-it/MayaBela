@@ -167,6 +167,7 @@ void main() {
         'data_rights_requests',
         'school_backups',
         'mfa_policies',
+        'golive_signoffs',
       ]),
     );
 
@@ -202,5 +203,6 @@ void main() {
     expect(find.text('Privacy'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
     expect(find.text('Training'), findsOneWidget);
+    expect(find.text('Sign-off'), findsOneWidget);
   });
 }

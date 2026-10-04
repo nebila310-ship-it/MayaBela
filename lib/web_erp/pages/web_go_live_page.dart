@@ -25,7 +25,7 @@ class WebGoLivePage extends StatefulWidget {
 
 class _WebGoLivePageState extends State<WebGoLivePage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 6, vsync: this);
+  late final TabController _tabs = TabController(length: 7, vsync: this);
 
   bool get _canManage => ModuleAccess.canManage('go_live');
 
@@ -63,10 +63,11 @@ class _WebGoLivePageState extends State<WebGoLivePage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Authenticator is required for school Admin. Consent, '
-                'data-rights, school snapshots, Excel → student import, and '
-                'short training stay on this desk. This does not change '
-                'markbook or exams, and it does not claim 99.5% uptime.',
+                'Authenticator is required for school Admin. Live dry-run '
+                'sign-off, Supabase backup confirmation, consent, school '
+                'snapshots, Excel import, and short training stay on this '
+                'desk. This does not change markbook or exams, and it does '
+                'not claim 99.5% uptime.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -78,6 +79,7 @@ class _WebGoLivePageState extends State<WebGoLivePage>
                 tabAlignment: TabAlignment.start,
                 tabs: const [
                   Tab(text: 'Overview'),
+                  Tab(text: 'Sign-off'),
                   Tab(text: 'Authenticator'),
                   Tab(text: 'Privacy'),
                   Tab(text: 'Backups'),
@@ -96,6 +98,7 @@ class _WebGoLivePageState extends State<WebGoLivePage>
                 controller: _tabs,
                 children: [
                   _OverviewTab(canManage: _canManage),
+                  _SignOffTab(canManage: _canManage),
                   const _MfaTab(),
                   _PrivacyTab(canManage: _canManage),
                   _BackupTab(canManage: _canManage),
@@ -143,6 +146,18 @@ class _OverviewTab extends StatelessWidget {
             ),
             _stat(context, 'Cloud', cap.cloudReady ? 'Ready' : 'Offline'),
             _stat(context, 'Storage', cap.storageReady ? 'Ready' : 'Check health'),
+            _stat(
+              context,
+              'Live dry-run',
+              cap.dryRunComplete
+                  ? 'Signed off'
+                  : '${cap.dryRunPassed}/${cap.dryRunTotal}',
+            ),
+            _stat(
+              context,
+              'Supabase backup',
+              cap.supabaseBackupConfirmed ? 'Confirmed' : 'Not confirmed',
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -184,6 +199,18 @@ class _OverviewTab extends StatelessWidget {
             },
           ),
         const MailPreflightCard(compact: true),
+        _CheckRow(
+          label: cap.dryRunComplete
+              ? 'Live dry-run signed off'
+              : 'Live dry-run still open',
+          ok: cap.dryRunComplete,
+        ),
+        _CheckRow(
+          label: cap.supabaseBackupConfirmed
+              ? 'Supabase backup confirmed'
+              : 'Supabase backup not confirmed',
+          ok: cap.supabaseBackupConfirmed,
+        ),
         const _CheckRow(
           label:
               'Platform-owner restore drill lives in tools/restore_drill_staging.mjs',
@@ -234,6 +261,107 @@ class _CheckRow extends StatelessWidget {
       ),
       title: Text(label),
     );
+  }
+}
+
+class _SignOffTab extends StatelessWidget {
+  const _SignOffTab({required this.canManage});
+  final bool canManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final svc = GoliveService.instance;
+    final signOff = svc.signOffForSchool();
+    final children = <Widget>[
+      Text(
+        'Walk https://mayabela.pages.dev (Ctrl+Shift+R) with school TB-001 '
+        'or the pilot school. Mark each row after you have done it. This '
+        'desk records the walk — it does not run the checks for you.',
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+      const SizedBox(height: 8),
+      Text(
+        signOff.dryRunComplete
+            ? 'Dry-run signed off (${signOff.dryRunPassed}/${signOff.items.length}).'
+            : '${signOff.dryRunPassed}/${signOff.items.length} live checks passed.',
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      const SizedBox(height: 12),
+    ];
+    var lastSection = '';
+    for (final item in signOff.items) {
+      if (item.section != lastSection) {
+        lastSection = item.section;
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              item.section,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+        );
+      }
+      children.add(
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: Theme.of(context).textTheme.titleSmall),
+                Text(item.expected),
+                if (item.signedBy.isNotEmpty)
+                  Text('${item.status.name} · ${item.signedBy}'),
+                if (canManage)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final status in DryRunStatus.values)
+                        ChoiceChip(
+                          label: Text(status.name),
+                          selected: item.status == status,
+                          onSelected: (_) => svc.setDryRunItem(item.id, status),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    children.addAll([
+      const SizedBox(height: 16),
+      Text('Supabase backup', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 4),
+      const Text(
+        'Confirm the production project has daily backups (or paid PITR). '
+        'This records the check. It does not take a dump or enable PITR.',
+      ),
+      const SizedBox(height: 8),
+      SelectableText(
+        'https://supabase.com/dashboard/project/'
+        '${GoliveService.defaultSupabaseProjectRef}',
+      ),
+      const SizedBox(height: 8),
+      Text(
+        signOff.supabaseBackupConfirmed
+            ? 'Confirmed ${signOff.supabaseConfirmedAt!.toLocal().toString().split('.').first} '
+                'by ${signOff.supabaseConfirmedBy} · ${signOff.supabaseKind}'
+            : 'Not confirmed yet.',
+      ),
+      if (canManage)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: () => svc.confirmSupabaseBackup(),
+            icon: const Icon(Icons.verified_outlined),
+            label: const Text('Confirm Supabase backup'),
+          ),
+        ),
+    ]);
+    return ListView(padding: const EdgeInsets.all(16), children: children);
   }
 }
 
@@ -490,8 +618,27 @@ class _BackupTab extends StatelessWidget {
         const Text(
           'School snapshots record counts and a student directory without '
           'passwords or authenticator secrets. Platform-owner registry restore '
-          'is a separate drill (tools/restore_drill_staging.mjs).',
+          'is a separate drill (tools/restore_drill_staging.mjs). Confirm the '
+          'Supabase project backup on the Sign-off tab.',
         ),
+        const SizedBox(height: 12),
+        _CheckRow(
+          label: svc.supabaseBackupConfirmed()
+              ? 'Supabase backup confirmed'
+              : 'Supabase backup not confirmed yet',
+          ok: svc.supabaseBackupConfirmed(),
+        ),
+        if (canManage)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => svc.confirmSupabaseBackup(
+                note: 'Confirmed from Backups tab',
+              ),
+              icon: const Icon(Icons.verified_outlined),
+              label: const Text('Confirm Supabase backup'),
+            ),
+          ),
         const SizedBox(height: 12),
         if (canManage)
           FilledButton.icon(

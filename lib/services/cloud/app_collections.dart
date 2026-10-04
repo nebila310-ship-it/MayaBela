@@ -13,6 +13,7 @@ abstract final class AppCollections {
   static const campusRooms = 'campus_rooms';
   static const campusCameras = 'campus_cameras';
   static const mfaPolicies = 'mfa_policies';
+  static const goliveSignoffs = 'golive_signoffs';
   static const materialAccess = 'material_access';
   static const studentPasswordResets = 'student_password_resets';
 

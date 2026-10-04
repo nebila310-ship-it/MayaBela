@@ -23,12 +23,66 @@ class GoliveService extends ChangeNotifier {
   static final instance = GoliveService._();
 
   static const leftoverCollection = AppCollections.mfaPolicies;
+  static const signOffCollection = AppCollections.goliveSignoffs;
+  static const defaultSupabaseProjectRef = 'hwkiihonthueadbhcvfi';
+
+  static const dryRunCatalog = <DryRunItem>[
+    DryRunItem(
+      id: 'security-anon',
+      section: 'Security',
+      title: 'Anon key cannot list school docs',
+      expected: '0 rows / denied',
+    ),
+    DryRunItem(
+      id: 'security-isolation',
+      section: 'Security',
+      title: 'School A cannot see school B',
+      expected: 'No cross-school rows; writes denied',
+    ),
+    DryRunItem(
+      id: 'login-password',
+      section: 'Login',
+      title: 'First login and change password',
+      expected: 'Forced change, then dashboard. No SMS/OTP.',
+    ),
+    DryRunItem(
+      id: 'grades-approve',
+      section: 'Grades',
+      title: 'Enter → approve → parent sees',
+      expected: 'Draft stays hidden; approved grade is visible',
+    ),
+    DryRunItem(
+      id: 'parent-link',
+      section: 'Parents',
+      title: 'Parent link with student ID and DOB',
+      expected: 'Wrong DOB rejected; approved parent opens child modules',
+    ),
+    DryRunItem(
+      id: 'attendance-session',
+      section: 'Attendance',
+      title: 'Teacher roll matches admin report',
+      expected: 'P/A/L session saved for that date',
+    ),
+    DryRunItem(
+      id: 'transport-gps',
+      section: 'Transport',
+      title: 'Driver live location',
+      expected: 'Parent map is fresh; stale >2 min is not live',
+    ),
+    DryRunItem(
+      id: 'ops-pages',
+      section: 'Ops',
+      title: 'Institution, School, Reports, inventory',
+      expected: 'Real pages — not Coming soon',
+    ),
+  ];
 
   final List<MfaEnrollment> _mfa = [];
   final List<PrivacyConsent> _consents = [];
   final List<DataRightsRequest> _rights = [];
   final List<SchoolBackupRecord> _backups = [];
   final List<MfaLeadershipPolicy> _policies = [];
+  final List<GoLiveSignOff> _signOffs = [];
   bool _loaded = false;
 
   @visibleForTesting
@@ -38,6 +92,7 @@ class GoliveService extends ChangeNotifier {
     instance._rights.clear();
     instance._backups.clear();
     instance._policies.clear();
+    instance._signOffs.clear();
     instance._loaded = true;
   }
 
@@ -246,7 +301,88 @@ class GoliveService extends ChangeNotifier {
       openDataRights: openDataRightsCount(),
       mfaRequired: mfaRequiredForLeadership(),
       currentUserMustEnroll: mustEnroll(),
+      dryRunPassed: signOffForSchool().dryRunPassed,
+      dryRunTotal: signOffForSchool().items.length,
+      dryRunComplete: signOffForSchool().dryRunComplete,
+      supabaseBackupConfirmed: signOffForSchool().supabaseBackupConfirmed,
     );
+  }
+
+  GoLiveSignOff signOffForSchool([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).toUpperCase();
+    for (final row in _signOffs) {
+      if (sid.isEmpty || row.schoolId == sid) {
+        return _withCatalog(row);
+      }
+    }
+    return GoLiveSignOff(
+      id: 'SIGN-$sid',
+      schoolId: sid,
+      items: List<DryRunItem>.from(dryRunCatalog),
+      updatedAt: DateTime.now().toUtc(),
+    );
+  }
+
+  bool dryRunComplete([String? schoolId]) =>
+      signOffForSchool(schoolId).dryRunComplete;
+
+  bool supabaseBackupConfirmed([String? schoolId]) =>
+      signOffForSchool(schoolId).supabaseBackupConfirmed;
+
+  Future<GoLiveSignOff> setDryRunItem(
+    String itemId,
+    DryRunStatus status, {
+    String note = '',
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final current = signOffForSchool(schoolId);
+    if (current.schoolId.isEmpty) {
+      throw StateError('Sign in to a school before signing off the dry-run.');
+    }
+    final items = [
+      for (final item in current.items)
+        if (item.id == itemId)
+          item.copyWith(
+            status: status,
+            note: note.trim(),
+            signedBy: _username,
+            signedAt: DateTime.now().toUtc(),
+            clearSignedAt: status == DryRunStatus.pending,
+          )
+        else
+          item,
+    ];
+    final next = current.copyWith(
+      items: items,
+      updatedAt: DateTime.now().toUtc(),
+      updatedBy: _username,
+    );
+    return _saveSignOff(next);
+  }
+
+  Future<GoLiveSignOff> confirmSupabaseBackup({
+    String kind = 'daily_snapshots',
+    String note = '',
+    String? projectRef,
+    String? schoolId,
+  }) async {
+    _requireStaffDesk();
+    final current = signOffForSchool(schoolId);
+    if (current.schoolId.isEmpty) {
+      throw StateError('Sign in to a school before confirming backups.');
+    }
+    final next = current.copyWith(
+      supabaseConfirmedAt: DateTime.now().toUtc(),
+      supabaseConfirmedBy: _username,
+      supabaseKind: kind.trim().isEmpty ? 'daily_snapshots' : kind.trim(),
+      supabaseProjectRef:
+          (projectRef ?? defaultSupabaseProjectRef).trim().toLowerCase(),
+      supabaseNote: note.trim(),
+      updatedAt: DateTime.now().toUtc(),
+      updatedBy: _username,
+    );
+    return _saveSignOff(next);
   }
 
   /// Starts MFA enrollment. Returns the secret and recovery codes once.
@@ -666,6 +802,7 @@ class GoliveService extends ChangeNotifier {
     List<DataRightsRequest>? rights,
     List<SchoolBackupRecord>? backups,
     List<MfaLeadershipPolicy>? policies,
+    List<GoLiveSignOff>? signOffs,
     bool merge = false,
   }) {
     void mergeList<T>(
@@ -706,6 +843,13 @@ class GoliveService extends ChangeNotifier {
       );
     }
     if (policies != null) mergeList(_policies, policies, (row) => row.id);
+    if (signOffs != null) {
+      mergeList(
+        _signOffs,
+        _isPublicReader ? const [] : signOffs,
+        (row) => row.id,
+      );
+    }
     _loaded = true;
     notifyListeners();
   }
@@ -731,6 +875,9 @@ class GoliveService extends ChangeNotifier {
 
   List<Map<String, dynamic>> policyMaps() =>
       _policies.map((row) => row.toMap()).toList();
+
+  List<Map<String, dynamic>> signOffMaps() =>
+      _signOffs.map((row) => row.toMap()).toList();
 
   MfaEnrollment? _findMfa(String username, [String? schoolId]) {
     final key = username.trim().toLowerCase();
@@ -772,6 +919,7 @@ class GoliveService extends ChangeNotifier {
         DataRightsRequest r => r.schoolId,
         SchoolBackupRecord r => r.schoolId,
         MfaLeadershipPolicy r => r.schoolId,
+        GoLiveSignOff r => r.schoolId,
         _ => '',
       };
       return rowSchool == sid;
@@ -807,17 +955,46 @@ class GoliveService extends ChangeNotifier {
     }
   }
 
+  GoLiveSignOff _withCatalog(GoLiveSignOff row) {
+    final byId = {for (final item in row.items) item.id: item};
+    final items = [
+      for (final catalog in dryRunCatalog)
+        byId[catalog.id]?.copyWith() ?? catalog,
+    ];
+    return row.copyWith(items: items);
+  }
+
+  Future<GoLiveSignOff> _saveSignOff(GoLiveSignOff row) async {
+    final idx = _signOffs.indexWhere((item) => item.id == row.id);
+    if (idx >= 0) {
+      _signOffs[idx] = row;
+    } else {
+      _signOffs.add(row);
+    }
+    await _persist();
+    await _persistLeftover(signOffCollection, row.id, row.toMap());
+    return row;
+  }
+
   Future<void> _persistPolicyLeftover(MfaLeadershipPolicy row) async {
+    await _persistLeftover(leftoverCollection, row.id, row.toMap());
+  }
+
+  Future<void> _persistLeftover(
+    String collection,
+    String docId,
+    Map<String, dynamic> data,
+  ) async {
     final crud = DocumentStore();
     if (!crud.available) return;
     try {
       await crud.createOrUpdate(
-        collection: leftoverCollection,
-        docId: row.id,
-        data: row.toMap(),
+        collection: collection,
+        docId: docId,
+        data: data,
       );
     } catch (e) {
-      if (kDebugMode) debugPrint('GoliveService policy persist: $e');
+      if (kDebugMode) debugPrint('GoliveService leftover persist: $e');
     }
   }
 

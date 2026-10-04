@@ -70,6 +70,9 @@ abstract final class TrainingManuals {
               'directory without passwords or authenticator secrets).\n\n'
               'The desk reminds you when the last snapshot is older than 24 '
               'hours. That is a checklist, not a scheduled backup product.\n\n'
+              'Go-live → Sign-off is where Admin records the live dry-run and '
+              'confirms the production Supabase backup (daily snapshots or '
+              'paid PITR). That confirmation is a record, not a dump.\n\n'
               'Platform-owner registry restore is a separate drill '
               '(tools/restore_drill_staging.mjs). This button does not replace '
               'that owner tool.',
