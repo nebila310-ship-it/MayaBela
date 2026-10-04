@@ -24,6 +24,7 @@ class MailPreflightCardState extends State<MailPreflightCard> {
   }
 
   Future<void> refresh() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     final status = await PlatformMailCloudService.instance.publicStatus();
     if (!mounted) return;
