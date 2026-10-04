@@ -210,8 +210,14 @@ class HomeworkItem {
     this.dueDate,
     List<String>? attachmentPaths,
     Map<String, List<String>>? studentWorksheetPaths,
+    Map<String, double>? studentScores,
+    Map<String, String>? teacherComments,
+    this.dueReminderSent = false,
+    this.overdueReminderSent = false,
   })  : attachmentPaths = attachmentPaths ?? [],
-        studentWorksheetPaths = studentWorksheetPaths ?? {};
+        studentWorksheetPaths = studentWorksheetPaths ?? {},
+        studentScores = studentScores ?? {},
+        teacherComments = teacherComments ?? {};
 
   final String id;
   final String className;
@@ -225,6 +231,10 @@ class HomeworkItem {
   DateTime? dueDate;
   List<String> attachmentPaths;
   Map<String, List<String>> studentWorksheetPaths;
+  Map<String, double> studentScores;
+  Map<String, String> teacherComments;
+  bool dueReminderSent;
+  bool overdueReminderSent;
 
   int get submittedStudentCount => studentWorksheetPaths.values
       .where((paths) => paths.isNotEmpty)
@@ -252,6 +262,10 @@ extension HomeworkItemPersistence on HomeworkItem {
         'studentWorksheetPaths': studentWorksheetPaths.map(
           (key, value) => MapEntry(key, value),
         ),
+        'studentScores': studentScores,
+        'teacherComments': teacherComments,
+        'dueReminderSent': dueReminderSent,
+        'overdueReminderSent': overdueReminderSent,
       };
 
   static HomeworkItem fromMap(Map<String, dynamic> map) {
@@ -279,6 +293,16 @@ extension HomeworkItemPersistence on HomeworkItem {
           : DateTime.tryParse(map['dueDate'] as String),
       attachmentPaths: List<String>.from(map['attachmentPaths'] as List? ?? []),
       studentWorksheetPaths: worksheets,
+      studentScores: {
+        for (final entry in (map['studentScores'] as Map? ?? {}).entries)
+          entry.key.toString(): (entry.value as num).toDouble(),
+      },
+      teacherComments: {
+        for (final entry in (map['teacherComments'] as Map? ?? {}).entries)
+          entry.key.toString(): entry.value.toString(),
+      },
+      dueReminderSent: map['dueReminderSent'] == true,
+      overdueReminderSent: map['overdueReminderSent'] == true,
     );
   }
 }

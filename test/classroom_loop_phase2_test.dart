@@ -139,7 +139,7 @@ void main() {
     );
   });
 
-  test('VP homework desk is view-only; teachers still own posting', () {
+  test('VP homework desk can post, score, and push to markbook', () {
     AuthService.currentUser = RegisteredUser(
       username: 'vp.loop',
       password: 'x',
@@ -148,7 +148,7 @@ void main() {
       staffRoles: const [StaffRoles.vicePresident],
     );
     expect(ModuleAccess.canView('homework'), isTrue);
-    expect(ModuleAccess.canManage('homework'), isFalse);
+    expect(ModuleAccess.canManage('homework'), isTrue);
     expect(ModuleAccess.canView('attendance'), isTrue);
     expect(ModuleAccess.canView('calendar'), isTrue);
     expect(ModuleAccess.canManage('calendar'), isFalse);

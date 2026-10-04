@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/discipline_persistence_service.dart';
+import 'package:mayabela/services/school_data_service.dart';
 
 /// EDUABA Student Affairs — behaviour / incident case register.
 ///
@@ -101,6 +103,55 @@ class DisciplineService extends ChangeNotifier {
       _pushParentNotification(newCase);
     }
     return newCase;
+  }
+
+  /// Schedule a hearing and put it on the staff calendar (same path as meetings).
+  Future<DisciplineCase?> scheduleHearing(
+    String id, {
+    required DateTime hearingAt,
+    bool inviteParent = true,
+  }) {
+    return updateCase(
+      id,
+      (current) {
+        final title =
+            'Discipline hearing — ${current.studentName} (${current.className})';
+        final description = current.description.trim().isEmpty
+            ? current.title
+            : '${current.title}\n${current.description}';
+        var eventId = current.calendarEventId;
+        if (eventId == null || eventId.isEmpty) {
+          eventId = SchoolDataService.instance
+              .scheduleCalendarEvent(
+                title: title,
+                description: description,
+                date: hearingAt,
+                type: CalendarEventType.meeting,
+                audience: 'staff',
+                autoAnnounce: false,
+              )
+              .id;
+        } else {
+          final existing = SchoolDataService.instance
+              .getCalendarEvents()
+              .cast<CalendarEvent?>()
+              .firstWhere((e) => e?.id == eventId, orElse: () => null);
+          if (existing != null) {
+            SchoolDataService.instance.updateCalendarEvent(
+              existing.copyWith(title: title, description: description, date: hearingAt),
+            );
+          }
+        }
+        return current.copyWith(
+          status: DisciplineCaseStatus.hearingScheduled,
+          hearingAt: hearingAt,
+          calendarEventId: eventId,
+          parentInvited: inviteParent,
+          parentNotified: inviteParent,
+        );
+      },
+      notifyParent: inviteParent,
+    );
   }
 
   /// Student Affairs / admin progression: status, hearing, outcome.

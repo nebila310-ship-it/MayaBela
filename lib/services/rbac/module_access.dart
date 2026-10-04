@@ -206,7 +206,7 @@ abstract final class ModuleAccess {
         SchoolPermissions.viewAllGrades,
         SchoolPermissions.viewStudents,
       ],
-      manage: [],
+      manage: [SchoolPermissions.viewAllGrades],
     ),
 
     // Resources
@@ -523,7 +523,7 @@ abstract final class ModuleAccess {
         StaffRoles.qualityAssurance,
         ..._executiveOversight,
       },
-      manageBy: <String>{},
+      manageBy: {StaffRoles.vicePresident, StaffRoles.sectionDirector},
     ),
     'parents': ModuleRoleAllocation(
       visibleTo: {
@@ -831,7 +831,7 @@ abstract final class ModuleAccess {
   }
 
   /// True when [heldPermissions] cover every allocated manage desk for [roleKey].
-  /// Empty-manage desks (homework, reports) stay allocation-only.
+  /// Empty-manage desks (reports) stay allocation-only.
   static bool allocationJwtManageIsCovered(
     String roleKey,
     Set<String> heldPermissions,

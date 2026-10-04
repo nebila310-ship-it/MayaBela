@@ -67,6 +67,7 @@ class DisciplineCase {
     this.outcome = DisciplineOutcome.none,
     this.outcomeNotes = '',
     this.hearingAt,
+    this.calendarEventId,
     this.parentInvited = false,
     this.parentNotified = false,
     this.escalatedTo = '',
@@ -98,6 +99,7 @@ class DisciplineCase {
   final DisciplineOutcome outcome;
   final String outcomeNotes;
   final DateTime? hearingAt;
+  final String? calendarEventId;
   final bool parentInvited;
   final bool parentNotified;
 
@@ -121,6 +123,7 @@ class DisciplineCase {
     DisciplineOutcome? outcome,
     String? outcomeNotes,
     DateTime? hearingAt,
+    String? calendarEventId,
     bool? parentInvited,
     bool? parentNotified,
     String? escalatedTo,
@@ -145,6 +148,7 @@ class DisciplineCase {
       outcome: outcome ?? this.outcome,
       outcomeNotes: outcomeNotes ?? this.outcomeNotes,
       hearingAt: hearingAt ?? this.hearingAt,
+      calendarEventId: calendarEventId ?? this.calendarEventId,
       parentInvited: parentInvited ?? this.parentInvited,
       parentNotified: parentNotified ?? this.parentNotified,
       escalatedTo: escalatedTo ?? this.escalatedTo,
@@ -171,6 +175,7 @@ class DisciplineCase {
     'outcome': outcome.name,
     'outcomeNotes': outcomeNotes,
     'hearingAt': hearingAt?.toIso8601String(),
+    if (calendarEventId != null) 'calendarEventId': calendarEventId,
     'parentInvited': parentInvited,
     'parentNotified': parentNotified,
     'escalatedTo': escalatedTo,
@@ -207,6 +212,10 @@ class DisciplineCase {
       hearingAt: map['hearingAt'] == null
           ? null
           : DateTime.tryParse('${map['hearingAt']}'),
+      calendarEventId: () {
+        final raw = '${map['calendarEventId'] ?? ''}'.trim();
+        return raw.isEmpty ? null : raw;
+      }(),
       parentInvited: map['parentInvited'] == true,
       parentNotified: map['parentNotified'] == true,
       escalatedTo: '${map['escalatedTo'] ?? ''}',

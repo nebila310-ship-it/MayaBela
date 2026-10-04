@@ -335,6 +335,70 @@ class ExamService extends ChangeNotifier {
     return attempt;
   }
 
+  /// Staff enter a percent for an offline / national paper — no portal sit.
+  Future<ExamAttempt> recordStaffOfflineResult({
+    required String paperId,
+    required String studentName,
+    required double percent,
+    String? studentId,
+    String? className,
+  }) async {
+    final paper = paperById(paperId);
+    if (paper == null) {
+      throw StateError('Exam paper not found.');
+    }
+    if (paper.isOnlineSit) {
+      throw StateError(
+        'This paper is an online sitting. Students sit it in the portal; '
+        'use the scoring desk for those attempts.',
+      );
+    }
+    final clamped = percent.clamp(0, 100).toDouble();
+    final now = DateTime.now();
+    final existing = attemptFor(paperId: paperId, studentName: studentName);
+    if (existing != null) {
+      existing.answers = [
+        ExamAnswer(questionId: '_staff_percent', pointsAwarded: clamped),
+      ];
+      existing.maxPoints = 100;
+      existing.status = ExamAttemptStatus.scored;
+      existing.submittedAt ??= now;
+      existing.scoredAt = now;
+      existing.scoredBy = AuthService.currentUser?.username;
+      existing.updatedAt = now;
+      existing.pushedToMarkbook = false;
+      if (studentId != null && studentId.trim().isNotEmpty) {
+        existing.studentId = studentId.trim().toUpperCase();
+      }
+      await _persist();
+      return existing;
+    }
+    final attempt = ExamAttempt(
+      id: _allocateId('AT', _attempts.map((a) => a.id)),
+      paperId: paperId,
+      schoolId: paper.schoolId,
+      studentName: studentName.trim(),
+      className: (className ?? paper.className).trim(),
+      studentId: (studentId ??
+              StudentRegistryService.instance.lookupByName(studentName)?.studentId)
+          ?.trim()
+          .toUpperCase(),
+      answers: [
+        ExamAnswer(questionId: '_staff_percent', pointsAwarded: clamped),
+      ],
+      maxPoints: 100,
+      status: ExamAttemptStatus.scored,
+      startedAt: now,
+      updatedAt: now,
+      submittedAt: now,
+      scoredAt: now,
+      scoredBy: AuthService.currentUser?.username,
+    );
+    _attempts.add(attempt);
+    await _persist();
+    return attempt;
+  }
+
   Future<ExamAttempt?> saveAnswers(
     String attemptId,
     List<ExamAnswer> answers,
