@@ -39,10 +39,18 @@ Deno.serve(async (req) => {
     const guardianEmail = clip(body?.guardianEmail, 120);
     const gradeApplying = clip(body?.gradeApplying, 40);
     const previousSchool = clip(body?.previousSchool, 120);
+    const dateOfBirth = clip(body?.dateOfBirth, 32);
 
     if (!schoolId || !fullName || !guardianName) {
       return errorResponse(
         "schoolId, fullName, and guardianName are required.",
+        400,
+        "invalid",
+      );
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+      return errorResponse(
+        "dateOfBirth is required (YYYY-MM-DD).",
         400,
         "invalid",
       );
@@ -92,6 +100,7 @@ Deno.serve(async (req) => {
       guardianPhone,
       guardianEmail,
       previousSchool,
+      dateOfBirth,
       notes: "",
       documents: defaultDocuments(),
       examMaxScore: 100,

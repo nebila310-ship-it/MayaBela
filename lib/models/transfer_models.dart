@@ -202,8 +202,15 @@ abstract final class TransferPermissions {
   static bool get canApproveInternalTransfers =>
       _isAdmin || AuthService.hasPermission(SchoolPermissions.approveTransfers);
 
-  /// External leave/transfer-out: school owner only (per product spec).
-  static bool get canApproveExternalTransfers => _isAdmin;
+  /// External leave/transfer-out: owner or Vice Principal.
+  static bool get canApproveExternalTransfers {
+    if (_isAdmin) return true;
+    final roles = AuthService.currentUser?.staffRoles ?? const <String>[];
+    return roles.any(
+          (role) => StaffRoles.canonicalize(role) == StaffRoles.vicePresident,
+        ) &&
+        AuthService.hasPermission(SchoolPermissions.approveTransfers);
+  }
 
   static bool get canPromoteStudents =>
       _isAdmin || AuthService.hasPermission(SchoolPermissions.promoteStudents);

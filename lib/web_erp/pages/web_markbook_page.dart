@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/constants/school_subjects.dart';
@@ -10,6 +11,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/year_start_sheet_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
@@ -204,6 +206,56 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
     );
   }
 
+  Future<void> _exportCsv() async {
+    final className = _className;
+    final subject = _subject;
+    if (className == null || subject == null) return;
+    final csv = YearStartSheetService.instance.gradeCsv(
+      className: className,
+      subject: subject,
+      schoolId: _schoolId.isEmpty ? null : _schoolId,
+    );
+    await YearStartSheetService.instance.shareCsv(
+      csv: csv,
+      fileName:
+          'grades_${className.replaceAll(' ', '_')}_${subject.replaceAll(' ', '_')}.csv',
+      subject: 'Grade CSV · $className · $subject',
+    );
+  }
+
+  Future<void> _importCsv() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['csv'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.single.bytes;
+    if (bytes == null) return;
+    try {
+      final n = YearStartSheetService.instance.importGradeCsv(
+        String.fromCharCodes(bytes),
+        teacherId: AuthService.currentUser?.username ?? 'staff',
+      );
+      if (!mounted) return;
+      setState(_reloadCells);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            n == 0
+                ? 'No grade rows could be written (locked grades stay skipped).'
+                : 'Imported $n grade row(s).',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
@@ -320,6 +372,16 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                     onPressed: _saving ? null : () => _save(submit: true),
                     icon: const Icon(Icons.send_outlined),
                     label: const Text('Save & submit for approval'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _exportCsv,
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Export CSV'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _importCsv,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Import CSV'),
                   ),
                 ],
                 TextButton(

@@ -564,6 +564,49 @@ class SchoolAuthCloudService {
     }
   }
 
+  Future<SchoolAuthCloudResult> inviteParentEmail({
+    required String schoolId,
+    required String email,
+    required String studentId,
+    required String studentName,
+    required DateTime dateOfBirth,
+    required String message,
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    try {
+      await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      final data = await _invoke('school-invite-parent', {
+        'schoolId': schoolId.trim().toUpperCase(),
+        'email': email.trim(),
+        'studentId': studentId.trim().toUpperCase(),
+        'studentName': studentName.trim(),
+        'dateOfBirth':
+            '${dateOfBirth.year.toString().padLeft(4, '0')}-'
+            '${dateOfBirth.month.toString().padLeft(2, '0')}-'
+            '${dateOfBirth.day.toString().padLeft(2, '0')}',
+        'message': message,
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'invalid',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return const SchoolAuthCloudResult(ok: true);
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
+      );
+    } catch (_) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+    }
+  }
+
   Future<SchoolAuthCloudResult> requestPasswordReset({
     required String schoolId,
     required String email,
@@ -699,6 +742,7 @@ class SchoolAuthCloudService {
     String guardianPhone = '',
     String guardianEmail = '',
     String previousSchool = '',
+    DateTime? dateOfBirth,
   }) async {
     if (!isAvailable) {
       return const SchoolAuthCloudResult(
@@ -717,6 +761,11 @@ class SchoolAuthCloudService {
         'guardianPhone': guardianPhone.trim(),
         'guardianEmail': guardianEmail.trim(),
         'previousSchool': previousSchool.trim(),
+        if (dateOfBirth != null)
+          'dateOfBirth':
+              '${dateOfBirth.year.toString().padLeft(4, '0')}-'
+              '${dateOfBirth.month.toString().padLeft(2, '0')}-'
+              '${dateOfBirth.day.toString().padLeft(2, '0')}',
       });
       if (data == null || data['error'] != null) {
         return SchoolAuthCloudResult(

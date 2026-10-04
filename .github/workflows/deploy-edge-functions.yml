@@ -13,6 +13,8 @@ on:
     branches: [main, master]
     paths:
       - "supabase/functions/school-request-password-reset/**"
+      - "supabase/functions/school-submit-application/**"
+      - "supabase/functions/school-invite-parent/**"
       - "supabase/functions/school-request-student-password-reset/**"
       - "supabase/functions/school-confirm-password-reset/**"
       - "supabase/functions/school-upsert-account/**"
@@ -49,6 +51,8 @@ jobs:
           fi
           REF=hwkiihonthueadbhcvfi
           supabase functions deploy school-request-password-reset --project-ref "$REF" --no-verify-jwt
+          supabase functions deploy school-submit-application --project-ref "$REF" --no-verify-jwt
+          supabase functions deploy school-invite-parent --project-ref "$REF" --no-verify-jwt
           supabase functions deploy school-request-student-password-reset --project-ref "$REF" --no-verify-jwt
           supabase functions deploy school-confirm-password-reset --project-ref "$REF" --no-verify-jwt
           supabase functions deploy school-upsert-account --project-ref "$REF" --no-verify-jwt
