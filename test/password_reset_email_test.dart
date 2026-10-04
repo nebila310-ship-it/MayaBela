@@ -102,7 +102,11 @@ void main() {
   test('school desks can read mail ready-state without an owner PIN', () {
     final fn = read('supabase/functions/platform-mail-config/index.ts');
     expect(fn, contains("action === \"public-status\""));
-    expect(fn.indexOf('public-status'), lessThan(fn.indexOf('authorizePlatformOwner')));
+    final handler = fn.substring(fn.indexOf('Deno.serve'));
+    expect(
+      handler.indexOf('public-status'),
+      lessThan(handler.indexOf('authorizePlatformOwner')),
+    );
 
     final client = read('lib/services/platform_mail_cloud_service.dart');
     expect(client, contains('Future<PlatformMailStatus> publicStatus()'));
