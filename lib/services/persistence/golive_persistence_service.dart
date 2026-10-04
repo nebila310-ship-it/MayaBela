@@ -12,6 +12,7 @@ class GolivePersistenceService {
   static const _rightsKey = 'data_rights_requests_v1';
   static const _backupsKey = 'school_backups_v1';
   static const _policiesKey = 'mfa_policies_v1';
+  static const _signOffsKey = 'golive_signoffs_v1';
 
   Future<void> loadIntoService() async {
     final enrollments = <MfaEnrollment>[];
@@ -44,12 +45,19 @@ class GolivePersistenceService {
         policies.add(MfaLeadershipPolicy.fromMap(map));
       } catch (_) {}
     }
+    final signOffs = <GoLiveSignOff>[];
+    for (final map in await LocalJsonStore.readList(_signOffsKey)) {
+      try {
+        signOffs.add(GoLiveSignOff.fromMap(map));
+      } catch (_) {}
+    }
     GoliveService.instance.applyPersistedData(
       enrollments: enrollments,
       consents: consents,
       rights: rights,
       backups: backups,
       policies: policies,
+      signOffs: signOffs,
     );
   }
 
@@ -60,6 +68,7 @@ class GolivePersistenceService {
     await LocalJsonStore.writeList(_rightsKey, svc.rightsMaps());
     await LocalJsonStore.writeList(_backupsKey, svc.backupMaps());
     await LocalJsonStore.writeList(_policiesKey, svc.policyMaps());
+    await LocalJsonStore.writeList(_signOffsKey, svc.signOffMaps());
     if (pushCloud) {
       await CloudAppStore.instance.pushAllGoLive();
     }

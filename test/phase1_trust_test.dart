@@ -185,6 +185,7 @@ void main() {
         AppCollections.campusRooms,
         AppCollections.campusCameras,
         AppCollections.mfaPolicies,
+        AppCollections.goliveSignoffs,
         AppCollections.materialAccess,
         AppCollections.studentPasswordResets,
       ]),

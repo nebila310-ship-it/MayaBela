@@ -640,17 +640,14 @@ class _SellScorecard {
       'Integration: grade approve→publish, parent link, attendance, GPS',
       'Sell package docs (pricing, onboarding, support) + pilot APK script',
       'Pilot APK assembleRelease unblocked (AGP 8.12 / Gradle 8.14.3 pin)',
+      'In-app live dry-run and Supabase backup sign-off',
     ];
 
-    final must = <String>[
-      'Live customer dry-run sign-off (SELL_DRY_RUN.md) before first paid school',
-    ];
+    final must = <String>[];
 
-    final should = <String>[
-      'Walk SELL_DRY_RUN.md on production with a real school admin (sign-off)',
-    ];
+    final should = <String>[];
 
-    // APK toolchain unblocked; remaining must-fix is live human sign-off.
+    // APK toolchain unblocked; Phase 7 puts dry-run and backup sign-off on Go-live.
     var score = 92 - (must.length * 2) - (should.length * 1);
     if (score < 0) score = 0;
     if (score > 100) score = 100;

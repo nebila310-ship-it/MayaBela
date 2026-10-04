@@ -117,6 +117,14 @@ class _WebSystemHealthPageState extends State<WebSystemHealthPage> {
                 icon: Icons.inventory_2_outlined,
               ),
               _HealthCard(
+                title: 'Supabase backup',
+                status: GoliveService.instance.supabaseBackupConfirmed()
+                    ? 'Confirmed'
+                    : 'Not confirmed',
+                ok: GoliveService.instance.supabaseBackupConfirmed(),
+                icon: Icons.cloud_sync_outlined,
+              ),
+              _HealthCard(
                 title: 'Last school backup',
                 status: GoliveService.instance.lastBackupAt() == null
                     ? 'None yet — open Go-live'
