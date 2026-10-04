@@ -412,6 +412,11 @@ abstract final class AppDataMaps {
                 if (slot.teacherId != null) 'teacherId': slot.teacherId,
                 if (slot.teacherName != null) 'teacherName': slot.teacherName,
                 'durationMinutes': slot.durationMinutes,
+                if (slot.room != null) 'room': slot.room,
+                if (slot.substituteTeacherId != null)
+                  'substituteTeacherId': slot.substituteTeacherId,
+                if (slot.substituteTeacherName != null)
+                  'substituteTeacherName': slot.substituteTeacherName,
               },
             )
             .toList(),
@@ -438,6 +443,9 @@ abstract final class AppDataMaps {
                 teacherId: raw['teacherId'] as String?,
                 teacherName: raw['teacherName'] as String?,
                 durationMinutes: raw['durationMinutes'] as int? ?? 40,
+                room: raw['room'] as String?,
+                substituteTeacherId: raw['substituteTeacherId'] as String?,
+                substituteTeacherName: raw['substituteTeacherName'] as String?,
               );
             })
             .toList();

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/class_timetable.dart';
+import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/campus_room_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/timetable_conflict_service.dart';
 import 'package:mayabela/services/timetable_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
@@ -54,6 +57,10 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
     if (widget.readOnly) return false;
     final className = _selectedClass;
     if (className == null) return false;
+    if (widget.mode == TimetableViewMode.adminDetail &&
+        ModuleAccess.canManage('timetable')) {
+      return true;
+    }
     return _service.canEdit(className);
   }
 
@@ -72,6 +79,7 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
       _selectedClass = widget.initialClass ?? options.first;
       _loadTimetable();
     }
+    CampusRoomService.instance.ensureLoaded();
   }
 
   @override
@@ -231,7 +239,19 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
     final durationController = TextEditingController(
       text: '${slot.durationMinutes}',
     );
+    final roomController = TextEditingController(text: slot.room ?? '');
     var kind = slot.kind;
+    final rooms = CampusRoomService.instance.all;
+    final teachers = TeacherRegistryService.instance.teachersForSchool(
+      AuthService.activeSchoolId ?? '',
+    );
+    var room = slot.room;
+    if (room != null &&
+        room.isNotEmpty &&
+        rooms.every((r) => r.roomName != room && r.label != room)) {
+      room = slot.room;
+    }
+    var substituteId = slot.substituteTeacherId ?? '';
 
     final saved = await showAdminFormDialog(
       context: context,
@@ -283,6 +303,58 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
               ),
             ),
           ),
+          if (kind == TimetableSlotKind.lesson) ...[
+            adminDialogField(
+              rooms.isEmpty
+                  ? TextField(
+                      controller: roomController,
+                      decoration: const InputDecoration(labelText: 'Room'),
+                      onChanged: (v) => room = v.trim(),
+                    )
+                  : DropdownButtonFormField<String>(
+                      initialValue: rooms.any((r) => r.label == room || r.roomName == room)
+                          ? rooms
+                              .firstWhere(
+                                (r) => r.label == room || r.roomName == room,
+                              )
+                              .label
+                          : null,
+                      decoration: const InputDecoration(labelText: 'Room'),
+                      items: [
+                        const DropdownMenuItem(
+                          value: '',
+                          child: Text('No room'),
+                        ),
+                        for (final r in rooms)
+                          DropdownMenuItem(
+                            value: r.label,
+                            child: Text(r.label),
+                          ),
+                      ],
+                      onChanged: (v) => setDialogState(() => room = v),
+                    ),
+            ),
+            adminDialogField(
+              DropdownButtonFormField<String>(
+                initialValue: teachers.any((t) => t.teacherId == substituteId)
+                    ? substituteId
+                    : '',
+                decoration: const InputDecoration(labelText: 'Substitute'),
+                items: [
+                  const DropdownMenuItem(
+                    value: '',
+                    child: Text('No substitute'),
+                  ),
+                  for (final teacher in teachers)
+                    DropdownMenuItem(
+                      value: teacher.teacherId,
+                      child: Text(teacher.fullName),
+                    ),
+                ],
+                onChanged: (v) => setDialogState(() => substituteId = v ?? ''),
+              ),
+            ),
+          ],
         ],
       ),
       canSave: (_) {
@@ -293,15 +365,25 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
 
     if (saved) {
       final minutes = int.parse(durationController.text.trim());
+      AdminTeacherRecord? sub;
+      for (final teacher in teachers) {
+        if (teacher.teacherId == substituteId) sub = teacher;
+      }
       final updated = slot.copyWith(
         kind: kind,
         subject: kind == TimetableSlotKind.lesson
             ? subjectController.text.trim()
             : null,
         durationMinutes: minutes,
+        room: (room ?? '').trim().isEmpty ? null : room!.trim(),
+        clearRoom: (room ?? '').trim().isEmpty,
+        substituteTeacherId: sub?.teacherId,
+        substituteTeacherName: sub?.fullName,
+        clearSubstitute: substituteId.isEmpty,
       );
       subjectController.dispose();
       durationController.dispose();
+      roomController.dispose();
       if (mounted) {
         onApply(updated);
       }
@@ -309,6 +391,7 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
     }
     subjectController.dispose();
     durationController.dispose();
+    roomController.dispose();
   }
 
   Future<void> _addSlot() async {
@@ -408,8 +491,11 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
               [
                 '${formatTimeOfDay(start)} – ${formatTimeOfDay(end)}',
                 s.timetableMinutes(slot.durationMinutes),
-                if (slot.teacherName?.trim().isNotEmpty == true)
-                  s.timetableTaughtBy(slot.teacherName!.trim()),
+                if (slot.effectiveTeacherName?.trim().isNotEmpty == true)
+                  slot.substituteTeacherName?.trim().isNotEmpty == true
+                      ? 'Cover: ${slot.substituteTeacherName!.trim()}'
+                      : s.timetableTaughtBy(slot.effectiveTeacherName!.trim()),
+                if ((slot.room ?? '').trim().isNotEmpty) slot.room!.trim(),
               ].join(' · '),
             ),
             trailing: _canEdit

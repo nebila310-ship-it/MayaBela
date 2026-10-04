@@ -47,6 +47,12 @@ void main() {
     expect(CloudAppStore.instance.pullGroupKeyForTest('cctv'), isNull);
     expect(CloudAppStore.instance.pullGroupKeyForTest('cctv_cameras'), isNull);
     expect(CloudAppStore.instance.pullGroupKeyForTest(AppCollections.ictDevices), isNotNull);
+    expect(
+      CloudAppStore.instance.pullGroupKeyForTest(AppCollections.campusCameras),
+      'campus_cameras',
+    );
+    expect(CloudSyncEngine.standardPriority, contains(AppCollections.campusCameras));
+    expect(CloudSyncEngine.highPriority, isNot(contains(AppCollections.campusCameras)));
   });
 
   test('NVR URL stays on this device and does not enqueue the outbox', () async {

@@ -265,6 +265,30 @@ class _WebSchoolManagementPageState extends State<WebSchoolManagementPage> {
             ),
           const SizedBox(height: 16),
           const WebErpRelatedToolsCard(
+            title: 'Campuses',
+            tools: [
+              WebErpRelatedTool(
+                routeId: 'campus',
+                label: 'Campus list',
+                icon: Icons.location_city_outlined,
+                subtitle: 'The only campus list — rooms and CCTV sites live there',
+              ),
+              WebErpRelatedTool(
+                routeId: 'cctv',
+                label: 'CCTV',
+                icon: Icons.videocam_outlined,
+                subtitle: 'Wire camera URLs that sync to staff desks',
+              ),
+              WebErpRelatedTool(
+                routeId: 'timetable',
+                label: 'Timetable',
+                icon: Icons.calendar_view_week,
+                subtitle: 'Rooms and substitute teachers on class slots',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const WebErpRelatedToolsCard(
             title: 'Student portal',
             tools: [
               WebErpRelatedTool(

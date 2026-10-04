@@ -5,6 +5,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -48,7 +49,23 @@ class _WebCctvPageState extends State<WebCctvPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _header(context, s, siteCount: sites.length, wiredCount: wired),
+              _header(
+                context,
+                s,
+                siteCount: sites.length,
+                wiredCount: wired,
+              ),
+              if (_canManage) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _addSite,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add camera'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               _localOnlyBanner(context, s),
               const SizedBox(height: 20),
@@ -223,6 +240,74 @@ class _WebCctvPageState extends State<WebCctvPage> {
     );
   }
 
+  Future<void> _addSite() async {
+    final campuses = SchoolRegistryService.instance.campusesForSchool(
+      AuthService.activeSchoolId,
+    );
+    if (campuses.isEmpty) return;
+    final nameCtrl = TextEditingController();
+    final locCtrl = TextEditingController();
+    var campus = campuses.first;
+    final saved = await showAdminFormDialog(
+      context: context,
+      title: 'Add camera',
+      accent: ClassroomPalette.navy,
+      icon: Icons.videocam_outlined,
+      saveLabel: 'Add',
+      builder: (context, setDialogState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          adminDialogField(
+            TextField(
+              controller: nameCtrl,
+              decoration: adminFieldDecoration(
+                label: 'Camera name',
+                icon: Icons.videocam_outlined,
+                accent: ClassroomPalette.navy,
+              ),
+            ),
+          ),
+          adminDialogField(
+            DropdownButtonFormField<String>(
+              initialValue: campus,
+              decoration: adminFieldDecoration(
+                label: 'Campus',
+                icon: Icons.location_city_outlined,
+                accent: ClassroomPalette.navy,
+              ),
+              items: [
+                for (final name in campuses)
+                  DropdownMenuItem(value: name, child: Text(name)),
+              ],
+              onChanged: (v) => setDialogState(() => campus = v ?? campus),
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: locCtrl,
+              decoration: adminFieldDecoration(
+                label: 'Location',
+                icon: Icons.place_outlined,
+                accent: ClassroomPalette.navy,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    final name = nameCtrl.text.trim();
+    final location = locCtrl.text.trim();
+    nameCtrl.dispose();
+    locCtrl.dispose();
+    if (saved != true || name.isEmpty) return;
+    await CctvCatalogService.instance.addSite(
+      name: name,
+      campusName: campus,
+      location: location,
+    );
+    if (mounted) setState(() {});
+  }
+
   Future<void> _linkSite(CctvCameraSite site) async {
     final s = AppLocale.instance.strings;
     final controller = TextEditingController(text: site.streamUrl ?? '');
@@ -348,7 +433,10 @@ class _CameraTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            site.location,
+            [
+              if ((site.campusName ?? '').isNotEmpty) site.campusName!,
+              site.location,
+            ].join(' · '),
             style: TextStyle(
               color: WebErpTheme.paperInk.withValues(alpha: 0.65),
               fontSize: 13,

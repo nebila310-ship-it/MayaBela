@@ -182,6 +182,8 @@ void main() {
         AppCollections.schoolAuditLog,
         AppCollections.libraryRentals,
         AppCollections.libraryCopies,
+        AppCollections.campusRooms,
+        AppCollections.campusCameras,
         AppCollections.materialAccess,
         AppCollections.studentPasswordResets,
       ]),

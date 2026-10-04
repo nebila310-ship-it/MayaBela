@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/campus_room_service.dart';
+import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -19,6 +21,13 @@ class WebCampusManagementPage extends StatefulWidget {
 
 class _WebCampusManagementPageState extends State<WebCampusManagementPage> {
   final _registry = SchoolRegistryService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    CampusRoomService.instance.ensureLoaded();
+    CctvCatalogService.instance.ensureLoaded();
+  }
 
   String? get _schoolId => AuthService.activeSchoolId;
 
@@ -100,6 +109,10 @@ class _WebCampusManagementPageState extends State<WebCampusManagementPage> {
     final to = await _promptForName(title: 'Rename Campus', initial: from);
     if (to == null || to.isEmpty || to == from || !mounted) return;
     final ok = await _registry.renameCampus(sid, from: from, to: to);
+    if (ok) {
+      await CampusRoomService.instance.renameCampus(from: from, to: to);
+      await CctvCatalogService.instance.renameCampus(from: from, to: to);
+    }
     if (!mounted) return;
     setState(() {});
     _snack(
@@ -146,6 +159,21 @@ class _WebCampusManagementPageState extends State<WebCampusManagementPage> {
     );
   }
 
+  Future<void> _addRoom(String campus) async {
+    final name = await _promptForName(title: 'Add room · $campus');
+    if (name == null || name.isEmpty || !mounted) return;
+    final room = await CampusRoomService.instance.addRoom(
+      campusName: campus,
+      roomName: name,
+    );
+    if (!mounted) return;
+    setState(() {});
+    _snack(
+      room == null ? 'That room is already on this campus' : 'Room "$name" added',
+      error: room == null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final campuses = _campuses;
@@ -170,59 +198,118 @@ class _WebCampusManagementPageState extends State<WebCampusManagementPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Students and teachers are assigned to a campus. Renaming a '
-            'campus updates everyone on it; a campus can only be deleted '
-            'when it is empty.',
+            'This is the only campus list. Rooms and CCTV sites belong here. '
+            'Renaming a campus updates students, teachers, rooms, and cameras. '
+            'A campus can only be deleted when it is empty.',
             style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.separated(
-              itemCount: campuses.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final campus = campuses[index];
-                final students = _studentCount(campus);
-                final teachers = _teacherCount(campus);
-                final deletable =
-                    campuses.length > 1 && students == 0 && teachers == 0;
-                return ListTile(
-                  tileColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Theme.of(context).dividerColor),
-                  ),
-                  leading: const Icon(Icons.location_city_outlined),
-                  title: Text(
-                    campus,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text('$students students · $teachers teachers'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Rename',
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed:
-                            canManage ? () => _renameCampus(campus) : null,
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                CampusRoomService.instance,
+                CctvCatalogService.instance,
+              ]),
+              builder: (context, _) {
+                return ListView.separated(
+                  itemCount: campuses.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final campus = campuses[index];
+                    final students = _studentCount(campus);
+                    final teachers = _teacherCount(campus);
+                    final rooms =
+                        CampusRoomService.instance.roomsForCampus(campus);
+                    final cameras = CctvCatalogService.instance.sitesForCampus(
+                      campus,
+                      schoolId: _schoolId,
+                    );
+                    final deletable =
+                        campuses.length > 1 && students == 0 && teachers == 0;
+                    return ExpansionTile(
+                      collapsedShape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Theme.of(context).dividerColor),
                       ),
-                      IconButton(
-                        tooltip: deletable
-                            ? 'Delete'
-                            : 'Only empty campuses can be deleted',
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: deletable && canManage
-                              ? Colors.red.shade700
-                              : null,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Theme.of(context).dividerColor),
+                      ),
+                      leading: const Icon(Icons.location_city_outlined),
+                      title: Text(
+                        campus,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        '$students students · $teachers teachers · '
+                        '${rooms.length} rooms · ${cameras.length} cameras',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Rename',
+                            icon: const Icon(Icons.edit_outlined),
+                            onPressed:
+                                canManage ? () => _renameCampus(campus) : null,
+                          ),
+                          IconButton(
+                            tooltip: deletable
+                                ? 'Delete'
+                                : 'Only empty campuses can be deleted',
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: deletable && canManage
+                                  ? Colors.red.shade700
+                                  : null,
+                            ),
+                            onPressed: deletable && canManage
+                                ? () => _deleteCampus(campus)
+                                : null,
+                          ),
+                        ],
+                      ),
+                      children: [
+                        for (final room in rooms)
+                          ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.meeting_room_outlined),
+                            title: Text(room.roomName),
+                            trailing: canManage
+                                ? IconButton(
+                                    tooltip: 'Remove room',
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () async {
+                                      await CampusRoomService.instance
+                                          .removeRoom(room.id);
+                                      if (mounted) setState(() {});
+                                    },
+                                  )
+                                : null,
+                          ),
+                        ListTile(
+                          dense: true,
+                          title: Text(
+                            cameras.isEmpty
+                                ? 'No cameras on this campus yet. Wire them on CCTV.'
+                                : cameras
+                                    .map((c) =>
+                                        '${c.name}${c.isWired ? ' (wired)' : ''}')
+                                    .join(' · '),
+                          ),
                         ),
-                        onPressed: deletable && canManage
-                            ? () => _deleteCampus(campus)
-                            : null,
-                      ),
-                    ],
-                  ),
+                        if (canManage)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: () => _addRoom(campus),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add room'),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
