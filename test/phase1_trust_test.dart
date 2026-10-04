@@ -181,6 +181,7 @@ void main() {
         AppCollections.employeeRegistry,
         AppCollections.schoolAuditLog,
         AppCollections.libraryRentals,
+        AppCollections.libraryCopies,
         AppCollections.materialAccess,
         AppCollections.studentPasswordResets,
       ]),
@@ -189,6 +190,7 @@ void main() {
     final store = CloudAppStore.instance;
     for (final collection in [
       AppCollections.libraryRentals,
+      AppCollections.libraryCopies,
       AppCollections.materialAccess,
       AppCollections.studentPasswordResets,
     ]) {

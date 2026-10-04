@@ -11,6 +11,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/year_start_sheet_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
@@ -35,7 +36,7 @@ class _WebLibraryPageState extends State<WebLibraryPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
     SchoolContentSyncService.instance.addListener(_refresh);
     LibraryRentalService.instance.addListener(_refresh);
     MaterialAccessService.instance.ensureLoaded();
@@ -420,6 +421,338 @@ class _WebLibraryPageState extends State<WebLibraryPage>
     );
   }
 
+  Future<void> _addCopies({LearningMaterialItem? preset}) async {
+    if (!_canManage) return;
+    final books = _data
+        .learningMaterialsSnapshot()
+        .where(
+          (m) =>
+              m.className.toLowerCase() ==
+              WebLibraryPage.libraryClass.toLowerCase(),
+        )
+        .toList();
+    if (books.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add an e-Book first')),
+      );
+      return;
+    }
+    var selectedBook = preset ?? books.first;
+    final countCtrl = TextEditingController(text: '1');
+    final saved = await showAdminFormDialog(
+      context: context,
+      title: 'Add copies',
+      accent: WebErpTheme.primary,
+      icon: Icons.library_add_outlined,
+      saveLabel: 'Add copies',
+      builder: (context, setDialogState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          adminDialogField(
+            DropdownButtonFormField<String>(
+              initialValue: selectedBook.id,
+              decoration: adminFieldDecoration(
+                label: 'Title',
+                icon: Icons.auto_stories_outlined,
+                accent: WebErpTheme.primary,
+              ),
+              items: books
+                  .map(
+                    (b) => DropdownMenuItem(value: b.id, child: Text(b.bookName)),
+                  )
+                  .toList(),
+              onChanged: (id) {
+                if (id == null) return;
+                setDialogState(
+                  () => selectedBook = books.firstWhere((b) => b.id == id),
+                );
+              },
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: countCtrl,
+              keyboardType: TextInputType.number,
+              decoration: adminFieldDecoration(
+                label: 'Number of copies',
+                icon: Icons.pin_outlined,
+                accent: WebErpTheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    final count = int.tryParse(countCtrl.text.trim()) ?? 0;
+    countCtrl.dispose();
+    if (saved != true || count <= 0) return;
+    await LibraryRentalService.instance.addCopies(
+      materialId: selectedBook.id,
+      bookTitle: selectedBook.bookName,
+      count: count,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added $count cop${count == 1 ? 'y' : 'ies'}.')),
+    );
+  }
+
+  Future<void> _checkoutCopy({LibraryCopy? preset}) async {
+    if (!_canManage) return;
+    final available = LibraryRentalService.instance.copies
+        .where((c) => c.isAvailable)
+        .toList();
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No available copies. Add copies first.')),
+      );
+      return;
+    }
+    var selected = preset ?? available.first;
+    if (!selected.isAvailable) {
+      selected = available.first;
+    }
+    final studentQuery = TextEditingController();
+    AdminStudentRecord? selectedStudent;
+    var studentHits = <AdminStudentRecord>[];
+    var due = DateTime.now().add(
+      const Duration(days: LibraryRentalService.defaultLoanDays),
+    );
+    final saved = await showAdminFormDialog(
+      context: context,
+      title: 'Checkout copy',
+      accent: WebErpTheme.primary,
+      icon: Icons.outbox_outlined,
+      saveLabel: 'Checkout',
+      builder: (context, setDialogState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          adminDialogField(
+            DropdownButtonFormField<String>(
+              initialValue: selected.id,
+              decoration: adminFieldDecoration(
+                label: 'Available copy',
+                icon: Icons.qr_code_2_outlined,
+                accent: WebErpTheme.primary,
+              ),
+              items: available
+                  .map(
+                    (c) => DropdownMenuItem(
+                      value: c.id,
+                      child: Text('${c.copyCode} · ${c.bookTitle}'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (id) {
+                if (id == null) return;
+                setDialogState(
+                  () => selected = available.firstWhere((c) => c.id == id),
+                );
+              },
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: studentQuery,
+              decoration: adminFieldDecoration(
+                label: 'Find student (name or ID)',
+                icon: Icons.person_search_outlined,
+                accent: WebErpTheme.primary,
+              ),
+              onChanged: (v) {
+                final q = v.trim().toLowerCase();
+                final schoolId = AuthService.activeSchoolId;
+                final all = schoolId == null
+                    ? StudentRegistryService.instance.getAllStudents()
+                    : StudentRegistryService.instance.studentsForSchool(schoolId);
+                setDialogState(() {
+                  studentHits = q.isEmpty
+                      ? <AdminStudentRecord>[]
+                      : all
+                          .where(
+                            (s) =>
+                                s.isActive &&
+                                (s.fullName.toLowerCase().contains(q) ||
+                                    s.studentId.toLowerCase().contains(q)),
+                          )
+                          .take(8)
+                          .toList();
+                });
+              },
+            ),
+          ),
+          if (selectedStudent != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Selected: ${selectedStudent!.fullName} (${selectedStudent!.studentId})',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          for (final hit in studentHits)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(hit.fullName),
+              subtitle: Text('${hit.studentId} · ${hit.className}'),
+              onTap: () => setDialogState(() {
+                selectedStudent = hit;
+                studentQuery.text = hit.fullName;
+                studentHits = [];
+              }),
+            ),
+          OutlinedButton(
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 180)),
+                initialDate: due,
+              );
+              if (picked != null) setDialogState(() => due = picked);
+            },
+            child: Text('Due ${due.day}/${due.month}/${due.year}'),
+          ),
+        ],
+      ),
+    );
+    studentQuery.dispose();
+    if (saved != true) return;
+    if (selectedStudent == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select a student')),
+      );
+      return;
+    }
+    try {
+      await LibraryRentalService.instance.checkout(
+        copyId: selected.id,
+        studentId: selectedStudent!.studentId,
+        studentName: selectedStudent!.fullName,
+        dueDate: due,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Checked out ${selected.copyCode} to ${selectedStudent!.fullName}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _exportOverdue() async {
+    final csv = LibraryRentalService.instance.overdueCsv();
+    await YearStartSheetService.instance.shareCsv(
+      csv: csv,
+      fileName: 'library_overdue.csv',
+      subject: 'Library overdue copies',
+    );
+  }
+
+  Widget _circulationTab(BuildContext context) {
+    final copies = LibraryRentalService.instance.copies;
+    final overdue = LibraryRentalService.instance.overdue();
+    return ListView(
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              onPressed: _canManage ? () => _addCopies() : null,
+              icon: const Icon(Icons.library_add_outlined),
+              label: const Text('Add copies'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _canManage ? () => _checkoutCopy() : null,
+              icon: const Icon(Icons.outbox_outlined),
+              label: const Text('Checkout copy'),
+            ),
+            OutlinedButton.icon(
+              onPressed: overdue.isEmpty ? null : _exportOverdue,
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Export overdue CSV'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Overdue',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        if (overdue.isEmpty)
+          const ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text('No overdue copies.'),
+          )
+        else
+          for (final loan in overdue)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.warning_amber_outlined),
+              title: Text(
+                '${loan.copyCode ?? ''} · ${loan.bookTitle}'.trim(),
+              ),
+              subtitle: Text(
+                '${loan.studentName} · ${loan.studentId} · '
+                '${loan.daysOverdue()} day(s) overdue',
+              ),
+              trailing: _canManage
+                  ? TextButton(
+                      onPressed: () =>
+                          LibraryRentalService.instance.markReturned(loan.id),
+                      child: const Text('Return'),
+                    )
+                  : null,
+            ),
+        const SizedBox(height: 8),
+        Text(
+          'Copies',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        if (copies.isEmpty)
+          const ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text('No physical copies yet. Use Add copies.'),
+          )
+        else
+          for (final copy in copies)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                copy.isAvailable
+                    ? Icons.menu_book_outlined
+                    : Icons.outbox_outlined,
+              ),
+              title: Text('${copy.copyCode} · ${copy.bookTitle}'),
+              subtitle: Text(
+                copy.status == LibraryCopyStatus.checkedOut
+                    ? 'Checked out'
+                    : copy.status.name,
+              ),
+              trailing: copy.isAvailable && _canManage
+                  ? TextButton(
+                      onPressed: () => _checkoutCopy(preset: copy),
+                      child: const Text('Checkout'),
+                    )
+                  : null,
+            ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final books = _books;
@@ -493,7 +826,8 @@ class _WebLibraryPageState extends State<WebLibraryPage>
             ),
           const SizedBox(height: 8),
           Text(
-            'Publish e-Books and materials. Mark Free or Paid, and rent to students.',
+            'Publish e-Books, rent digital copies, and circulate physical copies. '
+            'Overdue stays on this desk — not a second inventory ledger.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -504,7 +838,8 @@ class _WebLibraryPageState extends State<WebLibraryPage>
             isScrollable: true,
             tabs: const [
               Tab(text: 'e-Book and Material'),
-              Tab(text: 'Rentals'),
+              Tab(text: 'Loans'),
+              Tab(text: 'Circulation'),
             ],
           ),
           const SizedBox(height: 12),
@@ -571,6 +906,11 @@ class _WebLibraryPageState extends State<WebLibraryPage>
                                   book.materialName,
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
+                                Text(
+                                  '${LibraryRentalService.instance.copyCounts(book.id).available} of '
+                                  '${LibraryRentalService.instance.copyCounts(book.id).total} copies in',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                                 const SizedBox(height: 8),
                                 Wrap(
                                   spacing: 4,
@@ -615,10 +955,17 @@ class _WebLibraryPageState extends State<WebLibraryPage>
                                   ? WebErpTheme.primary
                                   : Colors.grey,
                             ),
-                            title: Text(r.bookTitle),
+                            title: Text(
+                              [
+                                r.bookTitle,
+                                if ((r.copyCode ?? '').isNotEmpty) r.copyCode!,
+                              ].join(' · '),
+                            ),
                             subtitle: Text(
                               '${r.studentName} · ${r.studentId}\n'
                               '${r.isPaid ? 'Paid${r.price == null ? '' : ' · ${r.price!.toStringAsFixed(0)} ETB'}' : 'Free'}'
+                              '${r.dueDate == null ? '' : ' · Due ${r.dueDate!.day}/${r.dueDate!.month}/${r.dueDate!.year}'}'
+                              '${r.isOverdue() ? ' · Overdue' : ''}'
                               '${r.isActive ? '' : ' · Returned'}',
                             ),
                             isThreeLine: true,
@@ -634,6 +981,7 @@ class _WebLibraryPageState extends State<WebLibraryPage>
                           );
                         },
                       ),
+                _circulationTab(context),
               ],
             ),
           ),

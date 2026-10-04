@@ -43,6 +43,7 @@ import 'package:mayabela/web_erp/pages/web_library_page.dart';
 import 'package:mayabela/web_erp/pages/web_reports_page.dart';
 import 'package:mayabela/web_erp/pages/web_school_management_page.dart';
 import 'package:mayabela/web_erp/pages/staff_role_config_page.dart';
+import 'package:mayabela/web_erp/pages/web_sis_page.dart';
 import 'package:mayabela/web_erp/pages/web_students_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
 import 'package:mayabela/web_erp/pages/web_go_live_page.dart';
@@ -91,6 +92,8 @@ class WebErpRouter {
         );
       case 'students':
         return WebStudentsTablePage(onNavigate: onNavigate);
+      case 'sis':
+        return WebSisPage(onNavigate: onNavigate);
       case 'admissions':
         return WebAdmissionsPage(onNavigate: onNavigate);
       case 'alumni':

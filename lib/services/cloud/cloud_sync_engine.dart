@@ -259,6 +259,7 @@ abstract final class CloudSyncEngine {
     AppCollections.employeeRegistry,
     AppCollections.schoolAuditLog,
     AppCollections.libraryRentals,
+    AppCollections.libraryCopies,
     AppCollections.materialAccess,
     AppCollections.studentPasswordResets,
   ];

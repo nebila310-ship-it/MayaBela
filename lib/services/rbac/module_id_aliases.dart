@@ -14,6 +14,7 @@ const Map<String, String> kModuleIdAliases = {
   'transport_live_gps': 'transport',
   'add_driver': 'transport',
   'add_student': 'students',
+  'sis': 'students',
   'timetable': 'academic',
   'student_portal_settings': 'school',
   'student_password_resets': 'students',

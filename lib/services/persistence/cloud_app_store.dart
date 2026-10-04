@@ -409,6 +409,8 @@ class CloudAppStore {
         return 'school_audit';
       case AppCollections.libraryRentals:
         return 'library_rentals';
+      case AppCollections.libraryCopies:
+        return 'library_copies';
       case AppCollections.materialAccess:
         return 'material_access';
       case AppCollections.studentPasswordResets:
@@ -510,6 +512,8 @@ class CloudAppStore {
         await _pullSchoolAudit();
       case 'library_rentals':
         await _pullLibraryRentals();
+      case 'library_copies':
+        await _pullLibraryCopies();
       case 'material_access':
         await _pullMaterialAccess();
       case 'student_password_resets':
@@ -1064,6 +1068,7 @@ class CloudAppStore {
         _pullQaFindings(),
         _pullInstitutionRecords(),
         _pullLibraryRentals(),
+        _pullLibraryCopies(),
         _pullMaterialAccess(),
         _pullStudentPasswordResets(),
         _pullAdmissionApplications(),
@@ -1129,6 +1134,7 @@ class CloudAppStore {
         _pullQaFindings(),
         _pullInstitutionRecords(),
         _pullLibraryRentals(),
+        _pullLibraryCopies(),
         _pullMaterialAccess(),
         _pullStudentPasswordResets(),
         _pullAdmissionApplications(),
@@ -3958,6 +3964,19 @@ class CloudAppStore {
     }
     if (rentals.isNotEmpty) {
       LibraryRentalService.instance.applyPersisted(rentals);
+    }
+  }
+
+  Future<void> _pullLibraryCopies() async {
+    final rows = await _schoolRead(AppCollections.libraryCopies);
+    if (rows.isEmpty) return;
+    final copies = <LibraryCopy>[];
+    for (final map in rows) {
+      final copy = LibraryCopy.fromMap(map);
+      if (copy != null) copies.add(copy);
+    }
+    if (copies.isNotEmpty) {
+      LibraryRentalService.instance.applyPersistedCopies(copies);
     }
   }
 

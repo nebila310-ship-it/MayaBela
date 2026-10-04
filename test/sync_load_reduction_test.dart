@@ -116,6 +116,7 @@ void main() {
         AppCollections.employeeRegistry,
         AppCollections.schoolAuditLog,
         AppCollections.libraryRentals,
+        AppCollections.libraryCopies,
         AppCollections.materialAccess,
         AppCollections.studentPasswordResets,
       ]),
