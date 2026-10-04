@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/web_erp/pages/web_sis_page.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/paginated_directory.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
@@ -138,6 +139,11 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                   icon: const Icon(Icons.person_add_alt_1_outlined),
                   label: const Text('Add Student'),
                 ),
+              OutlinedButton.icon(
+                onPressed: () => widget.onNavigate?.call('sis'),
+                icon: const Icon(Icons.badge_outlined),
+                label: const Text('Student SIS'),
+              ),
               const SizedBox(width: 12),
               SizedBox(
                 width: 260,
@@ -376,6 +382,17 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                                                 onUpdated: () =>
                                                     setState(() {}),
                                               ),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Open SIS',
+                                          icon: const Icon(
+                                            Icons.folder_shared_outlined,
+                                          ),
+                                          onPressed: () {
+                                            SisRoute.pendingStudentId =
+                                                s.studentId;
+                                            widget.onNavigate?.call('sis');
+                                          },
                                         ),
                                       ],
                                     ),
