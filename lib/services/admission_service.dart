@@ -6,6 +6,7 @@ import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/persistence/admission_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/student_support_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
@@ -341,6 +342,12 @@ class AdmissionService extends ChangeNotifier {
         app.stage != AdmissionStage.offered) {
       return null;
     }
+    if (app.dateOfBirth == null) {
+      throw StateError('Date of birth is required before enroll.');
+    }
+    if (!app.documentsComplete) {
+      throw StateError('Verify admission documents before enroll.');
+    }
     if (app.enrolledStudentId != null && app.enrolledStudentId!.isNotEmpty) {
       final existing =
           StudentRegistryService.instance.lookupById(app.enrolledStudentId!);
@@ -369,7 +376,7 @@ class AdmissionService extends ChangeNotifier {
       fullName: app.fullName,
       grade: resolvedGrade.isEmpty ? (parts?.grade ?? '') : resolvedGrade,
       className: resolvedClass,
-      dateOfBirth: app.dateOfBirth ?? DateTime(2015, 1, 1),
+      dateOfBirth: app.dateOfBirth!,
       gender: app.gender,
       guardianName: app.guardianName,
       guardianPhone: app.guardianPhone,
@@ -395,6 +402,14 @@ class AdmissionService extends ChangeNotifier {
       ),
     );
     await _copyAcademicDocumentsToVault(app, student.studentId);
+    try {
+      await ParentInviteService.instance.inviteParentForEnrollment(
+        student: student,
+        guardianEmail: app.guardianEmail,
+      );
+    } catch (_) {
+      // Enrollment already succeeded; invite can be retried from Students.
+    }
     return student;
   }
 

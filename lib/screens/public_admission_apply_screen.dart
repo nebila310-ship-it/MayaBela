@@ -26,6 +26,7 @@ class _PublicAdmissionApplyScreenState
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _previous = TextEditingController();
+  DateTime? _dateOfBirth;
   bool _busy = false;
   String? _message;
   String? _reference;
@@ -55,9 +56,13 @@ class _PublicAdmissionApplyScreenState
   Future<void> _submit() async {
     final schoolId = _schoolId.text.trim().toUpperCase();
     final name = _fullName.text.trim();
-    if (schoolId.isEmpty || name.isEmpty || _guardian.text.trim().isEmpty) {
+    if (schoolId.isEmpty ||
+        name.isEmpty ||
+        _guardian.text.trim().isEmpty ||
+        _dateOfBirth == null) {
       setState(() {
-        _message = 'School ID, student name, and guardian name are required.';
+        _message =
+            'School ID, student name, date of birth, and guardian name are required.';
         _reference = null;
       });
       return;
@@ -76,6 +81,7 @@ class _PublicAdmissionApplyScreenState
         guardianPhone: _phone.text.trim(),
         guardianEmail: _email.text.trim(),
         previousSchool: _previous.text.trim(),
+        dateOfBirth: _dateOfBirth,
       );
       if (!mounted) return;
       if (result.ok) {
@@ -166,6 +172,26 @@ class _PublicAdmissionApplyScreenState
                           ),
                         ),
                         const SizedBox(height: 10),
+                        OutlinedButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime(1995),
+                              lastDate: DateTime.now(),
+                              initialDate: _dateOfBirth ?? DateTime(2016, 1, 1),
+                              helpText: 'Student date of birth',
+                            );
+                            if (picked != null) {
+                              setState(() => _dateOfBirth = picked);
+                            }
+                          },
+                          child: Text(
+                            _dateOfBirth == null
+                                ? 'Date of birth (required)'
+                                : 'DOB ${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}',
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         TextField(
                           controller: _guardian,
                           decoration: const InputDecoration(
@@ -187,7 +213,7 @@ class _PublicAdmissionApplyScreenState
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
-                            labelText: 'Guardian email (optional)',
+                            labelText: 'Guardian email (used to invite after enroll)',
                             border: OutlineInputBorder(),
                           ),
                         ),

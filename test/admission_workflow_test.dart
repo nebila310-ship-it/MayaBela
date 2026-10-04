@@ -70,6 +70,8 @@ void main() {
       gradeApplying: 'Grade 4',
       guardianName: 'Hailu',
       guardianPhone: '0911222333',
+      guardianEmail: 'hailu@example.com',
+      dateOfBirth: DateTime(2015, 4, 12),
       source: AdmissionSource.walkIn,
       schoolId: 'LIA-001',
     );
@@ -116,6 +118,7 @@ void main() {
     expect(student, isNotNull);
     expect(student!.studentId, matches(RegExp(r'^STU-\d{4}$')));
     expect(student.fullName, 'Marta Hailu');
+    expect(student.dateOfBirth, DateTime(2015, 4, 12));
     current = AdmissionService.instance.byId(created.id)!;
     expect(current.stage, AdmissionStage.enrolled);
     expect(current.enrolledStudentId, student.studentId);
@@ -137,8 +140,18 @@ void main() {
       fullName: 'Yonas Lemma',
       gradeApplying: 'Grade 5',
       schoolId: 'LIA-001',
+      dateOfBirth: DateTime(2014, 9, 1),
+      guardianEmail: 'parent.yonas@example.com',
       stage: AdmissionStage.offered,
     );
+    for (final doc in created.documents) {
+      await AdmissionService.instance.setDocument(
+        created.id,
+        doc.id,
+        submitted: true,
+        verified: true,
+      );
+    }
     final student = await AdmissionService.instance.enroll(
       created.id,
       className: 'Grade 5B',

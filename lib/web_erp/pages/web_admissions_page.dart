@@ -285,6 +285,8 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
     final previousSchool = TextEditingController();
     final lastGrade = TextEditingController();
     final priorAverage = TextEditingController();
+    final email = TextEditingController();
+    DateTime? dateOfBirth;
     var asApplication = false;
     final grades = ClassStructureService.instance.gradesForSchool();
     final campuses =
@@ -350,6 +352,27 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
                         ),
                       ],
                       const SizedBox(height: 8),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            firstDate: DateTime(1995),
+                            lastDate: DateTime.now(),
+                            initialDate: dateOfBirth ?? DateTime(2016, 1, 1),
+                            helpText: 'Student date of birth',
+                          );
+                          if (picked != null) {
+                            dateOfBirth = picked;
+                            setLocal(() {});
+                          }
+                        },
+                        child: Text(
+                          dateOfBirth == null
+                              ? 'Date of birth (required to enroll)'
+                              : 'DOB ${dateOfBirth!.day}/${dateOfBirth!.month}/${dateOfBirth!.year}',
+                        ),
+                      ),
                       TextField(
                         controller: guardian,
                         decoration:
@@ -359,6 +382,13 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
                         controller: phone,
                         decoration:
                             const InputDecoration(labelText: 'Guardian phone'),
+                      ),
+                      TextField(
+                        controller: email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Guardian email (invite on enroll)',
+                        ),
                       ),
                       TextField(
                         controller: previousSchool,
@@ -411,6 +441,8 @@ class _WebAdmissionsPageState extends State<WebAdmissionsPage> {
       campus: school.text,
       guardianName: guardian.text,
       guardianPhone: phone.text,
+      guardianEmail: email.text,
+      dateOfBirth: dateOfBirth,
       previousSchool: previousSchool.text,
       lastGradeCompleted: lastGrade.text,
       previousAverage: double.tryParse(priorAverage.text.trim()),
@@ -482,8 +514,11 @@ class _AdmissionDetail extends StatelessWidget {
               [
                 if (app.gradeApplying.isNotEmpty) 'Grade ${app.gradeApplying}',
                 if (app.campus.isNotEmpty) app.campus,
+                if (app.dateOfBirth != null)
+                  'DOB ${app.dateOfBirth!.day}/${app.dateOfBirth!.month}/${app.dateOfBirth!.year}',
                 if (app.guardianName.isNotEmpty) app.guardianName,
                 if (app.guardianPhone.isNotEmpty) app.guardianPhone,
+                if (app.guardianEmail.isNotEmpty) app.guardianEmail,
               ].join(' · '),
             ),
             if (app.enrolledStudentId != null)
@@ -808,7 +843,9 @@ class _AdmissionDetail extends StatelessWidget {
         content: Text(
           student == null
               ? 'Could not enroll. Send or accept the offer first.'
-              : 'Enrolled as ${student.studentId} in $className',
+              : app.guardianEmail.trim().isEmpty
+                  ? 'Enrolled as ${student.studentId} in $className. Add a guardian email to send the parent invite.'
+                  : 'Enrolled as ${student.studentId} in $className. Parent invite emailed to ${app.guardianEmail.trim()}.',
         ),
       ),
     );

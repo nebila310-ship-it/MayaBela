@@ -159,7 +159,7 @@ void main() {
   });
 
   group('External transfer workflow', () {
-    test('registrar creates, only owner can approve → lifecycle transferred',
+    test('registrar creates, VP or owner can approve → lifecycle transferred',
         () async {
       seedStudent();
       signIn('registrar', AuthService.roleTeacher, [StaffRoles.registrar]);
@@ -180,7 +180,7 @@ void main() {
         'not_allowed',
       );
 
-      signIn('owner', AuthService.roleAdmin, const []);
+      signIn('vp', AuthService.roleTeacher, [StaffRoles.vicePresident]);
       expect(
         await TransferWorkflowService.instance.approveTransfer(request.id),
         isNull,

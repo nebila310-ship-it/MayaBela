@@ -1,11 +1,16 @@
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+
+enum ParentInviteOutcome { sent, noEmail, failed }
 
 class ParentContactLine {
   const ParentContactLine({required this.label, required this.phone});
@@ -306,6 +311,42 @@ class ParentInviteService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Email the parent invite after enroll. No SMS.
+  Future<ParentInviteOutcome> inviteParentForEnrollment({
+    required AdminStudentRecord student,
+    required String guardianEmail,
+  }) async {
+    final email = guardianEmail.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      return ParentInviteOutcome.noEmail;
+    }
+    final message = buildMessageForRecord(student);
+    NotificationService.instance.push(
+      title: 'Parent invite — ${student.fullName}',
+      body: 'Register with Student ID ${student.studentId} and the date of birth.',
+      type: NotificationType.announcement,
+      fromRole: AuthService.roleTeacher,
+      fromName: AuthService.currentUser?.fullName ??
+          AuthService.currentUser?.username ??
+          'Admissions',
+      recipientRole: AuthService.roleParent,
+      targetStudentId: student.studentId,
+      targetClassName: student.className,
+    );
+    if (!SchoolAuthCloudService.instance.isAvailable) {
+      return ParentInviteOutcome.sent;
+    }
+    final result = await SchoolAuthCloudService.instance.inviteParentEmail(
+      schoolId: student.schoolId,
+      email: email,
+      studentId: student.studentId,
+      studentName: student.fullName,
+      dateOfBirth: student.dateOfBirth,
+      message: message,
+    );
+    return result.ok ? ParentInviteOutcome.sent : ParentInviteOutcome.failed;
   }
 
   String? validateTransportId(String? raw, {String? schoolId}) {
