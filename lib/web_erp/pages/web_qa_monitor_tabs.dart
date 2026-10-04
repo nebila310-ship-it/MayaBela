@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/qa_monitor_models.dart';
 import 'package:mayabela/services/curriculum_service.dart';
+import 'package:mayabela/services/qa_export_service.dart';
 import 'package:mayabela/services/qa_monitor_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/year_start_sheet_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
 
@@ -33,15 +35,27 @@ class _ObservationsTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (canManage)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: () => _addObservation(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New observation'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (canManage)
+                  FilledButton.icon(
+                    onPressed: () => _addObservation(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New observation'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () => YearStartSheetService.instance.shareCsv(
+                    csv: QaExportService.instance.observationsCsv(),
+                    fileName: 'qa_observations.csv',
+                    subject: 'QA observations',
+                  ),
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Export CSV'),
                 ),
-              ),
+              ],
+            ),
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
@@ -232,15 +246,27 @@ class _AuditsTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (canManage)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: () => _addAudit(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Audit a unit'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (canManage)
+                  FilledButton.icon(
+                    onPressed: () => _addAudit(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Audit a unit'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () => YearStartSheetService.instance.shareCsv(
+                    csv: QaExportService.instance.auditsCsv(),
+                    fileName: 'qa_audits.csv',
+                    subject: 'QA audits',
+                  ),
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Export CSV'),
                 ),
-              ),
+              ],
+            ),
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
@@ -350,15 +376,27 @@ class _SurveysTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (canManage)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: () => _addSurvey(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New survey'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (canManage)
+                  FilledButton.icon(
+                    onPressed: () => _addSurvey(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New survey'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () => YearStartSheetService.instance.shareCsv(
+                    csv: QaExportService.instance.surveysCsv(),
+                    fileName: 'qa_surveys.csv',
+                    subject: 'QA surveys',
+                  ),
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Export CSV'),
                 ),
-              ),
+              ],
+            ),
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
@@ -449,15 +487,27 @@ class _ResearchTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (canManage)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: () => _addResearch(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New cycle'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (canManage)
+                  FilledButton.icon(
+                    onPressed: () => _addResearch(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New cycle'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () => YearStartSheetService.instance.shareCsv(
+                    csv: QaExportService.instance.researchCsv(),
+                    fileName: 'qa_research.csv',
+                    subject: 'QA action research',
+                  ),
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Export CSV'),
                 ),
-              ),
+              ],
+            ),
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
@@ -595,6 +645,19 @@ class _AnalyticsTab extends StatelessWidget {
           'Read-only Phase F snapshot. This does not enter grades or '
           'attendance, and students/parents never see at-risk labels here.',
           style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: () => YearStartSheetService.instance.shareCsv(
+              csv: QaExportService.instance.allCsv(),
+              fileName: 'qa_desk.csv',
+              subject: 'QA desk export',
+            ),
+            icon: const Icon(Icons.download_outlined),
+            label: const Text('Export QA CSV'),
+          ),
         ),
         const SizedBox(height: 12),
         Wrap(

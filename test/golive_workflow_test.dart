@@ -166,6 +166,7 @@ void main() {
         'privacy_consents',
         'data_rights_requests',
         'school_backups',
+        'mfa_policies',
       ]),
     );
 

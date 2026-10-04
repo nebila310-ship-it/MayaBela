@@ -27,9 +27,9 @@ abstract final class TrainingManuals {
           body:
               'Open MayaBela and choose Administration Staff. Enter the School ID '
               'your office issued, then your username and password.\n\n'
-              'Authenticator (MFA) is optional. Enroll it from Settings after '
-              'the first successful sign-in. Admin is never forced to enroll on '
-              'first boot.\n\n'
+              'Authenticator (MFA) is required for school Admin. Enroll it '
+              'from Settings or Go-live after the first successful sign-in. '
+              'Other roles stay opt-in.\n\n'
               'If the live site looks old, hard-refresh with Ctrl+Shift+R.',
         ),
         const TrainingArticle(

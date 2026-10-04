@@ -4,6 +4,8 @@ import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
 import 'package:mayabela/models/golive_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/app_collections.dart';
+import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/persistence/golive_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -13,16 +15,20 @@ import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/totp.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
-/// Phase J go-live desk: opt-in MFA, privacy rights, school backups, Excel import.
-/// Never writes grades, exams, or G–I collections. Never force-enrolls Admin.
+/// Phase J go-live desk: MFA (required for school Admin), privacy rights,
+/// school backups, Excel import. Never writes grades or exams.
+/// Does not auto-enroll anyone — leadership must finish authenticator setup.
 class GoliveService extends ChangeNotifier {
   GoliveService._();
   static final instance = GoliveService._();
+
+  static const leftoverCollection = AppCollections.mfaPolicies;
 
   final List<MfaEnrollment> _mfa = [];
   final List<PrivacyConsent> _consents = [];
   final List<DataRightsRequest> _rights = [];
   final List<SchoolBackupRecord> _backups = [];
+  final List<MfaLeadershipPolicy> _policies = [];
   bool _loaded = false;
 
   @visibleForTesting
@@ -31,6 +37,7 @@ class GoliveService extends ChangeNotifier {
     instance._consents.clear();
     instance._rights.clear();
     instance._backups.clear();
+    instance._policies.clear();
     instance._loaded = true;
   }
 
@@ -112,6 +119,68 @@ class GoliveService extends ChangeNotifier {
   int mfaEnrolledCount([String? schoolId]) =>
       _schoolFilter(_mfa, schoolId).where((row) => row.enabled).length;
 
+  static bool isLeadershipRole(String? roleKey) =>
+      roleKey == AuthService.roleAdmin;
+
+  bool isLeadershipUser([RegisteredUser? user]) {
+    final row = user ?? AuthService.currentUser;
+    return isLeadershipRole(row?.roleKey);
+  }
+
+  /// Default is required. A stored policy can turn it off for a school.
+  bool mfaRequiredForLeadership([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).toUpperCase();
+    for (final row in _policies) {
+      if (sid.isEmpty || row.schoolId == sid) {
+        return row.requiredForLeadership;
+      }
+    }
+    return true;
+  }
+
+  bool mustEnroll({String? username, String? roleKey, String? schoolId}) {
+    final uname = (username ?? _username).trim();
+    if (uname.isEmpty) return false;
+    if (!mfaRequiredForLeadership(schoolId)) return false;
+    final role = roleKey ?? AuthService.currentUser?.roleKey;
+    if (!isLeadershipRole(role)) return false;
+    return !isEnabledFor(uname, schoolId: schoolId);
+  }
+
+  bool canDisableEnrollment(String username, {String? schoolId}) {
+    if (!mfaRequiredForLeadership(schoolId)) return true;
+    final self = username.trim().toLowerCase() == _username.trim().toLowerCase();
+    if (self && isLeadershipUser()) return false;
+    final role = AuthService.currentUser?.roleKey;
+    if (self) return !isLeadershipRole(role);
+    return canManageDesk;
+  }
+
+  Future<MfaLeadershipPolicy> setMfaRequiredForLeadership(
+    bool required, {
+    String? schoolId,
+  }) async {
+    if (!canManageDesk) {
+      throw StateError('Only the go-live desk can change this policy.');
+    }
+    final sid = (schoolId ?? _schoolId).toUpperCase();
+    if (sid.isEmpty) {
+      throw StateError('Sign in to a school before changing MFA policy.');
+    }
+    final existing = _policyFor(sid);
+    final row = MfaLeadershipPolicy(
+      id: existing?.id ?? 'MFA-POL-$sid',
+      schoolId: sid,
+      requiredForLeadership: required,
+      updatedAt: DateTime.now().toUtc(),
+      updatedBy: _username,
+    );
+    _upsertPolicy(row);
+    await _persist();
+    await _persistPolicyLeftover(row);
+    return row;
+  }
+
   List<PrivacyConsent> consentsForSchool([String? schoolId]) {
     var list = _schoolFilter(_consents, schoolId);
     if (_isPublicReader) {
@@ -175,10 +244,12 @@ class GoliveService extends ChangeNotifier {
       snapshotDue: snapshotDue(),
       mfaEnrolled: mfaEnrolledCount(),
       openDataRights: openDataRightsCount(),
+      mfaRequired: mfaRequiredForLeadership(),
+      currentUserMustEnroll: mustEnroll(),
     );
   }
 
-  /// Starts opt-in MFA. Returns the secret and recovery codes once.
+  /// Starts MFA enrollment. Returns the secret and recovery codes once.
   /// Does not enable until [confirmEnrollment] sees a valid TOTP.
   Future<({MfaEnrollment enrollment, List<String> recoveryCodes})>
       startEnrollment({String? username, String? schoolId}) async {
@@ -236,6 +307,11 @@ class GoliveService extends ChangeNotifier {
     final self = username.trim().toLowerCase() == _username.trim().toLowerCase();
     if (!self && !canManageDesk) {
       throw StateError('You can only disable your own authenticator.');
+    }
+    if (!canDisableEnrollment(username)) {
+      throw StateError(
+        'Authenticator is required for school leadership and cannot be turned off.',
+      );
     }
     if (self && row.enabled) {
       final totpOk = code != null &&
@@ -589,6 +665,7 @@ class GoliveService extends ChangeNotifier {
     List<PrivacyConsent>? consents,
     List<DataRightsRequest>? rights,
     List<SchoolBackupRecord>? backups,
+    List<MfaLeadershipPolicy>? policies,
     bool merge = false,
   }) {
     void mergeList<T>(
@@ -628,6 +705,7 @@ class GoliveService extends ChangeNotifier {
         (row) => row.id,
       );
     }
+    if (policies != null) mergeList(_policies, policies, (row) => row.id);
     _loaded = true;
     notifyListeners();
   }
@@ -650,6 +728,9 @@ class GoliveService extends ChangeNotifier {
 
   List<Map<String, dynamic>> backupMaps() =>
       _backups.map((row) => row.toMap()).toList();
+
+  List<Map<String, dynamic>> policyMaps() =>
+      _policies.map((row) => row.toMap()).toList();
 
   MfaEnrollment? _findMfa(String username, [String? schoolId]) {
     final key = username.trim().toLowerCase();
@@ -690,6 +771,7 @@ class GoliveService extends ChangeNotifier {
         PrivacyConsent r => r.schoolId,
         DataRightsRequest r => r.schoolId,
         SchoolBackupRecord r => r.schoolId,
+        MfaLeadershipPolicy r => r.schoolId,
         _ => '',
       };
       return rowSchool == sid;
@@ -705,6 +787,37 @@ class GoliveService extends ChangeNotifier {
   void _requireImport() {
     if (!canImportStudents) {
       throw StateError('Only registrars and owners can import students.');
+    }
+  }
+
+  MfaLeadershipPolicy? _policyFor(String schoolId) {
+    final sid = schoolId.toUpperCase();
+    for (final row in _policies) {
+      if (row.schoolId == sid) return row;
+    }
+    return null;
+  }
+
+  void _upsertPolicy(MfaLeadershipPolicy row) {
+    final idx = _policies.indexWhere((item) => item.id == row.id);
+    if (idx >= 0) {
+      _policies[idx] = row;
+    } else {
+      _policies.add(row);
+    }
+  }
+
+  Future<void> _persistPolicyLeftover(MfaLeadershipPolicy row) async {
+    final crud = DocumentStore();
+    if (!crud.available) return;
+    try {
+      await crud.createOrUpdate(
+        collection: leftoverCollection,
+        docId: row.id,
+        data: row.toMap(),
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('GoliveService policy persist: $e');
     }
   }
 

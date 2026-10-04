@@ -63,10 +63,10 @@ class _WebGoLivePageState extends State<WebGoLivePage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Opt-in authenticator, consent and data-rights tooling, school '
-                'snapshots, Excel → student import, and short training. This '
-                'does not change markbook or exams, and it does not claim 99.5% '
-                'uptime.',
+                'Authenticator is required for school Admin. Consent, '
+                'data-rights, school snapshots, Excel → student import, and '
+                'short training stay on this desk. This does not change '
+                'markbook or exams, and it does not claim 99.5% uptime.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -126,7 +126,13 @@ class _OverviewTab extends StatelessWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-            _stat(context, 'MFA enrolled', '${cap.mfaEnrolled}'),
+            _stat(
+              context,
+              'MFA enrolled',
+              cap.mfaRequired
+                  ? '${cap.mfaEnrolled} · required'
+                  : '${cap.mfaEnrolled} · optional',
+            ),
             _stat(context, 'Open data-rights', '${cap.openDataRights}'),
             _stat(
               context,
@@ -158,7 +164,25 @@ class _OverviewTab extends StatelessWidget {
           label: 'Daily snapshot reminder (last 24 hours)',
           ok: !cap.snapshotDue,
         ),
-        const _CheckRow(label: 'Authenticator available (opt-in)', ok: true),
+        _CheckRow(
+          label: cap.mfaRequired
+              ? 'Authenticator required for school Admin'
+              : 'Authenticator available (optional)',
+          ok: !cap.currentUserMustEnroll,
+        ),
+        if (canManage)
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Require authenticator for school Admin'),
+            subtitle: const Text(
+              'Leadership cannot turn MFA off while this is on. '
+              'Other roles stay opt-in.',
+            ),
+            value: cap.mfaRequired,
+            onChanged: (v) async {
+              await GoliveService.instance.setMfaRequiredForLeadership(v);
+            },
+          ),
         const MailPreflightCard(compact: true),
         const _CheckRow(
           label:

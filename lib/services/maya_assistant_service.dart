@@ -1,7 +1,91 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
+import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/qa_findings_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
+
+/// Counts-only snapshot so Maya can answer live desk questions without PII.
+class MayaLiveSnapshot {
+  const MayaLiveSnapshot({
+    required this.schoolId,
+    required this.students,
+    required this.teachers,
+    required this.openFindings,
+    required this.overdueFindings,
+    required this.mfaEnrolled,
+    required this.mfaRequired,
+    required this.cloudReady,
+    required this.storageReady,
+    this.lastBackupAt,
+  });
+
+  final String schoolId;
+  final int students;
+  final int teachers;
+  final int openFindings;
+  final int overdueFindings;
+  final int mfaEnrolled;
+  final bool mfaRequired;
+  final bool cloudReady;
+  final bool storageReady;
+  final DateTime? lastBackupAt;
+
+  Map<String, dynamic> toMap() => {
+        'schoolId': schoolId,
+        'students': students,
+        'teachers': teachers,
+        'openFindings': openFindings,
+        'overdueFindings': overdueFindings,
+        'mfaEnrolled': mfaEnrolled,
+        'mfaRequired': mfaRequired,
+        'cloudReady': cloudReady,
+        'storageReady': storageReady,
+        'lastBackupAt': lastBackupAt?.toIso8601String(),
+      };
+
+  String get summary {
+    final backup = lastBackupAt == null
+        ? 'none yet'
+        : lastBackupAt!.toLocal().toString().split('.').first;
+    return 'Live school snapshot: $students students, $teachers staff, '
+        '$openFindings open QA findings ($overdueFindings overdue), '
+        '$mfaEnrolled MFA enrolled (${mfaRequired ? 'required' : 'optional'}), '
+        'cloud ${cloudReady ? 'ready' : 'offline'}, '
+        'storage ${storageReady ? 'ready' : 'check'}, last backup $backup.';
+  }
+
+  static MayaLiveSnapshot capture([String? schoolId]) {
+    final sid = (schoolId ??
+            AuthService.activeSchoolId ??
+            AuthService.currentUser?.schoolId ??
+            '')
+        .trim()
+        .toUpperCase();
+    final qa = QaFindingsService.instance.metricsForSchool(sid);
+    final cap = GoliveService.instance.capacitySnapshot();
+    final teachers = TeacherRegistryService.instance
+        .teachersForSchool(sid)
+        .length;
+    return MayaLiveSnapshot(
+      schoolId: sid,
+      students: StudentRegistryService.instance.studentsForSchool(sid).length,
+      teachers: teachers,
+      openFindings: qa.open,
+      overdueFindings: qa.overdue,
+      mfaEnrolled: cap.mfaEnrolled,
+      mfaRequired: cap.mfaRequired,
+      cloudReady: cap.cloudReady,
+      storageReady: SupabaseStorageBootstrap.lastError == null &&
+          !SupabaseStorageBootstrap.deferred &&
+          cap.cloudReady,
+      lastBackupAt: cap.lastBackupAt,
+    );
+  }
+}
 
 class MayaChatMessage {
   const MayaChatMessage({
@@ -50,9 +134,9 @@ class MayaAssistantService {
   static List<String> suggestionsForRole(String? roleKey) {
     return switch (roleKey) {
       AuthService.roleAdmin => const [
+          'What is the current school status?',
           'How do I approve a parent link?',
           'Where do I add a teacher?',
-          'How do grade approvals work?',
         ],
       AuthService.roleTeacher => const [
           'How do I enter grades?',
@@ -102,20 +186,27 @@ class MayaAssistantService {
       return 'Send a short question and I will help.';
     }
 
+    final live = MayaLiveSnapshot.capture();
     final cloud = await _tryCloudReply(
       roleKey: roleKey,
       userMessage: trimmed,
       history: history,
+      live: live,
     );
     if (cloud != null && cloud.trim().isNotEmpty) return cloud.trim();
 
-    return _localReply(roleKey: roleKey, userMessage: trimmed);
+    return _localReply(
+      roleKey: roleKey,
+      userMessage: trimmed,
+      live: live,
+    );
   }
 
   Future<String?> _tryCloudReply({
     required String roleKey,
     required String userMessage,
     required List<MayaChatMessage> history,
+    required MayaLiveSnapshot live,
   }) async {
     if (!isCloudAvailable) return null;
     try {
@@ -124,6 +215,7 @@ class MayaAssistantService {
         body: {
           'roleKey': roleKey,
           'message': userMessage,
+          'liveContext': live.toMap(),
           'history': history
               .take(12)
               .map(
@@ -152,8 +244,13 @@ class MayaAssistantService {
   String _localReply({
     required String roleKey,
     required String userMessage,
+    MayaLiveSnapshot? live,
   }) {
     final q = userMessage.toLowerCase();
+    final snap = live ?? MayaLiveSnapshot.capture();
+    if (_wantsLive(q)) {
+      return snap.summary;
+    }
 
     if (_matches(q, ['hello', 'hi', 'hey', 'selam', 'ሰላም'])) {
       return welcomeMessage(roleKey);
@@ -333,6 +430,23 @@ class MayaAssistantService {
     return 'I can help with common ${titleForRole(roleKey)} '
         'tasks in MaJo e-School Bridge. Ask about a feature by name '
         '(for example grades, attendance, bus, or settings), or tap a suggestion.';
+  }
+
+  bool _wantsLive(String q) {
+    return _matches(q, [
+      'how many',
+      'live snapshot',
+      'live numbers',
+      'current status',
+      'school status',
+      'open finding',
+      'overdue finding',
+      'mfa enrolled',
+      'last backup',
+      'how many student',
+      'how many teacher',
+      'how many staff',
+    ]);
   }
 
   bool _matches(String q, List<String> keys) {

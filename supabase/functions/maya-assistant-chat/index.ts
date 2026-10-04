@@ -46,11 +46,32 @@ Deno.serve(async (req) => {
     }
     contents.push({ role: "user", parts: [{ text: message }] });
 
+    const live = body?.liveContext && typeof body.liveContext === "object"
+      ? body.liveContext as Record<string, unknown>
+      : null;
+    const liveLine = live
+      ? [
+        "Live school snapshot (counts only, no names):",
+        `students=${live.students ?? 0}`,
+        `teachers=${live.teachers ?? 0}`,
+        `openFindings=${live.openFindings ?? 0}`,
+        `overdueFindings=${live.overdueFindings ?? 0}`,
+        `mfaEnrolled=${live.mfaEnrolled ?? 0}`,
+        `mfaRequired=${live.mfaRequired === true ? "yes" : "no"}`,
+        `cloudReady=${live.cloudReady === true ? "yes" : "no"}`,
+        `storageReady=${live.storageReady === true ? "yes" : "no"}`,
+        `lastBackupAt=${live.lastBackupAt || "none"}`,
+        "If the user asks about current school status, use these numbers.",
+        "Do not invent other counts.",
+      ].join(" ")
+      : "No live snapshot was provided. Do not invent school counts.";
+
     const system = [
       `You are ${title} inside MayaBela school ERP.`,
       "Be concise, practical, and safe. Help with in-app workflows only.",
       "Do not invent grades, fees, medical data, or student PII.",
       `User portal role: ${roleKey}.`,
+      liveLine,
     ].join(" ");
 
     const url =
