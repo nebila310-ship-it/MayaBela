@@ -170,6 +170,38 @@ class PlatformMailCloudService {
 
   Future<PlatformMailStatus> status() => _invoke({'action': 'status'});
 
+  /// School desks: whether password-reset email is configured. No owner PIN.
+  Future<PlatformMailStatus> publicStatus() async {
+    try {
+      if (!SupabaseBootstrap.isInitialized) {
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      }
+      if (!SupabaseBootstrap.isInitialized) {
+        return PlatformMailStatus.cloudRequired;
+      }
+      final res = await SupabaseBootstrap.client.functions
+          .invoke(
+            'platform-mail-config',
+            body: {'action': 'public-status'},
+          )
+          .timeout(const Duration(seconds: 15));
+      final data = res.data;
+      if (data is Map) {
+        return PlatformMailStatus.fromMap(data);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PlatformMailCloudService publicStatus: $e');
+      }
+    }
+    return const PlatformMailStatus(
+      ok: false,
+      configured: false,
+      errorCode: 'unavailable',
+      errorMessage: 'Could not check password-reset email.',
+    );
+  }
+
   Future<PlatformMailStatus> save({
     required String from,
     String? resendApiKey,

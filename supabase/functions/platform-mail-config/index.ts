@@ -29,9 +29,22 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sb = adminClient();
+    const action = trim(body?.action || "status").toLowerCase();
+
+    // School go-live / health: configured flag only, no owner PIN.
+    if (action === "public-status") {
+      const existing = await loadMailSecrets(sb);
+      const pub = mailStatusPublic(existing);
+      return jsonResponse({
+        ok: true,
+        configured: pub.configured,
+        hasResend: pub.hasResend,
+        hasSmtp: pub.hasSmtp,
+      });
+    }
+
     await authorizePlatformOwner(sb, req, body?.ownerPin);
 
-    const action = trim(body?.action || "status").toLowerCase();
     const existing = await loadMailSecrets(sb);
 
     if (action === "status") {

@@ -37,6 +37,7 @@ npx supabase functions deploy school-upsert-registry
 npx supabase functions deploy school-delete-account
 npx supabase functions deploy school-register-parent
 npx supabase functions deploy school-request-password-reset
+npx supabase functions deploy school-request-student-password-reset
 npx supabase functions deploy school-confirm-password-reset
 npx supabase functions deploy school-refresh-claims
 npx supabase functions deploy platform-owner-pin

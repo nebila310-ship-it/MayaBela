@@ -130,6 +130,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
         SchoolContentSyncService.instance,
         ConversationRealtimeSync.instance,
         InstitutionService.instance,
+        StudentPasswordResetStore.instance,
       ]),
       builder: (context, _) {
         final stats = _buildStats();

@@ -22,7 +22,23 @@ class _AdminStudentPasswordResetScreenState
   @override
   void initState() {
     super.initState();
+    StudentPasswordResetStore.instance.addListener(_onStore);
     _refresh();
+  }
+
+  @override
+  void dispose() {
+    StudentPasswordResetStore.instance.removeListener(_onStore);
+    super.dispose();
+  }
+
+  void _onStore() {
+    final schoolId = AuthService.activeSchoolId;
+    if (schoolId == null || !mounted) return;
+    setState(() {
+      _requests = StudentPasswordResetStore.instance.pendingForSchool(schoolId);
+      _loading = false;
+    });
   }
 
   Future<void> _refresh() async {

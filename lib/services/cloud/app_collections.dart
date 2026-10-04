@@ -8,6 +8,9 @@ abstract final class AppCollections {
   static const teacherRegistry = 'teacher_registry';
   static const driverRegistry = 'driver_registry';
   static const employeeRegistry = 'employee_registry';
+  static const libraryRentals = 'library_rentals';
+  static const materialAccess = 'material_access';
+  static const studentPasswordResets = 'student_password_resets';
 
   // Teacher / parent features
   static const gradeReports = 'grade_reports';

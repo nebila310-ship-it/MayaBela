@@ -119,4 +119,17 @@ class MaterialAccessService extends ChangeNotifier {
     _loaded = false;
     notifyListeners();
   }
+
+  void applyPersisted(List<Map<String, dynamic>> rows, {bool merge = true}) {
+    if (!merge) _grants.clear();
+    for (final row in rows) {
+      final materialId = (row['materialId'] as String?)?.trim() ?? '';
+      final studentId =
+          (row['studentId'] as String?)?.trim().toUpperCase() ?? '';
+      if (materialId.isEmpty || studentId.isEmpty) continue;
+      _grants.putIfAbsent(materialId, () => <String>{}).add(studentId);
+    }
+    _loaded = true;
+    notifyListeners();
+  }
 }
