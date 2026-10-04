@@ -169,8 +169,8 @@ void main() {
       expect(ModuleAccess.canManage('calendar'), isFalse);
       expect(ModuleAccess.canManage('events'), isFalse);
       expect(ModuleAccess.canView('homework'), isTrue);
-      expect(ModuleAccess.canManage('homework'), isFalse);
-      expect(ModuleAccess.isReadOnly('homework'), isTrue);
+      expect(ModuleAccess.canManage('homework'), isTrue);
+      expect(ModuleAccess.isReadOnly('homework'), isFalse);
       // Reports opened for VP oversight (export read-only).
       expect(ModuleAccess.canView('reports'), isTrue);
       expect(ModuleAccess.canManage('reports'), isFalse);
@@ -260,7 +260,7 @@ void main() {
       expect(ModuleAccess.canManage('parents'), isTrue);
       expect(ModuleAccess.canManage('examinations'), isTrue);
       expect(ModuleAccess.canView('homework'), isTrue);
-      expect(ModuleAccess.canManage('homework'), isFalse);
+      expect(ModuleAccess.canManage('homework'), isTrue);
       expect(ModuleAccess.canManage('grade_approvals'), isTrue);
       expect(ModuleAccess.canView('support'), isTrue);
       // Child-protection files are not a classroom or department-head desk.

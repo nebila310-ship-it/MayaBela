@@ -37,6 +37,7 @@ import 'package:mayabela/services/persistence/school_content_persistence_service
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/models/markbook.dart';
+import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/grade_audit_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/notification_service.dart';
@@ -3478,10 +3479,15 @@ class SchoolDataService {
         postedAt: persisted.postedAt,
         subjectId: persisted.subjectId,
         teachingSlotId: persisted.teachingSlotId,
+        dueDate: persisted.dueDate,
         attachmentPaths: List<String>.from(persisted.attachmentPaths),
         studentWorksheetPaths: persisted.studentWorksheetPaths.map(
           (key, value) => MapEntry(key, List<String>.from(value)),
         ),
+        studentScores: Map<String, double>.from(persisted.studentScores),
+        teacherComments: Map<String, String>.from(persisted.teacherComments),
+        dueReminderSent: persisted.dueReminderSent,
+        overdueReminderSent: persisted.overdueReminderSent,
       );
 
       final index = _homework.indexWhere((item) => item.id == normalized.id);
@@ -3554,6 +3560,10 @@ class SchoolDataService {
       if (clearDueDate) {
         item.dueDate = null;
       } else if (dueDate != null) {
+        if (item.dueDate != dueDate) {
+          item.dueReminderSent = false;
+          item.overdueReminderSent = false;
+        }
         item.dueDate = dueDate;
       }
       if (attachmentPaths != null) {
@@ -3566,6 +3576,176 @@ class SchoolDataService {
     } catch (_) {
       return false;
     }
+  }
+
+  HomeworkItem? homeworkById(String id) {
+    try {
+      return _homework.firstWhere((hw) => hw.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool recordHomeworkScore({
+    required String homeworkId,
+    required String studentId,
+    required double score,
+  }) {
+    final item = homeworkById(homeworkId);
+    if (item == null) return false;
+    item.studentScores[studentId.trim().toUpperCase()] =
+        score.clamp(0, 100).toDouble();
+    _persistHomework();
+    return true;
+  }
+
+  bool commentOnHomework({
+    required String homeworkId,
+    required String studentId,
+    required String comment,
+  }) {
+    final item = homeworkById(homeworkId);
+    if (item == null) return false;
+    final key = studentId.trim().toUpperCase();
+    final text = comment.trim();
+    if (text.isEmpty) {
+      item.teacherComments.remove(key);
+    } else {
+      item.teacherComments[key] = text;
+      final student = StudentRegistryService.instance.lookupAnyById(key);
+      NotificationService.instance.push(
+        title: 'Homework comment — ${item.subject}',
+        body: '${item.teacherName}: $text',
+        type: NotificationType.homework,
+        fromRole: AuthService.roleTeacher,
+        fromName: item.teacherName,
+        recipientRole: AuthService.roleParent,
+        targetStudentId: key,
+        targetClassName: item.className,
+      );
+      if (student != null) {
+        NotificationService.instance.push(
+          title: 'Homework comment — ${item.subject}',
+          body: '${item.teacherName}: $text',
+          type: NotificationType.homework,
+          fromRole: AuthService.roleTeacher,
+          fromName: item.teacherName,
+          recipientRole: AuthService.roleStudent,
+          targetStudentId: key,
+          targetClassName: item.className,
+        );
+      }
+    }
+    _persistHomework();
+    return true;
+  }
+
+  bool pushHomeworkScoreToMarkbook({
+    required String homeworkId,
+    required String studentId,
+    String? teacherId,
+  }) {
+    final item = homeworkById(homeworkId);
+    if (item == null) return false;
+    final key = studentId.trim().toUpperCase();
+    final score = item.studentScores[key];
+    if (score == null) return false;
+    final student = StudentRegistryService.instance.lookupAnyById(key);
+    final studentName = student?.fullName ?? key;
+    final data = this;
+    data.addSubjectToGradeReport(
+      studentName: studentName,
+      className: item.className,
+      subject: item.subject,
+      teacherId: teacherId ?? item.teacherId,
+    );
+    SubjectGrade? grade;
+    final report = data.getGradeReportForStudent(studentName);
+    if (report != null) {
+      for (final row in report.subjects) {
+        if (row.subject == item.subject) {
+          grade = row;
+          break;
+        }
+      }
+    }
+    if (grade == null || !grade.canTeacherEdit) return false;
+    final marks = MarkbookService.instance.marksForSubject(grade);
+    const category = 'homework';
+    final next = [
+      for (final mark in marks)
+        AssessmentMark(
+          categoryId: mark.categoryId,
+          label: mark.label,
+          weightPercent: mark.weightPercent,
+          score: mark.categoryId == category ? score : mark.score,
+          maxScore: mark.maxScore,
+          enteredAt: mark.categoryId == category ? DateTime.now() : mark.enteredAt,
+        ),
+    ];
+    if (!next.any((m) => m.categoryId == category)) {
+      next.add(
+        AssessmentMark(
+          categoryId: category,
+          label: 'Homework',
+          weightPercent: 10,
+          score: score,
+          enteredAt: DateTime.now(),
+        ),
+      );
+    }
+    return data.updateSubjectGrade(
+      studentName: studentName,
+      className: item.className,
+      subject: item.subject,
+      score: MarkbookMath.weightedPercentage(
+        next,
+        missingCountsAsZero:
+            MarkbookService.instance.settingsForSchool().missingCountsAsZero,
+      ),
+      assessments: next,
+      enteredByTeacherId: teacherId ?? item.teacherId,
+    );
+  }
+
+  int publishHomeworkReminders({DateTime? now}) {
+    final stamp = now ?? DateTime.now();
+    final today = DateTime(stamp.year, stamp.month, stamp.day);
+    var count = 0;
+    for (final item in _homework) {
+      final due = item.dueDate;
+      if (due == null) continue;
+      final dueDay = DateTime(due.year, due.month, due.day);
+      final days = dueDay.difference(today).inDays;
+      if (!item.dueReminderSent && days >= 0 && days <= 1) {
+        _notifyParentsInClass(
+          className: item.className,
+          title: days == 0
+              ? 'Homework due today — ${item.subject}'
+              : 'Homework due tomorrow — ${item.subject}',
+          body: '${item.teacherName}: ${item.description}',
+          type: NotificationType.homework,
+          fromRole: AuthService.roleTeacher,
+          fromName: item.teacherName,
+        );
+        item.dueReminderSent = true;
+        count++;
+      }
+      if (!item.overdueReminderSent && dueDay.isBefore(today)) {
+        _notifyParentsInClass(
+          className: item.className,
+          title: 'Homework overdue — ${item.subject}',
+          body: '${item.teacherName}: ${item.description}',
+          type: NotificationType.homework,
+          fromRole: AuthService.roleTeacher,
+          fromName: item.teacherName,
+        );
+        item.overdueReminderSent = true;
+        count++;
+      }
+    }
+    if (count > 0) _persistHomework();
+    return count;
   }
 
   List<String> studentWorksheetsFor({
@@ -3591,6 +3771,19 @@ class SchoolDataService {
       final key = studentId.trim().toUpperCase();
       final existing = item.studentWorksheetPaths[key] ?? <String>[];
       item.studentWorksheetPaths[key] = [...existing, ...paths];
+      final student = StudentRegistryService.instance.lookupAnyById(key);
+      NotificationService.instance.push(
+        title: 'Homework submitted — ${item.subject}',
+        body:
+            '${student?.fullName ?? key} uploaded work for ${item.className}.',
+        type: NotificationType.homework,
+        fromRole: AuthService.roleStudent,
+        fromName: student?.fullName ?? key,
+        recipientRole: AuthService.roleTeacher,
+        recipientStaffId: item.teacherId,
+        recipientUsername: item.teacherId,
+        targetClassName: item.className,
+      );
       _persistHomework();
       return true;
     } catch (_) {

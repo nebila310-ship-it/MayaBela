@@ -555,15 +555,10 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
       ),
     );
     if (confirmed != true) return;
-    await DisciplineService.instance.updateCase(
+    await DisciplineService.instance.scheduleHearing(
       c.id,
-      (cur) => cur.copyWith(
-        status: DisciplineCaseStatus.hearingScheduled,
-        hearingAt: date,
-        parentInvited: inviteParent,
-        parentNotified: inviteParent,
-      ),
-      notifyParent: inviteParent,
+      hearingAt: date,
+      inviteParent: inviteParent,
     );
   }
 

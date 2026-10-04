@@ -82,7 +82,7 @@ void main() {
       final rights = RoleModuleCatalog.defaultsForRole(vp);
       expect(rights['students'], ModuleRight.read);
       expect(rights['examinations'], ModuleRight.edit);
-      expect(rights['homework'], ModuleRight.read);
+      expect(rights['homework'], ModuleRight.edit);
       expect(rights['institution'], ModuleRight.none);
     });
 

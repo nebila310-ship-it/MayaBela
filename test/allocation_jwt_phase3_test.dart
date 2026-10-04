@@ -53,7 +53,7 @@ void main() {
     expect(AuthService.hasPermission(SchoolPermissions.manageStudents), isTrue);
     expect(ModuleAccess.canManage('quality_assurance'), isTrue);
     expect(AuthService.hasPermission(SchoolPermissions.manageQaFindings), isTrue);
-    expect(ModuleAccess.canManage('homework'), isFalse);
+    expect(ModuleAccess.canManage('homework'), isTrue);
     expect(ModuleAccess.canManage('students'), isFalse);
     expect(ModuleAccess.canManage('calendar'), isFalse);
   });

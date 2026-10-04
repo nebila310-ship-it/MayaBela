@@ -93,6 +93,9 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     if (_classOptions.isNotEmpty) {
       _selectedClass = widget.initialClass ?? _classOptions.first;
     }
+    if (!_isParent) {
+      SchoolDataService.instance.publishHomeworkReminders();
+    }
   }
 
   Future<void> _saveHomework({
@@ -346,9 +349,95 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     setState(() {});
   }
 
+  Future<void> _gradeStudent(HomeworkItem item, String studentId) async {
+    final scoreCtrl = TextEditingController(
+      text: item.studentScores[studentId]?.toStringAsFixed(0) ?? '',
+    );
+    final commentCtrl = TextEditingController(
+      text: item.teacherComments[studentId] ?? '',
+    );
+    final student = StudentRegistryService.instance.lookupAnyById(studentId);
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(student?.fullName ?? studentId),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: scoreCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Homework score (0–100)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: commentCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Teacher comment',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            child: const Text('Save'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'push'),
+            child: const Text('Save & push to markbook'),
+          ),
+        ],
+      ),
+    );
+    if (saved == null) return;
+    final score = double.tryParse(scoreCtrl.text.trim());
+    if (score != null) {
+      _data.recordHomeworkScore(
+        homeworkId: item.id,
+        studentId: studentId,
+        score: score,
+      );
+    }
+    if (commentCtrl.text.trim().isNotEmpty ||
+        item.teacherComments.containsKey(studentId)) {
+      _data.commentOnHomework(
+        homeworkId: item.id,
+        studentId: studentId,
+        comment: commentCtrl.text,
+      );
+    }
+    if (saved == 'push') {
+      _data.pushHomeworkScoreToMarkbook(
+        homeworkId: item.id,
+        studentId: studentId,
+      );
+    }
+    await HomeworkPersistenceService.instance.saveFromService();
+    if (mounted) setState(() {});
+  }
+
   Widget _teacherSubmissionInbox(HomeworkItem item) {
-    final count = item.submittedStudentCount;
-    if (count == 0) {
+    final roster = StudentRegistryService.instance.studentsForClass(
+      item.className,
+    );
+    final ids = <String>{
+      ...roster.map((s) => s.studentId.trim().toUpperCase()),
+      ...item.studentWorksheetPaths.keys.map((k) => k.trim().toUpperCase()),
+      ...item.studentScores.keys.map((k) => k.trim().toUpperCase()),
+      ...item.teacherComments.keys.map((k) => k.trim().toUpperCase()),
+    };
+    if (ids.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Text(
@@ -357,26 +446,44 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         ),
       );
     }
-    final rows = item.studentWorksheetPaths.entries
-        .where((e) => e.value.isNotEmpty)
-        .toList();
+    final count = item.submittedStudentCount;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$count student submission${count == 1 ? '' : 's'}',
+            count == 0
+                ? 'Score homework'
+                : '$count student submission${count == 1 ? '' : 's'}',
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
-          for (final entry in rows)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${StudentRegistryService.instance.lookupById(entry.key)?.fullName ?? entry.key}'
-                ' · ${entry.value.length} file${entry.value.length == 1 ? '' : 's'}',
-                style: const TextStyle(fontSize: 13),
-              ),
+          for (final studentId in ids)
+            Builder(
+              builder: (context) {
+                final student =
+                    StudentRegistryService.instance.lookupAnyById(studentId);
+                final files = item.worksheetsForStudent(studentId);
+                final score = item.studentScores[studentId];
+                final comment = item.teacherComments[studentId];
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(student?.fullName ?? studentId),
+                  subtitle: Text(
+                    [
+                      if (score != null) 'Score ${score.toStringAsFixed(0)}',
+                      if ((comment ?? '').isNotEmpty) comment,
+                      if (files.isNotEmpty)
+                        '${files.length} file${files.length == 1 ? '' : 's'}',
+                    ].join(' · '),
+                  ),
+                  trailing: TextButton(
+                    onPressed: () => _gradeStudent(item, studentId),
+                    child: const Text('Score'),
+                  ),
+                );
+              },
             ),
         ],
       ),

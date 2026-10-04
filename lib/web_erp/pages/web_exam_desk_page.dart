@@ -344,6 +344,8 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
 
   Widget _scoringTab(bool narrow) {
     final papers = _exams.papersForSchool(_schoolId);
+    final selected =
+        _scorePaperId == null ? null : _exams.paperById(_scorePaperId!);
     var attempts = _scorePaperId == null
         ? _exams.attempts
             .where((a) => _schoolId.isEmpty || a.schoolId == _schoolId.toUpperCase())
@@ -401,8 +403,14 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
           ],
         ),
         const SizedBox(height: 14),
-        if (attempts.isEmpty)
-          _emptyCard('No attempts yet. Students sit a published paper, or a teacher can start one from the mobile exam tile.')
+        if (selected != null && !selected.isOnlineSit) ...[
+          _offlineRoster(selected),
+          const SizedBox(height: 8),
+        ] else if (attempts.isEmpty)
+          _emptyCard(
+            'No attempts yet. Students sit a published online paper, or pick '
+            'an offline / lockdown paper to enter percents for the class roster.',
+          )
         else
           for (final attempt in attempts)
             _card(
@@ -457,6 +465,116 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
             ),
       ],
     );
+  }
+
+  Widget _offlineRoster(ExamPaper paper) {
+    final students = StudentRegistryService.instance.studentsForClass(
+      paper.className,
+      schoolId: _schoolId.isEmpty ? null : _schoolId,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Offline / lockdown paper — enter a percent for each student. '
+          'Students do not sit this in the portal.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 10),
+        if (students.isEmpty)
+          _emptyCard(
+            'No students listed for ${paper.className}. Add the class roster, '
+            'then enter percents here.',
+          )
+        else
+          for (final student in students)
+            _card(
+              child: ListTile(
+                leading: StudentPhotoAvatar(
+                  studentId: student.studentId,
+                  name: student.fullName,
+                  radius: 20,
+                ),
+                title: Text(student.fullName),
+                subtitle: Text(_offlineScoreLabel(paper, student)),
+                trailing: _canManage
+                    ? TextButton(
+                        onPressed: () => _enterOfflinePercent(paper, student),
+                        child: const Text('Enter %'),
+                      )
+                    : null,
+              ),
+            ),
+      ],
+    );
+  }
+
+  String _offlineScoreLabel(ExamPaper paper, AdminStudentRecord student) {
+    final attempt = _exams.attemptFor(
+      paperId: paper.id,
+      studentName: student.fullName,
+    );
+    if (attempt == null || attempt.status != ExamAttemptStatus.scored) {
+      return 'No score yet';
+    }
+    return '${attempt.percent.toStringAsFixed(0)}%'
+        '${attempt.pushedToMarkbook ? ' · in markbook' : ''}';
+  }
+
+  Future<void> _enterOfflinePercent(
+    ExamPaper paper,
+    AdminStudentRecord student,
+  ) async {
+    final existing = _exams.attemptFor(
+      paperId: paper.id,
+      studentName: student.fullName,
+    );
+    final ctrl = TextEditingController(
+      text: existing == null || existing.status != ExamAttemptStatus.scored
+          ? ''
+          : existing.percent.toStringAsFixed(0),
+    );
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(student.fullName),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Percent (0–100)'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    final percent = double.tryParse(ctrl.text.trim());
+    if (percent == null) return;
+    try {
+      await _exams.recordStaffOfflineResult(
+        paperId: paper.id,
+        studentName: student.fullName,
+        percent: percent,
+        studentId: student.studentId,
+        className: student.className,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
   }
 
   Future<void> _editQuestion([ExamQuestion? existing]) async {
