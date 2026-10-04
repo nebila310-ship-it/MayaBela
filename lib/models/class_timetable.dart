@@ -10,6 +10,9 @@ class TimetableSlot {
     this.teacherId,
     this.teacherName,
     this.durationMinutes = 40,
+    this.room,
+    this.substituteTeacherId,
+    this.substituteTeacherName,
   });
 
   final String id;
@@ -18,6 +21,19 @@ class TimetableSlot {
   final String? teacherId;
   final String? teacherName;
   final int durationMinutes;
+  final String? room;
+  final String? substituteTeacherId;
+  final String? substituteTeacherName;
+
+  String? get effectiveTeacherId =>
+      (substituteTeacherId ?? '').trim().isNotEmpty
+          ? substituteTeacherId
+          : teacherId;
+
+  String? get effectiveTeacherName =>
+      (substituteTeacherName ?? '').trim().isNotEmpty
+          ? substituteTeacherName
+          : teacherName;
 
   TimetableSlot copyWith({
     String? id,
@@ -26,7 +42,12 @@ class TimetableSlot {
     String? teacherId,
     String? teacherName,
     int? durationMinutes,
+    String? room,
+    String? substituteTeacherId,
+    String? substituteTeacherName,
     bool clearTeacher = false,
+    bool clearRoom = false,
+    bool clearSubstitute = false,
   }) {
     return TimetableSlot(
       id: id ?? this.id,
@@ -35,6 +56,13 @@ class TimetableSlot {
       teacherId: clearTeacher ? null : (teacherId ?? this.teacherId),
       teacherName: clearTeacher ? null : (teacherName ?? this.teacherName),
       durationMinutes: durationMinutes ?? this.durationMinutes,
+      room: clearRoom ? null : (room ?? this.room),
+      substituteTeacherId: clearSubstitute
+          ? null
+          : (substituteTeacherId ?? this.substituteTeacherId),
+      substituteTeacherName: clearSubstitute
+          ? null
+          : (substituteTeacherName ?? this.substituteTeacherName),
     );
   }
 }

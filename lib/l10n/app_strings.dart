@@ -1539,14 +1539,14 @@ class AppStrings implements AppStringsLike {
         'Kaameerri kampaasii waraabbii mana barumsaa irratti hafe. Fakkii jireenyaa NVR irraa bana — MayaBela viidiyoo hin kuusne.',
       );
   String get cctvLocalOnlyBanner => t(
-        'Video stays on the school NVR. MayaBela does not upload CCTV to the school cloud.',
-        'Video stays on the school NVR. MayaBela does not upload CCTV to the school cloud.',
-        'Viidiyoon NVR mana barumsaa irratti hafe. MayaBela CCTV gara cloud mana barumsaa hin ergu.',
+        'Footage stays on the school NVR. Camera URLs sync to staff desks on this school.',
+        'Footage stays on the school NVR. Camera URLs sync to staff desks on this school.',
+        'Viidiyoon NVR mana barumsaa irratti hafe. URL kaameeraa desk hojjettootaaf ni walqunnamsiisa.',
       );
   String get cctvNotInCloudChip => t(
-        'Not in MayaBela cloud',
-        'Not in MayaBela cloud',
-        'Cloud MayaBela keessa hin jiru',
+        'No footage in MayaBela cloud',
+        'No footage in MayaBela cloud',
+        'Viidiyoon cloud MayaBela keessa hin jiru',
       );
   String get cctvStaffOnly => t('Staff only', 'Staff only', 'Hojjettoota qofa');
   String get cctvReadyToConnect => t(
@@ -1612,9 +1612,9 @@ class AppStrings implements AppStringsLike {
         'Hidhaa waraabbii bani',
       );
   String get cctvSavedLocalOnly => t(
-        'Saved on this device. CCTV is not uploaded to the school cloud.',
-        'Saved on this device. CCTV is not uploaded to the school cloud.',
-        'Meeshaa kana irratti olkaa\'ame. CCTV gara cloud mana barumsaa hin ergamne.',
+        'Camera URL saved for staff desks. Footage stays on the NVR.',
+        'Camera URL saved for staff desks. Footage stays on the NVR.',
+        'URL kaameeraa desk hojjettootaaf olkaa\'ame. Viidiyoon NVR irratti hafe.',
       );
   String get moduleAccessDeniedTitle =>
       t('No access', 'መዳረሻ የለም', 'Seensi hin jiru');

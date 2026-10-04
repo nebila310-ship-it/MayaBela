@@ -50,18 +50,20 @@ abstract final class TimetableConflictService {
         for (var i = 0; i < day.slots.length; i++) {
           final slot = day.slots[i];
           if (slot.kind != TimetableSlotKind.lesson) continue;
-          final teacherKey = slot.teacherId?.trim().isNotEmpty == true
-              ? slot.teacherId!.trim().toUpperCase()
-              : (slot.teacherName?.trim().isNotEmpty == true
-                    ? slot.teacherName!.trim().toLowerCase()
+          final teacherId = slot.effectiveTeacherId;
+          final teacherName = slot.effectiveTeacherName;
+          final teacherKey = teacherId?.trim().isNotEmpty == true
+              ? teacherId!.trim().toUpperCase()
+              : (teacherName?.trim().isNotEmpty == true
+                    ? teacherName!.trim().toLowerCase()
                     : '');
           if (teacherKey.isEmpty) continue;
           final start = slotStartTime(day, i);
           bookings.add(
             _Booking(
               teacherKey: teacherKey,
-              teacherName: (slot.teacherName ?? slot.teacherId ?? '').trim(),
-              teacherId: slot.teacherId?.trim() ?? '',
+              teacherName: (teacherName ?? teacherId ?? '').trim(),
+              teacherId: teacherId?.trim() ?? '',
               dayKey: dayKey,
               className: table.className,
               subject: slot.subject?.trim().isNotEmpty == true
@@ -69,6 +71,7 @@ abstract final class TimetableConflictService {
                   : 'Lesson',
               startMinutes: start.hour * 60 + start.minute,
               durationMinutes: slot.durationMinutes,
+              room: slot.room?.trim() ?? '',
             ),
           );
         }
@@ -102,6 +105,32 @@ abstract final class TimetableConflictService {
         );
       }
     }
+    for (var i = 0; i < bookings.length; i++) {
+      for (var j = i + 1; j < bookings.length; j++) {
+        final a = bookings[i];
+        final b = bookings[j];
+        if (a.room.isEmpty || a.room.toLowerCase() != b.room.toLowerCase()) {
+          continue;
+        }
+        if (a.dayKey != b.dayKey || a.className == b.className) continue;
+        if (!_overlaps(a, b)) continue;
+        conflicts.add(
+          TimetableConflict(
+            teacherId: 'room:${a.room}',
+            teacherName: 'Room ${a.room}',
+            dayKey: a.dayKey,
+            classA: a.className,
+            classB: b.className,
+            subjectA: a.subject,
+            subjectB: b.subject,
+            startMinutes: a.startMinutes < b.startMinutes
+                ? a.startMinutes
+                : b.startMinutes,
+            durationMinutes: a.durationMinutes,
+          ),
+        );
+      }
+    }
     return conflicts;
   }
 
@@ -121,6 +150,7 @@ class _Booking {
     required this.subject,
     required this.startMinutes,
     required this.durationMinutes,
+    this.room = '',
   });
 
   final String teacherKey;
@@ -131,4 +161,5 @@ class _Booking {
   final String subject;
   final int startMinutes;
   final int durationMinutes;
+  final String room;
 }

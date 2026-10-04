@@ -10,6 +10,8 @@ abstract final class AppCollections {
   static const employeeRegistry = 'employee_registry';
   static const libraryRentals = 'library_rentals';
   static const libraryCopies = 'library_copies';
+  static const campusRooms = 'campus_rooms';
+  static const campusCameras = 'campus_cameras';
   static const materialAccess = 'material_access';
   static const studentPasswordResets = 'student_password_resets';
 

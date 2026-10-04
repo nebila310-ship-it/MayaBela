@@ -115,6 +115,8 @@ import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/campus_room_service.dart';
+import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
 import 'package:mayabela/services/library_rental_service.dart';
 import 'package:mayabela/services/material_access_service.dart';
 import 'package:mayabela/services/student_password_reset_store.dart';
@@ -411,6 +413,10 @@ class CloudAppStore {
         return 'library_rentals';
       case AppCollections.libraryCopies:
         return 'library_copies';
+      case AppCollections.campusRooms:
+        return 'campus_rooms';
+      case AppCollections.campusCameras:
+        return 'campus_cameras';
       case AppCollections.materialAccess:
         return 'material_access';
       case AppCollections.studentPasswordResets:
@@ -514,6 +520,10 @@ class CloudAppStore {
         await _pullLibraryRentals();
       case 'library_copies':
         await _pullLibraryCopies();
+      case 'campus_rooms':
+        await _pullCampusRooms();
+      case 'campus_cameras':
+        await _pullCampusCameras();
       case 'material_access':
         await _pullMaterialAccess();
       case 'student_password_resets':
@@ -1069,6 +1079,8 @@ class CloudAppStore {
         _pullInstitutionRecords(),
         _pullLibraryRentals(),
         _pullLibraryCopies(),
+        _pullCampusRooms(),
+        _pullCampusCameras(),
         _pullMaterialAccess(),
         _pullStudentPasswordResets(),
         _pullAdmissionApplications(),
@@ -1135,6 +1147,8 @@ class CloudAppStore {
         _pullInstitutionRecords(),
         _pullLibraryRentals(),
         _pullLibraryCopies(),
+        _pullCampusRooms(),
+        _pullCampusCameras(),
         _pullMaterialAccess(),
         _pullStudentPasswordResets(),
         _pullAdmissionApplications(),
@@ -3977,6 +3991,32 @@ class CloudAppStore {
     }
     if (copies.isNotEmpty) {
       LibraryRentalService.instance.applyPersistedCopies(copies);
+    }
+  }
+
+  Future<void> _pullCampusRooms() async {
+    final rows = await _schoolRead(AppCollections.campusRooms);
+    if (rows.isEmpty) return;
+    final rooms = <CampusRoom>[];
+    for (final map in rows) {
+      final room = CampusRoom.fromMap(map);
+      if (room != null) rooms.add(room);
+    }
+    if (rooms.isNotEmpty) {
+      CampusRoomService.instance.applyPersisted(rooms);
+    }
+  }
+
+  Future<void> _pullCampusCameras() async {
+    final rows = await _schoolRead(AppCollections.campusCameras);
+    if (rows.isEmpty) return;
+    final sites = <CctvCameraSite>[];
+    for (final map in rows) {
+      final site = CctvCameraSite.fromMap(map);
+      if (site != null) sites.add(site);
+    }
+    if (sites.isNotEmpty) {
+      CctvCatalogService.instance.applyPersisted(sites);
     }
   }
 
