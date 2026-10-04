@@ -386,6 +386,7 @@ class CloudAppStore {
       case AppCollections.privacyConsents:
       case AppCollections.dataRightsRequests:
       case AppCollections.schoolBackups:
+      case AppCollections.mfaPolicies:
         return 'golive';
       case AppCollections.ictDevices:
       case AppCollections.ictWeeklyReviews:
@@ -3667,10 +3668,18 @@ class CloudAppStore {
 
     if (publicReader) return;
     final backups = svc.backupMaps();
-    if (backups.isEmpty) return;
+    if (backups.isNotEmpty) {
+      await _pushSafe(() => _crud.writeBatch(
+            collection: AppCollections.schoolBackups,
+            items: backups,
+            docIdFor: (item) => item['id'] as String,
+          ));
+    }
+    final policies = svc.policyMaps();
+    if (policies.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.schoolBackups,
-          items: backups,
+          collection: AppCollections.mfaPolicies,
+          items: policies,
           docIdFor: (item) => item['id'] as String,
         ));
   }
@@ -3686,11 +3695,16 @@ class CloudAppStore {
             role == AuthService.roleStudent
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.schoolBackups);
+    final policyRows = role == AuthService.roleParent ||
+            role == AuthService.roleStudent
+        ? const <Map<String, dynamic>>[]
+        : await _schoolRead(AppCollections.mfaPolicies);
 
     if (mfaRows.isEmpty &&
         consentRows.isEmpty &&
         rightsRows.isEmpty &&
-        backupRows.isEmpty) {
+        backupRows.isEmpty &&
+        policyRows.isEmpty) {
       return;
     }
 
@@ -3718,11 +3732,18 @@ class CloudAppStore {
         backups.add(SchoolBackupRecord.fromMap(map));
       } catch (_) {}
     }
+    final policies = <MfaLeadershipPolicy>[];
+    for (final map in policyRows) {
+      try {
+        policies.add(MfaLeadershipPolicy.fromMap(map));
+      } catch (_) {}
+    }
 
     if (enrollments.isEmpty &&
         consents.isEmpty &&
         rights.isEmpty &&
-        backups.isEmpty) {
+        backups.isEmpty &&
+        policies.isEmpty) {
       return;
     }
 
@@ -3731,6 +3752,7 @@ class CloudAppStore {
       consents: consents.isEmpty ? null : consents,
       rights: rights.isEmpty ? null : rights,
       backups: backups.isEmpty ? null : backups,
+      policies: policies.isEmpty ? null : policies,
       merge: true,
     );
     await GolivePersistenceService.instance.saveFromService(pushCloud: false);

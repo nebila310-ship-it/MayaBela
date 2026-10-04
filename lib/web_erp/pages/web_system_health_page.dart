@@ -131,7 +131,9 @@ class _WebSystemHealthPageState extends State<WebSystemHealthPage> {
               ),
               _HealthCard(
                 title: 'Authenticator enrollments',
-                status: '${GoliveService.instance.mfaEnrolledCount()} opt-in',
+                status: GoliveService.instance.mfaRequiredForLeadership()
+                    ? '${GoliveService.instance.mfaEnrolledCount()} · required'
+                    : '${GoliveService.instance.mfaEnrolledCount()} · optional',
                 ok: true,
                 icon: Icons.phonelink_lock_outlined,
               ),

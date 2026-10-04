@@ -79,6 +79,40 @@ class MfaEnrollment {
   }
 }
 
+class MfaLeadershipPolicy {
+  const MfaLeadershipPolicy({
+    required this.id,
+    required this.schoolId,
+    required this.requiredForLeadership,
+    required this.updatedAt,
+    this.updatedBy = '',
+  });
+
+  final String id;
+  final String schoolId;
+  final bool requiredForLeadership;
+  final DateTime updatedAt;
+  final String updatedBy;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'schoolId': schoolId,
+        'requiredForLeadership': requiredForLeadership,
+        'updatedAt': updatedAt.toIso8601String(),
+        'updatedBy': updatedBy,
+      };
+
+  factory MfaLeadershipPolicy.fromMap(Map<String, dynamic> map) {
+    return MfaLeadershipPolicy(
+      id: (map['id'] ?? '').toString(),
+      schoolId: (map['schoolId'] ?? '').toString().toUpperCase(),
+      requiredForLeadership: map['requiredForLeadership'] != false,
+      updatedAt: DateTime.tryParse('${map['updatedAt']}') ?? DateTime.now(),
+      updatedBy: (map['updatedBy'] ?? '').toString(),
+    );
+  }
+}
+
 class PrivacyConsent {
   const PrivacyConsent({
     required this.id,
@@ -338,6 +372,8 @@ class GoLiveCapacitySnapshot {
     this.snapshotDue = true,
     required this.mfaEnrolled,
     required this.openDataRights,
+    this.mfaRequired = true,
+    this.currentUserMustEnroll = false,
   });
 
   final bool cloudReady;
@@ -346,4 +382,6 @@ class GoLiveCapacitySnapshot {
   final bool snapshotDue;
   final int mfaEnrolled;
   final int openDataRights;
+  final bool mfaRequired;
+  final bool currentUserMustEnroll;
 }

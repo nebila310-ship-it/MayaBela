@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/models/qa_finding.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
+import 'package:mayabela/services/qa_export_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
 import 'package:mayabela/services/qa_monitor_service.dart';
+import 'package:mayabela/services/year_start_sheet_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/web_erp/pages/web_curriculum_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_monitor_tabs.dart';
@@ -151,6 +153,11 @@ class _WebQaPageState extends State<WebQaPage>
                       icon: const Icon(Icons.flag_outlined),
                       label: const Text('New Finding'),
                     ),
+                  OutlinedButton.icon(
+                    onPressed: () => _exportFindings(),
+                    icon: const Icon(Icons.download_outlined),
+                    label: const Text('Export findings CSV'),
+                  ),
                   OutlinedButton.icon(
                     onPressed: () => showCurriculumFeedbackDialog(context),
                     icon: const Icon(Icons.account_tree_outlined),
@@ -399,6 +406,14 @@ class _WebQaPageState extends State<WebQaPage>
   }
 
   // -------------------------------------------------------------- dialogs
+
+  Future<void> _exportFindings() async {
+    await YearStartSheetService.instance.shareCsv(
+      csv: QaExportService.instance.findingsCsv(schoolId: _schoolId),
+      fileName: 'qa_findings.csv',
+      subject: 'QA findings',
+    );
+  }
 
   Future<void> _showNewFindingDialog(BuildContext context) async {
     var area = QaFindingArea.academic;

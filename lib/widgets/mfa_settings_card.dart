@@ -29,18 +29,27 @@ class _MfaSettingsCardState extends State<MfaSettingsCard> {
   Widget build(BuildContext context) {
     final svc = GoliveService.instance;
     final enrolled = svc.isEnabledFor(_username);
+    final required = svc.mustEnroll(username: _username) ||
+        (svc.mfaRequiredForLeadership() && svc.isLeadershipUser());
     return SettingsSectionCard(
-      title: 'Authenticator (optional)',
-      subtitle:
-          'A second factor after your password. Admin and demo accounts stay '
-          'password-only until you enroll.',
+      title: required
+          ? 'Authenticator (required for leadership)'
+          : 'Authenticator (optional)',
+      subtitle: required
+          ? 'School Admin must keep a second factor after the password.'
+          : 'A second factor after your password. Other roles stay '
+              'password-only until they enroll.',
       icon: Icons.phonelink_lock_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(enrolled
-              ? 'Authenticator is on for $_username.'
-              : 'Authenticator is off. This is opt-in.'),
+          Text(
+            enrolled
+                ? 'Authenticator is on for $_username.'
+                : required
+                    ? 'Authenticator is required for school leadership. Enroll now.'
+                    : 'Authenticator is off. This is opt-in for your role.',
+          ),
           if (_secretOnce != null) ...[
             const SizedBox(height: 8),
             const Text('Save this secret now. It is not shown again.'),
@@ -97,12 +106,19 @@ class _MfaSettingsCardState extends State<MfaSettingsCard> {
                 }
               },
             ),
-          if (enrolled)
+          if (enrolled && svc.canDisableEnrollment(_username))
             SettingsActionTile(
               icon: Icons.remove_moderator_outlined,
               title: 'Turn off authenticator',
               subtitle: 'Requires a current code or recovery code',
               onTap: () => _disable(context),
+            ),
+          if (enrolled && !svc.canDisableEnrollment(_username))
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Required for school leadership — this cannot be turned off.',
+              ),
             ),
         ],
       ),

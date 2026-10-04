@@ -47,6 +47,7 @@ import 'package:mayabela/web_erp/pages/web_sis_page.dart';
 import 'package:mayabela/web_erp/pages/web_students_table_page.dart';
 import 'package:mayabela/web_erp/pages/web_system_health_page.dart';
 import 'package:mayabela/web_erp/pages/web_go_live_page.dart';
+import 'package:mayabela/web_erp/pages/web_settings_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_digital_ops_page.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_qa_page.dart';
@@ -219,6 +220,7 @@ class WebErpRouter {
       case 'training_manuals':
         return const WebGoLivePage();
       case 'settings':
+        return WebSettingsHubPage(onNavigate: onNavigate);
       case 'profile':
         return const SettingsScreen();
       case 'add_student':
