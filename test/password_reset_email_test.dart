@@ -99,6 +99,37 @@ void main() {
     }
   });
 
+  test('school desks can read mail ready-state without an owner PIN', () {
+    final fn = read('supabase/functions/platform-mail-config/index.ts');
+    expect(fn, contains("action === \"public-status\""));
+    final handler = fn.substring(fn.indexOf('Deno.serve'));
+    expect(
+      handler.indexOf('public-status'),
+      lessThan(handler.indexOf('authorizePlatformOwner')),
+    );
+
+    final client = read('lib/services/platform_mail_cloud_service.dart');
+    expect(client, contains('Future<PlatformMailStatus> publicStatus()'));
+    expect(client, contains("'action': 'public-status'"));
+    expect(client.contains("'ownerPin': ownerPin"), isTrue);
+  });
+
+  test('student forgot-password queues on the cloud admin desk', () {
+    final fn = read(
+      'supabase/functions/school-request-student-password-reset/index.ts',
+    );
+    expect(fn, contains('student_password_resets'));
+    expect(fn, contains('upsertDoc'));
+    expect(fn, contains('findAccountDoc(sb, identifier, "student"'));
+
+    final auth = read('lib/services/school_auth_cloud_service.dart');
+    expect(auth, contains('requestStudentPasswordReset('));
+    expect(auth, contains('school-request-student-password-reset'));
+
+    final screen = read('lib/screens/student_forgot_password_screen.dart');
+    expect(screen, contains('StudentPasswordResetStore.instance.submit('));
+  });
+
   test('cloud result keeps the mailer via flag', () {
     const sent = SchoolAuthCloudResult(ok: true, via: 'mail');
     expect(sent.via, 'mail');

@@ -56,6 +56,10 @@ class PlatformMailCloudService {
   PlatformMailCloudService._();
   static final instance = PlatformMailCloudService._();
 
+  /// Widget tests must not start the 15s functions timeout.
+  @visibleForTesting
+  static bool disableNetworkForTests = false;
+
   static const gmailSmtpBlocked =
       'Gmail SMTP cannot be used from MayaBela cloud — that is the Failed to fetch error. Create a free Resend API key at resend.com, paste it in Resend API key, set From to MayaBela <onboarding@resend.dev>, Save, then Send test. It will arrive at the Gmail you used to sign up at Resend.';
 
@@ -169,6 +173,41 @@ class PlatformMailCloudService {
   }
 
   Future<PlatformMailStatus> status() => _invoke({'action': 'status'});
+
+  /// School desks: whether password-reset email is configured. No owner PIN.
+  Future<PlatformMailStatus> publicStatus() async {
+    if (disableNetworkForTests) {
+      return PlatformMailStatus.cloudRequired;
+    }
+    try {
+      if (!SupabaseBootstrap.isInitialized) {
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      }
+      if (!SupabaseBootstrap.isInitialized) {
+        return PlatformMailStatus.cloudRequired;
+      }
+      final res = await SupabaseBootstrap.client.functions
+          .invoke(
+            'platform-mail-config',
+            body: {'action': 'public-status'},
+          )
+          .timeout(const Duration(seconds: 15));
+      final data = res.data;
+      if (data is Map) {
+        return PlatformMailStatus.fromMap(data);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PlatformMailCloudService publicStatus: $e');
+      }
+    }
+    return const PlatformMailStatus(
+      ok: false,
+      configured: false,
+      errorCode: 'unavailable',
+      errorMessage: 'Could not check password-reset email.',
+    );
+  }
 
   Future<PlatformMailStatus> save({
     required String from,

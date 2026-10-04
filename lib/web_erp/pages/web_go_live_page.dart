@@ -12,6 +12,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_excel_import.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/web_erp/widgets/mail_preflight_card.dart';
 import 'package:mayabela/widgets/mfa_settings_card.dart';
 
 /// LIA Phase J go-live desk: MFA, privacy, backups, Excel import, training.
@@ -158,6 +159,7 @@ class _OverviewTab extends StatelessWidget {
           ok: !cap.snapshotDue,
         ),
         const _CheckRow(label: 'Authenticator available (opt-in)', ok: true),
+        const MailPreflightCard(compact: true),
         const _CheckRow(
           label:
               'Platform-owner restore drill lives in tools/restore_drill_staging.mjs',

@@ -115,6 +115,10 @@ import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/library_rental_service.dart';
+import 'package:mayabela/services/material_access_service.dart';
+import 'package:mayabela/services/student_password_reset_store.dart';
+import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/services/timetable_service.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
 
@@ -403,6 +407,12 @@ class CloudAppStore {
         return 'transfers';
       case AppCollections.schoolAuditLog:
         return 'school_audit';
+      case AppCollections.libraryRentals:
+        return 'library_rentals';
+      case AppCollections.materialAccess:
+        return 'material_access';
+      case AppCollections.studentPasswordResets:
+        return 'student_password_resets';
       case AppCollections.authAccounts:
         return 'auth_accounts';
       default:
@@ -498,6 +508,12 @@ class CloudAppStore {
         await _pullTransferRequests();
       case 'school_audit':
         await _pullSchoolAudit();
+      case 'library_rentals':
+        await _pullLibraryRentals();
+      case 'material_access':
+        await _pullMaterialAccess();
+      case 'student_password_resets':
+        await _pullStudentPasswordResets();
       case 'auth_accounts':
         await _pullAuthAccounts();
     }
@@ -1005,6 +1021,8 @@ class CloudAppStore {
         _pullDosa(),
         _pullQaMonitor(),
         _pullGoLive(),
+        _pullLibraryRentals(),
+        _pullMaterialAccess(),
       ]);
       await pullTransportStateIntoServices();
     });
@@ -1045,6 +1063,9 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullQaFindings(),
         _pullInstitutionRecords(),
+        _pullLibraryRentals(),
+        _pullMaterialAccess(),
+        _pullStudentPasswordResets(),
         _pullAdmissionApplications(),
         _pullExamBank(),
         _pullLessonPlans(),
@@ -1107,6 +1128,9 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullQaFindings(),
         _pullInstitutionRecords(),
+        _pullLibraryRentals(),
+        _pullMaterialAccess(),
+        _pullStudentPasswordResets(),
         _pullAdmissionApplications(),
         _pullExamBank(),
         _pullLessonPlans(),
@@ -1167,6 +1191,8 @@ class CloudAppStore {
         _pullConversations(),
         _pullAppNotifications(),
         _pullMaterialPurchases(),
+        _pullLibraryRentals(),
+        _pullMaterialAccess(),
         _pullExamBank(),
         _pullLessonPlans(),
         _pullCurriculumOffice(),
@@ -3919,6 +3945,45 @@ class CloudAppStore {
       await SchoolAuditPersistenceService.instance.saveFromService(
         pushCloud: false,
       );
+    }
+  }
+
+  Future<void> _pullLibraryRentals() async {
+    final rows = await _scopedStudentIdRead(AppCollections.libraryRentals);
+    if (rows.isEmpty) return;
+    final rentals = <LibraryRental>[];
+    for (final map in rows) {
+      final rental = LibraryRental.fromMap(map);
+      if (rental != null) rentals.add(rental);
+    }
+    if (rentals.isNotEmpty) {
+      LibraryRentalService.instance.applyPersisted(rentals);
+    }
+  }
+
+  Future<void> _pullMaterialAccess() async {
+    final rows = await _scopedStudentIdRead(AppCollections.materialAccess);
+    if (rows.isEmpty) return;
+    MaterialAccessService.instance.applyPersisted(rows);
+  }
+
+  Future<void> _pullStudentPasswordResets() async {
+    final role = AuthService.currentUser?.roleKey;
+    if (role != AuthService.roleAdmin &&
+        role != AuthService.roleTeacher &&
+        !AuthService.mayReadAllSchoolData) {
+      return;
+    }
+    final rows = await _schoolRead(AppCollections.studentPasswordResets);
+    if (rows.isEmpty) return;
+    final requests = <StudentPasswordResetRequest>[];
+    for (final map in rows) {
+      try {
+        requests.add(StudentPasswordResetRequest.fromMap(map));
+      } catch (_) {}
+    }
+    if (requests.isNotEmpty) {
+      StudentPasswordResetStore.instance.applyPersisted(requests);
     }
   }
 }

@@ -519,6 +519,51 @@ class SchoolAuthCloudService {
     }
   }
 
+  /// Student portal forgot-password: queue a request for school admin (no JWT).
+  Future<SchoolAuthCloudResult> requestStudentPasswordReset({
+    required String schoolId,
+    required String identifier,
+    String? studentId,
+    String? studentName,
+    String? username,
+  }) async {
+    if (!isAvailable) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    try {
+      await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      final data = await _invoke('school-request-student-password-reset', {
+        'schoolId': schoolId.trim().toUpperCase(),
+        'identifier': identifier.trim(),
+        if (studentId != null && studentId.trim().isNotEmpty)
+          'studentId': studentId.trim().toUpperCase(),
+        if (studentName != null && studentName.trim().isNotEmpty)
+          'studentName': studentName.trim(),
+        if (username != null && username.trim().isNotEmpty)
+          'username': username.trim().toLowerCase(),
+      });
+      if (data == null || data['error'] != null) {
+        return SchoolAuthCloudResult(
+          ok: false,
+          errorCode: (data?['code'] as String?) ?? 'invalid',
+          errorMessage: data?['error']?.toString(),
+        );
+      }
+      return SchoolAuthCloudResult(
+        ok: true,
+        applicationId: data['id']?.toString(),
+      );
+    } on FunctionException catch (e) {
+      return SchoolAuthCloudResult(
+        ok: false,
+        errorCode: _mapFunctionsError(e),
+        errorMessage: _functionsErrorMessage(e),
+      );
+    } catch (_) {
+      return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+    }
+  }
+
   Future<SchoolAuthCloudResult> requestPasswordReset({
     required String schoolId,
     required String email,

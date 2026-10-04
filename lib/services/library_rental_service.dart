@@ -122,6 +122,21 @@ class LibraryRentalService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void applyPersisted(List<LibraryRental> rows, {bool merge = true}) {
+    if (!merge) _rentals.clear();
+    for (final rental in rows) {
+      final idx = _rentals.indexWhere((item) => item.id == rental.id);
+      if (idx >= 0) {
+        _rentals[idx] = rental;
+      } else {
+        _rentals.add(rental);
+      }
+    }
+    _rentals.sort((a, b) => b.rentedAt.compareTo(a.rentedAt));
+    _loaded = true;
+    notifyListeners();
+  }
+
   Future<LibraryRental> rent({
     required String materialId,
     required String bookTitle,

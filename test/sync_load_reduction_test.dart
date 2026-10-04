@@ -108,5 +108,17 @@ void main() {
         reason: '$collection must map to a pull group',
       );
     }
+    expect(
+      CloudSyncEngine.standardPriority,
+      containsAll([
+        AppCollections.institutionRecords,
+        AppCollections.driverRegistry,
+        AppCollections.employeeRegistry,
+        AppCollections.schoolAuditLog,
+        AppCollections.libraryRentals,
+        AppCollections.materialAccess,
+        AppCollections.studentPasswordResets,
+      ]),
+    );
   });
 }

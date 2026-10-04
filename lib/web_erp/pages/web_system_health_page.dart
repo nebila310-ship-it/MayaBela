@@ -4,6 +4,7 @@ import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
 import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/widgets/mail_preflight_card.dart';
 
 class WebSystemHealthPage extends StatefulWidget {
   const WebSystemHealthPage({super.key});
@@ -15,6 +16,8 @@ class WebSystemHealthPage extends StatefulWidget {
 class _WebSystemHealthPageState extends State<WebSystemHealthPage> {
   bool? _storageReady;
   String? _storageDetail;
+  final GlobalKey<MailPreflightCardState> _mailKey =
+      GlobalKey<MailPreflightCardState>();
 
   @override
   void initState() {
@@ -67,7 +70,10 @@ class _WebSystemHealthPageState extends State<WebSystemHealthPage> {
                 ),
               ),
               OutlinedButton.icon(
-                onPressed: _checkStorage,
+                onPressed: () {
+                  _checkStorage();
+                  _mailKey.currentState?.refresh();
+                },
                 icon: const Icon(Icons.refresh),
                 label: const Text('Recheck'),
               ),
@@ -129,6 +135,7 @@ class _WebSystemHealthPageState extends State<WebSystemHealthPage> {
                 ok: true,
                 icon: Icons.phonelink_lock_outlined,
               ),
+              MailPreflightCard(key: _mailKey),
             ],
           ),
           const SizedBox(height: 24),

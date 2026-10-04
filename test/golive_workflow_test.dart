@@ -8,6 +8,7 @@ import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/golive_service.dart';
+import 'package:mayabela/services/platform_mail_cloud_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_excel_import.dart';
@@ -22,6 +23,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     GoliveService.resetForTests();
     ExamService.resetForTests();
+    PlatformMailCloudService.disableNetworkForTests = true;
     AuthService.currentUser = RegisteredUser(
       username: 'owner.j',
       password: 'x',
@@ -31,7 +33,10 @@ void main() {
     );
   });
 
-  tearDown(() => AuthService.currentUser = null);
+  tearDown(() {
+    PlatformMailCloudService.disableNetworkForTests = false;
+    AuthService.currentUser = null;
+  });
 
   test('TOTP verifies in the 30s window and Admin is not enrolled by default', () {
     final secret = Totp.generateSecret();

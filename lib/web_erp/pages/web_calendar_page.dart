@@ -36,8 +36,9 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
   }
 
   List<CalendarEvent> get _visibleEvents {
+    final role = AuthService.currentUser?.roleKey;
     return _data.getVisibleCalendarEventsForRole(
-      AuthService.roleAdmin,
+      AuthService.mayReadAllSchoolData ? AuthService.roleAdmin : role,
       includeEthiopian: UserPreferencesService.instance.showEthiopianHolidays,
     );
   }
