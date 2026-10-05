@@ -44,6 +44,7 @@ npx supabase functions deploy platform-owner-pin
 npx supabase functions deploy platform-list-schools
 npx supabase functions deploy platform-create-school
 npx supabase functions deploy platform-update-school
+npx supabase functions deploy platform-delete-school
 npx supabase functions deploy platform-upload-logo
 npx supabase functions deploy platform-mail-config
 npx supabase functions deploy maya-assistant-chat
