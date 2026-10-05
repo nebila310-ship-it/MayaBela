@@ -275,15 +275,24 @@ class SchoolLogoService {
     SchoolLogoStyle style = SchoolLogoStyle.rectangular,
   }) async {
     try {
+      if (!SupabaseBootstrap.isInitialized && kIsWeb) {
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      }
       if (!SupabaseBootstrap.isInitialized) return null;
       final path =
           'schools/${schoolId.trim().toUpperCase()}/branding/${brandingFile(style)}';
-      final bytes = await SupabaseBootstrap.client.storage
-          .from('school-files')
-          .download(path);
-      if (bytes.isEmpty) return null;
-      WebAttachmentCache.instance.remember(cacheKey(schoolId, style), bytes);
-      return bytes;
+      for (final bucket in const ['school-branding', 'school-files']) {
+        try {
+          final bytes = await SupabaseBootstrap.client.storage
+              .from(bucket)
+              .download(path);
+          if (bytes.isNotEmpty) {
+            WebAttachmentCache.instance.remember(cacheKey(schoolId, style), bytes);
+            return bytes;
+          }
+        } catch (_) {}
+      }
+      return null;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SchoolLogoService.downloadBrandingBytes: $e');

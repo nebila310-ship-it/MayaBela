@@ -146,6 +146,34 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+  <div id="splash-school-name" style="display:none;position:absolute;top:calc(50% + 120px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;"></div>
+  <script>
+    (function applySavedSchoolSplash() {
+      try {
+        var raw = localStorage.getItem('mayabela_school_splash');
+        if (!raw) return;
+        var brand = JSON.parse(raw);
+        var img = document.querySelector('#splash img');
+        var src = brand.dataUrl || brand.logoUrl;
+        if (img && src) {
+          img.src = src;
+          img.style.maxWidth = '240px';
+          img.style.maxHeight = '240px';
+          img.style.objectFit = 'cover';
+          if (brand.logoStyle === 'circular') {
+            img.style.borderRadius = '50%';
+            img.style.width = '160px';
+            img.style.height = '160px';
+          }
+        }
+        var nameEl = document.getElementById('splash-school-name');
+        if (nameEl && brand.name) {
+          nameEl.textContent = brand.name;
+          nameEl.style.display = 'block';
+        }
+      } catch (e) {}
+    })();
+  </script>
   
   
   
@@ -220,7 +248,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=cctv-admin-20260825a" async=""></script>
+    <script src="flutter_bootstrap.js?v=school-splash-20261005" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {

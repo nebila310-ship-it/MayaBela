@@ -35,10 +35,10 @@ void main() {
     expect(roundTrip.logoUrl, school.logoUrl);
   });
 
-  test('branding URLs use the authenticated storage endpoint', () {
+  test('branding URLs use the public school-branding bucket', () {
     expect(
       SchoolLogoService.publicUrl('fen101'),
-      '$kSupabaseUrl/storage/v1/object/authenticated/school-files/'
+      '$kSupabaseUrl/storage/v1/object/public/school-branding/'
       'schools/FEN101/branding/logo.jpg',
     );
     expect(
@@ -46,7 +46,7 @@ void main() {
         'fen101',
         style: SchoolLogoStyle.circular,
       ),
-      '$kSupabaseUrl/storage/v1/object/authenticated/school-files/'
+      '$kSupabaseUrl/storage/v1/object/public/school-branding/'
       'schools/FEN101/branding/identity.jpg',
     );
     expect(
@@ -64,15 +64,15 @@ void main() {
         '$kSupabaseUrl/storage/v1/object/public/school-files/'
         'schools/FEN101/branding/logo.jpg?v=9';
     final viewable = SchoolLogoService.viewableUrl(public);
-    expect(viewable, contains('/object/authenticated/school-files/'));
+    expect(viewable, contains('/object/public/school-branding/'));
     expect(viewable, isNot(contains('/object/public/school-files/')));
-    expect(SchoolLogoService.imageHeadersFor(viewable), isNotNull);
+    expect(SchoolLogoService.imageHeadersFor(viewable), isNull);
     expect(
       SchoolLogoService.displayUrlFor(
         'FEN101',
         storedUrl: public,
       ),
-      contains('/object/authenticated/school-files/'),
+      contains('/object/public/school-branding/'),
     );
   });
 
