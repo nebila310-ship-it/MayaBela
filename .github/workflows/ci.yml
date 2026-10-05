@@ -13,22 +13,58 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether Flutter tests are needed
+        id: gate
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE" ]; then
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --depth=1 origin "$BASE" 2>/dev/null || true
+          CHANGED=$(git diff --name-only "$BASE"...HEAD || git diff --name-only "$BASE" HEAD || true)
+          echo "Changed files:"
+          echo "$CHANGED"
+          if [ -z "$CHANGED" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if echo "$CHANGED" | grep -vE '^\.github/' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip Flutter tests (workflow-only change)
+        if: steps.gate.outputs.run != 'true'
+        run: echo "Only .github files changed — Flutter tests skipped."
 
       - name: Setup Flutter
+        if: steps.gate.outputs.run == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Get packages
+        if: steps.gate.outputs.run == 'true'
         run: flutter pub get
 
       - name: Unit tests
+        if: steps.gate.outputs.run == 'true'
         run: flutter test --reporter expanded
 
   # Live PostgREST negatives against dedicated staging (never production).
@@ -36,6 +72,7 @@ jobs:
   # Skips (exit 0) when those secrets are unset so existing CI stays green.
   rls-isolation:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
