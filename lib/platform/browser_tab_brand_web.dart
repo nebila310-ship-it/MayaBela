@@ -4,6 +4,7 @@ void applyBrowserTabBrand({
   String? title,
   String? iconDataUrl,
   String? iconUrl,
+  String? appleIconUrl,
 }) {
   try {
     final name = title?.trim();
@@ -27,9 +28,14 @@ void applyBrowserTabBrand({
     icon.setAttribute('href', href);
     if (href.startsWith('data:image')) {
       icon.setAttribute('type', 'image/jpeg');
+    } else if (href.endsWith('.png')) {
+      icon.setAttribute('type', 'image/png');
     }
 
     final apple = web.document.querySelector('link[rel="apple-touch-icon"]');
-    apple?.setAttribute('href', href);
+    final appleHref = (appleIconUrl != null && appleIconUrl.trim().isNotEmpty)
+        ? appleIconUrl.trim()
+        : href;
+    apple?.setAttribute('href', appleHref);
   } catch (_) {}
 }

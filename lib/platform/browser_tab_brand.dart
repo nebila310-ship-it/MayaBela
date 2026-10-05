@@ -4,6 +4,10 @@ import 'package:mayabela/platform/browser_tab_brand_stub.dart'
 
 /// Browser tab title + favicon (web only).
 abstract final class BrowserTabBrand {
+  static const productTitle = 'MaJo Bridge OS';
+  static const productIconHref = 'favicon.png';
+  static const productAppleIconHref = 'icons/Icon-192.png';
+
   static String resolveTitle({
     String? sessionSchoolName,
     String? splashName,
@@ -21,11 +25,21 @@ abstract final class BrowserTabBrand {
     String? title,
     String? iconDataUrl,
     String? iconUrl,
+    String? appleIconUrl,
   }) {
     impl.applyBrowserTabBrand(
       title: title,
       iconDataUrl: iconDataUrl,
       iconUrl: iconUrl,
+      appleIconUrl: appleIconUrl,
+    );
+  }
+
+  static void applyProduct() {
+    apply(
+      title: productTitle,
+      iconUrl: productIconHref,
+      appleIconUrl: productAppleIconHref,
     );
   }
 }

@@ -3,15 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/login_brand_header.dart';
+import 'package:mayabela/web_erp/login/web_login_shell.dart';
 
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     LoginPrefsService.instance.debugReset();
     await LoginPrefsService.instance.load();
+    LoginChromeBrand.tabTitle.value = LoginChromeBrand.productTitle;
   });
 
   test('persists remembered school brand for the next launch', () async {
@@ -80,5 +83,105 @@ void main() {
 
     expect(find.text('Sunrise Academy'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('empty school id shows MaJo Bridge OS, not a remembered school',
+      (tester) async {
+    await LoginPrefsService.instance.rememberSchoolBrand(
+      schoolId: 'BRANDTEST',
+      name: 'Sunrise Academy',
+      logoUrl: 'https://example.com/sunrise.jpg',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: LoginBrandHeader(schoolId: ''),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('MaJo Bridge OS'), findsOneWidget);
+    expect(find.text('Sunrise Academy'), findsNothing);
+  });
+
+  testWidgets('typed school id switches the login header to the school name',
+      (tester) async {
+    await LoginPrefsService.instance.rememberSchoolBrand(
+      schoolId: 'BRANDTEST',
+      name: 'Sunrise Academy',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: LoginBrandHeader(schoolId: 'BRANDTEST'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Sunrise Academy'), findsOneWidget);
+    expect(find.text('MaJo Bridge OS'), findsNothing);
+  });
+
+  testWidgets('launch splash without a school id shows MaJo Bridge OS',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: LaunchSchoolSplash(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('MaJo Bridge OS'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  test('chrome title is MaJo Bridge OS until a school id is entered', () async {
+    await LoginPrefsService.instance.rememberSchoolBrand(
+      schoolId: 'BRANDTEST',
+      name: 'Sunrise Academy',
+    );
+
+    LoginChromeBrand.apply(schoolId: '');
+    expect(LoginChromeBrand.tabTitle.value, 'MaJo Bridge OS');
+
+    LoginChromeBrand.apply(schoolId: 'BRANDTEST');
+    expect(LoginChromeBrand.tabTitle.value, 'Sunrise Academy');
+
+    LoginChromeBrand.apply(schoolId: '  ');
+    expect(LoginChromeBrand.tabTitle.value, 'MaJo Bridge OS');
+  });
+
+  testWidgets('web login side brand is MaJo until a school id is typed',
+      (tester) async {
+    await LoginPrefsService.instance.rememberSchoolBrand(
+      schoolId: 'BRANDTEST',
+      name: 'Sunrise Academy',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: WebLoginSideBrand(schoolId: ''),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('MaJo Bridge OS'), findsOneWidget);
+    expect(find.text('Sunrise Academy'), findsNothing);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: WebLoginSideBrand(schoolId: 'BRANDTEST'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Sunrise Academy'), findsOneWidget);
+    expect(find.text('MaJo Bridge OS'), findsNothing);
   });
 }

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 void persistSchoolSplashBrand(String json) {}
 
+void persistActiveSchoolId(String? schoolId) {}
+
 String? readSchoolSplashDataUrl({String? schoolId}) => null;
 
 Uint8List? readSchoolSplashBytes({String? schoolId}) => null;

@@ -30,6 +30,7 @@ class SchoolSplashMeta {
 /// show the school logo without a school JWT.
 abstract final class SchoolSplashBrand {
   static const storageKey = 'mayabela_school_splash';
+  static const activeSchoolIdKey = 'mayabela_last_school_id';
 
   static String cacheKey(String schoolId, SchoolLogoStyle style) =>
       'web://school-logo/${schoolId.trim().toUpperCase()}/${style.name}';
@@ -65,6 +66,11 @@ abstract final class SchoolSplashBrand {
       iconDataUrl: dataUrl,
       iconUrl: url.isEmpty ? null : url,
     );
+  }
+
+  /// HTML splash reads this to know whether a School ID is in play.
+  static void persistActiveSchoolId(String? schoolId) {
+    impl.persistActiveSchoolId(schoolId);
   }
 
   static String? readDataUrl({String? schoolId}) =>

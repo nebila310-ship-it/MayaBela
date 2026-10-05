@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
@@ -9,7 +10,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/widgets/maya_brand_logo.dart';
 import 'package:mayabela/widgets/school_logo_display.dart';
 
-/// Login top brand: remembered or registry school name + logo, else Maya.
+/// Login top brand: typed School ID name + logo, else MaJo Bridge OS.
 class LoginBrandHeader extends StatefulWidget {
   const LoginBrandHeader({
     super.key,
@@ -46,11 +47,9 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
 
   _BrandSnapshot? get _snapshot {
     final typed = widget.schoolId.trim();
-    final splash = SchoolSplashBrand.readMeta(
-      schoolId: typed.isEmpty ? null : typed,
-    );
-    final id = typed.isNotEmpty ? typed : (splash?.schoolId ?? '');
-    if (id.isEmpty) return null;
+    if (typed.isEmpty) return null;
+    final splash = SchoolSplashBrand.readMeta(schoolId: typed);
+    final id = typed;
 
     final record = SchoolRegistryService.instance.lookup(id);
     if (record != null && record.name.trim().isNotEmpty) {
@@ -67,10 +66,8 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
         logoBytes: _logoBytes,
       );
     }
-    final remembered = LoginPrefsService.instance.brandForSchool(id) ??
-        LoginPrefsService.instance.rememberedBrand;
-    if (remembered != null &&
-        (typed.isEmpty || remembered.schoolId == id.toUpperCase())) {
+    final remembered = LoginPrefsService.instance.brandForSchool(id);
+    if (remembered != null) {
       return _BrandSnapshot(
         schoolId: remembered.schoolId,
         name: remembered.name,
@@ -108,16 +105,23 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
 
   Future<void> _load() async {
     final typed = widget.schoolId.trim();
-    final splash = SchoolSplashBrand.readMeta(
-      schoolId: typed.isEmpty ? null : typed,
-    );
-    final id = typed.isNotEmpty ? typed : (splash?.schoolId ?? '');
-    final record = id.isEmpty ? null : SchoolRegistryService.instance.lookup(id);
+    if (typed.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _logoPath = null;
+          _logoBytes = null;
+        });
+      }
+      return;
+    }
+    final splash = SchoolSplashBrand.readMeta(schoolId: typed);
+    final id = typed;
+    final record = SchoolRegistryService.instance.lookup(id);
     final style = record?.logoStyle ??
         splash?.logoStyle ??
         SchoolLogoStyle.rectangular;
     final bytes = SchoolSplashBrand.readBytes(
-      schoolId: id.isEmpty ? splash?.schoolId : id,
+      schoolId: id,
       style: style,
     );
     String? path;
@@ -138,12 +142,13 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
         logoStyle: record.logoStyle,
       );
     }
-    if (mounted) {
-      setState(() {
-        _logoPath = path;
-        _logoBytes = bytes;
-      });
-    }
+    if (!mounted) return;
+    if (widget.schoolId.trim() != id) return;
+    setState(() {
+      _logoPath = path;
+      _logoBytes = bytes;
+    });
+    LoginChromeBrand.apply(schoolId: id);
   }
 
   @override
@@ -152,7 +157,21 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     final accent = widget.accentColor ?? Colors.indigo.shade900;
 
     if (brand == null) {
-      return MayaBrandLogo(onSecretTap: widget.onSecretTap, height: widget.height);
+      return Column(
+        children: [
+          Text(
+            LoginChromeBrand.productTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 10),
+          MayaBrandLogo(onSecretTap: widget.onSecretTap, height: widget.height),
+        ],
+      );
     }
 
     final logo = SchoolLogoDisplay(

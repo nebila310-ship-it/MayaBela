@@ -77,8 +77,7 @@ import 'package:mayabela/setup/dashboard_setup.dart';
 
 import 'package:mayabela/theme/app_theme.dart';
 import 'package:mayabela/widgets/app_lock_gate.dart';
-import 'package:mayabela/platform/browser_tab_brand.dart';
-import 'package:mayabela/platform/school_splash_brand.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/system_nav_safe_scope.dart';
 
@@ -93,16 +92,8 @@ Future<void> main() async {
       'main.loginPrefs',
       LoginPrefsService.instance.load,
     );
-    final splash = SchoolSplashBrand.readMeta();
-    final remembered = LoginPrefsService.instance.rememberedBrand;
-    BrowserTabBrand.apply(
-      title: BrowserTabBrand.resolveTitle(
-        splashName: splash?.name,
-        rememberedName: remembered?.name,
-        fallback: 'MaJo e-School Bridge',
-      ),
-      iconDataUrl: SchoolSplashBrand.readDataUrl(),
-      iconUrl: remembered?.logoUrl ?? splash?.logoUrl,
+    LoginChromeBrand.apply(
+      schoolId: LoginPrefsService.instance.lastSchoolId ?? '',
     );
     await StartupProfiler.track(
       'main.supabaseInitialize',
@@ -292,6 +283,7 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
     super.initState();
     AppLocale.instance.addListener(_rebuild);
     UserPreferencesService.instance.addListener(_rebuild);
+    LoginChromeBrand.tabTitle.addListener(_rebuild);
     HardwareKeyboard.instance.addHandler(_onKeyActivity);
   }
 
@@ -300,6 +292,7 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
     HardwareKeyboard.instance.removeHandler(_onKeyActivity);
     AppLocale.instance.removeListener(_rebuild);
     UserPreferencesService.instance.removeListener(_rebuild);
+    LoginChromeBrand.tabTitle.removeListener(_rebuild);
     super.dispose();
   }
 
@@ -319,17 +312,12 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
   Widget build(BuildContext context) {
 
     final prefs = UserPreferencesService.instance;
-    final splash = SchoolSplashBrand.readMeta();
-    final remembered = LoginPrefsService.instance.rememberedBrand;
     final sessionName = SchoolRegistryService.instance
         .lookup(AuthService.activeSchoolId)
         ?.name;
-    final tabTitle = BrowserTabBrand.resolveTitle(
-      sessionSchoolName: sessionName,
-      splashName: splash?.name,
-      rememberedName: remembered?.name,
-      fallback: AppLocale.instance.strings.appTitle,
-    );
+    final tabTitle = (sessionName != null && sessionName.trim().isNotEmpty)
+        ? sessionName.trim()
+        : LoginChromeBrand.tabTitle.value;
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
       debugShowCheckedModeBanner: false,
@@ -382,7 +370,11 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late Widget _home = kIsWeb
       ? const LoginScreen()
       : LaunchSchoolSplash(
-          brand: LoginPrefsService.instance.rememberedBrand,
+          brand: (LoginPrefsService.instance.lastSchoolId ?? '')
+                  .trim()
+                  .isNotEmpty
+              ? LoginPrefsService.instance.rememberedBrand
+              : null,
         );
 
   @override

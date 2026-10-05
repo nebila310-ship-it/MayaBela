@@ -81,6 +81,7 @@ class LoginPrefsService {
         (_lastSchoolId == null || _lastSchoolId!.isEmpty)) {
       _lastSchoolId = _rememberedBrand!.schoolId;
     }
+    SchoolSplashBrand.persistActiveSchoolId(_lastSchoolId);
     final raw = prefs.getString(_entriesKey);
     if (raw == null || raw.isEmpty) {
       _entries = [];
@@ -125,6 +126,7 @@ class LoginPrefsService {
     final id = schoolId.trim().toUpperCase();
     if (id.isEmpty) return;
     _lastSchoolId = id;
+    SchoolSplashBrand.persistActiveSchoolId(id);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSchoolIdKey, id);
     if (_rememberedBrand != null && _rememberedBrand!.schoolId != id) {
@@ -152,6 +154,7 @@ class LoginPrefsService {
     );
     _lastSchoolId = id;
     _rememberedBrand = brand;
+    SchoolSplashBrand.persistActiveSchoolId(id);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSchoolIdKey, id);
     await prefs.setString(_brandKey, jsonEncode(brand.toJson()));

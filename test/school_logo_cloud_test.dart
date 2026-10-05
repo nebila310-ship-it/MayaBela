@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/platform/browser_tab_brand.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -121,15 +122,15 @@ void main() {
         sessionSchoolName: 'Fenote Raey Academy',
         splashName: 'Old Name',
         rememberedName: 'Saved Name',
-        fallback: 'MaJo e-School Bridge',
+        fallback: LoginChromeBrand.productTitle,
       ),
       'Fenote Raey Academy',
     );
     expect(
       BrowserTabBrand.resolveTitle(
-        fallback: 'MaJo e-School Bridge',
+        fallback: LoginChromeBrand.productTitle,
       ),
-      'MaJo e-School Bridge',
+      LoginChromeBrand.productTitle,
     );
   });
 }
