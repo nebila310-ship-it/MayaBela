@@ -733,8 +733,9 @@ class _LoginScreenState extends State<LoginScreen> {
       textCapitalization: TextCapitalization.characters,
       autofillHint: 'organization',
       style: style,
-      onChanged: (_) {
+      onChanged: (value) {
         if (!_schoolIdEditing) setState(() => _schoolIdEditing = true);
+        LoginChromeBrand.apply(schoolId: value);
         setState(() {});
       },
       onSubmitted: (value) {
