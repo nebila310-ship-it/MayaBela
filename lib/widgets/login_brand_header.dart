@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -27,6 +30,7 @@ class LoginBrandHeader extends StatefulWidget {
 
 class _LoginBrandHeaderState extends State<LoginBrandHeader> {
   String? _logoPath;
+  Uint8List? _logoBytes;
 
   @override
   void initState() {
@@ -41,8 +45,13 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
   }
 
   _BrandSnapshot? get _snapshot {
-    final id = widget.schoolId.trim();
+    final typed = widget.schoolId.trim();
+    final splash = SchoolSplashBrand.readMeta(
+      schoolId: typed.isEmpty ? null : typed,
+    );
+    final id = typed.isNotEmpty ? typed : (splash?.schoolId ?? '');
     if (id.isEmpty) return null;
+
     final record = SchoolRegistryService.instance.lookup(id);
     if (record != null && record.name.trim().isNotEmpty) {
       return _BrandSnapshot(
@@ -55,60 +64,86 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
         ),
         logoPath: _logoPath ?? record.displayLogoPath,
         logoStyle: record.logoStyle,
+        logoBytes: _logoBytes,
       );
     }
-    final remembered = LoginPrefsService.instance.brandForSchool(id);
-    if (remembered != null) {
+    final remembered = LoginPrefsService.instance.brandForSchool(id) ??
+        LoginPrefsService.instance.rememberedBrand;
+    if (remembered != null &&
+        (typed.isEmpty || remembered.schoolId == id.toUpperCase())) {
       return _BrandSnapshot(
         schoolId: remembered.schoolId,
         name: remembered.name,
         logoUrl: SchoolLogoService.displayUrlFor(
-          id,
+          remembered.schoolId,
           storedUrl: remembered.logoUrl,
           style: remembered.logoStyle,
         ),
         logoPath: remembered.logoPath,
         logoStyle: remembered.logoStyle,
+        logoBytes: _logoBytes,
+      );
+    }
+    if (splash != null && splash.schoolId == id.toUpperCase()) {
+      return _BrandSnapshot(
+        schoolId: splash.schoolId,
+        name: splash.name,
+        logoUrl: splash.logoUrl ??
+            SchoolLogoService.publicUrl(splash.schoolId, style: splash.logoStyle),
+        logoStyle: splash.logoStyle,
+        logoBytes: _logoBytes,
       );
     }
     if (id.length >= 3) {
       return _BrandSnapshot(
         schoolId: id,
-        name: '',
+        name: splash?.name ?? '',
         logoUrl: SchoolLogoService.publicUrl(id),
-        logoStyle: SchoolLogoStyle.rectangular,
+        logoStyle: splash?.logoStyle ?? SchoolLogoStyle.rectangular,
+        logoBytes: _logoBytes,
       );
     }
     return null;
   }
 
   Future<void> _load() async {
-    final id = widget.schoolId.trim();
-    if (id.isEmpty) {
-      if (mounted) setState(() => _logoPath = null);
-      return;
-    }
-    final record = SchoolRegistryService.instance.lookup(id);
-    if (record == null) {
-      if (mounted) setState(() => _logoPath = null);
-      return;
-    }
-    final path = await SchoolLogoService.instance.resolvedLogoPath(
-      id,
-      storedPath: record.displayLogoPath,
+    final typed = widget.schoolId.trim();
+    final splash = SchoolSplashBrand.readMeta(
+      schoolId: typed.isEmpty ? null : typed,
     );
-    await LoginPrefsService.instance.rememberSchoolBrand(
-      schoolId: record.id,
-      name: record.name,
-      logoUrl: SchoolLogoService.displayUrlFor(
+    final id = typed.isNotEmpty ? typed : (splash?.schoolId ?? '');
+    final record = id.isEmpty ? null : SchoolRegistryService.instance.lookup(id);
+    final style = record?.logoStyle ??
+        splash?.logoStyle ??
+        SchoolLogoStyle.rectangular;
+    final bytes = SchoolSplashBrand.readBytes(
+      schoolId: id.isEmpty ? splash?.schoolId : id,
+      style: style,
+    );
+    String? path;
+    if (record != null) {
+      path = await SchoolLogoService.instance.resolvedLogoPath(
         record.id,
-        storedUrl: record.displayLogoUrl,
-        style: record.logoStyle,
-      ),
-      logoPath: path ?? record.displayLogoPath,
-      logoStyle: record.logoStyle,
-    );
-    if (mounted) setState(() => _logoPath = path);
+        storedPath: record.displayLogoPath,
+      );
+      await LoginPrefsService.instance.rememberSchoolBrand(
+        schoolId: record.id,
+        name: record.name,
+        logoUrl: SchoolLogoService.displayUrlFor(
+          record.id,
+          storedUrl: record.displayLogoUrl,
+          style: record.logoStyle,
+        ),
+        logoPath: path ?? record.displayLogoPath,
+        logoStyle: record.logoStyle,
+      );
+    }
+    if (mounted) {
+      setState(() {
+        _logoPath = path;
+        _logoBytes = bytes;
+      });
+    }
   }
 
   @override
@@ -119,6 +154,15 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     if (brand == null) {
       return MayaBrandLogo(onSecretTap: widget.onSecretTap, height: widget.height);
     }
+
+    final logo = SchoolLogoDisplay(
+      schoolId: brand.schoolId,
+      imagePath: brand.logoPath,
+      imageBytes: brand.logoBytes,
+      networkUrl: brand.logoUrl,
+      style: brand.logoStyle,
+      height: widget.height,
+    );
 
     return GestureDetector(
       onTap: widget.onSecretTap,
@@ -138,23 +182,9 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
             const SizedBox(height: 10),
           ],
           if (brand.logoStyle == SchoolLogoStyle.circular)
-            Center(
-              child: SchoolLogoDisplay(
-                schoolId: brand.schoolId,
-                imagePath: brand.logoPath,
-                networkUrl: brand.logoUrl,
-                style: brand.logoStyle,
-                height: widget.height,
-              ),
-            )
+            Center(child: logo)
           else
-            SchoolLogoDisplay(
-              schoolId: brand.schoolId,
-              imagePath: brand.logoPath,
-              networkUrl: brand.logoUrl,
-              style: brand.logoStyle,
-              height: widget.height,
-            ),
+            logo,
         ],
       ),
     );
@@ -167,6 +197,7 @@ class _BrandSnapshot {
     required this.name,
     this.logoUrl,
     this.logoPath,
+    this.logoBytes,
     this.logoStyle = SchoolLogoStyle.rectangular,
   });
 
@@ -174,5 +205,6 @@ class _BrandSnapshot {
   final String name;
   final String? logoUrl;
   final String? logoPath;
+  final Uint8List? logoBytes;
   final SchoolLogoStyle logoStyle;
 }

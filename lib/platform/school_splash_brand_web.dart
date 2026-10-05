@@ -19,19 +19,24 @@ void persistSchoolSplashBrand(String json) {
   } catch (_) {}
 }
 
-String? readSchoolSplashDataUrl({String? schoolId}) {
+Map<String, dynamic>? readSchoolSplashMap({String? schoolId}) {
   try {
     final map = _splashMap();
     if (map == null) return null;
     final storedId = (map['schoolId'] as String? ?? '').trim().toUpperCase();
     final want = schoolId?.trim().toUpperCase();
     if (want != null && want.isNotEmpty && storedId != want) return null;
-    final dataUrl = map['dataUrl'] as String?;
-    if (dataUrl == null || !dataUrl.startsWith('data:image')) return null;
-    return dataUrl;
+    return map;
   } catch (_) {
     return null;
   }
+}
+
+String? readSchoolSplashDataUrl({String? schoolId}) {
+  final map = readSchoolSplashMap(schoolId: schoolId);
+  final dataUrl = map?['dataUrl'] as String?;
+  if (dataUrl == null || !dataUrl.startsWith('data:image')) return null;
+  return dataUrl;
 }
 
 Uint8List? readSchoolSplashBytes({String? schoolId}) {
