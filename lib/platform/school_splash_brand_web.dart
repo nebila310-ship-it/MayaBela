@@ -19,6 +19,20 @@ void persistSchoolSplashBrand(String json) {
   } catch (_) {}
 }
 
+void persistActiveSchoolId(String? schoolId) {
+  try {
+    final id = schoolId?.trim().toUpperCase() ?? '';
+    if (id.isEmpty) {
+      web.window.localStorage.removeItem(SchoolSplashBrand.activeSchoolIdKey);
+    } else {
+      web.window.localStorage.setItem(
+        SchoolSplashBrand.activeSchoolIdKey,
+        id,
+      );
+    }
+  } catch (_) {}
+}
+
 Map<String, dynamic>? readSchoolSplashMap({String? schoolId}) {
   try {
     final map = _splashMap();

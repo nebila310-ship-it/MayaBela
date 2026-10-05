@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/remembered_school_brand.dart';
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/widgets/maya_brand_logo.dart';
 import 'package:mayabela/widgets/school_logo_display.dart';
@@ -26,6 +27,16 @@ class LaunchSchoolSplash extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (remembered == null) ...[
+                  Text(
+                    LoginChromeBrand.productTitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.indigo.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const MayaBrandLogo(height: 128),
                 ] else ...[
                   Text(

@@ -24,13 +24,13 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="MayaBela">
+  <meta name="apple-mobile-web-app-title" content="MaJo Bridge OS">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>MayaBela</title>
+  <title>MaJo Bridge OS</title>
   <link rel="manifest" href="manifest.json">
   <style>
     @font-face {
@@ -146,13 +146,29 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
-  <div id="splash-school-name" style="display:none;position:absolute;top:calc(50% + 120px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;"></div>
+  <div id="splash-school-name" style="position:absolute;top:calc(50% + 120px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;">MaJo Bridge OS</div>
   <script>
     (function applySavedSchoolSplash() {
       try {
+        function readLastSchoolId() {
+          var direct = (localStorage.getItem('mayabela_last_school_id') || '').trim();
+          if (direct) return direct.toUpperCase();
+          var flutter = localStorage.getItem('flutter.login_last_school_id');
+          if (!flutter) return '';
+          try {
+            var parsed = JSON.parse(flutter);
+            return (parsed || '').toString().trim().toUpperCase();
+          } catch (e) {
+            return flutter.replace(/^"+|"+$/g, '').trim().toUpperCase();
+          }
+        }
+        var lastId = readLastSchoolId();
+        if (!lastId) return;
         var raw = localStorage.getItem('mayabela_school_splash');
         if (!raw) return;
         var brand = JSON.parse(raw);
+        var brandId = (brand.schoolId || '').toString().trim().toUpperCase();
+        if (brandId && brandId !== lastId) return;
         var picture = document.getElementById('splash');
         var img = picture && picture.querySelector('img');
         var src = brand.dataUrl || brand.logoUrl;

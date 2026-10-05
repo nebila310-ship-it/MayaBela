@@ -14,8 +14,7 @@ import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_registry_service.dart';
-import 'package:mayabela/platform/browser_tab_brand.dart';
-import 'package:mayabela/platform/school_splash_brand.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/session_prefs_service.dart';
@@ -643,17 +642,7 @@ class AuthService {
   static void applySchoolContext(String loginSchoolId) {
     final trimmed = loginSchoolId.trim();
     sessionSchoolId = trimmed.isNotEmpty ? trimmed : currentUser?.schoolId;
-    final record = SchoolRegistryService.instance.lookup(sessionSchoolId);
-    final splash = SchoolSplashBrand.readMeta(schoolId: sessionSchoolId);
-    BrowserTabBrand.apply(
-      title: BrowserTabBrand.resolveTitle(
-        sessionSchoolName: record?.name,
-        splashName: splash?.name,
-        fallback: 'MaJo e-School Bridge',
-      ),
-      iconDataUrl: SchoolSplashBrand.readDataUrl(schoolId: sessionSchoolId),
-      iconUrl: record?.displayLogoUrl ?? splash?.logoUrl,
-    );
+    LoginChromeBrand.apply(schoolId: sessionSchoolId ?? '');
   }
 
   static String? get activeSchoolId => sessionSchoolId ?? currentUser?.schoolId;
