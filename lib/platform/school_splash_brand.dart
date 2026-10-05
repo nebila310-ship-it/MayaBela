@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/browser_tab_brand.dart';
 import 'package:mayabela/platform/school_splash_brand_stub.dart'
     if (dart.library.html) 'package:mayabela/platform/school_splash_brand_web.dart'
     as impl;
@@ -59,7 +60,15 @@ abstract final class SchoolSplashBrand {
         if (dataUrl != null && dataUrl.isNotEmpty) 'dataUrl': dataUrl,
       }),
     );
+    BrowserTabBrand.apply(
+      title: name.trim().isEmpty ? null : name.trim(),
+      iconDataUrl: dataUrl,
+      iconUrl: url.isEmpty ? null : url,
+    );
   }
+
+  static String? readDataUrl({String? schoolId}) =>
+      impl.readSchoolSplashDataUrl(schoolId: schoolId);
 
   static SchoolSplashMeta? readMeta({String? schoolId}) {
     final map = impl.readSchoolSplashMap(schoolId: schoolId);
