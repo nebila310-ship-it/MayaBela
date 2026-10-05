@@ -61,12 +61,16 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
     final record = SchoolRegistryService.instance.lookup(id);
     final path = await SchoolLogoService.instance.resolvedLogoPath(
       id,
-      storedPath: record?.logoPath,
+      storedPath: record?.displayLogoPath,
     );
     if (mounted) {
       setState(() {
         _logoPath = path;
-        _logoUrl = record?.logoUrl;
+        _logoUrl = record?.displayLogoUrl ??
+            SchoolLogoService.publicUrl(
+              id,
+              style: record?.logoStyle ?? SchoolLogoStyle.rectangular,
+            );
       });
     }
   }

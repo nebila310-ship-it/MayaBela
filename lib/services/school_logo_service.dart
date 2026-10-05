@@ -13,6 +13,7 @@ import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/platform_owner_service.dart';
+import 'package:mayabela/supabase_options.dart';
 
 /// School logos: pick → normalize → local/web cache → optional cloud upload.
 class SchoolLogoService {
@@ -21,6 +22,23 @@ class SchoolLogoService {
 
   /// Last human-readable pick/save error (for owner console toasts).
   String? lastError;
+
+  static String brandingFile(SchoolLogoStyle style) =>
+      style == SchoolLogoStyle.circular ? 'identity.jpg' : 'logo.jpg';
+
+  /// Guessable public URL so login/splash can show a cloud logo before JWT.
+  static String publicUrl(
+    String schoolId, {
+    SchoolLogoStyle style = SchoolLogoStyle.rectangular,
+    int? cacheBust,
+  }) {
+    final url = schoolBrandingPublicUrl(
+      schoolId,
+      file: brandingFile(style),
+    );
+    if (cacheBust == null) return url;
+    return '$url?v=$cacheBust';
+  }
 
   /// Picks a logo image. Prefers [FilePicker] (works on web); falls back to
   /// gallery [ImagePicker] on native if needed.
@@ -250,6 +268,7 @@ class SchoolLogoService {
     required String schoolId,
     required String localPath,
     Uint8List? bytes,
+    SchoolLogoStyle style = SchoolLogoStyle.rectangular,
   }) async {
     lastError = null;
     final id = schoolId.trim().toUpperCase();
@@ -266,24 +285,30 @@ class SchoolLogoService {
     }
 
     // Prefer platform edge upload (works without school JWT).
-    final viaPlatform = await _uploadViaPlatformFunction(id, payload);
+    final viaPlatform = await _uploadViaPlatformFunction(id, payload, style);
     if (viaPlatform != null) return viaPlatform;
 
     // Fallback: direct storage when the session has school claims.
-    return _uploadDirect(id, payload);
+    return _uploadDirect(id, payload, style);
   }
 
   Future<String?> _uploadViaPlatformFunction(
     String schoolId,
     Uint8List bytes,
+    SchoolLogoStyle style,
   ) async {
     try {
       await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
-      if (!SupabaseBootstrap.isInitialized) return null;
+      if (!SupabaseBootstrap.isInitialized) {
+        lastError = 'Cloud is not configured on this build.';
+        return null;
+      }
 
       final ownerPin = PlatformOwnerService.instance.sessionOwnerPin?.trim();
       if (ownerPin == null ||
           ownerPin.length < PlatformOwnerService.minPinLength) {
+        lastError =
+            'Unlock the owner console with your PIN, then save the logo again.';
         return null;
       }
 
@@ -293,17 +318,24 @@ class SchoolLogoService {
           'schoolId': schoolId,
           'bytesBase64': base64Encode(bytes),
           'ownerPin': ownerPin,
+          'kind': style == SchoolLogoStyle.circular ? 'identity' : 'banner',
+          'style': style.name,
         },
       );
       final data = res.data;
       if (data is Map && data['ok'] == true && data['url'] is String) {
-        return data['url'] as String;
+        final url = (data['url'] as String).trim();
+        if (url.startsWith('http')) return url;
       }
+      lastError = data is Map
+          ? (data['error']?.toString() ?? 'Cloud logo upload failed.')
+          : 'Cloud logo upload failed.';
       if (kDebugMode) {
         debugPrint('platform-upload-logo failed: $data');
       }
       return null;
     } catch (e) {
+      lastError = 'Cloud logo upload failed. Check internet and try again.';
       if (kDebugMode) {
         debugPrint('platform-upload-logo error: $e');
       }
@@ -311,10 +343,15 @@ class SchoolLogoService {
     }
   }
 
-  Future<String?> _uploadDirect(String schoolId, Uint8List bytes) async {
+  Future<String?> _uploadDirect(
+    String schoolId,
+    Uint8List bytes,
+    SchoolLogoStyle style,
+  ) async {
     try {
       if (!SupabaseBootstrap.isInitialized) return null;
-      final storagePath = 'schools/$schoolId/branding/logo.jpg';
+      final storagePath =
+          'schools/$schoolId/branding/${brandingFile(style)}';
       await SupabaseBootstrap.client.storage.from('school-files').uploadBinary(
             storagePath,
             bytes,
@@ -323,14 +360,16 @@ class SchoolLogoService {
               upsert: true,
             ),
           );
-      return SupabaseBootstrap.client.storage
+      final url = SupabaseBootstrap.client.storage
           .from('school-files')
           .getPublicUrl(storagePath);
+      return '$url?v=${DateTime.now().millisecondsSinceEpoch}';
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SchoolLogoService._uploadDirect: $e');
       }
-      lastError = 'Cloud logo upload was denied. Logo kept on this device.';
+      lastError ??=
+          'Cloud logo upload was denied. Logo was not saved for other devices.';
       return null;
     }
   }

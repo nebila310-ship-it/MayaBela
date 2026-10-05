@@ -71,13 +71,29 @@ Future<void> _saveSchoolLogoFromPicker({
     schoolId: schoolId,
     localPath: saved,
     bytes: normalized,
+    style: style,
   );
-  await SchoolRegistryService.instance.setSchoolLogo(
+  if (remoteUrl == null || !remoteUrl.startsWith('http')) {
+    onError?.call(
+      logos.lastError ??
+          'Logo stayed on this device. Cloud save failed — try again.',
+    );
+    return;
+  }
+  final cloud = await SchoolRegistryService.instance.setSchoolLogo(
     schoolId,
     localPath: saved,
     remoteUrl: remoteUrl,
     style: style,
   );
+  if (!cloud.ok) {
+    onError?.call(
+      cloud.errorMessage?.trim().isNotEmpty == true
+          ? cloud.errorMessage!
+          : 'Logo uploaded but school record did not sync. Try Save again.',
+    );
+    return;
+  }
   if (context.mounted) onSaved();
 }
 
@@ -549,7 +565,10 @@ class _SchoolTileState extends State<_SchoolTile> {
   void didUpdateWidget(_SchoolTile oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.school.id != widget.school.id ||
-        oldWidget.school.logoPath != widget.school.logoPath) {
+        oldWidget.school.logoPath != widget.school.logoPath ||
+        oldWidget.school.identityLogoPath != widget.school.identityLogoPath ||
+        oldWidget.school.logoUrl != widget.school.logoUrl ||
+        oldWidget.school.identityLogoUrl != widget.school.identityLogoUrl) {
       _loadLogo();
     }
   }
@@ -557,7 +576,7 @@ class _SchoolTileState extends State<_SchoolTile> {
   Future<void> _loadLogo() async {
     final path = await SchoolLogoService.instance.resolvedLogoPath(
       widget.school.id,
-      storedPath: widget.school.logoPath,
+      storedPath: widget.school.displayLogoPath,
     );
     if (mounted) setState(() => _logoPath = path);
   }
@@ -884,7 +903,7 @@ class _SchoolTileState extends State<_SchoolTile> {
       height: 56,
       child: SchoolLogoDisplay(
         imagePath: _logoPath,
-        networkUrl: school.logoUrl,
+        networkUrl: school.displayLogoUrl,
         style: school.logoStyle,
         height: 56,
         width: 56,
@@ -967,7 +986,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
   Future<void> _loadLogo() async {
     final path = await SchoolLogoService.instance.resolvedLogoPath(
       widget.schoolId,
-      storedPath: _school?.logoPath,
+      storedPath: _school?.displayLogoPath,
     );
     if (mounted) setState(() => _logoPath = path);
   }
@@ -1293,7 +1312,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       },
       onError: (message) {
         if (message.contains('cancelled')) return;
-        _toast(message);
+        _toast(message, isError: true);
       },
     );
   }
@@ -1302,7 +1321,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     if (!_editing) return;
     if (_logoPath == null &&
         _logoBytes == null &&
-        (_school?.logoPath == null || _school!.logoPath!.isEmpty)) {
+        (_school?.displayLogoPath == null || _school!.displayLogoPath!.isEmpty) &&
+        (_school?.displayLogoUrl == null || _school!.displayLogoUrl!.isEmpty)) {
       _toast('No logo to remove');
       return;
     }
@@ -1324,8 +1344,18 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     );
     if (confirm != true || !mounted) return;
 
-    await SchoolRegistryService.instance.clearSchoolLogo(widget.schoolId);
-    if (mounted) setState(() => _logoBytes = null);
+    final cloud = await SchoolRegistryService.instance.clearSchoolLogo(
+      widget.schoolId,
+    );
+    if (!mounted) return;
+    if (!cloud.ok) {
+      _toast(
+        cloud.errorMessage ?? 'Logo still in cloud. Try again.',
+        isError: true,
+      );
+      return;
+    }
+    setState(() => _logoBytes = null);
     _load();
     _toast('Logo removed');
   }
@@ -1471,7 +1501,7 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
             child: SchoolLogoDisplay(
               imagePath: _logoPath,
               imageBytes: _logoBytes,
-              networkUrl: school.logoUrl,
+              networkUrl: school.displayLogoUrl,
               style: school.logoStyle,
               height: 72,
               width: 72,
@@ -2053,15 +2083,17 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           ),
         ],
         const SizedBox(height: 16),
-        _sectionTitle('School logo'),
+        _sectionTitle('School logo & identity'),
         if (_logoPath != null ||
             _logoBytes != null ||
-            (school.logoPath != null && school.logoPath!.isNotEmpty)) ...[
+            (school.displayLogoUrl != null && school.displayLogoUrl!.isNotEmpty) ||
+            (school.displayLogoPath != null &&
+                school.displayLogoPath!.isNotEmpty)) ...[
           Center(
             child: SchoolLogoDisplay(
               imagePath: _logoPath,
               imageBytes: _logoBytes,
-              networkUrl: school.logoUrl,
+              networkUrl: school.displayLogoUrl,
               style: school.logoStyle,
               height: school.logoStyle == SchoolLogoStyle.circular ? 100 : 90,
             ),
@@ -2080,18 +2112,21 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
             OutlinedButton.icon(
               onPressed: () => _changeLogo(SchoolLogoStyle.rectangular),
               icon: const Icon(Icons.crop_landscape_outlined),
-              label: const Text('Rectangular banner'),
+              label: const Text('School logo (banner)'),
               style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
             ),
             OutlinedButton.icon(
               onPressed: () => _changeLogo(SchoolLogoStyle.circular),
               icon: const Icon(Icons.circle_outlined),
-              label: const Text('Circular logo'),
+              label: const Text('Identity logo (circular)'),
               style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
             ),
             if (_logoPath != null ||
                 _logoBytes != null ||
-                (school.logoPath != null && school.logoPath!.isNotEmpty))
+                (school.displayLogoUrl != null &&
+                    school.displayLogoUrl!.isNotEmpty) ||
+                (school.displayLogoPath != null &&
+                    school.displayLogoPath!.isNotEmpty))
               OutlinedButton.icon(
                 onPressed: _removeLogo,
                 icon: const Icon(Icons.delete_outline, color: Colors.orange),
@@ -2653,13 +2688,16 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
               schoolId: school.id,
               localPath: saved,
               bytes: _pendingLogoBytes,
-            );
-            await SchoolRegistryService.instance.setSchoolLogo(
-              school.id,
-              localPath: saved,
-              remoteUrl: remoteUrl,
               style: _pendingLogoStyle,
             );
+            if (remoteUrl != null && remoteUrl.startsWith('http')) {
+              await SchoolRegistryService.instance.setSchoolLogo(
+                school.id,
+                localPath: saved,
+                remoteUrl: remoteUrl,
+                style: _pendingLogoStyle,
+              );
+            }
           }
         } catch (_) {
           // Logo is optional — school is already created.
@@ -2797,7 +2835,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
                     ? null
                     : () => _pickLogo(SchoolLogoStyle.rectangular),
                 icon: const Icon(Icons.crop_landscape_outlined),
-                label: const Text('Rectangular banner'),
+                label: const Text('School logo (banner)'),
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
               ),
               OutlinedButton.icon(
@@ -2805,7 +2843,7 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
                     ? null
                     : () => _pickLogo(SchoolLogoStyle.circular),
                 icon: const Icon(Icons.circle_outlined),
-                label: const Text('Circular logo'),
+                label: const Text('Identity logo (circular)'),
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
               ),
               if (_pendingLogoBytes != null)

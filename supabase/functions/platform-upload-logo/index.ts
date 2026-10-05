@@ -1,13 +1,17 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
-import {
-  adminClient,
-  getDoc,
-} from "../_shared/school_auth.ts";
+import { adminClient } from "../_shared/school_auth.ts";
 import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
+
+function brandingFile(kind: string): string {
+  return kind === "identity" || kind === "circular"
+    ? "identity.jpg"
+    : "logo.jpg";
+}
 
 /**
  * Platform-owner logo upload. Uses the service role so logos can be stored
  * without a school-scoped JWT (owner console has no school session).
+ * kind: banner/logo (rectangular) or identity/circular.
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -40,22 +44,30 @@ Deno.serve(async (req) => {
       return errorResponse("Image too large.", 400, "too_large");
     }
 
-    const path = `schools/${schoolId}/branding/logo.jpg`;
-    const { error: upErr } = await sb.storage
-      .from("school-files")
-      .upload(path, bytes, {
-        contentType: "image/jpeg",
-        upsert: true,
-      });
+    const kind = String(body?.kind || body?.style || "banner").trim().toLowerCase();
+    const path = `schools/${schoolId}/branding/${brandingFile(kind)}`;
+    const options = {
+      contentType: "image/jpeg",
+      upsert: true,
+      cacheControl: "60",
+    };
+
+    let upErr = (await sb.storage.from("school-files").upload(path, bytes, options))
+      .error;
+    if (upErr) {
+      const retry = await sb.storage.from("school-files").update(path, bytes, options);
+      upErr = retry.error;
+    }
     if (upErr) {
       console.error(upErr);
       return errorResponse(upErr.message || "Upload failed.", 500, "upload");
     }
 
     const { data } = sb.storage.from("school-files").getPublicUrl(path);
-    return jsonResponse({ ok: true, url: data.publicUrl, path });
+    const url = `${data.publicUrl}?v=${Date.now()}`;
+    return jsonResponse({ ok: true, url, path, kind: brandingFile(kind) });
   } catch (e) {
-    const msg = String(e?.message || e);
+    const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {
       return errorResponse("Too many attempts. Try again later.", 429, "rate_limited");
     }

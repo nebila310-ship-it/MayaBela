@@ -205,11 +205,28 @@ class PlatformSchoolsCloudService {
         );
       }
 
+      final payload = Map<String, dynamic>.from(school.toJson());
+      payload.remove('adminInitialPassword');
+      payload.remove('password');
+      payload.remove('passwordHash');
+      void stripLocalPath(String key) {
+        final value = payload[key];
+        if (value is String &&
+            value.trim().isNotEmpty &&
+            !value.startsWith('http://') &&
+            !value.startsWith('https://')) {
+          payload[key] = null;
+        }
+      }
+
+      stripLocalPath('logoPath');
+      stripLocalPath('identityLogoPath');
+
       final res = await SupabaseBootstrap.client.functions.invoke(
         'platform-update-school',
         body: {
           'ownerPin': ownerPin,
-          'school': school.toJson(),
+          'school': payload,
           'schoolId': school.id.trim().toUpperCase(),
           if (adminPassword != null && adminPassword.isNotEmpty)
             'adminPassword': adminPassword,

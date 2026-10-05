@@ -13,6 +13,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
+import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/platform_audit_log_service.dart';
 import 'package:mayabela/services/platform_owner_service.dart';
 import 'package:mayabela/services/platform_schools_cloud_service.dart';
@@ -41,6 +42,8 @@ class SchoolRecord {
     this.officePhone,
     this.logoPath,
     this.logoUrl,
+    this.identityLogoPath,
+    this.identityLogoUrl,
     this.logoStyle = SchoolLogoStyle.rectangular,
     this.contractedSeats,
     this.ratePerStudentMonthEtb,
@@ -72,6 +75,8 @@ class SchoolRecord {
   String? officePhone;
   String? logoPath;
   String? logoUrl;
+  String? identityLogoPath;
+  String? identityLogoUrl;
   SchoolLogoStyle logoStyle;
   int? contractedSeats;
   int? ratePerStudentMonthEtb;
@@ -93,6 +98,35 @@ class SchoolRecord {
   /// Owned by the platform owner console; school JWT updates cannot change it.
   Set<String>? enabledModules;
   final List<AcademicTerm> academicTerms;
+
+  /// Cloud URL for login / splash for the last-saved style.
+  String? get displayLogoUrl {
+    final primary = logoStyle == SchoolLogoStyle.circular
+        ? identityLogoUrl
+        : logoUrl;
+    final fallback = logoStyle == SchoolLogoStyle.circular
+        ? logoUrl
+        : identityLogoUrl;
+    final a = primary?.trim();
+    if (a != null && a.startsWith('http')) return a;
+    final b = fallback?.trim();
+    if (b != null && b.startsWith('http')) return b;
+    return null;
+  }
+
+  String? get displayLogoPath {
+    final primary = logoStyle == SchoolLogoStyle.circular
+        ? identityLogoPath
+        : logoPath;
+    final fallback = logoStyle == SchoolLogoStyle.circular
+        ? logoPath
+        : identityLogoPath;
+    final a = primary?.trim();
+    if (a != null && a.isNotEmpty) return a;
+    final b = fallback?.trim();
+    if (b != null && b.isNotEmpty) return b;
+    return null;
+  }
 
   SchoolAccessBlock? get accessBlock {
     if (status == SchoolLifecycleStatus.inactive) {
@@ -126,6 +160,8 @@ class SchoolRecord {
     String? officePhone,
     String? logoPath,
     String? logoUrl,
+    String? identityLogoPath,
+    String? identityLogoUrl,
     SchoolLogoStyle? logoStyle,
     int? contractedSeats,
     int? ratePerStudentMonthEtb,
@@ -159,6 +195,8 @@ class SchoolRecord {
       officePhone: officePhone ?? this.officePhone,
       logoPath: logoPath ?? this.logoPath,
       logoUrl: logoUrl ?? this.logoUrl,
+      identityLogoPath: identityLogoPath ?? this.identityLogoPath,
+      identityLogoUrl: identityLogoUrl ?? this.identityLogoUrl,
       logoStyle: logoStyle ?? this.logoStyle,
       contractedSeats: contractedSeats ?? this.contractedSeats,
       ratePerStudentMonthEtb:
@@ -199,6 +237,8 @@ class SchoolRecord {
     'officePhone': officePhone,
     'logoPath': logoPath,
     'logoUrl': logoUrl,
+    'identityLogoPath': identityLogoPath,
+    'identityLogoUrl': identityLogoUrl,
     'logoStyle': logoStyle.name,
     'contractedSeats': contractedSeats,
     'ratePerStudentMonthEtb': ratePerStudentMonthEtb,
@@ -258,6 +298,8 @@ class SchoolRecord {
       officePhone: json['officePhone'] as String?,
       logoPath: json['logoPath'] as String?,
       logoUrl: json['logoUrl'] as String?,
+      identityLogoPath: json['identityLogoPath'] as String?,
+      identityLogoUrl: json['identityLogoUrl'] as String?,
       logoStyle: SchoolLogoStyle.parse(json['logoStyle'] as String?),
       contractedSeats: json['contractedSeats'] as int?,
       ratePerStudentMonthEtb: json['ratePerStudentMonthEtb'] as int?,
@@ -921,35 +963,65 @@ class SchoolRegistryService {
     return cloud;
   }
 
-  Future<void> setSchoolLogo(
+  Future<PlatformSchoolCloudResult> setSchoolLogo(
     String schoolId, {
     String? localPath,
     String? remoteUrl,
     SchoolLogoStyle? style,
   }) async {
     final record = lookup(schoolId);
-    if (record == null) return;
-    record.logoPath = localPath;
-    if (remoteUrl != null) record.logoUrl = remoteUrl;
-    if (style != null) record.logoStyle = style;
-    await updateSchool(record);
+    if (record == null) {
+      return const PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'not_found',
+        errorMessage: 'School not found locally.',
+      );
+    }
+    final resolvedStyle = style ?? record.logoStyle;
+    if (resolvedStyle == SchoolLogoStyle.circular) {
+      if (localPath != null) record.identityLogoPath = localPath;
+      if (remoteUrl != null) record.identityLogoUrl = remoteUrl;
+    } else {
+      if (localPath != null) record.logoPath = localPath;
+      if (remoteUrl != null) record.logoUrl = remoteUrl;
+    }
+    record.logoStyle = resolvedStyle;
+    final cloud = await updateSchool(record, preferPlatformCloud: true);
+    try {
+      await LoginPrefsService.instance.rememberSchoolBrand(
+        schoolId: record.id,
+        name: record.name,
+        logoUrl: record.displayLogoUrl,
+        logoPath: record.displayLogoPath,
+        logoStyle: record.logoStyle,
+      );
+    } catch (_) {}
     try {
       await PlatformAuditLogService.instance.log(
         action: 'logo_updated',
         schoolId: record.id,
         schoolName: record.name,
-        detail: style?.label,
+        detail: resolvedStyle.label,
       );
     } catch (_) {}
+    return cloud;
   }
 
-  Future<void> clearSchoolLogo(String schoolId) async {
+  Future<PlatformSchoolCloudResult> clearSchoolLogo(String schoolId) async {
     await SchoolLogoService.instance.deleteLogo(schoolId);
     final record = lookup(schoolId);
-    if (record == null) return;
+    if (record == null) {
+      return const PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'not_found',
+        errorMessage: 'School not found locally.',
+      );
+    }
     record.logoPath = null;
     record.logoUrl = null;
-    await updateSchool(record);
+    record.identityLogoPath = null;
+    record.identityLogoUrl = null;
+    final cloud = await updateSchool(record, preferPlatformCloud: true);
     try {
       await PlatformAuditLogService.instance.log(
         action: 'logo_removed',
@@ -957,6 +1029,7 @@ class SchoolRegistryService {
         schoolName: record.name,
       );
     } catch (_) {}
+    return cloud;
   }
 
   Future<void> setContractedSeats(String schoolId, int? seats) async {
