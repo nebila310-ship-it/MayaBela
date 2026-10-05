@@ -1361,8 +1361,20 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     );
     if (!pinOk || !mounted) return;
 
-    await SchoolRegistryService.instance.removeSchool(widget.schoolId);
+    final cloud = await SchoolRegistryService.instance.removeSchool(
+      widget.schoolId,
+    );
     if (!mounted) return;
+    if (!cloud.ok) {
+      _toast(
+        cloud.errorMessage?.trim().isNotEmpty == true
+            ? cloud.errorMessage!
+            : 'Cloud delete failed (${cloud.errorCode ?? 'error'}). '
+                'The school was NOT removed.',
+        isError: true,
+      );
+      return;
+    }
     Navigator.pop(context, true);
   }
 

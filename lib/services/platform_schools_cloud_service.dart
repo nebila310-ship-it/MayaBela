@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/models/cloud/app_data_maps.dart';
-import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
 import 'package:mayabela/services/platform_owner_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -269,6 +268,68 @@ class PlatformSchoolsCloudService {
     }
   }
 
+  /// Permanently delete a school tenant in Supabase (owner PIN, no school JWT).
+  Future<PlatformSchoolCloudResult> deleteSchoolInCloud(String schoolId) async {
+    try {
+      final ownerPin = await _ownerPinOrNull();
+      if (!SupabaseBootstrap.isInitialized) {
+        return const PlatformSchoolCloudResult(
+          ok: false,
+          errorCode: 'cloud_required',
+          errorMessage: 'Cloud is not configured on this build.',
+        );
+      }
+      if (ownerPin == null) {
+        return const PlatformSchoolCloudResult(
+          ok: false,
+          errorCode: 'unauthorized',
+          errorMessage:
+              'Unlock the platform console with your Owner PIN, then retry.',
+        );
+      }
+      final id = schoolId.trim().toUpperCase();
+      if (id.length < 3) {
+        return const PlatformSchoolCloudResult(
+          ok: false,
+          errorCode: 'invalid',
+          errorMessage: 'Invalid school id.',
+        );
+      }
+
+      final res = await SupabaseBootstrap.client.functions.invoke(
+        'platform-delete-school',
+        body: {'schoolId': id, 'ownerPin': ownerPin},
+      );
+      final data = res.data;
+      if (data is! Map) {
+        return const PlatformSchoolCloudResult(
+          ok: false,
+          errorCode: 'invalid',
+          errorMessage: 'Cloud delete returned an empty response.',
+        );
+      }
+      if (data['error'] != null || data['ok'] != true) {
+        return PlatformSchoolCloudResult(
+          ok: false,
+          errorCode: (data['code'] as String?) ?? 'invalid',
+          errorMessage: data['error']?.toString() ?? 'Cloud delete failed.',
+        );
+      }
+      return PlatformSchoolCloudResult(ok: true, schoolId: id);
+    } on FunctionException catch (e) {
+      return _parseFunctionError(e, fallback: 'Cloud delete failed');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PlatformSchoolsCloudService.deleteSchoolInCloud failed: $e');
+      }
+      return PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'invalid',
+        errorMessage: e.toString(),
+      );
+    }
+  }
+
   /// Pull every school_registry doc into the local registry (merge).
   Future<int> syncAllSchoolsFromCloud() async {
     try {
@@ -309,49 +370,18 @@ class PlatformSchoolsCloudService {
         }
       }
 
-      // Drop demo TB-001 when real cloud schools exist and TB-001 is not among them.
-      if (count > 0) {
-        SchoolRegistryService.instance.removeDemoIfNotInCloud(
-          cloudIds: raw
-              .whereType<Map>()
-              .map((m) => (m['id'] as String?)?.trim().toUpperCase() ?? '')
-              .where((id) => id.isNotEmpty)
-              .toSet(),
-        );
-      }
+      final cloudIds = raw
+          .whereType<Map>()
+          .map((m) => (m['id'] as String?)?.trim().toUpperCase() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      SchoolRegistryService.instance.removeSchoolsNotInCloud(
+        cloudIds: cloudIds,
+      );
 
       await SchoolRegistryPersistenceService.instance.saveFromService(
         pushCloud: false,
       );
-
-      // Local-only orphans cannot be pushed without a school JWT; leave them
-      // for the owner to recreate via platform-create-school.
-      try {
-        final cloudIds = raw
-            .whereType<Map>()
-            .map((m) => (m['id'] as String?)?.trim().toUpperCase() ?? '')
-            .where((id) => id.isNotEmpty)
-            .toSet();
-        for (final school
-            in SchoolRegistryService.instance.allSchoolsSnapshot()) {
-          final id = school.id.trim().toUpperCase();
-          if (id.isEmpty || id == 'TB-001') continue;
-          if (!cloudIds.contains(id)) {
-            if (kDebugMode) {
-              debugPrint(
-                'PlatformSchoolsCloudService: local-only school $id '
-                '(recreate from owner console to sync)',
-              );
-            }
-            // Keep the old attempt for admin recovery, but do not pretend push works.
-            await CloudAppStore.instance.pushSchool(school);
-          }
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('PlatformSchoolsCloudService push missing: $e');
-        }
-      }
 
       return count;
     } on FunctionException catch (e) {

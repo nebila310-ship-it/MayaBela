@@ -59,6 +59,9 @@ verify_jwt = false
 [functions.platform-update-school]
 verify_jwt = false
 
+[functions.platform-delete-school]
+verify_jwt = false
+
 [functions.platform-upload-logo]
 verify_jwt = false
 

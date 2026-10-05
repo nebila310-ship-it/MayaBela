@@ -334,6 +334,20 @@ class SchoolRegistryService {
     _seedDemoSchool();
   }
 
+  /// Used by platform console after a successful cloud list pull.
+  /// Drops local schools that are no longer in cloud so a delete on one
+  /// PC disappears on the next owner-console refresh.
+  void removeSchoolsNotInCloud({required Set<String> cloudIds}) {
+    final upper = cloudIds.map((e) => e.toUpperCase()).toSet();
+    _schools.removeWhere((s) {
+      final id = s.id.toUpperCase();
+      if (id == 'TB-001' && s.name == 'Maya School' && !upper.contains('TB-001')) {
+        return false;
+      }
+      return !upper.contains(id);
+    });
+  }
+
   /// Used by platform console after a cloud list pull.
   void removeDemoIfNotInCloud({required Set<String> cloudIds}) {
     final upper = cloudIds.map((e) => e.toUpperCase()).toSet();
@@ -888,13 +902,15 @@ class SchoolRegistryService {
     return cloud;
   }
 
-  Future<void> removeSchool(String schoolId) async {
+  Future<PlatformSchoolCloudResult> removeSchool(String schoolId) async {
     final id = schoolId.trim().toUpperCase();
     final record = lookup(id);
+    final cloud =
+        await PlatformSchoolsCloudService.instance.deleteSchoolInCloud(id);
+    if (!cloud.ok) return cloud;
     await SchoolLogoService.instance.deleteLogo(id);
     _schools.removeWhere((s) => s.id.toUpperCase() == id);
-    await _persist();
-    await CloudAppStore.instance.deleteSchool(id);
+    await _persist(pushCloud: false);
     if (record != null) {
       await PlatformAuditLogService.instance.log(
         action: 'school_deleted',
@@ -902,6 +918,7 @@ class SchoolRegistryService {
         schoolName: record.name,
       );
     }
+    return cloud;
   }
 
   Future<void> setSchoolLogo(
