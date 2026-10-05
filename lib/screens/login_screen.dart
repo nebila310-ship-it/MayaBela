@@ -124,7 +124,15 @@ class _LoginScreenState extends State<LoginScreen> {
       LoginPrefsService.instance.saveLastSchoolId(id);
       _applySavedEntryForSchoolId(id);
     }
-    if (mounted) setState(() => _schoolIdEditing = false);
+    if (!mounted) return;
+    setState(() => _schoolIdEditing = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (id.isNotEmpty && schoolId.text.trim().isEmpty) {
+        schoolId.text = id;
+      }
+      _syncLoginChrome();
+    });
   }
 
   Future<void> _restoreSavedLogin() async {
@@ -1287,7 +1295,7 @@ class _LoginScreenState extends State<LoginScreen> {
         fit: StackFit.expand,
         children: [
           const WebLoginBackground(),
-          if (!phone) const WebLoginWatermark(),
+          if (!phone) WebLoginSideBrand(schoolId: schoolId.text),
           if (phone)
             SafeArea(
               child: LayoutBuilder(

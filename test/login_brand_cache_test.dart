@@ -7,6 +7,7 @@ import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/login_brand_header.dart';
+import 'package:mayabela/web_erp/login/web_login_shell.dart';
 
 void main() {
   setUp(() async {
@@ -152,5 +153,35 @@ void main() {
 
     LoginChromeBrand.apply(schoolId: '  ');
     expect(LoginChromeBrand.tabTitle.value, 'MaJo Bridge OS');
+  });
+
+  testWidgets('web login side brand is MaJo until a school id is typed',
+      (tester) async {
+    await LoginPrefsService.instance.rememberSchoolBrand(
+      schoolId: 'BRANDTEST',
+      name: 'Sunrise Academy',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: WebLoginSideBrand(schoolId: ''),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('MaJo Bridge OS'), findsOneWidget);
+    expect(find.text('Sunrise Academy'), findsNothing);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: WebLoginSideBrand(schoolId: 'BRANDTEST'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Sunrise Academy'), findsOneWidget);
+    expect(find.text('MaJo Bridge OS'), findsNothing);
   });
 }

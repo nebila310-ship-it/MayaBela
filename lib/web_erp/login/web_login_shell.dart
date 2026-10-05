@@ -1,6 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/login_chrome_brand.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
+import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/widgets/school_logo_display.dart';
 
 /// Abstract education / tech background (inspired by EMS login — no stock photo).
 class WebLoginBackground extends StatelessWidget {
@@ -174,38 +181,117 @@ class _WebLoginBackgroundPainter extends CustomPainter {
 
 /// Soft brand watermark on the web login background (left of the sign-in card).
 class WebLoginWatermark extends StatelessWidget {
-  const WebLoginWatermark({super.key});
+  const WebLoginWatermark({
+    super.key,
+    this.opacity = 0.22,
+    this.inline = false,
+  });
 
   static const assetPath = 'assets/branding/majo_login_watermark.png';
+  final double opacity;
+  final bool inline;
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final mark = math.min(size.width * 0.38, size.height * 0.52).clamp(220.0, 420.0);
+    final image = ShaderMask(
+      shaderCallback: (rect) => RadialGradient(
+        center: Alignment.center,
+        radius: 0.9,
+        colors: [
+          Colors.white,
+          Colors.white.withValues(alpha: 0.0),
+        ],
+        stops: const [0.42, 1.0],
+      ).createShader(rect),
+      blendMode: BlendMode.dstIn,
+      child: Opacity(
+        opacity: opacity,
+        child: Image.asset(
+          assetPath,
+          width: mark,
+          height: mark,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        ),
+      ),
+    );
+    if (inline) return image;
+    return IgnorePointer(
+      child: Align(
+        alignment: const Alignment(-0.62, 0.02),
+        child: image,
+      ),
+    );
+  }
+}
+
+/// Left-side login brand: MaJo Bridge OS until a School ID is typed.
+class WebLoginSideBrand extends StatelessWidget {
+  const WebLoginSideBrand({super.key, required this.schoolId});
+
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = schoolId.trim();
+    final record = id.isEmpty ? null : SchoolRegistryService.instance.lookup(id);
+    final splash = id.isEmpty ? null : SchoolSplashBrand.readMeta(schoolId: id);
+    final remembered = id.isEmpty
+        ? null
+        : LoginPrefsService.instance.brandForSchool(id);
+    final name = (record?.name.trim().isNotEmpty ?? false)
+        ? record!.name.trim()
+        : (remembered?.name.trim().isNotEmpty ?? false)
+            ? remembered!.name.trim()
+            : (splash?.name.trim() ?? '');
+    final showSchool = id.isNotEmpty && (name.isNotEmpty || id.length >= 3);
+    final style = record?.logoStyle ??
+        remembered?.logoStyle ??
+        splash?.logoStyle ??
+        SchoolLogoStyle.rectangular;
+    final logoUrl = record?.displayLogoUrl ??
+        remembered?.logoUrl ??
+        splash?.logoUrl ??
+        (id.length >= 3 ? SchoolLogoService.publicUrl(id, style: style) : null);
 
     return IgnorePointer(
       child: Align(
         alignment: const Alignment(-0.62, 0.02),
-        child: ShaderMask(
-          shaderCallback: (rect) => RadialGradient(
-            center: Alignment.center,
-            radius: 0.9,
-            colors: [
-              Colors.white,
-              Colors.white.withValues(alpha: 0.0),
-            ],
-            stops: const [0.42, 1.0],
-          ).createShader(rect),
-          blendMode: BlendMode.dstIn,
-          child: Opacity(
-            opacity: 0.12,
-            child: Image.asset(
-              assetPath,
-              width: mark,
-              height: mark,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  showSchool
+                      ? (name.isNotEmpty ? name : id.toUpperCase())
+                      : LoginChromeBrand.productTitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.indigo.shade900,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (showSchool)
+                  SchoolLogoDisplay(
+                    schoolId: record?.id ?? remembered?.schoolId ?? id,
+                    imagePath:
+                        record?.displayLogoPath ?? remembered?.logoPath,
+                    networkUrl: logoUrl,
+                    style: style,
+                    height: 168,
+                  )
+                else
+                  const WebLoginWatermark(opacity: 0.55, inline: true),
+              ],
             ),
           ),
         ),
