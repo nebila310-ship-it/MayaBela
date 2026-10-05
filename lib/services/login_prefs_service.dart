@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/remembered_school_brand.dart';
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
 
 class SavedLoginEntry {
   const SavedLoginEntry({
@@ -154,6 +155,15 @@ class LoginPrefsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSchoolIdKey, id);
     await prefs.setString(_brandKey, jsonEncode(brand.toJson()));
+    try {
+      SchoolSplashBrand.remember(
+        schoolId: id,
+        name: trimmedName,
+        style: logoStyle,
+        jpegBytes: SchoolSplashBrand.readBytes(schoolId: id, style: logoStyle),
+        logoUrl: brand.logoUrl,
+      );
+    } catch (_) {}
   }
 
   RememberedSchoolBrand? _readBrand(String? raw) {

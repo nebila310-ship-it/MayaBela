@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/widgets/platform_path_image.dart';
@@ -41,6 +42,9 @@ class _SchoolLogoDisplayState extends State<SchoolLogoDisplay> {
   void initState() {
     super.initState();
     _primeFromCache();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fetchFromStorage();
+    });
   }
 
   @override
@@ -54,15 +58,22 @@ class _SchoolLogoDisplayState extends State<SchoolLogoDisplay> {
       _downloaded = null;
       _downloadStarted = false;
       _primeFromCache();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _fetchFromStorage();
+      });
     }
   }
 
   void _primeFromCache() {
     final id = widget.schoolId?.trim();
     if (id == null || id.isEmpty) return;
-    final cached = WebAttachmentCache.instance.read(
-      SchoolLogoService.cacheKey(id, widget.style),
-    );
+    final cached = SchoolSplashBrand.readBytes(
+          schoolId: id,
+          style: widget.style,
+        ) ??
+        WebAttachmentCache.instance.read(
+          SchoolLogoService.cacheKey(id, widget.style),
+        );
     if (cached != null && cached.isNotEmpty) {
       _downloaded = cached;
     }

@@ -14,6 +14,8 @@ import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/platform_audit_log_service.dart';
 import 'package:mayabela/services/platform_owner_service.dart';
 import 'package:mayabela/services/platform_schools_cloud_service.dart';
@@ -1019,6 +1021,22 @@ class SchoolRegistryService {
       if (remoteUrl != null) record.logoUrl = remoteUrl;
     }
     record.logoStyle = resolvedStyle;
+    try {
+      SchoolSplashBrand.remember(
+        schoolId: record.id,
+        name: record.name,
+        style: record.logoStyle,
+        jpegBytes: WebAttachmentCache.instance.read(
+              SchoolLogoService.cacheKey(record.id, record.logoStyle),
+            ) ??
+            WebAttachmentCache.instance.read(record.displayLogoPath),
+        logoUrl: SchoolLogoService.displayUrlFor(
+          record.id,
+          storedUrl: record.displayLogoUrl,
+          style: record.logoStyle,
+        ),
+      );
+    } catch (_) {}
     final cloud = await updateSchool(record, preferPlatformCloud: true);
     try {
       await LoginPrefsService.instance.rememberSchoolBrand(

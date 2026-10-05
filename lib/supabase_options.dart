@@ -34,26 +34,32 @@ String get kSupabaseAnonKey => _envOrDefault(
 
 /// School branding object URL.
 ///
-/// `school-files` is a private bucket, so `/object/public/` 404s in the
-/// browser. Use the authenticated endpoint plus the anon key headers from
-/// [schoolBrandingImageHeaders].
+/// Login, loading, and `<img>` tags cannot send a JWT. Branding therefore
+/// lives in the public `school-branding` bucket.
 String schoolBrandingPublicUrl(String schoolId, {required String file}) {
   final id = schoolId.trim().toUpperCase();
   final name = file.trim().isEmpty ? 'logo.jpg' : file.trim();
-  return '$kSupabaseUrl/storage/v1/object/authenticated/school-files/'
+  return '$kSupabaseUrl/storage/v1/object/public/school-branding/'
       'schools/$id/branding/$name';
 }
 
-/// Rewrite a stored public storage URL so [Image.network] can load it.
+/// Prefer a public branding URL; rewrite legacy private-bucket URLs.
 String schoolBrandingViewableUrl(String url) {
-  return url.replaceFirst(
-    '/storage/v1/object/public/school-files/',
+  var value = url.trim();
+  value = value.replaceFirst(
     '/storage/v1/object/authenticated/school-files/',
+    '/storage/v1/object/public/school-branding/',
   );
+  value = value.replaceFirst(
+    '/storage/v1/object/public/school-files/',
+    '/storage/v1/object/public/school-branding/',
+  );
+  return value;
 }
 
-/// Headers so the private branding object can be fetched without a school JWT.
+/// Headers for private storage objects. Public branding URLs need none.
 Map<String, String>? schoolBrandingImageHeaders(String url) {
+  if (url.contains('/object/public/school-branding/')) return null;
   if (!url.contains('/storage/v1/object/')) return null;
   if (url.contains('token=')) return null;
   return {

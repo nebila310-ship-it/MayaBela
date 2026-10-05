@@ -8,11 +8,34 @@ function brandingFile(kind: string): string {
     : "logo.jpg";
 }
 
-function authenticatedUrl(publicUrl: string): string {
-  return publicUrl.replace(
-    "/storage/v1/object/public/",
-    "/storage/v1/object/authenticated/",
-  );
+async function uploadToBucket(
+  sb: ReturnType<typeof adminClient>,
+  bucket: string,
+  path: string,
+  bytes: Uint8Array,
+  options: { contentType: string; upsert: boolean; cacheControl: string },
+) {
+  let upErr = (await sb.storage.from(bucket).upload(path, bytes, options)).error;
+  if (upErr) {
+    const retry = await sb.storage.from(bucket).update(path, bytes, options);
+    upErr = retry.error;
+  }
+  return upErr;
+}
+
+async function ensurePublicBrandingBucket(sb: ReturnType<typeof adminClient>) {
+  const { data } = await sb.storage.getBucket("school-branding");
+  if (!data) {
+    await sb.storage.createBucket("school-branding", {
+      public: true,
+      fileSizeLimit: 4500000,
+      allowedMimeTypes: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+    });
+    return;
+  }
+  if (!data.public) {
+    await sb.storage.updateBucket("school-branding", { public: true });
+  }
 }
 
 /**
@@ -64,20 +87,25 @@ Deno.serve(async (req) => {
       cacheControl: "60",
     };
 
-    let upErr = (await sb.storage.from("school-files").upload(path, bytes, options))
-      .error;
-    if (upErr) {
-      const retry = await sb.storage.from("school-files").update(path, bytes, options);
-      upErr = retry.error;
-    }
-    if (upErr) {
-      console.error(upErr);
-      return errorResponse(upErr.message || "Upload failed.", 500, "upload");
-    }
+    await ensurePublicBrandingBucket(sb);
 
-    const { data } = sb.storage.from("school-files").getPublicUrl(path);
+    const publicErr = await uploadToBucket(
+      sb,
+      "school-branding",
+      path,
+      bytes,
+      options,
+    );
+    if (publicErr) {
+      console.error(publicErr);
+      return errorResponse(publicErr.message || "Upload failed.", 500, "upload");
+    }
+    // Keep a copy in the private bucket for in-app storage downloads.
+    await uploadToBucket(sb, "school-files", path, bytes, options);
+
+    const { data } = sb.storage.from("school-branding").getPublicUrl(path);
     const cacheBust = Date.now();
-    const url = `${authenticatedUrl(data.publicUrl)}?v=${cacheBust}`;
+    const url = `${data.publicUrl}?v=${cacheBust}`;
 
     try {
       const existing =
