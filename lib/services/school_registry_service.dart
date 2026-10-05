@@ -444,7 +444,13 @@ class SchoolRegistryService {
 
   /// Merge one school from cloud login so fresh browsers can pass the
   /// local registry gate without replacing the whole list.
-  void upsertSchool(SchoolRecord school) {
+  ///
+  /// [keepLogosIfIncomingEmpty] keeps a just-saved local/cloud logo when the
+  /// list payload has not caught up yet (owner console reopen).
+  void upsertSchool(
+    SchoolRecord school, {
+    bool keepLogosIfIncomingEmpty = false,
+  }) {
     final id = school.id.trim().toUpperCase();
     if (id.isEmpty) return;
     final record = id == school.id
@@ -452,11 +458,38 @@ class SchoolRegistryService {
         : SchoolRecord.fromJson({...school.toJson(), 'id': id});
     final index = _schools.indexWhere((s) => s.id.toUpperCase() == id);
     if (index >= 0) {
+      if (keepLogosIfIncomingEmpty) {
+        final prev = _schools[index];
+        record.logoUrl = _preferHttpLogo(record.logoUrl, prev.logoUrl);
+        record.identityLogoUrl =
+            _preferHttpLogo(record.identityLogoUrl, prev.identityLogoUrl);
+        record.logoPath = _preferLogoPath(record.logoPath, prev.logoPath);
+        record.identityLogoPath = _preferLogoPath(
+          record.identityLogoPath,
+          prev.identityLogoPath,
+        );
+      }
       _schools[index] = record;
     } else {
       _schools.add(record);
     }
     _loaded = true;
+  }
+
+  static String? _preferHttpLogo(String? incoming, String? previous) {
+    final next = incoming?.trim();
+    if (next != null && next.startsWith('http')) return incoming;
+    final prev = previous?.trim();
+    if (prev != null && prev.startsWith('http')) return previous;
+    return incoming ?? previous;
+  }
+
+  static String? _preferLogoPath(String? incoming, String? previous) {
+    final next = incoming?.trim();
+    if (next != null && next.isNotEmpty) return incoming;
+    final prev = previous?.trim();
+    if (prev != null && prev.isNotEmpty) return previous;
+    return incoming ?? previous;
   }
 
   List<SchoolRecord> allSchoolsSnapshot() => List.from(_schools);
@@ -991,7 +1024,11 @@ class SchoolRegistryService {
       await LoginPrefsService.instance.rememberSchoolBrand(
         schoolId: record.id,
         name: record.name,
-        logoUrl: record.displayLogoUrl,
+        logoUrl: SchoolLogoService.displayUrlFor(
+          record.id,
+          storedUrl: record.displayLogoUrl,
+          style: record.logoStyle,
+        ),
         logoPath: record.displayLogoPath,
         logoStyle: record.logoStyle,
       );

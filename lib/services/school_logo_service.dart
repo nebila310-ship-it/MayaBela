@@ -26,7 +26,7 @@ class SchoolLogoService {
   static String brandingFile(SchoolLogoStyle style) =>
       style == SchoolLogoStyle.circular ? 'identity.jpg' : 'logo.jpg';
 
-  /// Guessable public URL so login/splash can show a cloud logo before JWT.
+  /// Guessable branding URL so login/splash can show a cloud logo before JWT.
   static String publicUrl(
     String schoolId, {
     SchoolLogoStyle style = SchoolLogoStyle.rectangular,
@@ -38,6 +38,34 @@ class SchoolLogoService {
     );
     if (cacheBust == null) return url;
     return '$url?v=$cacheBust';
+  }
+
+  static String cacheKey(String schoolId, SchoolLogoStyle style) =>
+      'web://school-logo/${schoolId.trim().toUpperCase()}/${style.name}';
+
+  /// Make a stored storage URL loadable by [Image.network].
+  static String? viewableUrl(String? url) {
+    final value = url?.trim();
+    if (value == null || value.isEmpty) return null;
+    return schoolBrandingViewableUrl(value);
+  }
+
+  static Map<String, String>? imageHeadersFor(String? url) {
+    final value = url?.trim();
+    if (value == null || value.isEmpty) return null;
+    return schoolBrandingImageHeaders(value);
+  }
+
+  /// Best URL to render for a school: saved cloud URL, else stable storage path.
+  static String displayUrlFor(
+    String schoolId, {
+    String? storedUrl,
+    SchoolLogoStyle style = SchoolLogoStyle.rectangular,
+    int? cacheBust,
+  }) {
+    final stored = viewableUrl(storedUrl);
+    if (stored != null && stored.startsWith('http')) return stored;
+    return publicUrl(schoolId, style: style, cacheBust: cacheBust);
   }
 
   /// Picks a logo image. Prefers [FilePicker] (works on web); falls back to
@@ -233,12 +261,35 @@ class SchoolLogoService {
       subdir: 'school_logos',
       size: bytes.length,
     );
-    if (saved != null) {
-      return saved.filePath;
-    }
+    final path = saved?.filePath ??
+        WebAttachmentCache.instance.store('logo_$id.jpg', bytes);
+    WebAttachmentCache.instance.remember(cacheKey(id, style), bytes);
+    WebAttachmentCache.instance.remember(path, bytes);
+    return path;
+  }
 
-    // Fallback: keep bytes in memory cache (web).
-    return WebAttachmentCache.instance.store('logo_$id.jpg', bytes);
+  /// Load branding bytes from private storage using the anon key (RLS allows
+  /// public-read on `schools/*/branding/*`).
+  Future<Uint8List?> downloadBrandingBytes({
+    required String schoolId,
+    SchoolLogoStyle style = SchoolLogoStyle.rectangular,
+  }) async {
+    try {
+      if (!SupabaseBootstrap.isInitialized) return null;
+      final path =
+          'schools/${schoolId.trim().toUpperCase()}/branding/${brandingFile(style)}';
+      final bytes = await SupabaseBootstrap.client.storage
+          .from('school-files')
+          .download(path);
+      if (bytes.isEmpty) return null;
+      WebAttachmentCache.instance.remember(cacheKey(schoolId, style), bytes);
+      return bytes;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SchoolLogoService.downloadBrandingBytes: $e');
+      }
+      return null;
+    }
   }
 
   Future<String?> resolvedLogoPath(String? schoolId, {String? storedPath}) async {
@@ -360,9 +411,13 @@ class SchoolLogoService {
               upsert: true,
             ),
           );
-      final url = SupabaseBootstrap.client.storage
-          .from('school-files')
-          .getPublicUrl(storagePath);
+      final url = SchoolLogoService.viewableUrl(
+            SupabaseBootstrap.client.storage
+                .from('school-files')
+                .getPublicUrl(storagePath),
+          ) ??
+          '';
+      if (!url.startsWith('http')) return null;
       return '$url?v=${DateTime.now().millisecondsSinceEpoch}';
     } catch (e) {
       if (kDebugMode) {

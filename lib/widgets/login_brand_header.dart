@@ -48,8 +48,11 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       return _BrandSnapshot(
         schoolId: record.id,
         name: record.name,
-        logoUrl: record.displayLogoUrl ??
-            SchoolLogoService.publicUrl(record.id, style: record.logoStyle),
+        logoUrl: SchoolLogoService.displayUrlFor(
+          record.id,
+          storedUrl: record.displayLogoUrl,
+          style: record.logoStyle,
+        ),
         logoPath: _logoPath ?? record.displayLogoPath,
         logoStyle: record.logoStyle,
       );
@@ -59,8 +62,11 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       return _BrandSnapshot(
         schoolId: remembered.schoolId,
         name: remembered.name,
-        logoUrl: remembered.logoUrl ??
-            SchoolLogoService.publicUrl(id, style: remembered.logoStyle),
+        logoUrl: SchoolLogoService.displayUrlFor(
+          id,
+          storedUrl: remembered.logoUrl,
+          style: remembered.logoStyle,
+        ),
         logoPath: remembered.logoPath,
         logoStyle: remembered.logoStyle,
       );
@@ -94,7 +100,11 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: record.id,
       name: record.name,
-      logoUrl: record.displayLogoUrl,
+      logoUrl: SchoolLogoService.displayUrlFor(
+        record.id,
+        storedUrl: record.displayLogoUrl,
+        style: record.logoStyle,
+      ),
       logoPath: path ?? record.displayLogoPath,
       logoStyle: record.logoStyle,
     );
@@ -130,6 +140,7 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
           if (brand.logoStyle == SchoolLogoStyle.circular)
             Center(
               child: SchoolLogoDisplay(
+                schoolId: brand.schoolId,
                 imagePath: brand.logoPath,
                 networkUrl: brand.logoUrl,
                 style: brand.logoStyle,
@@ -138,6 +149,7 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
             )
           else
             SchoolLogoDisplay(
+              schoolId: brand.schoolId,
               imagePath: brand.logoPath,
               networkUrl: brand.logoUrl,
               style: brand.logoStyle,

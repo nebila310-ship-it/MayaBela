@@ -35,10 +35,10 @@ void main() {
     expect(roundTrip.logoUrl, school.logoUrl);
   });
 
-  test('public branding URLs are stable per school and style', () {
+  test('branding URLs use the authenticated storage endpoint', () {
     expect(
       SchoolLogoService.publicUrl('fen101'),
-      '$kSupabaseUrl/storage/v1/object/public/school-files/'
+      '$kSupabaseUrl/storage/v1/object/authenticated/school-files/'
       'schools/FEN101/branding/logo.jpg',
     );
     expect(
@@ -46,7 +46,7 @@ void main() {
         'fen101',
         style: SchoolLogoStyle.circular,
       ),
-      '$kSupabaseUrl/storage/v1/object/public/school-files/'
+      '$kSupabaseUrl/storage/v1/object/authenticated/school-files/'
       'schools/FEN101/branding/identity.jpg',
     );
     expect(
@@ -57,5 +57,47 @@ void main() {
       SchoolLogoService.brandingFile(SchoolLogoStyle.circular),
       'identity.jpg',
     );
+  });
+
+  test('legacy public storage URLs are rewritten for Image.network', () {
+    final public =
+        '$kSupabaseUrl/storage/v1/object/public/school-files/'
+        'schools/FEN101/branding/logo.jpg?v=9';
+    final viewable = SchoolLogoService.viewableUrl(public);
+    expect(viewable, contains('/object/authenticated/school-files/'));
+    expect(viewable, isNot(contains('/object/public/school-files/')));
+    expect(SchoolLogoService.imageHeadersFor(viewable), isNotNull);
+    expect(
+      SchoolLogoService.displayUrlFor(
+        'FEN101',
+        storedUrl: public,
+      ),
+      contains('/object/authenticated/school-files/'),
+    );
+  });
+
+  test('cloud sync does not wipe a just-saved logo URL', () {
+    final registry = SchoolRegistryService.instance;
+    registry.upsertSchool(
+      SchoolRecord(
+        id: 'FEN101',
+        name: 'Fenote Raey Academy',
+        logoUrl:
+            'https://example.supabase.co/storage/v1/object/authenticated/'
+            'school-files/schools/FEN101/branding/logo.jpg?v=1',
+        identityLogoUrl:
+            'https://example.supabase.co/storage/v1/object/authenticated/'
+            'school-files/schools/FEN101/branding/identity.jpg?v=1',
+      ),
+    );
+
+    registry.upsertSchool(
+      SchoolRecord(id: 'FEN101', name: 'Fenote Raey Academy'),
+      keepLogosIfIncomingEmpty: true,
+    );
+
+    final kept = registry.lookup('FEN101');
+    expect(kept?.logoUrl, contains('logo.jpg'));
+    expect(kept?.identityLogoUrl, contains('identity.jpg'));
   });
 }
