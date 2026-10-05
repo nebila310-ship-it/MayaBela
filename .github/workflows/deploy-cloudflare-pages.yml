@@ -2,6 +2,10 @@
 # Secrets required in GitHub repo settings:
 #   CLOUDFLARE_API_TOKEN   — Pages Edit permission
 #   CLOUDFLARE_ACCOUNT_ID  — from Cloudflare dashboard URL / overview
+#
+# Unit tests stay in the CI workflow. This job used to wait on a second
+# full Flutter test suite, which left Pages stuck on Queued when GitHub
+# runners were busy.
 
 name: Deploy Cloudflare Pages
 
@@ -22,26 +26,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Unit tests
-        run: |
-          flutter pub get
-          flutter test --reporter expanded
-
   deploy:
-    needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
