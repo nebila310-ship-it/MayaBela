@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/supabase_options.dart';
@@ -99,5 +103,14 @@ void main() {
     final kept = registry.lookup('FEN101');
     expect(kept?.logoUrl, contains('logo.jpg'));
     expect(kept?.identityLogoUrl, contains('identity.jpg'));
+  });
+
+  test('splash thumbnail is small enough for localStorage', () {
+    final canvas = img.Image(width: 1400, height: 504);
+    img.fill(canvas, color: img.ColorRgb8(20, 80, 160));
+    final raw = Uint8List.fromList(img.encodeJpg(canvas, quality: 95));
+    final thumb = SchoolSplashBrand.thumbnailForTest(raw);
+    expect(thumb, isNotNull);
+    expect(thumb!.length, lessThan(180000));
   });
 }

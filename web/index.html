@@ -153,9 +153,13 @@
         var raw = localStorage.getItem('mayabela_school_splash');
         if (!raw) return;
         var brand = JSON.parse(raw);
-        var img = document.querySelector('#splash img');
+        var picture = document.getElementById('splash');
+        var img = picture && picture.querySelector('img');
         var src = brand.dataUrl || brand.logoUrl;
         if (img && src) {
+          var sources = picture.querySelectorAll('source');
+          for (var i = 0; i < sources.length; i++) sources[i].remove();
+          img.removeAttribute('srcset');
           img.src = src;
           img.style.maxWidth = '240px';
           img.style.maxHeight = '240px';
@@ -248,7 +252,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=school-splash-20261005" async=""></script>
+    <script src="flutter_bootstrap.js?v=school-splash-img-20261005" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {

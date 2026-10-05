@@ -8,6 +8,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/app_lock_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
@@ -89,9 +90,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool get _schoolBrandVisible {
     final id = schoolId.text.trim();
-    if (id.isEmpty) return false;
-    if (SchoolRegistryService.instance.lookup(id) != null) return true;
-    return LoginPrefsService.instance.brandForSchool(id) != null;
+    if (id.isNotEmpty) {
+      if (SchoolRegistryService.instance.lookup(id) != null) return true;
+      if (LoginPrefsService.instance.brandForSchool(id) != null) return true;
+    }
+    return SchoolSplashBrand.readMeta() != null ||
+        LoginPrefsService.instance.rememberedBrand != null;
   }
 
   @override
@@ -102,6 +106,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final lastId = LoginPrefsService.instance.lastSchoolId;
     if (lastId != null && lastId.isNotEmpty) {
       schoolId.text = lastId;
+    } else {
+      final splash = SchoolSplashBrand.readMeta();
+      if (splash != null && splash.schoolId.isNotEmpty) {
+        schoolId.text = splash.schoolId;
+      }
     }
     if (kIsWeb) {
       _prefsLoaded = true;
@@ -134,7 +143,13 @@ class _LoginScreenState extends State<LoginScreen> {
       schoolId.text = lastId;
       _schoolIdEditing = false;
     } else {
-      _schoolIdEditing = true;
+      final splash = SchoolSplashBrand.readMeta();
+      if (splash != null && splash.schoolId.isNotEmpty) {
+        schoolId.text = splash.schoolId;
+        _schoolIdEditing = false;
+      } else {
+        _schoolIdEditing = true;
+      }
     }
 
     if (LoginPrefsService.instance.rememberEnabled && entry != null) {
