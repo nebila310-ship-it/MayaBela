@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/supabase_options.dart';
 import 'package:mayabela/widgets/platform_path_image_io.dart'
     if (dart.library.html) 'package:mayabela/widgets/platform_path_image_stub.dart'
     as io_image;
@@ -42,11 +43,13 @@ class PlatformPathImage extends StatelessWidget {
     }
 
     if (value.startsWith('http://') || value.startsWith('https://')) {
+      final viewable = schoolBrandingViewableUrl(value);
       return Image.network(
-        value,
+        viewable,
         width: width,
         height: height,
         fit: fit,
+        headers: schoolBrandingImageHeaders(viewable),
         errorBuilder: errorBuilder,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;

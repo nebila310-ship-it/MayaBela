@@ -25,6 +25,7 @@ import 'package:mayabela/services/rbac/school_module_catalog.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/email_utils.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/web_erp/models/web_erp_nav_item.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -902,8 +903,16 @@ class _SchoolTileState extends State<_SchoolTile> {
       width: 56,
       height: 56,
       child: SchoolLogoDisplay(
+        schoolId: school.id,
         imagePath: _logoPath,
-        networkUrl: school.displayLogoUrl,
+        imageBytes: WebAttachmentCache.instance.read(
+          SchoolLogoService.cacheKey(school.id, school.logoStyle),
+        ),
+        networkUrl: SchoolLogoService.displayUrlFor(
+          school.id,
+          storedUrl: school.displayLogoUrl,
+          style: school.logoStyle,
+        ),
         style: school.logoStyle,
         height: 56,
         width: 56,
@@ -988,7 +997,21 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
       widget.schoolId,
       storedPath: _school?.displayLogoPath,
     );
-    if (mounted) setState(() => _logoPath = path);
+    final cached = WebAttachmentCache.instance.read(
+          SchoolLogoService.cacheKey(
+            widget.schoolId,
+            _school?.logoStyle ?? SchoolLogoStyle.rectangular,
+          ),
+        ) ??
+        WebAttachmentCache.instance.read(path);
+    if (mounted) {
+      setState(() {
+        _logoPath = path;
+        if (cached != null && cached.isNotEmpty) {
+          _logoBytes = cached;
+        }
+      });
+    }
   }
 
   void _load() {
@@ -1499,9 +1522,14 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
               school.logoStyle == SchoolLogoStyle.circular ? 999 : 12,
             ),
             child: SchoolLogoDisplay(
+              schoolId: school.id,
               imagePath: _logoPath,
               imageBytes: _logoBytes,
-              networkUrl: school.displayLogoUrl,
+              networkUrl: SchoolLogoService.displayUrlFor(
+                school.id,
+                storedUrl: school.displayLogoUrl,
+                style: school.logoStyle,
+              ),
               style: school.logoStyle,
               height: 72,
               width: 72,
@@ -2091,9 +2119,14 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
                 school.displayLogoPath!.isNotEmpty)) ...[
           Center(
             child: SchoolLogoDisplay(
+              schoolId: school.id,
               imagePath: _logoPath,
               imageBytes: _logoBytes,
-              networkUrl: school.displayLogoUrl,
+              networkUrl: SchoolLogoService.displayUrlFor(
+                school.id,
+                storedUrl: school.displayLogoUrl,
+                style: school.logoStyle,
+              ),
               style: school.logoStyle,
               height: school.logoStyle == SchoolLogoStyle.circular ? 100 : 90,
             ),

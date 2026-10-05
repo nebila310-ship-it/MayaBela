@@ -378,6 +378,7 @@ class PlatformSchoolsCloudService {
           map['id'] = id;
           SchoolRegistryService.instance.upsertSchool(
             AppDataMaps.schoolFromMap(map),
+            keepLogosIfIncomingEmpty: true,
           );
           count++;
         } catch (e) {

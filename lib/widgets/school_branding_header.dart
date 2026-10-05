@@ -66,11 +66,11 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
     if (mounted) {
       setState(() {
         _logoPath = path;
-        _logoUrl = record?.displayLogoUrl ??
-            SchoolLogoService.publicUrl(
-              id,
-              style: record?.logoStyle ?? SchoolLogoStyle.rectangular,
-            );
+        _logoUrl = SchoolLogoService.displayUrlFor(
+          id,
+          storedUrl: record?.displayLogoUrl,
+          style: record?.logoStyle ?? SchoolLogoStyle.rectangular,
+        );
       });
     }
   }
@@ -185,6 +185,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
     if (style == SchoolLogoStyle.circular) {
       return Center(
         child: SchoolLogoDisplay(
+          schoolId: widget.schoolId,
           imagePath: _logoPath,
           networkUrl: _logoUrl,
           style: style,
@@ -194,6 +195,7 @@ class _SchoolBrandingHeaderState extends State<SchoolBrandingHeader> {
     }
 
     return SchoolLogoDisplay(
+      schoolId: widget.schoolId,
       imagePath: _logoPath,
       networkUrl: _logoUrl,
       style: style,

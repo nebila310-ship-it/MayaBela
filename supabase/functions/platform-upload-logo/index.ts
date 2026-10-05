@@ -1,5 +1,5 @@
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
-import { adminClient } from "../_shared/school_auth.ts";
+import { adminClient, getDoc, upsertDoc } from "../_shared/school_auth.ts";
 import { authorizePlatformOwner } from "../_shared/platform_pin.ts";
 
 function brandingFile(kind: string): string {
@@ -8,10 +8,20 @@ function brandingFile(kind: string): string {
     : "logo.jpg";
 }
 
+function authenticatedUrl(publicUrl: string): string {
+  return publicUrl.replace(
+    "/storage/v1/object/public/",
+    "/storage/v1/object/authenticated/",
+  );
+}
+
 /**
  * Platform-owner logo upload. Uses the service role so logos can be stored
  * without a school-scoped JWT (owner console has no school session).
  * kind: banner/logo (rectangular) or identity/circular.
+ *
+ * Also writes logoUrl / identityLogoUrl onto school_registry so leaving the
+ * owner console and coming back still shows the saved image.
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,7 +55,9 @@ Deno.serve(async (req) => {
     }
 
     const kind = String(body?.kind || body?.style || "banner").trim().toLowerCase();
-    const path = `schools/${schoolId}/branding/${brandingFile(kind)}`;
+    const file = brandingFile(kind);
+    const isIdentity = file === "identity.jpg";
+    const path = `schools/${schoolId}/branding/${file}`;
     const options = {
       contentType: "image/jpeg",
       upsert: true,
@@ -64,8 +76,32 @@ Deno.serve(async (req) => {
     }
 
     const { data } = sb.storage.from("school-files").getPublicUrl(path);
-    const url = `${data.publicUrl}?v=${Date.now()}`;
-    return jsonResponse({ ok: true, url, path, kind: brandingFile(kind) });
+    const cacheBust = Date.now();
+    const url = `${authenticatedUrl(data.publicUrl)}?v=${cacheBust}`;
+
+    try {
+      const existing =
+        (await getDoc(sb, "school_registry", schoolId, schoolId)) ||
+        (await getDoc(sb, "school_registry", schoolId)) ||
+        {};
+      const merged: Record<string, unknown> = {
+        ...existing,
+        id: schoolId,
+        schoolId,
+        updatedAt: new Date().toISOString(),
+        logoStyle: isIdentity ? "circular" : "rectangular",
+      };
+      if (isIdentity) {
+        merged.identityLogoUrl = url;
+      } else {
+        merged.logoUrl = url;
+      }
+      await upsertDoc(sb, "school_registry", schoolId, merged, schoolId);
+    } catch (regErr) {
+      console.error("platform-upload-logo registry persist failed", regErr);
+    }
+
+    return jsonResponse({ ok: true, url, path, kind: file });
   } catch (e) {
     const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {

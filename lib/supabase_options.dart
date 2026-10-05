@@ -32,12 +32,34 @@ String get kSupabaseAnonKey => _envOrDefault(
       _kDefaultSupabaseAnonKey,
     );
 
-/// Public school branding object (login page; no JWT).
+/// School branding object URL.
+///
+/// `school-files` is a private bucket, so `/object/public/` 404s in the
+/// browser. Use the authenticated endpoint plus the anon key headers from
+/// [schoolBrandingImageHeaders].
 String schoolBrandingPublicUrl(String schoolId, {required String file}) {
   final id = schoolId.trim().toUpperCase();
   final name = file.trim().isEmpty ? 'logo.jpg' : file.trim();
-  return '$kSupabaseUrl/storage/v1/object/public/school-files/'
+  return '$kSupabaseUrl/storage/v1/object/authenticated/school-files/'
       'schools/$id/branding/$name';
+}
+
+/// Rewrite a stored public storage URL so [Image.network] can load it.
+String schoolBrandingViewableUrl(String url) {
+  return url.replaceFirst(
+    '/storage/v1/object/public/school-files/',
+    '/storage/v1/object/authenticated/school-files/',
+  );
+}
+
+/// Headers so the private branding object can be fetched without a school JWT.
+Map<String, String>? schoolBrandingImageHeaders(String url) {
+  if (!url.contains('/storage/v1/object/')) return null;
+  if (url.contains('token=')) return null;
+  return {
+    'Authorization': 'Bearer $kSupabaseAnonKey',
+    'apikey': kSupabaseAnonKey,
+  };
 }
 
 bool get kSupabaseReady {
