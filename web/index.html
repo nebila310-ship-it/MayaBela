@@ -175,6 +175,21 @@
           nameEl.textContent = brand.name;
           nameEl.style.display = 'block';
         }
+        if (brand.name) {
+          document.title = brand.name;
+          var appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+          if (appleTitle) appleTitle.setAttribute('content', brand.name);
+        }
+        var iconSrc = brand.dataUrl || brand.logoUrl;
+        if (iconSrc) {
+          var iconLinks = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]');
+          for (var i = 0; i < iconLinks.length; i++) {
+            iconLinks[i].setAttribute('href', iconSrc);
+            if (iconSrc.indexOf('data:image') === 0) {
+              iconLinks[i].setAttribute('type', 'image/jpeg');
+            }
+          }
+        }
       } catch (e) {}
     })();
   </script>
@@ -252,7 +267,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=school-splash-img-20261005" async=""></script>
+    <script src="flutter_bootstrap.js?v=school-tab-brand-20261005" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {

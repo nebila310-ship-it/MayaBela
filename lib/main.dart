@@ -77,6 +77,8 @@ import 'package:mayabela/setup/dashboard_setup.dart';
 
 import 'package:mayabela/theme/app_theme.dart';
 import 'package:mayabela/widgets/app_lock_gate.dart';
+import 'package:mayabela/platform/browser_tab_brand.dart';
+import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/system_nav_safe_scope.dart';
 
@@ -90,6 +92,17 @@ Future<void> main() async {
     await StartupProfiler.track(
       'main.loginPrefs',
       LoginPrefsService.instance.load,
+    );
+    final splash = SchoolSplashBrand.readMeta();
+    final remembered = LoginPrefsService.instance.rememberedBrand;
+    BrowserTabBrand.apply(
+      title: BrowserTabBrand.resolveTitle(
+        splashName: splash?.name,
+        rememberedName: remembered?.name,
+        fallback: 'MaJo e-School Bridge',
+      ),
+      iconDataUrl: SchoolSplashBrand.readDataUrl(),
+      iconUrl: remembered?.logoUrl ?? splash?.logoUrl,
     );
     await StartupProfiler.track(
       'main.supabaseInitialize',
@@ -306,10 +319,21 @@ class _MayaSchoolAppState extends State<MayaSchoolApp> {
   Widget build(BuildContext context) {
 
     final prefs = UserPreferencesService.instance;
+    final splash = SchoolSplashBrand.readMeta();
+    final remembered = LoginPrefsService.instance.rememberedBrand;
+    final sessionName = SchoolRegistryService.instance
+        .lookup(AuthService.activeSchoolId)
+        ?.name;
+    final tabTitle = BrowserTabBrand.resolveTitle(
+      sessionSchoolName: sessionName,
+      splashName: splash?.name,
+      rememberedName: remembered?.name,
+      fallback: AppLocale.instance.strings.appTitle,
+    );
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
       debugShowCheckedModeBanner: false,
-      title: AppLocale.instance.strings.appTitle,
+      title: tabTitle,
       locale: Locale(AppLocale.instance.materialLocaleCode),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

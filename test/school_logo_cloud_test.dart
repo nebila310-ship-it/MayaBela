@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:mayabela/models/school_logo_style.dart';
+import 'package:mayabela/platform/browser_tab_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -112,5 +113,23 @@ void main() {
     final thumb = SchoolSplashBrand.thumbnailForTest(raw);
     expect(thumb, isNotNull);
     expect(thumb!.length, lessThan(180000));
+  });
+
+  test('browser tab title prefers the school name', () {
+    expect(
+      BrowserTabBrand.resolveTitle(
+        sessionSchoolName: 'Fenote Raey Academy',
+        splashName: 'Old Name',
+        rememberedName: 'Saved Name',
+        fallback: 'MaJo e-School Bridge',
+      ),
+      'Fenote Raey Academy',
+    );
+    expect(
+      BrowserTabBrand.resolveTitle(
+        fallback: 'MaJo e-School Bridge',
+      ),
+      'MaJo e-School Bridge',
+    );
   });
 }
