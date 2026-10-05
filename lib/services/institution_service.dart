@@ -314,8 +314,8 @@ class InstitutionService extends ChangeNotifier {
       await LoginPrefsService.instance.rememberSchoolBrand(
         schoolId: rec.schoolId,
         name: name,
-        logoUrl: school?.logoUrl,
-        logoPath: school?.logoPath,
+        logoUrl: school?.displayLogoUrl,
+        logoPath: school?.displayLogoPath,
         logoStyle: school?.logoStyle ?? SchoolLogoStyle.rectangular,
       );
     } catch (_) {}

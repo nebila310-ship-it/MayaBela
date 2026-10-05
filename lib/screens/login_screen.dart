@@ -362,8 +362,8 @@ class _LoginScreenState extends State<LoginScreen> {
             .rememberSchoolBrand(
               schoolId: record.id,
               name: record.name,
-              logoUrl: record.logoUrl,
-              logoPath: record.logoPath,
+              logoUrl: record.displayLogoUrl,
+              logoPath: record.displayLogoPath,
               logoStyle: record.logoStyle,
             )
             .timeout(const Duration(seconds: 3));

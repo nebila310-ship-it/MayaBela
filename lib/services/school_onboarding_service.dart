@@ -12,7 +12,8 @@ class SchoolOnboardingService {
     EnrollmentService.instance.ensureSeeded();
     final creds = SchoolAdminCredentialsService.instance;
     final hasLogo =
-        (school.logoPath?.isNotEmpty == true) || (school.logoUrl?.isNotEmpty == true);
+        (school.displayLogoPath?.isNotEmpty == true) ||
+        (school.displayLogoUrl?.isNotEmpty == true);
     final hasAdminPhone = creds.adminPhoneForSchool(school)?.trim().isNotEmpty == true;
     final hasPassword = creds.schoolHasPassword(school);
     final studentCount =

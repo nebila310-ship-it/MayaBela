@@ -32,6 +32,14 @@ String get kSupabaseAnonKey => _envOrDefault(
       _kDefaultSupabaseAnonKey,
     );
 
+/// Public school branding object (login page; no JWT).
+String schoolBrandingPublicUrl(String schoolId, {required String file}) {
+  final id = schoolId.trim().toUpperCase();
+  final name = file.trim().isEmpty ? 'logo.jpg' : file.trim();
+  return '$kSupabaseUrl/storage/v1/object/public/school-files/'
+      'schools/$id/branding/$name';
+}
+
 bool get kSupabaseReady {
   if (!kSupabaseConfigured) return false;
   if (kSupabaseUrl.contains('YOUR_PROJECT_REF')) return false;

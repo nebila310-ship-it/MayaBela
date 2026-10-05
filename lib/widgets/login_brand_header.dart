@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mayabela/models/remembered_school_brand.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
@@ -49,14 +48,30 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       return _BrandSnapshot(
         schoolId: record.id,
         name: record.name,
-        logoUrl: record.logoUrl,
-        logoPath: _logoPath ?? record.logoPath,
+        logoUrl: record.displayLogoUrl ??
+            SchoolLogoService.publicUrl(record.id, style: record.logoStyle),
+        logoPath: _logoPath ?? record.displayLogoPath,
         logoStyle: record.logoStyle,
       );
     }
     final remembered = LoginPrefsService.instance.brandForSchool(id);
     if (remembered != null) {
-      return _BrandSnapshot.fromRemembered(remembered);
+      return _BrandSnapshot(
+        schoolId: remembered.schoolId,
+        name: remembered.name,
+        logoUrl: remembered.logoUrl ??
+            SchoolLogoService.publicUrl(id, style: remembered.logoStyle),
+        logoPath: remembered.logoPath,
+        logoStyle: remembered.logoStyle,
+      );
+    }
+    if (id.length >= 3) {
+      return _BrandSnapshot(
+        schoolId: id,
+        name: '',
+        logoUrl: SchoolLogoService.publicUrl(id),
+        logoStyle: SchoolLogoStyle.rectangular,
+      );
     }
     return null;
   }
@@ -74,13 +89,13 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     }
     final path = await SchoolLogoService.instance.resolvedLogoPath(
       id,
-      storedPath: record.logoPath,
+      storedPath: record.displayLogoPath,
     );
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: record.id,
       name: record.name,
-      logoUrl: record.logoUrl,
-      logoPath: path ?? record.logoPath,
+      logoUrl: record.displayLogoUrl,
+      logoPath: path ?? record.displayLogoPath,
       logoStyle: record.logoStyle,
     );
     if (mounted) setState(() => _logoPath = path);
@@ -100,16 +115,18 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       behavior: HitTestBehavior.opaque,
       child: Column(
         children: [
-          Text(
-            brand.name,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: accent,
+          if (brand.name.isNotEmpty) ...[
+            Text(
+              brand.name,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: accent,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
+          ],
           if (brand.logoStyle == SchoolLogoStyle.circular)
             Center(
               child: SchoolLogoDisplay(
@@ -140,16 +157,6 @@ class _BrandSnapshot {
     this.logoPath,
     this.logoStyle = SchoolLogoStyle.rectangular,
   });
-
-  factory _BrandSnapshot.fromRemembered(RememberedSchoolBrand brand) {
-    return _BrandSnapshot(
-      schoolId: brand.schoolId,
-      name: brand.name,
-      logoUrl: brand.logoUrl,
-      logoPath: brand.logoPath,
-      logoStyle: brand.logoStyle,
-    );
-  }
 
   final String schoolId;
   final String name;
