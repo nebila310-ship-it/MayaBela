@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mayabela/platform/browser_tab_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 
 /// Login/tab/splash chrome: MaJo when School ID is empty, school once it is typed.
@@ -27,14 +28,18 @@ abstract final class LoginChromeBrand {
       sessionSchoolName: record?.name,
       splashName: splash?.name,
       rememberedName: remembered?.name,
-      fallback: id.toUpperCase(),
+      fallback: productTitle,
     );
+    final logoUrl = record?.displayLogoUrl ??
+        remembered?.logoUrl ??
+        splash?.logoUrl ??
+        (id.trim().length >= 3
+            ? SchoolLogoService.publicUrl(id.trim())
+            : null);
     BrowserTabBrand.apply(
       title: title,
       iconDataUrl: SchoolSplashBrand.readDataUrl(schoolId: id),
-      iconUrl: record?.displayLogoUrl ??
-          remembered?.logoUrl ??
-          splash?.logoUrl,
+      iconUrl: logoUrl,
     );
     tabTitle.value = title;
   }

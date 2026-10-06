@@ -45,24 +45,23 @@ class LoginPrefsService {
   static const _entriesKey = 'login_saved_entries';
   static const _lastSchoolIdKey = 'login_last_school_id';
   static const _brandKey = 'login_last_school_brand';
+  static const _brandsKey = 'login_school_brands_v1';
 
   bool _rememberEnabled = false;
   List<SavedLoginEntry> _entries = [];
   String? _lastSchoolId;
-  RememberedSchoolBrand? _rememberedBrand;
+  final Map<String, RememberedSchoolBrand> _brands = {};
   bool _loaded = false;
 
   bool get rememberEnabled => _rememberEnabled;
   List<SavedLoginEntry> get entries => List.unmodifiable(_entries);
   String? get lastSchoolId => _lastSchoolId;
-  RememberedSchoolBrand? get rememberedBrand => _rememberedBrand;
+  RememberedSchoolBrand? get rememberedBrand => brandForSchool(_lastSchoolId);
 
   RememberedSchoolBrand? brandForSchool(String? schoolId) {
     final id = schoolId?.trim().toUpperCase();
     if (id == null || id.isEmpty) return null;
-    final brand = _rememberedBrand;
-    if (brand == null || brand.schoolId != id) return null;
-    return brand;
+    return _brands[id];
   }
 
   List<String> get savedSchoolIds {
@@ -76,10 +75,15 @@ class LoginPrefsService {
     final prefs = await SharedPreferences.getInstance();
     _rememberEnabled = prefs.getBool(_rememberKey) ?? false;
     _lastSchoolId = prefs.getString(_lastSchoolIdKey);
-    _rememberedBrand = _readBrand(prefs.getString(_brandKey));
-    if (_rememberedBrand != null &&
-        (_lastSchoolId == null || _lastSchoolId!.isEmpty)) {
-      _lastSchoolId = _rememberedBrand!.schoolId;
+    _brands
+      ..clear()
+      ..addAll(_readBrands(prefs.getString(_brandsKey)));
+    final legacy = _readBrand(prefs.getString(_brandKey));
+    if (legacy != null) {
+      _brands.putIfAbsent(legacy.schoolId, () => legacy);
+    }
+    if (_lastSchoolId == null || _lastSchoolId!.isEmpty) {
+      _lastSchoolId = rememberedBrand?.schoolId;
     }
     SchoolSplashBrand.persistActiveSchoolId(_lastSchoolId);
     final raw = prefs.getString(_entriesKey);
@@ -129,9 +133,21 @@ class LoginPrefsService {
     SchoolSplashBrand.persistActiveSchoolId(id);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSchoolIdKey, id);
-    if (_rememberedBrand != null && _rememberedBrand!.schoolId != id) {
-      _rememberedBrand = null;
-      await prefs.remove(_brandKey);
+    final cached = _brands[id];
+    if (cached != null) {
+      await prefs.setString(_brandKey, jsonEncode(cached.toJson()));
+      try {
+        SchoolSplashBrand.remember(
+          schoolId: cached.schoolId,
+          name: cached.name,
+          style: cached.logoStyle,
+          jpegBytes: SchoolSplashBrand.readBytes(
+            schoolId: cached.schoolId,
+            style: cached.logoStyle,
+          ),
+          logoUrl: cached.logoUrl,
+        );
+      } catch (_) {}
     }
   }
 
@@ -153,11 +169,17 @@ class LoginPrefsService {
       logoStyle: logoStyle,
     );
     _lastSchoolId = id;
-    _rememberedBrand = brand;
+    _brands[id] = brand;
     SchoolSplashBrand.persistActiveSchoolId(id);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSchoolIdKey, id);
     await prefs.setString(_brandKey, jsonEncode(brand.toJson()));
+    await prefs.setString(
+      _brandsKey,
+      jsonEncode({
+        for (final entry in _brands.entries) entry.key: entry.value.toJson(),
+      }),
+    );
     try {
       SchoolSplashBrand.remember(
         schoolId: id,
@@ -184,12 +206,33 @@ class LoginPrefsService {
     }
   }
 
+  Map<String, RememberedSchoolBrand> _readBrands(String? raw) {
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      final out = <String, RememberedSchoolBrand>{};
+      for (final entry in decoded.entries) {
+        final value = entry.value;
+        if (value is! Map) continue;
+        final brand = RememberedSchoolBrand.fromJson(
+          Map<String, dynamic>.from(value),
+        );
+        if (brand.schoolId.isEmpty || brand.name.isEmpty) continue;
+        out[brand.schoolId] = brand;
+      }
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
   @visibleForTesting
   void debugReset() {
     _rememberEnabled = false;
     _entries = [];
     _lastSchoolId = null;
-    _rememberedBrand = null;
+    _brands.clear();
     _loaded = false;
   }
 

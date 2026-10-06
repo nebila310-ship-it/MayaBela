@@ -30,6 +30,7 @@ class SchoolSplashMeta {
 /// show the school logo without a school JWT.
 abstract final class SchoolSplashBrand {
   static const storageKey = 'mayabela_school_splash';
+  static const brandsKey = 'mayabela_school_brands';
   static const activeSchoolIdKey = 'mayabela_last_school_id';
 
   static String cacheKey(String schoolId, SchoolLogoStyle style) =>
