@@ -131,11 +131,147 @@
       bottom: 0;
       right: 0;
     }
+
+    #splash-halo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 268px;
+      height: 268px;
+      margin: 0;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .splash-orbit {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #00897B,
+        #12B5CB,
+        #1A73E8,
+        #8E24AA,
+        #C2185B,
+        #E37400,
+        #F9AB00,
+        #1E8E3E,
+        #00897B
+      );
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+      animation: splash-spin 1.2s linear infinite, splash-hue 3.6s linear infinite;
+    }
+
+    .splash-orbit-inner {
+      position: absolute;
+      inset: 18px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 180deg,
+        #F9AB00,
+        #1A73E8,
+        #C2185B,
+        #12B5CB,
+        #1E8E3E,
+        #F9AB00
+      );
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+      animation: splash-spin-rev 1.75s linear infinite, splash-hue 4.8s linear infinite reverse;
+    }
+
+    .splash-bead {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      margin-left: -6px;
+      border-radius: 50%;
+      background: #12B5CB;
+      box-shadow: 0 0 10px #12B5CB;
+      transform-origin: 6px 134px;
+      animation: splash-spin 1.2s linear infinite, splash-bead 2.6s linear infinite;
+    }
+
+    #splash-loader-wrap {
+      position: absolute;
+      top: calc(50% + 190px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 4;
+      pointer-events: none;
+      width: 90%;
+    }
+
+    #splash-loading-label {
+      margin: 0;
+      font: 700 13px/1.2 system-ui, Segoe UI, sans-serif;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      background: linear-gradient(
+        90deg,
+        #00897B,
+        #1A73E8,
+        #8E24AA,
+        #E37400,
+        #1E8E3E,
+        #00897B
+      );
+      background-size: 240% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: splash-label 2.8s linear infinite;
+    }
+
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes splash-spin-rev {
+      to { transform: rotate(-360deg); }
+    }
+
+    @keyframes splash-hue {
+      to { filter: hue-rotate(360deg); }
+    }
+
+    @keyframes splash-bead {
+      0% { background: #12B5CB; box-shadow: 0 0 10px #12B5CB; }
+      25% { background: #8E24AA; box-shadow: 0 0 10px #8E24AA; }
+      50% { background: #E37400; box-shadow: 0 0 10px #E37400; }
+      75% { background: #1E8E3E; box-shadow: 0 0 10px #1E8E3E; }
+      100% { background: #12B5CB; box-shadow: 0 0 10px #12B5CB; }
+    }
+
+    @keyframes splash-label {
+      to { background-position: 240% 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .splash-orbit,
+      .splash-orbit-inner,
+      .splash-bead,
+      #splash-loading-label {
+        animation: none;
+      }
+    }
   </style>
   <script id="splash-screen-script">
     function removeSplashFromWeb() {
       document.getElementById("splash")?.remove();
       document.getElementById("splash-branding")?.remove();
+      document.getElementById("splash-school-name")?.remove();
+      document.getElementById("splash-halo")?.remove();
+      document.getElementById("splash-loader-wrap")?.remove();
       document.body.style.background = "transparent";
     }
   </script>
@@ -146,7 +282,15 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
-  <div id="splash-school-name" style="position:absolute;top:calc(50% + 120px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;">MaJo Bridge OS</div>
+  <div id="splash-halo" aria-hidden="true">
+    <div class="splash-orbit"></div>
+    <div class="splash-orbit-inner"></div>
+    <div class="splash-bead"></div>
+  </div>
+  <div id="splash-school-name" style="position:absolute;top:calc(50% + 148px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;">MaJo Bridge OS</div>
+  <div id="splash-loader-wrap">
+    <p id="splash-loading-label">Loading</p>
+  </div>
   <script>
     (function applySavedSchoolSplash() {
       try {
@@ -283,7 +427,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=school-tab-brand-20261005" async=""></script>
+    <script src="flutter_bootstrap.js?v=splash-color-loader-20261006" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {
