@@ -91,63 +91,61 @@ void main() {
     expect(find.text('Income tax'), findsWidgets);
     expect(find.text('Net pay'), findsWidgets);
     expect(find.text('Payroll register'), findsOneWidget);
-    expect(
-      find.textContaining('Use the scrollbar or arrows'),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('payroll-scroll-right')), findsOneWidget);
+    expect(find.textContaining('Every column stays on this page'), findsOneWidget);
+    expect(find.byKey(const ValueKey('payroll-scroll-right')), findsNothing);
+    expect(find.byKey(const ValueKey('web-erp-hscroll-view')), findsNothing);
+    expect(find.text('Staff ID'), findsWidgets);
+    expect(find.text('Staff pension'), findsOneWidget);
+    expect(find.text('Total deduct.'), findsOneWidget);
+    expect(find.text('Set salary'), findsWidgets);
     final tableSize = tester.getSize(
       find.byKey(const ValueKey('payroll-register-table')),
     );
-    expect(tableSize.width, greaterThanOrEqualTo(WebPayrollPage.registerMinWidth));
-
-    final registerScroll = tester
-        .widget<SingleChildScrollView>(
-          find.ancestor(
-            of: find.byKey(const ValueKey('payroll-register-table')),
-            matching: find.byKey(const ValueKey('web-erp-hscroll-view')),
-          ),
-        )
-        .controller!;
-    expect(registerScroll.position.maxScrollExtent, greaterThan(100));
-
-    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
-    await tester.pumpAndSettle();
-    expect(registerScroll.position.pixels, greaterThan(0));
+    expect(tableSize.width, lessThanOrEqualTo(1200));
+    expect(tableSize.width, greaterThan(700));
   });
 
-  testWidgets('payroll register can scroll horizontally on a 500px surface',
+  testWidgets('payroll register pages 10 employees and keeps every column visible',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(500, 800));
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      for (var i = 1; i <= 12; i++)
+        AdminTeacherRecord(
+          teacherId: 'TCH-PAGE-${i.toString().padLeft(2, '0')}',
+          employeeId: 'TCH-PAGE-${i.toString().padLeft(2, '0')}',
+          fullName: 'Employee ${i.toString().padLeft(2, '0')}',
+          assignedClass: 'Grade 1A',
+          schoolId: 'FR-001',
+          phone: '09110000${i.toString().padLeft(2, '0')}',
+        ),
+    ]);
+
+    await tester.binding.setSurfaceSize(const Size(1100, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: WebHrHubPage(initialTab: 3)),
+        home: Scaffold(body: WebPayrollPage()),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('payroll-register-table')), findsOneWidget);
+    expect(find.text('Employee 01'), findsOneWidget);
+    expect(find.text('Employee 10'), findsOneWidget);
+    expect(find.text('Employee 12'), findsNothing);
+    expect(find.textContaining('1–10 of'), findsOneWidget);
+    expect(find.text('Net pay'), findsWidgets);
+    expect(find.text('Income tax'), findsWidgets);
+    expect(find.text('Staff pension'), findsOneWidget);
 
-    final registerScroll = tester
-        .widget<SingleChildScrollView>(
-          find.ancestor(
-            of: find.byKey(const ValueKey('payroll-register-table')),
-            matching: find.byKey(const ValueKey('web-erp-hscroll-view')),
-          ),
-        )
-        .controller!;
-    expect(registerScroll.position.maxScrollExtent, greaterThan(1000));
-    expect(registerScroll.position.pixels, 0);
-
-    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.ensureVisible(find.byKey(const ValueKey('payroll-page-next')));
     await tester.pumpAndSettle();
-    expect(registerScroll.position.pixels, greaterThan(200));
-
-    await tester.tap(find.byKey(const ValueKey('payroll-scroll-right')));
+    await tester.tap(find.byKey(const ValueKey('payroll-page-next')));
     await tester.pumpAndSettle();
-    expect(registerScroll.position.pixels, greaterThan(400));
+
+    expect(find.text('Employee 12'), findsOneWidget);
+    expect(find.text('Employee 01'), findsNothing);
+    expect(find.text('Net pay'), findsWidgets);
   });
 
   testWidgets('Transport tile hosts Register Driver and Live GPS',

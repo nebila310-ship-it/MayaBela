@@ -6,15 +6,14 @@ import 'package:mayabela/services/ethiopia_payroll_tax.dart';
 import 'package:mayabela/services/payroll_export_service.dart';
 import 'package:mayabela/services/payroll_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
-import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 
 class WebPayrollPage extends StatefulWidget {
   const WebPayrollPage({super.key, this.embedded = false});
 
   final bool embedded;
 
-  /// Wide enough for every payroll column without clipping headers.
-  static const registerMinWidth = 1880.0;
+  /// Employees shown on one register page so the list stays on-screen.
+  static const registerPageSize = 10;
 
   @override
   State<WebPayrollPage> createState() => _WebPayrollPageState();
@@ -25,7 +24,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
   late String _periodYm;
   late final TextEditingController _periodController;
   var _exporting = false;
-  final _tableHScroll = ScrollController();
+  var _page = 0;
 
   @override
   void initState() {
@@ -39,21 +38,21 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
   @override
   void dispose() {
     _periodController.dispose();
-    _tableHScroll.dispose();
     super.dispose();
   }
 
-  void _nudgeTable(double delta) {
-    if (!_tableHScroll.hasClients) return;
-    final next = (_tableHScroll.offset + delta).clamp(
-      0.0,
-      _tableHScroll.position.maxScrollExtent,
-    );
-    _tableHScroll.animateTo(
-      next,
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-    );
+  int _pageIndex(int length) {
+    if (length <= 0) return 0;
+    final maxPage = (length - 1) ~/ WebPayrollPage.registerPageSize;
+    return _page.clamp(0, maxPage);
+  }
+
+  List<T> _pageSlice<T>(List<T> items) {
+    if (items.isEmpty) return items;
+    final size = WebPayrollPage.registerPageSize;
+    final start = _pageIndex(items.length) * size;
+    final end = (start + size).clamp(0, items.length);
+    return items.sublist(start, end);
   }
 
   String _etb(num value) => EthiopianPayrollTax.etb(value);
@@ -336,16 +335,18 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
               paid.fold(0.0, (s, r) => s + pick(r)),
             );
 
-        return Padding(
+        final pageRows = _pageSlice(rows);
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (!widget.embedded)
                 Text('Payroll', style: WebErpTheme.sectionTitle(context)),
               Text(
                 'Income tax (PAYE) is employment tax. Pension, advances, and other '
-                'deductions follow. Net pay is the last column.',
+                'deductions follow. Net pay is the last money column.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -383,7 +384,10 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
-                      onChanged: (v) => setState(() => _query = v.trim()),
+                      onChanged: (v) => setState(() {
+                        _query = v.trim();
+                        _page = 0;
+                      }),
                     ),
                   ),
                   SizedBox(
@@ -439,332 +443,206 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                   if (latest != null) _stat('Last run', latest.periodYm),
                 ],
               ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: rows.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Add teachers, other staff, or drivers in HR first.',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Payroll register',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                              IconButton(
-                                key: const ValueKey('payroll-scroll-left'),
-                                tooltip: 'Scroll left',
-                                onPressed: () => _nudgeTable(-280),
-                                icon: const Icon(Icons.chevron_left),
-                              ),
-                              IconButton(
-                                key: const ValueKey('payroll-scroll-right'),
-                                tooltip: 'Scroll right to Net pay',
-                                onPressed: () => _nudgeTable(280),
-                                icon: const Icon(Icons.chevron_right),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Amounts in ETB. Use the scrollbar or arrows to see every column.',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: Container(
-                              width: double.infinity,
-                              decoration: WebErpTheme.cardDecoration(context),
-                              clipBehavior: Clip.hardEdge,
-                              child: WebErpHScroll(
-                                controller: _tableHScroll,
-                                minChildWidth: WebPayrollPage.registerMinWidth,
-                                child: DataTable(
-                                key: const ValueKey('payroll-register-table'),
-                                showCheckboxColumn: false,
-                                headingRowHeight: 44,
-                                dataRowMinHeight: 40,
-                                dataRowMaxHeight: 52,
-                                headingTextStyle: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12,
-                                ),
-                                columnSpacing: 16,
-                                horizontalMargin: 12,
-                                columns: const [
-                                  DataColumn(label: Text('Staff ID')),
-                                  DataColumn(label: Text('Name')),
-                                  DataColumn(label: Text('Job')),
-                                  DataColumn(label: Text('Basic'), numeric: true),
-                                  DataColumn(label: Text('Gross'), numeric: true),
-                                  DataColumn(
-                                    label: Text('Income tax'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(
-                                    label: Text('Staff pension'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(label: Text('Advance'), numeric: true),
-                                  DataColumn(
-                                    label: Text('Other deduct.'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(
-                                    label: Text('Total deduct.'),
-                                    numeric: true,
-                                  ),
-                                  DataColumn(label: Text('Net pay'), numeric: true),
-                                  DataColumn(label: Text('')),
-                                ],
-                                rows: [
-                                  for (final row in rows)
-                                    DataRow(
-                                      cells: [
-                                        DataCell(Text(row.person.personId)),
-                                        DataCell(
-                                          Text(
-                                            row.person.fullName,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              color: row.person.isActive
-                                                  ? null
-                                                  : Colors.grey,
-                                              decoration: row.person.isActive
-                                                  ? null
-                                                  : TextDecoration.lineThrough,
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(Text(row.person.jobTitle)),
-                                        DataCell(Text(_amount(row.calc.basicSalary))),
-                                        DataCell(Text(_amount(row.calc.gross))),
-                                        DataCell(Text(_amount(row.calc.paye))),
-                                        DataCell(
-                                          Text(_amount(row.calc.employeePension)),
-                                        ),
-                                        DataCell(
-                                          Text(_amount(row.calc.salaryAdvance)),
-                                        ),
-                                        DataCell(
-                                          Text(_amount(row.calc.otherDeductions)),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(row.calc.totalStaffDeductions),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(row.calc.net),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          canManage
-                                              ? TextButton(
-                                                  onPressed: () =>
-                                                      _edit(row.person),
-                                                  child: Text(
-                                                    row.hasSalary
-                                                        ? 'Edit'
-                                                        : 'Set salary',
-                                                  ),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
-                                      ],
-                                    ),
-                                  if (paid.isNotEmpty)
-                                    DataRow(
-                                      cells: [
-                                        const DataCell(Text('')),
-                                        const DataCell(
-                                          Text(
-                                            'TOTAL',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(Text('${paid.length} staff')),
-                                        DataCell(
-                                          Text(_amount(sum((r) => r.calc.basicSalary))),
-                                        ),
-                                        DataCell(
-                                          Text(_amount(sum((r) => r.calc.gross))),
-                                        ),
-                                        DataCell(
-                                          Text(_amount(sum((r) => r.calc.paye))),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(sum((r) => r.calc.employeePension)),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(sum((r) => r.calc.salaryAdvance)),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(sum((r) => r.calc.otherDeductions)),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(
-                                              sum((r) => r.calc.totalStaffDeductions),
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Text(
-                                            _amount(sum((r) => r.calc.net)),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                        const DataCell(SizedBox.shrink()),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                              ),
-                            ),
-                          ),
-                          if (advances.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Text(
-                              'Salary advances',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Recovered from net pay after income tax and pension.',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: WebErpTheme.cardDecoration(context),
-                              child: WebErpHScroll(
-                                minChildWidth: 720,
-                                child: DataTable(
-                                  columns: const [
-                                    DataColumn(label: Text('Staff ID')),
-                                    DataColumn(label: Text('Name')),
-                                    DataColumn(label: Text('Job')),
-                                    DataColumn(
-                                      label: Text('Advance recovered'),
-                                      numeric: true,
-                                    ),
-                                    DataColumn(
-                                      label: Text('Net pay'),
-                                      numeric: true,
-                                    ),
-                                  ],
-                                  rows: [
-                                    for (final row in advances)
-                                      DataRow(
-                                        cells: [
-                                          DataCell(Text(row.person.personId)),
-                                          DataCell(Text(row.person.fullName)),
-                                          DataCell(Text(row.person.jobTitle)),
-                                          DataCell(
-                                            Text(_etb(row.calc.salaryAdvance)),
-                                          ),
-                                          DataCell(Text(_etb(row.calc.net))),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (others.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Text(
-                              'Other deductions',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Loans, absence, cooperative, or other recoveries.',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: WebErpTheme.cardDecoration(context),
-                              child: WebErpHScroll(
-                                minChildWidth: 720,
-                                child: DataTable(
-                                  columns: const [
-                                    DataColumn(label: Text('Staff ID')),
-                                    DataColumn(label: Text('Name')),
-                                    DataColumn(label: Text('Job')),
-                                    DataColumn(
-                                      label: Text('Amount'),
-                                      numeric: true,
-                                    ),
-                                    DataColumn(label: Text('Reason')),
-                                    DataColumn(
-                                      label: Text('Net pay'),
-                                      numeric: true,
-                                    ),
-                                  ],
-                                  rows: [
-                                    for (final row in others)
-                                      DataRow(
-                                        cells: [
-                                          DataCell(Text(row.person.personId)),
-                                          DataCell(Text(row.person.fullName)),
-                                          DataCell(Text(row.person.jobTitle)),
-                                          DataCell(
-                                            Text(_etb(row.calc.otherDeductions)),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              row.otherNote.isEmpty
-                                                  ? 'Other'
-                                                  : row.otherNote,
-                                            ),
-                                          ),
-                                          DataCell(Text(_etb(row.calc.net))),
-                                        ],
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                        ],
+              const SizedBox(height: 16),
+              if (rows.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Text(
+                    'Add teachers, other staff, or drivers in HR first.',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                )
+              else ...[
+                Text(
+                  'Payroll register',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  'Amounts in ETB. Every column stays on this page.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-              ),
+                ),
+                const SizedBox(height: 8),
+                _fitCard(
+                  child: _fitTable(
+                    key: const ValueKey('payroll-register-table'),
+                    columnWeights: const [
+                      1.15, 1.6, 1.25, 1.0, 1.0, 1.1, 1.15, 1.0, 1.05, 1.15, 1.1, 0.9,
+                    ],
+                    headers: const [
+                      'Staff ID',
+                      'Name',
+                      'Job',
+                      'Basic',
+                      'Gross',
+                      'Income tax',
+                      'Staff pension',
+                      'Advance',
+                      'Other deduct.',
+                      'Total deduct.',
+                      'Net pay',
+                      '',
+                    ],
+                    numeric: const {3, 4, 5, 6, 7, 8, 9, 10},
+                    rows: [
+                      for (final row in pageRows)
+                        [
+                          _cell(row.person.personId),
+                          _cell(
+                            row.person.fullName,
+                            emphasize: true,
+                            muted: !row.person.isActive,
+                            strike: !row.person.isActive,
+                          ),
+                          _cell(row.person.jobTitle),
+                          _cell(_amount(row.calc.basicSalary), numeric: true),
+                          _cell(_amount(row.calc.gross), numeric: true),
+                          _cell(_amount(row.calc.paye), numeric: true),
+                          _cell(_amount(row.calc.employeePension), numeric: true),
+                          _cell(_amount(row.calc.salaryAdvance), numeric: true),
+                          _cell(_amount(row.calc.otherDeductions), numeric: true),
+                          _cell(
+                            _amount(row.calc.totalStaffDeductions),
+                            numeric: true,
+                          ),
+                          _cell(
+                            _amount(row.calc.net),
+                            numeric: true,
+                            emphasize: true,
+                          ),
+                          canManage
+                              ? Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () => _edit(row.person),
+                                    child: Text(
+                                      row.hasSalary ? 'Edit' : 'Set salary',
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ],
+                      if (paid.isNotEmpty)
+                        [
+                          _cell(''),
+                          _cell('TOTAL', emphasize: true),
+                          _cell('${paid.length} staff'),
+                          _cell(_amount(sum((r) => r.calc.basicSalary)), numeric: true),
+                          _cell(_amount(sum((r) => r.calc.gross)), numeric: true),
+                          _cell(_amount(sum((r) => r.calc.paye)), numeric: true),
+                          _cell(
+                            _amount(sum((r) => r.calc.employeePension)),
+                            numeric: true,
+                          ),
+                          _cell(
+                            _amount(sum((r) => r.calc.salaryAdvance)),
+                            numeric: true,
+                          ),
+                          _cell(
+                            _amount(sum((r) => r.calc.otherDeductions)),
+                            numeric: true,
+                          ),
+                          _cell(
+                            _amount(sum((r) => r.calc.totalStaffDeductions)),
+                            numeric: true,
+                          ),
+                          _cell(
+                            _amount(sum((r) => r.calc.net)),
+                            numeric: true,
+                            emphasize: true,
+                          ),
+                          const SizedBox.shrink(),
+                        ],
+                    ],
+                  ),
+                ),
+                _pager(total: rows.length),
+                if (advances.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Salary advances',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Recovered from net pay after income tax and pension.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  _fitCard(
+                    child: _fitTable(
+                      columnWeights: const [1.2, 1.8, 1.5, 1.4, 1.2],
+                      headers: const [
+                        'Staff ID',
+                        'Name',
+                        'Job',
+                        'Advance recovered',
+                        'Net pay',
+                      ],
+                      numeric: const {3, 4},
+                      rows: [
+                        for (final row in advances)
+                          [
+                            _cell(row.person.personId),
+                            _cell(row.person.fullName, emphasize: true),
+                            _cell(row.person.jobTitle),
+                            _cell(_etb(row.calc.salaryAdvance), numeric: true),
+                            _cell(_etb(row.calc.net), numeric: true, emphasize: true),
+                          ],
+                      ],
+                    ),
+                  ),
+                ],
+                if (others.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Other deductions',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Loans, absence, cooperative, or other recoveries.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  _fitCard(
+                    child: _fitTable(
+                      columnWeights: const [1.1, 1.6, 1.3, 1.1, 1.6, 1.1],
+                      headers: const [
+                        'Staff ID',
+                        'Name',
+                        'Job',
+                        'Amount',
+                        'Reason',
+                        'Net pay',
+                      ],
+                      numeric: const {3, 5},
+                      rows: [
+                        for (final row in others)
+                          [
+                            _cell(row.person.personId),
+                            _cell(row.person.fullName, emphasize: true),
+                            _cell(row.person.jobTitle),
+                            _cell(_etb(row.calc.otherDeductions), numeric: true),
+                            _cell(row.otherNote.isEmpty ? 'Other' : row.otherNote),
+                            _cell(_etb(row.calc.net), numeric: true, emphasize: true),
+                          ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
             ],
           ),
         );
@@ -779,6 +657,105 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
         Text(label, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
       ],
+    );
+  }
+
+  Widget _fitCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      decoration: WebErpTheme.cardDecoration(context),
+      clipBehavior: Clip.hardEdge,
+      child: child,
+    );
+  }
+
+  Widget _fitTable({
+    Key? key,
+    required List<double> columnWeights,
+    required List<String> headers,
+    required List<List<Widget>> rows,
+    Set<int> numeric = const {},
+  }) {
+    return Table(
+      key: key,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      columnWidths: {
+        for (var i = 0; i < columnWeights.length; i++)
+          i: FlexColumnWidth(columnWeights[i]),
+      },
+      border: TableBorder(
+        horizontalInside: BorderSide(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
+        ),
+      ),
+      children: [
+        TableRow(
+          children: [
+            for (var i = 0; i < headers.length; i++)
+              _cell(headers[i], header: true, numeric: numeric.contains(i)),
+          ],
+        ),
+        for (final row in rows) TableRow(children: row),
+      ],
+    );
+  }
+
+  Widget _cell(
+    String text, {
+    bool header = false,
+    bool numeric = false,
+    bool emphasize = false,
+    bool muted = false,
+    bool strike = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      child: Text(
+        text,
+        textAlign: numeric ? TextAlign.right : TextAlign.left,
+        style: TextStyle(
+          fontSize: header ? 11 : 12,
+          height: 1.25,
+          fontWeight: header || emphasize ? FontWeight.w800 : FontWeight.w500,
+          color: muted ? Colors.grey : null,
+          decoration: strike ? TextDecoration.lineThrough : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _pager({required int total}) {
+    if (total <= WebPayrollPage.registerPageSize) {
+      return const SizedBox.shrink();
+    }
+    final size = WebPayrollPage.registerPageSize;
+    final page = _pageIndex(total);
+    final start = page * size + 1;
+    final end = ((page + 1) * size).clamp(0, total);
+    final lastPage = (total - 1) ~/ size;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          Text(
+            '$start–$end of $total staff',
+            key: const ValueKey('payroll-page-label'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const Spacer(),
+          TextButton(
+            key: const ValueKey('payroll-page-prev'),
+            onPressed: page > 0 ? () => setState(() => _page = page - 1) : null,
+            child: const Text('Previous'),
+          ),
+          TextButton(
+            key: const ValueKey('payroll-page-next'),
+            onPressed:
+                page < lastPage ? () => setState(() => _page = page + 1) : null,
+            child: const Text('Next'),
+          ),
+        ],
+      ),
     );
   }
 }
