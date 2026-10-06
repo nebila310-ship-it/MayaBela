@@ -199,6 +199,14 @@ void main() {
     expect(html, contains('splash-orbit'));
     expect(html, contains('hue-rotate'));
     expect(html, contains('Loading'));
+    expect(html, contains("flutter-first-frame"));
+    expect(html, contains('flt-glass-pane'));
+    final splashDiv = html.indexOf('<div id="splash">');
+    final halo = html.indexOf('id="splash-halo"');
+    final splashEnd = html.indexOf('</div>', html.indexOf('id="splash-loader-wrap"'));
+    expect(splashDiv, greaterThan(0));
+    expect(halo, greaterThan(splashDiv));
+    expect(halo, lessThan(splashEnd));
   });
 
   testWidgets('loading ring keeps spinning and changing color', (tester) async {
