@@ -519,8 +519,20 @@ class _AdmissionDetail extends StatelessWidget {
                 if (app.guardianName.isNotEmpty) app.guardianName,
                 if (app.guardianPhone.isNotEmpty) app.guardianPhone,
                 if (app.guardianEmail.isNotEmpty) app.guardianEmail,
+                if (app.parentNationalId.isNotEmpty)
+                  'Parent ID ${app.parentNationalId}',
               ].join(' · '),
             ),
+            if (app.extraPrograms.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Extra programmes: ${app.extraProgramsLabel}'),
+              ),
+            if (app.programNotes.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(app.programNotes),
+              ),
             if (app.enrolledStudentId != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

@@ -48,6 +48,8 @@ void main() {
       previousSchool: 'Lideta Primary',
       lastGradeCompleted: 'Grade 4',
       previousAverage: 86,
+      extraPrograms: const ['film_editing', 'football', 'ai_learning'],
+      parentNationalId: 'ID-7788',
       documents: AdmissionApplication.defaultDocuments(),
       createdAt: now,
       updatedAt: now,
@@ -56,8 +58,15 @@ void main() {
     expect(copy.id, 'APP-0001');
     expect(copy.stage, AdmissionStage.application);
     expect(copy.source, AdmissionSource.online);
-    expect(copy.documents, hasLength(4));
+    expect(copy.documents, hasLength(6));
+    expect(
+      copy.documents.map((d) => d.id),
+      containsAll(AdmissionApplication.requiredDocumentIds),
+    );
     expect(copy.documentsComplete, isFalse);
+    expect(copy.extraPrograms, ['film_editing', 'football', 'ai_learning']);
+    expect(copy.extraProgramsLabel, contains('Film & editing class'));
+    expect(copy.parentNationalId, 'ID-7788');
     expect(copy.previousSchool, 'Lideta Primary');
     expect(copy.lastGradeCompleted, 'Grade 4');
     expect(copy.previousAverage, 86);
