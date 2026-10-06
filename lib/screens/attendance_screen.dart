@@ -557,33 +557,35 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         );
 
         if (widget.embedded) {
-          return Column(
-            children: [
-              if (!widget.readOnly)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleMedium,
+          return SizedBox.expand(
+            child: Column(
+              children: [
+                if (!widget.readOnly)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                         ),
-                      ),
-                      _lockButton(s),
-                      IconButton(
-                        icon: Icon(_showHistory ? Icons.edit : Icons.history),
-                        onPressed: () =>
-                            setState(() => _showHistory = !_showHistory),
-                        tooltip: _showHistory
-                            ? s.takeAttendanceTooltip
-                            : s.viewHistoryTooltip,
-                      ),
-                    ],
+                        _lockButton(s),
+                        IconButton(
+                          icon: Icon(_showHistory ? Icons.edit : Icons.history),
+                          onPressed: () =>
+                              setState(() => _showHistory = !_showHistory),
+                          tooltip: _showHistory
+                              ? s.takeAttendanceTooltip
+                              : s.viewHistoryTooltip,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              Expanded(child: body),
-            ],
+                Expanded(child: body),
+              ],
+            ),
           );
         }
 

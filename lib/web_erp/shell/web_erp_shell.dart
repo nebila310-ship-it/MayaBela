@@ -161,9 +161,21 @@ class _WebErpAdminShellState extends State<WebErpAdminShell> {
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
+            layoutBuilder: (currentChild, previousChildren) {
+              return Stack(
+                fit: StackFit.expand,
+                alignment: Alignment.topCenter,
+                children: <Widget>[
+                  ...previousChildren,
+                  if (currentChild != null) currentChild,
+                ],
+              );
+            },
             child: KeyedSubtree(
               key: ValueKey(_routeId),
-              child: WebErpRouter.pageFor(_routeId, onNavigate: _navigate),
+              child: SizedBox.expand(
+                child: WebErpRouter.pageFor(_routeId, onNavigate: _navigate),
+              ),
             ),
           ),
         ),

@@ -203,35 +203,37 @@ class _AdminAttendanceReportsScreenState
         );
 
         if (widget.embedded) {
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        s.attendanceReportsTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
+          return SizedBox.expand(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.attendanceReportsTitle,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                    ),
-                    if (_exporting)
-                      const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.2),
-                      )
-                    else
-                      IconButton(
-                        tooltip: s.exportAttendanceExcel,
-                        onPressed: _exportAttendance,
-                        icon: const Icon(Icons.download_rounded),
-                      ),
-                  ],
+                      if (_exporting)
+                        const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        )
+                      else
+                        IconButton(
+                          tooltip: s.exportAttendanceExcel,
+                          onPressed: _exportAttendance,
+                          icon: const Icon(Icons.download_rounded),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(child: body),
-            ],
+                Expanded(child: body),
+              ],
+            ),
           );
         }
 

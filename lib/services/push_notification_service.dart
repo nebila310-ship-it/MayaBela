@@ -7,6 +7,7 @@ import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_preference_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 
@@ -107,11 +108,18 @@ class PushNotificationService {
     String? targetStudentId,
     String? targetClassName,
     String? recipientStaffId,
+    String? recipientStaffRole,
     List<String>? recipientUsernames,
     String? recipientUsername,
   }) {
     final user = AuthService.currentUser;
-    if (user == null || user.roleKey != recipientRole) return false;
+    if (user == null) return false;
+    final staffTarget = recipientStaffRole?.trim() ?? '';
+    if (staffTarget.isNotEmpty) {
+      if (!StaffRoles.holds(user.staffRoles, staffTarget)) return false;
+    } else if (user.roleKey != recipientRole) {
+      return false;
+    }
 
     final prefs = NotificationPreferenceService.instance;
     if (!prefs.isEnabled(recipientRole, NotificationPreferenceKey.master)) {
@@ -207,6 +215,7 @@ class PushNotificationService {
     String? targetStudentId,
     String? targetClassName,
     String? recipientStaffId,
+    String? recipientStaffRole,
     List<String>? recipientUsernames,
     String? recipientUsername,
   }) async {
@@ -218,6 +227,7 @@ class PushNotificationService {
       targetStudentId: targetStudentId,
       targetClassName: targetClassName,
       recipientStaffId: recipientStaffId,
+      recipientStaffRole: recipientStaffRole,
       recipientUsernames: recipientUsernames,
       recipientUsername: recipientUsername,
     )) {

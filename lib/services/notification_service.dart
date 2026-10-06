@@ -12,6 +12,7 @@ import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/pending_notification_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 class NotificationService extends ChangeNotifier {
@@ -53,6 +54,7 @@ class NotificationService extends ChangeNotifier {
 
   static String _fingerprint(AppNotification item) =>
       'fp:${item.type.name}|${item.title}|${item.body}|${item.recipientRole}|'
+      '${item.recipientStaffRole ?? ''}|'
       '${item.recipientStaffId ?? ''}|${item.recipientUsername ?? ''}';
 
   Future<void> hydratePersistedReads() async {
@@ -118,7 +120,13 @@ class NotificationService extends ChangeNotifier {
   }
 
   bool _matchesCurrentUser(AppNotification item, String role) {
-    if (item.recipientRole != role) return false;
+    final staffTarget = item.recipientStaffRole?.trim() ?? '';
+    if (staffTarget.isNotEmpty) {
+      final held = AuthService.currentUser?.staffRoles ?? const <String>[];
+      if (!StaffRoles.holds(held, staffTarget)) return false;
+    } else if (item.recipientRole != role) {
+      return false;
+    }
     if (!_matchesPersonTarget(
       recipientStaffId: item.recipientStaffId,
       recipientUsername: item.recipientUsername,
@@ -272,6 +280,7 @@ class NotificationService extends ChangeNotifier {
     String? targetStudentId,
     String? targetClassName,
     String? recipientStaffId,
+    String? recipientStaffRole,
     String? recipientUsername,
     List<String>? recipientUsernames,
   }) {
@@ -291,7 +300,9 @@ class NotificationService extends ChangeNotifier {
         )) {
       return;
     }
-    if (!hasPersonTarget &&
+    final staffTarget = recipientStaffRole?.trim() ?? '';
+    if (staffTarget.isEmpty &&
+        !hasPersonTarget &&
         recipientRole == fromRole &&
         AuthService.currentUser?.roleKey == fromRole) {
       return;
@@ -321,6 +332,7 @@ class NotificationService extends ChangeNotifier {
         recipientStaffId: recipientStaffId?.trim().isEmpty == true
             ? null
             : recipientStaffId?.trim(),
+        recipientStaffRole: staffTarget.isEmpty ? null : staffTarget,
         recipientUsername: recipientUsername?.trim().isEmpty == true
             ? null
             : recipientUsername?.trim(),
@@ -337,6 +349,7 @@ class NotificationService extends ChangeNotifier {
       targetStudentId: targetStudentId,
       targetClassName: targetClassName,
       recipientStaffId: recipientStaffId,
+      recipientStaffRole: staffTarget.isEmpty ? null : staffTarget,
       recipientUsername: recipientUsername,
       recipientUsernames: recipientUsernames,
     );
@@ -353,6 +366,7 @@ class NotificationService extends ChangeNotifier {
           targetStudentId: targetStudentId,
           targetClassName: targetClassName,
           recipientStaffId: recipientStaffId,
+          recipientStaffRole: staffTarget.isEmpty ? null : staffTarget,
           recipientUsername: recipientUsername,
           recipientUsernames: recipientUsernames,
         ),
@@ -368,6 +382,7 @@ class NotificationService extends ChangeNotifier {
         targetStudentId: targetStudentId,
         targetClassName: targetClassName,
         recipientStaffId: recipientStaffId,
+        recipientStaffRole: staffTarget.isEmpty ? null : staffTarget,
         recipientUsername: recipientUsername,
         recipientUsernames: recipientUsernames,
       ),
@@ -415,6 +430,7 @@ class NotificationService extends ChangeNotifier {
         targetStudentId: item['targetStudentId'] as String?,
         targetClassName: item['targetClassName'] as String?,
         recipientStaffId: item['recipientStaffId'] as String?,
+        recipientStaffRole: item['recipientStaffRole'] as String?,
         recipientUsername: item['recipientUsername'] as String?,
         recipientUsernames:
             (item['recipientUsernames'] as List?)

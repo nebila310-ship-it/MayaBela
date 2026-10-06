@@ -30,6 +30,7 @@ class AppNotification {
     this.targetStudentId,
     this.targetClassName,
     this.recipientStaffId,
+    this.recipientStaffRole,
     this.recipientUsername,
     this.recipientUsernames = const [],
   });
@@ -54,6 +55,10 @@ class AppNotification {
 
   /// Composite staff id (e.g. `teacher:TCH-1001`) for a direct staff notice.
   final String? recipientStaffId;
+
+  /// Staff-role key (e.g. `vice_president`) so VP / SD / Principal see
+  /// desk notices even when they signed in as a teacher account.
+  final String? recipientStaffRole;
 
   /// Single login username this notice is for.
   final String? recipientUsername;

@@ -360,6 +360,8 @@ abstract final class AppDataMaps {
     if (n.targetStudentId != null) 'targetStudentId': n.targetStudentId,
     if (n.targetClassName != null) 'targetClassName': n.targetClassName,
     if (n.recipientStaffId != null) 'recipientStaffId': n.recipientStaffId,
+    if (n.recipientStaffRole != null && n.recipientStaffRole!.trim().isNotEmpty)
+      'recipientStaffRole': n.recipientStaffRole,
     if (n.recipientUsername != null) 'recipientUsername': n.recipientUsername,
     if (n.recipientUsernames.isNotEmpty)
       'recipientUsernames': n.recipientUsernames,
@@ -382,6 +384,7 @@ abstract final class AppDataMaps {
     targetStudentId: map['targetStudentId'] as String?,
     targetClassName: map['targetClassName'] as String?,
     recipientStaffId: map['recipientStaffId'] as String?,
+    recipientStaffRole: map['recipientStaffRole'] as String?,
     recipientUsername: map['recipientUsername'] as String?,
     recipientUsernames:
         (map['recipientUsernames'] as List?)

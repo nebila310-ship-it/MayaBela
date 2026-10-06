@@ -121,6 +121,15 @@ void main() {
       ),
       isTrue,
     );
+    expect(
+      notes.any(
+        (n) =>
+            n.title == 'Discipline case escalated to you' &&
+            n.recipientStaffRole == StaffRoles.sectionDirector &&
+            n.body.contains('Your review is needed'),
+      ),
+      isTrue,
+    );
   });
 
   test('resolved reports stay closed for the teacher and the desk', () async {

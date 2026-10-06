@@ -311,6 +311,7 @@ abstract final class StaffRoles {
         SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.approveGrades,
         SchoolPermissions.approveTransfers,
+        SchoolPermissions.manageStudents,
         SchoolPermissions.manageClasses,
         SchoolPermissions.manageSubjects,
         SchoolPermissions.manageTimetables,
@@ -551,6 +552,16 @@ abstract final class StaffRoles {
   static String canonicalize(String key) {
     final k = key.trim().toLowerCase();
     return aliases[k] ?? k;
+  }
+
+  /// True when [roles] includes [key] after alias canonicalization.
+  static bool holds(Iterable<String> roles, String key) {
+    final want = canonicalize(key);
+    if (want.isEmpty) return false;
+    for (final role in roles) {
+      if (canonicalize(role) == want) return true;
+    }
+    return false;
   }
 
   /// Enrolment id prefix per role (QA-1001, HR-1001, VP-1001, …).
