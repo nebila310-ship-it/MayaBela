@@ -50,6 +50,20 @@ class DisciplineService extends ChangeNotifier {
         .toList();
   }
 
+  /// True when [staffRoles] (or the signed-in user) is the desk this case
+  /// was escalated to — they may schedule a hearing or record an outcome,
+  /// but not run the rest of the Student Affairs desk.
+  static bool canReviewEscalatedCase(
+    DisciplineCase c, {
+    List<String>? staffRoles,
+  }) {
+    if (!c.isOpen) return false;
+    final target = c.escalatedTo.trim();
+    if (target.isEmpty) return false;
+    final roles = staffRoles ?? AuthService.currentUser?.staffRoles ?? const [];
+    return StaffRoles.holds(roles, target);
+  }
+
   /// Teacher's own behaviour / incident reports, including closed ones.
   List<DisciplineCase> reportsForCurrentTeacher() {
     final user = AuthService.currentUser;

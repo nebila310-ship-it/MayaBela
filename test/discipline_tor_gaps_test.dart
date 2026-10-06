@@ -132,6 +132,82 @@ void main() {
     );
   });
 
+  test('oversight desks only review cases escalated to them', () {
+    final now = DateTime.now();
+    DisciplineCase caseOf({
+      required DisciplineCaseStatus status,
+      String escalatedTo = '',
+    }) {
+      return DisciplineCase(
+        id: 'c-1',
+        schoolId: 'TB-001',
+        studentId: 'STU-1001',
+        studentName: 'Sara Bekele',
+        className: 'Grade 4A',
+        reporterId: 'teacher.disc',
+        reporterName: 'Ms Hana',
+        reporterRole: 'subject',
+        kind: DisciplineCaseKind.behaviour,
+        title: 'Repeated disrespect',
+        description: 'Ignored two warnings',
+        status: status,
+        escalatedTo: escalatedTo,
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
+
+    final open = caseOf(status: DisciplineCaseStatus.submitted);
+    final toVp = caseOf(
+      status: DisciplineCaseStatus.escalated,
+      escalatedTo: StaffRoles.vicePresident,
+    );
+    final toSd = caseOf(
+      status: DisciplineCaseStatus.escalated,
+      escalatedTo: StaffRoles.sectionDirector,
+    );
+    final closed = caseOf(
+      status: DisciplineCaseStatus.resolved,
+      escalatedTo: StaffRoles.vicePresident,
+    );
+
+    expect(
+      DisciplineService.canReviewEscalatedCase(
+        toVp,
+        staffRoles: const [StaffRoles.vicePresident],
+      ),
+      isTrue,
+    );
+    expect(
+      DisciplineService.canReviewEscalatedCase(
+        toSd,
+        staffRoles: const [StaffRoles.vicePresident],
+      ),
+      isFalse,
+    );
+    expect(
+      DisciplineService.canReviewEscalatedCase(
+        open,
+        staffRoles: const [StaffRoles.vicePresident],
+      ),
+      isFalse,
+    );
+    expect(
+      DisciplineService.canReviewEscalatedCase(
+        closed,
+        staffRoles: const [StaffRoles.vicePresident],
+      ),
+      isFalse,
+    );
+    expect(
+      DisciplineService.canReviewEscalatedCase(
+        toSd,
+        staffRoles: const [StaffRoles.sectionDirector],
+      ),
+      isTrue,
+    );
+  });
+
   test('resolved reports stay closed for the teacher and the desk', () async {
     final filed = await DisciplineService.instance.fileReport(
       studentId: 'STU-1001',
@@ -267,6 +343,75 @@ void main() {
     expect(find.text('Classroom disruption'), findsOneWidget);
     expect(find.text('Submitted'), findsOneWidget);
     expect(find.textContaining('Reported by Ms Hana'), findsOneWidget);
+  });
+
+  testWidgets('VP observes cases and only acts when escalated to VP', (
+    tester,
+  ) async {
+    final now = DateTime.utc(2026, 9, 30);
+    AuthService.currentUser = RegisteredUser(
+      username: 'vp.desk',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      fullName: 'Vice Principal',
+      staffRoles: const [StaffRoles.vicePresident],
+    );
+    DisciplineService.instance.applyPersistedData([
+      DisciplineCase(
+        id: 'dc-open-affairs',
+        schoolId: 'TB-001',
+        studentId: 'STU-1001',
+        studentName: 'Sara Bekele',
+        className: 'Grade 4A',
+        reporterId: 'teacher.disc',
+        reporterName: 'Ms Hana',
+        reporterRole: 'teacher',
+        kind: DisciplineCaseKind.behaviour,
+        title: 'Classroom disruption',
+        description: 'Talking over the lesson',
+        status: DisciplineCaseStatus.submitted,
+        createdAt: now,
+        updatedAt: now,
+      ),
+      DisciplineCase(
+        id: 'dc-escalated-vp',
+        schoolId: 'TB-001',
+        studentId: 'STU-1002',
+        studentName: 'Yonas Tadesse',
+        className: 'Grade 5B',
+        reporterId: 'teacher.disc',
+        reporterName: 'Ms Hana',
+        reporterRole: 'teacher',
+        kind: DisciplineCaseKind.incident,
+        title: 'Fight in the yard',
+        description: 'Pushed another student',
+        status: DisciplineCaseStatus.escalated,
+        escalatedTo: StaffRoles.vicePresident,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ]);
+
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: WebStudentAffairsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Observation and follow-up only'),
+      findsOneWidget,
+    );
+    expect(find.text('File Report'), findsNothing);
+    expect(find.text('Escalate'), findsNothing);
+    expect(find.text('Dismiss'), findsNothing);
+    expect(find.text('Start Investigation'), findsNothing);
+    expect(find.text('Schedule Hearing'), findsOneWidget);
+    expect(find.text('Record Outcome'), findsOneWidget);
+    expect(find.text('Sara Bekele — Grade 4A'), findsOneWidget);
+    expect(find.text('Yonas Tadesse — Grade 5B'), findsOneWidget);
   });
 
   test('detention is a first-class outcome on the same case store', () {
