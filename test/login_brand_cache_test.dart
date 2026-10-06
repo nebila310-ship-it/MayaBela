@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/widgets/fancy_loading_ring.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/login_brand_header.dart';
@@ -15,6 +16,7 @@ import 'package:mayabela/web_erp/login/web_login_shell.dart';
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    SchoolRegistryService.instance.applyPersistedSchools([]);
     LoginPrefsService.instance.debugReset();
     await LoginPrefsService.instance.load();
     LoginChromeBrand.tabTitle.value = LoginChromeBrand.productTitle;
@@ -40,7 +42,7 @@ void main() {
     expect(LoginPrefsService.instance.brandForSchool('OTHER'), isNull);
   });
 
-  test('switching school id clears a mismatched remembered brand', () async {
+  test('switching school id keeps the previous school brand for later', () async {
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: 'ONE',
       name: 'One School',
@@ -48,6 +50,8 @@ void main() {
     await LoginPrefsService.instance.saveLastSchoolId('TWO');
     expect(LoginPrefsService.instance.lastSchoolId, 'TWO');
     expect(LoginPrefsService.instance.rememberedBrand, isNull);
+    expect(LoginPrefsService.instance.brandForSchool('ONE')?.name, 'One School');
+    expect(LoginPrefsService.instance.brandForSchool('TWO'), isNull);
   });
 
   testWidgets('login header shows remembered school before registry lookup',
@@ -162,6 +166,23 @@ void main() {
     expect(LoginChromeBrand.tabTitle.value, 'MaJo Bridge OS');
   });
 
+  test('browser tab uses the school name, never the school id', () async {
+    SchoolRegistryService.instance.applyPersistedSchools([
+      SchoolRecord(id: 'TB-001', name: 'Maya School'),
+    ]);
+
+    LoginChromeBrand.apply(schoolId: 'TB-001');
+    expect(LoginChromeBrand.tabTitle.value, 'Maya School');
+    expect(LoginChromeBrand.tabTitle.value, isNot('TB-001'));
+
+    SchoolRegistryService.instance.applyPersistedSchools([]);
+    LoginPrefsService.instance.debugReset();
+    await LoginPrefsService.instance.load();
+    LoginChromeBrand.apply(schoolId: 'UNKNOWN-99');
+    expect(LoginChromeBrand.tabTitle.value, 'MaJo Bridge OS');
+    expect(LoginChromeBrand.tabTitle.value, isNot('UNKNOWN-99'));
+  });
+
   testWidgets('web login side brand is MaJo until a school id is typed',
       (tester) async {
     await LoginPrefsService.instance.rememberSchoolBrand(
@@ -201,6 +222,7 @@ void main() {
     expect(html, contains('Loading'));
     expect(html, contains("flutter-first-frame"));
     expect(html, contains('flt-glass-pane'));
+    expect(html, contains('mayabela_school_brands'));
     final splashDiv = html.indexOf('<div id="splash">');
     final halo = html.indexOf('id="splash-halo"');
     final splashEnd = html.indexOf('</div>', html.indexOf('id="splash-loader-wrap"'));

@@ -10,6 +10,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
+import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
@@ -121,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_schoolIdEditing) return;
     final id = schoolId.text.trim();
     if (id.isNotEmpty) {
-      LoginPrefsService.instance.saveLastSchoolId(id);
+      unawaited(_commitTypedSchoolId(id));
       _applySavedEntryForSchoolId(id);
     }
     if (!mounted) return;
@@ -208,6 +209,26 @@ class _LoginScreenState extends State<LoginScreen> {
   void _onSchoolIdTextChanged() {
     _syncLoginChrome();
     if (mounted) setState(() {});
+  }
+
+  Future<void> _commitTypedSchoolId(String id) async {
+    await LoginPrefsService.instance.saveLastSchoolId(id);
+    final record = SchoolRegistryService.instance.lookup(id);
+    if (record != null && record.name.trim().isNotEmpty) {
+      await LoginPrefsService.instance.rememberSchoolBrand(
+        schoolId: record.id,
+        name: record.name,
+        logoUrl: SchoolLogoService.displayUrlFor(
+          record.id,
+          storedUrl: record.displayLogoUrl,
+          style: record.logoStyle,
+        ),
+        logoPath: record.displayLogoPath,
+        logoStyle: record.logoStyle,
+      );
+    }
+    if (!mounted) return;
+    LoginChromeBrand.apply(schoolId: id);
   }
 
   void _syncLoginChrome() {
@@ -741,7 +762,7 @@ class _LoginScreenState extends State<LoginScreen> {
       onSubmitted: (value) {
         final id = value.trim();
         if (id.isNotEmpty) {
-          LoginPrefsService.instance.saveLastSchoolId(id);
+          unawaited(_commitTypedSchoolId(id));
           _applySavedEntryForSchoolId(id);
         }
         _schoolIdFocus.unfocus();
@@ -782,7 +803,7 @@ class _LoginScreenState extends State<LoginScreen> {
         schoolId.text = picked;
         _schoolIdEditing = false;
       });
-      LoginPrefsService.instance.saveLastSchoolId(picked);
+      unawaited(_commitTypedSchoolId(picked));
       _applySavedEntryForSchoolId(picked);
     }
   }

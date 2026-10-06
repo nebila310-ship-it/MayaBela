@@ -332,11 +332,21 @@
         }
         var lastId = readLastSchoolId();
         if (!lastId) return;
-        var raw = localStorage.getItem('mayabela_school_splash');
-        if (!raw) return;
-        var brand = JSON.parse(raw);
-        var brandId = (brand.schoolId || '').toString().trim().toUpperCase();
-        if (brandId && brandId !== lastId) return;
+        var brand = null;
+        try {
+          var allRaw = localStorage.getItem('mayabela_school_brands');
+          if (allRaw) {
+            var all = JSON.parse(allRaw);
+            if (all && all[lastId]) brand = all[lastId];
+          }
+        } catch (e) {}
+        if (!brand) {
+          var raw = localStorage.getItem('mayabela_school_splash');
+          if (!raw) return;
+          brand = JSON.parse(raw);
+          var brandId = (brand.schoolId || '').toString().trim().toUpperCase();
+          if (brandId && brandId !== lastId) return;
+        }
         var picture = document.getElementById('splash');
         var img = picture && picture.querySelector('img');
         var src = brand.dataUrl || brand.logoUrl;
@@ -345,6 +355,13 @@
           for (var i = 0; i < sources.length; i++) sources[i].remove();
           img.removeAttribute('srcset');
           img.src = src;
+          img.onerror = function () {
+            img.onerror = null;
+            img.src = 'splash/img/light-1x.png';
+            img.style.borderRadius = '';
+            img.style.width = '';
+            img.style.height = '';
+          };
           img.style.maxWidth = '240px';
           img.style.maxHeight = '240px';
           img.style.objectFit = 'cover';
@@ -451,7 +468,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=splash-stop-on-login-20261006" async=""></script>
+    <script src="flutter_bootstrap.js?v=tab-school-name-20261006" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {
