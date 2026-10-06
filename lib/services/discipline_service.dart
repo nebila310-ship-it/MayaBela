@@ -6,6 +6,7 @@ import 'package:mayabela/models/discipline_case.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/discipline_persistence_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
 
 /// EDUABA Student Affairs — behaviour / incident case register.
@@ -212,16 +213,46 @@ class DisciplineService extends ChangeNotifier {
     final kindLabel = c.kind == DisciplineCaseKind.behaviour
         ? 'behaviour'
         : 'incident';
-    final body = c.status == DisciplineCaseStatus.escalated
-        ? '${c.studentName} (${c.className}) escalated to '
-              '${DisciplineConductCodes.escalationLabel(c.escalatedTo)}.'
-        : '${c.reporterName} filed a $kindLabel report for ${c.studentName} '
-              '(${c.className}): ${c.title}.';
+    if (c.status == DisciplineCaseStatus.escalated) {
+      final target = StaffRoles.canonicalize(c.escalatedTo);
+      final label = DisciplineConductCodes.escalationLabel(c.escalatedTo);
+      final body =
+          '${c.studentName} (${c.className}) escalated to $label. '
+          'Your review is needed.';
+      if (target.isNotEmpty) {
+        NotificationService.instance.push(
+          title: 'Discipline case escalated to you',
+          body: body,
+          type: NotificationType.general,
+          fromRole: AuthService.roleTeacher,
+          fromName: c.reporterName.isNotEmpty
+              ? c.reporterName
+              : 'Student Affairs',
+          recipientRole: AuthService.roleTeacher,
+          recipientStaffRole: target,
+          targetClassName: c.className,
+          showOnMessagesBadge: true,
+        );
+      }
+      NotificationService.instance.push(
+        title: 'Discipline case escalated',
+        body: '${c.studentName} (${c.className}) escalated to $label.',
+        type: NotificationType.general,
+        fromRole: AuthService.roleTeacher,
+        fromName: c.reporterName.isNotEmpty
+            ? c.reporterName
+            : 'Student Affairs',
+        recipientRole: AuthService.roleAdmin,
+        targetClassName: c.className,
+        showOnMessagesBadge: false,
+      );
+      return;
+    }
     NotificationService.instance.push(
-      title: c.status == DisciplineCaseStatus.escalated
-          ? 'Discipline case escalated'
-          : 'New discipline report',
-      body: body,
+      title: 'New discipline report',
+      body:
+          '${c.reporterName} filed a $kindLabel report for ${c.studentName} '
+          '(${c.className}): ${c.title}.',
       type: NotificationType.general,
       fromRole: AuthService.roleTeacher,
       fromName: c.reporterName.isNotEmpty ? c.reporterName : 'Student Affairs',

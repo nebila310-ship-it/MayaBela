@@ -9,6 +9,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 /// Queues tray notifications for users who are not logged in when an event fires.
@@ -27,6 +28,7 @@ class PendingNotificationStore {
     required String fromName,
     String? recipientUsername,
     String? recipientStaffId,
+    String? recipientStaffRole,
     String? targetStudentId,
     String? targetClassName,
     List<String>? recipientUsernames,
@@ -42,6 +44,7 @@ class PendingNotificationStore {
       'fromName': fromName,
       'recipientUsername': ?recipientUsername,
       'recipientStaffId': ?recipientStaffId,
+      'recipientStaffRole': ?recipientStaffRole,
       'targetStudentId': ?targetStudentId,
       'targetClassName': ?targetClassName,
       if (recipientUsernames != null && recipientUsernames.isNotEmpty)
@@ -98,7 +101,12 @@ class PendingNotificationStore {
   }
 
   bool _matchesCurrentUser(Map<String, dynamic> item, RegisteredUser user) {
-    if (item['recipientRole'] != user.roleKey) return false;
+    final staffTarget = (item['recipientStaffRole'] as String?)?.trim() ?? '';
+    if (staffTarget.isNotEmpty) {
+      if (!StaffRoles.holds(user.staffRoles, staffTarget)) return false;
+    } else if (item['recipientRole'] != user.roleKey) {
+      return false;
+    }
 
     final explicitUser = (item['recipientUsername'] as String?)
         ?.trim()

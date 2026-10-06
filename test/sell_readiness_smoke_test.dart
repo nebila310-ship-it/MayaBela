@@ -241,6 +241,8 @@ void main() {
       expect(ModuleAccess.canView('academic'), isTrue);
       expect(ModuleAccess.canView('events'), isTrue);
       expect(ModuleAccess.canManage('students'), isTrue);
+      expect(ModuleAccess.canView('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isTrue);
       AuthService.currentUser = null;
     });
   });

@@ -176,6 +176,7 @@ void main() {
       expect(ModuleAccess.canManage('reports'), isFalse);
       expect(ModuleAccess.canView('audit_log'), isTrue);
       expect(ModuleAccess.canManage('audit_log'), isFalse);
+      expect(ModuleAccess.canManage('student_affairs'), isTrue);
     });
 
     test('does not see owner-only system chrome', () {
@@ -265,8 +266,27 @@ void main() {
       expect(ModuleAccess.canView('support'), isTrue);
       // Child-protection files are not a classroom or department-head desk.
       expect(ModuleAccess.canView('safeguarding'), isFalse);
+      expect(ModuleAccess.canView('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('student_affairs'),
+      );
       expect(ModuleAccess.canView('reports'), isTrue);
       expect(ModuleAccess.canManage('reports'), isFalse);
+    });
+  });
+
+  group('Principal', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.principal]));
+
+    test('opens Student Affairs when a case is escalated', () {
+      expect(ModuleAccess.canView('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('student_affairs'),
+      );
     });
   });
 

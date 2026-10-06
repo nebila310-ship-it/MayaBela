@@ -5,6 +5,7 @@ import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ void main() {
     required String roleKey,
     String? linkedTeacherId,
     String? linkedAdminId,
+    List<String> staffRoles = const [],
   }) {
     AuthService.currentUser = RegisteredUser(
       username: username,
@@ -33,6 +35,7 @@ void main() {
       schoolId: 'TB-001',
       linkedTeacherId: linkedTeacherId,
       linkedAdminId: linkedAdminId,
+      staffRoles: staffRoles,
     );
   }
 
@@ -144,6 +147,66 @@ void main() {
         (n) => n.title.startsWith('Case update'),
       ),
       isTrue,
+    );
+  });
+
+  test('staff-role escalation notice reaches VP and Section Director', () {
+    signIn(username: 'affairs.desk', roleKey: AuthService.roleTeacher);
+    NotificationService.instance.push(
+      title: 'Discipline case escalated to you',
+      body: 'Sara Bekele (Grade 4A) escalated to Vice Principal.',
+      type: NotificationType.general,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Student Affairs',
+      recipientRole: AuthService.roleTeacher,
+      recipientStaffRole: StaffRoles.vicePresident,
+    );
+    NotificationService.instance.push(
+      title: 'Discipline case escalated to you',
+      body: 'Sara Bekele (Grade 4A) escalated to Section Director.',
+      type: NotificationType.general,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Student Affairs',
+      recipientRole: AuthService.roleTeacher,
+      recipientStaffRole: StaffRoles.sectionDirector,
+    );
+
+    signIn(
+      username: 'vp.user',
+      roleKey: AuthService.roleTeacher,
+      staffRoles: const [StaffRoles.vicePresident],
+    );
+    final vpNotes = NotificationService.instance.notificationsForCurrentUser();
+    expect(
+      vpNotes.any((n) => n.body.contains('Vice Principal')),
+      isTrue,
+    );
+    expect(
+      vpNotes.any((n) => n.body.contains('Section Director')),
+      isFalse,
+    );
+
+    signIn(
+      username: 'sd.user',
+      roleKey: AuthService.roleTeacher,
+      staffRoles: const [StaffRoles.sectionDirector],
+    );
+    final sdNotes = NotificationService.instance.notificationsForCurrentUser();
+    expect(
+      sdNotes.any((n) => n.body.contains('Section Director')),
+      isTrue,
+    );
+    expect(
+      sdNotes.any((n) => n.body.contains('Vice Principal')),
+      isFalse,
+    );
+
+    signIn(username: 'plain.teacher', roleKey: AuthService.roleTeacher);
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title == 'Discipline case escalated to you',
+      ),
+      isFalse,
     );
   });
 }

@@ -162,9 +162,10 @@ class _WebAttendanceHubPageState extends State<WebAttendanceHubPage>
     if (!_canView) {
       return const Center(child: Text('You do not have access to attendance.'));
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return SizedBox.expand(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         Padding(
           padding: EdgeInsets.fromLTRB(
             narrow ? 12 : 20,
@@ -235,12 +236,15 @@ class _WebAttendanceHubPageState extends State<WebAttendanceHubPage>
             controller: _tabs,
             physics: const NeverScrollableScrollPhysics(),
             children: const [
-              AttendanceScreen(embedded: true),
-              AdminAttendanceReportsScreen(embedded: true),
+              SizedBox.expand(child: AttendanceScreen(embedded: true)),
+              SizedBox.expand(
+                child: AdminAttendanceReportsScreen(embedded: true),
+              ),
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }

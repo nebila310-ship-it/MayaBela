@@ -420,9 +420,15 @@ abstract final class ModuleAccess {
       visibleTo: {
         StaffRoles.studentAffairs,
         StaffRoles.vicePresident,
+        StaffRoles.sectionDirector,
         ..._executiveOversight,
       },
-      manageBy: {StaffRoles.studentAffairs, StaffRoles.vicePresident},
+      manageBy: {
+        StaffRoles.studentAffairs,
+        StaffRoles.vicePresident,
+        StaffRoles.sectionDirector,
+        StaffRoles.principal,
+      },
     ),
     'safeguarding': ModuleRoleAllocation(
       visibleTo: {
