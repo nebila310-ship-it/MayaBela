@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/ethiopia_payroll_tax.dart';
+import 'package:mayabela/services/payroll_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_payroll_page.dart';
@@ -31,6 +33,7 @@ void main() {
         phone: '0911000000',
       ),
     ]);
+    PayrollService.instance.applyPersistedData(profiles: const [], runs: const []);
   });
 
   tearDown(() {
@@ -84,7 +87,7 @@ void main() {
 
     await tester.tap(find.text('Payroll'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Income tax (PAYE)'), findsOneWidget);
+    expect(find.textContaining('Click Basic, Advance, or Other deduct'), findsWidgets);
     expect(find.text('Run payroll'), findsOneWidget);
     expect(find.text('Export Excel'), findsOneWidget);
     expect(find.text('Print / PDF'), findsOneWidget);
@@ -97,7 +100,10 @@ void main() {
     expect(find.text('Staff ID'), findsWidgets);
     expect(find.text('Staff pension'), findsOneWidget);
     expect(find.text('Total deduct.'), findsOneWidget);
-    expect(find.text('Set salary'), findsWidgets);
+    expect(find.text('Set salary'), findsNothing);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.textContaining('Click Basic, Advance, or Other deduct'), findsOneWidget);
+    expect(find.byKey(const ValueKey('payroll-cell-basic-TCH-STAT-1')), findsOneWidget);
     final tableSize = tester.getSize(
       find.byKey(const ValueKey('payroll-register-table')),
     );
@@ -146,6 +152,84 @@ void main() {
     expect(find.text('Employee 12'), findsOneWidget);
     expect(find.text('Employee 01'), findsNothing);
     expect(find.text('Net pay'), findsWidgets);
+  });
+
+  testWidgets('payroll cells recalc tax, pension, and net as figures are typed',
+      (tester) async {
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-EDIT-1',
+        employeeId: 'TCH-EDIT-1',
+        fullName: 'Editable Staff',
+        assignedClass: 'Grade 1A',
+        schoolId: 'FR-001',
+        phone: '0911000099',
+      ),
+    ]);
+
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebPayrollPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('payroll-cell-basic-TCH-EDIT-1')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('payroll-input-basic-TCH-EDIT-1')),
+      '12000',
+    );
+    await tester.pump();
+
+    final afterBasic = EthiopianPayrollTax.breakdown(basicSalary: 12000);
+    expect(find.text('2,250.00'), findsWidgets);
+    expect(find.text('840.00'), findsWidgets);
+    expect(find.text('8,910.00'), findsWidgets);
+    expect(afterBasic.paye, 2250);
+    expect(afterBasic.employeePension, 840);
+    expect(afterBasic.net, 8910);
+
+    await tester.tap(
+      find.byKey(const ValueKey('payroll-cell-advance-TCH-EDIT-1')),
+    );
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('payroll-input-advance-TCH-EDIT-1')),
+      '1000',
+    );
+    await tester.pump();
+
+    expect(find.text('7,910.00'), findsWidgets);
+    expect(find.text('840.00'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('payroll-cell-other-TCH-EDIT-1')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('payroll-input-other-TCH-EDIT-1')),
+      '250',
+    );
+    await tester.pump();
+
+    expect(find.text('7,660.00'), findsWidgets);
+    expect(find.byKey(const ValueKey('payroll-cell-pension-TCH-EDIT-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('payroll-input-pension-TCH-EDIT-1')), findsNothing);
+    expect(find.byKey(const ValueKey('payroll-total-net')), findsOneWidget);
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    final saved = PayrollService.instance.registerRows().firstWhere(
+          (r) => r.person.personId == 'TCH-EDIT-1',
+        );
+    expect(saved.calc.basicSalary, 12000);
+    expect(saved.calc.salaryAdvance, 1000);
+    expect(saved.calc.otherDeductions, 250);
+    expect(saved.calc.employeePension, 840);
+    expect(saved.calc.net, 7660);
   });
 
   testWidgets('Transport tile hosts Register Driver and Live GPS',
