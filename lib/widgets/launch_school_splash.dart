@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/remembered_school_brand.dart';
-import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/widgets/fancy_loading_ring.dart';
 import 'package:mayabela/widgets/maya_brand_logo.dart';
 import 'package:mayabela/widgets/school_logo_display.dart';
 
@@ -17,6 +17,7 @@ class LaunchSchoolSplash extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remembered = brand;
+    final title = remembered?.name ?? LoginChromeBrand.productTitle;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -26,61 +27,49 @@ class LaunchSchoolSplash extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (remembered == null) ...[
-                  Text(
-                    LoginChromeBrand.productTitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.indigo.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const MayaBrandLogo(height: 128),
-                ] else ...[
-                  Text(
-                    remembered.name,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.indigo.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (remembered.logoStyle == SchoolLogoStyle.circular)
-                    Center(
-                      child: SchoolLogoDisplay(
-                        schoolId: remembered.schoolId,
-                        imagePath: remembered.logoPath,
-                        networkUrl: SchoolLogoService.displayUrlFor(
-                          remembered.schoolId,
-                          storedUrl: remembered.logoUrl,
+                SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const FancyLoadingRing(
+                        key: ValueKey('splash-loading-ring'),
+                        size: 200,
+                        showLabel: false,
+                      ),
+                      if (remembered == null)
+                        const MayaBrandLogo(height: 128)
+                      else
+                        SchoolLogoDisplay(
+                          schoolId: remembered.schoolId,
+                          imagePath: remembered.logoPath,
+                          networkUrl: SchoolLogoService.displayUrlFor(
+                            remembered.schoolId,
+                            storedUrl: remembered.logoUrl,
+                            style: remembered.logoStyle,
+                          ),
                           style: remembered.logoStyle,
+                          height: 128,
                         ),
-                        style: remembered.logoStyle,
-                        height: 128,
-                      ),
-                    )
-                  else
-                    SchoolLogoDisplay(
-                      schoolId: remembered.schoolId,
-                      imagePath: remembered.logoPath,
-                      networkUrl: SchoolLogoService.displayUrlFor(
-                        remembered.schoolId,
-                        storedUrl: remembered.logoUrl,
-                        style: remembered.logoStyle,
-                      ),
-                      style: remembered.logoStyle,
-                      height: 128,
-                    ),
-                ],
-                const SizedBox(height: 28),
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2.6),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.indigo.shade900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const FancyLoadingRing(
+                  key: ValueKey('splash-loading-caption'),
+                  size: 0,
+                  showLabel: true,
                 ),
               ],
             ),

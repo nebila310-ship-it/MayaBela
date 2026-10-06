@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/widgets/fancy_loading_ring.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/login_brand_header.dart';
 import 'package:mayabela/web_erp/login/web_login_shell.dart';
@@ -82,7 +85,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Sunrise Academy'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(FancyLoadingRing), findsWidgets);
+    expect(find.byKey(const ValueKey('splash-loading-ring')), findsOneWidget);
+    expect(find.text('LOADING'), findsOneWidget);
   });
 
   testWidgets('empty school id shows MaJo Bridge OS, not a remembered school',
@@ -136,7 +141,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('MaJo Bridge OS'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(FancyLoadingRing), findsWidgets);
+    expect(find.byKey(const ValueKey('splash-loading-ring')), findsOneWidget);
+    expect(find.text('LOADING'), findsOneWidget);
   });
 
   test('chrome title is MaJo Bridge OS until a school id is entered', () async {
@@ -183,5 +190,28 @@ void main() {
     await tester.pump();
     expect(find.text('Sunrise Academy'), findsOneWidget);
     expect(find.text('MaJo Bridge OS'), findsNothing);
+  });
+
+  test('html splash includes a color-shifting loading ring', () {
+    final html = File('web/index.html').readAsStringSync();
+    expect(html, contains('id="splash-halo"'));
+    expect(html, contains('id="splash-loading-label"'));
+    expect(html, contains('splash-orbit'));
+    expect(html, contains('hue-rotate'));
+    expect(html, contains('Loading'));
+  });
+
+  testWidgets('loading ring keeps spinning and changing color', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(child: FancyLoadingRing(size: 72)),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(FancyLoadingRing), findsOneWidget);
+    expect(find.text('LOADING'), findsOneWidget);
   });
 }
