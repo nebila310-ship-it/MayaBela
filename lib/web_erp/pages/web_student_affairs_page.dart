@@ -28,9 +28,13 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
   String _leaveFilter = 'pending';
 
   bool get _canManage => ModuleAccess.canManage('student_affairs');
+  bool get _isOversightDesk =>
+      !_canManage &&
+      ModuleAccess.canView('student_affairs') &&
+      AuthService.isAdministrationStaff;
   bool get _isClassroomTeacher =>
       AuthService.currentUser?.roleKey == AuthService.roleTeacher &&
-      !_canManage;
+      !AuthService.isAdministrationStaff;
   String get _schoolId => AuthService.activeSchoolId ?? '';
 
   @override
@@ -71,6 +75,10 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                 _isClassroomTeacher
                     ? 'Your behaviour and incident reports stay here after '
                           'Student Affairs records an action, marked Closed.'
+                    : _isOversightDesk
+                    ? 'Observation and follow-up only. Student Affairs keeps '
+                          'investigation, leave, and filing. If a case is escalated '
+                          'to you, you can schedule a hearing or record an outcome.'
                     : 'Behaviour & incident cases (investigation → hearing → outcome) '
                           'on the existing discipline register. Tag a code-of-conduct rule '
                           'when filing; parents are notified on new reports and escalation. '
@@ -316,13 +324,14 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
-          if (_canManage && c.isOpen) ...[
+          if (c.isOpen &&
+              (_canManage || DisciplineService.canReviewEscalatedCase(c))) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (c.status == DisciplineCaseStatus.submitted)
+                if (_canManage && c.status == DisciplineCaseStatus.submitted)
                   OutlinedButton.icon(
                     onPressed: () =>
                         _updateStatus(c, DisciplineCaseStatus.investigating),
@@ -339,16 +348,18 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
                   icon: const Icon(Icons.rule_outlined),
                   label: const Text('Record Outcome'),
                 ),
-                OutlinedButton.icon(
-                  onPressed: () => _showEscalateDialog(context, c),
-                  icon: const Icon(Icons.trending_up),
-                  label: const Text('Escalate'),
-                ),
-                TextButton.icon(
-                  onPressed: () => _dismissCase(c),
-                  icon: const Icon(Icons.close),
-                  label: const Text('Dismiss'),
-                ),
+                if (_canManage)
+                  OutlinedButton.icon(
+                    onPressed: () => _showEscalateDialog(context, c),
+                    icon: const Icon(Icons.trending_up),
+                    label: const Text('Escalate'),
+                  ),
+                if (_canManage)
+                  TextButton.icon(
+                    onPressed: () => _dismissCase(c),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Dismiss'),
+                  ),
               ],
             ),
           ],

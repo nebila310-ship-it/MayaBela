@@ -176,7 +176,9 @@ void main() {
       expect(ModuleAccess.canManage('reports'), isFalse);
       expect(ModuleAccess.canView('audit_log'), isTrue);
       expect(ModuleAccess.canManage('audit_log'), isFalse);
-      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(ModuleAccess.canView('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isFalse);
+      expect(ModuleAccess.isReadOnly('student_affairs'), isTrue);
     });
 
     test('does not see owner-only system chrome', () {
@@ -267,7 +269,8 @@ void main() {
       // Child-protection files are not a classroom or department-head desk.
       expect(ModuleAccess.canView('safeguarding'), isFalse);
       expect(ModuleAccess.canView('student_affairs'), isTrue);
-      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isFalse);
+      expect(ModuleAccess.isReadOnly('student_affairs'), isTrue);
       expect(
         webErpNavItemsForCurrentUser().map((e) => e.id),
         contains('student_affairs'),
@@ -280,9 +283,10 @@ void main() {
   group('Principal', () {
     setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.principal]));
 
-    test('opens Student Affairs when a case is escalated', () {
+    test('opens Student Affairs read-only unless a case is escalated', () {
       expect(ModuleAccess.canView('student_affairs'), isTrue);
-      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isFalse);
+      expect(ModuleAccess.isReadOnly('student_affairs'), isTrue);
       expect(
         webErpNavItemsForCurrentUser().map((e) => e.id),
         contains('student_affairs'),
@@ -308,6 +312,8 @@ void main() {
       expect(ModuleAccess.canView('parents'), isTrue);
       expect(ModuleAccess.canManage('parents'), isTrue);
       expect(ModuleAccess.canView('students'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(ModuleAccess.isReadOnly('student_affairs'), isFalse);
     });
   });
 

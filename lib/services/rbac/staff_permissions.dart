@@ -311,7 +311,6 @@ abstract final class StaffRoles {
         SchoolPermissions.viewAllSchoolData,
         SchoolPermissions.approveGrades,
         SchoolPermissions.approveTransfers,
-        SchoolPermissions.manageStudents,
         SchoolPermissions.manageClasses,
         SchoolPermissions.manageSubjects,
         SchoolPermissions.manageTimetables,
