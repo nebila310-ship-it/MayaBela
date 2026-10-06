@@ -248,6 +248,16 @@ void main() {
     final apply = read('lib/screens/public_admission_apply_screen.dart');
     expect(apply, contains('dateOfBirth'));
     expect(apply, contains('Date of birth (required)'));
+    expect(apply, contains('Birth certificate'));
+    expect(apply, contains('Previous school reports'));
+    expect(apply, contains('Parent / guardian national ID'));
+    expect(apply, contains('AdmissionExtraPrograms'));
+    expect(apply, contains('Extra programmes'));
+    final programs = read('lib/models/admission_extra_program.dart');
+    expect(programs, contains('Film & editing class'));
+    expect(programs, contains('Sport / football class'));
+    expect(programs, contains('AI learning class'));
+    expect(programs, contains('Visual arts'));
 
     final desk = read('lib/web_erp/pages/web_admissions_page.dart');
     expect(desk, contains('dateOfBirth: dateOfBirth'));
@@ -256,6 +266,10 @@ void main() {
     final submit = read('supabase/functions/school-submit-application/index.ts');
     expect(submit, contains('dateOfBirth is required'));
     expect(submit, contains('dateOfBirth,'));
+    expect(submit, contains('birth-certificate'));
+    expect(submit, contains('parent-national-id'));
+    expect(submit, contains('extraPrograms'));
+    expect(submit, contains('documents_required'));
 
     final invite = read('supabase/functions/school-invite-parent/index.ts');
     expect(invite, contains('sendPlainEmail'));

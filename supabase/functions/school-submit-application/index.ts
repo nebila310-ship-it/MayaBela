@@ -10,20 +10,87 @@ function clip(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
 }
 
-function defaultDocuments() {
-  const labels = [
-    "Birth certificate",
-    "Previous school report",
-    "Passport photo",
-    "Parent / guardian ID",
-  ];
-  return labels.map((label, i) => ({
-    id: `doc-${i}`,
-    label,
-    submitted: true,
-    verified: false,
-    notes: "",
-  }));
+const DOCUMENT_SPECS: Array<{ id: string; label: string; required: boolean }> = [
+  { id: "birth-certificate", label: "Birth certificate", required: true },
+  {
+    id: "previous-school-reports",
+    label: "Previous school reports (last 2–3 years)",
+    required: true,
+  },
+  {
+    id: "parent-national-id",
+    label: "Parent / guardian national ID",
+    required: true,
+  },
+  { id: "passport-photo", label: "Student passport photo", required: false },
+  {
+    id: "student-id-or-passport",
+    label: "Student national ID or passport",
+    required: false,
+  },
+  {
+    id: "vaccination-record",
+    label: "Vaccination / health record",
+    required: false,
+  },
+];
+
+const EXTRA_PROGRAM_IDS = new Set([
+  "film_editing",
+  "football",
+  "basketball",
+  "athletics",
+  "swimming",
+  "ai_learning",
+  "coding_robotics",
+  "visual_arts",
+  "music",
+  "dance",
+  "drama",
+  "creative_writing",
+  "photography",
+  "chess",
+]);
+
+function stringList(value: unknown, maxItems = 20, maxLen = 40): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const item of value) {
+    const id = clip(item, maxLen);
+    if (id && EXTRA_PROGRAM_IDS.has(id) && !out.includes(id)) out.push(id);
+    if (out.length >= maxItems) break;
+  }
+  return out;
+}
+
+function parseDocuments(raw: unknown) {
+  const incoming = new Map<string, { fileName?: string; filePath?: string }>();
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (!item || typeof item !== "object") continue;
+      const id = clip((item as { id?: unknown }).id, 40);
+      if (!id) continue;
+      incoming.set(id, {
+        fileName: clip((item as { fileName?: unknown }).fileName, 160) ||
+          undefined,
+        filePath: clip((item as { filePath?: unknown }).filePath, 240) ||
+          undefined,
+      });
+    }
+  }
+  return DOCUMENT_SPECS.map((spec) => {
+    const hit = incoming.get(spec.id);
+    const submitted = Boolean(hit?.fileName || hit?.filePath);
+    return {
+      id: spec.id,
+      label: spec.label,
+      submitted,
+      verified: false,
+      notes: spec.required ? "Required" : "",
+      ...(hit?.filePath ? { filePath: hit.filePath } : {}),
+      ...(hit?.fileName && !hit.filePath ? { filePath: hit.fileName } : {}),
+    };
+  });
 }
 
 Deno.serve(async (req) => {
@@ -39,7 +106,25 @@ Deno.serve(async (req) => {
     const guardianEmail = clip(body?.guardianEmail, 120);
     const gradeApplying = clip(body?.gradeApplying, 40);
     const previousSchool = clip(body?.previousSchool, 120);
+    const lastGradeCompleted = clip(body?.lastGradeCompleted, 40);
     const dateOfBirth = clip(body?.dateOfBirth, 32);
+    const gender = clip(body?.gender, 24);
+    const nationality = clip(body?.nationality, 60);
+    const homeLanguage = clip(body?.homeLanguage, 60);
+    const homeAddress = clip(body?.homeAddress, 200);
+    const city = clip(body?.city, 80);
+    const studentNationalId = clip(body?.studentNationalId, 40);
+    const parentNationalId = clip(body?.parentNationalId, 40);
+    const parentRelationship = clip(body?.parentRelationship, 32);
+    const secondGuardianName = clip(body?.secondGuardianName, 120);
+    const secondGuardianPhone = clip(body?.secondGuardianPhone, 32);
+    const specialNeedsNotes = clip(body?.specialNeedsNotes, 400);
+    const siblingAtSchool = clip(body?.siblingAtSchool, 120);
+    const programNotes = clip(body?.programNotes, 400);
+    const extraPrograms = stringList(body?.extraPrograms);
+    const vaccinationUpToDate = body?.vaccinationUpToDate === true;
+    const previousAverage = Number(body?.previousAverage);
+    const documents = parseDocuments(body?.documents);
 
     if (!schoolId || !fullName || !guardianName) {
       return errorResponse(
@@ -53,6 +138,18 @@ Deno.serve(async (req) => {
         "dateOfBirth is required (YYYY-MM-DD).",
         400,
         "invalid",
+      );
+    }
+    const missingRequired = DOCUMENT_SPECS.filter((spec) => {
+      if (!spec.required) return false;
+      const doc = documents.find((d) => d.id === spec.id);
+      return !doc?.submitted;
+    });
+    if (missingRequired.length > 0) {
+      return errorResponse(
+        `Attach: ${missingRequired.map((d) => d.label).join(", ")}.`,
+        400,
+        "documents_required",
       );
     }
 
@@ -100,9 +197,28 @@ Deno.serve(async (req) => {
       guardianPhone,
       guardianEmail,
       previousSchool,
+      lastGradeCompleted,
+      ...(Number.isFinite(previousAverage) ? { previousAverage } : {}),
       dateOfBirth,
-      notes: "",
-      documents: defaultDocuments(),
+      gender,
+      nationality,
+      homeLanguage,
+      homeAddress,
+      city,
+      studentNationalId,
+      parentNationalId,
+      parentRelationship,
+      secondGuardianName,
+      secondGuardianPhone,
+      specialNeedsNotes,
+      siblingAtSchool,
+      extraPrograms,
+      programNotes,
+      vaccinationUpToDate,
+      notes: extraPrograms.length
+        ? `Extra programmes: ${extraPrograms.join(", ")}`
+        : "",
+      documents,
       examMaxScore: 100,
       examNotes: "",
       offerMessage: "",

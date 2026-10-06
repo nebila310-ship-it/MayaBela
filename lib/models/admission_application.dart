@@ -1,3 +1,5 @@
+import 'package:mayabela/models/admission_extra_program.dart';
+
 /// LIA TOR Phase A — admissions pipeline before a student is enrolled.
 ///
 /// Inquiry → Application → Documents → Exam → Waitlist/Offer → Enrollment.
@@ -112,6 +114,20 @@ class AdmissionApplication {
     this.decisionReason = '',
     this.createdById = '',
     this.createdByName = '',
+    this.nationality = '',
+    this.homeLanguage = '',
+    this.homeAddress = '',
+    this.city = '',
+    this.studentNationalId = '',
+    this.parentNationalId = '',
+    this.parentRelationship = '',
+    this.secondGuardianName = '',
+    this.secondGuardianPhone = '',
+    this.specialNeedsNotes = '',
+    this.siblingAtSchool = '',
+    this.extraPrograms = const [],
+    this.programNotes = '',
+    this.vaccinationUpToDate = false,
   });
 
   final String id;
@@ -147,6 +163,20 @@ class AdmissionApplication {
   final String decisionReason;
   final String createdById;
   final String createdByName;
+  final String nationality;
+  final String homeLanguage;
+  final String homeAddress;
+  final String city;
+  final String studentNationalId;
+  final String parentNationalId;
+  final String parentRelationship;
+  final String secondGuardianName;
+  final String secondGuardianPhone;
+  final String specialNeedsNotes;
+  final String siblingAtSchool;
+  final List<String> extraPrograms;
+  final String programNotes;
+  final bool vaccinationUpToDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -192,18 +222,44 @@ class AdmissionApplication {
     AdmissionStage.enrolled,
   ];
 
-  static List<AdmissionDocument> defaultDocuments() {
-    const labels = [
-      'Birth certificate',
-      'Previous school report',
-      'Passport photo',
-      'Parent / guardian ID',
+  /// Stable ids used by the public apply form and registrar desk.
+  static const requiredDocumentIds = [
+    'birth-certificate',
+    'previous-school-reports',
+    'parent-national-id',
+  ];
+
+  static List<AdmissionDocument> defaultDocuments({
+    Map<String, String?> filePaths = const {},
+    Set<String> submittedIds = const {},
+  }) {
+    const specs = <(String, String, bool)>[
+      ('birth-certificate', 'Birth certificate', true),
+      (
+        'previous-school-reports',
+        'Previous school reports (last 2–3 years)',
+        true,
+      ),
+      ('parent-national-id', 'Parent / guardian national ID', true),
+      ('passport-photo', 'Student passport photo', false),
+      ('student-id-or-passport', 'Student national ID or passport', false),
+      ('vaccination-record', 'Vaccination / health record', false),
     ];
     return [
-      for (var i = 0; i < labels.length; i++)
-        AdmissionDocument(id: 'doc-$i', label: labels[i]),
+      for (final spec in specs)
+        AdmissionDocument(
+          id: spec.$1,
+          label: spec.$2,
+          submitted: submittedIds.contains(spec.$1) ||
+              (filePaths[spec.$1]?.trim().isNotEmpty ?? false),
+          filePath: filePaths[spec.$1],
+          notes: spec.$3 ? 'Required' : '',
+        ),
     ];
   }
+
+  String get extraProgramsLabel =>
+      AdmissionExtraPrograms.titlesFor(extraPrograms).join(', ');
 
   /// Next staff-driven stages from [stage]. Empty when terminal.
   static List<AdmissionStage> nextStages(AdmissionStage stage) {
@@ -290,6 +346,20 @@ class AdmissionApplication {
     DateTime? enrolledAt,
     String? decisionReason,
     DateTime? updatedAt,
+    String? nationality,
+    String? homeLanguage,
+    String? homeAddress,
+    String? city,
+    String? studentNationalId,
+    String? parentNationalId,
+    String? parentRelationship,
+    String? secondGuardianName,
+    String? secondGuardianPhone,
+    String? specialNeedsNotes,
+    String? siblingAtSchool,
+    List<String>? extraPrograms,
+    String? programNotes,
+    bool? vaccinationUpToDate,
   }) {
     return AdmissionApplication(
       id: id,
@@ -323,6 +393,20 @@ class AdmissionApplication {
       decisionReason: decisionReason ?? this.decisionReason,
       createdById: createdById,
       createdByName: createdByName,
+      nationality: nationality ?? this.nationality,
+      homeLanguage: homeLanguage ?? this.homeLanguage,
+      homeAddress: homeAddress ?? this.homeAddress,
+      city: city ?? this.city,
+      studentNationalId: studentNationalId ?? this.studentNationalId,
+      parentNationalId: parentNationalId ?? this.parentNationalId,
+      parentRelationship: parentRelationship ?? this.parentRelationship,
+      secondGuardianName: secondGuardianName ?? this.secondGuardianName,
+      secondGuardianPhone: secondGuardianPhone ?? this.secondGuardianPhone,
+      specialNeedsNotes: specialNeedsNotes ?? this.specialNeedsNotes,
+      siblingAtSchool: siblingAtSchool ?? this.siblingAtSchool,
+      extraPrograms: extraPrograms ?? this.extraPrograms,
+      programNotes: programNotes ?? this.programNotes,
+      vaccinationUpToDate: vaccinationUpToDate ?? this.vaccinationUpToDate,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -360,6 +444,20 @@ class AdmissionApplication {
         'decisionReason': decisionReason,
         'createdById': createdById,
         'createdByName': createdByName,
+        'nationality': nationality,
+        'homeLanguage': homeLanguage,
+        'homeAddress': homeAddress,
+        'city': city,
+        'studentNationalId': studentNationalId,
+        'parentNationalId': parentNationalId,
+        'parentRelationship': parentRelationship,
+        'secondGuardianName': secondGuardianName,
+        'secondGuardianPhone': secondGuardianPhone,
+        'specialNeedsNotes': specialNeedsNotes,
+        'siblingAtSchool': siblingAtSchool,
+        'extraPrograms': extraPrograms,
+        'programNotes': programNotes,
+        'vaccinationUpToDate': vaccinationUpToDate,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -433,8 +531,31 @@ class AdmissionApplication {
       decisionReason: (map['decisionReason'] as String? ?? '').trim(),
       createdById: (map['createdById'] as String? ?? '').trim(),
       createdByName: (map['createdByName'] as String? ?? '').trim(),
+      nationality: (map['nationality'] as String? ?? '').trim(),
+      homeLanguage: (map['homeLanguage'] as String? ?? '').trim(),
+      homeAddress: (map['homeAddress'] as String? ?? '').trim(),
+      city: (map['city'] as String? ?? '').trim(),
+      studentNationalId: (map['studentNationalId'] as String? ?? '').trim(),
+      parentNationalId: (map['parentNationalId'] as String? ?? '').trim(),
+      parentRelationship: (map['parentRelationship'] as String? ?? '').trim(),
+      secondGuardianName: (map['secondGuardianName'] as String? ?? '').trim(),
+      secondGuardianPhone: (map['secondGuardianPhone'] as String? ?? '').trim(),
+      specialNeedsNotes: (map['specialNeedsNotes'] as String? ?? '').trim(),
+      siblingAtSchool: (map['siblingAtSchool'] as String? ?? '').trim(),
+      extraPrograms: _stringList(map['extraPrograms']),
+      programNotes: (map['programNotes'] as String? ?? '').trim(),
+      vaccinationUpToDate: map['vaccinationUpToDate'] == true,
       createdAt: parseDate(map['createdAt']) ?? DateTime.now(),
       updatedAt: parseDate(map['updatedAt']) ?? DateTime.now(),
     );
+  }
+
+  static List<String> _stringList(dynamic raw) {
+    if (raw is! List) return const [];
+    return [
+      for (final item in raw)
+        if (item != null && item.toString().trim().isNotEmpty)
+          item.toString().trim(),
+    ];
   }
 }
