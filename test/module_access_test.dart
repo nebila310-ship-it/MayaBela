@@ -177,8 +177,8 @@ void main() {
       expect(ModuleAccess.canView('audit_log'), isTrue);
       expect(ModuleAccess.canManage('audit_log'), isFalse);
       expect(ModuleAccess.canView('student_affairs'), isTrue);
-      expect(ModuleAccess.canManage('student_affairs'), isFalse);
-      expect(ModuleAccess.isReadOnly('student_affairs'), isTrue);
+      expect(ModuleAccess.canManage('student_affairs'), isTrue);
+      expect(ModuleAccess.isReadOnly('student_affairs'), isFalse);
     });
 
     test('does not see owner-only system chrome', () {
