@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
@@ -27,7 +28,16 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
   String _caseFilter = 'open';
   String _leaveFilter = 'pending';
 
-  bool get _canManage => ModuleAccess.canManage('student_affairs');
+  /// Filing, investigation, leave, escalate, and dismiss stay with Student
+  /// Affairs (or school admin). VP can manage aliased care/DoSA modules but
+  /// must not run this desk unless a case is escalated to them.
+  bool get _canManage {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    if (user.roleKey == AuthService.roleAdmin) return true;
+    return StaffRoles.holds(user.staffRoles, StaffRoles.studentAffairs);
+  }
+
   bool get _isOversightDesk =>
       !_canManage &&
       ModuleAccess.canView('student_affairs') &&

@@ -423,7 +423,10 @@ abstract final class ModuleAccess {
         StaffRoles.sectionDirector,
         ..._executiveOversight,
       },
-      manageBy: {StaffRoles.studentAffairs},
+      // VP stays a manager of the aliased care / DoSA desks that share this
+      // module id. The discipline page itself still gates actions on the
+      // Student Affairs staff role, not this allocation.
+      manageBy: {StaffRoles.studentAffairs, StaffRoles.vicePresident},
     ),
     'safeguarding': ModuleRoleAllocation(
       visibleTo: {
