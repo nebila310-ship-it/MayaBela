@@ -95,6 +95,14 @@
       transform: translate(-50%, -50%);
     }
 
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #ffffff;
+      pointer-events: none;
+    }
+
     .contain {
       display:block;
       width:100%; height:100%;
@@ -274,22 +282,38 @@
       document.getElementById("splash-loader-wrap")?.remove();
       document.body.style.background = "transparent";
     }
+    window.addEventListener('flutter-first-frame', removeSplashFromWeb);
+    (function watchFlutterThenDropSplash() {
+      if (document.querySelector('flt-glass-pane, flutter-view')) {
+        removeSplashFromWeb();
+        return;
+      }
+      var obs = new MutationObserver(function () {
+        if (document.querySelector('flt-glass-pane, flutter-view')) {
+          removeSplashFromWeb();
+          obs.disconnect();
+        }
+      });
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+    })();
   </script>
 </head>
 <body>
-  <picture id="splash">
+  <div id="splash">
+    <picture>
       <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  <div id="splash-halo" aria-hidden="true">
-    <div class="splash-orbit"></div>
-    <div class="splash-orbit-inner"></div>
-    <div class="splash-bead"></div>
-  </div>
-  <div id="splash-school-name" style="position:absolute;top:calc(50% + 148px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;">MaJo Bridge OS</div>
-  <div id="splash-loader-wrap">
-    <p id="splash-loading-label">Loading</p>
+    </picture>
+    <div id="splash-halo" aria-hidden="true">
+      <div class="splash-orbit"></div>
+      <div class="splash-orbit-inner"></div>
+      <div class="splash-bead"></div>
+    </div>
+    <div id="splash-school-name" style="position:absolute;top:calc(50% + 148px);left:50%;transform:translateX(-50%);width:90%;text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;">MaJo Bridge OS</div>
+    <div id="splash-loader-wrap">
+      <p id="splash-loading-label">Loading</p>
+    </div>
   </div>
   <script>
     (function applySavedSchoolSplash() {
@@ -427,7 +451,7 @@
       });
     }
   </script>
-    <script src="flutter_bootstrap.js?v=splash-color-loader-20261006" async=""></script>
+    <script src="flutter_bootstrap.js?v=splash-stop-on-login-20261006" async=""></script>
   <script>
     setTimeout(function () {
       if (document.getElementById('splash') && !document.querySelector('flt-glass-pane')) {
