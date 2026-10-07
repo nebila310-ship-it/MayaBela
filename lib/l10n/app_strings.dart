@@ -5,6 +5,7 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/l10n/oromo_catalog.dart';
 import 'package:mayabela/l10n/parent_guardian_terms.dart';
+import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 
 class AppStrings implements AppStringsLike {
@@ -4174,5 +4175,20 @@ class AppLocale extends ChangeNotifier {
     SharedPreferences.getInstance().then((prefs) {
       prefs.setString(_prefsKey, code);
     });
+    UserPrefsSyncHook.noteLocalChanged();
+  }
+
+  void applyFromCloud(String code) {
+    if (!['en', 'am', 'om'].contains(code) || _code == code) return;
+    _code = code;
+    notifyListeners();
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_prefsKey, code);
+    });
+  }
+
+  @visibleForTesting
+  void resetForTests() {
+    _code = 'en';
   }
 }

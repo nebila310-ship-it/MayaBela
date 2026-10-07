@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
 
 class NotificationPreferenceService extends ChangeNotifier {
   NotificationPreferenceService._();
@@ -82,9 +83,42 @@ class NotificationPreferenceService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _persist() async {
+  Future<void> _persist({bool syncCloud = true}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageKey, jsonEncode(_byRole));
+    if (syncCloud) UserPrefsSyncHook.noteLocalChanged();
+  }
+
+  Map<String, Map<String, bool>> toCloudMap() => {
+        for (final entry in _byRole.entries)
+          entry.key: Map<String, bool>.from(entry.value),
+      };
+
+  Future<void> applyFromCloud(Object? raw) async {
+    if (raw is! Map) return;
+    _byRole
+      ..clear()
+      ..addEntries(
+        raw.entries.map((entry) {
+          final value = entry.value;
+          final flags = <String, bool>{};
+          if (value is Map) {
+            for (final item in value.entries) {
+              flags[item.key.toString()] = item.value == true;
+            }
+          }
+          return MapEntry(entry.key.toString(), flags);
+        }),
+      );
+    _loaded = true;
+    notifyListeners();
+    await _persist(syncCloud: false);
+  }
+
+  @visibleForTesting
+  void resetForTests() {
+    _byRole.clear();
+    _loaded = false;
   }
 
   bool isEnabled(String roleKey, NotificationPreferenceKey key) {
