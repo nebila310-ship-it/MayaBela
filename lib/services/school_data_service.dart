@@ -3967,6 +3967,48 @@ class SchoolDataService {
         _classNamesMatch(report.className, className);
   }
 
+  bool _gradeReportIdsMatch(String? left, String? right) {
+    final a = left?.trim();
+    final b = right?.trim();
+    if (a == null || a.isEmpty || b == null || b.isEmpty) return false;
+    return a.toUpperCase() == b.toUpperCase();
+  }
+
+  bool _gradeReportNamesMatch(String left, String right) {
+    return left.trim().toLowerCase() == right.trim().toLowerCase();
+  }
+
+  bool _gradeReportMatchesRosterStudent(
+    StudentGradeReport report, {
+    required String studentName,
+    String? studentId,
+  }) {
+    if (_gradeReportIdsMatch(report.studentId, studentId)) return true;
+    return _gradeReportNamesMatch(report.studentName, studentName);
+  }
+
+  bool _gradeReportOnActiveSchool(StudentGradeReport report) {
+    final schoolId = AuthService.activeSchoolId?.trim();
+    if (schoolId == null || schoolId.isEmpty) return true;
+    final roster = StudentRegistryService.instance.studentsForSchool(schoolId);
+    if (roster.isEmpty) return true;
+    final classNames = getAllClassNames();
+    for (final student in roster) {
+      if (!_gradeReportMatchesRosterStudent(
+        report,
+        studentName: student.fullName,
+        studentId: student.studentId,
+      )) {
+        continue;
+      }
+      if (classNames.any((name) => _classNamesMatch(name, report.className))) {
+        return true;
+      }
+      if (_classNamesMatch(student.className, report.className)) return true;
+    }
+    return false;
+  }
+
   StudentGradeReport? _findGradeReport({
     required String studentName,
     required String className,
@@ -6693,8 +6735,12 @@ class SchoolDataService {
     _persistSchoolContent();
   }
 
-  List<StudentGradeReport> getAllGradeReports() =>
-      List.unmodifiable(_gradeReports);
+  List<StudentGradeReport> getAllGradeReports() {
+    return [
+      for (final report in _gradeReports)
+        if (_gradeReportOnActiveSchool(report)) report,
+    ];
+  }
 
   StudentGradeReport? getGradeReportForStudentId(String studentId) {
     final reports = gradeReportsForStudent(studentId);
@@ -6730,28 +6776,46 @@ class SchoolDataService {
 
   List<StudentGradeReport> getGradeReportsForClass(String className) {
     final roster = getStudentsForClass(className);
-    final existing = {
-      for (final report in _gradeReports.where(
-        (r) => _classNamesMatch(r.className, className),
-      ))
-        report.studentName: report,
-    };
+    final classReports = [
+      for (final report in _gradeReports)
+        if (_classNamesMatch(report.className, className)) report,
+    ];
 
     if (roster.isEmpty) {
-      return existing.values.toList();
+      return classReports;
     }
 
-    return roster.map((student) {
-      final report = existing[student.name];
-      if (report != null) return report;
-      return StudentGradeReport(
+    return [
+      for (final student in roster)
+        _rosterGradeReport(student, className, classReports),
+    ];
+  }
+
+  StudentGradeReport _rosterGradeReport(
+    StudentRef student,
+    String className,
+    List<StudentGradeReport> classReports,
+  ) {
+    for (final report in classReports) {
+      if (_gradeReportMatchesRosterStudent(
+        report,
         studentName: student.name,
-        className: className,
-        term: 'Term 1',
-        studentId: student.registryStudentId,
-        subjects: const [],
-      );
-    }).toList();
+        studentId: student.inviteStudentId,
+      )) {
+        return report.copyWith(
+          studentName: student.name,
+          className: className,
+          studentId: student.inviteStudentId,
+        );
+      }
+    }
+    return StudentGradeReport(
+      studentName: student.name,
+      className: className,
+      term: 'Term 1',
+      studentId: student.inviteStudentId,
+      subjects: const [],
+    );
   }
 
   List<StudentGradeReport> getGradeReportsForParent() {
