@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
+import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/utils/attachment_size_limit.dart';
@@ -371,6 +372,19 @@ class ProfilePhotoCodec {
   }
 
   /// Downloads a private school-files photo with the signed-in Storage client.
+  /// Local cache, native file, or authenticated school-files download.
+  static Future<Uint8List?> bytesFromStoredPath(String? path) async {
+    if (path == null) return null;
+    final trimmed = path.trim();
+    if (trimmed.isEmpty) return null;
+    final cached = WebAttachmentCache.instance.read(trimmed);
+    if (cached != null && cached.isNotEmpty) return cached;
+    if (isRemoteUrl(trimmed)) return fetchRemoteBytes(trimmed);
+    final local = await readAttachmentBytes(trimmed);
+    if (local == null || local.isEmpty) return null;
+    return Uint8List.fromList(local);
+  }
+
   static Future<Uint8List?> fetchRemoteBytes(String? path) async {
     if (path == null || path.trim().isEmpty) return null;
     final cached = WebAttachmentCache.instance.read(path);

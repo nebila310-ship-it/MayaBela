@@ -12,6 +12,7 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/utils/attachment_size_limit.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
 
@@ -30,8 +31,7 @@ class AnnouncementAttachmentService {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: type,
-      allowedExtensions:
-          type == FileType.custom ? allowedExtensions : null,
+      allowedExtensions: type == FileType.custom ? allowedExtensions : null,
       // Web needs bytes in-memory; native can read from path for large files.
       withData: kIsWeb,
     );
@@ -81,17 +81,24 @@ class AnnouncementAttachmentService {
     }
     if (local == null) return null;
 
+    // Native picks often have a path and no in-memory bytes. Read the saved
+    // file so the cloud upload is not skipped (laptop-only path).
+    final payload = await resolveUploadBytes(
+      bytes: bytes,
+      localPath: local.filePath,
+    );
+
     // Prefer a cloud URL so other roles / devices can open the file.
     final cloud = await uploadSavedAttachment(
       fileName: file.name,
-      bytes: bytes,
+      bytes: payload,
       localPath: local.filePath,
       subdir: subdir,
       attachmentId: local.id,
     );
     if (cloud != null) {
-      if (bytes != null && bytes.isNotEmpty) {
-        WebAttachmentCache.instance.remember(cloud, bytes);
+      if (payload != null && payload.isNotEmpty) {
+        WebAttachmentCache.instance.remember(cloud, payload);
       }
       return AnnouncementAttachment(
         id: local.id,
@@ -101,6 +108,19 @@ class AnnouncementAttachmentService {
       );
     }
     return local;
+  }
+
+  /// Bytes already in memory, web cache, or a native file on this device.
+  Future<List<int>?> resolveUploadBytes({
+    List<int>? bytes,
+    String? localPath,
+  }) async {
+    if (bytes != null && bytes.isNotEmpty) return bytes;
+    final path = localPath?.trim() ?? '';
+    if (path.isEmpty) return null;
+    final cached = WebAttachmentCache.instance.read(path);
+    if (cached != null && cached.isNotEmpty) return cached;
+    return readAttachmentBytes(path);
   }
 
   Future<String?> uploadSavedAttachment({
@@ -139,22 +159,23 @@ class AnnouncementAttachmentService {
     if (!ready) return null;
 
     try {
-      var payload = bytes;
-      if ((payload == null || payload.isEmpty) &&
-          WebAttachmentCache.instance.isWebPath(localPath)) {
-        payload = WebAttachmentCache.instance.read(localPath);
-      }
+      final payload = await resolveUploadBytes(
+        bytes: bytes,
+        localPath: localPath,
+      );
       if (payload == null || payload.isEmpty) return null;
 
-      final schoolId = (AuthService.activeSchoolId ??
-              AuthService.currentUser?.schoolId ??
-              'unknown')
-          .trim()
-          .toUpperCase();
+      final schoolId =
+          (AuthService.activeSchoolId ??
+                  AuthService.currentUser?.schoolId ??
+                  'unknown')
+              .trim()
+              .toUpperCase();
       final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-      final storagePath =
-          'schools/$schoolId/$subdir/${attachmentId}_$safeName';
-      await SupabaseBootstrap.client.storage.from('school-files').uploadBinary(
+      final storagePath = 'schools/$schoolId/$subdir/${attachmentId}_$safeName';
+      await SupabaseBootstrap.client.storage
+          .from('school-files')
+          .uploadBinary(
             storagePath,
             Uint8List.fromList(payload),
             fileOptions: FileOptions(
@@ -185,7 +206,9 @@ class AnnouncementAttachmentService {
     if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
     if (lower.endsWith('.tif') || lower.endsWith('.tiff')) return 'image/tiff';
     if (lower.endsWith('.svg')) return 'image/svg+xml';
-    if (lower.endsWith('.txt') || lower.endsWith('.csv') || lower.endsWith('.log')) {
+    if (lower.endsWith('.txt') ||
+        lower.endsWith('.csv') ||
+        lower.endsWith('.log')) {
       return 'text/plain';
     }
     if (lower.endsWith('.rtf')) return 'application/rtf';
@@ -229,12 +252,24 @@ class AnnouncementAttachmentService {
     }
     final path = attachment.filePath;
     if (path.startsWith('http://') || path.startsWith('https://')) {
+      List<int>? privateBytes;
+      if (ProfilePhotoCodec.isPrivateSchoolFilesUrl(path)) {
+        privateBytes = await ProfilePhotoCodec.fetchRemoteBytes(path);
+      }
       if (kIsWeb) {
         final opened = await WebFileUtils.openOrDownload(
           filePath: path,
           fileName: attachment.fileName,
+          bytes: privateBytes,
         );
         return OpenResult(type: opened ? ResultType.done : ResultType.error);
+      }
+      if (privateBytes != null && privateBytes.isNotEmpty) {
+        final temp = await writeTempAttachment(
+          fileName: attachment.fileName,
+          bytes: privateBytes,
+        );
+        if (temp != null) return OpenFile.open(temp);
       }
       final uri = Uri.tryParse(path);
       if (uri != null &&

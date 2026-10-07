@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/services/announcement_attachment_service.dart';
 
 /// Records voice clips with live amplitude samples for waveform UI.
 class VoiceMessageService {
@@ -93,8 +95,28 @@ class VoiceMessageService {
     final length = await file.length();
     if (length <= 0) return null;
 
+    final id = 'voice-${DateTime.now().millisecondsSinceEpoch}';
+    final bytes = await file.readAsBytes();
+    WebAttachmentCache.instance.remember(savedPath, bytes);
+    final cloud = await AnnouncementAttachmentService.instance
+        .uploadSavedAttachment(
+          fileName: 'voice_message.m4a',
+          bytes: bytes,
+          localPath: savedPath,
+          subdir: 'message_attachments',
+          attachmentId: id,
+        );
+    if (cloud != null && cloud.isNotEmpty) {
+      WebAttachmentCache.instance.remember(cloud, bytes);
+      return AnnouncementAttachment(
+        id: id,
+        fileName: 'voice_message.m4a',
+        filePath: cloud,
+        fileSizeBytes: length,
+      );
+    }
     return AnnouncementAttachment(
-      id: 'voice-${DateTime.now().millisecondsSinceEpoch}',
+      id: id,
       fileName: 'voice_message.m4a',
       filePath: savedPath,
       fileSizeBytes: length,
