@@ -205,6 +205,7 @@ abstract final class CloudSyncEngine {
     AppCollections.learningMaterials,
     AppCollections.calendarEvents,
     AppCollections.galleryPosts,
+    AppCollections.qrScans,
     AppCollections.classTimetables,
     AppCollections.fees,
     AppCollections.buses,
@@ -347,6 +348,7 @@ abstract final class CloudSyncEngine {
         ];
       case AuthService.roleDriver:
         return [
+          AppCollections.schoolRegistry,
           AppCollections.studentRegistry,
           AppCollections.buses,
           AppCollections.busLivePositions,
