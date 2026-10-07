@@ -1146,6 +1146,10 @@ class AppStrings implements AppStringsLike {
   String gradeApprovalActionSuccess(String action) => switch (action) {
         'approve' => t('Grades approved and published', 'ደረጃዎች ጸድቀው ተለጥፈዋል'),
         'reject' => t('Grades rejected and returned to teacher', 'ደረጃዎች ተቀባይነት አላገኙም — ወደ መምህር ተመለሱ'),
+        'unlock' => t(
+              'Approved grade unlocked for an agreed edit',
+              'ጸድቆ የነበረው ደረጃ ለተስማማ እርማት ተከፈተ',
+            ),
         _ => t('Adjustment request sent to teacher', 'የማስተካከያ ጥያቄ ወደ መምህር ተላከ'),
       };
   String get gradeApprovalActionFailed => t(
@@ -1168,6 +1172,30 @@ class AppStrings implements AppStringsLike {
       t('Pending approval', 'ማጽደቅ በመጠባበቅ ላይ');
   String get gradeApprovedLockedLabel =>
       t('Locked after approval', 'ከጸደቀ በኋላ ተቆልፏል');
+  String get unlockApprovedGradeTitle => t(
+        'Unlock approved grade',
+        'ጸድቆ የተቆለፈ ደረጃ ክፈት',
+      );
+  String get unlockApprovedGradeAction => t(
+        'Unlock for agreed edit',
+        'ለተስማማ እርማት ክፈት',
+      );
+  String get unlockApprovedReportAction => t(
+        'Unlock this report for agreed edit',
+        'ይህን ሪፖርት ለተስማማ እርማት ክፈት',
+      );
+  String get unlockApprovedGradeReasonLabel => t(
+        'Agreed edit reason',
+        'የተስማማው የእርማት ምክንያት',
+      );
+  String get unlockApprovedGradeHint => t(
+        'This sends the approved mark back to the teacher as a draft. Ranking drops until it is approved again.',
+        'ጸድቆ የነበረው ውጤት ወደ መምህሩ እንደ ረቂቅ ይመለሳል። እንደገና እስኪጸድቅ ድረስ ከደረጃ ውጪ ይሆናል።',
+      );
+  String unlockApprovedGradeCount(int count) => t(
+        'Unlocked $count approved subject${count == 1 ? '' : 's'} for an agreed edit',
+        '$count ጸድቀው የነበሩ ትምህርቶች ለተስማማ እርማት ተከፍተዋል',
+      );
   String get gradeResubmitHint => t(
         'Review the admin feedback, update the grade, then submit again.',
         'የአስተዳዳሪ ግብረመልስ ይመልከቱ፣ ደረጃውን ያስተካክሉ፣ ከዚያ እንደገና ያስረክቡ።',
@@ -2440,6 +2468,34 @@ class AppStrings implements AppStringsLike {
   String get noApprovedSubjectsForAverage => t(
         'No approved subjects yet',
         'ጸድቆ የገባ ትምህርት የለም',
+      );
+  String get gradeReportCertificateTitle => t(
+        'Grade Report Certificate',
+        'የደረጃ ሪፖርት ሰርተፍኬት',
+      );
+  String get generateGradeReportCertificate => t(
+        'Generate grade report certificate',
+        'የደረጃ ሪፖርት ሰርተፍኬት ፍጠር',
+      );
+  String get downloadGradeReportCertificate => t(
+        'Download certificate',
+        'ሰርተፍኬቱን አውርድ',
+      );
+  String get gradeReportCertificateReady => t(
+        'Grade report certificate is ready',
+        'የደረጃ ሪፖርት ሰርተፍኬት ዝግጁ ነው',
+      );
+  String get gradeReportCertificateFailed => t(
+        'Could not generate the grade report certificate',
+        'የደረጃ ሪፖርት ሰርተፍኬት መፍጠር አልተሳካም',
+      );
+  String get principalCommentLabel => t(
+        'Principal comment',
+        'የዋና መምህር አስተያየት',
+      );
+  String get principalSignatureLabel => t(
+        'Principal / Head of school',
+        'ዋና መምህር / የትምህርት ቤት ኃላፊ',
       );
   String averageLabel(double avg) =>
       t('Average: ${avg.toStringAsFixed(1)}%', 'አማካይ: ${avg.toStringAsFixed(1)}%');

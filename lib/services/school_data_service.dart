@@ -5203,7 +5203,9 @@ class SchoolDataService {
     required String subject,
     String? adminId,
     String? adminName,
+    String? reason,
   }) {
+    if (!GradeWorkflowService.canUserUnlockApprovedGrades) return false;
     final subjectGrade = _findSubjectGrade(
       studentName: studentName,
       className: className,
@@ -5217,6 +5219,12 @@ class SchoolDataService {
     subjectGrade.approvalLevelIndex = 0;
     subjectGrade.publishedToParents = false;
     subjectGrade.publishedAt = null;
+    final note = reason?.trim();
+    if (note != null && note.isNotEmpty) {
+      subjectGrade.reviewComment = note;
+    }
+    subjectGrade.lastReviewedBy = adminName ?? subjectGrade.lastReviewedBy;
+    subjectGrade.lastReviewedAt = DateTime.now();
 
     unawaited(
       GradeAuditService.instance.log(
@@ -5228,13 +5236,45 @@ class SchoolDataService {
         studentId: report.studentId,
         actorId: adminId,
         actorName: adminName,
-        actorRole: AuthService.roleAdmin,
+        actorRole: AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
+        detail: note,
         statusBefore: before,
         statusAfter: subjectGrade.status,
       ),
     );
     _persistGradeReports();
     return true;
+  }
+
+  /// Reopens every approved subject on a student report so teachers can edit.
+  int adminUnlockApprovedGradeReport({
+    required String studentName,
+    required String className,
+    required String reason,
+    String? adminId,
+    String? adminName,
+  }) {
+    if (!GradeWorkflowService.canUserUnlockApprovedGrades) return 0;
+    final report = _findGradeReport(
+      studentName: studentName,
+      className: className,
+    );
+    if (report == null) return 0;
+    var unlocked = 0;
+    for (final subject in List<SubjectGrade>.from(report.subjects)) {
+      if (subject.status != SubjectGradeStatus.approved) continue;
+      if (adminUnlockSubjectGrade(
+        studentName: studentName,
+        className: className,
+        subject: subject.subject,
+        adminId: adminId,
+        adminName: adminName,
+        reason: reason,
+      )) {
+        unlocked++;
+      }
+    }
+    return unlocked;
   }
 
   List<SubjectGradePendingItem> pendingGradeApprovals({String? schoolId}) {

@@ -9,6 +9,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/screens/grade_report_certificate_screen.dart';
 import 'package:mayabela/widgets/term_report_card_view.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
 
@@ -76,7 +77,7 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
       context: context,
       builder: (context) => _ReportCardEditorDialog(
         report: report,
-        schoolName: SchoolRegistryService.instance.lookup(_schoolId)?.name,
+        schoolName: SchoolRegistryService.instance.displayName(_schoolId),
         canManage: _canManage,
       ),
     );
@@ -308,6 +309,11 @@ class _ReportCardEditorDialogState extends State<_ReportCardEditorDialog> {
         ),
       ),
       actions: [
+        TextButton(
+          onPressed: () =>
+              openGradeReportCertificate(context, report),
+          child: const Text('Generate certificate'),
+        ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Close'),

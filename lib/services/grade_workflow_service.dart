@@ -36,6 +36,9 @@ abstract final class GradeWorkflowService {
       AuthService.currentUser?.roleKey == AuthService.roleAdmin ||
       AuthService.hasPermission(SchoolPermissions.approveGrades);
 
+  /// Admin / Section Director can reopen an approved grade for an agreed edit.
+  static bool get canUserUnlockApprovedGrades => _hasExamApprovalPermission;
+
   static bool canUserApprove({
     required SubjectGrade grade,
     required String className,

@@ -10,6 +10,7 @@ import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/grade_unlock_dialogs.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_related_tools.dart';
 
 class GradeApprovalQueueScreen extends StatefulWidget {
@@ -133,13 +134,44 @@ class _GradeApprovalQueueScreenState extends State<GradeApprovalQueueScreen> {
     }
 
     if (!mounted) return;
+    _finishAction(
+      ok
+          ? s.gradeApprovalActionSuccess(action.name)
+          : s.gradeApprovalActionFailed,
+      ok,
+    );
+  }
+
+  Future<void> _unlock(SubjectGradePendingItem item) async {
+    final s = AppLocale.instance.strings;
+    final reason = await askUnlockApprovedGradeReason(
+      context,
+      studentName: item.report.studentName,
+      subject: item.subject,
+    );
+    if (reason == null || !mounted) return;
+    final user = AuthService.currentUser;
+    final ok = _data.adminUnlockSubjectGrade(
+      studentName: item.report.studentName,
+      className: item.report.className,
+      subject: item.subject,
+      adminId: user?.linkedTeacherId ?? user?.username,
+      adminName: AuthService.displayNameForRole(user?.roleKey ?? ''),
+      reason: reason,
+    );
+    if (!mounted) return;
+    _finishAction(
+      ok ? s.gradeApprovalActionSuccess('unlock') : s.gradeApprovalActionFailed,
+      ok,
+    );
+  }
+
+  void _finishAction(String message, bool ok) {
     setState(() {});
     SchoolContentSyncService.instance.markDataChanged();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          ok ? s.gradeApprovalActionSuccess(action.name) : s.gradeApprovalActionFailed,
-        ),
+        content: Text(message),
         backgroundColor: ok ? Colors.green : Colors.orange.shade800,
       ),
     );
@@ -332,6 +364,18 @@ class _GradeApprovalQueueScreenState extends State<GradeApprovalQueueScreen> {
                                     label: Text(s.requestGradeAdjustment),
                                   ),
                                 ],
+                              ),
+                            ],
+                            if (status == SubjectGradeStatus.approved &&
+                                GradeWorkflowService.canUserUnlockApprovedGrades) ...[
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _unlock(item),
+                                  icon: const Icon(Icons.lock_open_outlined),
+                                  label: Text(s.unlockApprovedGradeAction),
+                                ),
                               ),
                             ],
                           ],

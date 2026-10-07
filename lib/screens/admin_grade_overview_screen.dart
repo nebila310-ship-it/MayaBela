@@ -5,6 +5,7 @@ import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/grade_outreach_service.dart';
 import 'package:mayabela/services/grade_report_export_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/grade_average_breakdown_sheet.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
@@ -50,6 +51,7 @@ class _AdminGradeOverviewScreenState extends State<AdminGradeOverviewScreen>
     _tabs.addListener(() {
       if (mounted) setState(() {});
     });
+    SchoolContentSyncService.instance.addListener(_refresh);
     _refresh();
   }
 
@@ -74,6 +76,7 @@ class _AdminGradeOverviewScreenState extends State<AdminGradeOverviewScreen>
 
   @override
   void dispose() {
+    SchoolContentSyncService.instance.removeListener(_refresh);
     _tabs.dispose();
     super.dispose();
   }

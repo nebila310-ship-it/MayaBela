@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/screens/grade_report_certificate_screen.dart';
 import 'package:mayabela/screens/homeroom_student_profile_screen.dart';
 import 'package:mayabela/screens/teacher_enter_grades_screen.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
@@ -1004,8 +1005,7 @@ class _ReportDetail extends StatelessWidget {
                     ? TermReportCardView(
                         report: report,
                         schoolName: SchoolRegistryService.instance
-                            .lookup(AuthService.activeSchoolId ?? '')
-                            ?.name,
+                            .displayName(AuthService.activeSchoolId),
                         compact: true,
                       )
                     : Column(
@@ -1044,6 +1044,15 @@ class _ReportDetail extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: () => openGradeReportCertificate(context, report),
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: Text(s.generateGradeReportCertificate),
               ),
             ),
             const SizedBox(height: 16),

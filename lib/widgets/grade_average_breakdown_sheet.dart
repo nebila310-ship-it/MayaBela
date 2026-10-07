@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/screens/grade_report_certificate_screen.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
+import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/widgets/grade_unlock_dialogs.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 Future<void> showGradeAverageBreakdownSheet(
@@ -21,10 +26,90 @@ Future<void> showGradeAverageBreakdownSheet(
 }
 
 /// Approved, entered subjects that produce a ranking average.
-class GradeAverageBreakdownSheet extends StatelessWidget {
+class GradeAverageBreakdownSheet extends StatefulWidget {
   const GradeAverageBreakdownSheet({super.key, required this.report});
 
   final StudentGradeReport report;
+
+  @override
+  State<GradeAverageBreakdownSheet> createState() =>
+      _GradeAverageBreakdownSheetState();
+}
+
+class _GradeAverageBreakdownSheetState
+    extends State<GradeAverageBreakdownSheet> {
+  StudentGradeReport get _report {
+    final id = widget.report.studentId;
+    if (id != null && id.trim().isNotEmpty) {
+      final byId = SchoolDataService.instance.getGradeReportForStudentId(id);
+      if (byId != null) return byId;
+    }
+    return SchoolDataService.instance.getGradeReportForStudent(
+          widget.report.studentName,
+        ) ??
+        widget.report;
+  }
+
+  Future<void> _unlockSubject(SubjectGrade grade) async {
+    final reason = await askUnlockApprovedGradeReason(
+      context,
+      studentName: _report.studentName,
+      subject: grade.subject,
+    );
+    if (reason == null || !mounted) return;
+    final user = AuthService.currentUser;
+    final ok = SchoolDataService.instance.adminUnlockSubjectGrade(
+      studentName: _report.studentName,
+      className: _report.className,
+      subject: grade.subject,
+      adminId: user?.linkedTeacherId ?? user?.username,
+      adminName: AuthService.displayNameForRole(user?.roleKey ?? ''),
+      reason: reason,
+    );
+    if (!mounted) return;
+    SchoolContentSyncService.instance.markDataChanged();
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? AppLocale.instance.strings.gradeApprovalActionSuccess('unlock')
+              : AppLocale.instance.strings.gradeApprovalActionFailed,
+        ),
+        backgroundColor: ok ? const Color(0xFF15803D) : Colors.orange.shade800,
+      ),
+    );
+  }
+
+  Future<void> _unlockReport() async {
+    final reason = await askUnlockApprovedGradeReason(
+      context,
+      studentName: _report.studentName,
+    );
+    if (reason == null || !mounted) return;
+    final user = AuthService.currentUser;
+    final count = SchoolDataService.instance.adminUnlockApprovedGradeReport(
+      studentName: _report.studentName,
+      className: _report.className,
+      reason: reason,
+      adminId: user?.linkedTeacherId ?? user?.username,
+      adminName: AuthService.displayNameForRole(user?.roleKey ?? ''),
+    );
+    if (!mounted) return;
+    SchoolContentSyncService.instance.markDataChanged();
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count > 0
+              ? AppLocale.instance.strings.unlockApprovedGradeCount(count)
+              : AppLocale.instance.strings.gradeApprovalActionFailed,
+        ),
+        backgroundColor:
+            count > 0 ? const Color(0xFF15803D) : Colors.orange.shade800,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +117,15 @@ class GradeAverageBreakdownSheet extends StatelessWidget {
       listenable: AppLocale.instance,
       builder: (context, _) {
         final s = AppLocale.instance.strings;
-        final approved = GradeAnalyticsService.approvedSubjectsForAverage(
-          report,
-        );
+        final report = _report;
+        final approved =
+            GradeAnalyticsService.approvedSubjectsForAverage(report);
         final average = approved.isEmpty
             ? 0.0
             : approved.map((g) => g.percentage).reduce((a, b) => a + b) /
-                  approved.length;
+                approved.length;
+        final canUnlock = GradeWorkflowService.canUserUnlockApprovedGrades &&
+            approved.isNotEmpty;
         final maxHeight = MediaQuery.sizeOf(context).height * 0.78;
         return SafeArea(
           child: Padding(
@@ -89,6 +176,25 @@ class GradeAverageBreakdownSheet extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () =>
+                            openGradeReportCertificate(context, report),
+                        icon: const Icon(Icons.workspace_premium_outlined),
+                        label: Text(s.generateGradeReportCertificate),
+                      ),
+                      if (canUnlock)
+                        OutlinedButton.icon(
+                          onPressed: _unlockReport,
+                          icon: const Icon(Icons.lock_open_outlined),
+                          label: Text(s.unlockApprovedReportAction),
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     s.approvedSubjectsThatMakeAverage,
@@ -115,6 +221,9 @@ class GradeAverageBreakdownSheet extends StatelessWidget {
                             itemBuilder: (context, index) {
                               return ApprovedSubjectAverageRow(
                                 grade: approved[index],
+                                onUnlock: canUnlock
+                                    ? () => _unlockSubject(approved[index])
+                                    : null,
                               );
                             },
                           ),
@@ -130,9 +239,14 @@ class GradeAverageBreakdownSheet extends StatelessWidget {
 }
 
 class ApprovedSubjectAverageRow extends StatelessWidget {
-  const ApprovedSubjectAverageRow({super.key, required this.grade});
+  const ApprovedSubjectAverageRow({
+    super.key,
+    required this.grade,
+    this.onUnlock,
+  });
 
   final SubjectGrade grade;
+  final VoidCallback? onUnlock;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +318,13 @@ class ApprovedSubjectAverageRow extends StatelessWidget {
                     ),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                if (onUnlock != null)
+                  ActionChip(
+                    avatar: const Icon(Icons.lock_open_outlined, size: 16),
+                    label: Text(s.unlockApprovedGradeAction),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onUnlock,
                   ),
               ],
             ),

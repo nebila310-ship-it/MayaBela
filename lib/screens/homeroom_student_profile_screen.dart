@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/student_conduct.dart';
 import 'package:mayabela/models/teacher_features.dart';
+import 'package:mayabela/screens/grade_report_certificate_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
@@ -210,6 +211,13 @@ class _HomeroomStudentProfileScreenState
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () =>
+                    openGradeReportCertificate(context, report),
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: Text(s.generateGradeReportCertificate),
               ),
               const SizedBox(height: 16),
               _SectionCard(
