@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
@@ -114,7 +116,10 @@ import 'package:mayabela/services/platform_audit_log_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/student_photo_service.dart';
+import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/campus_room_service.dart';
 import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
 import 'package:mayabela/services/library_rental_service.dart';
@@ -1106,6 +1111,7 @@ class CloudAppStore {
         _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
+      unawaited(_promoteLocalPersonPhotos());
     });
   }
 
@@ -1176,6 +1182,7 @@ class CloudAppStore {
       _trackStep(trackProgress, 'Loading transport…');
       await pullTransportStateIntoServices();
       _trackStep(trackProgress, 'Finalizing…');
+      unawaited(_promoteLocalPersonPhotos());
     });
   }
 
@@ -1192,6 +1199,7 @@ class CloudAppStore {
         _pullAppNotifications(),
       ]);
       await pullTransportStateIntoServices();
+      unawaited(_promoteLocalPersonPhotos());
     });
   }
 
@@ -2254,6 +2262,19 @@ class CloudAppStore {
       await StudentPersistenceService.instance.saveRegistryFromService(
         pushCloud: false,
       );
+    }
+  }
+
+  /// Upload photos that still only exist as a path on this device.
+  Future<void> _promoteLocalPersonPhotos() async {
+    try {
+      await StudentPhotoService.instance.promotePendingToCloud();
+      await TeacherPhotoService.instance.promotePendingToCloud();
+      await DriverPhotoService.instance.promotePendingToCloud();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('CloudAppStore promote local photos: $e');
+      }
     }
   }
 

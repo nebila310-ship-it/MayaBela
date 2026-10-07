@@ -62,3 +62,35 @@ Future<bool> attachmentPathExists(String path) async {
   if (path.isEmpty) return false;
   return File(path).exists();
 }
+
+Future<List<int>?> readAttachmentBytes(String path) async {
+  final value = path.trim();
+  if (value.isEmpty) return null;
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return null;
+  }
+  try {
+    final file = File(value);
+    if (!await file.exists()) return null;
+    final bytes = await file.readAsBytes();
+    return bytes.isEmpty ? null : bytes;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<String?> writeTempAttachment({
+  required String fileName,
+  required List<int> bytes,
+}) async {
+  if (bytes.isEmpty) return null;
+  try {
+    final dir = await getTemporaryDirectory();
+    final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final file = File('${dir.path}/$safeName');
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  } catch (_) {
+    return null;
+  }
+}

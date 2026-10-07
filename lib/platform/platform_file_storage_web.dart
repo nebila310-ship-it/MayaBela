@@ -28,3 +28,15 @@ Future<AnnouncementAttachment?> copyAttachmentFromPath({
 
 Future<bool> attachmentPathExists(String path) async =>
     WebAttachmentCache.instance.isWebPath(path);
+
+Future<List<int>?> readAttachmentBytes(String path) async {
+  return WebAttachmentCache.instance.read(path);
+}
+
+Future<String?> writeTempAttachment({
+  required String fileName,
+  required List<int> bytes,
+}) async {
+  if (bytes.isEmpty) return null;
+  return WebAttachmentCache.instance.store(fileName, bytes);
+}
