@@ -177,14 +177,8 @@ void main() {
       staffRoles: const [StaffRoles.vicePresident],
     );
     final vpNotes = NotificationService.instance.notificationsForCurrentUser();
-    expect(
-      vpNotes.any((n) => n.body.contains('Vice Principal')),
-      isTrue,
-    );
-    expect(
-      vpNotes.any((n) => n.body.contains('Section Director')),
-      isFalse,
-    );
+    expect(vpNotes.any((n) => n.body.contains('Vice Principal')), isTrue);
+    expect(vpNotes.any((n) => n.body.contains('Section Director')), isFalse);
 
     signIn(
       username: 'sd.user',
@@ -192,14 +186,8 @@ void main() {
       staffRoles: const [StaffRoles.sectionDirector],
     );
     final sdNotes = NotificationService.instance.notificationsForCurrentUser();
-    expect(
-      sdNotes.any((n) => n.body.contains('Section Director')),
-      isTrue,
-    );
-    expect(
-      sdNotes.any((n) => n.body.contains('Vice Principal')),
-      isFalse,
-    );
+    expect(sdNotes.any((n) => n.body.contains('Section Director')), isTrue);
+    expect(sdNotes.any((n) => n.body.contains('Vice Principal')), isFalse);
 
     signIn(username: 'plain.teacher', roleKey: AuthService.roleTeacher);
     expect(
@@ -207,6 +195,90 @@ void main() {
         (n) => n.title == 'Discipline case escalated to you',
       ),
       isFalse,
+    );
+  });
+
+  test('untargeted staff messages stay off other teachers\' inboxes', () {
+    signIn(username: 'admin.maya', roleKey: AuthService.roleAdmin);
+    NotificationService.instance.push(
+      title: 'New message from Admin',
+      body: 'Please acknowledge the staff briefing.',
+      type: NotificationType.message,
+      fromRole: AuthService.roleAdmin,
+      fromName: 'Admin',
+      recipientRole: AuthService.roleTeacher,
+    );
+
+    signIn(
+      username: 'rami',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: 'TCH-RAMI',
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title == 'New message from Admin',
+      ),
+      isFalse,
+    );
+
+    signIn(username: 'parent.bek', roleKey: AuthService.roleParent);
+    NotificationService.instance.push(
+      title: 'New message from Parent',
+      body: 'Is homework due tomorrow?',
+      type: NotificationType.message,
+      fromRole: AuthService.roleParent,
+      fromName: 'Parent',
+      recipientRole: AuthService.roleTeacher,
+      recipientUsername: 'sara',
+    );
+
+    signIn(
+      username: 'sara',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: 'TCH-SARA',
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().where(
+        (n) => n.title.startsWith('New message from Parent'),
+      ),
+      hasLength(1),
+    );
+
+    signIn(
+      username: 'rami',
+      roleKey: AuthService.roleTeacher,
+      linkedTeacherId: 'TCH-RAMI',
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title.startsWith('New message from Parent'),
+      ),
+      isFalse,
+    );
+  });
+
+  test('VP signed in as admin still sees desk escalation', () {
+    signIn(username: 'affairs.desk', roleKey: AuthService.roleTeacher);
+    NotificationService.instance.push(
+      title: 'Discipline case escalated to you',
+      body: 'Sara Bekele (Grade 4A) escalated to Vice Principal.',
+      type: NotificationType.general,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Student Affairs',
+      recipientRole: AuthService.roleTeacher,
+      recipientStaffRole: StaffRoles.vicePresident,
+    );
+
+    signIn(
+      username: 'vp.admin',
+      roleKey: AuthService.roleAdmin,
+      staffRoles: const [StaffRoles.vicePresident],
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title == 'Discipline case escalated to you',
+      ),
+      isTrue,
     );
   });
 }

@@ -4145,6 +4145,23 @@ class SchoolDataService {
     return className.trim();
   }
 
+  List<StudentAttendanceEntry> _reportEntriesForSession(
+    AttendanceSession session,
+  ) {
+    final schoolId = AuthService.activeSchoolId?.trim();
+    if (schoolId == null || schoolId.isEmpty) return session.entries;
+    final registry = StudentRegistryService.instance.studentsForClass(
+      session.className,
+      schoolId: schoolId,
+    );
+    if (registry.isEmpty) return session.entries;
+    final roster = getStudentsForClass(session.className);
+    return [
+      for (final entry in session.entries)
+        if (_attendanceEntryOnRoster(entry, roster)) entry,
+    ];
+  }
+
   DailyAttendanceReport buildDailyAttendanceReport(DateTime date) {
     final sessions = getAttendanceSessionsForDate(date);
     final records = <StudentAttendanceRecord>[];
@@ -4156,12 +4173,14 @@ class SchoolDataService {
     var excused = 0;
 
     for (final session in sessions) {
+      final entries = _reportEntriesForSession(session);
+      if (entries.isEmpty) continue;
       var sessionPresent = 0;
       var sessionLate = 0;
       var sessionAbsent = 0;
       var sessionExcused = 0;
 
-      for (final entry in session.entries) {
+      for (final entry in entries) {
         switch (entry.status) {
           case AttendanceStatus.present:
             sessionPresent++;
@@ -7388,6 +7407,11 @@ class SchoolDataService {
       fromRole: scannerRole,
       fromName: scannedBy,
       recipientRole: AuthService.roleParent,
+      targetStudentId: StudentRegistryService.instance
+              .lookupById(student.id)
+              ?.studentId ??
+          student.id,
+      targetClassName: student.className,
     );
     _persistSchoolContent();
     return null;
@@ -7448,7 +7472,6 @@ class SchoolDataService {
       date: today,
       conductedBy: scannedBy,
       entries: entries,
-      notifyParents: false,
     );
     return null;
   }

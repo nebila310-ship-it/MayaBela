@@ -264,7 +264,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         date: selectedDate,
         conductedBy: AuthService.currentPersonName(),
         entries: entries,
-        notifyParents: false,
         periodKey: selectedPeriodKey,
         periodLabel: selectedPeriodLabel,
       );
