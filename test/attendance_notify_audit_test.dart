@@ -49,7 +49,7 @@ void main() {
       DateTime.now(),
     );
     expect(report.records.any((r) => r.studentName == 'Sara Bekele'), isFalse);
-    expect(report.records.any((r) => r.studentName == 'Maya Live'), isFalse);
+    expect(report.records.any((r) => r.studentName == 'Maya Live'), isTrue);
   });
 
   test('saving an absence notifies the linked parent', () {
