@@ -8,6 +8,7 @@ import 'package:mayabela/models/message.dart';
 import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/platform/web_browser_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
 import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/pending_notification_store.dart';
@@ -73,7 +74,7 @@ class NotificationService extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _saveReadIds() async {
+  Future<void> _saveReadIds({bool syncCloud = true}) async {
     final username =
         AuthService.currentUser?.username.trim().toLowerCase() ?? '';
     if (username.isEmpty) return;
@@ -83,7 +84,22 @@ class NotificationService extends ChangeNotifier {
         _readIdsKey(username),
         _persistedReadIds.toList()..sort(),
       );
+      if (syncCloud) UserPrefsSyncHook.noteLocalChanged();
     } catch (_) {}
+  }
+
+  List<String> cloudReadIds() => _persistedReadIds.toList()..sort();
+
+  Future<void> applyCloudReadIds(Iterable<String> ids) async {
+    final username =
+        AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    if (username.isNotEmpty && _hydratedForUsername != username) {
+      _persistedReadIds.clear();
+      _hydratedForUsername = username;
+    }
+    _persistedReadIds.addAll(ids.where((id) => id.trim().isNotEmpty));
+    _applyPersistedReadsToItems();
+    await _saveReadIds(syncCloud: false);
   }
 
   void _rememberRead(AppNotification item) {

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
+
 /// Web ERP navigation preferences: favorites, recents, sidebar state.
 class WebErpPrefsService extends ChangeNotifier {
   WebErpPrefsService._();
@@ -37,11 +39,42 @@ class WebErpPrefsService extends ChangeNotifier {
     }
   }
 
-  Future<void> _persist() async {
+  Future<void> _persist({bool syncCloud = true}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_sidebarCollapsedKey, sidebarCollapsed);
     await prefs.setString(_favoritesKey, jsonEncode(favorites));
     await prefs.setString(_recentsKey, jsonEncode(recents));
+    if (syncCloud) UserPrefsSyncHook.noteLocalChanged();
+  }
+
+  Map<String, dynamic> toCloudMap() => {
+    'webErpFavorites': List<String>.from(favorites),
+    'webErpRecents': List<String>.from(recents),
+    'webErpSidebarCollapsed': sidebarCollapsed,
+  };
+
+  Future<void> applyFromCloud(Map<String, dynamic> data) async {
+    final fav = data['webErpFavorites'];
+    final rec = data['webErpRecents'];
+    if (fav is List) {
+      favorites = fav.map((e) => e.toString()).toList();
+    }
+    if (rec is List) {
+      recents = rec.map((e) => e.toString()).toList();
+    }
+    sidebarCollapsed =
+        data['webErpSidebarCollapsed'] as bool? ?? sidebarCollapsed;
+    _loaded = true;
+    notifyListeners();
+    await _persist(syncCloud: false);
+  }
+
+  @visibleForTesting
+  void resetForTests() {
+    favorites = [];
+    recents = [];
+    sidebarCollapsed = false;
+    _loaded = false;
   }
 
   Future<void> setSidebarCollapsed(bool value) async {

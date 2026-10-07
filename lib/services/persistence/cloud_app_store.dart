@@ -108,6 +108,7 @@ import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
+import 'package:mayabela/services/cloud/user_cloud_preferences.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
@@ -432,6 +433,8 @@ class CloudAppStore {
         return 'student_password_resets';
       case AppCollections.authAccounts:
         return 'auth_accounts';
+      case AppCollections.userPreferences:
+        return 'user_preferences';
       default:
         return null;
     }
@@ -541,6 +544,8 @@ class CloudAppStore {
         await _pullStudentPasswordResets();
       case 'auth_accounts':
         await _pullAuthAccounts();
+      case 'user_preferences':
+        await _pullUserPreferences();
     }
   }
 
@@ -1040,6 +1045,7 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
         _pullCurriculumOffice(),
         _pullLessonPlans(),
         _pullStudentSupport(),
@@ -1109,6 +1115,7 @@ class CloudAppStore {
         _pullQrScans(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
       ]);
       await pullTransportStateIntoServices();
       unawaited(_promoteLocalPersonPhotos());
@@ -1178,6 +1185,7 @@ class CloudAppStore {
         _pullQrScans(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
       ]);
       _trackStep(trackProgress, 'Loading transport…');
       await pullTransportStateIntoServices();
@@ -1197,6 +1205,7 @@ class CloudAppStore {
         _pullSchoolRegistry(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
       ]);
       await pullTransportStateIntoServices();
       unawaited(_promoteLocalPersonPhotos());
@@ -1229,6 +1238,7 @@ class CloudAppStore {
         _pullAttendanceSessions(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
         _pullMaterialPurchases(),
         _pullLibraryRentals(),
         _pullMaterialAccess(),
@@ -4079,6 +4089,10 @@ class CloudAppStore {
     if (rooms.isNotEmpty) {
       CampusRoomService.instance.applyPersisted(rooms);
     }
+  }
+
+  Future<void> _pullUserPreferences() async {
+    await UserCloudPreferences.instance.pullFromCloud();
   }
 
   Future<void> _pullCampusCameras() async {

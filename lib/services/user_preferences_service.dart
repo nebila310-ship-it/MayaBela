@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
+
 class UserPreferencesService extends ChangeNotifier {
   UserPreferencesService._();
   static final instance = UserPreferencesService._();
@@ -60,7 +62,7 @@ class UserPreferencesService extends ChangeNotifier {
     }
   }
 
-  Future<void> _persist() async {
+  Future<void> _persist({bool syncCloud = true}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_compactKey, compactDashboard);
     await prefs.setBool(_holidaysKey, showEthiopianHolidays);
@@ -71,6 +73,70 @@ class UserPreferencesService extends ChangeNotifier {
     await prefs.setBool(_darkModeKey, darkMode);
     await prefs.setBool(_sidebarCollapsedKey, classroomSidebarCollapsed);
     await prefs.setString(_cardOrderKey, jsonEncode(_cardOrder));
+    if (syncCloud) UserPrefsSyncHook.noteLocalChanged();
+  }
+
+  Map<String, dynamic> toCloudMap() => {
+    'compactDashboard': compactDashboard,
+    'classroomSidebarCollapsed': classroomSidebarCollapsed,
+    'showEthiopianHolidays': showEthiopianHolidays,
+    'syncEventsToDeviceCalendar': syncEventsToDeviceCalendar,
+    'notificationSounds': notificationSounds,
+    'autoOpenNotifications': autoOpenNotifications,
+    'hapticFeedback': hapticFeedback,
+    'darkMode': darkMode,
+    'cardOrder': {
+      for (final entry in _cardOrder.entries)
+        entry.key: List<String>.from(entry.value),
+    },
+  };
+
+  Future<void> applyFromCloud(Map<String, dynamic> data) async {
+    compactDashboard = data['compactDashboard'] as bool? ?? compactDashboard;
+    classroomSidebarCollapsed =
+        data['classroomSidebarCollapsed'] as bool? ?? classroomSidebarCollapsed;
+    showEthiopianHolidays =
+        data['showEthiopianHolidays'] as bool? ?? showEthiopianHolidays;
+    syncEventsToDeviceCalendar =
+        data['syncEventsToDeviceCalendar'] as bool? ??
+        syncEventsToDeviceCalendar;
+    notificationSounds =
+        data['notificationSounds'] as bool? ?? notificationSounds;
+    autoOpenNotifications =
+        data['autoOpenNotifications'] as bool? ?? autoOpenNotifications;
+    hapticFeedback = data['hapticFeedback'] as bool? ?? hapticFeedback;
+    darkMode = data['darkMode'] as bool? ?? darkMode;
+    final order = data['cardOrder'];
+    if (order is Map) {
+      _cardOrder
+        ..clear()
+        ..addEntries(
+          order.entries
+              .where((e) => e.value is List)
+              .map(
+                (e) => MapEntry(
+                  e.key.toString(),
+                  (e.value as List).map((v) => v.toString()).toList(),
+                ),
+              ),
+        );
+    }
+    notifyListeners();
+    await _persist(syncCloud: false);
+  }
+
+  @visibleForTesting
+  void resetForTests() {
+    compactDashboard = false;
+    classroomSidebarCollapsed = false;
+    showEthiopianHolidays = true;
+    syncEventsToDeviceCalendar = true;
+    notificationSounds = true;
+    autoOpenNotifications = false;
+    hapticFeedback = true;
+    darkMode = false;
+    _cardOrder.clear();
+    _loaded = false;
   }
 
   List<String> getOrder(String roleKey, List<String> defaultOrder) {
