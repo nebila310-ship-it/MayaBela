@@ -330,6 +330,8 @@ class CloudAppStore {
         return 'calendar';
       case AppCollections.galleryPosts:
         return 'gallery';
+      case AppCollections.qrScans:
+        return 'qr_scans';
       case AppCollections.classTimetables:
         return 'timetables';
       case AppCollections.fees:
@@ -474,6 +476,8 @@ class CloudAppStore {
         await _pullCalendarEvents();
       case 'gallery':
         await _pullGalleryPosts();
+      case 'qr_scans':
+        await _pullQrScans();
       case 'timetables':
         await _pullClassTimetables();
       case 'fees':
@@ -1096,6 +1100,8 @@ class CloudAppStore {
         _pullDigitalOps(),
         _pullInventory(),
         _pullProcurement(),
+        _pullPayroll(),
+        _pullQrScans(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -1162,6 +1168,8 @@ class CloudAppStore {
         _pullQaMonitor(),
         _pullGoLive(),
         _pullDigitalOps(),
+        _pullPayroll(),
+        _pullQrScans(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
@@ -1179,6 +1187,7 @@ class CloudAppStore {
       await Future.wait([
         _pullDriverRegistry(),
         _pullStudentRegistry(),
+        _pullSchoolRegistry(),
         _pullConversations(),
         _pullAppNotifications(),
       ]);
