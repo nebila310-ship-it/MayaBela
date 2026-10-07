@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
@@ -42,6 +43,26 @@ void main() {
       schoolId: 'TB-001',
       staffRoles: staffRoles,
     );
+  }
+
+  void seedUnreadMessageForCurrentUser() {
+    final user = AuthService.currentUser!;
+    AuthService.currentUser = RegisteredUser(
+      username: 'seeder.parent',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+    );
+    NotificationService.instance.push(
+      title: 'New message from Parent',
+      body: 'Please check homework.',
+      type: NotificationType.message,
+      fromRole: AuthService.roleParent,
+      fromName: 'Parent',
+      recipientRole: user.roleKey,
+      recipientUsername: user.username,
+    );
+    AuthService.currentUser = user;
   }
 
   test('every classroom role has a Messages tile', () {
@@ -132,6 +153,7 @@ void main() {
     tester,
   ) async {
     signIn(AuthService.roleTeacher);
+    seedUnreadMessageForCurrentUser();
     final unread = DashboardBadgeService.instance.countFor('messages');
     expect(unread, greaterThan(0));
 
@@ -170,6 +192,7 @@ void main() {
     tester,
   ) async {
     signIn(AuthService.roleTeacher);
+    seedUnreadMessageForCurrentUser();
 
     Widget reminder() => MaterialApp(
       home: InboxLoginReminder(

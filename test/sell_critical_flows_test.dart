@@ -263,30 +263,41 @@ void main() {
     test('save session → daily and range reports reflect counts', () {
       signIn(username: 'admin.sell', roleKey: AuthService.roleAdmin);
       final data = SchoolDataService.instance;
+      const className = 'Grade 4A-SELL';
       final day = DateTime(2026, 8, 4);
+      final roster = [
+        ('Sell Present', AttendanceStatus.present),
+        ('Sell Absent', AttendanceStatus.absent),
+        ('Sell Late', AttendanceStatus.late),
+      ];
+      final entries = <StudentAttendanceEntry>[];
+      for (var i = 0; i < roster.length; i++) {
+        final student = StudentRegistryService.instance.addStudent(
+          schoolId: schoolId,
+          fullName: roster[i].$1,
+          grade: 'Grade 4',
+          className: className,
+          dateOfBirth: DateTime(2014, 8, i + 1),
+        );
+        data.syncChildFromRegistry(student.studentId);
+        entries.add(
+          StudentAttendanceEntry(
+            studentName: student.fullName,
+            studentId: student.studentId,
+            status: roster[i].$2,
+          ),
+        );
+      }
 
       data.saveAttendanceSession(
-        className: 'Grade 4A',
+        className: className,
         date: day,
         conductedBy: 'Miss Belen',
         notifyParents: false,
-        entries: [
-          StudentAttendanceEntry(
-            studentName: 'Sara Bekele',
-            status: AttendanceStatus.present,
-          ),
-          StudentAttendanceEntry(
-            studentName: 'Daniel Tesfaye',
-            status: AttendanceStatus.absent,
-          ),
-          StudentAttendanceEntry(
-            studentName: 'Hanna Girma',
-            status: AttendanceStatus.late,
-          ),
-        ],
+        entries: entries,
       );
 
-      final session = data.getAttendanceSession('Grade 4A', day);
+      final session = data.getAttendanceSession(className, day);
       expect(session, isNotNull);
       expect(session!.entries, hasLength(3));
 

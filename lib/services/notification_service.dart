@@ -43,7 +43,7 @@ class NotificationService extends ChangeNotifier {
       fromName: 'Mr. Bekele',
       recipientRole: AuthService.roleTeacher,
       createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-      isRead: false,
+      isRead: true,
     ),
   ];
 
@@ -151,6 +151,13 @@ class NotificationService extends ChangeNotifier {
       return false;
     }
     if (role == AuthService.roleParent) {
+      if (item.type == NotificationType.attendance &&
+          !NotificationPreferenceService.instance.isEnabled(
+            AuthService.roleParent,
+            NotificationPreferenceKey.attendance,
+          )) {
+        return false;
+      }
       return _matchesLinkedStudentScope(
         item,
         AuthService.activeLinkedStudentIds()
@@ -166,7 +173,20 @@ class NotificationService extends ChangeNotifier {
       if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
       return _matchesLinkedStudentScope(item, {linkedStudentId});
     }
+    if (item.type == NotificationType.message &&
+        !_hasDirectPersonTarget(item) &&
+        staffTarget.isEmpty) {
+      return false;
+    }
     return true;
+  }
+
+  bool _hasDirectPersonTarget(AppNotification item) {
+    final staffId = item.recipientStaffId?.trim();
+    if (staffId != null && staffId.isNotEmpty) return true;
+    final username = item.recipientUsername?.trim();
+    if (username != null && username.isNotEmpty) return true;
+    return item.recipientUsernames.any((u) => u.trim().isNotEmpty);
   }
 
   /// Direct staff/username notices stay with that person; role-wide
@@ -615,13 +635,12 @@ class NotificationService extends ChangeNotifier {
           fromName: 'Mr. Bekele',
           recipientRole: AuthService.roleTeacher,
           createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-          isRead: false,
+          isRead: true,
         ),
       );
     }
     for (final item in _items) {
-      if (item.id == 'seed-1') item.isRead = true;
-      if (item.id == 'seed-2') item.isRead = false;
+      if (item.id == 'seed-1' || item.id == 'seed-2') item.isRead = true;
     }
   }
 }

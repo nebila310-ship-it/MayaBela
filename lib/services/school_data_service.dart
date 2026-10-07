@@ -4251,6 +4251,7 @@ class SchoolDataService {
       final alreadyNamed = named.isNotEmpty &&
           entries.any((e) => e.studentName.trim().toLowerCase() == named);
       if (alreadyNamed) continue;
+      if (!_attendanceEntryOnRoster(entry, roster)) continue;
       if (seen.add(_attendanceEntryKey(entry))) {
         entries.add(_copyAttendanceEntry(entry));
       }
@@ -4281,6 +4282,7 @@ class SchoolDataService {
 
     for (final session in sessions) {
       final reportEntries = _reportEntriesForSession(session);
+      if (reportEntries.isEmpty) continue;
       var sessionPresent = 0;
       var sessionLate = 0;
       var sessionAbsent = 0;
@@ -7557,6 +7559,11 @@ class SchoolDataService {
       fromRole: scannerRole,
       fromName: scannedBy,
       recipientRole: AuthService.roleParent,
+      targetStudentId: StudentRegistryService.instance
+              .lookupById(student.id)
+              ?.studentId ??
+          student.id,
+      targetClassName: student.className,
     );
     _persistSchoolContent();
     return null;
@@ -7617,7 +7624,6 @@ class SchoolDataService {
       date: today,
       conductedBy: scannedBy,
       entries: entries,
-      notifyParents: false,
     );
     return null;
   }

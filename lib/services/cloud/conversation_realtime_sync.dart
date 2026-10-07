@@ -34,7 +34,9 @@ class ConversationRealtimeSync extends ChangeNotifier {
     _seedCountsFromLocal();
     _primed = false;
 
-    _subscription = _crud.watchAll(AppCollections.conversations).listen(
+    _subscription = _crud
+        .watchAll(AppCollections.conversations)
+        .listen(
           _onSnapshot,
           onError: (Object e) {
             if (kDebugMode) {
@@ -137,6 +139,7 @@ class ConversationRealtimeSync extends ChangeNotifier {
       fromRole: message.senderRole,
       fromName: senderName,
       recipientRole: recipientRole,
+      recipientUsername: AuthService.currentUser?.username,
       showOnMessagesBadge: true,
     );
   }
