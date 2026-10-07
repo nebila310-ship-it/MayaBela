@@ -1,4 +1,5 @@
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -154,7 +155,10 @@ class GradeAnalyticsService {
         final classReports = List<StudentGradeReport>.from(
           byClass[className] ?? const [],
         )..sort((a, b) => b.average.compareTo(a.average));
-        final top = classReports.take(topCount).toList();
+        final top = classReports
+            .where((r) => r.average >= underperformThreshold)
+            .take(topCount)
+            .toList();
         gradePool.addAll(top);
         final parsed = _parseClassName(className);
         sectionTops.add(
@@ -253,7 +257,7 @@ class GradeAnalyticsService {
     if (classes.isEmpty) {
       final fromReports = <String>{};
       for (final report in _data.getAllGradeReports()) {
-        if (report.subjects.isEmpty) continue;
+        if (_rankingReport(report) == null) continue;
         fromReports.add(report.className);
       }
       classes = fromReports.toList()..sort();
@@ -263,7 +267,7 @@ class GradeAnalyticsService {
     for (final className in classes) {
       final scored = [
         for (final report in _data.getGradeReportsForClass(className))
-          if (report.subjects.isNotEmpty) report,
+          if (_rankingReport(report) case final ranked?) ranked,
       ];
       if (scored.isNotEmpty) {
         byClass[className] = scored;
@@ -272,24 +276,32 @@ class GradeAnalyticsService {
     return byClass;
   }
 
+  /// Ranking uses approved (locked) marks only. Draft and pending stay off
+  /// the leaderboard until Section Director approval.
+  StudentGradeReport? _rankingReport(StudentGradeReport report) {
+    final approved = [
+      for (final subject in report.subjects)
+        if (subject.status == SubjectGradeStatus.approved) subject,
+    ];
+    if (approved.isEmpty) return null;
+    if (approved.length == report.subjects.length) return report;
+    return report.copyWith(subjects: approved);
+  }
+
   List<RankedStudentReport> rankingsForClass(String className) {
     final reports = [
       for (final report in _data.getGradeReportsForClass(className))
-        if (report.subjects.isNotEmpty) report,
+        if (_rankingReport(report) case final ranked?) ranked,
     ]..sort((a, b) => b.average.compareTo(a.average));
     return _withRanks(reports);
   }
 
   List<StudentGradeReport> underperformersForClass(String className) {
-    return _data
-        .getGradeReportsForClass(className)
-        .where(
-          (report) =>
-              report.subjects.isNotEmpty &&
-              report.average < underperformThreshold,
-        )
-        .toList()
-      ..sort((a, b) => a.average.compareTo(b.average));
+    return [
+      for (final report in _data.getGradeReportsForClass(className))
+        if (_rankingReport(report) case final ranked?)
+          if (ranked.average < underperformThreshold) ranked,
+    ]..sort((a, b) => a.average.compareTo(b.average));
   }
 
   bool _reportInClass(StudentGradeReport report, String? className) {

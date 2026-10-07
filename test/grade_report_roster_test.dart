@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -53,6 +54,8 @@ void main() {
               subject: 'Literacy',
               score: i == 4 ? 40 : 90 - i.toDouble(),
               maxScore: 100,
+              status: SubjectGradeStatus.approved,
+              publishedToParents: true,
             ),
           ],
         ),
@@ -126,7 +129,13 @@ void main() {
         className: className,
         term: 'Term 1',
         subjects: [
-          SubjectGrade(subject: 'Numeracy', score: 92, maxScore: 100),
+          SubjectGrade(
+            subject: 'Numeracy',
+            score: 92,
+            maxScore: 100,
+            status: SubjectGradeStatus.approved,
+            publishedToParents: true,
+          ),
         ],
       ),
     ]);
@@ -147,5 +156,127 @@ void main() {
           .expand((s) => s.students),
       isEmpty,
     );
+  });
+
+  test('draft and pending marks stay off ranking until approved', () {
+    final data = SchoolDataService.instance;
+    const className = 'KG 1C-GR';
+    final high = StudentRegistryService.instance.addStudent(
+      schoolId: 'MAL838',
+      fullName: 'Rank High',
+      grade: 'KG',
+      className: className,
+      dateOfBirth: DateTime(2019, 6, 1),
+    );
+    final low = StudentRegistryService.instance.addStudent(
+      schoolId: 'MAL838',
+      fullName: 'Rank Low',
+      grade: 'KG',
+      className: className,
+      dateOfBirth: DateTime(2019, 6, 2),
+    );
+    data.syncChildFromRegistry(high.studentId);
+    data.syncChildFromRegistry(low.studentId);
+
+    data.applyPersistedGradeReports([
+      StudentGradeReport(
+        studentName: high.fullName,
+        studentId: high.studentId,
+        className: className,
+        term: 'Term 1',
+        subjects: [
+          SubjectGrade(
+            subject: 'Literacy',
+            score: 95,
+            maxScore: 100,
+            status: SubjectGradeStatus.pendingApproval,
+          ),
+        ],
+      ),
+      StudentGradeReport(
+        studentName: low.fullName,
+        studentId: low.studentId,
+        className: className,
+        term: 'Term 1',
+        subjects: [
+          SubjectGrade(
+            subject: 'Literacy',
+            score: 32,
+            maxScore: 100,
+          ),
+        ],
+      ),
+    ]);
+
+    var snapshot = GradeAnalyticsService.instance.buildSnapshot();
+    expect(
+      snapshot.topScorers
+          .expand((g) => g.sections)
+          .where((s) => s.className == className)
+          .expand((s) => s.students),
+      isEmpty,
+    );
+    expect(
+      snapshot.underperformers
+          .expand((g) => g.sections)
+          .where((s) => s.className == className)
+          .expand((s) => s.students),
+      isEmpty,
+    );
+    expect(
+      GradeAnalyticsService.instance.rankingsForClass(className),
+      isEmpty,
+    );
+
+    data.applyPersistedGradeReports([
+      StudentGradeReport(
+        studentName: high.fullName,
+        studentId: high.studentId,
+        className: className,
+        term: 'Term 1',
+        subjects: [
+          SubjectGrade(
+            subject: 'Literacy',
+            score: 95,
+            maxScore: 100,
+            status: SubjectGradeStatus.approved,
+            publishedToParents: true,
+          ),
+        ],
+      ),
+      StudentGradeReport(
+        studentName: low.fullName,
+        studentId: low.studentId,
+        className: className,
+        term: 'Term 1',
+        subjects: [
+          SubjectGrade(
+            subject: 'Literacy',
+            score: 32,
+            maxScore: 100,
+            status: SubjectGradeStatus.approved,
+            publishedToParents: true,
+          ),
+        ],
+      ),
+    ]);
+
+    snapshot = GradeAnalyticsService.instance.buildSnapshot();
+    final tops = snapshot.topScorers
+        .expand((g) => g.sections)
+        .where((s) => s.className == className)
+        .expand((s) => s.students)
+        .map((e) => e.report.studentName)
+        .toList();
+    final lows = snapshot.underperformers
+        .expand((g) => g.sections)
+        .where((s) => s.className == className)
+        .expand((s) => s.students)
+        .map((r) => r.studentName)
+        .toList();
+    expect(tops, contains('Rank High'));
+    expect(tops, isNot(contains('Rank Low')));
+    expect(lows, contains('Rank Low'));
+    expect(lows, isNot(contains('Rank High')));
   });
 }

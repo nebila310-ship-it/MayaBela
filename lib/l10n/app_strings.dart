@@ -2438,9 +2438,9 @@ class AppStrings implements AppStringsLike {
   String get editGradeTooltip =>
       t('Edit grade', 'ደረጃ አርትዕ');
   String get adminGradeOverviewSubtitle => t(
-        'Top performers and students below 50% — compiled from teacher grade reports',
-        'ከፍተኛ አፈጻጸም እና ከ 50% በታች — ከመምህር ደረጃ ሪፖርቶች',
-        'Performansii ol\'aanaa fi 50% gadi — gabaasa barsiisaa irraa',
+        'Top performers and students below 50% — compiled from approved, locked grade reports',
+        'ከፍተኛ አፈጻጸም እና ከ 50% በታች — ከጸደቁ የተቆለፉ ደረጃ ሪፖርቶች',
+        'Performansii ol\'aanaa fi 50% gadi — gabaasa qabxii mirkanaa\'ee cufame irraa',
       );
   String get adminGradeTopPerformersCaption => t(
         'Top performers',
