@@ -1167,7 +1167,7 @@ class AppStrings implements AppStringsLike {
   String get gradePendingApprovalLabel =>
       t('Pending approval', 'ማጽደቅ በመጠባበቅ ላይ');
   String get gradeApprovedLockedLabel =>
-      t('Approved and published', 'ጸድቆ ተለጥፏል');
+      t('Locked after approval', 'ከጸደቀ በኋላ ተቆልፏል');
   String get gradeResubmitHint => t(
         'Review the admin feedback, update the grade, then submit again.',
         'የአስተዳዳሪ ግብረመልስ ይመልከቱ፣ ደረጃውን ያስተካክሉ፣ ከዚያ እንደገና ያስረክቡ።',

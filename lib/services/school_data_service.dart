@@ -4918,6 +4918,7 @@ class SchoolDataService {
       className: className,
     );
     if (subjectGrade == null || report == null) return false;
+    if (!subjectGrade.canTeacherEdit) return false;
     _normalizeSubjectWorkflow(subjectGrade);
     if (!subjectGrade.canTeacherEdit) return false;
     if (subjectGrade.status == SubjectGradeStatus.rejected ||
@@ -5005,6 +5006,7 @@ class SchoolDataService {
       subject: subject,
     );
     if (subjectGrade == null) return false;
+    if (!subjectGrade.canTeacherEdit) return false;
     _normalizeSubjectWorkflow(subjectGrade);
     if (!subjectGrade.canTeacherEdit) return false;
 
@@ -5552,6 +5554,16 @@ class SchoolDataService {
       final studentName = entry.key.trim();
       if (studentName.isEmpty) continue;
 
+      final existing = _findSubjectGrade(
+        studentName: studentName,
+        className: canonicalClass,
+        subject: subject,
+      );
+      if (existing != null && !existing.canTeacherEdit) {
+        skippedLocked++;
+        continue;
+      }
+
       addSubjectToGradeReport(
         studentName: studentName,
         className: canonicalClass,
@@ -5791,9 +5803,9 @@ class SchoolDataService {
   }
 
   SubjectGrade _normalizeSubjectWorkflow(SubjectGrade grade) {
-    if (grade.status == SubjectGradeStatus.approved &&
-        !grade.publishedToParents) {
-      grade.status = SubjectGradeStatus.draft;
+    if (grade.publishedToParents &&
+        grade.status == SubjectGradeStatus.draft) {
+      grade.status = SubjectGradeStatus.approved;
     }
     return grade;
   }
@@ -5842,12 +5854,21 @@ class SchoolDataService {
     SubjectGrade local,
     SubjectGrade incoming,
   ) {
+    if (local.status == SubjectGradeStatus.approved &&
+        incoming.status != SubjectGradeStatus.approved) {
+      return local;
+    }
+    if (incoming.status == SubjectGradeStatus.approved &&
+        local.status != SubjectGradeStatus.approved) {
+      return incoming;
+    }
+
     int rank(SubjectGradeStatus status) {
       return switch (status) {
         SubjectGradeStatus.pendingApproval => 5,
         SubjectGradeStatus.changesRequested => 4,
         SubjectGradeStatus.rejected => 4,
-        SubjectGradeStatus.approved => 3,
+        SubjectGradeStatus.approved => 6,
         SubjectGradeStatus.draft => 2,
       };
     }
@@ -5859,9 +5880,9 @@ class SchoolDataService {
     }
 
     DateTime? activityAt(SubjectGrade grade) {
-      return grade.submittedAt ??
-          grade.lastReviewedAt ??
-          grade.publishedAt;
+      return grade.lastReviewedAt ??
+          grade.publishedAt ??
+          grade.submittedAt;
     }
 
     final localAt = activityAt(local);
