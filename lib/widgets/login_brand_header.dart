@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/services/school_public_brand_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/widgets/maya_brand_logo.dart';
 import 'package:mayabela/widgets/school_logo_display.dart';
@@ -52,10 +54,11 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     final id = typed;
 
     final record = SchoolRegistryService.instance.lookup(id);
-    if (record != null && record.name.trim().isNotEmpty) {
+    final name = LoginChromeBrand.resolvedSchoolName(id) ?? '';
+    if (record != null && name.isNotEmpty) {
       return _BrandSnapshot(
         schoolId: record.id,
-        name: record.name,
+        name: name,
         logoUrl: SchoolLogoService.displayUrlFor(
           record.id,
           storedUrl: record.displayLogoUrl,
@@ -67,10 +70,10 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       );
     }
     final remembered = LoginPrefsService.instance.brandForSchool(id);
-    if (remembered != null) {
+    if (remembered != null && name.isNotEmpty) {
       return _BrandSnapshot(
         schoolId: remembered.schoolId,
-        name: remembered.name,
+        name: name,
         logoUrl: SchoolLogoService.displayUrlFor(
           remembered.schoolId,
           storedUrl: remembered.logoUrl,
@@ -84,9 +87,13 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     if (splash != null && splash.schoolId == id.toUpperCase()) {
       return _BrandSnapshot(
         schoolId: splash.schoolId,
-        name: splash.name,
-        logoUrl: splash.logoUrl ??
-            SchoolLogoService.publicUrl(splash.schoolId, style: splash.logoStyle),
+        name: name,
+        logoUrl:
+            splash.logoUrl ??
+            SchoolLogoService.publicUrl(
+              splash.schoolId,
+              style: splash.logoStyle,
+            ),
         logoStyle: splash.logoStyle,
         logoBytes: _logoBytes,
       );
@@ -94,7 +101,7 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     if (id.length >= 3) {
       return _BrandSnapshot(
         schoolId: id,
-        name: splash?.name ?? '',
+        name: name,
         logoUrl: SchoolLogoService.publicUrl(id),
         logoStyle: splash?.logoStyle ?? SchoolLogoStyle.rectangular,
         logoBytes: _logoBytes,
@@ -117,13 +124,9 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
     final splash = SchoolSplashBrand.readMeta(schoolId: typed);
     final id = typed;
     final record = SchoolRegistryService.instance.lookup(id);
-    final style = record?.logoStyle ??
-        splash?.logoStyle ??
-        SchoolLogoStyle.rectangular;
-    final bytes = SchoolSplashBrand.readBytes(
-      schoolId: id,
-      style: style,
-    );
+    final style =
+        record?.logoStyle ?? splash?.logoStyle ?? SchoolLogoStyle.rectangular;
+    final bytes = SchoolSplashBrand.readBytes(schoolId: id, style: style);
     String? path;
     if (record != null) {
       path = await SchoolLogoService.instance.resolvedLogoPath(
@@ -149,10 +152,29 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       _logoBytes = bytes;
     });
     LoginChromeBrand.apply(schoolId: id);
+    if (LoginChromeBrand.resolvedSchoolName(id) == null) {
+      unawaited(_loadPublicName(id));
+    }
+  }
+
+  Future<void> _loadPublicName(String id) async {
+    final brand = await SchoolPublicBrandService.instance.loadAndRemember(id);
+    if (!mounted) return;
+    if (widget.schoolId.trim().toUpperCase() != id.toUpperCase()) return;
+    if (brand == null) return;
+    LoginChromeBrand.apply(schoolId: id);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: LoginChromeBrand.tabTitle,
+      builder: (context, _, __) => _buildHeader(context),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
     final brand = _snapshot;
     final accent = widget.accentColor ?? Colors.indigo.shade900;
 
@@ -188,18 +210,16 @@ class _LoginBrandHeaderState extends State<LoginBrandHeader> {
       behavior: HitTestBehavior.opaque,
       child: Column(
         children: [
-          if (brand.name.isNotEmpty) ...[
-            Text(
-              brand.name,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: accent,
-              ),
+          Text(
+            brand.name.isNotEmpty ? brand.name : LoginChromeBrand.productTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: accent,
             ),
-            const SizedBox(height: 10),
-          ],
+          ),
+          const SizedBox(height: 10),
           if (brand.logoStyle == SchoolLogoStyle.circular)
             Center(child: logo)
           else

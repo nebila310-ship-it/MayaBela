@@ -31,6 +31,7 @@ Or paste `supabase/migrations/20260725120000_app_documents.sql` into the SQL edi
 
 ```bash
 npx supabase functions deploy school-login
+npx supabase functions deploy school-public-brand
 npx supabase functions deploy school-change-password
 npx supabase functions deploy school-upsert-account
 npx supabase functions deploy school-upsert-registry
