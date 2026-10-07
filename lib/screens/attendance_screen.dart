@@ -10,6 +10,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/timetable_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
@@ -22,6 +23,8 @@ class AttendanceScreen extends StatefulWidget {
     this.initialClass,
     this.embedded = false,
   });
+
+  static const registerPageSize = 10;
 
   final bool readOnly;
   final String? childName;
@@ -44,6 +47,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   String? conductedBy;
   bool _showHistory = false;
   bool _locked = false;
+  var _page = 0;
+
+  int _pageIndex(int length) {
+    if (length <= 0) return 0;
+    final maxPage = (length - 1) ~/ AttendanceScreen.registerPageSize;
+    return _page.clamp(0, maxPage);
+  }
+
+  List<StudentAttendanceEntry> _pageSlice(List<StudentAttendanceEntry> items) {
+    if (items.isEmpty) return items;
+    final start = _pageIndex(items.length) * AttendanceScreen.registerPageSize;
+    final end = (start + AttendanceScreen.registerPageSize).clamp(
+      0,
+      items.length,
+    );
+    return items.sublist(start, end);
+  }
+
+  String _entryKey(StudentAttendanceEntry entry) {
+    final id = entry.studentId?.trim();
+    if (id != null && id.isNotEmpty) return id;
+    return entry.studentName.trim();
+  }
 
   List<String> get _classOptions {
     if (widget.readOnly) {
@@ -186,13 +212,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
     if (picked != null) {
       selectedDate = picked;
+      _page = 0;
       _loadAttendance();
     }
   }
 
-  void _setStatus(int index, AttendanceStatus status) {
+  void _setStatus(StudentAttendanceEntry entry, AttendanceStatus status) {
     if (!_canEditRegister) return;
-    final entry = entries[index];
     if (entry.status == status) return;
     setState(() {
       entry.status = status;
@@ -308,13 +334,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Color _statusColor(AttendanceStatus status) {
     switch (status) {
       case AttendanceStatus.present:
-        return Colors.green;
+        return ClassroomPalette.green;
       case AttendanceStatus.absent:
-        return Colors.red;
+        return ClassroomPalette.red;
       case AttendanceStatus.late:
-        return Colors.orange;
+        return ClassroomPalette.orange;
       case AttendanceStatus.excused:
-        return const Color(0xFF1565C0);
+        return ClassroomPalette.blue;
     }
   }
 
@@ -349,211 +375,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ? _HistoryView(history: history, className: selectedClass)
               : selectedClass.trim().isEmpty
               ? Center(child: Text(s.noClassesAssigned))
-              : Column(
-                  children: [
-                    if (!widget.readOnly && _classOptions.isNotEmpty)
-                      ClassPickerBar(
-                        label: s.className,
-                        options: _classOptions,
-                        selected: selectedClass,
-                        accent: TeacherTheme.primaryDark,
-                        onSelected: (value) {
-                          selectedClass = value;
-                          _loadAttendance();
-                        },
-                      ),
-                    Container(
-                      width: double.infinity,
-                      padding: listPagePadding(context),
-                      child: Column(
-                        children: [
-                          ListTile(
-                            tileColor: Colors.white.withValues(alpha: 0.92),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: TeacherTheme.primaryDark.withValues(
-                                  alpha: 0.12,
-                                ),
-                              ),
-                            ),
-                            leading: const Icon(
-                              Icons.calendar_today,
-                              color: TeacherTheme.primaryDark,
-                            ),
-                            title: Text(
-                              '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  conductedBy != null
-                                      ? s.conductedByName(conductedBy!)
-                                      : s.selectedDate,
-                                ),
-                                if (!widget.readOnly)
-                                  DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      isDense: true,
-                                      isExpanded: true,
-                                      value:
-                                          _periodOptions(s).any(
-                                            (item) =>
-                                                item.key == selectedPeriodKey,
-                                          )
-                                          ? selectedPeriodKey
-                                          : '',
-                                      items: [
-                                        for (final option in _periodOptions(s))
-                                          DropdownMenuItem(
-                                            value: option.key,
-                                            child: Text(option.label),
-                                          ),
-                                      ],
-                                      onChanged: (value) {
-                                        selectedPeriodKey = value ?? '';
-                                        _loadAttendance();
-                                      },
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            isThreeLine: !widget.readOnly,
-                            trailing: widget.readOnly
-                                ? null
-                                : TextButton(
-                                    onPressed: _pickDate,
-                                    child: Text(s.change),
-                                  ),
-                          ),
-                          if (_locked && !widget.readOnly) ...[
-                            const SizedBox(height: 8),
-                            ListTile(
-                              dense: true,
-                              tileColor: TeacherTheme.primaryDark.withValues(
-                                alpha: 0.08,
-                              ),
-                              leading: const Icon(Icons.lock_outline),
-                              title: Text(s.attendanceRegisterLocked),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          Wrap(
-                            alignment: WrapAlignment.spaceEvenly,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _summaryChip(
-                                s.present,
-                                presentCount,
-                                Colors.green,
-                              ),
-                              _summaryChip(s.absent, absentCount, Colors.red),
-                              _summaryChip(s.late, lateCount, Colors.orange),
-                              _summaryChip(
-                                s.excused,
-                                excusedCount,
-                                const Color(0xFF1565C0),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.separated(
-                        padding: listPagePadding(context),
-                        itemCount: entries.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final entry = entries[index];
-                          return Card(
-                            child: ListTile(
-                              leading: StudentPhotoAvatar(
-                                name: entry.studentName,
-                                radius: 20,
-                                fallbackColor: _statusColor(entry.status),
-                              ),
-                              title: Text(entry.studentName),
-                              subtitle: Text(
-                                _statusLabel(entry.status, s),
-                                style: TextStyle(
-                                  color: _statusColor(entry.status),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              trailing: widget.readOnly
-                                  ? Icon(
-                                      Icons.circle,
-                                      color: _statusColor(entry.status),
-                                      size: 14,
-                                    )
-                                  : FittedBox(
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          _statusButton(
-                                            index,
-                                            AttendanceStatus.present,
-                                            Icons.check,
-                                          ),
-                                          _statusButton(
-                                            index,
-                                            AttendanceStatus.late,
-                                            Icons.schedule,
-                                          ),
-                                          _statusButton(
-                                            index,
-                                            AttendanceStatus.absent,
-                                            Icons.close,
-                                          ),
-                                          _statusButton(
-                                            index,
-                                            AttendanceStatus.excused,
-                                            Icons.event_available,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: listPagePadding(context),
-                      child: Row(
-                        children: [
-                          if (!widget.readOnly)
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _canEditRegister
-                                    ? _markAllPresent
-                                    : null,
-                                child: Text(s.markAllPresent),
-                              ),
-                            ),
-                          if (!widget.readOnly) const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: widget.readOnly
-                                  ? () => Navigator.pop(context)
-                                  : (_canEditRegister ? _saveAttendance : null),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: TeacherTheme.primaryDark,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: Text(
-                                widget.readOnly ? s.close : s.saveAttendance,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              : _register(s),
         );
 
         if (widget.embedded) {
@@ -612,6 +434,287 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
+  Widget _register(AppStrings s) {
+    final pageRows = _pageSlice(entries);
+    return SingleChildScrollView(
+      key: const ValueKey('attendance-register'),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!widget.readOnly && _classOptions.isNotEmpty)
+            ClassPickerBar(
+              label: s.className,
+              options: _classOptions,
+              selected: selectedClass,
+              accent: TeacherTheme.primaryDark,
+              onSelected: (value) {
+                selectedClass = value;
+                _page = 0;
+                _loadAttendance();
+              },
+            ),
+          Padding(
+            padding: listPagePadding(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                  tileColor: Colors.white.withValues(alpha: 0.92),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: TeacherTheme.primaryDark.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  leading: const Icon(
+                    Icons.calendar_today,
+                    color: TeacherTheme.primaryDark,
+                  ),
+                  title: Text(
+                    '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        conductedBy != null
+                            ? s.conductedByName(conductedBy!)
+                            : s.selectedDate,
+                      ),
+                      if (!widget.readOnly)
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isDense: true,
+                            isExpanded: true,
+                            value:
+                                _periodOptions(
+                                  s,
+                                ).any((item) => item.key == selectedPeriodKey)
+                                ? selectedPeriodKey
+                                : '',
+                            items: [
+                              for (final option in _periodOptions(s))
+                                DropdownMenuItem(
+                                  value: option.key,
+                                  child: Text(option.label),
+                                ),
+                            ],
+                            onChanged: (value) {
+                              selectedPeriodKey = value ?? '';
+                              _page = 0;
+                              _loadAttendance();
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                  isThreeLine: !widget.readOnly,
+                  trailing: widget.readOnly
+                      ? null
+                      : TextButton(onPressed: _pickDate, child: Text(s.change)),
+                ),
+                if (_locked && !widget.readOnly) ...[
+                  const SizedBox(height: 8),
+                  ListTile(
+                    dense: true,
+                    tileColor: TeacherTheme.primaryDark.withValues(alpha: 0.08),
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text(s.attendanceRegisterLocked),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.spaceEvenly,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _summaryChip(
+                      s.present,
+                      presentCount,
+                      ClassroomPalette.green,
+                    ),
+                    _summaryChip(s.absent, absentCount, ClassroomPalette.red),
+                    _summaryChip(s.late, lateCount, ClassroomPalette.orange),
+                    _summaryChip(
+                      s.excused,
+                      excusedCount,
+                      ClassroomPalette.blue,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (entries.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    child: Text(
+                      'No students on this class register.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
+                  )
+                else ...[
+                  for (final entry in pageRows) ...[
+                    _studentBar(entry, s),
+                    const SizedBox(height: 8),
+                  ],
+                  _pager(total: entries.length),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (!widget.readOnly)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _canEditRegister ? _markAllPresent : null,
+                          child: Text(s.markAllPresent),
+                        ),
+                      ),
+                    if (!widget.readOnly) const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: widget.readOnly
+                            ? () => Navigator.pop(context)
+                            : (_canEditRegister ? _saveAttendance : null),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: TeacherTheme.primaryDark,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(
+                          widget.readOnly ? s.close : s.saveAttendance,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _studentBar(StudentAttendanceEntry entry, AppStrings s) {
+    final color = _statusColor(entry.status);
+    final key = _entryKey(entry);
+    return Material(
+      key: ValueKey('attendance-student-$key'),
+      color: color,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+        child: Row(
+          children: [
+            StudentPhotoAvatar(
+              studentId: entry.studentId,
+              name: entry.studentName,
+              radius: 20,
+              fallbackColor: Colors.white70,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.studentName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  Text(
+                    _statusLabel(entry.status, s),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (widget.readOnly)
+              const Icon(Icons.circle, color: Colors.white, size: 12)
+            else
+              FittedBox(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _statusButton(
+                      entry,
+                      AttendanceStatus.present,
+                      Icons.check,
+                      s,
+                    ),
+                    _statusButton(
+                      entry,
+                      AttendanceStatus.late,
+                      Icons.schedule,
+                      s,
+                    ),
+                    _statusButton(
+                      entry,
+                      AttendanceStatus.absent,
+                      Icons.close,
+                      s,
+                    ),
+                    _statusButton(
+                      entry,
+                      AttendanceStatus.excused,
+                      Icons.event_available,
+                      s,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pager({required int total}) {
+    if (total <= AttendanceScreen.registerPageSize) {
+      return const SizedBox.shrink();
+    }
+    final page = _pageIndex(total);
+    final size = AttendanceScreen.registerPageSize;
+    final start = page * size + 1;
+    final end = ((page + 1) * size).clamp(0, total);
+    final lastPage = (total - 1) ~/ size;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Text(
+            '$start–$end of $total students',
+            key: const ValueKey('attendance-page-label'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const Spacer(),
+          TextButton(
+            key: const ValueKey('attendance-page-prev'),
+            onPressed: page > 0 ? () => setState(() => _page = page - 1) : null,
+            child: const Text('Previous'),
+          ),
+          TextButton(
+            key: const ValueKey('attendance-page-next'),
+            onPressed: page < lastPage
+                ? () => setState(() => _page = page + 1)
+                : null,
+            child: const Text('Next'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _summaryChip(String label, int count, Color color) {
     return Chip(
       avatar: CircleAvatar(
@@ -625,12 +728,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _statusButton(int index, AttendanceStatus status, IconData icon) {
-    final selected = entries[index].status == status;
+  Widget _statusButton(
+    StudentAttendanceEntry entry,
+    AttendanceStatus status,
+    IconData icon,
+    AppStrings s,
+  ) {
+    final selected = entry.status == status;
     return IconButton(
-      onPressed: () => _setStatus(index, status),
-      icon: Icon(icon),
-      color: selected ? _statusColor(status) : Colors.grey,
+      visualDensity: VisualDensity.compact,
+      tooltip: _statusLabel(status, s),
+      onPressed: () => _setStatus(entry, status),
+      icon: Icon(icon, size: 22),
+      color: selected ? Colors.white : Colors.white.withValues(alpha: 0.55),
+      style: IconButton.styleFrom(
+        backgroundColor: selected ? Colors.black26 : null,
+      ),
     );
   }
 }
