@@ -105,6 +105,19 @@ class DriverPhotoService {
     return bytes;
   }
 
+  Future<void> promotePendingToCloud() async {
+    for (final driver in DriverRegistryService.instance.registrySnapshot()) {
+      final path = driver.photoPath;
+      if (path == null || path.trim().isEmpty) continue;
+      if (!ProfilePhotoCodec.isDeviceLocalPath(path)) continue;
+      final bytes =
+          lookupBytes(driver.driverId, storedPath: path) ??
+          await ProfilePhotoCodec.bytesFromStoredPath(path);
+      if (bytes == null || bytes.isEmpty) continue;
+      await _promoteToCloud(driver.driverId, bytes, storedPath: path);
+    }
+  }
+
   Future<void> _promoteToCloud(
     String? driverId,
     Uint8List bytes, {

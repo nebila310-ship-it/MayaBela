@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
@@ -106,6 +108,7 @@ import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
+import 'package:mayabela/services/cloud/user_cloud_preferences.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
@@ -114,7 +117,10 @@ import 'package:mayabela/services/platform_audit_log_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/student_photo_service.dart';
+import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/campus_room_service.dart';
 import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
 import 'package:mayabela/services/library_rental_service.dart';
@@ -330,6 +336,8 @@ class CloudAppStore {
         return 'calendar';
       case AppCollections.galleryPosts:
         return 'gallery';
+      case AppCollections.qrScans:
+        return 'qr_scans';
       case AppCollections.classTimetables:
         return 'timetables';
       case AppCollections.fees:
@@ -425,6 +433,8 @@ class CloudAppStore {
         return 'student_password_resets';
       case AppCollections.authAccounts:
         return 'auth_accounts';
+      case AppCollections.userPreferences:
+        return 'user_preferences';
       default:
         return null;
     }
@@ -474,6 +484,8 @@ class CloudAppStore {
         await _pullCalendarEvents();
       case 'gallery':
         await _pullGalleryPosts();
+      case 'qr_scans':
+        await _pullQrScans();
       case 'timetables':
         await _pullClassTimetables();
       case 'fees':
@@ -532,6 +544,8 @@ class CloudAppStore {
         await _pullStudentPasswordResets();
       case 'auth_accounts':
         await _pullAuthAccounts();
+      case 'user_preferences':
+        await _pullUserPreferences();
     }
   }
 
@@ -1031,6 +1045,7 @@ class CloudAppStore {
         _pullLeaveRequests(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
         _pullCurriculumOffice(),
         _pullLessonPlans(),
         _pullStudentSupport(),
@@ -1096,10 +1111,14 @@ class CloudAppStore {
         _pullDigitalOps(),
         _pullInventory(),
         _pullProcurement(),
+        _pullPayroll(),
+        _pullQrScans(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
       ]);
       await pullTransportStateIntoServices();
+      unawaited(_promoteLocalPersonPhotos());
     });
   }
 
@@ -1162,12 +1181,16 @@ class CloudAppStore {
         _pullQaMonitor(),
         _pullGoLive(),
         _pullDigitalOps(),
+        _pullPayroll(),
+        _pullQrScans(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
       ]);
       _trackStep(trackProgress, 'Loading transport…');
       await pullTransportStateIntoServices();
       _trackStep(trackProgress, 'Finalizing…');
+      unawaited(_promoteLocalPersonPhotos());
     });
   }
 
@@ -1179,10 +1202,13 @@ class CloudAppStore {
       await Future.wait([
         _pullDriverRegistry(),
         _pullStudentRegistry(),
+        _pullSchoolRegistry(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
       ]);
       await pullTransportStateIntoServices();
+      unawaited(_promoteLocalPersonPhotos());
     });
   }
 
@@ -1212,6 +1238,7 @@ class CloudAppStore {
         _pullAttendanceSessions(),
         _pullConversations(),
         _pullAppNotifications(),
+        _pullUserPreferences(),
         _pullMaterialPurchases(),
         _pullLibraryRentals(),
         _pullMaterialAccess(),
@@ -2245,6 +2272,19 @@ class CloudAppStore {
       await StudentPersistenceService.instance.saveRegistryFromService(
         pushCloud: false,
       );
+    }
+  }
+
+  /// Upload photos that still only exist as a path on this device.
+  Future<void> _promoteLocalPersonPhotos() async {
+    try {
+      await StudentPhotoService.instance.promotePendingToCloud();
+      await TeacherPhotoService.instance.promotePendingToCloud();
+      await DriverPhotoService.instance.promotePendingToCloud();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('CloudAppStore promote local photos: $e');
+      }
     }
   }
 
@@ -4049,6 +4089,10 @@ class CloudAppStore {
     if (rooms.isNotEmpty) {
       CampusRoomService.instance.applyPersisted(rooms);
     }
+  }
+
+  Future<void> _pullUserPreferences() async {
+    await UserCloudPreferences.instance.pullFromCloud();
   }
 
   Future<void> _pullCampusCameras() async {

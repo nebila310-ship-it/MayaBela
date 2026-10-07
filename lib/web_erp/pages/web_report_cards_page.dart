@@ -7,7 +7,6 @@ import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
-import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/term_report_card_view.dart';
@@ -33,18 +32,13 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
   String get _schoolId => AuthService.activeSchoolId ?? '';
 
   List<String> get _classes {
-    final names = <String>{
+    final names = _data.getAllClassNames();
+    if (names.isNotEmpty) return names;
+    final fallback = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
       ..._data.getAllGradeReports().map((r) => r.className),
-      ...StudentRegistryService.instance
-          .registrySnapshot()
-          .where((s) =>
-              _schoolId.isEmpty ||
-              s.schoolId.toUpperCase() == _schoolId.toUpperCase())
-          .map((s) => s.className),
     };
-    final list = names.where((n) => n.trim().isNotEmpty).toList()..sort();
-    return list;
+    return fallback.where((n) => n.trim().isNotEmpty).toList()..sort();
   }
 
   List<StudentGradeReport> get _reports {

@@ -205,6 +205,7 @@ abstract final class CloudSyncEngine {
     AppCollections.learningMaterials,
     AppCollections.calendarEvents,
     AppCollections.galleryPosts,
+    AppCollections.qrScans,
     AppCollections.classTimetables,
     AppCollections.fees,
     AppCollections.buses,
@@ -266,6 +267,7 @@ abstract final class CloudSyncEngine {
     AppCollections.goliveSignoffs,
     AppCollections.materialAccess,
     AppCollections.studentPasswordResets,
+    AppCollections.userPreferences,
   ];
 
   /// Fast ticks probe the high-priority lane minus live GPS/messages.
@@ -344,9 +346,11 @@ abstract final class CloudSyncEngine {
           AppCollections.mfaEnrollments,
           AppCollections.libraryRentals,
           AppCollections.materialAccess,
+          AppCollections.userPreferences,
         ];
       case AuthService.roleDriver:
         return [
+          AppCollections.schoolRegistry,
           AppCollections.studentRegistry,
           AppCollections.buses,
           AppCollections.busLivePositions,
@@ -354,6 +358,7 @@ abstract final class CloudSyncEngine {
           AppCollections.transportScans,
           AppCollections.conversations,
           AppCollections.appNotifications,
+          AppCollections.userPreferences,
         ];
       case AuthService.roleStudent:
         return [
@@ -390,6 +395,7 @@ abstract final class CloudSyncEngine {
           AppCollections.mfaEnrollments,
           AppCollections.libraryRentals,
           AppCollections.materialAccess,
+          AppCollections.userPreferences,
         ];
       default:
         return highPriority;

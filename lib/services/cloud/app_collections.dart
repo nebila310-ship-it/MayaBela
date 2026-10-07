@@ -38,6 +38,9 @@ abstract final class AppCollections {
   static const schoolRegistry = 'school_registry';
   static const platformAudit = 'platform_audit_log';
   static const fcmTokens = 'fcm_tokens';
+
+  /// Signed-in user's UI prefs (language, theme, ERP favorites, read ids).
+  static const userPreferences = 'user_preferences';
   static const transportScans = 'transport_scans';
   static const transportPassengerStatus = 'transport_passenger_status';
   static const busLivePositions = 'bus_live_positions';

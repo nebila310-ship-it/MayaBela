@@ -396,6 +396,136 @@ void main() {
       expect(published.reportCardPublished, isTrue);
       expect(published.homeroomComment, 'Excellent effort this term.');
     });
+
+    test('teacher cannot edit a grade after it is approved', () {
+      final data = SchoolDataService.instance;
+      const student = 'Hanna Girma';
+      const className = 'Grade 4A';
+      const subject = 'Geography';
+
+      signIn(username: 'teacher.geo', roleKey: AuthService.roleTeacher);
+      expect(
+        data.addSubjectToGradeReport(
+          studentName: student,
+          className: className,
+          subject: subject,
+          teacherId: 'TCH-1001',
+        ),
+        isTrue,
+      );
+      expect(
+        data.updateSubjectGrade(
+          studentName: student,
+          className: className,
+          subject: subject,
+          score: 88,
+          enteredByTeacherId: 'TCH-1001',
+        ),
+        isTrue,
+      );
+      expect(
+        data.submitSubjectGradeForApproval(
+          studentName: student,
+          className: className,
+          subject: subject,
+          teacherId: 'TCH-1001',
+        ),
+        isTrue,
+      );
+
+      signIn(
+        username: 'sd.approver',
+        roleKey: AuthService.roleTeacher,
+        staffRoles: const [StaffRoles.sectionDirector],
+      );
+      expect(
+        data.approveSubjectGrade(
+          studentName: student,
+          className: className,
+          subject: subject,
+          reviewerId: 'SD-1',
+          reviewerName: 'Section Director',
+          reviewerRole: AuthService.roleTeacher,
+        ),
+        isTrue,
+      );
+
+      signIn(username: 'teacher.geo', roleKey: AuthService.roleTeacher);
+      expect(
+        data.updateSubjectGrade(
+          studentName: student,
+          className: className,
+          subject: subject,
+          score: 40,
+          enteredByTeacherId: 'TCH-1001',
+        ),
+        isFalse,
+      );
+      final result = MarkbookService.instance.enterClassAssessments(
+        className: className,
+        subject: subject,
+        teacherId: 'TCH-1001',
+        assessmentsByStudent: {
+          student: [
+            AssessmentMark(
+              categoryId: 'final',
+              label: 'Final exam',
+              weightPercent: 35,
+              score: 10,
+            ),
+          ],
+        },
+        submitForApproval: true,
+      );
+      expect(result.saved, 0);
+      expect(result.skippedLocked, 1);
+
+      var grade = data
+          .getGradeReportForStudent(student)!
+          .subjects
+          .firstWhere((s) => s.subject == subject);
+      expect(grade.status, SubjectGradeStatus.approved);
+      expect(grade.canTeacherEdit, isFalse);
+      expect(grade.score, 88);
+
+      grade.status = SubjectGradeStatus.approved;
+      grade.publishedToParents = false;
+      expect(
+        data.updateSubjectGrade(
+          studentName: student,
+          className: className,
+          subject: subject,
+          score: 12,
+          enteredByTeacherId: 'TCH-1001',
+        ),
+        isFalse,
+      );
+      expect(grade.status, SubjectGradeStatus.approved);
+      expect(grade.score, 88);
+
+      data.applyPersistedGradeReports([
+        StudentGradeReport(
+          studentName: student,
+          className: className,
+          term: 'Term 1',
+          subjects: [
+            SubjectGrade(
+              subject: subject,
+              score: 12,
+              maxScore: 100,
+              status: SubjectGradeStatus.pendingApproval,
+              submittedAt: DateTime.now(),
+            ),
+          ],
+        ),
+      ]);
+      grade = data
+          .getGradeReportForStudent(student)!
+          .subjects
+          .firstWhere((s) => s.subject == subject);
+      expect(grade.status, SubjectGradeStatus.approved);
+      expect(grade.score, 88);
+    });
   });
 
   test('markbook and report cards ride the examinations module', () {

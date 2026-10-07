@@ -1,8 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 
-/// Plays local voice message attachments inside the app.
+import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
+
+/// Plays voice message attachments from this device or school-files.
 class VoicePlaybackService {
   VoicePlaybackService._();
 
@@ -20,22 +24,43 @@ class VoicePlaybackService {
   }
 
   Future<bool> play(String path) async {
-    final file = File(path);
-    if (!await file.exists()) return false;
+    final value = path.trim();
+    if (value.isEmpty) return false;
 
     try {
       await _ensureReady();
-      if (_currentPath == path && _player.state == PlayerState.playing) {
+      if (_currentPath == value && _player.state == PlayerState.playing) {
         await _player.pause();
         return true;
       }
-      if (_currentPath == path && _player.state == PlayerState.paused) {
+      if (_currentPath == value && _player.state == PlayerState.paused) {
         await _player.resume();
         return true;
       }
       await _player.stop();
-      _currentPath = path;
-      await _player.play(DeviceFileSource(path));
+      _currentPath = value;
+
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        final bytes =
+            WebAttachmentCache.instance.read(value) ??
+            await ProfilePhotoCodec.fetchRemoteBytes(value);
+        if (bytes != null && bytes.isNotEmpty) {
+          await _player.play(BytesSource(Uint8List.fromList(bytes)));
+          return true;
+        }
+        await _player.play(UrlSource(value));
+        return true;
+      }
+
+      final cached = WebAttachmentCache.instance.read(value);
+      if (cached != null && cached.isNotEmpty) {
+        await _player.play(BytesSource(Uint8List.fromList(cached)));
+        return true;
+      }
+
+      final file = File(value);
+      if (!await file.exists()) return false;
+      await _player.play(DeviceFileSource(value));
       return true;
     } catch (_) {
       _currentPath = null;

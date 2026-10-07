@@ -5,6 +5,7 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/l10n/oromo_catalog.dart';
 import 'package:mayabela/l10n/parent_guardian_terms.dart';
+import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 
 class AppStrings implements AppStringsLike {
@@ -1166,7 +1167,7 @@ class AppStrings implements AppStringsLike {
   String get gradePendingApprovalLabel =>
       t('Pending approval', 'ማጽደቅ በመጠባበቅ ላይ');
   String get gradeApprovedLockedLabel =>
-      t('Approved and published', 'ጸድቆ ተለጥፏል');
+      t('Locked after approval', 'ከጸደቀ በኋላ ተቆልፏል');
   String get gradeResubmitHint => t(
         'Review the admin feedback, update the grade, then submit again.',
         'የአስተዳዳሪ ግብረመልስ ይመልከቱ፣ ደረጃውን ያስተካክሉ፣ ከዚያ እንደገና ያስረክቡ።',
@@ -2432,14 +2433,22 @@ class AppStrings implements AppStringsLike {
       t('Subject already exists', 'ትምህርቱ አስቀድሞ አለ');
   String get subjectBreakdown =>
       t('Subject Breakdown', 'በትምህርት ዝርዝር');
+  String get approvedSubjectsThatMakeAverage => t(
+        'These approved subjects make this average',
+        'ይህን አማካይ የሰጡት ጸድቀው የገቡ ትምህርቶች ናቸው',
+      );
+  String get noApprovedSubjectsForAverage => t(
+        'No approved subjects yet',
+        'ጸድቆ የገባ ትምህርት የለም',
+      );
   String averageLabel(double avg) =>
       t('Average: ${avg.toStringAsFixed(1)}%', 'አማካይ: ${avg.toStringAsFixed(1)}%');
   String get editGradeTooltip =>
       t('Edit grade', 'ደረጃ አርትዕ');
   String get adminGradeOverviewSubtitle => t(
-        'Top performers and students below 50% — compiled from teacher grade reports',
-        'ከፍተኛ አፈጻጸም እና ከ 50% በታች — ከመምህር ደረጃ ሪፖርቶች',
-        'Performansii ol\'aanaa fi 50% gadi — gabaasa barsiisaa irraa',
+        'Top performers and students below 50% — compiled from approved, locked grade reports',
+        'ከፍተኛ አፈጻጸም እና ከ 50% በታች — ከጸደቁ የተቆለፉ ደረጃ ሪፖርቶች',
+        'Performansii ol\'aanaa fi 50% gadi — gabaasa qabxii mirkanaa\'ee cufame irraa',
       );
   String get adminGradeTopPerformersCaption => t(
         'Top performers',
@@ -4174,5 +4183,20 @@ class AppLocale extends ChangeNotifier {
     SharedPreferences.getInstance().then((prefs) {
       prefs.setString(_prefsKey, code);
     });
+    UserPrefsSyncHook.noteLocalChanged();
+  }
+
+  void applyFromCloud(String code) {
+    if (!['en', 'am', 'om'].contains(code) || _code == code) return;
+    _code = code;
+    notifyListeners();
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString(_prefsKey, code);
+    });
+  }
+
+  @visibleForTesting
+  void resetForTests() {
+    _code = 'en';
   }
 }

@@ -273,6 +273,13 @@ void main() {
     final data = SchoolDataService.instance;
     const className = 'Grade 9Z-P3P';
     final day = DateTime.utc(2026, 12, 11);
+    StudentRegistryService.instance.addStudent(
+      schoolId: 'TB-001',
+      fullName: 'Period Kid',
+      grade: '9',
+      className: className,
+      dateOfBirth: DateTime(2010, 1, 1),
+    );
 
     expect(
       data.saveAttendanceSession(

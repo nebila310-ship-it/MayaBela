@@ -97,7 +97,9 @@ class _WebLoginBackgroundPainter extends CustomPainter {
         text: TextSpan(
           text: _formulas[i],
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.45 + rng.nextDouble() * 0.2),
+            color: Colors.white.withValues(
+              alpha: 0.45 + rng.nextDouble() * 0.2,
+            ),
             fontSize: 11 + rng.nextDouble() * 6,
             fontWeight: FontWeight.w500,
           ),
@@ -120,15 +122,19 @@ class _WebLoginBackgroundPainter extends CustomPainter {
     final headR = size.shortestSide * 0.18;
 
     final glow = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF1565C0).withValues(alpha: 0.35),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: headR * 1.8));
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFF1565C0).withValues(alpha: 0.35),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(center: Offset(cx, cy), radius: headR * 1.8),
+          );
     canvas.drawCircle(Offset(cx, cy), headR * 1.8, glow);
 
-    final head = Paint()..color = const Color(0xFF0D47A1).withValues(alpha: 0.55);
+    final head = Paint()
+      ..color = const Color(0xFF0D47A1).withValues(alpha: 0.55);
     canvas.drawCircle(Offset(cx, cy), headR, head);
 
     final cap = Path()
@@ -147,7 +153,10 @@ class _WebLoginBackgroundPainter extends CustomPainter {
       final a = i * math.pi / 4;
       canvas.drawLine(
         Offset(cx, cy),
-        Offset(cx + headR * 0.85 * math.cos(a), cy + headR * 0.85 * math.sin(a)),
+        Offset(
+          cx + headR * 0.85 * math.cos(a),
+          cy + headR * 0.85 * math.sin(a),
+        ),
         circuit,
       );
     }
@@ -160,8 +169,16 @@ class _WebLoginBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
-    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.2), 18, iconPaint);
-    canvas.drawCircle(Offset(size.width * 0.55, size.height * 0.12), 12, iconPaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.15, size.height * 0.2),
+      18,
+      iconPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.55, size.height * 0.12),
+      12,
+      iconPaint,
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -194,15 +211,14 @@ class WebLoginWatermark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final mark = math.min(size.width * 0.38, size.height * 0.52).clamp(220.0, 420.0);
+    final mark = math
+        .min(size.width * 0.38, size.height * 0.52)
+        .clamp(220.0, 420.0);
     final image = ShaderMask(
       shaderCallback: (rect) => RadialGradient(
         center: Alignment.center,
         radius: 0.9,
-        colors: [
-          Colors.white,
-          Colors.white.withValues(alpha: 0.0),
-        ],
+        colors: [Colors.white, Colors.white.withValues(alpha: 0.0)],
         stops: const [0.42, 1.0],
       ).createShader(rect),
       blendMode: BlendMode.dstIn,
@@ -220,15 +236,12 @@ class WebLoginWatermark extends StatelessWidget {
     );
     if (inline) return image;
     return IgnorePointer(
-      child: Align(
-        alignment: const Alignment(-0.62, 0.02),
-        child: image,
-      ),
+      child: Align(alignment: const Alignment(-0.62, 0.02), child: image),
     );
   }
 }
 
-/// Left-side login brand: MaJo Bridge OS until a School ID is typed.
+/// Left-side login brand: MaJo Bridge OS until the school name is known.
 class WebLoginSideBrand extends StatelessWidget {
   const WebLoginSideBrand({super.key, required this.schoolId});
 
@@ -236,26 +249,33 @@ class WebLoginSideBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<String>(
+      valueListenable: LoginChromeBrand.tabTitle,
+      builder: (context, _, __) => _buildBrand(context),
+    );
+  }
+
+  Widget _buildBrand(BuildContext context) {
     final id = schoolId.trim();
-    final record = id.isEmpty ? null : SchoolRegistryService.instance.lookup(id);
+    final record = id.isEmpty
+        ? null
+        : SchoolRegistryService.instance.lookup(id);
     final splash = id.isEmpty ? null : SchoolSplashBrand.readMeta(schoolId: id);
     final remembered = id.isEmpty
         ? null
         : LoginPrefsService.instance.brandForSchool(id);
-    final name = (record?.name.trim().isNotEmpty ?? false)
-        ? record!.name.trim()
-        : (remembered?.name.trim().isNotEmpty ?? false)
-            ? remembered!.name.trim()
-            : (splash?.name.trim() ?? '');
-    final showSchool = id.isNotEmpty && (name.isNotEmpty || id.length >= 3);
-    final style = record?.logoStyle ??
+    final name = LoginChromeBrand.resolvedSchoolName(id) ?? '';
+    final showSchoolLogo = id.length >= 3;
+    final style =
+        record?.logoStyle ??
         remembered?.logoStyle ??
         splash?.logoStyle ??
         SchoolLogoStyle.rectangular;
-    final logoUrl = record?.displayLogoUrl ??
+    final logoUrl =
+        record?.displayLogoUrl ??
         remembered?.logoUrl ??
         splash?.logoUrl ??
-        (id.length >= 3 ? SchoolLogoService.publicUrl(id, style: style) : null);
+        (showSchoolLogo ? SchoolLogoService.publicUrl(id, style: style) : null);
 
     return IgnorePointer(
       child: Align(
@@ -268,9 +288,7 @@ class WebLoginSideBrand extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  showSchool
-                      ? (name.isNotEmpty ? name : id.toUpperCase())
-                      : LoginChromeBrand.productTitle,
+                  name.isNotEmpty ? name : LoginChromeBrand.productTitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
@@ -280,11 +298,10 @@ class WebLoginSideBrand extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (showSchool)
+                if (showSchoolLogo)
                   SchoolLogoDisplay(
                     schoolId: record?.id ?? remembered?.schoolId ?? id,
-                    imagePath:
-                        record?.displayLogoPath ?? remembered?.logoPath,
+                    imagePath: record?.displayLogoPath ?? remembered?.logoPath,
                     networkUrl: logoUrl,
                     style: style,
                     height: 168,
@@ -302,11 +319,7 @@ class WebLoginSideBrand extends StatelessWidget {
 
 /// Dark navy login card with optional left speech-bubble notch.
 class WebLoginCard extends StatelessWidget {
-  const WebLoginCard({
-    super.key,
-    required this.child,
-    this.showNotch = true,
-  });
+  const WebLoginCard({super.key, required this.child, this.showNotch = true});
 
   final Widget child;
   final bool showNotch;
@@ -373,7 +386,12 @@ InputDecoration webLoginFieldDecoration({
   Widget? suffixIcon,
 }) {
   const fieldBg = Color(0xFF1E2F45);
-  const iconBox = BoxConstraints(minWidth: 40, minHeight: 40, maxWidth: 40, maxHeight: 40);
+  const iconBox = BoxConstraints(
+    minWidth: 40,
+    minHeight: 40,
+    maxWidth: 40,
+    maxHeight: 40,
+  );
   return InputDecoration(
     labelText: label,
     hintText: hint,
@@ -400,7 +418,10 @@ InputDecoration webLoginFieldDecoration({
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: WebLoginCard.accentOrange, width: 1.5),
+      borderSide: const BorderSide(
+        color: WebLoginCard.accentOrange,
+        width: 1.5,
+      ),
     ),
   );
 }

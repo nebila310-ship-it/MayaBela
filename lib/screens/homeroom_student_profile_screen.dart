@@ -11,6 +11,7 @@ import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/class_rankings_list.dart';
+import 'package:mayabela/widgets/grade_average_breakdown_sheet.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/student_avatar.dart';
 
@@ -116,19 +117,13 @@ class _HomeroomStudentProfileScreenState
     );
   }
 
-  Color _gradeColor(double percentage) {
-    if (percentage >= 90) return Colors.green;
-    if (percentage >= 80) return Colors.lightGreen;
-    if (percentage >= 70) return Colors.orange;
-    if (percentage >= 50) return Colors.deepOrange;
-    return Colors.red;
-  }
-
   @override
   Widget build(BuildContext context) {
     final style = rankVisualStyle(widget.entry.rank, widget.entry.average);
     final student = _studentRef;
     final report = widget.entry.report;
+    final approved =
+        GradeAnalyticsService.approvedSubjectsForAverage(report);
 
     return ListenableBuilder(
       listenable: AppLocale.instance,
@@ -279,64 +274,24 @@ class _HomeroomStudentProfileScreenState
               _SectionCard(
                 title: s.subjectBreakdown,
                 icon: Icons.menu_book_outlined,
-                subtitle: s.homeroomGradesReadOnlyHint,
-                child: Column(
-                  children: report.subjects.map((subject) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
+                subtitle: s.approvedSubjectsThatMakeAverage,
+                child: approved.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          s.noApprovedSubjectsForAverage,
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                      )
+                    : Column(
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  subject.subject,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (subject.comment != null)
-                                  Text(
-                                    subject.comment!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                              ],
+                          for (final subject in approved)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: ApprovedSubjectAverageRow(grade: subject),
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _gradeColor(subject.percentage)
-                                  .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${subject.score.toInt()}/${subject.maxScore.toInt()}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _gradeColor(subject.percentage),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
-                    );
-                  }).toList(),
-                ),
               ),
             ],
           ),

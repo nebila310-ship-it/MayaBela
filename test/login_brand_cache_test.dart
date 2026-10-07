@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/models/school_logo_style.dart';
 import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
+import 'package:mayabela/services/school_public_brand_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/widgets/fancy_loading_ring.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
@@ -19,6 +20,8 @@ void main() {
     SchoolRegistryService.instance.applyPersistedSchools([]);
     LoginPrefsService.instance.debugReset();
     await LoginPrefsService.instance.load();
+    SchoolPublicBrandService.instance.debugReset();
+    SchoolPublicBrandService.instance.debugAllowNetwork = false;
     LoginChromeBrand.tabTitle.value = LoginChromeBrand.productTitle;
   });
 
@@ -42,20 +45,27 @@ void main() {
     expect(LoginPrefsService.instance.brandForSchool('OTHER'), isNull);
   });
 
-  test('switching school id keeps the previous school brand for later', () async {
-    await LoginPrefsService.instance.rememberSchoolBrand(
-      schoolId: 'ONE',
-      name: 'One School',
-    );
-    await LoginPrefsService.instance.saveLastSchoolId('TWO');
-    expect(LoginPrefsService.instance.lastSchoolId, 'TWO');
-    expect(LoginPrefsService.instance.rememberedBrand, isNull);
-    expect(LoginPrefsService.instance.brandForSchool('ONE')?.name, 'One School');
-    expect(LoginPrefsService.instance.brandForSchool('TWO'), isNull);
-  });
+  test(
+    'switching school id keeps the previous school brand for later',
+    () async {
+      await LoginPrefsService.instance.rememberSchoolBrand(
+        schoolId: 'ONE',
+        name: 'One School',
+      );
+      await LoginPrefsService.instance.saveLastSchoolId('TWO');
+      expect(LoginPrefsService.instance.lastSchoolId, 'TWO');
+      expect(LoginPrefsService.instance.rememberedBrand, isNull);
+      expect(
+        LoginPrefsService.instance.brandForSchool('ONE')?.name,
+        'One School',
+      );
+      expect(LoginPrefsService.instance.brandForSchool('TWO'), isNull);
+    },
+  );
 
-  testWidgets('login header shows remembered school before registry lookup',
-      (tester) async {
+  testWidgets('login header shows remembered school before registry lookup', (
+    tester,
+  ) async {
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: 'BRANDTEST',
       name: 'Sunrise Academy',
@@ -64,9 +74,7 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: LoginBrandHeader(schoolId: 'BRANDTEST'),
-        ),
+        home: Scaffold(body: LoginBrandHeader(schoolId: 'BRANDTEST')),
       ),
     );
     await tester.pump();
@@ -82,9 +90,7 @@ void main() {
     final brand = LoginPrefsService.instance.rememberedBrand;
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: LaunchSchoolSplash(brand: brand),
-      ),
+      MaterialApp(home: LaunchSchoolSplash(brand: brand)),
     );
     await tester.pump();
 
@@ -94,8 +100,9 @@ void main() {
     expect(find.text('LOADING'), findsOneWidget);
   });
 
-  testWidgets('empty school id shows MaJo Bridge OS, not a remembered school',
-      (tester) async {
+  testWidgets('empty school id shows MaJo Bridge OS, not a remembered school', (
+    tester,
+  ) async {
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: 'BRANDTEST',
       name: 'Sunrise Academy',
@@ -104,9 +111,7 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: LoginBrandHeader(schoolId: ''),
-        ),
+        home: Scaffold(body: LoginBrandHeader(schoolId: '')),
       ),
     );
     await tester.pump();
@@ -115,8 +120,9 @@ void main() {
     expect(find.text('Sunrise Academy'), findsNothing);
   });
 
-  testWidgets('typed school id switches the login header to the school name',
-      (tester) async {
+  testWidgets('typed school id switches the login header to the school name', (
+    tester,
+  ) async {
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: 'BRANDTEST',
       name: 'Sunrise Academy',
@@ -124,9 +130,7 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: LoginBrandHeader(schoolId: 'BRANDTEST'),
-        ),
+        home: Scaffold(body: LoginBrandHeader(schoolId: 'BRANDTEST')),
       ),
     );
     await tester.pump();
@@ -135,13 +139,10 @@ void main() {
     expect(find.text('MaJo Bridge OS'), findsNothing);
   });
 
-  testWidgets('launch splash without a school id shows MaJo Bridge OS',
-      (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: LaunchSchoolSplash(),
-      ),
-    );
+  testWidgets('launch splash without a school id shows MaJo Bridge OS', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: LaunchSchoolSplash()));
     await tester.pump();
 
     expect(find.text('MaJo Bridge OS'), findsOneWidget);
@@ -183,8 +184,9 @@ void main() {
     expect(LoginChromeBrand.tabTitle.value, isNot('UNKNOWN-99'));
   });
 
-  testWidgets('web login side brand is MaJo until a school id is typed',
-      (tester) async {
+  testWidgets('web login side brand is MaJo until a school id is typed', (
+    tester,
+  ) async {
     await LoginPrefsService.instance.rememberSchoolBrand(
       schoolId: 'BRANDTEST',
       name: 'Sunrise Academy',
@@ -192,9 +194,7 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: WebLoginSideBrand(schoolId: ''),
-        ),
+        home: Scaffold(body: WebLoginSideBrand(schoolId: '')),
       ),
     );
     await tester.pump();
@@ -203,13 +203,66 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: WebLoginSideBrand(schoolId: 'BRANDTEST'),
-        ),
+        home: Scaffold(body: WebLoginSideBrand(schoolId: 'BRANDTEST')),
       ),
     );
     await tester.pump();
     expect(find.text('Sunrise Academy'), findsOneWidget);
+    expect(find.text('MaJo Bridge OS'), findsNothing);
+  });
+
+  testWidgets(
+    'fresh laptop shows logo without using the school id as the name',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: WebLoginSideBrand(schoolId: 'MAL838')),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('MAL838'), findsNothing);
+      expect(find.text('MaJo Bridge OS'), findsOneWidget);
+
+      LoginChromeBrand.apply(schoolId: 'MAL838');
+      expect(LoginChromeBrand.tabTitle.value, 'MaJo Bridge OS');
+      expect(LoginChromeBrand.tabTitle.value, isNot('MAL838'));
+    },
+  );
+
+  testWidgets('public school name fills login chrome and the browser tab', (
+    tester,
+  ) async {
+    SchoolPublicBrandService.instance.debugFetchOverride = (id) async {
+      expect(id, 'MAL838');
+      return const SchoolPublicBrand(
+        schoolId: 'MAL838',
+        name: 'Fenote Raey Academy',
+      );
+    };
+
+    final brand = await SchoolPublicBrandService.instance.loadAndRemember(
+      'mal838',
+    );
+    expect(brand?.name, 'Fenote Raey Academy');
+    LoginChromeBrand.apply(schoolId: 'MAL838');
+    expect(LoginChromeBrand.tabTitle.value, 'Fenote Raey Academy');
+    expect(LoginChromeBrand.tabTitle.value, isNot('MAL838'));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              WebLoginSideBrand(schoolId: 'MAL838'),
+              LoginBrandHeader(schoolId: 'MAL838'),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Fenote Raey Academy'), findsWidgets);
+    expect(find.text('MAL838'), findsNothing);
     expect(find.text('MaJo Bridge OS'), findsNothing);
   });
 
@@ -225,7 +278,10 @@ void main() {
     expect(html, contains('mayabela_school_brands'));
     final splashDiv = html.indexOf('<div id="splash">');
     final halo = html.indexOf('id="splash-halo"');
-    final splashEnd = html.indexOf('</div>', html.indexOf('id="splash-loader-wrap"'));
+    final splashEnd = html.indexOf(
+      '</div>',
+      html.indexOf('id="splash-loader-wrap"'),
+    );
     expect(splashDiv, greaterThan(0));
     expect(halo, greaterThan(splashDiv));
     expect(halo, lessThan(splashEnd));
@@ -234,9 +290,7 @@ void main() {
   testWidgets('loading ring keeps spinning and changing color', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: Center(child: FancyLoadingRing(size: 72)),
-        ),
+        home: Scaffold(body: Center(child: FancyLoadingRing(size: 72))),
       ),
     );
     await tester.pump();

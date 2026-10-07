@@ -195,6 +195,21 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
     );
   }
 
+  SubjectGrade? _subjectGradeFor(String studentName) {
+    for (final report in _data.getGradeReportsForClass(widget.className)) {
+      if (report.studentName != studentName) continue;
+      for (final grade in report.subjects) {
+        if (grade.subject == _selectedSubject) return grade;
+      }
+    }
+    return null;
+  }
+
+  bool _isGradeLocked(String studentName) {
+    final grade = _subjectGradeFor(studentName);
+    return grade != null && !grade.canTeacherEdit;
+  }
+
   String _draftFinalLabel(_StudentGradeDraft draft) {
     final marks = [
       for (final cat in _categories)
@@ -235,7 +250,7 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
     });
   }
 
-  Widget _attachmentThumb(String path, {required VoidCallback onRemove}) {
+  Widget _attachmentThumb(String path, {VoidCallback? onRemove}) {
     final isImage = attachmentPathIsImage(path);
     return SizedBox(
       width: 72,
@@ -263,21 +278,22 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                     ),
             ),
           ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: IconButton(
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.black54,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(24, 24),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          if (onRemove != null)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(24, 24),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.close, size: 14),
+                onPressed: onRemove,
               ),
-              icon: const Icon(Icons.close, size: 14),
-              onPressed: onRemove,
             ),
-          ),
         ],
       ),
     );
@@ -297,6 +313,7 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
         MarkbookService.instance.settingsForSchool().missingCountsAsZero;
 
     for (final entry in _drafts.entries) {
+      if (_isGradeLocked(entry.key)) continue;
       final comment = entry.value.commentController.text.trim();
       if (comment.isNotEmpty) {
         comments[entry.key] = comment;
@@ -361,8 +378,15 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
     }
 
     if (scores.isEmpty) {
+      final lockedCount = _drafts.keys.where(_isGradeLocked).length;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.enterAtLeastOneGrade)),
+        SnackBar(
+          content: Text(
+            lockedCount > 0
+                ? 'Could not save: $lockedCount grade(s) are locked after approval.'
+                : s.enterAtLeastOneGrade,
+          ),
+        ),
       );
       return;
     }
@@ -438,7 +462,9 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _pickMarkPhotos(draft, studentName),
+          onPressed: _isGradeLocked(studentName)
+              ? null
+              : () => _pickMarkPhotos(draft, studentName),
           icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
           label: Text(s.addMarkPhotos),
         ),
@@ -454,9 +480,11 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                 final path = draft.markPhotoPaths[index];
                 return _attachmentThumb(
                   path,
-                  onRemove: () {
-                    setState(() => draft.markPhotoPaths.removeAt(index));
-                  },
+                  onRemove: _isGradeLocked(studentName)
+                      ? null
+                      : () {
+                          setState(() => draft.markPhotoPaths.removeAt(index));
+                        },
                 );
               },
             ),
@@ -480,7 +508,9 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _pickAttachments(draft, studentName),
+          onPressed: _isGradeLocked(studentName)
+              ? null
+              : () => _pickAttachments(draft, studentName),
           icon: const Icon(Icons.attach_file, size: 18),
           label: Text(s.announcementAddAttachment),
         ),
@@ -503,11 +533,13 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                   constraints: const BoxConstraints(maxWidth: 160),
                   child: Text(name, overflow: TextOverflow.ellipsis),
                 ),
-                onDeleted: () {
-                  setState(() {
-                    draft.attachmentPaths.remove(path);
-                  });
-                },
+                onDeleted: _isGradeLocked(studentName)
+                    ? null
+                    : () {
+                        setState(() {
+                          draft.attachmentPaths.remove(path);
+                        });
+                      },
               );
             }).toList(),
           ),
@@ -570,6 +602,7 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
     final draft = _draftFor(name);
     final fileCount = draft.attachmentCount;
     final expanded = _expandedStudents.contains(name);
+    final locked = _isGradeLocked(name);
 
     return Card(
       child: Column(
@@ -599,12 +632,24 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+                if (locked) ...[
+                  const SizedBox(width: 6),
+                  Chip(
+                    avatar: const Icon(Icons.lock_outline, size: 14),
+                    label: Text(s.gradeApprovedLockedLabel),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: Colors.green.withValues(alpha: 0.12),
+                  ),
+                ],
                 const SizedBox(width: 8),
                 if (_categories.isEmpty)
                   SizedBox(
                     width: 56,
                     child: TextField(
                       controller: draft.scoreController,
+                      enabled: !locked,
+                      readOnly: locked,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 15),
@@ -631,9 +676,11 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                       width: 88,
                       child: TextField(
                         controller: draft.categoryController(cat.id),
+                        enabled: !locked,
+                        readOnly: locked,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
-                        onChanged: (_) => setState(() {}),
+                        onChanged: locked ? null : (_) => setState(() {}),
                         decoration: InputDecoration(
                           labelText: '${cat.label} ${cat.weightPercent.toStringAsFixed(0)}%',
                           isDense: true,
@@ -658,14 +705,14 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.add_photo_alternate_outlined, size: 22),
                   color: TeacherTheme.primaryDark,
-                  onPressed: () => _pickMarkPhotos(draft, name),
+                  onPressed: locked ? null : () => _pickMarkPhotos(draft, name),
                 ),
                 IconButton(
                   tooltip: s.announcementAddAttachment,
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.attach_file, size: 22),
                   color: TeacherTheme.primaryDark,
-                  onPressed: () => _pickAttachments(draft, name),
+                  onPressed: locked ? null : () => _pickAttachments(draft, name),
                 ),
                 IconButton(
                   tooltip: expanded ? 'Hide details' : 'Show comment & files',
@@ -695,6 +742,8 @@ class _TeacherEnterGradesScreenState extends State<TeacherEnterGradesScreen> {
                 children: [
                   TextField(
                     controller: draft.commentController,
+                    enabled: !locked,
+                    readOnly: locked,
                     maxLines: 2,
                     decoration: adminFieldDecoration(
                       label: s.commentLabel,

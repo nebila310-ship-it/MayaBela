@@ -3967,6 +3967,48 @@ class SchoolDataService {
         _classNamesMatch(report.className, className);
   }
 
+  bool _gradeReportIdsMatch(String? left, String? right) {
+    final a = left?.trim();
+    final b = right?.trim();
+    if (a == null || a.isEmpty || b == null || b.isEmpty) return false;
+    return a.toUpperCase() == b.toUpperCase();
+  }
+
+  bool _gradeReportNamesMatch(String left, String right) {
+    return left.trim().toLowerCase() == right.trim().toLowerCase();
+  }
+
+  bool _gradeReportMatchesRosterStudent(
+    StudentGradeReport report, {
+    required String studentName,
+    String? studentId,
+  }) {
+    if (_gradeReportIdsMatch(report.studentId, studentId)) return true;
+    return _gradeReportNamesMatch(report.studentName, studentName);
+  }
+
+  bool _gradeReportOnActiveSchool(StudentGradeReport report) {
+    final schoolId = AuthService.activeSchoolId?.trim();
+    if (schoolId == null || schoolId.isEmpty) return true;
+    final roster = StudentRegistryService.instance.studentsForSchool(schoolId);
+    if (roster.isEmpty) return true;
+    final classNames = getAllClassNames();
+    for (final student in roster) {
+      if (!_gradeReportMatchesRosterStudent(
+        report,
+        studentName: student.fullName,
+        studentId: student.studentId,
+      )) {
+        continue;
+      }
+      if (classNames.any((name) => _classNamesMatch(name, report.className))) {
+        return true;
+      }
+      if (_classNamesMatch(student.className, report.className)) return true;
+    }
+    return false;
+  }
+
   StudentGradeReport? _findGradeReport({
     required String studentName,
     required String className,
@@ -4096,8 +4138,19 @@ class SchoolDataService {
     _persistSchoolContent();
   }
 
+  DateTime _calendarDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
   bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    if (a.year == b.year && a.month == b.month && a.day == b.day) {
+      return true;
+    }
+    final left = a.toLocal();
+    final right = b.toLocal();
+    return left.year == right.year &&
+        left.month == right.month &&
+        left.day == right.day;
   }
 
   String _normalizeAttendancePeriodKey(String? periodKey) =>
@@ -4128,10 +4181,82 @@ class SchoolDataService {
   }
 
   List<AttendanceSession> getAttendanceSessionsForDate(DateTime date) {
-    return _attendanceSessions
-        .where((session) => _isSameDay(session.date, date) && session.isDaily)
-        .toList()
+    return _sessionsForDailyReport(date)
       ..sort((a, b) => a.className.compareTo(b.className));
+  }
+
+  bool _attendanceSessionInDailyReport(AttendanceSession session) {
+    final schoolId = AuthService.activeSchoolId?.trim();
+    if (schoolId == null || schoolId.isEmpty) return true;
+    if (StudentRegistryService.instance.studentsForSchool(schoolId).isEmpty) {
+      return true;
+    }
+    return getAllClassNames().any(
+      (className) => _classNamesMatch(className, session.className),
+    );
+  }
+
+  List<AttendanceSession> _sessionsForDailyReport(DateTime date) {
+    final byClass = <String, AttendanceSession>{};
+    for (final session in _attendanceSessions) {
+      if (!_isSameDay(session.date, date)) continue;
+      if (!_attendanceSessionInDailyReport(session)) continue;
+      final key = session.className.trim().toLowerCase();
+      final current = byClass[key];
+      if (current == null) {
+        byClass[key] = session;
+        continue;
+      }
+      if (current.isDaily) continue;
+      if (session.isDaily) byClass[key] = session;
+    }
+    return byClass.values.toList();
+  }
+
+  List<StudentAttendanceEntry> _reportEntriesForSession(
+    AttendanceSession session,
+  ) {
+    final roster = getStudentsForClass(session.className);
+    if (roster.isEmpty) {
+      return [
+        for (final entry in session.entries) _copyAttendanceEntry(entry),
+      ];
+    }
+    final seen = <String>{};
+    final entries = <StudentAttendanceEntry>[];
+    for (final student in roster) {
+      StudentAttendanceEntry? match;
+      for (final entry in session.entries) {
+        if (entry.matches(
+          studentId: student.inviteStudentId,
+          studentName: student.name,
+        )) {
+          match = entry;
+          break;
+        }
+      }
+      entries.add(
+        StudentAttendanceEntry(
+          studentName: student.name,
+          studentId: student.inviteStudentId,
+          status: match?.status ?? AttendanceStatus.present,
+          updatedAt: match?.updatedAt,
+        ),
+      );
+      seen.add(_attendanceEntryKey(entries.last));
+      if (match != null) seen.add(_attendanceEntryKey(match));
+    }
+    for (final entry in session.entries) {
+      final named = entry.studentName.trim().toLowerCase();
+      final alreadyNamed = named.isNotEmpty &&
+          entries.any((e) => e.studentName.trim().toLowerCase() == named);
+      if (alreadyNamed) continue;
+      if (!_attendanceEntryOnRoster(entry, roster)) continue;
+      if (seen.add(_attendanceEntryKey(entry))) {
+        entries.add(_copyAttendanceEntry(entry));
+      }
+    }
+    return entries;
   }
 
   String _gradeForStudent(String studentName, String className) {
@@ -4145,23 +4270,6 @@ class SchoolDataService {
     return className.trim();
   }
 
-  List<StudentAttendanceEntry> _reportEntriesForSession(
-    AttendanceSession session,
-  ) {
-    final schoolId = AuthService.activeSchoolId?.trim();
-    if (schoolId == null || schoolId.isEmpty) return session.entries;
-    final registry = StudentRegistryService.instance.studentsForClass(
-      session.className,
-      schoolId: schoolId,
-    );
-    if (registry.isEmpty) return session.entries;
-    final roster = getStudentsForClass(session.className);
-    return [
-      for (final entry in session.entries)
-        if (_attendanceEntryOnRoster(entry, roster)) entry,
-    ];
-  }
-
   DailyAttendanceReport buildDailyAttendanceReport(DateTime date) {
     final sessions = getAttendanceSessionsForDate(date);
     final records = <StudentAttendanceRecord>[];
@@ -4173,14 +4281,14 @@ class SchoolDataService {
     var excused = 0;
 
     for (final session in sessions) {
-      final entries = _reportEntriesForSession(session);
-      if (entries.isEmpty) continue;
+      final reportEntries = _reportEntriesForSession(session);
+      if (reportEntries.isEmpty) continue;
       var sessionPresent = 0;
       var sessionLate = 0;
       var sessionAbsent = 0;
       var sessionExcused = 0;
 
-      for (final entry in entries) {
+      for (final entry in reportEntries) {
         switch (entry.status) {
           case AttendanceStatus.present:
             sessionPresent++;
@@ -4202,7 +4310,7 @@ class SchoolDataService {
             className: session.className,
             status: entry.status,
             conductedBy: session.conductedBy,
-            date: DateTime(date.year, date.month, date.day),
+            date: _calendarDay(date),
           ),
         );
       }
@@ -4608,6 +4716,7 @@ class SchoolDataService {
       incoming: hydrated,
       merged: merged,
     );
+    final sessionDay = _calendarDay(date);
     overlayApprovedLeaveOnEntries(
       entries: rosterAligned,
       className: className,
@@ -4620,7 +4729,7 @@ class SchoolDataService {
     _attendanceSessions.add(
       AttendanceSession(
         className: className,
-        date: date,
+        date: sessionDay,
         conductedBy: conductedBy,
         entries: rosterAligned,
         locked: nextLocked,
@@ -4811,6 +4920,7 @@ class SchoolDataService {
       className: className,
     );
     if (subjectGrade == null || report == null) return false;
+    if (!subjectGrade.canTeacherEdit) return false;
     _normalizeSubjectWorkflow(subjectGrade);
     if (!subjectGrade.canTeacherEdit) return false;
     if (subjectGrade.status == SubjectGradeStatus.rejected ||
@@ -4898,6 +5008,7 @@ class SchoolDataService {
       subject: subject,
     );
     if (subjectGrade == null) return false;
+    if (!subjectGrade.canTeacherEdit) return false;
     _normalizeSubjectWorkflow(subjectGrade);
     if (!subjectGrade.canTeacherEdit) return false;
 
@@ -5445,6 +5556,16 @@ class SchoolDataService {
       final studentName = entry.key.trim();
       if (studentName.isEmpty) continue;
 
+      final existing = _findSubjectGrade(
+        studentName: studentName,
+        className: canonicalClass,
+        subject: subject,
+      );
+      if (existing != null && !existing.canTeacherEdit) {
+        skippedLocked++;
+        continue;
+      }
+
       addSubjectToGradeReport(
         studentName: studentName,
         className: canonicalClass,
@@ -5684,9 +5805,9 @@ class SchoolDataService {
   }
 
   SubjectGrade _normalizeSubjectWorkflow(SubjectGrade grade) {
-    if (grade.status == SubjectGradeStatus.approved &&
-        !grade.publishedToParents) {
-      grade.status = SubjectGradeStatus.draft;
+    if (grade.publishedToParents &&
+        grade.status == SubjectGradeStatus.draft) {
+      grade.status = SubjectGradeStatus.approved;
     }
     return grade;
   }
@@ -5735,12 +5856,21 @@ class SchoolDataService {
     SubjectGrade local,
     SubjectGrade incoming,
   ) {
+    if (local.status == SubjectGradeStatus.approved &&
+        incoming.status != SubjectGradeStatus.approved) {
+      return local;
+    }
+    if (incoming.status == SubjectGradeStatus.approved &&
+        local.status != SubjectGradeStatus.approved) {
+      return incoming;
+    }
+
     int rank(SubjectGradeStatus status) {
       return switch (status) {
         SubjectGradeStatus.pendingApproval => 5,
         SubjectGradeStatus.changesRequested => 4,
         SubjectGradeStatus.rejected => 4,
-        SubjectGradeStatus.approved => 3,
+        SubjectGradeStatus.approved => 6,
         SubjectGradeStatus.draft => 2,
       };
     }
@@ -5752,9 +5882,9 @@ class SchoolDataService {
     }
 
     DateTime? activityAt(SubjectGrade grade) {
-      return grade.submittedAt ??
-          grade.lastReviewedAt ??
-          grade.publishedAt;
+      return grade.lastReviewedAt ??
+          grade.publishedAt ??
+          grade.submittedAt;
     }
 
     final localAt = activityAt(local);
@@ -6628,8 +6758,12 @@ class SchoolDataService {
     _persistSchoolContent();
   }
 
-  List<StudentGradeReport> getAllGradeReports() =>
-      List.unmodifiable(_gradeReports);
+  List<StudentGradeReport> getAllGradeReports() {
+    return [
+      for (final report in _gradeReports)
+        if (_gradeReportOnActiveSchool(report)) report,
+    ];
+  }
 
   StudentGradeReport? getGradeReportForStudentId(String studentId) {
     final reports = gradeReportsForStudent(studentId);
@@ -6665,28 +6799,46 @@ class SchoolDataService {
 
   List<StudentGradeReport> getGradeReportsForClass(String className) {
     final roster = getStudentsForClass(className);
-    final existing = {
-      for (final report in _gradeReports.where(
-        (r) => _classNamesMatch(r.className, className),
-      ))
-        report.studentName: report,
-    };
+    final classReports = [
+      for (final report in _gradeReports)
+        if (_classNamesMatch(report.className, className)) report,
+    ];
 
     if (roster.isEmpty) {
-      return existing.values.toList();
+      return classReports;
     }
 
-    return roster.map((student) {
-      final report = existing[student.name];
-      if (report != null) return report;
-      return StudentGradeReport(
+    return [
+      for (final student in roster)
+        _rosterGradeReport(student, className, classReports),
+    ];
+  }
+
+  StudentGradeReport _rosterGradeReport(
+    StudentRef student,
+    String className,
+    List<StudentGradeReport> classReports,
+  ) {
+    for (final report in classReports) {
+      if (_gradeReportMatchesRosterStudent(
+        report,
         studentName: student.name,
-        className: className,
-        term: 'Term 1',
-        studentId: student.registryStudentId,
-        subjects: const [],
-      );
-    }).toList();
+        studentId: student.inviteStudentId,
+      )) {
+        return report.copyWith(
+          studentName: student.name,
+          className: className,
+          studentId: student.inviteStudentId,
+        );
+      }
+    }
+    return StudentGradeReport(
+      studentName: student.name,
+      className: className,
+      term: 'Term 1',
+      studentId: student.inviteStudentId,
+      subjects: const [],
+    );
   }
 
   List<StudentGradeReport> getGradeReportsForParent() {

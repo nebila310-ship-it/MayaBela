@@ -110,6 +110,19 @@ class TeacherPhotoService {
     return bytes;
   }
 
+  Future<void> promotePendingToCloud() async {
+    for (final teacher in TeacherRegistryService.instance.registrySnapshot()) {
+      final path = teacher.photoPath;
+      if (path == null || path.trim().isEmpty) continue;
+      if (!ProfilePhotoCodec.isDeviceLocalPath(path)) continue;
+      final bytes =
+          lookupBytes(teacher.teacherId, storedPath: path) ??
+          await ProfilePhotoCodec.bytesFromStoredPath(path);
+      if (bytes == null || bytes.isEmpty) continue;
+      await _promoteToCloud(teacher.teacherId, bytes, storedPath: path);
+    }
+  }
+
   Future<void> _promoteToCloud(
     String? teacherId,
     Uint8List bytes, {
