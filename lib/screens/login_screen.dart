@@ -11,6 +11,7 @@ import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/platform/school_splash_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/services/school_public_brand_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/cloud/session_cloud_sync.dart';
@@ -62,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
   int _logoTapCount = 0;
   DateTime? _lastLogoTap;
   final FocusNode _schoolIdFocus = FocusNode();
+  Timer? _publicBrandDebounce;
 
   /// Login identifier: email, Ethiopian phone, or username / student id.
   String _loginIdentifierValue() {
@@ -93,6 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _schoolBrandVisible {
     final id = schoolId.text.trim();
     if (id.isEmpty) return false;
+    if (id.length >= 3) return true;
     if (SchoolRegistryService.instance.lookup(id) != null) return true;
     if (LoginPrefsService.instance.brandForSchool(id) != null) return true;
     return SchoolSplashBrand.readMeta(schoolId: id) != null;
@@ -167,6 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       setState(() => _prefsLoaded = true);
     }
+    final typed = schoolId.text.trim();
+    if (typed.length >= 3) {
+      unawaited(_ensurePublicSchoolBrand(typed));
+    }
   }
 
   void _applySavedEntryForSchoolId(String schoolIdValue) {
@@ -197,6 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
     AppLocale.instance.removeListener(_onLocaleChanged);
     _schoolIdFocus.removeListener(_onSchoolIdFocusChanged);
     schoolId.removeListener(_onSchoolIdTextChanged);
+    _publicBrandDebounce?.cancel();
     _schoolIdFocus.dispose();
     schoolId.dispose();
     username.dispose();
@@ -209,6 +217,26 @@ class _LoginScreenState extends State<LoginScreen> {
   void _onSchoolIdTextChanged() {
     _syncLoginChrome();
     if (mounted) setState(() {});
+    _schedulePublicBrandFetch(schoolId.text.trim());
+  }
+
+  void _schedulePublicBrandFetch(String id) {
+    _publicBrandDebounce?.cancel();
+    if (id.trim().length < 3) return;
+    _publicBrandDebounce = Timer(const Duration(milliseconds: 280), () {
+      unawaited(_ensurePublicSchoolBrand(id));
+    });
+  }
+
+  Future<void> _ensurePublicSchoolBrand(String id) async {
+    final typed = id.trim();
+    if (typed.length < 3) return;
+    final brand =
+        await SchoolPublicBrandService.instance.loadAndRemember(typed);
+    if (!mounted) return;
+    if (schoolId.text.trim().toUpperCase() != typed.toUpperCase()) return;
+    LoginChromeBrand.apply(schoolId: typed);
+    if (brand != null) setState(() {});
   }
 
   Future<void> _commitTypedSchoolId(String id) async {
@@ -226,6 +254,8 @@ class _LoginScreenState extends State<LoginScreen> {
         logoPath: record.displayLogoPath,
         logoStyle: record.logoStyle,
       );
+    } else {
+      await _ensurePublicSchoolBrand(id);
     }
     if (!mounted) return;
     LoginChromeBrand.apply(schoolId: id);

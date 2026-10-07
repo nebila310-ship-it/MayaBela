@@ -79,3 +79,6 @@ verify_jwt = false
 
 [functions.school-request-student-password-reset]
 verify_jwt = false
+
+[functions.school-public-brand]
+verify_jwt = false
