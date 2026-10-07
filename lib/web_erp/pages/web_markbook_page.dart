@@ -132,6 +132,19 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
     }
   }
 
+  bool _isGradeLocked(String studentName) {
+    final className = _className;
+    final subject = _subject;
+    if (className == null || subject == null) return false;
+    for (final report in _data.getGradeReportsForClass(className)) {
+      if (report.studentName != studentName) continue;
+      for (final item in report.subjects) {
+        if (item.subject == subject) return !item.canTeacherEdit;
+      }
+    }
+    return false;
+  }
+
   Future<void> _save({required bool submit}) async {
     if (!_canManage || _saving) return;
     final className = _className;
@@ -140,6 +153,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
     final cats = _markbook.settingsForSchool().categories;
     final assessments = <String, List<AssessmentMark>>{};
     for (final student in _students) {
+      if (_isGradeLocked(student.name)) continue;
       final row = _cells[student.name];
       if (row == null) continue;
       final marks = <AssessmentMark>[];
@@ -192,9 +206,11 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          submit
-              ? 'Submitted ${result.saved} weighted score(s) for approval'
-              : 'Saved ${result.saved} weighted score(s)',
+          result.skippedLocked > 0
+              ? '${submit ? 'Submitted' : 'Saved'} ${result.saved} · ${result.skippedLocked} locked after approval'
+              : submit
+                  ? 'Submitted ${result.saved} weighted score(s) for approval'
+                  : 'Saved ${result.saved} weighted score(s)',
         ),
       ),
     );
@@ -428,6 +444,13 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                                 ),
                                 const SizedBox(width: 8),
                                 Flexible(child: Text(student.name)),
+                                if (_isGradeLocked(student.name)) ...[
+                                  const SizedBox(width: 6),
+                                  const Tooltip(
+                                    message: 'Locked after approval',
+                                    child: Icon(Icons.lock_outline, size: 16),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -437,7 +460,9 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                                 width: 72,
                                 child: TextField(
                                   controller: _cells[student.name]?[cat.id],
-                                  enabled: _canManage,
+                                  enabled: _canManage &&
+                                      !_isGradeLocked(student.name),
+                                  readOnly: _isGradeLocked(student.name),
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
                                   decoration: const InputDecoration(
