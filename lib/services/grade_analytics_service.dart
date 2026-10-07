@@ -1,6 +1,7 @@
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 class RankedStudentReport {
   const RankedStudentReport({
@@ -132,38 +133,34 @@ class GradeAnalyticsService {
   final _data = SchoolDataService.instance;
 
   GradeAnalyticsSnapshot buildSnapshot({Iterable<String>? classNames}) {
-    var reports = _data.getAllGradeReports();
-    if (classNames != null) {
-      final allowed = classNames.map((name) => name.trim()).toSet();
-      reports = reports.where((r) => allowed.contains(r.className)).toList();
-    }
-    final byClass = <String, List<StudentGradeReport>>{};
-    for (final report in reports) {
-      byClass.putIfAbsent(report.className, () => []).add(report);
+    final byClass = _scoredReportsByClass(classNames);
+    final classesByGrade = <String, List<String>>{};
+    for (final className in byClass.keys) {
+      final parsed = _parseClassName(className);
+      final gradeLevel = parsed?.$1 ?? className;
+      classesByGrade.putIfAbsent(gradeLevel, () => []).add(className);
     }
 
-    final gradeLevels = _orderedGrades(reports, byClass.keys);
+    final gradeLevels = classesByGrade.keys.toList()..sort(_compareGrades);
     final topScorers = <GradeTopScorers>[];
     final underperformers = <GradeUnderperformers>[];
 
     for (final gradeLevel in gradeLevels) {
-      final sectionLabels = _sectionsForGrade(gradeLevel, byClass.keys);
+      final classList = classesByGrade[gradeLevel]!..sort();
       final sectionTops = <SectionTopScorers>[];
       final gradePool = <StudentGradeReport>[];
 
-      for (final section in sectionLabels) {
-        final className = _structure.classNameFor(gradeLevel, section);
+      for (final className in classList) {
         final classReports = List<StudentGradeReport>.from(
           byClass[className] ?? const [],
         )..sort((a, b) => b.average.compareTo(a.average));
-
         final top = classReports.take(topCount).toList();
         gradePool.addAll(top);
-
+        final parsed = _parseClassName(className);
         sectionTops.add(
           SectionTopScorers(
             gradeLevel: gradeLevel,
-            section: section,
+            section: parsed?.$2.isNotEmpty == true ? parsed!.$2 : className,
             className: className,
             students: _withRanks(top),
           ),
@@ -174,7 +171,10 @@ class GradeAnalyticsService {
       final seen = <String>{};
       final gradeTop = <StudentGradeReport>[];
       for (final report in gradePool) {
-        if (seen.add(report.studentName)) {
+        final key = (report.studentId?.trim().isNotEmpty ?? false)
+            ? 'id:${report.studentId!.trim().toUpperCase()}'
+            : 'name:${report.studentName.trim().toLowerCase()}';
+        if (seen.add(key)) {
           gradeTop.add(report);
         }
         if (gradeTop.length >= topCount) break;
@@ -192,18 +192,17 @@ class GradeAnalyticsService {
       }
 
       final underSections = <SectionUnderperformers>[];
-      for (final section in sectionLabels) {
-        final className = _structure.classNameFor(gradeLevel, section);
+      for (final className in classList) {
+        final parsed = _parseClassName(className);
         final low = (byClass[className] ?? const [])
             .where((r) => r.average < underperformThreshold)
             .toList()
           ..sort((a, b) => a.average.compareTo(b.average));
-
         if (low.isNotEmpty) {
           underSections.add(
             SectionUnderperformers(
               gradeLevel: gradeLevel,
-              section: section,
+              section: parsed?.$2.isNotEmpty == true ? parsed!.$2 : className,
               className: className,
               students: low,
             ),
@@ -227,19 +226,75 @@ class GradeAnalyticsService {
     );
   }
 
+  Map<String, List<StudentGradeReport>> _scoredReportsByClass(
+    Iterable<String>? classNames,
+  ) {
+    final schoolClasses = _data.getAllClassNames();
+    var classes = schoolClasses;
+    if (classNames != null) {
+      final allowed = [
+        for (final name in classNames)
+          if (name.trim().isNotEmpty) name.trim(),
+      ];
+      if (allowed.isNotEmpty) {
+        classes = [
+          for (final name in allowed)
+            if (schoolClasses.isEmpty ||
+                schoolClasses.any(
+                  (className) => StudentRegistryService.classNamesMatch(
+                    className,
+                    name,
+                  ),
+                ))
+              name,
+        ];
+      }
+    }
+    if (classes.isEmpty) {
+      final fromReports = <String>{};
+      for (final report in _data.getAllGradeReports()) {
+        if (report.subjects.isEmpty) continue;
+        fromReports.add(report.className);
+      }
+      classes = fromReports.toList()..sort();
+    }
+
+    final byClass = <String, List<StudentGradeReport>>{};
+    for (final className in classes) {
+      final scored = [
+        for (final report in _data.getGradeReportsForClass(className))
+          if (report.subjects.isNotEmpty) report,
+      ];
+      if (scored.isNotEmpty) {
+        byClass[className] = scored;
+      }
+    }
+    return byClass;
+  }
+
   List<RankedStudentReport> rankingsForClass(String className) {
-    final reports = List<StudentGradeReport>.from(
-      _data.getGradeReportsForClass(className),
-    )..sort((a, b) => b.average.compareTo(a.average));
+    final reports = [
+      for (final report in _data.getGradeReportsForClass(className))
+        if (report.subjects.isNotEmpty) report,
+    ]..sort((a, b) => b.average.compareTo(a.average));
     return _withRanks(reports);
   }
 
   List<StudentGradeReport> underperformersForClass(String className) {
     return _data
         .getGradeReportsForClass(className)
-        .where((report) => report.average < underperformThreshold)
+        .where(
+          (report) =>
+              report.subjects.isNotEmpty &&
+              report.average < underperformThreshold,
+        )
         .toList()
       ..sort((a, b) => a.average.compareTo(b.average));
+  }
+
+  bool _reportInClass(StudentGradeReport report, String? className) {
+    if (className == null || className.trim().isEmpty) return true;
+    return StudentRegistryService.classNamesMatch(report.className, className);
   }
 
   List<RankedStudentReport> _withRanks(List<StudentGradeReport> reports) {
@@ -247,39 +302,6 @@ class GradeAnalyticsService {
       for (var i = 0; i < reports.length; i++)
         RankedStudentReport(report: reports[i], rank: i + 1),
     ];
-  }
-
-  List<String> _orderedGrades(
-    List<StudentGradeReport> reports,
-    Iterable<String> classNames,
-  ) {
-    final grades = <String>{};
-    grades.addAll(_structure.gradesForSchool());
-    for (final className in classNames) {
-      final parsed = _parseClassName(className);
-      if (parsed != null) grades.add(parsed.$1);
-    }
-    for (final report in reports) {
-      final parsed = _parseClassName(report.className);
-      if (parsed != null) grades.add(parsed.$1);
-    }
-
-    final list = grades.toList();
-    list.sort(_compareGrades);
-    return list;
-  }
-
-  List<String> _sectionsForGrade(String gradeLevel, Iterable<String> classNames) {
-    final sections = <String>{};
-    sections.addAll(_structure.sectionsForGrade(gradeLevel));
-    for (final className in classNames) {
-      final parsed = _parseClassName(className);
-      if (parsed != null && parsed.$1 == gradeLevel && parsed.$2.isNotEmpty) {
-        sections.add(parsed.$2);
-      }
-    }
-    final list = sections.toList()..sort();
-    return list;
   }
 
   (String, String)? _parseClassName(String className) {
@@ -325,11 +347,7 @@ class GradeAnalyticsService {
     final counts = <String, int>{};
     final labels = <String, String>{};
     for (final report in _data.getAllGradeReports()) {
-      if (className != null &&
-          className.trim().isNotEmpty &&
-          report.className != className) {
-        continue;
-      }
+      if (!_reportInClass(report, className)) continue;
       for (final grade in report.subjects) {
         if (subject != null &&
             subject.trim().isNotEmpty &&
@@ -360,11 +378,7 @@ class GradeAnalyticsService {
   List<GradeAttendanceRow> gradeAttendanceRows({String? className}) {
     final rows = <GradeAttendanceRow>[];
     for (final report in _data.getAllGradeReports()) {
-      if (className != null &&
-          className.trim().isNotEmpty &&
-          report.className != className) {
-        continue;
-      }
+      if (!_reportInClass(report, className)) continue;
       if (report.subjects.isEmpty) continue;
       final snap = _data.attendanceSnapshotForStudent(
         studentName: report.studentName,
