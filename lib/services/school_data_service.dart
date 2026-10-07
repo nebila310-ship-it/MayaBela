@@ -4096,8 +4096,19 @@ class SchoolDataService {
     _persistSchoolContent();
   }
 
+  DateTime _calendarDay(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
   bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    if (a.year == b.year && a.month == b.month && a.day == b.day) {
+      return true;
+    }
+    final left = a.toLocal();
+    final right = b.toLocal();
+    return left.year == right.year &&
+        left.month == right.month &&
+        left.day == right.day;
   }
 
   String _normalizeAttendancePeriodKey(String? periodKey) =>
@@ -4128,10 +4139,81 @@ class SchoolDataService {
   }
 
   List<AttendanceSession> getAttendanceSessionsForDate(DateTime date) {
-    return _attendanceSessions
-        .where((session) => _isSameDay(session.date, date) && session.isDaily)
-        .toList()
+    return _sessionsForDailyReport(date)
       ..sort((a, b) => a.className.compareTo(b.className));
+  }
+
+  bool _attendanceSessionInDailyReport(AttendanceSession session) {
+    final schoolId = AuthService.activeSchoolId?.trim();
+    if (schoolId == null || schoolId.isEmpty) return true;
+    if (StudentRegistryService.instance.studentsForSchool(schoolId).isEmpty) {
+      return true;
+    }
+    return getAllClassNames().any(
+      (className) => _classNamesMatch(className, session.className),
+    );
+  }
+
+  List<AttendanceSession> _sessionsForDailyReport(DateTime date) {
+    final byClass = <String, AttendanceSession>{};
+    for (final session in _attendanceSessions) {
+      if (!_isSameDay(session.date, date)) continue;
+      if (!_attendanceSessionInDailyReport(session)) continue;
+      final key = session.className.trim().toLowerCase();
+      final current = byClass[key];
+      if (current == null) {
+        byClass[key] = session;
+        continue;
+      }
+      if (current.isDaily) continue;
+      if (session.isDaily) byClass[key] = session;
+    }
+    return byClass.values.toList();
+  }
+
+  List<StudentAttendanceEntry> _reportEntriesForSession(
+    AttendanceSession session,
+  ) {
+    final roster = getStudentsForClass(session.className);
+    if (roster.isEmpty) {
+      return [
+        for (final entry in session.entries) _copyAttendanceEntry(entry),
+      ];
+    }
+    final seen = <String>{};
+    final entries = <StudentAttendanceEntry>[];
+    for (final student in roster) {
+      StudentAttendanceEntry? match;
+      for (final entry in session.entries) {
+        if (entry.matches(
+          studentId: student.inviteStudentId,
+          studentName: student.name,
+        )) {
+          match = entry;
+          break;
+        }
+      }
+      entries.add(
+        StudentAttendanceEntry(
+          studentName: student.name,
+          studentId: student.inviteStudentId,
+          status: match?.status ?? AttendanceStatus.present,
+          updatedAt: match?.updatedAt,
+        ),
+      );
+      seen.add(_attendanceEntryKey(entries.last));
+      if (match != null) seen.add(_attendanceEntryKey(match));
+    }
+    for (final entry in session.entries) {
+      final named = entry.studentName.trim().toLowerCase();
+      final alreadyNamed = named.isNotEmpty &&
+          entries.any((e) => e.studentName.trim().toLowerCase() == named);
+      if (alreadyNamed) continue;
+      if (seen.add(_attendanceEntryKey(entry))) {
+        entries.add(_copyAttendanceEntry(entry));
+      }
+    }
+    return entries;
   }
 
   String _gradeForStudent(String studentName, String className) {
@@ -4156,12 +4238,13 @@ class SchoolDataService {
     var excused = 0;
 
     for (final session in sessions) {
+      final reportEntries = _reportEntriesForSession(session);
       var sessionPresent = 0;
       var sessionLate = 0;
       var sessionAbsent = 0;
       var sessionExcused = 0;
 
-      for (final entry in session.entries) {
+      for (final entry in reportEntries) {
         switch (entry.status) {
           case AttendanceStatus.present:
             sessionPresent++;
@@ -4183,7 +4266,7 @@ class SchoolDataService {
             className: session.className,
             status: entry.status,
             conductedBy: session.conductedBy,
-            date: DateTime(date.year, date.month, date.day),
+            date: _calendarDay(date),
           ),
         );
       }
@@ -4589,6 +4672,7 @@ class SchoolDataService {
       incoming: hydrated,
       merged: merged,
     );
+    final sessionDay = _calendarDay(date);
     overlayApprovedLeaveOnEntries(
       entries: rosterAligned,
       className: className,
@@ -4601,7 +4685,7 @@ class SchoolDataService {
     _attendanceSessions.add(
       AttendanceSession(
         className: className,
-        date: date,
+        date: sessionDay,
         conductedBy: conductedBy,
         entries: rosterAligned,
         locked: nextLocked,
