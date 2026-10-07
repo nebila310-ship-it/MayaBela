@@ -6,6 +6,7 @@ import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/grade_outreach_service.dart';
 import 'package:mayabela/services/grade_report_export_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/widgets/grade_average_breakdown_sheet.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 class GradesOverviewPalette {
@@ -1072,7 +1073,6 @@ class _RankedStudentTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
         color: highlight
             ? GradesOverviewPalette.top.withValues(alpha: 0.06)
@@ -1086,73 +1086,106 @@ class _RankedStudentTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: highlight
-                  ? GradesOverviewPalette.top.withValues(alpha: 0.15)
-                  : GradesOverviewPalette.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: medal != null
-                ? Icon(medal, color: GradesOverviewPalette.top, size: 22)
-                : Text(
-                    '${entry.rank}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: GradesOverviewPalette.primary,
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 10),
-          StudentPhotoAvatar(
-            studentId: entry.report.studentId,
-            name: entry.report.studentName,
-            radius: 16,
-            fallbackColor: GradesOverviewPalette.primary,
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.report.studentName,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+            child: Tooltip(
+              message: s.approvedSubjectsThatMakeAverage,
+              child: InkWell(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(14),
                 ),
-                Text(
-                  entry.report.className,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${entry.average.toStringAsFixed(1)}%',
-                style: TextStyle(fontWeight: FontWeight.bold, color: color),
-              ),
-              if (sent)
-                Text(
-                  s.sentLabel,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: GradesOverviewPalette.top,
-                    fontWeight: FontWeight.w600,
+                onTap: () =>
+                    showGradeAverageBreakdownSheet(context, entry.report),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: highlight
+                              ? GradesOverviewPalette.top.withValues(alpha: 0.15)
+                              : GradesOverviewPalette.primary
+                                  .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: medal != null
+                            ? Icon(
+                                medal,
+                                color: GradesOverviewPalette.top,
+                                size: 22,
+                              )
+                            : Text(
+                                '${entry.rank}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: GradesOverviewPalette.primary,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 10),
+                      StudentPhotoAvatar(
+                        studentId: entry.report.studentId,
+                        name: entry.report.studentName,
+                        radius: 16,
+                        fallbackColor: GradesOverviewPalette.primary,
+                        enableViewer: false,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.report.studentName,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              entry.report.className,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${entry.average.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                          if (sent)
+                            Text(
+                              s.sentLabel,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: GradesOverviewPalette.top,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-            ],
+              ),
+            ),
           ),
           IconButton(
             tooltip: s.sendCongratsToParent,
             onPressed: sent ? null : onSendCongrats,
             icon: Icon(
               sent ? Icons.check_circle : Icons.celebration_outlined,
-              color: sent ? GradesOverviewPalette.top : GradesOverviewPalette.secondary,
+              color: sent
+                  ? GradesOverviewPalette.top
+                  : GradesOverviewPalette.secondary,
               size: 22,
             ),
           ),
@@ -1181,7 +1214,6 @@ class _UnderperformerTile extends StatelessWidget {
     final color = scoreColor(report.average);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
         color: GradesOverviewPalette.low.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14),
@@ -1191,31 +1223,56 @@ class _UnderperformerTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          StudentPhotoAvatar(
-            studentId: report.studentId,
-            name: report.studentName,
-            radius: 18,
-            fallbackColor: color,
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  report.studentName,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+            child: Tooltip(
+              message: s.approvedSubjectsThatMakeAverage,
+              child: InkWell(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(14),
                 ),
-                Text(
-                  report.className,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                onTap: () => showGradeAverageBreakdownSheet(context, report),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  child: Row(
+                    children: [
+                      StudentPhotoAvatar(
+                        studentId: report.studentId,
+                        name: report.studentName,
+                        radius: 18,
+                        fallbackColor: color,
+                        enableViewer: false,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              report.studentName,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              report.className,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${report.average.toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-          Text(
-            '${report.average.toStringAsFixed(1)}%',
-            style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
           IconButton(
             tooltip: s.askHomeroomRecommendation,

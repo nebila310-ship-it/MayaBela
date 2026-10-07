@@ -2433,6 +2433,14 @@ class AppStrings implements AppStringsLike {
       t('Subject already exists', 'ትምህርቱ አስቀድሞ አለ');
   String get subjectBreakdown =>
       t('Subject Breakdown', 'በትምህርት ዝርዝር');
+  String get approvedSubjectsThatMakeAverage => t(
+        'These approved subjects make this average',
+        'ይህን አማካይ የሰጡት ጸድቀው የገቡ ትምህርቶች ናቸው',
+      );
+  String get noApprovedSubjectsForAverage => t(
+        'No approved subjects yet',
+        'ጸድቆ የገባ ትምህርት የለም',
+      );
   String averageLabel(double avg) =>
       t('Average: ${avg.toStringAsFixed(1)}%', 'አማካይ: ${avg.toStringAsFixed(1)}%');
   String get editGradeTooltip =>
