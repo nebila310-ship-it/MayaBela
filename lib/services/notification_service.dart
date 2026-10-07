@@ -42,7 +42,7 @@ class NotificationService extends ChangeNotifier {
       fromName: 'Mr. Bekele',
       recipientRole: AuthService.roleTeacher,
       createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-      isRead: false,
+      isRead: true,
     ),
   ];
 
@@ -619,13 +619,12 @@ class NotificationService extends ChangeNotifier {
           fromName: 'Mr. Bekele',
           recipientRole: AuthService.roleTeacher,
           createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-          isRead: false,
+          isRead: true,
         ),
       );
     }
     for (final item in _items) {
-      if (item.id == 'seed-1') item.isRead = true;
-      if (item.id == 'seed-2') item.isRead = false;
+      if (item.id == 'seed-1' || item.id == 'seed-2') item.isRead = true;
     }
   }
 }
