@@ -279,13 +279,19 @@ class GradeAnalyticsService {
   /// Ranking uses approved (locked) marks only. Draft and pending stay off
   /// the leaderboard until Section Director approval.
   StudentGradeReport? _rankingReport(StudentGradeReport report) {
-    final approved = [
-      for (final subject in report.subjects)
-        if (subject.status == SubjectGradeStatus.approved) subject,
-    ];
+    final approved = approvedSubjectsForAverage(report);
     if (approved.isEmpty) return null;
     if (approved.length == report.subjects.length) return report;
     return report.copyWith(subjects: approved);
+  }
+
+  static List<SubjectGrade> approvedSubjectsForAverage(
+    StudentGradeReport report,
+  ) {
+    return [
+      for (final subject in report.subjects)
+        if (subject.status == SubjectGradeStatus.approved) subject,
+    ];
   }
 
   List<RankedStudentReport> rankingsForClass(String className) {
