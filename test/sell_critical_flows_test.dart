@@ -261,6 +261,7 @@ void main() {
 
   group('Attendance', () {
     test('save session → daily and range reports reflect counts', () {
+      signIn(username: 'admin.sell', roleKey: AuthService.roleAdmin);
       final data = SchoolDataService.instance;
       final day = DateTime(2026, 8, 4);
 
