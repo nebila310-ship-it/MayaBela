@@ -738,7 +738,112 @@ export function studentMayUsePortalTempPassword(
   hasStoredSecret: boolean,
 ): boolean {
   if (!hasStoredSecret) return true;
-  return !!account?.mustChangePassword;
+  if (account?.mustChangePassword) return true;
+  return account?.firstLoginCompleted === false;
+}
+
+/** Passwords a first-login student may use (school template + current default). */
+export function acceptedStudentFirstLoginPasswords(
+  school: Record<string, unknown> | null | undefined,
+): string[] {
+  const year = String(new Date().getFullYear());
+  const values = [
+    resolvedStudentPortalTempPassword(school),
+    "EduAba@2026",
+    `EduAba@${year}`,
+  ];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const value = String(raw || "").trim();
+    if (value.length < MIN_PASSWORD_LENGTH || seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  return out;
+}
+
+function studentPortalCanLogin(
+  data: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!data) return false;
+  if (data.isActive === false) return false;
+  const status = String(data.portalAccountStatus || "").trim().toLowerCase();
+  if (status === "suspended" || status === "graduated" || status === "transferred") {
+    return false;
+  }
+  return String(data.loginUsername || "").trim().length > 0;
+}
+
+export async function findStudentRegistryForLogin(
+  sb: SupabaseClient,
+  identifier: string,
+  schoolId: string,
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const sid = String(schoolId || "").trim().toUpperCase();
+  const raw = String(identifier || "").trim();
+  if (!sid || !raw) return null;
+  const studentId = raw.toUpperCase();
+  const username = normalizeUsername(raw);
+
+  const byId = await getDoc(sb, "student_registry", studentId, sid);
+  if (byId && studentPortalCanLogin(byId)) {
+    const recSchool = String(byId.schoolId || "").trim().toUpperCase();
+    if (!recSchool || recSchool === sid) {
+      const login = String(byId.loginUsername || "").trim();
+      const rid = String(byId.studentId || studentId).trim().toUpperCase();
+      if (usernamesMatch(login, raw) || rid === studentId) {
+        return { id: rid || studentId, data: byId };
+      }
+    }
+  }
+
+  const { data: rows, error } = await sb
+    .from("app_documents")
+    .select("doc_id, data")
+    .eq("collection", "student_registry")
+    .eq("school_id", sid)
+    .filter("data->>loginUsername", "ilike", username)
+    .limit(8);
+  if (error) throw error;
+  for (const row of rows || []) {
+    const data = { ...(row.data as Record<string, unknown>) };
+    if (!studentPortalCanLogin(data)) continue;
+    const recSchool = String(data.schoolId || "").trim().toUpperCase();
+    if (recSchool && recSchool !== sid) continue;
+    if (!usernamesMatch(data.loginUsername, raw)) continue;
+    const id = String(data.studentId || row.doc_id || "").trim().toUpperCase();
+    return { id: id || String(row.doc_id), data };
+  }
+  return null;
+}
+
+export async function provisionStudentAccountFromRegistry(
+  sb: SupabaseClient,
+  schoolId: string,
+  student: Record<string, unknown>,
+  password: string,
+): Promise<{ id: string; data: Record<string, unknown> }> {
+  const username = normalizeUsername(student.loginUsername);
+  const studentId = String(student.studentId || "").trim().toUpperCase();
+  const sid = String(schoolId || "").trim().toUpperCase();
+  const docId = accountDocId(sid, username);
+  const profile: Record<string, unknown> = {
+    username,
+    roleKey: "student",
+    schoolId: sid,
+    email: null,
+    phone: null,
+    fullName: String(student.fullName || student.name || "").trim() || null,
+    linkedStudentId: studentId || null,
+    linkedStudentIds: studentId ? [studentId] : [],
+    mustChangePassword: true,
+    firstLoginCompleted: false,
+    updatedAt: new Date().toISOString(),
+  };
+  await upsertSecret(sb, username, password, sid);
+  await upsertDoc(sb, "app_auth_accounts", docId, profile, sid);
+  return { id: docId, data: profile };
 }
 
 export function syntheticEmail(username: string, schoolId: string): string {

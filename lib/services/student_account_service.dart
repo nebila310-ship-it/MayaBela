@@ -132,9 +132,11 @@ class StudentAccountService {
       firstLoginCompleted: false,
     );
     StudentRegistryService.instance.replaceStudent(updated);
-    unawaited(StudentPersistenceService.instance.saveRegistryFromService(
+    await StudentPersistenceService.instance.saveRegistryFromService(
       syncStudentId: student.studentId,
-    ));
+      pushCloud: true,
+      immediateUpload: true,
+    );
 
     unawaited(
       StudentPortalAuditService.instance.log(
@@ -176,9 +178,11 @@ class StudentAccountService {
       firstLoginCompleted: false,
     );
     StudentRegistryService.instance.replaceStudent(updated);
-    unawaited(StudentPersistenceService.instance.saveRegistryFromService(
+    await StudentPersistenceService.instance.saveRegistryFromService(
       syncStudentId: student.studentId,
-    ));
+      pushCloud: true,
+      immediateUpload: true,
+    );
 
     unawaited(
       StudentPortalAuditService.instance.log(

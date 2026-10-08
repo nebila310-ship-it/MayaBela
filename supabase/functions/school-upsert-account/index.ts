@@ -78,9 +78,14 @@ Deno.serve(async (req) => {
       (!!caller &&
         callerSchool === schoolId &&
         callerPerms.includes("assign_roles"));
+    const canWriteStudentLogin =
+      roleKey === "student" &&
+      !!caller &&
+      callerSchool === schoolId &&
+      (isAdminCaller || callerPerms.includes("manage_students"));
 
     const sb = adminClient();
-    if (!canManageStaff) {
+    if (!canManageStaff && !canWriteStudentLogin) {
       if (roleKey !== "admin") {
         const jwtHint = !caller
           ? (String(userErr?.message || "").toLowerCase().includes("sub")

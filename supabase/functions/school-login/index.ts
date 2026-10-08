@@ -17,7 +17,9 @@ import {
   upsertSecret,
   verifySecret,
   normalizeStaffRoles,
-  resolvedStudentPortalTempPassword,
+  acceptedStudentFirstLoginPasswords,
+  findStudentRegistryForLogin,
+  provisionStudentAccountFromRegistry,
   studentMayUsePortalTempPassword,
 } from "../_shared/school_auth.ts";
 
@@ -55,12 +57,37 @@ Deno.serve(async (req) => {
       `login_${normalizeUsername(usernameInput)}_${roleKey}_${schoolIdInput || "none"}`,
     );
 
-    const found = await findAccountDoc(
+    let found = await findAccountDoc(
       sb,
       usernameInput,
       roleKey,
       schoolIdInput || null,
     );
+
+    const schoolDoc = await assertSchoolAccessible(sb, schoolIdInput);
+    const firstLoginPasswords = acceptedStudentFirstLoginPasswords(schoolDoc);
+
+    // Enrolling a student writes student_registry, but the login account is a
+    // separate staff-account upsert. If that upsert was denied, provision it
+    // here from the roster when the school-set password is used.
+    if (!found && roleKey === "student") {
+      const roster = await findStudentRegistryForLogin(
+        sb,
+        usernameInput,
+        schoolIdInput,
+      );
+      if (
+        roster &&
+        firstLoginPasswords.includes(String(password))
+      ) {
+        found = await provisionStudentAccountFromRegistry(
+          sb,
+          schoolIdInput,
+          roster.data,
+          String(password),
+        );
+      }
+    }
     if (!found) {
       return errorResponse("Invalid credentials.", 401, "invalid");
     }
@@ -85,18 +112,23 @@ Deno.serve(async (req) => {
       return errorResponse("Role mismatch.", 403, "invalid");
     }
 
-    const schoolDoc = await assertSchoolAccessible(sb, profileSchoolId);
-
     const secret = await loadSecret(sb, username, profileSchoolId, found.id);
     let ok = await verifySecret(password, secret, found.data.password);
     const hasStoredSecret = !!(secret?.passwordHash || found.data.password);
     if (
       !ok &&
       roleKey === "student" &&
-      studentMayUsePortalTempPassword(found.data, hasStoredSecret)
+      firstLoginPasswords.includes(String(password))
     ) {
-      const template = resolvedStudentPortalTempPassword(schoolDoc);
-      if (template.length >= 10 && password === template) {
+      const roster = await findStudentRegistryForLogin(
+        sb,
+        usernameInput,
+        schoolIdInput,
+      );
+      const allowTemplate = roster
+        ? roster.data.firstLoginCompleted !== true
+        : studentMayUsePortalTempPassword(found.data, hasStoredSecret);
+      if (allowTemplate) {
         ok = true;
         await upsertSecret(sb, username, password, profileSchoolId);
       }
