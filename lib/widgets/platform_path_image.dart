@@ -33,6 +33,7 @@ class PlatformPathImage extends StatefulWidget {
 
 class _PlatformPathImageState extends State<PlatformPathImage> {
   Uint8List? _remoteBytes;
+  bool _remoteFailed = false;
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _PlatformPathImageState extends State<PlatformPathImage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.path != widget.path) {
       _remoteBytes = null;
+      _remoteFailed = false;
       _hydrate();
     }
   }
@@ -57,8 +59,24 @@ class _PlatformPathImageState extends State<PlatformPathImage> {
     final bytes = await ProfilePhotoCodec.fetchRemoteBytes(value);
     if (!mounted) return;
     if (widget.path?.trim() != value) return;
-    if (bytes == null || bytes.isEmpty) return;
-    setState(() => _remoteBytes = bytes);
+    if (bytes == null || bytes.isEmpty) {
+      setState(() => _remoteFailed = true);
+      return;
+    }
+    setState(() {
+      _remoteBytes = bytes;
+      _remoteFailed = false;
+    });
+  }
+
+  Widget _loadingBox() {
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.white54),
+      ),
+    );
   }
 
   @override
@@ -79,16 +97,14 @@ class _PlatformPathImageState extends State<PlatformPathImage> {
       );
     }
 
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      if (ProfilePhotoCodec.isPrivateSchoolFilesUrl(value)) {
-        return SizedBox(
-          width: widget.width,
-          height: widget.height,
-          child: const Center(
-            child: CircularProgressIndicator(color: Colors.white54),
-          ),
-        );
+    if (ProfilePhotoCodec.isPrivateSchoolFilesUrl(value)) {
+      if (_remoteFailed) {
+        return _fallback(context, Exception('school-files download failed'));
       }
+      return _loadingBox();
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
       final viewable = schoolBrandingViewableUrl(value);
       return Image.network(
         viewable,
@@ -99,13 +115,7 @@ class _PlatformPathImageState extends State<PlatformPathImage> {
         errorBuilder: widget.errorBuilder,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
-          return SizedBox(
-            width: widget.width,
-            height: widget.height,
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.white54),
-            ),
-          );
+          return _loadingBox();
         },
       );
     }

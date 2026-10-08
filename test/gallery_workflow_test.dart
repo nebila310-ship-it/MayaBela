@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,7 +33,10 @@ void main() {
 
   tearDown(() => AuthService.currentUser = null);
 
-  test('gallery posts serialize file attachments', () {
+  test('gallery posts serialize cloud file attachments', () {
+    const cloud =
+        'https://example.supabase.co/storage/v1/object/public/school-files/'
+        'schools/MAL838/gallery_attachments/schedule.pdf';
     final postedAt = DateTime.utc(2026, 9, 7, 12);
     final original = GalleryPost(
       id: 'gal-att-1',
@@ -41,16 +46,37 @@ void main() {
       caption: 'See the attached schedule',
       authorName: 'School Admin',
       postedAt: postedAt,
-      attachmentPaths: const ['gallery_attachments/schedule.pdf'],
+      attachmentPaths: const [cloud],
     );
 
     final copy = AppDataMaps.galleryPostFromMap(
       AppDataMaps.galleryPostToMap(original),
     );
 
-    expect(copy.attachmentPaths, ['gallery_attachments/schedule.pdf']);
+    expect(copy.attachmentPaths, [cloud]);
     expect(copy.title, 'Sports day');
     expect(copy.type, GalleryPostType.note);
+  });
+
+  test('gallery cloud maps drop laptop-only photo paths', () {
+    const cloud =
+        'https://example.supabase.co/storage/v1/object/public/school-files/'
+        'schools/MAL838/gallery_media/1_photo.jpg';
+    final original = GalleryPost(
+      id: 'gal-local-1',
+      className: 'Grade 4A',
+      type: GalleryPostType.photo,
+      title: 'Class photo',
+      caption: 'From today',
+      authorName: 'School Admin',
+      postedAt: DateTime.utc(2026, 9, 7, 12),
+      mediaPath: 'web://1/class.jpg',
+      attachmentPaths: const ['web://1/flyer.pdf', cloud],
+    );
+
+    final map = AppDataMaps.galleryPostToMap(original);
+    expect(map.containsKey('mediaPath'), isFalse);
+    expect(map['attachmentPaths'], [cloud]);
   });
 
   test('addGalleryPost keeps attachments for the class', () {
@@ -121,6 +147,19 @@ void main() {
     const url = 'https://example.test/gallery/class.jpg';
     WebAttachmentCache.instance.remember(url, List<int>.filled(24, 3));
     expect(WebAttachmentCache.instance.read(url), isNotNull);
+  });
+
+  test('gallery uploads skip the storage probe that blocked parent photos', () {
+    final upload = File(
+      'lib/services/announcement_attachment_service.dart',
+    ).readAsStringSync();
+    expect(upload, contains('Skip the Storage probe'));
+    expect(upload.contains('SupabaseStorageBootstrap.ensureReady()'), isFalse);
+
+    final gallery =
+        File('lib/services/gallery_media_service.dart').readAsStringSync();
+    expect(gallery, contains('displayJpegOrOriginal'));
+    expect(gallery, contains('promotePendingToCloud'));
   });
 
   test('oversize gallery photos are rejected', () async {

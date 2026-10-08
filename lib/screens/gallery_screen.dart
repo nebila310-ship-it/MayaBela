@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -5,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/gallery_compose.dart';
 import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/gallery_share_service.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -109,6 +112,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   void initState() {
     super.initState();
     SchoolContentSyncService.instance.addListener(_refresh);
+    unawaited(GalleryMediaService.instance.promotePendingToCloud());
     if (widget.initialClass != null) {
       _selectedClass = widget.initialClass;
     } else if (_isSchoolWide) {
@@ -159,6 +163,23 @@ class _GalleryScreenState extends State<GalleryScreen> {
       case GalleryPostType.note:
         return s.note;
     }
+  }
+
+  Future<String?> _cloudPathOrNull(String? path, String? fileName) async {
+    final value = path?.trim();
+    if (value == null || value.isEmpty) return null;
+    if (!ProfilePhotoCodec.isDeviceLocalPath(value)) return value;
+    final cached = WebAttachmentCache.instance.read(value);
+    if (cached == null || cached.isEmpty) return null;
+    final retry = await GalleryMediaService.instance.persistBytes(
+      fileName: (fileName ?? attachmentFileName(value)).trim().isEmpty
+          ? 'gallery.jpg'
+          : fileName ?? attachmentFileName(value),
+      bytes: cached,
+    );
+    if (retry == null) return null;
+    if (ProfilePhotoCodec.isDeviceLocalPath(retry.filePath)) return null;
+    return retry.filePath;
   }
 
   Future<void> _addPost() async {
@@ -402,6 +423,40 @@ class _GalleryScreenState extends State<GalleryScreen> {
       return;
     }
 
+    final cloudMediaPath = await _cloudPathOrNull(
+      composed.mediaPath,
+      composed.mediaLabel,
+    );
+    if (composed.mediaPath != null &&
+        composed.mediaPath!.trim().isNotEmpty &&
+        cloudMediaPath == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s.galleryCloudRequired),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+      return;
+    }
+    final cloudAttachments = <String>[];
+    for (final path in attachments) {
+      final cloud = await _cloudPathOrNull(path, attachmentFileName(path));
+      if (cloud == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(s.galleryCloudRequired),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
+        return;
+      }
+      cloudAttachments.add(cloud);
+    }
+
     _data.addGalleryPost(
       className: postedClass,
       type: composed.type,
@@ -409,8 +464,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
       caption: composed.caption,
       authorName: _authorName,
       mediaLabel: composed.mediaLabel,
-      mediaPath: composed.mediaPath,
-      attachmentPaths: attachments,
+      mediaPath: cloudMediaPath,
+      attachmentPaths: cloudAttachments,
     );
     if (_isSchoolWide && _selectedClass != _allClasses) {
       _selectedClass = postedClass;

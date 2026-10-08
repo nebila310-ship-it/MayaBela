@@ -149,5 +149,6 @@ void main() {
     ).readAsStringSync();
     expect(store, contains('_promoteLocalPersonPhotos()'));
     expect(store, contains('promotePendingToCloud()'));
+    expect(store, contains('GalleryMediaService.instance.promotePendingToCloud()'));
   });
 }
