@@ -1203,7 +1203,15 @@ class AuthService {
       roleKey: roleKey,
       schoolId: schoolId,
     );
-    if (user == null || !_passwordMatches(user, password)) {
+    final passwordOk = user != null &&
+        (_passwordMatches(user, password) ||
+            _studentTemplatePasswordMatches(
+              user: user,
+              roleKey: roleKey,
+              password: password,
+              schoolId: schoolId,
+            ));
+    if (user == null || !passwordOk) {
       if (roleKey == roleStudent) {
         unawaited(
           StudentPortalAuditService.instance.log(
@@ -1257,6 +1265,25 @@ class AuthService {
 
   static bool _passwordMatches(RegisteredUser user, String password) {
     return PasswordHashService.instance.verifyPassword(password, user.password);
+  }
+
+  /// First-login students can use the school-set template (EduAba@2026) even
+  /// when a leftover generated suffix was stored locally.
+  static bool _studentTemplatePasswordMatches({
+    required RegisteredUser user,
+    required String roleKey,
+    required String password,
+    String? schoolId,
+  }) {
+    if (roleKey != roleStudent) return false;
+    if (!StudentAccountService.instance.matchesSchoolTempPassword(
+      password: password,
+      schoolId: user.schoolId ?? schoolId,
+    )) {
+      return false;
+    }
+    if (user.mustChangePassword) return true;
+    return !isStoredPasswordVerifiable(user.password);
   }
 
   /// Cloud sessions keep `__REDACTED__` / empty locally, so Settings cannot

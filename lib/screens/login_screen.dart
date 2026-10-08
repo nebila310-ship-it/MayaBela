@@ -838,16 +838,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _fillStudentDemo() {
-    setState(() {
-      selectedRole = AuthService.roleStudent;
-      schoolId.text = AuthService.demoStudentSchoolId;
-      username.text = AuthService.demoStudentUsername;
-      password.text = AuthService.demoStudentPassword;
-      _schoolIdEditing = false;
-    });
-  }
-
   void _fillTransportDemo() {
     setState(() {
       selectedRole = AuthService.roleDriver;
@@ -1001,15 +991,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         const SizedBox(height: 20),
         _buildSchoolIdField(),
-        if (selectedRole == AuthService.roleStudent) ...[
-          const SizedBox(height: 10),
-          _buildDemoBanner(
-            hint: s.studentDemoHint,
-            actionLabel: s.useStudentDemo,
-            actionKey: const Key('login-student-demo'),
-            onFill: _fillStudentDemo,
-          ),
-        ],
         if (selectedRole == AuthService.roleDriver) ...[
           const SizedBox(height: 10),
           _buildDemoBanner(

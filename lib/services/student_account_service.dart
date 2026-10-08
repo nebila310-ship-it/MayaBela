@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_portal_audit_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -48,17 +49,39 @@ class StudentAccountService {
     return student.portalAccountStatus.canLogin;
   }
 
-  /// Unique temp per student. Optional school template is used as a prefix only.
-  String generateTempPassword(String? schoolId) {
-    final unique = AuthService.generateTempPassword(length: 10);
-    final template = settingsForSchool(schoolId).tempPasswordTemplate.trim();
-    if (template.isEmpty) return unique;
-    final year = DateTime.now().year.toString();
-    final prefix = template.replaceAll('{year}', year).trim();
-    if (prefix.isEmpty) return unique;
-    // Keep total length reasonable for sharing; still unique per account.
-    final base = prefix.length > 8 ? prefix.substring(0, 8) : prefix;
-    return '$base-$unique';
+  /// School-set first-login password. Students share one template until they
+  /// change it — never a unique generated suffix.
+  String resolvedTempPassword(String? schoolId) {
+    final resolved = settingsForSchool(schoolId).resolvedTempPassword();
+    if (resolved.length >= AuthService.minPasswordLength) return resolved;
+    return AuthService.generateTempPassword();
+  }
+
+  bool matchesSchoolTempPassword({
+    required String password,
+    String? schoolId,
+  }) {
+    if (password.isEmpty) return false;
+    return password == resolvedTempPassword(schoolId);
+  }
+
+  String generateTempPassword(String? schoolId) =>
+      resolvedTempPassword(schoolId);
+
+  Future<void> _syncPlainPasswordToCloud({
+    required String username,
+    required String plainPassword,
+  }) async {
+    final user = AuthService.findUser(username);
+    if (user == null) return;
+    try {
+      await SchoolAuthCloudService.instance.upsertAccount(
+        user: user,
+        password: plainPassword,
+      );
+    } catch (_) {
+      // Local account is still usable; school-login also accepts the template.
+    }
   }
 
   /// Creates portal auth + updates student registry record.
@@ -94,6 +117,10 @@ class StudentAccountService {
       mustChangePassword: true,
     );
     if (authError != null) return null;
+    await _syncPlainPasswordToCloud(
+      username: username,
+      plainPassword: tempPassword,
+    );
 
     final updated = student.copyWith(
       loginUsername: username,
@@ -137,6 +164,10 @@ class StudentAccountService {
       username: username,
       plainPassword: tempPassword,
       mustChangePassword: true,
+    );
+    await _syncPlainPasswordToCloud(
+      username: username,
+      plainPassword: tempPassword,
     );
 
     final updated = student.copyWith(
@@ -203,9 +234,7 @@ class StudentAccountService {
   }
 
   String passwordForShare(AdminStudentRecord student) {
-    final stored = student.initialPassword?.trim();
-    if (stored != null && stored.isNotEmpty) return stored;
-    return generateTempPassword(student.schoolId);
+    return resolvedTempPassword(student.schoolId);
   }
 
   String buildCredentialsMessage(AdminStudentRecord student) {
