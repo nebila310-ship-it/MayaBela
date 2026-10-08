@@ -447,6 +447,34 @@ export function usernamesMatch(a: unknown, b: unknown): boolean {
   return !!ka && ka === kb;
 }
 
+/** `STU-1013`, `stu-1013`, and `1013` are the same roster id. */
+export function studentIdsMatch(a: unknown, b: unknown): boolean {
+  const na = String(a || "").trim().toUpperCase();
+  const nb = String(b || "").trim().toUpperCase();
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  const strip = (value: string) =>
+    value.startsWith("STU-") ? value.slice(4) : value;
+  const sa = strip(na);
+  const sb = strip(nb);
+  return !!sa && sa === sb;
+}
+
+/** Doc ids to try when the student typed `1013`, `STU-1013`, or a username. */
+export function studentRegistryIdCandidates(identifier: string): string[] {
+  const raw = String(identifier || "").trim();
+  if (!raw) return [];
+  const upper = raw.toUpperCase();
+  const ids = new Set<string>([upper]);
+  if (upper.startsWith("STU-")) {
+    const rest = upper.slice(4).trim();
+    if (rest) ids.add(rest);
+  } else if (/^\d{3,}$/.test(upper)) {
+    ids.add(`STU-${upper}`);
+  }
+  return [...ids];
+}
+
 export function parentLinkDocId(
   schoolId: string,
   parentUsername: string,
@@ -783,17 +811,22 @@ export async function findStudentRegistryForLogin(
   const sid = String(schoolId || "").trim().toUpperCase();
   const raw = String(identifier || "").trim();
   if (!sid || !raw) return null;
-  const studentId = raw.toUpperCase();
   const username = normalizeUsername(raw);
 
-  const byId = await getDoc(sb, "student_registry", studentId, sid);
-  if (byId && studentPortalCanLogin(byId)) {
-    const recSchool = String(byId.schoolId || "").trim().toUpperCase();
-    if (!recSchool || recSchool === sid) {
-      const login = String(byId.loginUsername || "").trim();
-      const rid = String(byId.studentId || studentId).trim().toUpperCase();
-      if (usernamesMatch(login, raw) || rid === studentId) {
-        return { id: rid || studentId, data: byId };
+  for (const candidate of studentRegistryIdCandidates(raw)) {
+    const byId = await getDoc(sb, "student_registry", candidate, sid);
+    if (byId && studentPortalCanLogin(byId)) {
+      const recSchool = String(byId.schoolId || "").trim().toUpperCase();
+      if (!recSchool || recSchool === sid) {
+        const login = String(byId.loginUsername || "").trim();
+        const rid = String(byId.studentId || candidate).trim().toUpperCase();
+        if (
+          usernamesMatch(login, raw) ||
+          studentIdsMatch(rid, raw) ||
+          studentIdsMatch(rid, candidate)
+        ) {
+          return { id: rid || candidate, data: byId };
+        }
       }
     }
   }
@@ -814,6 +847,28 @@ export async function findStudentRegistryForLogin(
     if (!usernamesMatch(data.loginUsername, raw)) continue;
     const id = String(data.studentId || row.doc_id || "").trim().toUpperCase();
     return { id: id || String(row.doc_id), data };
+  }
+
+  for (const candidate of studentRegistryIdCandidates(raw)) {
+    const { data: idRows, error: idError } = await sb
+      .from("app_documents")
+      .select("doc_id, data")
+      .eq("collection", "student_registry")
+      .eq("school_id", sid)
+      .filter("data->>studentId", "ilike", candidate)
+      .limit(8);
+    if (idError) throw idError;
+    for (const row of idRows || []) {
+      const data = { ...(row.data as Record<string, unknown>) };
+      if (!studentPortalCanLogin(data)) continue;
+      const recSchool = String(data.schoolId || "").trim().toUpperCase();
+      if (recSchool && recSchool !== sid) continue;
+      const id = String(data.studentId || row.doc_id || "").trim().toUpperCase();
+      if (!studentIdsMatch(id, raw) && !studentIdsMatch(id, candidate)) {
+        continue;
+      }
+      return { id: id || String(row.doc_id), data };
+    }
   }
   return null;
 }
@@ -1388,6 +1443,7 @@ export async function findAccountDoc(
 ): Promise<{ id: string; data: Record<string, unknown> } | null> {
   const rawKey = normalizeUsername(identifier);
   const phoneKey = ethiopianLoginKey(identifier);
+  const emailKey = normalizeEmail(identifier);
   const keys = [...new Set([phoneKey, rawKey].filter((k) => !!k))];
   const sid = String(schoolId || "").trim().toUpperCase();
 
@@ -1396,11 +1452,34 @@ export async function findAccountDoc(
 
   // Prefer school-scoped account ids: SCHOOLID__username
   if (sid) {
-    for (const key of keys) {
-      const compositeId = accountDocId(sid, key);
+    for (const lookupKey of keys) {
+      const compositeId = accountDocId(sid, lookupKey);
       const composite = await getDoc(sb, "app_auth_accounts", compositeId, sid);
       if (composite && roleOk(composite)) {
         return { id: compositeId, data: composite };
+      }
+    }
+
+    if (roleKey === "student") {
+      for (const id of studentRegistryIdCandidates(identifier)) {
+        const { data: linkedRows, error: linkedError } = await sb
+          .from("app_documents")
+          .select("doc_id, data")
+          .eq("collection", "app_auth_accounts")
+          .eq("school_id", sid)
+          .filter("data->>linkedStudentId", "ilike", id)
+          .limit(8);
+        if (linkedError) throw linkedError;
+        for (const row of linkedRows || []) {
+          const data = { ...(row.data as Record<string, unknown>) };
+          if (!roleOk(data)) continue;
+          if (
+            studentIdsMatch(data.linkedStudentId, identifier) ||
+            studentIdsMatch(data.linkedStudentId, id)
+          ) {
+            return { id: String(row.doc_id), data };
+          }
+        }
       }
     }
 
@@ -1414,36 +1493,39 @@ export async function findAccountDoc(
       if (usernamesMatch(doc.data.username || doc.id, identifier) && roleOk(doc.data)) {
         return { id: doc.id, data: doc.data };
       }
-      if (normalizeEmail(doc.data.email) === key && roleOk(doc.data)) {
+      if (
+        emailKey &&
+        normalizeEmail(doc.data.email) === emailKey &&
+        roleOk(doc.data)
+      ) {
         return { id: doc.id, data: doc.data };
       }
       if (
         roleKey === "student" &&
-        String(doc.data.linkedStudentId || "").toUpperCase() ===
-          String(identifier).trim().toUpperCase()
+        studentIdsMatch(doc.data.linkedStudentId, identifier)
       ) {
         return { id: doc.id, data: doc.data };
       }
     }
 
     // Legacy global phone doc — only if it belongs to this school.
-    for (const key of keys) {
-      const legacy = await getDoc(sb, "app_auth_accounts", key, sid);
+    for (const lookupKey of keys) {
+      const legacy = await getDoc(sb, "app_auth_accounts", lookupKey, sid);
       if (
         legacy &&
         roleOk(legacy) &&
         String(legacy.schoolId || "").trim().toUpperCase() === sid
       ) {
-        return { id: key, data: legacy };
+        return { id: lookupKey, data: legacy };
       }
     }
     return null;
   }
 
-  for (const key of keys) {
-    const direct = await getDoc(sb, "app_auth_accounts", key);
+  for (const lookupKey of keys) {
+    const direct = await getDoc(sb, "app_auth_accounts", lookupKey);
     if (direct && roleOk(direct)) {
-      return { id: key, data: direct };
+      return { id: lookupKey, data: direct };
     }
   }
 
@@ -1453,15 +1535,14 @@ export async function findAccountDoc(
     if (usernamesMatch(data.username || doc.id, identifier) && roleOk(data)) {
       return { id: doc.id, data };
     }
-    if (normalizeEmail(data.email) === key && roleOk(data)) {
+    if (emailKey && normalizeEmail(data.email) === emailKey && roleOk(data)) {
       return { id: doc.id, data };
     }
   }
 
   if (roleKey === "student") {
-    const studentId = String(identifier).trim().toUpperCase();
     for (const doc of snap) {
-      if (String(doc.data.linkedStudentId || "").toUpperCase() === studentId) {
+      if (studentIdsMatch(doc.data.linkedStudentId, identifier)) {
         return { id: doc.id, data: doc.data };
       }
     }

@@ -28,6 +28,7 @@ import 'package:mayabela/services/student_portal_audit_service.dart';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/student_id_utils.dart';
 import 'package:flutter/foundation.dart';
 
 class RegisteredUser {
@@ -151,6 +152,21 @@ class AuthService {
   static String apiRoleKeyForLogin(String loginRole) {
     if (loginRole == roleStaff) return roleTeacher;
     return loginRole;
+  }
+
+  /// Identifier sent to school-login. Emails and Ethiopian mobiles are
+  /// normalized; mixed usernames like `Sami1013` / `STU-1013` stay intact.
+  ///
+  /// Never digits-only a username. `PhoneUtils.loginKey('Sami1013')` is
+  /// `1013`, which school-login cannot resolve as SAMI ABDULAZIZ.
+  static String normalizeLoginIdentifier(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+    final email = EmailUtils.normalize(trimmed);
+    if (email != null) return email;
+    final phone = PhoneUtils.normalizeLocal(trimmed);
+    if (phone != null) return phone;
+    return trimmed;
   }
 
   /// Administration / custom staff (has assigned staffRoles), not classroom-only.
@@ -1093,17 +1109,7 @@ class AuthService {
       return localError;
     }
 
-    var cloudUsername = username.trim();
-    final email = EmailUtils.normalize(cloudUsername);
-    if (email != null) {
-      cloudUsername = email;
-    } else if (roleKey == roleParent ||
-        roleKey == roleDriver ||
-        roleKey == roleTeacher ||
-        roleKey == roleAdmin) {
-      final phone = PhoneUtils.normalizeLocal(cloudUsername);
-      if (phone != null) cloudUsername = phone;
-    }
+    final cloudUsername = normalizeLoginIdentifier(username);
 
     var cloudReady = SupabaseBootstrap.isInitialized ||
         await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
@@ -1186,17 +1192,7 @@ class AuthService {
       return 'empty';
     }
 
-    var identifier = username.trim();
-    final email = EmailUtils.normalize(identifier);
-    if (email != null) {
-      identifier = email;
-    } else if (roleKey == roleParent ||
-        roleKey == roleDriver ||
-        roleKey == roleTeacher ||
-        roleKey == roleAdmin) {
-      final phone = PhoneUtils.normalizeLocal(identifier);
-      if (phone != null) identifier = phone;
-    }
+    final identifier = normalizeLoginIdentifier(username);
 
     final user = _findUser(
       identifier,
@@ -1327,11 +1323,12 @@ class AuthService {
       return (user.schoolId ?? '').trim().toUpperCase() == sid;
     }
 
-    if (roleKey == roleStudent || trimmed.toUpperCase().startsWith('STU-')) {
-      final studentId = trimmed.toUpperCase();
+    if (roleKey == roleStudent ||
+        trimmed.toUpperCase().startsWith('STU-') ||
+        RegExp(r'^\d+$').hasMatch(trimmed)) {
       for (final user in _users.values) {
         if (user.roleKey == roleStudent &&
-            user.linkedStudentId?.toUpperCase() == studentId &&
+            studentIdsMatch(user.linkedStudentId, trimmed) &&
             schoolOk(user)) {
           return user;
         }
