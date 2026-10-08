@@ -718,6 +718,29 @@ export async function assertSchoolAccessible(
   return school;
 }
 
+/** School-set first-login password (`{year}` → current year). Default EduAba@2026. */
+export function resolvedStudentPortalTempPassword(
+  school: Record<string, unknown> | null | undefined,
+): string {
+  const portal = school?.studentPortal && typeof school.studentPortal === "object"
+    ? school.studentPortal as Record<string, unknown>
+    : {};
+  const template = String(portal.tempPasswordTemplate || "EduAba@2026").trim();
+  return template.split("{year}").join(String(new Date().getFullYear())).trim();
+}
+
+/**
+ * Students may sign in with the school template only before they choose their
+ * own password, or when the cloud account has no stored secret yet.
+ */
+export function studentMayUsePortalTempPassword(
+  account: Record<string, unknown> | null | undefined,
+  hasStoredSecret: boolean,
+): boolean {
+  if (!hasStoredSecret) return true;
+  return !!account?.mustChangePassword;
+}
+
 export function syntheticEmail(username: string, schoolId: string): string {
   const u = normalizeUsername(username).replace(/[^a-z0-9._+-]/g, "_");
   // Domain labels only allow letters, digits, and interior hyphens.

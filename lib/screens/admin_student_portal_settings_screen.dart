@@ -22,7 +22,7 @@ class _AdminStudentPortalSettingsScreenState
   bool _allowReportDownload = true;
   bool _allowStudentMessaging = false;
   bool _allowClassRank = false;
-  final _tempPassword = TextEditingController(text: 'Welcome12!');
+  final _tempPassword = TextEditingController(text: 'EduAba@2026');
 
   @override
   void initState() {
@@ -122,7 +122,8 @@ class _AdminStudentPortalSettingsScreenState
             controller: _tempPassword,
             decoration: const InputDecoration(
               labelText: 'Temporary password template',
-              helperText: 'Use {year} for current year, e.g. EduAba@{year}',
+              helperText:
+                  'This is the student login password until they change it. Use {year} for the current year, e.g. EduAba@{year}',
             ),
           ),
           const Divider(height: 32),

@@ -17,6 +17,8 @@ import {
   upsertSecret,
   verifySecret,
   normalizeStaffRoles,
+  resolvedStudentPortalTempPassword,
+  studentMayUsePortalTempPassword,
 } from "../_shared/school_auth.ts";
 
 Deno.serve(async (req) => {
@@ -86,7 +88,19 @@ Deno.serve(async (req) => {
     const schoolDoc = await assertSchoolAccessible(sb, profileSchoolId);
 
     const secret = await loadSecret(sb, username, profileSchoolId, found.id);
-    const ok = await verifySecret(password, secret, found.data.password);
+    let ok = await verifySecret(password, secret, found.data.password);
+    const hasStoredSecret = !!(secret?.passwordHash || found.data.password);
+    if (
+      !ok &&
+      roleKey === "student" &&
+      studentMayUsePortalTempPassword(found.data, hasStoredSecret)
+    ) {
+      const template = resolvedStudentPortalTempPassword(schoolDoc);
+      if (template.length >= 10 && password === template) {
+        ok = true;
+        await upsertSecret(sb, username, password, profileSchoolId);
+      }
+    }
     if (!ok) {
       return errorResponse("Invalid credentials.", 401, "invalid");
     }

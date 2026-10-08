@@ -102,6 +102,12 @@ class StudentPortalSettings {
       allowClassRank: map['allowClassRank'] as bool? ?? false,
     );
   }
+
+  /// First-login password shared with students (`{year}` → current year).
+  String resolvedTempPassword({int? year}) {
+    final y = (year ?? DateTime.now().year).toString();
+    return tempPasswordTemplate.replaceAll('{year}', y).trim();
+  }
 }
 
 enum StudentPortalAuditAction {
