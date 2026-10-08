@@ -152,6 +152,21 @@ void main() {
     expect(SchoolAuthCloudService.resolvedSchoolId(), schoolId);
   });
 
+  test('student login JWT nested app_metadata counts as school claims', () {
+    final token = _unsignedJwt({
+      'role': 'authenticated',
+      'app_metadata': {
+        'role': 'student',
+        'schoolId': 'MAL838',
+        'username': 'sami1013',
+      },
+    });
+    final claims = SchoolAuthCloudService.schoolClaimsFromAccessToken(token);
+    expect(claims['role'], 'student');
+    expect(claims['schoolId'], 'MAL838');
+    expect(SchoolAuthCloudService.schoolClaimsArePresent(claims), isTrue);
+  });
+
   test('malformed access tokens do not throw', () {
     expect(
       SchoolAuthCloudService.schoolClaimsFromAccessToken('not-a-jwt'),

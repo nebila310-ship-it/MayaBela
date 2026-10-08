@@ -388,35 +388,28 @@ class SchoolAuthCloudService {
       }
 
       // setSession(accessToken:) calls Auth getUser(). That extra round-trip
-      // often fails on phone networks after school-login already succeeded,
-      // which made the APK show "invalid credentials" while web worked.
+      // often fails after school-login already succeeded. Do not turn a 200
+      // school-login into "Invalid credentials" — attach the session
+      // best-effort and continue with the returned profile.
       try {
         await SupabaseBootstrap.client.auth.setSession(
           refreshToken,
           accessToken: accessToken,
         );
-      } catch (e) {
+      } catch (_) {
         try {
           await SupabaseBootstrap.client.auth.setSession(refreshToken);
-        } catch (e2) {
-          if (kIsWeb) {
-            return SchoolAuthCloudResult(
-              ok: false,
-              errorCode: 'invalid',
-              errorMessage: e2.toString(),
-            );
-          }
-        }
+        } catch (_) {}
       }
-      try {
-        await SupabaseBootstrap.client.auth.refreshSession();
-      } catch (_) {}
 
-      if (!await hasSchoolClaims()) {
-        await refreshAccessClaims(username: username.trim());
+      var claimsOk = await hasSchoolClaims();
+      if (!claimsOk && (accessToken ?? '').isNotEmpty) {
+        claimsOk = schoolClaimsArePresent(_claimsFromAccessToken(accessToken!));
       }
-      if (!await hasSchoolClaims() && kIsWeb) {
-        return const SchoolAuthCloudResult(ok: false, errorCode: 'invalid');
+      if (!claimsOk) {
+        try {
+          await refreshAccessClaims(username: username.trim());
+        } catch (_) {}
       }
 
       final profile = _userFromProfile(profileMap);
