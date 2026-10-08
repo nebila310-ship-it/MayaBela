@@ -8,6 +8,7 @@ import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
+import 'package:mayabela/utils/student_id_utils.dart';
 
 class AdminStudentRecord {
   AdminStudentRecord({
@@ -572,7 +573,9 @@ class StudentRegistryService {
   AdminStudentRecord? lookupById(String studentId) {
     final id = studentId.trim().toUpperCase();
     try {
-      return _students.firstWhere((s) => s.studentId == id && s.isActive);
+      return _students.firstWhere(
+        (s) => studentIdsMatch(s.studentId, id) && s.isActive,
+      );
     } catch (_) {
       return null;
     }
@@ -581,7 +584,7 @@ class StudentRegistryService {
   AdminStudentRecord? lookupAnyById(String studentId) {
     final id = studentId.trim().toUpperCase();
     try {
-      return _students.firstWhere((s) => s.studentId == id);
+      return _students.firstWhere((s) => studentIdsMatch(s.studentId, id));
     } catch (_) {
       return null;
     }

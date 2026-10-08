@@ -23,7 +23,6 @@ import 'package:mayabela/services/session_prefs_service.dart';
 import 'package:mayabela/theme/login_role_theme.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
-import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/screens/public_admission_apply_screen.dart';
 import 'package:mayabela/screens/enrollment_screens.dart';
@@ -34,7 +33,6 @@ import 'package:mayabela/screens/forgot_password_screen.dart';
 import 'package:mayabela/screens/student_forgot_password_screen.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/login_brand_header.dart';
-import 'package:mayabela/widgets/ethiopian_phone_field.dart';
 import 'package:mayabela/widgets/dom_backed_text_field.dart';
 import 'package:mayabela/web_erp/login/web_login_shell.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -67,16 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// Login identifier: email, Ethiopian phone, or username / student id.
   String _loginIdentifierValue() {
-    final raw = username.text.trim();
-    final email = EmailUtils.normalize(raw);
-    if (email != null) return email;
-    final local = EthiopianPhoneField.localFromInput(raw);
-    if (local.isNotEmpty) {
-      return PhoneUtils.loginKey(local);
-    }
-    final phone = PhoneUtils.normalizeLocal(raw);
-    if (phone != null) return phone;
-    return raw;
+    return AuthService.normalizeLoginIdentifier(username.text);
   }
 
   Widget _forgotPasswordScreen() {
