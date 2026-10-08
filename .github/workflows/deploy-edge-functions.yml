@@ -25,6 +25,7 @@ on:
       - "supabase/functions/platform-delete-school/**"
       - "supabase/functions/platform-upload-logo/**"
       - "supabase/functions/school-public-brand/**"
+      - "supabase/functions/school-login/**"
       - "supabase/functions/_shared/mailer.ts"
       - "supabase/functions/_shared/school_auth.ts"
       - "supabase/functions/_shared/cors.ts"
@@ -66,3 +67,4 @@ jobs:
           supabase functions deploy platform-delete-school --project-ref "$REF" --no-verify-jwt
           supabase functions deploy platform-upload-logo --project-ref "$REF" --no-verify-jwt
           supabase functions deploy school-public-brand --project-ref "$REF" --no-verify-jwt
+          supabase functions deploy school-login --project-ref "$REF" --no-verify-jwt
