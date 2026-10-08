@@ -125,6 +125,10 @@ void main() {
       isFalse,
     );
     expect(
+      ProfilePhotoCodec.isDeviceLocalPath('asset:assets/branding/maya_brand.png'),
+      isFalse,
+    );
+    expect(
       ProfilePhotoCodec.cloudObjectPath(
         schoolId: 'tb-001',
         folder: 'student_photos',

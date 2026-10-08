@@ -406,6 +406,24 @@ class GalleryPost {
   final String? mediaLabel;
   final String? mediaPath;
   List<String> attachmentPaths;
+
+  GalleryPost copyWith({
+    String? mediaPath,
+    List<String>? attachmentPaths,
+  }) {
+    return GalleryPost(
+      id: id,
+      className: className,
+      type: type,
+      title: title,
+      caption: caption,
+      authorName: authorName,
+      postedAt: postedAt,
+      mediaLabel: mediaLabel,
+      mediaPath: mediaPath ?? this.mediaPath,
+      attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+    );
+  }
 }
 
 class DailyActivityOption {

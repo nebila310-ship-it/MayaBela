@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/models/fee_record.dart';
 import 'package:mayabela/models/platform_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 
 /// Firestore / LocalJsonStore serialization for app content models.
@@ -84,18 +85,28 @@ abstract final class AppDataMaps {
 
   // —— Gallery ——
 
-  static Map<String, dynamic> galleryPostToMap(GalleryPost post) => {
-    'id': post.id,
-    'className': post.className,
-    'type': post.type.name,
-    'title': post.title,
-    'caption': post.caption,
-    'authorName': post.authorName,
-    'postedAt': post.postedAt.toIso8601String(),
-    if (post.mediaLabel != null) 'mediaLabel': post.mediaLabel,
-    if (post.mediaPath != null) 'mediaPath': post.mediaPath,
-    'attachmentPaths': post.attachmentPaths,
-  };
+  static Map<String, dynamic> galleryPostToMap(GalleryPost post) {
+    final media = post.mediaPath;
+    final cloudMedia =
+        media != null && !ProfilePhotoCodec.isDeviceLocalPath(media)
+            ? media
+            : null;
+    final attachments = post.attachmentPaths
+        .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
+        .toList();
+    return {
+      'id': post.id,
+      'className': post.className,
+      'type': post.type.name,
+      'title': post.title,
+      'caption': post.caption,
+      'authorName': post.authorName,
+      'postedAt': post.postedAt.toIso8601String(),
+      if (post.mediaLabel != null) 'mediaLabel': post.mediaLabel,
+      if (cloudMedia != null) 'mediaPath': cloudMedia,
+      'attachmentPaths': attachments,
+    };
+  }
 
   static GalleryPost galleryPostFromMap(Map<String, dynamic> map) =>
       GalleryPost(

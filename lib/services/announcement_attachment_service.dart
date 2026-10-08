@@ -137,7 +137,7 @@ class AnnouncementAttachmentService {
         localPath: localPath,
         subdir: subdir,
         attachmentId: attachmentId,
-      ).timeout(const Duration(seconds: 12), onTimeout: () => null);
+      ).timeout(const Duration(seconds: 28), onTimeout: () => null);
     } catch (_) {
       return null;
     }
@@ -152,11 +152,12 @@ class AnnouncementAttachmentService {
   }) async {
     if (!SupabaseBootstrap.isInitialized) return null;
     if (SupabaseStorageBootstrap.deferred) return null;
-    final ready = await SupabaseStorageBootstrap.ensureReady().timeout(
-      const Duration(seconds: 8),
-      onTimeout: () => false,
-    );
-    if (!ready) return null;
+
+    // Skip the Storage probe. It previously aborted every gallery upload and
+    // left a laptop-only `web://` path that parents cannot open.
+    try {
+      await SupabaseBootstrap.ensureReadyForFirestore();
+    } catch (_) {}
 
     try {
       final payload = await resolveUploadBytes(
@@ -168,24 +169,43 @@ class AnnouncementAttachmentService {
       final schoolId =
           (AuthService.activeSchoolId ??
                   AuthService.currentUser?.schoolId ??
-                  'unknown')
+                  '')
               .trim()
               .toUpperCase();
+      if (schoolId.isEmpty) return null;
       final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
       final storagePath = 'schools/$schoolId/$subdir/${attachmentId}_$safeName';
-      await SupabaseBootstrap.client.storage
-          .from('school-files')
-          .uploadBinary(
-            storagePath,
-            Uint8List.fromList(payload),
-            fileOptions: FileOptions(
-              contentType: _contentTypeFor(fileName),
-              upsert: true,
-            ),
-          );
-      return SupabaseBootstrap.client.storage
-          .from('school-files')
-          .getPublicUrl(storagePath);
+      final body = Uint8List.fromList(payload);
+
+      Future<String?> attempt() async {
+        await SupabaseBootstrap.client.storage
+            .from('school-files')
+            .uploadBinary(
+              storagePath,
+              body,
+              fileOptions: FileOptions(
+                contentType: _contentTypeFor(fileName),
+                upsert: true,
+              ),
+            )
+            .timeout(const Duration(seconds: 25));
+        final url = SupabaseBootstrap.client.storage
+            .from('school-files')
+            .getPublicUrl(storagePath);
+        WebAttachmentCache.instance.remember(url, body);
+        WebAttachmentCache.instance.remember(storagePath, body);
+        return url;
+      }
+
+      try {
+        return await attempt();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('AnnouncementAttachmentService cloud upload retry: $e');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+        return await attempt();
+      }
     } catch (e) {
       SupabaseStorageBootstrap.reset();
       if (kDebugMode) {

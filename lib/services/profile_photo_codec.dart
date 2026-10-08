@@ -33,6 +33,7 @@ class ProfilePhotoCodec {
     if (trimmed.isEmpty) return true;
     if (WebAttachmentCache.instance.isWebPath(trimmed)) return true;
     if (trimmed.startsWith('data:')) return true;
+    if (trimmed.startsWith('asset:')) return false;
     if (isRemoteUrl(trimmed)) return false;
     if (trimmed.startsWith('schools/')) return false;
     return true;
@@ -200,6 +201,28 @@ class ProfilePhotoCodec {
       }
       final resized = img.copyResize(square, width: 512, height: 512);
       return Uint8List.fromList(img.encodeJpg(resized, quality: 88));
+    } catch (_) {
+      return bytes;
+    }
+  }
+
+  /// JPEG that Flutter Web can display. Does not crop — gallery class photos
+  /// must keep their original frame. HEIC/TIFF that cannot decode stay original.
+  static Uint8List displayJpegOrOriginal(Uint8List bytes) {
+    if (bytes.isEmpty) return bytes;
+    try {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return bytes;
+      var out = decoded;
+      const maxEdge = 1920;
+      if (out.width > maxEdge || out.height > maxEdge) {
+        out = img.copyResize(
+          out,
+          width: out.width >= out.height ? maxEdge : null,
+          height: out.height > out.width ? maxEdge : null,
+        );
+      }
+      return Uint8List.fromList(img.encodeJpg(out, quality: 85));
     } catch (_) {
       return bytes;
     }

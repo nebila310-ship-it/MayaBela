@@ -120,6 +120,7 @@ import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
+import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/campus_room_service.dart';
 import 'package:mayabela/services/cctv/cctv_catalog_service.dart';
@@ -2281,6 +2282,7 @@ class CloudAppStore {
       await StudentPhotoService.instance.promotePendingToCloud();
       await TeacherPhotoService.instance.promotePendingToCloud();
       await DriverPhotoService.instance.promotePendingToCloud();
+      await GalleryMediaService.instance.promotePendingToCloud();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('CloudAppStore promote local photos: $e');

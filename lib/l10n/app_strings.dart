@@ -1062,6 +1062,11 @@ class AppStrings implements AppStringsLike {
         'ፎቶ ወይም ቪዲዮ መጨመር አልተቻለም። ሌላ ፋይል ይሞክሩ።',
         'Suuraa ykn viidiyoo dabaluun hin dandeenye. Faayilii biraa yaali.',
       );
+  String get galleryCloudRequired => t(
+        'That photo is only on this computer. Wait for the cloud save, then post again so parents can open it.',
+        'ፎቶው በዚህ ኮምፒውተር ብቻ ነው። ወደ ክላውድ ከተቀመጠ በኋላ እንደገና ይለጥፉ፣ ወላጆች እንዲከፍቱት።',
+        'Suuraan kun kompiitara kana irratti qofa. Kuufama duwwaa eegi, irra deebiin maxxansi akka maatii banuu danda\'u.',
+      );
   String get schoolGalleryHint => t(
         'Share class photos, videos, notes, and file attachments. Photos up to 8 MB, videos up to 25 MB, other files up to 10 MB. Parents see posts for their children.',
         'ፎቶ፣ ቪዲዮ፣ ማስታወሻ እና ፋይሎችን ለክፍል ያጋሩ። ወላጆች የልጆቻቸውን ልጥፎች ያያሉ።',
