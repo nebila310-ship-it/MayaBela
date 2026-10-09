@@ -1798,6 +1798,7 @@ class SchoolDataService {
     required List<String> parentNames,
     required List<String> staffIds,
     List<String>? linkedStudentIds,
+    List<String>? parentParticipantUsernames,
   }) {
     final title = groupName.trim();
     if (title.isEmpty) {
@@ -1835,6 +1836,16 @@ class SchoolDataService {
             changed = true;
           }
         }
+        for (final raw in parentParticipantUsernames ?? const <String>[]) {
+          final username = raw.trim();
+          if (username.isEmpty) continue;
+          if (!conversation.parentParticipantUsernames.any(
+            (existing) => existing.trim().toLowerCase() == username.toLowerCase(),
+          )) {
+            conversation.parentParticipantUsernames.add(username);
+            changed = true;
+          }
+        }
         if (changed) _persistConversation(conversation.id);
         return conversation.id;
       }
@@ -1855,6 +1866,7 @@ class SchoolDataService {
         groupParentNames: sortedParents,
         groupStaffIds: sortedStaffIds,
         linkedStudentIds: linkedStudentIds,
+        parentParticipantUsernames: parentParticipantUsernames,
         messages: [],
         usesCustomGroupName: true,
       ),
@@ -3442,7 +3454,10 @@ class SchoolDataService {
   }
 
   List<HomeworkItem> getHomeworkForParent() {
-    final classes = getChildren().map((child) => child.className).toSet();
+    final classes = <String>{
+      ...getChildren().map((child) => child.className),
+      ...AuthService.accessClassNamesForSync(),
+    }.where((name) => name.trim().isNotEmpty).toSet();
     return _homework
         .where((item) => classes.any((c) => _classNamesMatch(c, item.className)))
         .toList()
@@ -4535,7 +4550,7 @@ class SchoolDataService {
       studentName: entry.studentName,
       studentId: (id == null || id.trim().isEmpty) ? null : id,
       status: entry.status,
-      updatedAt: entry.updatedAt,
+      updatedAt: entry.updatedAt ?? DateTime.now(),
     );
   }
 
@@ -4561,9 +4576,9 @@ class SchoolDataService {
     if (existing == null) return incoming;
     if (incoming.updatedAt == null) {
       return StudentAttendanceEntry(
-        studentName: existing.studentName,
-        studentId: existing.studentId ?? incoming.studentId,
-        status: existing.status,
+        studentName: incoming.studentName,
+        studentId: incoming.studentId ?? existing.studentId,
+        status: incoming.status,
         updatedAt: existing.updatedAt,
       );
     }
@@ -5857,6 +5872,15 @@ class SchoolDataService {
     SubjectGrade local,
     SubjectGrade incoming,
   ) {
+    if (local.status == SubjectGradeStatus.approved &&
+        incoming.status == SubjectGradeStatus.pendingApproval) {
+      // Seed/demo approved rows have no review stamp. A live pending
+      // submission from another device must still reach the admin queue.
+      // A real approval (lastReviewedAt / publishedAt) stays locked.
+      if (local.lastReviewedAt == null && local.publishedAt == null) {
+        return incoming;
+      }
+    }
     if (local.status == SubjectGradeStatus.approved &&
         incoming.status != SubjectGradeStatus.approved) {
       return local;
@@ -7797,7 +7821,11 @@ class SchoolDataService {
     }
 
     _ethiopianHolidaysSynced = true;
-    if (changed && persist) _persistSchoolContent();
+    if (changed && persist) {
+      unawaited(
+        SchoolContentPersistenceService.instance.saveCalendarFromService(),
+      );
+    }
   }
 
   CalendarEvent scheduleCalendarEvent({
@@ -8074,7 +8102,24 @@ class SchoolDataService {
         periodKey: incoming.periodKey,
       );
       if (existing == null) {
-        _attendanceSessions.add(incoming);
+        _attendanceSessions.add(
+          AttendanceSession(
+            className: incoming.className,
+            date: incoming.date,
+            conductedBy: incoming.conductedBy,
+            entries: incoming.entries
+                .map(
+                  (entry) =>
+                      _hydrateAttendanceEntry(entry, incoming.className),
+                )
+                .toList(),
+            locked: incoming.locked,
+            lockedBy: incoming.lockedBy,
+            lockedAt: incoming.lockedAt,
+            periodKey: incoming.periodKey,
+            periodLabel: incoming.periodLabel,
+          ),
+        );
         continue;
       }
       _attendanceSessions.remove(existing);
@@ -8087,7 +8132,12 @@ class SchoolDataService {
           conductedBy: incoming.conductedBy.isNotEmpty
               ? incoming.conductedBy
               : existing.conductedBy,
-          entries: _mergeAttendanceEntries(existing.entries, incoming.entries),
+          entries: _mergeAttendanceEntries(
+            existing.entries,
+            incoming.entries
+                .map((entry) => _hydrateAttendanceEntry(entry, incoming.className))
+                .toList(),
+          ),
           locked: incoming.locked,
           lockedBy: incoming.lockedBy ?? existing.lockedBy,
           lockedAt: incoming.lockedAt ?? existing.lockedAt,

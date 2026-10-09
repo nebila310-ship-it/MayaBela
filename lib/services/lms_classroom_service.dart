@@ -3,6 +3,8 @@ import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
+import 'package:mayabela/models/enrollment.dart';
+import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
@@ -44,15 +46,10 @@ class LmsClassroomService {
 
   String ensureClassDiscussion(String className) {
     final title = discussionTitle(className);
-    final existing = SchoolDataService.instance.getConversations().where(
-          (c) =>
-              c.isGroup &&
-              c.name.trim().toLowerCase() == title.toLowerCase(),
-        );
-    if (existing.isNotEmpty) return existing.first.id;
-
     final students = StudentRegistryService.instance.studentsForClass(className);
     final parentNames = <String>{};
+    final parentUsernames = <String>{};
+    final studentIds = students.map((s) => s.studentId.toUpperCase()).toSet();
     for (final student in students) {
       for (final name in [
         student.fatherName,
@@ -63,6 +60,15 @@ class LmsClassroomService {
           parentNames.add(name.trim());
         }
       }
+    }
+    EnrollmentService.instance.ensureSeeded();
+    for (final link in EnrollmentService.instance.allLinksSnapshot()) {
+      if (link.status != ParentLinkStatus.approved) continue;
+      if (!studentIds.contains(link.studentId.trim().toUpperCase())) continue;
+      final username = link.parentUsername.trim();
+      if (username.isNotEmpty) parentUsernames.add(username);
+      final fullName = link.parentFullName.trim();
+      if (fullName.isNotEmpty) parentNames.add(fullName);
     }
 
     final staffIds = <String>{};
@@ -87,6 +93,7 @@ class LmsClassroomService {
       parentNames: parentNames.toList()..sort(),
       staffIds: staffIds.toList()..sort(),
       linkedStudentIds: students.map((s) => s.studentId).toList(),
+      parentParticipantUsernames: parentUsernames.toList()..sort(),
     );
   }
 

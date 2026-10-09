@@ -983,6 +983,7 @@ class AppStrings implements AppStringsLike {
       t('No classes assigned', 'ምንም ክፍል አልተመደበም');
   String get gradesBtn => t('Grades', 'ደረጃዎች');
   String get dailyActivities => t('Daily Activities', 'ዕለታዊ እንቅስቃሴ');
+  String get classDiscussion => t('Class discussion', 'የክፍል ውይይት');
   String get messageParent => t('Message Parent', 'ወላጅ መልእክት');
   String messageTo(String name) =>
       t('Message $name', 'ለ$name መልእክት');

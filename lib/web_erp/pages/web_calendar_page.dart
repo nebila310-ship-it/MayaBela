@@ -29,10 +29,14 @@ class _WebCalendarPageState extends State<WebCalendarPage> {
   @override
   void initState() {
     super.initState();
-    _data.publishDueCalendarAnnouncements();
     final now = DateTime.now();
     _focusedMonth = DateTime(now.year, now.month);
     _selectedDay = DateTime(now.year, now.month, now.day);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _data.ensureEthiopianHolidaysSynced();
+      if (mounted) setState(() {});
+    });
   }
 
   List<CalendarEvent> get _visibleEvents {

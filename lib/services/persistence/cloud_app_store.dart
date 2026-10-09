@@ -621,13 +621,10 @@ class CloudAppStore {
   Future<List<Map<String, dynamic>>> _scopedStudentIdRead(String collection) {
     final role = AuthService.currentUser?.roleKey;
     if (role == AuthService.roleParent || role == AuthService.roleStudent) {
-      return _schoolRead(
-        collection,
-        whereInField: 'studentId',
-        whereInValues: _studentIdQueryValues(
-          AuthService.activeLinkedStudentIds(),
-        ),
-      );
+      // RLS already limits rows to linked students. An exact `studentId`
+      // whereIn used to drop daily activities / grades when the JWT id
+      // casing differed or the doc only had a `studentIds` array.
+      return _schoolRead(collection);
     }
     if (role == AuthService.roleTeacher && AuthService.usesScopedCloudReads) {
       return _schoolRead(
@@ -639,15 +636,19 @@ class CloudAppStore {
     return _schoolRead(collection);
   }
 
-  Future<List<Map<String, dynamic>>> _scopedClassRead(String collection) {
-    if (!AuthService.usesScopedCloudReads) {
-      return _schoolRead(collection);
-    }
-    return _schoolRead(
-      collection,
-      whereInField: 'className',
-      whereInValues: AuthService.cloudClassNameQueryValues(),
-    );
+  Future<List<Map<String, dynamic>>> _scopedClassRead(String collection) async {
+    // RLS already hides other classes. An empty exact `whereIn` used to
+    // return [] and hide live attendance/homework on a fresh parent phone.
+    final rows = await _schoolRead(collection);
+    if (!AuthService.usesScopedCloudReads) return rows;
+    final classes = AuthService.accessClassNamesForSync();
+    if (classes.isEmpty) return rows;
+    return rows.where((doc) {
+      final name = '${doc['className'] ?? ''}';
+      return classes.any(
+        (assigned) => StudentRegistryService.classNamesMatch(assigned, name),
+      );
+    }).toList();
   }
 
   void _trackStep(bool track, String message) {
@@ -1043,6 +1044,9 @@ class CloudAppStore {
     return _serializedPull(() async {
       if (!available) return;
       await _prepareCloudRead();
+      try {
+        await SchoolAuthCloudService.instance.refreshAccessClaims();
+      } catch (_) {}
       await _pullParentLinks();
       await _pullStudentRegistry();
       await _pullAuthAccounts();
@@ -1709,11 +1713,21 @@ class CloudAppStore {
         ));
   }
 
+  Map<String, dynamic> _homeworkCloudMap(HomeworkItem item) {
+    final map = Map<String, dynamic>.from(item.toMap());
+    map['studentIds'] = StudentRegistryService.instance
+        .studentsForClass(item.className)
+        .map((s) => s.studentId.trim())
+        .where((id) => id.isNotEmpty)
+        .toList();
+    return map;
+  }
+
   Future<void> pushHomeworkItem(HomeworkItem item) async {
     await _pushSafe(() => _crud.createOrUpdate(
           collection: AppCollections.homework,
           docId: item.id,
-          data: item.toMap(),
+          data: _homeworkCloudMap(item),
         ));
   }
 
@@ -1721,7 +1735,7 @@ class CloudAppStore {
     final items = SchoolDataService.instance.homeworkSnapshot();
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.homework,
-          items: items.map((i) => i.toMap()).toList(),
+          items: items.map(_homeworkCloudMap).toList(),
           docIdFor: (item) => item['id'] as String,
         ));
   }

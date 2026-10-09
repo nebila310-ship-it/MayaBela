@@ -88,10 +88,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _data.publishDueCalendarAnnouncements();
     final initial = widget.initialDate ?? DateTime.now();
     _focusedMonth = DateTime(initial.year, initial.month);
     _selectedDay = DateTime(initial.year, initial.month, initial.day);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _data.ensureEthiopianHolidaysSynced();
+      if (mounted) setState(() {});
+    });
   }
 
   void _changeMonth(int delta) {
