@@ -4472,16 +4472,6 @@ class SchoolDataService {
     }
     final belongs = session != null &&
         session.entries.any((entry) => _attendanceEntryOnRoster(entry, roster));
-    if (session != null && !belongs) {
-      return (
-        entries: [
-          for (final entry in session.entries) _copyAttendanceEntry(entry),
-        ],
-        conductedBy: session.conductedBy,
-        locked: session.locked,
-        periodLabel: session.periodLabel,
-      );
-    }
     final entries = roster.map((student) {
       StudentAttendanceEntry? match;
       if (session != null) {
@@ -5884,11 +5874,10 @@ class SchoolDataService {
   ) {
     if (local.status == SubjectGradeStatus.approved &&
         incoming.status == SubjectGradeStatus.pendingApproval) {
-      final incomingAt = incoming.submittedAt;
-      final localAt =
-          local.lastReviewedAt ?? local.publishedAt ?? local.submittedAt;
-      if (localAt == null) return incoming;
-      if (incomingAt != null && !incomingAt.isBefore(localAt)) {
+      // Seed/demo approved rows have no review stamp. A live pending
+      // submission from another device must still reach the admin queue.
+      // A real approval (lastReviewedAt / publishedAt) stays locked.
+      if (local.lastReviewedAt == null && local.publishedAt == null) {
         return incoming;
       }
     }
