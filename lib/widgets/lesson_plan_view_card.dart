@@ -72,6 +72,7 @@ class _LessonPlanViewCardState extends State<LessonPlanViewCard> {
       if (plan.durationMinutes != null) '${plan.durationMinutes} min',
       plan.isPublished ? 'Published' : 'Draft',
       if (plan.reviewLabel.isNotEmpty) plan.reviewLabel,
+      if (plan.hasAchievement) plan.achievementLabel,
     ].where((part) => part.trim().isNotEmpty).join(' · ');
 
     return Card(
@@ -99,6 +100,7 @@ class _LessonPlanViewCardState extends State<LessonPlanViewCard> {
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
             const _LessonPlanGuide(),
+            _achievementSection(plan),
             if (unit != null)
               _section(
                 context,
@@ -193,6 +195,70 @@ class _LessonPlanViewCardState extends State<LessonPlanViewCard> {
                 alignment: Alignment.centerRight,
                 child: Wrap(spacing: 8, children: widget.actions),
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _achievementSection(LessonPlan plan) {
+    final value = plan.achievementPercent;
+    final color = value == null
+        ? Colors.grey.shade600
+        : value >= 80
+            ? const Color(0xFF15803D)
+            : value >= 60
+                ? const Color(0xFFB45309)
+                : const Color(0xFFB91C1C);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Achievement',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: widget.accent,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value == null
+                  ? 'Management has not evaluated this weekly plan yet.'
+                  : 'Management evaluation of how well this plan met its aims.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 6),
+            if (value == null)
+              const Text('Not evaluated')
+            else ...[
+              Text(
+                '$value%',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: value / 100,
+                  minHeight: 8,
+                  color: color,
+                  backgroundColor: color.withValues(alpha: 0.15),
+                ),
+              ),
+              if (plan.achievementNotes.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(plan.achievementNotes.trim(), style: const TextStyle(height: 1.35)),
+              ],
             ],
           ],
         ),

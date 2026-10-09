@@ -12,6 +12,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/lesson_plan_view_card.dart';
@@ -32,9 +33,19 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
   String? _subject;
 
   bool get _canManage => ModuleAccess.canManage('lesson_plans');
+  bool get _teacherScoped =>
+      AuthService.currentUser?.roleKey == AuthService.roleTeacher &&
+      !_canManage;
   String get _schoolId => AuthService.activeSchoolId ?? '';
 
   List<String> get _classes {
+    if (_teacherScoped) {
+      final names = <String>{
+        ...TeacherAccessService.instance.myClasses.map((a) => a.className),
+        ...AuthService.accessClassNamesForSync(),
+      };
+      return names.where((n) => n.trim().isNotEmpty).toList()..sort();
+    }
     final names = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
       ...SchoolDataService.instance.getAllGradeReports().map((r) => r.className),
@@ -52,8 +63,22 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
   }
 
   List<String> get _subjects {
+    if (_teacherScoped) {
+      final names = <String>{};
+      for (final className in _classes) {
+        names.addAll(
+          TeacherAccessService.instance.teachableSubjects(className),
+        );
+      }
+      return names.where((n) => n.trim().isNotEmpty).toList()..sort();
+    }
     final list = {...SchoolSubjects.all}.toList()..sort();
     return list;
+  }
+
+  List<String> _subjectsForClass(String className) {
+    if (!_teacherScoped) return _subjects;
+    return TeacherAccessService.instance.teachableSubjects(className);
   }
 
   @override
@@ -74,42 +99,46 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
         CurriculumService.instance,
       ]),
       builder: (context, _) {
-        var items = _plans.forSchool(_schoolId);
-        if (_className != null) {
+        var items = _plans.visibleForCurrentUser(
+          className: _className,
+          schoolId: _schoolId,
+        );
+        if (_subject != null) {
           items = items
               .where(
-                (p) => StudentRegistryService.classNamesMatch(
-                  p.className,
-                  _className!,
-                ),
+                (p) => TeacherAccessService.subjectsMatch(p.subject, _subject!),
               )
               .toList();
         }
-        if (_subject != null) {
-          items = items.where((p) => p.subject == _subject).toList();
-        }
-        items.sort((a, b) => b.weekStart.compareTo(a.weekStart));
         return ListView(
           padding: EdgeInsets.all(narrow ? 12 : 20),
           children: [
             Text('Lesson plans', style: WebErpTheme.sectionTitle(context)),
             const SizedBox(height: 4),
             Text(
-              'International-school weekly plan: learning objectives, success '
-              'criteria, lesson sequence, differentiation, assessment, home '
-              'learning, and resources. Publish so teachers, parents, and students '
-              'can expand the same plan. This does not enter grades.',
+              _teacherScoped
+                  ? 'Prepare weekly plans for the subjects you teach. Other '
+                      'subjects stay hidden. Submit a plan to send it to the '
+                      'parents of that class. Parents can read it only.'
+                  : 'Teachers write a weekly plan for their own subject. '
+                      'Publishing sends it to parents of that class (read-only). '
+                      'Record an achievement % so leadership can evaluate delivery. '
+                      'This does not enter grades.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
+            if (_canManage) ...[
+              const SizedBox(height: 12),
+              _evaluationSummary(items),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (_canManage)
+                if (_canManage || _teacherScoped)
                   FilledButton.icon(
                     onPressed: () => _edit(),
                     icon: const Icon(Icons.add),
@@ -193,7 +222,14 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
       plan: plan,
       initiallyExpanded: expand,
       actions: [
-        if (_canManage) ...[
+        if (_canManage)
+          TextButton(
+            onPressed: () => _evaluate(plan),
+            child: Text(
+              plan.hasAchievement ? 'Update achievement' : 'Evaluate',
+            ),
+          ),
+        if (_canManage || _teacherScoped) ...[
           if (!plan.isPublished)
             TextButton(
               onPressed: () =>
@@ -223,8 +259,109 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
         existing: existing,
         classes: _classes,
         subjects: _subjects,
+        subjectsForClass: _teacherScoped ? _subjectsForClass : null,
       ),
     );
+  }
+
+  Widget _evaluationSummary(List<LessonPlan> items) {
+    final scored = items.where((p) => p.hasAchievement).toList();
+    final average = scored.isEmpty
+        ? null
+        : scored.fold<int>(0, (sum, p) => sum + p.achievementPercent!) /
+            scored.length;
+    final pending = items.where((p) => p.isPublished && !p.hasAchievement).length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: WebErpTheme.cardDecoration(context),
+      child: Wrap(
+        spacing: 24,
+        runSpacing: 8,
+        children: [
+          _stat('Plans', '${items.length}'),
+          _stat(
+            'Average achievement',
+            average == null ? '—' : '${average.round()}%',
+          ),
+          _stat('Awaiting evaluation', '$pending'),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 2),
+        Text(value, style: WebErpTheme.sectionTitle(context)),
+      ],
+    );
+  }
+
+  Future<void> _evaluate(LessonPlan plan) async {
+    final percent = TextEditingController(
+      text: plan.achievementPercent?.toString() ?? '',
+    );
+    final notes = TextEditingController(text: plan.achievementNotes);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Evaluate lesson plan'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${plan.title} · ${plan.className} · ${plan.subject}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: percent,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Achievement %',
+                  hintText: '0–100',
+                  helperText:
+                      'How well this weekly plan met its learning aims.',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: notes,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Evaluation notes (optional)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    final value = int.tryParse(percent.text.trim());
+    final noteText = notes.text;
+    percent.dispose();
+    notes.dispose();
+    if (saved != true || value == null) return;
+    await _plans.evaluatePlan(plan.id, percent: value, notes: noteText);
   }
 
   static String _weekLabel(DateTime start) {
@@ -239,11 +376,13 @@ class LessonPlanEditorDialog extends StatefulWidget {
     required this.classes,
     required this.subjects,
     this.existing,
+    this.subjectsForClass,
   });
 
   final LessonPlan? existing;
   final List<String> classes;
   final List<String> subjects;
+  final List<String> Function(String className)? subjectsForClass;
 
   @override
   State<LessonPlanEditorDialog> createState() => _LessonPlanEditorDialogState();
@@ -297,10 +436,13 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     );
     _period = TextEditingController(text: p?.periodLabel ?? '');
     _className = p?.className ?? widget.classes.firstOrNull ?? '';
+    final initialSubjects = _subjectsFor(_className);
     _subject = p?.subject ??
-        (widget.subjects.contains('Science')
+        (initialSubjects.contains('Science')
             ? 'Science'
-            : widget.subjects.firstOrNull ?? 'Science');
+            : initialSubjects.firstOrNull ??
+                widget.subjects.firstOrNull ??
+                'Science');
     _weekStart = p?.weekStart ?? LessonPlan.mondayOf(DateTime.now());
     _homework = {...?p?.homeworkIds};
     _papers = {...?p?.examPaperIds};
@@ -331,6 +473,14 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     _onlineUrl.dispose();
     _onlineLabel.dispose();
     super.dispose();
+  }
+
+  List<String> _subjectsFor(String className) {
+    final fromClass = widget.subjectsForClass?.call(className);
+    if (fromClass != null) {
+      return fromClass.where((name) => name.trim().isNotEmpty).toList();
+    }
+    return widget.subjects;
   }
 
   List<HomeworkItem> get _homeworkOptions {
@@ -371,6 +521,15 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     if (title.isEmpty || _className.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Title and class are required.')),
+      );
+      return;
+    }
+    final allowedSubjects = _subjectsFor(_className);
+    if (allowedSubjects.isNotEmpty && !allowedSubjects.contains(_subject)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only save a plan for your assigned subjects.'),
+        ),
       );
       return;
     }
@@ -485,6 +644,10 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
                 ],
                 onChanged: (v) => setState(() {
                   _className = v ?? _className;
+                  final next = _subjectsFor(_className);
+                  if (!next.contains(_subject)) {
+                    _subject = next.firstOrNull ?? _subject;
+                  }
                   _homework.clear();
                   _papers.clear();
                   _materials.clear();
@@ -492,12 +655,12 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                key: ValueKey('lp-edit-subject-$_subject'),
+                key: ValueKey('lp-edit-subject-$_className-$_subject'),
                 initialValue:
-                    widget.subjects.contains(_subject) ? _subject : null,
+                    _subjectsFor(_className).contains(_subject) ? _subject : null,
                 decoration: const InputDecoration(labelText: 'Subject'),
                 items: [
-                  for (final name in widget.subjects)
+                  for (final name in _subjectsFor(_className))
                     DropdownMenuItem(value: name, child: Text(name)),
                 ],
                 onChanged: (v) => setState(() {

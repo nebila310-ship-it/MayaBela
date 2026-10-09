@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -37,14 +36,8 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
     return names.where((name) => name.trim().isNotEmpty).toList()..sort();
   }
 
-  List<String> get _subjects {
-    final fromSlots = _access.myClasses
-        .map((a) => a.subject)
-        .whereType<String>()
-        .where((s) => s.trim().isNotEmpty)
-        .toSet();
-    final list = {...fromSlots, ...SchoolSubjects.all}.toList()..sort();
-    return list;
+  List<String> _subjectsFor(String className) {
+    return _access.teachableSubjects(className);
   }
 
   @override
@@ -67,6 +60,8 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
       listenable: Listenable.merge([_plans, AppLocale.instance]),
       builder: (context, _) {
         final className = _selectedClass;
+        final subjects =
+            className == null ? const <String>[] : _subjectsFor(className);
         final items = className == null
             ? const <LessonPlan>[]
             : _plans.forClass(className);
@@ -76,7 +71,7 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
             backgroundColor: accent,
             title: Text(AppLocale.instance.strings.dashboardTitle('lesson_plans')),
           ),
-          floatingActionButton: className == null
+          floatingActionButton: className == null || subjects.isEmpty
               ? null
               : FloatingActionButton.extended(
                   onPressed: () => _openEditor(),
@@ -107,9 +102,25 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                   ),
                 ),
               if (_classOptions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Text(
+                    subjects.isEmpty
+                        ? 'No subjects are assigned to you in this class, so you cannot prepare a lesson plan here.'
+                        : 'Prepare weekly plans for ${subjects.join(', ')} only. Other subjects stay hidden. Submit sends the plan to parents of this class (read-only).',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              if (_classOptions.isNotEmpty)
                 Expanded(
                   child: items.isEmpty
-                      ? const Center(child: Text('No lesson plans for this class.'))
+                      ? Center(
+                          child: Text(
+                            subjects.isEmpty
+                                ? 'No assigned subjects for this class.'
+                                : 'No lesson plans for your subjects in this class.',
+                          ),
+                        )
                       : ListView.builder(
                           padding: listPagePadding(context),
                           itemCount: items.length,
@@ -163,12 +174,23 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
   }
 
   Future<void> _openEditor([LessonPlan? plan]) async {
+    final className = plan?.className ?? _selectedClass ?? _classOptions.first;
+    final subjects = _subjectsFor(className);
+    if (subjects.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only prepare lesson plans for your assigned subjects.'),
+        ),
+      );
+      return;
+    }
     await showDialog<void>(
       context: context,
       builder: (context) => LessonPlanEditorDialog(
         existing: plan,
         classes: _classOptions,
-        subjects: _subjects,
+        subjects: subjects,
+        subjectsForClass: _subjectsFor,
       ),
     );
   }

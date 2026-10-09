@@ -245,6 +245,20 @@ class TeacherAccessService {
     return teachableSubjects(className).contains(subject);
   }
 
+  static bool subjectsMatch(String a, String b) =>
+      a.trim().toLowerCase() == b.trim().toLowerCase();
+
+  /// Teachers prepare lesson plans only for subjects they teach in that class.
+  bool canPrepareLessonPlan({
+    required String className,
+    required String subject,
+  }) {
+    if (className.trim().isEmpty || subject.trim().isEmpty) return false;
+    return teachableSubjects(className).any(
+      (name) => subjectsMatch(name, subject),
+    );
+  }
+
   bool canEditSubject(
     String className,
     String subject, {
