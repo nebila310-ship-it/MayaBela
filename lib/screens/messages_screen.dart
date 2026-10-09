@@ -98,7 +98,7 @@ class _MessagesScreenState extends State<MessagesScreen>
       MaterialPageRoute(
         builder: (_) => ChatScreen(
           conversationId: conversation.id,
-          contactName: conversation.name,
+          contactName: conversation.inboxTitleForViewer(),
           isBroadcast: conversation.isBroadcast,
           isGroup: conversation.isGroup,
         ),
@@ -1193,7 +1193,9 @@ class _ChatScreenState extends State<ChatScreen> {
         return Scaffold(
           backgroundColor: MessagesPalette.chatWallpaper,
           appBar: MessagesAppBar(
+            titleKey: const Key('chat-app-bar-title'),
             title: chat?.inboxTitleForViewer() ?? widget.contactName,
+            subtitle: chat?.chatBarSubtitleForViewer(),
             peerOnline: peerOnline,
             photoPath: widget.isGroup ? chat?.photoPath : null,
             onTitleTap: chat == null

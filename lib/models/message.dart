@@ -564,14 +564,34 @@ class Conversation {
     return groupStaffIds.any((id) => id.trim() == viewerStaffId.trim());
   }
 
-  /// Inbox row title: the other person's name (WhatsApp), not a role-owner label.
+  /// Inbox row / chat AppBar title: the other person's name, never the viewer.
   String inboxTitleForViewer({String? viewerRole}) {
     viewerRole ??= AuthService.currentUser?.roleKey;
     if (isGroup || isBroadcast) {
       return displayTitleForViewer(viewerRole: viewerRole);
     }
-    return _peerPersonNameForViewer(viewerRole: viewerRole) ??
-        _stripRoleSuffix(displayTitleForViewer(viewerRole: viewerRole));
+    final peer = _peerPersonNameForViewer(viewerRole: viewerRole);
+    if (peer != null && peer.trim().isNotEmpty) return peer;
+    final stripped = _stripRoleSuffix(
+      displayTitleForViewer(viewerRole: viewerRole),
+    );
+    if (stripped.isNotEmpty &&
+        !_isViewerOwnPersonName(stripped, viewerRole: viewerRole) &&
+        !isGenericRoleOwnerName(stripped)) {
+      return stripped;
+    }
+    return inboxPeerRoleLabel(viewerRole: viewerRole) ?? stripped;
+  }
+
+  /// Second line of the open-conversation top bar.
+  /// Direct chats: the other person's role. Groups: last sender's name.
+  String? chatBarSubtitleForViewer({String? viewerRole}) {
+    viewerRole ??= AuthService.currentUser?.roleKey;
+    if (isGroup) {
+      return _lastIncomingSenderPersonName(viewerRole: viewerRole) ??
+          inboxPeerRoleLabel(viewerRole: viewerRole);
+    }
+    return inboxPeerRoleLabel(viewerRole: viewerRole);
   }
 
   /// Role shown next to the conversation name (Teacher, Parent, …).
@@ -642,7 +662,54 @@ class Conversation {
         ? null
         : _compositeStaffIdForRole(viewerRole);
     final viewerUsername = AuthService.currentUser?.username;
+    final viewerIsParent = viewerRole == AuthService.roleParent;
 
+    String? accept(String? value) {
+      final name = _personNameOrNull(value);
+      if (name == null) return null;
+      if (_isViewerOwnPersonName(name, viewerRole: viewerRole)) return null;
+      return name;
+    }
+
+    for (var i = messages.length - 1; i >= 0; i--) {
+      final msg = messages[i];
+      if (msg.isOutgoingFor(
+        viewerRole,
+        viewerStaffId: viewerStaffId,
+        viewerUsername: viewerUsername,
+      )) {
+        continue;
+      }
+      final fromMessage = accept(msg.senderDisplayName);
+      if (fromMessage != null) return fromMessage;
+      final fromUsername = accept(_personNameFromUsername(msg.senderUsername));
+      if (fromUsername != null) return fromUsername;
+      final fromStaff = accept(_personNameFromStaffId(msg.senderStaffId));
+      if (fromStaff != null) return fromStaff;
+    }
+
+    if (!viewerIsParent) {
+      for (final username in parentParticipantUsernames) {
+        final fromUsername = accept(_personNameFromUsername(username));
+        if (fromUsername != null) return fromUsername;
+      }
+      final parentName = accept(parentParticipantName);
+      if (parentName != null) return parentName;
+    }
+
+    final peerId = _peerStaffId(viewerRole);
+    final fromPeer = accept(_personNameFromStaffId(peerId));
+    if (fromPeer != null) return fromPeer;
+
+    return accept(name);
+  }
+
+  String? _lastIncomingSenderPersonName({String? viewerRole}) {
+    viewerRole ??= AuthService.currentUser?.roleKey;
+    final viewerStaffId = viewerRole == null
+        ? null
+        : _compositeStaffIdForRole(viewerRole);
+    final viewerUsername = AuthService.currentUser?.username;
     for (var i = messages.length - 1; i >= 0; i--) {
       final msg = messages[i];
       if (msg.isOutgoingFor(
@@ -658,20 +725,36 @@ class Conversation {
       if (fromUsername != null) return fromUsername;
       final fromStaff = _personNameFromStaffId(msg.senderStaffId);
       if (fromStaff != null) return fromStaff;
+      final fallback = _stripRoleSuffix(msg.resolveDisplayName());
+      if (fallback.isNotEmpty && !isGenericRoleOwnerName(fallback)) {
+        return fallback;
+      }
     }
+    return null;
+  }
 
-    for (final username in parentParticipantUsernames) {
-      final fromUsername = _personNameFromUsername(username);
-      if (fromUsername != null) return fromUsername;
+  bool _isViewerOwnPersonName(String? value, {String? viewerRole}) {
+    final candidate = _personNameOrNull(value);
+    if (candidate == null) return false;
+    final key = candidate.toLowerCase();
+    final user = AuthService.currentUser;
+    final ownFull = _personNameOrNull(user?.fullName);
+    if (ownFull != null && ownFull.toLowerCase() == key) return true;
+
+    viewerRole ??= user?.roleKey;
+    if (viewerRole == AuthService.roleParent) {
+      final parentName = _personNameOrNull(parentParticipantName);
+      if (parentName != null && parentName.toLowerCase() == key) {
+        return true;
+      }
+    } else {
+      final viewerStaffId = viewerRole == null
+          ? null
+          : _compositeStaffIdForRole(viewerRole);
+      final ownStaff = _personNameFromStaffId(viewerStaffId);
+      if (ownStaff != null && ownStaff.toLowerCase() == key) return true;
     }
-    final parentName = _personNameOrNull(parentParticipantName);
-    if (parentName != null) return parentName;
-
-    final peerId = _peerStaffId(viewerRole);
-    final fromPeer = _personNameFromStaffId(peerId);
-    if (fromPeer != null) return fromPeer;
-
-    return _personNameOrNull(name);
+    return false;
   }
 
   /// Conversation list / chat header title for the signed-in viewer.
