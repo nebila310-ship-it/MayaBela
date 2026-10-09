@@ -293,6 +293,56 @@ class CloudAppStore {
     return true;
   }
 
+  /// Classroom teachers may only upsert class-scoped docs. Dumping demo seed
+  /// for other classes used to fail the whole batch under RLS.
+  @visibleForTesting
+  static List<T> teacherWritableByClass<T>({
+    required List<T> items,
+    required String Function(T item) classNameOf,
+    String? roleKey,
+    bool mayWriteAllSchool = false,
+    List<String> assignedClasses = const [],
+  }) {
+    if (roleKey != AuthService.roleTeacher || mayWriteAllSchool) {
+      return items;
+    }
+    final classes = assignedClasses
+        .map((c) => c.trim())
+        .where((c) => c.isNotEmpty)
+        .toList();
+    if (classes.isEmpty) return items;
+    return items
+        .where(
+          (item) => classes.any(
+            (assigned) => StudentRegistryService.classNamesMatch(
+              assigned,
+              classNameOf(item),
+            ),
+          ),
+        )
+        .toList();
+  }
+
+  List<T> _teacherWritableByClass<T>(
+    List<T> items,
+    String Function(T item) classNameOf,
+  ) {
+    return teacherWritableByClass(
+      items: items,
+      classNameOf: classNameOf,
+      roleKey: AuthService.currentUser?.roleKey,
+      mayWriteAllSchool: AuthService.mayReadAllSchoolData,
+      assignedClasses: [
+        ...AuthService.accessClassNamesForSync(),
+        ...AuthService.cloudAssignedClassNames,
+      ],
+    );
+  }
+
+  @visibleForTesting
+  static String gradeDocIdForTest(Map<String, dynamic> map) =>
+      _gradeDocIdFromMap(map);
+
   String? _pullGroupKey(String collection) {
     switch (collection) {
       case AppCollections.conversations:
@@ -1688,20 +1738,48 @@ class CloudAppStore {
 
   // —— CRUD: Grades, homework, daily activities ——
 
+  Map<String, dynamic> _gradeCloudMap(StudentGradeReport report) {
+    final map = Map<String, dynamic>.from(report.toMap());
+    var studentId = '${map['studentId'] ?? ''}'.trim();
+    if (studentId.isEmpty) {
+      final name = report.studentName.trim().toLowerCase();
+      AdminStudentRecord? roster;
+      for (final student in StudentRegistryService.instance.studentsForClass(
+        report.className,
+      )) {
+        if (student.fullName.trim().toLowerCase() == name) {
+          roster = student;
+          break;
+        }
+      }
+      roster ??= StudentRegistryService.instance.lookupByName(report.studentName);
+      studentId = roster?.studentId.trim() ?? '';
+    }
+    if (studentId.isNotEmpty) {
+      map['studentId'] = studentId;
+      map['studentIds'] = [studentId];
+    }
+    return map;
+  }
+
   Future<void> pushGradeReport(StudentGradeReport report) async {
-    final docId = _gradeDocId(report);
+    final data = _gradeCloudMap(report);
     await _pushSafe(() => _crud.createOrUpdate(
           collection: AppCollections.gradeReports,
-          docId: docId,
-          data: report.toMap(),
+          docId: _gradeDocIdFromMap(data),
+          data: data,
         ));
   }
 
   Future<void> pushAllGradeReports() async {
-    final reports = SchoolDataService.instance.gradeReportsSnapshot();
+    final reports = _teacherWritableByClass(
+      SchoolDataService.instance.gradeReportsSnapshot(),
+      (report) => report.className,
+    );
+    if (reports.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.gradeReports,
-          items: reports.map((r) => r.toMap()).toList(),
+          items: reports.map(_gradeCloudMap).toList(),
           docIdFor: (item) => _gradeDocIdFromMap(item),
         ));
   }
@@ -1732,7 +1810,11 @@ class CloudAppStore {
   }
 
   Future<void> pushAllHomework() async {
-    final items = SchoolDataService.instance.homeworkSnapshot();
+    final items = _teacherWritableByClass(
+      SchoolDataService.instance.homeworkSnapshot(),
+      (item) => item.className,
+    );
+    if (items.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.homework,
           items: items.map(_homeworkCloudMap).toList(),
@@ -2575,10 +2657,12 @@ class CloudAppStore {
       _gradeDocIdFromMap(report.toMap());
 
   static String _gradeDocIdFromMap(Map<String, dynamic> map) {
-    final studentId = map['studentId'] as String? ?? '';
+    final studentId = (map['studentId'] as String? ?? '').trim();
+    final studentName = (map['studentName'] as String? ?? '').trim();
     final className = map['className'] as String? ?? '';
     final term = map['term'] as String? ?? '';
-    return '${studentId}_${className}_$term'
+    final who = studentId.isNotEmpty ? studentId : studentName;
+    return '${who}_${className}_$term'
         .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
   }
 
@@ -2640,8 +2724,20 @@ class CloudAppStore {
         ));
   }
 
+  Future<void> pushAttendanceSession(AttendanceSession session) async {
+    await _pushSafe(() => _crud.createOrUpdate(
+          collection: AppCollections.attendanceSessions,
+          docId: AppDataMaps.attendanceDocId(session),
+          data: AppDataMaps.attendanceSessionToMap(session),
+        ));
+  }
+
   Future<void> pushAllAttendanceSessions() async {
-    final sessions = SchoolDataService.instance.attendanceSnapshot();
+    final sessions = _teacherWritableByClass(
+      SchoolDataService.instance.attendanceSnapshot(),
+      (session) => session.className,
+    );
+    if (sessions.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.attendanceSessions,
           items: sessions.map(AppDataMaps.attendanceSessionToMap).toList(),
@@ -2879,7 +2975,9 @@ class CloudAppStore {
     if (rows.isEmpty) return;
     final parsed = rows.map(AppDataMaps.attendanceSessionFromMap).toList();
     SchoolDataService.instance.applyPersistedAttendance(parsed);
-    await SchoolContentPersistenceService.instance.saveFromService(pushCloud: false);
+    await SchoolContentPersistenceService.instance.saveAttendanceFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullFees() async {

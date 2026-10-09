@@ -63,11 +63,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
 
   List<String> get _classOptions {
     if (_isParent) {
-      return _data
-          .getChildren()
-          .map((child) => child.className)
-          .toSet()
-          .toList();
+      return _data.homeworkClassOptionsForViewer();
     }
     return _access.myClasses.map((assignment) => assignment.className).toList();
   }

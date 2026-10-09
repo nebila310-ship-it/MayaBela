@@ -1,4 +1,5 @@
 import 'package:mayabela/models/cloud/app_data_maps.dart';
+import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/persistence/local_json_store.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -63,6 +64,25 @@ class SchoolContentPersistenceService {
 
     if (pushCloud) {
       await CloudAppStore.instance.pushAllSchoolContent();
+    }
+  }
+
+  /// Attendance-only persist so a teacher save cannot dump fees/gallery
+  /// seed rows that RLS will reject (aborting the taken session).
+  Future<void> saveAttendanceFromService({
+    bool pushCloud = true,
+    AttendanceSession? session,
+  }) async {
+    final data = SchoolDataService.instance;
+    await LocalJsonStore.writeList(
+      _attendanceKey,
+      data.attendanceSnapshot().map(AppDataMaps.attendanceSessionToMap).toList(),
+    );
+    if (!pushCloud) return;
+    if (session != null) {
+      await CloudAppStore.instance.pushAttendanceSession(session);
+    } else {
+      await CloudAppStore.instance.pushAllAttendanceSessions();
     }
   }
 

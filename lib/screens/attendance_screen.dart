@@ -317,7 +317,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
     conductedBy = conductor;
     final outcome = await CloudSaveHonesty.settle(
-      persist: SchoolContentPersistenceService.instance.saveFromService(),
+      persist: SchoolContentPersistenceService.instance
+          .saveAttendanceFromService(),
     );
     if (!mounted) return;
     setState(() {});

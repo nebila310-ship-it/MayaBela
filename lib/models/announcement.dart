@@ -349,7 +349,7 @@ class StudentGradeReport {
   final String className;
   String term;
   final List<SubjectGrade> subjects;
-  final String? studentId;
+  String? studentId;
   String? academicYear;
   String? homeroomComment;
   String? principalComment;
