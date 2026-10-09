@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
-import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
+import 'package:mayabela/services/parent_student_verify_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/parent_child_registration_card.dart';
 
@@ -28,21 +29,9 @@ class _ParentLinkChildScreenState extends State<ParentLinkChildScreen> {
     super.dispose();
   }
 
-  DateTime? _parseDob(String raw) {
-    final parts = raw.trim().split('/');
-    if (parts.length != 3) return null;
-    try {
-      return DateTime(
-        int.parse(parts[2]),
-        int.parse(parts[1]),
-        int.parse(parts[0]),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
+  DateTime? _parseDob(String raw) => ParentInviteLink.parseDob(raw);
 
-  void _verify() {
+  Future<void> _verify() async {
     final schoolId = AuthService.activeSchoolId ?? AuthService.currentUser?.schoolId;
     if (schoolId == null || schoolId.isEmpty) {
       setState(() {
@@ -59,19 +48,18 @@ class _ParentLinkChildScreenState extends State<ParentLinkChildScreen> {
       });
       return;
     }
-    final ok = StudentRegistryService.instance.verifyStudent(
+    setState(() => _entry.verifying = true);
+    final record = await ParentStudentVerifyService.instance.verify(
       schoolId: schoolId,
       studentId: _entry.studentIdController.text,
       dateOfBirth: dob,
     );
+    if (!mounted) return;
     setState(() {
-      _entry.record = ok
-          ? StudentRegistryService.instance.lookupById(
-              _entry.studentIdController.text,
-            )
-          : null;
-      _message = ok ? s.studentFound : s.studentNotFound;
-      _success = ok;
+      _entry.verifying = false;
+      _entry.record = record;
+      _message = record != null ? s.studentFound : s.studentNotFound;
+      _success = record != null;
     });
   }
 

@@ -475,6 +475,76 @@ export function studentRegistryIdCandidates(identifier: string): string[] {
   return [...ids];
 }
 
+/** YYYY-MM-DD from ISO, unix ms, or DD/MM/YYYY. */
+export function calendarDateIso(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    return null;
+  }
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const slash = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slash) {
+    const dd = slash[1].padStart(2, "0");
+    const mm = slash[2].padStart(2, "0");
+    return `${slash[3]}-${mm}-${dd}`;
+  }
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return null;
+}
+
+export function sameCalendarDay(a: unknown, b: unknown): boolean {
+  const da = calendarDateIso(a);
+  const db = calendarDateIso(b);
+  return !!da && da === db;
+}
+
+/** Roster row by STU-id or digits. Does not require a student portal login. */
+export async function findStudentRegistryRecord(
+  sb: SupabaseClient,
+  identifier: string,
+  schoolId: string,
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const sid = String(schoolId || "").trim().toUpperCase();
+  const raw = String(identifier || "").trim();
+  if (!sid || !raw) return null;
+
+  for (const candidate of studentRegistryIdCandidates(raw)) {
+    const byId = await getDoc(sb, "student_registry", candidate, sid) ||
+      await getDoc(sb, "student_registry", candidate);
+    if (!byId) continue;
+    const recSchool = String(byId.schoolId || "").trim().toUpperCase();
+    if (recSchool && recSchool !== sid) continue;
+    const rid = String(byId.studentId || candidate).trim().toUpperCase();
+    return { id: rid || candidate, data: byId };
+  }
+
+  for (const candidate of studentRegistryIdCandidates(raw)) {
+    const { data: idRows, error: idError } = await sb
+      .from("app_documents")
+      .select("doc_id, data")
+      .eq("collection", "student_registry")
+      .eq("school_id", sid)
+      .filter("data->>studentId", "ilike", candidate)
+      .limit(8);
+    if (idError) throw idError;
+    for (const row of idRows || []) {
+      const data = { ...(row.data as Record<string, unknown>) };
+      const recSchool = String(data.schoolId || "").trim().toUpperCase();
+      if (recSchool && recSchool !== sid) continue;
+      const id = String(data.studentId || row.doc_id || "").trim().toUpperCase();
+      if (!studentIdsMatch(id, raw) && !studentIdsMatch(id, candidate)) {
+        continue;
+      }
+      return { id: id || String(row.doc_id), data };
+    }
+  }
+  return null;
+}
+
 export function parentLinkDocId(
   schoolId: string,
   parentUsername: string,

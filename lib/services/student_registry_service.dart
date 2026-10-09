@@ -705,6 +705,14 @@ class StudentRegistryService {
     return _sameDay(student.dateOfBirth, dateOfBirth);
   }
 
+  /// Cache a cloud-verified child so signup/link works on a fresh phone.
+  void rememberVerifiedStudent(AdminStudentRecord record) {
+    if (record.studentId.trim().isEmpty || record.schoolId.trim().isEmpty) {
+      return;
+    }
+    applyPersistedStudents([record]);
+  }
+
   bool _sameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }

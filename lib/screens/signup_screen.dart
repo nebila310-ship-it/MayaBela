@@ -4,7 +4,8 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/admin_registry_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
-import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
+import 'package:mayabela/services/parent_student_verify_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/utils/email_utils.dart';
@@ -41,7 +42,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _submitting = false;
 
   AppStrings get s => AppLocale.instance.strings;
-  final _studentRegistry = StudentRegistryService.instance;
   final _teacherRegistry = TeacherRegistryService.instance;
   final _adminRegistry = AdminRegistryService.instance;
   final _driverRegistry = DriverRegistryService.instance;
@@ -98,21 +98,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  DateTime? _parseDob(String raw) {
-    final parts = raw.trim().split('/');
-    if (parts.length != 3) return null;
-    try {
-      return DateTime(
-        int.parse(parts[2]),
-        int.parse(parts[1]),
-        int.parse(parts[0]),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
+  DateTime? _parseDob(String raw) => ParentInviteLink.parseDob(raw);
 
-  void _lookupStudent(ParentChildFormEntry entry) {
+  Future<void> _lookupStudent(ParentChildFormEntry entry) async {
     if (schoolId.text.trim().isEmpty) {
       _setMessage(s.enterSchoolId, isSuccess: false);
       return;
@@ -122,24 +110,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _setMessage(s.invalidDateFormat, isSuccess: false);
       return;
     }
-    final ok = _studentRegistry.verifyStudent(
+    setState(() => entry.verifying = true);
+    final record = await ParentStudentVerifyService.instance.verify(
       schoolId: schoolId.text,
       studentId: entry.studentIdController.text,
       dateOfBirth: dob,
     );
+    if (!mounted) return;
     setState(() {
-      entry.record = ok
-          ? _studentRegistry.lookupById(entry.studentIdController.text)
-          : null;
-      if (ok) {
+      entry.verifying = false;
+      entry.record = record;
+      if (record != null) {
         applyStudentContactSuggestion(
           entry: entry,
           phoneController: phone,
           nameController: fullName,
         );
       }
-      message = ok ? s.studentFound : s.studentNotFound;
-      _messageIsSuccess = ok;
+      message = record != null ? s.studentFound : s.studentNotFound;
+      _messageIsSuccess = record != null;
     });
   }
 
