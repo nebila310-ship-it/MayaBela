@@ -383,6 +383,8 @@ class StudentGradeReport {
         'className': className,
         'term': term,
         if (studentId != null) 'studentId': studentId,
+        if (studentId != null && studentId!.trim().isNotEmpty)
+          'studentIds': [studentId],
         if (academicYear != null) 'academicYear': academicYear,
         if (homeroomComment != null) 'homeroomComment': homeroomComment,
         if (principalComment != null) 'principalComment': principalComment,

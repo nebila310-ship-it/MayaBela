@@ -468,6 +468,7 @@ class DailyActivityReport {
   Map<String, dynamic> toMap() => {
         'id': id,
         'studentId': studentId,
+        'studentIds': [studentId],
         'studentName': studentName,
         'className': className,
         'date': date.toIso8601String(),

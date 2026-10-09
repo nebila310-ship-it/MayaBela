@@ -174,6 +174,11 @@ abstract final class AppDataMaps {
     if (session.periodKey.trim().isNotEmpty) 'periodKey': session.periodKey,
     if (session.periodLabel.trim().isNotEmpty)
       'periodLabel': session.periodLabel,
+    'studentIds': session.entries
+        .map((e) => e.studentId?.trim())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toList(),
     'entries': session.entries
         .map(
           (e) => {

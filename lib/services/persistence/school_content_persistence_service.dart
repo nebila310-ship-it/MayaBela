@@ -66,6 +66,22 @@ class SchoolContentPersistenceService {
     }
   }
 
+  /// Calendar-only persist so holiday seed does not dump attendance/fees.
+  Future<void> saveCalendarFromService({bool pushCloud = true}) async {
+    final data = SchoolDataService.instance;
+    await LocalJsonStore.writeList(
+      _calendarKey,
+      data.calendarSnapshot().map(AppDataMaps.calendarEventToMap).toList(),
+    );
+    await LocalJsonStore.writeInt(
+      _calendarNextIdKey,
+      data.calendarNextIdSnapshot(),
+    );
+    if (pushCloud) {
+      await CloudAppStore.instance.pushAllCalendarEvents();
+    }
+  }
+
   Future<void> _loadFees() async {
     final rows = await LocalJsonStore.readList(_feesKey);
     if (rows.isEmpty) return;

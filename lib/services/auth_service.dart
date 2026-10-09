@@ -446,20 +446,26 @@ class AuthService {
           fromKids.add(className);
         }
       }
+      for (final name in cloudLinkedClassNames) {
+        final trimmed = name.trim();
+        if (trimmed.isNotEmpty) fromKids.add(trimmed);
+      }
       if (fromKids.isNotEmpty) return fromKids.toList();
-      return List<String>.from(cloudLinkedClassNames);
+      return const [];
     }
     if (user.roleKey == roleStudent) {
       final student = StudentRegistryService.instance.lookupAnyById(
             (user.linkedStudentId ?? '').trim(),
           ) ??
           StudentRegistryService.instance.lookupByLoginUsername(user.username);
+      final names = <String>{};
       final className = student?.className.trim();
-      if (className != null && className.isNotEmpty) return [className];
-      if (cloudLinkedClassNames.isNotEmpty) {
-        return List<String>.from(cloudLinkedClassNames);
+      if (className != null && className.isNotEmpty) names.add(className);
+      for (final name in cloudLinkedClassNames) {
+        final trimmed = name.trim();
+        if (trimmed.isNotEmpty) names.add(trimmed);
       }
-      return const [];
+      return names.toList();
     }
     if (user.roleKey == roleTeacher) {
       final fromRegistry = <String>{};

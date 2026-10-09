@@ -112,6 +112,7 @@ class ConversationDocument {
           'counterpartyStaffId': counterpartyStaffId,
         if (staffSubjectName != null) 'staffSubjectName': staffSubjectName,
         'linkedStudentIds': linkedStudentIds,
+        'studentIds': linkedStudentIds,
         'parentParticipantUsernames': parentParticipantUsernames,
         if (schoolId != null) 'schoolId': schoolId,
       };
@@ -145,10 +146,11 @@ class ConversationDocument {
       staffParticipantId: map['staffParticipantId'] as String?,
       counterpartyStaffId: map['counterpartyStaffId'] as String?,
       staffSubjectName: map['staffSubjectName'] as String?,
-      linkedStudentIds: (map['linkedStudentIds'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
+      linkedStudentIds: ((map['linkedStudentIds'] as List<dynamic>?) ??
+              (map['studentIds'] as List<dynamic>?) ??
+              const [])
+          .map((e) => e.toString())
+          .toList(),
       parentParticipantUsernames:
           (map['parentParticipantUsernames'] as List<dynamic>?)
                   ?.map((e) => e.toString())

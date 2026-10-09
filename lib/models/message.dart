@@ -438,9 +438,13 @@ class Conversation {
       return true;
     }
     final linked = AuthService.activeLinkedStudentIds()
-        .map((id) => id.toUpperCase())
+        .map((id) => id.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
         .toSet();
-    if (linkedStudentIds.any(linked.contains)) return true;
+    if (linked.isNotEmpty &&
+        linkedStudentIds.any((id) => linked.contains(id.trim().toUpperCase()))) {
+      return true;
+    }
 
     if (contactRole == 'parent' && _parentNameMatchesCurrentUser(name)) {
       return true;
@@ -508,6 +512,15 @@ class Conversation {
         parentParticipantUsernames.any(
           (u) => u.trim().toLowerCase() == normalizedUsername,
         )) {
+      return true;
+    }
+
+    final linked = AuthService.activeLinkedStudentIds()
+        .map((id) => id.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (linked.isNotEmpty &&
+        linkedStudentIds.any((id) => linked.contains(id.trim().toUpperCase()))) {
       return true;
     }
 

@@ -387,15 +387,17 @@ class DocumentStore {
         docs = docs.where((d) => d[entry.key] == entry.value).toList();
       }
       if (whereInField != null) {
-        final set = inValues.toSet();
-        docs = docs.where((d) => set.contains('${d[whereInField]}')).toList();
+        final set = inValues.map((e) => e.toUpperCase()).toSet();
+        docs = docs
+            .where((d) => set.contains('${d[whereInField]}'.toUpperCase()))
+            .toList();
       }
       if (arrayContainsAnyField != null) {
-        final set = arrayValues.toSet();
+        final set = arrayValues.map((e) => e.toUpperCase()).toSet();
         docs = docs.where((d) {
           final raw = d[arrayContainsAnyField];
           if (raw is List) {
-            return raw.any((e) => set.contains('$e'));
+            return raw.any((e) => set.contains('$e'.toUpperCase()));
           }
           return false;
         }).toList();

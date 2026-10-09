@@ -14,6 +14,7 @@ import 'package:mayabela/screens/class_timetable_screen.dart';
 import 'package:mayabela/screens/fees_payments_screen.dart';
 import 'package:mayabela/screens/gallery_screen.dart';
 import 'package:mayabela/screens/grade_reports_screen.dart';
+import 'package:mayabela/screens/daily_activities_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/student_lesson_plans_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
@@ -38,6 +39,7 @@ import 'package:mayabela/services/student_account_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/widgets/parent_bus_link_card.dart';
+import 'package:mayabela/services/lms_classroom_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/widgets/report_issue_dialog.dart';
 import 'package:mayabela/widgets/dashboard_card.dart';
@@ -53,6 +55,18 @@ int _badge(String tileId) => DashboardBadgeService.instance.countFor(tileId);
 void _openTile(String tileId, VoidCallback action) {
   DashboardBadgeService.instance.markReadForTile(tileId);
   action();
+}
+
+void _ensureClassDiscussionsForViewer() {
+  final names = <String>{
+    ...SchoolDataService.instance.getChildren().map((child) => child.className),
+    ...AuthService.accessClassNamesForSync(),
+  };
+  for (final className in names) {
+    final trimmed = className.trim();
+    if (trimmed.isEmpty) continue;
+    LmsClassroomService.instance.ensureClassDiscussion(trimmed);
+  }
 }
 
 DashboardEntry _mayaAssistantEntry(
@@ -520,6 +534,20 @@ List<DashboardEntry> _parentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'daily_activities',
+      icon: Icons.today,
+      color: const Color(0xFF00796B),
+      builder: (context) => DashboardCard(
+        icon: Icons.today,
+        title: AppLocale.instance.strings.dailyActivities,
+        color: const Color(0xFF00796B),
+        onTap: () => _openTile(
+          'daily_activities',
+          () => openParentDailyActivity(context),
+        ),
+      ),
+    ),
+    DashboardEntry(
       id: 'lesson_plans',
       icon: Icons.event_note_outlined,
       color: const Color(0xFF5D4037),
@@ -566,6 +594,23 @@ List<DashboardEntry> _parentEntries() {
         color: Colors.orange,
         badgeCount: _badge('messages'),
         onTap: () => openMessages(context),
+      ),
+    ),
+    DashboardEntry(
+      id: 'class_discussion',
+      icon: Icons.forum_outlined,
+      color: const Color(0xFF1565C0),
+      builder: (context) => DashboardCard(
+        icon: Icons.forum_outlined,
+        title: AppLocale.instance.strings.classDiscussion,
+        color: const Color(0xFF1565C0),
+        onTap: () => _openTile('class_discussion', () {
+          _ensureClassDiscussionsForViewer();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MessagesScreen()),
+          );
+        }),
       ),
     ),
     DashboardEntry(
@@ -848,6 +893,20 @@ List<DashboardEntry> _studentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'daily_activities',
+      icon: Icons.today,
+      color: const Color(0xFF00796B),
+      builder: (context) => DashboardCard(
+        icon: Icons.today,
+        title: AppLocale.instance.strings.dailyActivities,
+        color: const Color(0xFF00796B),
+        onTap: () => _openTile(
+          'daily_activities',
+          () => openStudentDailyActivity(context),
+        ),
+      ),
+    ),
+    DashboardEntry(
       id: 'timetable',
       icon: Icons.schedule,
       color: Colors.indigo,
@@ -912,6 +971,27 @@ List<DashboardEntry> _studentEntries() {
         color: Colors.orange,
         badgeCount: _badge('messages'),
         onTap: () => _openTile('messages', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MessagesScreen(
+                canCompose: settings.allowStudentMessaging,
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'class_discussion',
+      icon: Icons.forum_outlined,
+      color: const Color(0xFF1565C0),
+      builder: (context) => DashboardCard(
+        icon: Icons.forum_outlined,
+        title: AppLocale.instance.strings.classDiscussion,
+        color: const Color(0xFF1565C0),
+        onTap: () => _openTile('class_discussion', () {
+          _ensureClassDiscussionsForViewer();
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -1239,12 +1319,12 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My children',
           icon: Icons.child_care,
-          entryIds: ['children', 'attendance', 'homework', 'lesson_plans', 'learning_materials', 'grades', 'timetable'],
+          entryIds: ['children', 'attendance', 'homework', 'daily_activities', 'lesson_plans', 'learning_materials', 'grades', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'School updates',
           icon: Icons.campaign,
-          entryIds: ['messages', 'announcements', 'calendar'],
+          entryIds: ['messages', 'class_discussion', 'announcements', 'calendar'],
         ),
         DashboardSectionDefinition(
           title: 'Services',
@@ -1293,12 +1373,12 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'daily_activities', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',
           icon: Icons.campaign,
-          entryIds: ['announcements', 'calendar', 'messages'],
+          entryIds: ['announcements', 'calendar', 'messages', 'class_discussion'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',
@@ -1427,6 +1507,85 @@ Future<void> openParentAttendance(BuildContext context) async {
         readOnly: true,
         childName: selected.name,
         initialClass: selected.className,
+      ),
+    ),
+  );
+}
+
+Future<void> openParentDailyActivity(BuildContext context) async {
+  final children = SchoolDataService.instance.getChildren();
+  if (children.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No linked children found')),
+    );
+    return;
+  }
+
+  ChildProfile selected;
+  if (children.length == 1) {
+    selected = children.first;
+  } else {
+    final picked = await showParentChildPicker(
+      context,
+      title: AppLocale.instance.strings.dailyActivities,
+      subtitle: AppLocale.instance.strings.chooseChildSubtitle,
+    );
+    if (picked == null || !context.mounted) return;
+    selected = picked;
+  }
+
+  final studentId = selected.studentId?.trim();
+  if (studentId == null || studentId.isEmpty) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('This child has no student ID yet.')),
+    );
+    return;
+  }
+
+  if (!context.mounted) return;
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DailyActivitiesScreen(
+        studentId: studentId,
+        studentName: selected.name,
+        className: selected.className,
+        mode: DailyActivityMode.parent,
+      ),
+    ),
+  );
+}
+
+Future<void> openStudentDailyActivity(BuildContext context) async {
+  final children = SchoolDataService.instance.getChildren();
+  if (children.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your daily activity record is not available yet.'),
+      ),
+    );
+    return;
+  }
+  final selected = children.first;
+  final studentId = selected.studentId?.trim();
+  if (studentId == null || studentId.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your daily activity record is not available yet.'),
+      ),
+    );
+    return;
+  }
+  if (!context.mounted) return;
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DailyActivitiesScreen(
+        studentId: studentId,
+        studentName: selected.name,
+        className: selected.className,
+        mode: DailyActivityMode.parent,
       ),
     ),
   );
