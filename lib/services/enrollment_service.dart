@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/models/enrollment.dart';
+import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
@@ -63,8 +64,7 @@ class EnrollmentService extends ChangeNotifier {
     }
   }
 
-  List<ParentLinkRequest> allLinksSnapshot() =>
-      List.unmodifiable(_parentLinks);
+  List<ParentLinkRequest> allLinksSnapshot() => List.unmodifiable(_parentLinks);
 
   int get nextLinkIdCounter => _nextLinkId;
 
@@ -138,8 +138,8 @@ class EnrollmentService extends ChangeNotifier {
         )
         .toList();
     if (existing.isNotEmpty) {
-      final loggedInParent = AuthService.currentUser?.roleKey ==
-              AuthService.roleParent &&
+      final loggedInParent =
+          AuthService.currentUser?.roleKey == AuthService.roleParent &&
           _sameParentUsername(AuthService.currentUser!.username, username);
       if (loggedInParent) {
         return 'already_linked';
@@ -153,7 +153,14 @@ class EnrollmentService extends ChangeNotifier {
           reopened = true;
         }
       }
-      if (reopened) notifyListeners();
+      if (reopened) {
+        for (final link in existing) {
+          if (link.status == ParentLinkStatus.pending) {
+            _notifyHomeroomAndAdminOfPendingLink(link);
+          }
+        }
+        notifyListeners();
+      }
       if (persist && reopened) unawaited(_persist());
       return null;
     }
@@ -182,6 +189,7 @@ class EnrollmentService extends ChangeNotifier {
         className: student?.className,
       ),
     );
+    _notifyHomeroomAndAdminOfPendingLink(_parentLinks.last);
     notifyListeners();
 
     if (persist) unawaited(_persist());
@@ -253,8 +261,10 @@ class EnrollmentService extends ChangeNotifier {
     final school = schoolId.trim().toUpperCase();
     final user = PhoneUtils.loginKey(parentUsername).toLowerCase();
     final stu = studentId.trim().toUpperCase();
-    return 'PL-${school}__${user}__$stu'
-        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    return 'PL-${school}__${user}__$stu'.replaceAll(
+      RegExp(r'[^A-Za-z0-9._-]'),
+      '_',
+    );
   }
 
   static bool _sameParentUsername(String stored, String username) {
@@ -294,9 +304,7 @@ class EnrollmentService extends ChangeNotifier {
     if (schoolId == null) return [];
     final id = schoolId.toUpperCase();
     return _parentLinks
-        .where(
-          (l) => l.schoolId == id && l.status == ParentLinkStatus.pending,
-        )
+        .where((l) => l.schoolId == id && l.status == ParentLinkStatus.pending)
         .toList();
   }
 
@@ -305,63 +313,125 @@ class EnrollmentService extends ChangeNotifier {
     if (schoolId == null) return [];
     final id = schoolId.toUpperCase();
     return _parentLinks
-        .where(
-          (l) => l.schoolId == id && l.status == ParentLinkStatus.approved,
-        )
+        .where((l) => l.schoolId == id && l.status == ParentLinkStatus.approved)
         .toList();
   }
 
   String? _classNameForLink(ParentLinkRequest link) {
     final stamped = link.className?.trim();
     if (stamped != null && stamped.isNotEmpty) return stamped;
-    return StudentRegistryService.instance.lookupById(link.studentId)?.className;
+    return StudentRegistryService.instance
+        .lookupById(link.studentId)
+        ?.className;
   }
 
-  Set<String> _assignedClassNamesForCurrentTeacher() {
+  Set<String> _homeroomClassNamesForCurrentTeacher() {
     final names = <String>{};
-    void add(String? name) {
-      final trimmed = name?.trim() ?? '';
-      if (trimmed.isNotEmpty) names.add(trimmed);
-    }
-
-    for (final assignment in TeacherAccessService.instance.myClasses) {
-      add(assignment.className);
-    }
     for (final name in TeacherAccessService.instance.homeroomClassNames) {
-      add(name);
-    }
-    for (final name in AuthService.cloudAssignedClassNames) {
-      add(name);
+      final trimmed = name.trim();
+      if (trimmed.isNotEmpty) names.add(trimmed);
     }
     return names;
   }
 
-  bool _isAssignedClass(String? className) {
+  bool _isHomeroomClassForCurrentTeacher(String? className) {
     if (className == null || className.trim().isEmpty) return false;
-    return _assignedClassNamesForCurrentTeacher().any(
+    if (TeacherAccessService.instance.isHomeroomFor(className)) return true;
+    return _homeroomClassNamesForCurrentTeacher().any(
       (assigned) => StudentRegistryService.classNamesMatch(assigned, className),
     );
   }
 
-  /// Approve/reject only for parents-desk managers or classroom teachers
-  /// of the student's class. Administration Staff cannot approve.
-  bool canCurrentUserManageParentLink(ParentLinkRequest link) {
-    if (ModuleAccess.canManage('parents')) return true;
+  String? _homeroomTeacherIdForLink(ParentLinkRequest link) {
+    final student = StudentRegistryService.instance.lookupById(link.studentId);
+    final fromStudent = student?.homeroomTeacherId?.trim();
+    if (fromStudent != null && fromStudent.isNotEmpty) return fromStudent;
+    final className = _classNameForLink(link);
+    if (className == null || className.trim().isEmpty) return null;
+    return SchoolDataService.instance
+        .homeroomTeacherIdForClass(className)
+        ?.trim();
+  }
+
+  /// Homeroom teacher of this child only — not every subject teacher.
+  bool _isHomeroomTeacherOfLink(ParentLinkRequest link) {
     final user = AuthService.currentUser;
-    if (user == null) return false;
-    if (user.roleKey != AuthService.roleTeacher) return false;
+    if (user == null || user.roleKey != AuthService.roleTeacher) return false;
     if (AuthService.isAdministrationStaff) return false;
-    return _isAssignedClass(_classNameForLink(link));
+    if (_isHomeroomClassForCurrentTeacher(_classNameForLink(link))) {
+      return true;
+    }
+    final teacherId = TeacherAccessService.instance.teacherId
+        .trim()
+        .toUpperCase();
+    if (teacherId.isEmpty) return false;
+    final homeroomId = _homeroomTeacherIdForLink(link)?.toUpperCase();
+    return homeroomId != null &&
+        homeroomId.isNotEmpty &&
+        homeroomId == teacherId;
+  }
+
+  /// Alert school admin and this child's homeroom teacher only.
+  /// Never broadcast to every teacher (no staff-id-less teacher role push).
+  void _notifyHomeroomAndAdminOfPendingLink(ParentLinkRequest link) {
+    try {
+      final s = AppLocale.instance.strings;
+      final student = StudentRegistryService.instance.lookupById(
+        link.studentId,
+      );
+      final registeredName = student?.fullName.trim() ?? '';
+      final childName = registeredName.isEmpty
+          ? link.studentId
+          : registeredName;
+      final parentName = link.parentFullName.trim().isEmpty
+          ? link.parentUsername
+          : link.parentFullName.trim();
+      final title = s.parentLinkPendingNotificationTitle;
+      final body = s.parentLinkPendingNotificationBody(parentName, childName);
+      final className = _classNameForLink(link);
+
+      NotificationService.instance.push(
+        title: title,
+        body: body,
+        type: NotificationType.announcement,
+        fromRole: AuthService.roleParent,
+        fromName: parentName,
+        recipientRole: AuthService.roleAdmin,
+        targetStudentId: link.studentId,
+        targetClassName: className,
+      );
+
+      final homeroomId = _homeroomTeacherIdForLink(link);
+      if (homeroomId == null || homeroomId.isEmpty) return;
+      NotificationService.instance.push(
+        title: title,
+        body: body,
+        type: NotificationType.announcement,
+        fromRole: AuthService.roleParent,
+        fromName: parentName,
+        recipientRole: AuthService.roleTeacher,
+        recipientStaffId: StaffMemberOption.teacherKey(homeroomId),
+        targetStudentId: link.studentId,
+        targetClassName: className,
+      );
+    } catch (_) {}
+  }
+
+  /// Approve/reject only for school admin / parents-desk or the homeroom
+  /// teacher. Subject teachers and Administration Staff cannot approve.
+  bool canCurrentUserManageParentLink(ParentLinkRequest link) {
+    if (AuthService.currentUser?.roleKey == AuthService.roleAdmin ||
+        ModuleAccess.canManage('parents')) {
+      return true;
+    }
+    return _isHomeroomTeacherOfLink(link);
   }
 
   List<ParentLinkRequest> pendingForHomeroomTeacher() {
     ensureSeeded();
-    final assigned = _assignedClassNamesForCurrentTeacher();
-    if (assigned.isEmpty) return [];
-
     return _parentLinks.where((link) {
       if (link.status != ParentLinkStatus.pending) return false;
-      return _isAssignedClass(_classNameForLink(link));
+      return _isHomeroomTeacherOfLink(link);
     }).toList();
   }
 
@@ -390,12 +460,7 @@ class EnrollmentService extends ChangeNotifier {
 
   List<ParentLinkRequest> allLinksForHomeroomTeacher() {
     ensureSeeded();
-    final assigned = _assignedClassNamesForCurrentTeacher();
-    if (assigned.isEmpty) return [];
-
-    return _parentLinks
-        .where((link) => _isAssignedClass(_classNameForLink(link)))
-        .toList();
+    return _parentLinks.where(_isHomeroomTeacherOfLink).toList();
   }
 
   /// Pending first, then approved, then rejected; newest first within each group.
@@ -409,14 +474,15 @@ class EnrollmentService extends ChangeNotifier {
         AuthService.hasPermission(SchoolPermissions.manageParentLinks)) {
       links = allLinksForSchool(AuthService.activeSchoolId ?? user.schoolId);
     } else if (user.roleKey == AuthService.roleTeacher) {
-      // Homeroom teachers: only their classes.
       links = allLinksForHomeroomTeacher();
     } else {
       return [];
     }
 
     links.sort((a, b) {
-      final statusOrder = _statusSortKey(a.status).compareTo(_statusSortKey(b.status));
+      final statusOrder = _statusSortKey(
+        a.status,
+      ).compareTo(_statusSortKey(b.status));
       if (statusOrder != 0) return statusOrder;
       return b.requestedAt.compareTo(a.requestedAt);
     });
@@ -427,7 +493,9 @@ class EnrollmentService extends ChangeNotifier {
   List<ParentLinkRequest> sortedLinksForParent(String username) {
     final links = linksForParent(username);
     links.sort((a, b) {
-      final statusOrder = _statusSortKey(a.status).compareTo(_statusSortKey(b.status));
+      final statusOrder = _statusSortKey(
+        a.status,
+      ).compareTo(_statusSortKey(b.status));
       if (statusOrder != 0) return statusOrder;
       return b.requestedAt.compareTo(a.requestedAt);
     });
@@ -496,7 +564,9 @@ class EnrollmentService extends ChangeNotifier {
     final approved = approvedStudentIdsForParent(username);
     AuthService.updateParentLinks(username, approved);
     if (SchoolDatabaseService.instance.isInitialized) {
-      await SchoolDatabaseService.instance.syncParentEnrollmentForUser(username);
+      await SchoolDatabaseService.instance.syncParentEnrollmentForUser(
+        username,
+      );
     }
   }
 

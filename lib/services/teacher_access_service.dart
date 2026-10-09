@@ -37,7 +37,8 @@ class TeacherAccessService {
         linkedTeacherId: AuthService.currentUser?.linkedTeacherId,
         username: AuthService.currentUser?.username,
         phone: AuthService.currentUser?.phone,
-        schoolId: AuthService.activeSchoolId ?? AuthService.currentUser?.schoolId,
+        schoolId:
+            AuthService.activeSchoolId ?? AuthService.currentUser?.schoolId,
       );
 
   String get teacherId =>
@@ -78,13 +79,12 @@ class TeacherAccessService {
     final record = _record;
     if (record == null) return null;
     try {
-      return record.classAssignments
-          .firstWhere(
-            (assignment) => StudentRegistryService.classNamesMatch(
-              assignment.className,
-              className,
-            ),
-          );
+      return record.classAssignments.firstWhere(
+        (assignment) => StudentRegistryService.classNamesMatch(
+          assignment.className,
+          className,
+        ),
+      );
     } catch (_) {
       return null;
     }
@@ -148,19 +148,25 @@ class TeacherAccessService {
 
     final db = SchoolDatabaseService.instance;
     if (db.isInitialized) {
-      return db.canTeacherAccessClassName(
-        teacherId: id,
-        className: className,
-      );
+      return db.canTeacherAccessClassName(teacherId: id, className: className);
     }
     return assignmentFor(className) != null;
   }
 
-  bool isHomeroomFor(String className) =>
-      assignmentFor(className)?.isHomeroom ?? false;
+  bool isHomeroomFor(String className) {
+    if (assignmentFor(className)?.isHomeroom == true) return true;
+    return _registryAssignmentFor(className)?.role ==
+        TeacherStaffRole.homeroomTeacher;
+  }
 
-  bool get hasAnyHomeroomClass =>
-      myClasses.any((assignment) => assignment.isHomeroom);
+  bool get hasAnyHomeroomClass {
+    if (myClasses.any((assignment) => assignment.isHomeroom)) return true;
+    final record = _record;
+    if (record == null) return false;
+    return record.classAssignments.any(
+      (assignment) => assignment.role == TeacherStaffRole.homeroomTeacher,
+    );
+  }
 
   bool get hasFullDashboardAccess => hasAnyHomeroomClass;
 
@@ -254,6 +260,19 @@ class TeacherAccessService {
 
   bool canExportGradesForClass(String className) => isHomeroomFor(className);
 
-  List<String> get homeroomClassNames =>
-      myClasses.where((a) => a.isHomeroom).map((a) => a.className).toList();
+  List<String> get homeroomClassNames {
+    final names = <String>{};
+    for (final assignment in myClasses) {
+      if (assignment.isHomeroom) names.add(assignment.className);
+    }
+    final record = _record;
+    if (record != null) {
+      for (final assignment in record.classAssignments) {
+        if (assignment.role == TeacherStaffRole.homeroomTeacher) {
+          names.add(assignment.className);
+        }
+      }
+    }
+    return names.toList();
+  }
 }
