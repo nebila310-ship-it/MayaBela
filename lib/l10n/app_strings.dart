@@ -3251,6 +3251,16 @@ class AppStrings implements AppStringsLike {
   String get pendingApprovalBody => t('The school admin or your child\'s homeroom teacher will verify the link. Until approved, access is limited.', 'የትምህርት ቤቱ ወይም የልጅዎን ክፍል የሚያስተዳድረው መምህር ያረጋግጣል። እስከ መጽደቅ ድረስ ገደብ ያለ መዳረሻ ይኖርዎታል።');
   String get parentApprovals =>
       t('Parent Approvals', 'የወላጅ ጥያቄዎች');
+  String get parentLinkPendingNotificationTitle =>
+      t('Parent link waiting for approval', 'የወላጅ ግንኙነት መጽደቅ ይጠብቃል');
+  String parentLinkPendingNotificationBody(
+    String parentName,
+    String childName,
+  ) =>
+      t(
+        '$parentName requested a link to $childName. Only the homeroom teacher or school admin can approve.',
+        '$parentName ከ$childName ጋር መገናኘት ጠይቋል። የክፍል መምህሩ ወይም ትምህርት ቤቱ ብቻ ያጸድቃል።',
+      );
   String get noPendingApprovals =>
       t('No pending requests', 'በመጠበቅ ላይ ያለ ጥያቄ የለም');
   String get approve => t('Approve', 'አጽድቅ');
