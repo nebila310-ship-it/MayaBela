@@ -480,10 +480,44 @@ class DocumentStore {
         });
       }
       if (rows.isEmpty) continue;
-      await db.from('app_documents').upsert(
-        rows,
-        onConflict: 'collection,school_id,doc_id',
-      );
+      try {
+        await db.from('app_documents').upsert(
+          rows,
+          onConflict: 'collection,school_id,doc_id',
+        );
+      } catch (e) {
+        // One RLS-denied seed row used to abort the whole teacher upsert,
+        // so their own homework / grades / attendance never reached cloud.
+        if (kDebugMode) {
+          debugPrint(
+            '[DocumentStore] writeBatch chunk failed, retrying per row: $e',
+          );
+        }
+        Object? firstNonGuard;
+        var anyOk = false;
+        for (final row in rows) {
+          try {
+            await db.from('app_documents').upsert(
+              [row],
+              onConflict: 'collection,school_id,doc_id',
+            );
+            anyOk = true;
+          } catch (rowError) {
+            if (_isGuardError(rowError)) {
+              if (kDebugMode) {
+                debugPrint(
+                  '[DocumentStore] skip ${row['doc_id']}: $rowError',
+                );
+              }
+              continue;
+            }
+            firstNonGuard ??= rowError;
+          }
+        }
+        if (!anyOk && firstNonGuard != null) {
+          throw firstNonGuard;
+        }
+      }
     }
   }
 

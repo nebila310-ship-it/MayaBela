@@ -10,7 +10,9 @@ import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/lms_classroom_service.dart';
+import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/setup/dashboard_setup.dart';
 
 void main() {
@@ -314,5 +316,172 @@ void main() {
     final conversation = SchoolDataService.instance.getConversation(id);
     expect(conversation, isNotNull);
     expect(conversation!.linkedStudentIds, isNotEmpty);
+  });
+
+  test('teacher homework push drops other-class seed rows', () {
+    final kept = CloudAppStore.teacherWritableByClass(
+      items: [
+        HomeworkItem(
+          id: 'hw-keep',
+          className: 'Grade 5B',
+          subject: 'Math',
+          description: 'Live homework',
+          teacherName: 'Abebe',
+          teacherId: 'TCH-KEEP',
+          postedAt: DateTime.utc(2026, 10, 9),
+        ),
+        HomeworkItem(
+          id: 'hw-1',
+          className: 'Grade 4A',
+          subject: 'English',
+          description: 'Demo seed',
+          teacherName: 'Seed',
+          teacherId: 'TCH-SEED',
+          postedAt: DateTime.utc(2026, 1, 1),
+        ),
+      ],
+      classNameOf: (item) => item.className,
+      roleKey: AuthService.roleTeacher,
+      assignedClasses: const ['5B'],
+    );
+    expect(kept.map((item) => item.id), ['hw-keep']);
+  });
+
+  test('teacher JWT classes union with registry classes', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      linkedTeacherId: 'TCH-1001',
+    );
+    AuthService.applyCloudAccessScope(assignedClassNames: const ['Grade 9QA']);
+    final names = AuthService.accessClassNamesForSync();
+    expect(names, containsAll(['Grade 4A', 'Grade 5B', 'Grade 9QA']));
+  });
+
+  test('parent homework class picker includes JWT classes', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.hw2',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      linkedStudentIds: const ['STU-HW-2'],
+    );
+    AuthService.applyCloudAccessScope(
+      linkedClassNames: const ['Grade 4A'],
+      linkedStudentIds: const ['STU-HW-2'],
+    );
+    expect(
+      SchoolDataService.instance.homeworkClassOptionsForViewer(),
+      contains('Grade 4A'),
+    );
+  });
+
+  test('admin grade queue keeps this-school pending when names collide', () {
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-OTHER-Q',
+        fullName: 'Queue Twin Student',
+        grade: '9',
+        className: 'Grade 9QA',
+        schoolId: 'OTHER-001',
+        dateOfBirth: DateTime(2012, 1, 1),
+      ),
+      AdminStudentRecord(
+        studentId: 'STU-OURS-Q',
+        fullName: 'Queue Twin Student',
+        grade: '9',
+        className: 'Grade 9QA',
+        schoolId: 'FR-001',
+        dateOfBirth: DateTime(2012, 1, 1),
+      ),
+    ]);
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.queue',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'FR-001',
+    );
+    SchoolDataService.instance.applyPersistedGradeReports([
+      StudentGradeReport(
+        studentName: 'Queue Twin Student',
+        className: 'Grade 9QA',
+        term: 'Term 1',
+        studentId: 'STU-OURS-Q',
+        subjects: [
+          SubjectGrade(
+            subject: 'Mathematics',
+            score: 88,
+            maxScore: 100,
+            status: SubjectGradeStatus.pendingApproval,
+            submittedAt: DateTime.utc(2026, 10, 9, 8),
+          ),
+        ],
+      ),
+    ]);
+
+    final pending = SchoolDataService.instance.adminGradeReviewItems(
+      schoolId: 'FR-001',
+    );
+    expect(
+      pending.any(
+        (item) =>
+            item.report.studentId == 'STU-OURS-Q' &&
+            item.subject == 'Mathematics' &&
+            item.subjectGrade.status == SubjectGradeStatus.pendingApproval,
+      ),
+      isTrue,
+    );
+  });
+
+  test('grade cloud id uses student name when studentId is missing', () {
+    expect(
+      CloudAppStore.gradeDocIdForTest({
+        'studentName': 'Abebe Tesfaye',
+        'className': 'Grade 4A',
+        'term': 'Term 1',
+      }),
+      'Abebe_Tesfaye_Grade_4A_Term_1',
+    );
+    expect(
+      CloudAppStore.gradeDocIdForTest({
+        'studentId': 'STU-1',
+        'studentName': 'Abebe Tesfaye',
+        'className': 'Grade 4A',
+        'term': 'Term 1',
+      }),
+      isNot(
+        CloudAppStore.gradeDocIdForTest({
+          'studentId': 'STU-2',
+          'studentName': 'Chaltu Lemma',
+          'className': 'Grade 4A',
+          'term': 'Term 1',
+        }),
+      ),
+    );
+  });
+
+  test('attendance teacher push keeps only assigned-class sessions', () {
+    final kept = CloudAppStore.teacherWritableByClass(
+      items: [
+        AttendanceSession(
+          className: 'Grade 5B',
+          date: DateTime.utc(2026, 10, 9),
+          conductedBy: 'Abebe',
+          entries: const [],
+        ),
+        AttendanceSession(
+          className: 'Grade 4A',
+          date: DateTime.utc(2026, 10, 9),
+          conductedBy: 'Seed',
+          entries: const [],
+        ),
+      ],
+      classNameOf: (session) => session.className,
+      roleKey: AuthService.roleTeacher,
+      assignedClasses: const ['Grade 5B'],
+    );
+    expect(kept.map((session) => session.className), ['Grade 5B']);
   });
 }

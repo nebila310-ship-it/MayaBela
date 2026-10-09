@@ -1015,6 +1015,18 @@ class SchoolDataService {
     } catch (_) {}
   }
 
+  void _persistAttendance([AttendanceSession? session]) {
+    unawaited(_saveAttendanceBestEffort(session));
+  }
+
+  Future<void> _saveAttendanceBestEffort(AttendanceSession? session) async {
+    try {
+      await SchoolContentPersistenceService.instance.saveAttendanceFromService(
+        session: session,
+      );
+    } catch (_) {}
+  }
+
   List<Conversation> getConversationsForRole(String? roleKey) {
     final list = _conversations
         .where((c) => MessagingAccessService.canView(c, roleKey))
@@ -3453,11 +3465,15 @@ class SchoolDataService {
     DailyActivityPersistenceService.instance.saveFromService();
   }
 
-  List<HomeworkItem> getHomeworkForParent() {
-    final classes = <String>{
+  List<String> homeworkClassOptionsForViewer() {
+    return {
       ...getChildren().map((child) => child.className),
       ...AuthService.accessClassNamesForSync(),
-    }.where((name) => name.trim().isNotEmpty).toSet();
+    }.where((name) => name.trim().isNotEmpty).toSet().toList();
+  }
+
+  List<HomeworkItem> getHomeworkForParent() {
+    final classes = homeworkClassOptionsForViewer().toSet();
     return _homework
         .where((item) => classes.any((c) => _classNamesMatch(c, item.className)))
         .toList()
@@ -3830,7 +3846,13 @@ class SchoolDataService {
   }
 
   void _persistHomework() {
-    HomeworkPersistenceService.instance.saveFromService();
+    unawaited(_saveHomeworkBestEffort());
+  }
+
+  Future<void> _saveHomeworkBestEffort() async {
+    try {
+      await HomeworkPersistenceService.instance.saveFromService();
+    } catch (_) {}
   }
 
   List<LearningMaterialItem> getLearningMaterialsForClass(String className) {
@@ -4073,9 +4095,11 @@ class SchoolDataService {
           ? null
           : academicYear?.trim(),
       subjects: [],
-      studentId: StudentRegistryService.instance
-          .lookupByName(studentName)
-          ?.studentId,
+      studentId: _studentIdForGrade(
+            studentName: studentName,
+            className: canonicalClass,
+          ) ??
+          StudentRegistryService.instance.lookupByName(studentName)?.studentId,
     );
     _gradeReports.add(created);
     _persistGradeReports();
@@ -4742,23 +4766,22 @@ class SchoolDataService {
     if (existing != null) {
       _attendanceSessions.remove(existing);
     }
-    _attendanceSessions.add(
-      AttendanceSession(
-        className: className,
-        date: sessionDay,
-        conductedBy: conductedBy,
-        entries: rosterAligned,
-        locked: nextLocked,
-        lockedBy: nextLocked
-            ? (lockedBy ?? existing?.lockedBy ?? conductedBy)
-            : null,
-        lockedAt: nextLocked ? (existing?.lockedAt ?? DateTime.now()) : null,
-        periodKey: key,
-        periodLabel: periodLabel.trim().isNotEmpty
-            ? periodLabel.trim()
-            : (existing?.periodLabel ?? ''),
-      ),
+    final session = AttendanceSession(
+      className: className,
+      date: sessionDay,
+      conductedBy: conductedBy,
+      entries: rosterAligned,
+      locked: nextLocked,
+      lockedBy: nextLocked
+          ? (lockedBy ?? existing?.lockedBy ?? conductedBy)
+          : null,
+      lockedAt: nextLocked ? (existing?.lockedAt ?? DateTime.now()) : null,
+      periodKey: key,
+      periodLabel: periodLabel.trim().isNotEmpty
+          ? periodLabel.trim()
+          : (existing?.periodLabel ?? ''),
     );
+    _attendanceSessions.add(session);
 
     if (notifyParents) {
       _notifyParentsOfAttendanceChanges(
@@ -4773,7 +4796,7 @@ class SchoolDataService {
       conductedBy: conductedBy,
       entries: rosterAligned,
     );
-    _persistSchoolContent();
+    _persistAttendance(session);
     return true;
   }
 
@@ -5030,6 +5053,7 @@ class SchoolDataService {
 
     final report = _findGradeReport(studentName: studentName, className: className);
     if (report == null) return false;
+    _ensureGradeReportStudentId(report);
 
     final schoolId = AuthService.activeSchoolId ?? '';
     final settings = GradeWorkflowService.settingsForSchool(schoolId);
@@ -5270,10 +5294,12 @@ class SchoolDataService {
     final items = <SubjectGradePendingItem>[];
     for (final report in _gradeReports) {
       if (normalizedSchool != null && normalizedSchool.isNotEmpty) {
-        final student = StudentRegistryService.instance.lookupByName(
-          report.studentName,
+        final student = _studentForAdminGradeQueue(
+          report,
+          schoolId: normalizedSchool,
         );
-        if (student != null && student.schoolId.toUpperCase() != normalizedSchool) {
+        if (student != null &&
+            student.schoolId.toUpperCase() != normalizedSchool) {
           continue;
         }
       }
@@ -5690,7 +5716,76 @@ class SchoolDataService {
   }
 
   void _persistGradeReports() {
-    GradePersistenceService.instance.saveFromService();
+    unawaited(_saveGradeReportsBestEffort());
+  }
+
+  Future<void> _saveGradeReportsBestEffort() async {
+    try {
+      await GradePersistenceService.instance.saveFromService();
+    } catch (_) {}
+  }
+
+  String? _studentIdForGrade({
+    required String studentName,
+    required String className,
+  }) {
+    final name = studentName.trim().toLowerCase();
+    if (name.isEmpty) return null;
+    final schoolId = AuthService.activeSchoolId;
+    final roster = schoolId == null || schoolId.trim().isEmpty
+        ? StudentRegistryService.instance.registrySnapshot()
+        : StudentRegistryService.instance.studentsForSchool(schoolId);
+    AdminStudentRecord? nameOnly;
+    for (final student in roster) {
+      if (student.fullName.trim().toLowerCase() != name) continue;
+      if (_classNamesMatch(student.className, className)) {
+        return student.studentId;
+      }
+      nameOnly ??= student;
+    }
+    return nameOnly?.studentId;
+  }
+
+  void _ensureGradeReportStudentId(StudentGradeReport report) {
+    if (report.studentId != null && report.studentId!.trim().isNotEmpty) {
+      return;
+    }
+    final id = _studentIdForGrade(
+      studentName: report.studentName,
+      className: report.className,
+    );
+    if (id == null || id.trim().isEmpty) return;
+    report.studentId = id;
+  }
+
+  AdminStudentRecord? _studentForAdminGradeQueue(
+    StudentGradeReport report, {
+    required String schoolId,
+  }) {
+    final wantSchool = schoolId.trim().toUpperCase();
+    final id = report.studentId?.trim();
+    if (id != null && id.isNotEmpty) {
+      final byId = StudentRegistryService.instance.lookupAnyById(id);
+      if (byId != null) return byId;
+    }
+    final name = report.studentName.trim().toLowerCase();
+    if (name.isEmpty) return null;
+    AdminStudentRecord? sameSchool;
+    AdminStudentRecord? otherSchool;
+    for (final student in StudentRegistryService.instance.registrySnapshot()) {
+      if (!student.isActive) continue;
+      if (student.fullName.trim().toLowerCase() != name) continue;
+      if (student.schoolId.toUpperCase() == wantSchool) {
+        if (report.className.trim().isEmpty ||
+            _classNamesMatch(student.className, report.className)) {
+          return student;
+        }
+        sameSchool ??= student;
+      } else {
+        otherSchool ??= student;
+      }
+    }
+    return sameSchool ?? otherSchool;
   }
 
   bool _markbookMissingCountsAsZero() {

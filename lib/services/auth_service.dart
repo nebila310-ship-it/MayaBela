@@ -468,7 +468,7 @@ class AuthService {
       return names.toList();
     }
     if (user.roleKey == roleTeacher) {
-      final fromRegistry = <String>{};
+      final names = <String>{};
       final record = TeacherRegistryService.instance.resolveForAuthUser(
         linkedTeacherId: user.linkedTeacherId,
         username: user.username,
@@ -476,10 +476,13 @@ class AuthService {
         schoolId: activeSchoolId ?? user.schoolId,
       );
       if (record != null) {
-        fromRegistry.addAll(record.assignedClassNames);
+        names.addAll(record.assignedClassNames);
       }
-      if (fromRegistry.isNotEmpty) return fromRegistry.toList();
-      return List<String>.from(cloudAssignedClassNames);
+      for (final name in cloudAssignedClassNames) {
+        final trimmed = name.trim();
+        if (trimmed.isNotEmpty) names.add(trimmed);
+      }
+      return names.toList();
     }
     return const [];
   }
