@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
@@ -12,6 +13,7 @@ import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/setup/dashboard_setup.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 import 'package:mayabela/widgets/lesson_plan_view_card.dart';
@@ -77,6 +79,8 @@ void main() {
     expect(copy.reviewStatus, LessonPlanReviewStatus.none);
     expect(copy.reviewLabel, isEmpty);
     expect(copy.curriculumUnitId, isNull);
+    expect(copy.achievementPercent, isNull);
+    expect(copy.hasAchievement, isFalse);
   });
 
   test('Phase D maps without review fields still load', () {
@@ -102,6 +106,8 @@ void main() {
     expect(copy.plenary, isEmpty);
     expect(copy.durationMinutes, isNull);
     expect(copy.hasSequence, isFalse);
+    expect(copy.achievementPercent, isNull);
+    expect(copy.achievementNotes, isEmpty);
   });
 
   test('draft stays hidden from students until published', () async {
@@ -491,4 +497,192 @@ void main() {
     await tester.pump();
     expect(find.text('Stay visible after rebuild'), findsOneWidget);
   });
+
+  test('science teacher does not see another subject plan for the same class',
+      () async {
+    _registerScienceTeacher();
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.lp.subj',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.createPlan(
+      title: 'Plant parts',
+      className: 'Grade 4A',
+      subject: 'Science',
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.createPlan(
+      title: 'Fractions',
+      className: 'Grade 4A',
+      subject: 'Mathematics',
+      schoolId: 'TB-001',
+    );
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.sci.lp',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      linkedTeacherId: 'TCH-LP-SCI-1',
+    );
+    final visible = LessonPlanService.instance.forClass(
+      'Grade 4A',
+      schoolId: 'TB-001',
+    );
+    expect(visible.map((p) => p.title), ['Plant parts']);
+    expect(visible.map((p) => p.subject), isNot(contains('Mathematics')));
+
+    await expectLater(
+      LessonPlanService.instance.createPlan(
+        title: 'Should not save',
+        className: 'Grade 4A',
+        subject: 'Mathematics',
+        schoolId: 'TB-001',
+      ),
+      throwsA(isA<StateError>()),
+    );
+    AuthService.currentUser = null;
+  });
+
+  test('published subject plan is visible to the class parent, who cannot evaluate',
+      () async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.sci.lp',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+    );
+    final plan = await LessonPlanService.instance.createPlan(
+      title: 'Plant parts',
+      className: 'Grade 4A',
+      subject: 'Science',
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.submitForReview(plan.id);
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.lp.eval',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+    );
+    expect(
+      LessonPlanService.instance
+          .publishedForClass('Grade 4A', schoolId: 'TB-001')
+          .map((p) => p.title),
+      contains('Plant parts'),
+    );
+    expect(
+      await LessonPlanService.instance.evaluatePlan(plan.id, percent: 90),
+      isNull,
+    );
+    expect(
+      LessonPlanService.instance.planById(plan.id)?.achievementPercent,
+      isNull,
+    );
+    AuthService.currentUser = null;
+  });
+
+  test('management records achievement percent to evaluate a plan', () async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.sci.lp',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+    );
+    final plan = await LessonPlanService.instance.createPlan(
+      title: 'Plant parts',
+      className: 'Grade 4A',
+      subject: 'Science',
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.submitForReview(plan.id);
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.lp.eval',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+    );
+    final scored = await LessonPlanService.instance.evaluatePlan(
+      plan.id,
+      percent: 140,
+      notes: 'Aims met; stretch the plenary next week.',
+    );
+    expect(scored?.achievementPercent, 100);
+    expect(scored?.achievementLabel, 'Achievement 100%');
+    expect(scored?.achievementNotes, contains('plenary'));
+    expect(scored?.evaluatedBy, 'admin.lp.eval');
+    expect(
+      LessonPlanService.instance.averageAchievement(schoolId: 'TB-001'),
+      100,
+    );
+    AuthService.currentUser = null;
+  });
+
+  testWidgets('expanded plan shows management achievement percent', (
+    tester,
+  ) async {
+    final week = LessonPlan.mondayOf(DateTime.utc(2026, 9, 7));
+    final plan = LessonPlan(
+      id: 'LP-ACH',
+      schoolId: 'TB-001',
+      title: 'Evaluated week',
+      className: 'Grade 4A',
+      subject: 'Science',
+      weekStart: week,
+      objectives: 'Identify plant parts',
+      achievementPercent: 85,
+      achievementNotes: 'Most learners labelled independently.',
+      createdAt: week,
+      updatedAt: week,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              LessonPlanViewCard(plan: plan, initiallyExpanded: true),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.textContaining('Achievement 85%'), findsWidgets);
+    expect(find.text('85%'), findsOneWidget);
+    expect(find.text('Most learners labelled independently.'), findsOneWidget);
+  });
+}
+
+void _registerScienceTeacher() {
+  TeacherRegistryService.instance.applyPersistedTeachers([
+    AdminTeacherRecord(
+      teacherId: 'TCH-LP-SCI-1',
+      fullName: 'Science Teacher',
+      subject: 'Science',
+      assignedClass: 'Grade 4A',
+      schoolId: 'TB-001',
+      loginUsername: 'teacher.sci.lp',
+      classAssignments: const [
+        TeacherClassAssignment(
+          className: 'Grade 4A',
+          role: TeacherStaffRole.subjectTeacher,
+          teachingSlots: [
+            SubjectTeachingSlot(
+              slotId: 'STA-LP-SCI',
+              subjectId: 'SCI',
+              subjectName: 'Science',
+            ),
+          ],
+        ),
+      ],
+      subjects: const ['Science'],
+    ),
+  ]);
 }

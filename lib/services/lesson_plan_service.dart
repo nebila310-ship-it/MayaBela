@@ -5,6 +5,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
 /// Weekly lesson plans. Does not write grades, exams, or admissions scores.
@@ -38,6 +39,21 @@ class LessonPlanService extends ChangeNotifier {
       AuthService.currentUser?.roleKey == AuthService.roleStudent ||
       AuthService.currentUser?.roleKey == AuthService.roleParent;
 
+  bool get _restrictTeacherToSubjects {
+    if (AuthService.currentUser?.roleKey != AuthService.roleTeacher) {
+      return false;
+    }
+    return TeacherAccessService.instance.teachingAssignments().isNotEmpty;
+  }
+
+  bool _teacherMayPrepare(String className, String subject) {
+    if (!_restrictTeacherToSubjects) return true;
+    return TeacherAccessService.instance.canPrepareLessonPlan(
+      className: className,
+      subject: subject,
+    );
+  }
+
   List<LessonPlan> forSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).toUpperCase();
     final list = sid.isEmpty
@@ -61,12 +77,49 @@ class LessonPlanService extends ChangeNotifier {
   }
 
   List<LessonPlan> forClass(String className, {String? schoolId}) {
-    return forSchool(schoolId)
-        .where(
-          (p) => StudentRegistryService.classNamesMatch(p.className, className),
-        )
-        .toList()
-      ..sort((a, b) => b.weekStart.compareTo(a.weekStart));
+    return visibleForCurrentUser(className: className, schoolId: schoolId);
+  }
+
+  /// Teachers see only their subjects. Parents/students see published class plans.
+  /// Management sees every plan in the school.
+  List<LessonPlan> visibleForCurrentUser({
+    String? className,
+    String? schoolId,
+  }) {
+    var list = forSchool(schoolId);
+    if (className != null) {
+      list = list
+          .where(
+            (p) => StudentRegistryService.classNamesMatch(
+              p.className,
+              className,
+            ),
+          )
+          .toList();
+    }
+    if (_restrictTeacherToSubjects) {
+      final access = TeacherAccessService.instance;
+      list = list
+          .where(
+            (p) => access.canPrepareLessonPlan(
+              className: p.className,
+              subject: p.subject,
+            ),
+          )
+          .toList();
+    }
+    list.sort((a, b) => b.weekStart.compareTo(a.weekStart));
+    return list;
+  }
+
+  double? averageAchievement({String? className, String? schoolId}) {
+    final scored = visibleForCurrentUser(
+      className: className,
+      schoolId: schoolId,
+    ).where((p) => p.achievementPercent != null).toList();
+    if (scored.isEmpty) return null;
+    final total = scored.fold<int>(0, (sum, p) => sum + p.achievementPercent!);
+    return total / scored.length;
   }
 
   LessonPlan? planById(String id) {
@@ -107,6 +160,11 @@ class LessonPlanService extends ChangeNotifier {
     String? onlineSessionLabel,
     bool onlineSessionIsLive = false,
   }) async {
+    if (!_teacherMayPrepare(className, subject)) {
+      throw StateError(
+        'Teachers can only prepare lesson plans for their own subjects.',
+      );
+    }
     final now = DateTime.now();
     final plan = LessonPlan(
       id: ShortRegistryId.allocate(
@@ -186,6 +244,11 @@ class LessonPlanService extends ChangeNotifier {
   }) async {
     final plan = planById(id);
     if (plan == null) return null;
+    final nextClass = (className ?? plan.className).trim();
+    final nextSubject = (subject ?? plan.subject).trim();
+    if (!_teacherMayPrepare(nextClass, nextSubject)) {
+      return null;
+    }
     if (title != null) plan.title = title.trim();
     if (className != null) plan.className = className.trim();
     if (subject != null) plan.subject = subject.trim();
@@ -241,6 +304,24 @@ class LessonPlanService extends ChangeNotifier {
         plan.onlineSessionIsLive = onlineSessionIsLive;
       }
     }
+    plan.updatedAt = DateTime.now();
+    await _persist();
+    return plan;
+  }
+
+  /// Management records how well this weekly plan achieved its aims (0–100).
+  Future<LessonPlan?> evaluatePlan(
+    String id, {
+    required int percent,
+    String notes = '',
+  }) async {
+    if (_isPublicReader) return null;
+    final plan = planById(id);
+    if (plan == null) return null;
+    plan.achievementPercent = LessonPlan.clampPercent(percent);
+    plan.achievementNotes = notes.trim();
+    plan.evaluatedBy = AuthService.currentUser?.username;
+    plan.evaluatedAt = DateTime.now();
     plan.updatedAt = DateTime.now();
     await _persist();
     return plan;

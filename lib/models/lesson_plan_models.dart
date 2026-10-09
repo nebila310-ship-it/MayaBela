@@ -39,6 +39,10 @@ class LessonPlan {
     this.onlineSessionUrl,
     this.onlineSessionLabel,
     this.onlineSessionIsLive = false,
+    this.achievementPercent,
+    this.achievementNotes = '',
+    this.evaluatedBy,
+    this.evaluatedAt,
   });
 
   final String id;
@@ -75,6 +79,10 @@ class LessonPlan {
   String? onlineSessionUrl;
   String? onlineSessionLabel;
   bool onlineSessionIsLive;
+  int? achievementPercent;
+  String achievementNotes;
+  String? evaluatedBy;
+  DateTime? evaluatedAt;
 
   bool get isPublished => status == LessonPlanStatus.published;
 
@@ -97,6 +105,21 @@ class LessonPlan {
         LessonPlanReviewStatus.approved => 'Approved',
         LessonPlanReviewStatus.changesRequested => 'Changes requested',
       };
+
+  bool get hasAchievement => achievementPercent != null;
+
+  String get achievementLabel {
+    final value = achievementPercent;
+    if (value == null) return '';
+    return 'Achievement $value%';
+  }
+
+  static int? clampPercent(int? value) {
+    if (value == null) return null;
+    if (value < 0) return 0;
+    if (value > 100) return 100;
+    return value;
+  }
 
   DateTime get weekEnd => weekStart.add(const Duration(days: 6));
 
@@ -146,6 +169,10 @@ class LessonPlan {
         if (onlineSessionLabel != null)
           'onlineSessionLabel': onlineSessionLabel,
         'onlineSessionIsLive': onlineSessionIsLive,
+        if (achievementPercent != null) 'achievementPercent': achievementPercent,
+        'achievementNotes': achievementNotes,
+        if (evaluatedBy != null) 'evaluatedBy': evaluatedBy,
+        if (evaluatedAt != null) 'evaluatedAt': evaluatedAt!.toIso8601String(),
       };
 
   factory LessonPlan.fromMap(Map<String, dynamic> map) {
@@ -196,6 +223,12 @@ class LessonPlan {
       onlineSessionUrl: map['onlineSessionUrl'] as String?,
       onlineSessionLabel: map['onlineSessionLabel'] as String?,
       onlineSessionIsLive: map['onlineSessionIsLive'] as bool? ?? false,
+      achievementPercent: clampPercent((map['achievementPercent'] as num?)?.toInt()),
+      achievementNotes: map['achievementNotes'] as String? ?? '',
+      evaluatedBy: map['evaluatedBy'] as String?,
+      evaluatedAt: map['evaluatedAt'] != null
+          ? DateTime.tryParse(map['evaluatedAt'] as String)
+          : null,
     );
   }
 
