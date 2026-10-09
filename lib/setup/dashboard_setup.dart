@@ -534,6 +534,25 @@ List<DashboardEntry> _parentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'gallery',
+      icon: Icons.photo_library,
+      color: Colors.purple,
+      builder: (context) => DashboardCard(
+        icon: Icons.photo_library,
+        title: _t('gallery', role),
+        color: Colors.purple,
+        badgeCount: _badge('gallery'),
+        onTap: () => _openTile('gallery', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GalleryScreen(mode: GalleryViewMode.parent),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'daily_activities',
       icon: Icons.today,
       color: const Color(0xFF00796B),
@@ -855,6 +874,25 @@ List<DashboardEntry> _studentEntries() {
             context,
             MaterialPageRoute(
               builder: (_) => const HomeworkScreen(mode: HomeworkViewMode.student),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'gallery',
+      icon: Icons.photo_library,
+      color: Colors.purple,
+      builder: (context) => DashboardCard(
+        icon: Icons.photo_library,
+        title: _t('gallery', role),
+        color: Colors.purple,
+        badgeCount: _badge('gallery'),
+        onTap: () => _openTile('gallery', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const GalleryScreen(mode: GalleryViewMode.parent),
             ),
           );
         }),
@@ -1324,7 +1362,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'School updates',
           icon: Icons.campaign,
-          entryIds: ['messages', 'class_discussion', 'announcements', 'calendar'],
+          entryIds: ['messages', 'class_discussion', 'announcements', 'calendar', 'gallery'],
         ),
         DashboardSectionDefinition(
           title: 'Services',
@@ -1378,7 +1416,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'Updates',
           icon: Icons.campaign,
-          entryIds: ['announcements', 'calendar', 'messages', 'class_discussion'],
+          entryIds: ['announcements', 'calendar', 'messages', 'class_discussion', 'gallery'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',

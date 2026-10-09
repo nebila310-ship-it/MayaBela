@@ -133,9 +133,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => GalleryScreen(
-              mode: AuthService.currentUser?.roleKey == AuthService.roleParent
-                  ? GalleryViewMode.parent
-                  : GalleryViewMode.teacher,
+              mode: switch (AuthService.currentUser?.roleKey) {
+                AuthService.roleParent || AuthService.roleStudent =>
+                  GalleryViewMode.parent,
+                AuthService.roleAdmin => GalleryViewMode.school,
+                _ => GalleryViewMode.teacher,
+              },
             ),
           ),
         );

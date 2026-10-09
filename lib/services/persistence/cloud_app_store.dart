@@ -2697,7 +2697,11 @@ class CloudAppStore {
   }
 
   Future<void> pushAllGalleryPosts() async {
-    final posts = SchoolDataService.instance.gallerySnapshot();
+    final posts = _teacherWritableByClass(
+      SchoolDataService.instance.gallerySnapshot(),
+      (post) => post.className,
+    );
+    if (posts.isEmpty) return;
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.galleryPosts,
           items: posts.map(AppDataMaps.galleryPostToMap).toList(),
@@ -3039,7 +3043,9 @@ class CloudAppStore {
     if (rows.isEmpty) return;
     final parsed = rows.map(AppDataMaps.galleryPostFromMap).toList();
     SchoolDataService.instance.applyPersistedGallery(parsed);
-    await SchoolContentPersistenceService.instance.saveFromService(pushCloud: false);
+    await SchoolContentPersistenceService.instance.saveGalleryFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullQrScans() async {
