@@ -6,6 +6,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
@@ -38,7 +39,7 @@ class ParentInviteService {
   static final instance = ParentInviteService._();
 
   static const appName = 'Maya School';
-  static const appLink = 'https://mayaschool.et/app';
+  static const appLink = ParentInviteLink.liveOrigin;
 
   static String formatDob(DateTime dob) {
     final day = dob.day.toString().padLeft(2, '0');
@@ -56,6 +57,11 @@ class ParentInviteService {
     String? transportId,
   }) {
     final name = schoolName ?? AuthService.schoolDisplayName;
+    final inviteUrl = ParentInviteLink.build(
+      schoolId: schoolId,
+      studentId: studentId,
+      dateOfBirth: childDateOfBirth,
+    );
     final dobLine = childDateOfBirth != null
         ? 'Student DOB (use when registering): ${formatDob(childDateOfBirth)}'
         : 'Use the student\'s date of birth (DD/MM/YYYY) when registering.';
@@ -64,6 +70,13 @@ class ParentInviteService {
       ..writeln('Welcome to Maya School!')
       ..writeln()
       ..writeln('We are delighted that $childName is enrolled at $name.')
+      ..writeln()
+      ..writeln('Open this link on any phone or computer to register as Parent:')
+      ..writeln(inviteUrl)
+      ..writeln()
+      ..writeln(
+        'The form will already have the School ID, Student ID, and date of birth filled in.',
+      )
       ..writeln()
       ..writeln('School ID: $schoolId')
       ..writeln('Student ID: $studentId')
@@ -127,7 +140,7 @@ class ParentInviteService {
     buffer
       ..writeln()
       ..writeln(
-        'Download the $appName app ($appLink) and register as Parent using the Student ID and date of birth above.',
+        'If the link does not open, go to $appLink, tap Register as Parent, and enter the School ID, Student ID, and date of birth above.',
       )
       ..writeln()
       ..writeln('Thank you for choosing $name.');

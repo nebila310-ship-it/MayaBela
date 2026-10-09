@@ -6,6 +6,7 @@ import {
   assertNotRateLimited,
   ensureAuthUser,
   ethiopianLoginKey,
+  findStudentRegistryRecord,
   getDoc,
   isUserFacingEmail,
   normalizeEmail,
@@ -14,15 +15,11 @@ import {
   parentLinkDocId,
   profileFromAccount,
   upsertSecret,
+  sameCalendarDay,
+  studentIdsMatch,
   usernamesMatch,
   verifySecret,
 } from "../_shared/school_auth.ts";
-
-function sameDay(a: string | null | undefined, b: string | null | undefined): boolean {
-  const da = String(a || "").slice(0, 10);
-  const db = String(b || "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(da) && da === db;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -128,20 +125,24 @@ Deno.serve(async (req) => {
     for (const child of children) {
       const studentId = String(child?.studentId || "").trim().toUpperCase();
       if (!studentId) continue;
-      const student = await getDoc(sb, "student_registry", studentId, schoolId);
-      if (!student) continue;
+      const found = await findStudentRegistryRecord(sb, studentId, schoolId);
+      const student = found?.data;
+      if (!student || student.isActive === false) continue;
       if (String(student.schoolId || "").trim().toUpperCase() !== schoolId) {
         continue;
       }
-      if (!sameDay(String(student.dateOfBirth || ""), child?.dateOfBirth)) {
+      if (!sameCalendarDay(student.dateOfBirth, child?.dateOfBirth)) {
         continue;
       }
+      const resolvedId = String(found?.id || student.studentId || studentId)
+        .trim()
+        .toUpperCase();
       const relationship = String(child?.relationship || "guardian");
-      const docId = parentLinkDocId(schoolId, username, studentId);
+      const docId = parentLinkDocId(schoolId, username, resolvedId);
       const matching = (linkRows || []).filter((row) => {
         const data = (row.data || {}) as Record<string, unknown>;
         const rowStudent = String(data.studentId || "").trim().toUpperCase();
-        if (rowStudent !== studentId) return false;
+        if (!studentIdsMatch(rowStudent, resolvedId)) return false;
         return usernamesMatch(data.parentUsername, username);
       });
       const alreadyPending = matching.some((row) =>
@@ -150,14 +151,14 @@ Deno.serve(async (req) => {
       const hadApproved = matching.some((row) =>
         String((row.data as Record<string, unknown>)?.status || "") === "approved"
       );
-      if (hadApproved) reopenedStudentIds.push(studentId);
+      if (hadApproved) reopenedStudentIds.push(resolvedId);
       if (alreadyPending && !hadApproved) continue;
 
       const pendingData = {
         id: docId,
         parentUsername: username,
         parentFullName: String(fullName || existingAccount?.fullName || "Parent"),
-        studentId,
+        studentId: resolvedId,
         schoolId,
         relationship,
         requestedAt: new Date().toISOString(),

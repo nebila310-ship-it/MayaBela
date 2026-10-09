@@ -42,6 +42,7 @@ class ParentChildFormEntry {
   ParentRelationship relationship = ParentRelationship.father;
   bool? hasMedicalCondition;
   AdminStudentRecord? record;
+  bool verifying = false;
 
   void dispose() {
     studentIdController.dispose();
@@ -140,7 +141,7 @@ class _ParentChildRegistrationCardState extends State<ParentChildRegistrationCar
                     ),
                     const SizedBox(width: 10),
                     FilledButton.icon(
-                      onPressed: widget.onVerify,
+                      onPressed: entry.verifying ? null : widget.onVerify,
                       style: FilledButton.styleFrom(
                         backgroundColor: widget.accent,
                         foregroundColor: Colors.white,
@@ -149,7 +150,16 @@ class _ParentChildRegistrationCardState extends State<ParentChildRegistrationCar
                           vertical: 16,
                         ),
                       ),
-                      icon: const Icon(Icons.verified_user_outlined, size: 18),
+                      icon: entry.verifying
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.verified_user_outlined, size: 18),
                       label: Text(s.verifyChild),
                     ),
                   ],

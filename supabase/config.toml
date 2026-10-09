@@ -82,3 +82,6 @@ verify_jwt = false
 
 [functions.school-public-brand]
 verify_jwt = false
+
+[functions.school-verify-student]
+verify_jwt = false

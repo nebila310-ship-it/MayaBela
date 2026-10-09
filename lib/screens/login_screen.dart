@@ -26,6 +26,7 @@ import 'package:mayabela/utils/startup_profiler.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/screens/public_admission_apply_screen.dart';
 import 'package:mayabela/screens/enrollment_screens.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/screens/platform_console_screen.dart';
 import 'package:mayabela/widgets/platform_pin_flows.dart';
 import 'package:mayabela/screens/change_password_screen.dart';
@@ -62,6 +63,8 @@ class _LoginScreenState extends State<LoginScreen> {
   DateTime? _lastLogoTap;
   final FocusNode _schoolIdFocus = FocusNode();
   Timer? _publicBrandDebounce;
+  ParentInvitePrefill? _invitePrefill;
+  bool _openedInviteSignup = false;
 
   /// Login identifier: email, Ethiopian phone, or username / student id.
   String _loginIdentifierValue() {
@@ -96,8 +99,12 @@ class _LoginScreenState extends State<LoginScreen> {
     AppLocale.instance.addListener(_onLocaleChanged);
     _schoolIdFocus.addListener(_onSchoolIdFocusChanged);
     schoolId.addListener(_onSchoolIdTextChanged);
+    _invitePrefill = ParentInviteLink.parse(Uri.base);
     final lastId = LoginPrefsService.instance.lastSchoolId;
-    if (lastId != null && lastId.isNotEmpty) {
+    if (_invitePrefill != null) {
+      schoolId.text = _invitePrefill!.schoolId;
+      selectedRole = AuthService.roleParent;
+    } else if (lastId != null && lastId.isNotEmpty) {
       schoolId.text = lastId;
     }
     _syncLoginChrome();
@@ -136,14 +143,25 @@ class _LoginScreenState extends State<LoginScreen> {
     final entry = LoginPrefsService.instance.latestEntry;
     if (!mounted) return;
 
-    if (lastId != null && lastId.isNotEmpty) {
+    if (_invitePrefill != null) {
+      schoolId.text = _invitePrefill!.schoolId;
+      selectedRole = AuthService.roleParent;
+      _schoolIdEditing = false;
+    } else if (lastId != null && lastId.isNotEmpty) {
       schoolId.text = lastId;
       _schoolIdEditing = false;
     } else {
       _schoolIdEditing = true;
     }
 
-    if (LoginPrefsService.instance.rememberEnabled && entry != null) {
+    if (_invitePrefill != null) {
+      setState(() {
+        selectedRole = AuthService.roleParent;
+        schoolId.text = _invitePrefill!.schoolId;
+        _schoolIdEditing = false;
+        _prefsLoaded = true;
+      });
+    } else if (LoginPrefsService.instance.rememberEnabled && entry != null) {
       setState(() {
         rememberMe = true;
         selectedRole = entry.roleKey;
@@ -163,6 +181,36 @@ class _LoginScreenState extends State<LoginScreen> {
     if (typed.length >= 3) {
       unawaited(_ensurePublicSchoolBrand(typed));
     }
+    _maybeOpenInviteSignup();
+  }
+
+  void _openParentSignup() {
+    final invite = _invitePrefill;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ParentSignUpScreen(
+          initialSchoolId: invite?.schoolId ?? schoolId.text.trim(),
+          initialStudentId: invite?.studentId,
+          initialDob: invite?.dobText,
+        ),
+      ),
+    );
+  }
+
+  void _maybeOpenInviteSignup() {
+    if (_openedInviteSignup) return;
+    final invite = _invitePrefill;
+    if (invite == null ||
+        invite.studentId == null ||
+        invite.studentId!.isEmpty) {
+      return;
+    }
+    _openedInviteSignup = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _openParentSignup();
+    });
   }
 
   void _applySavedEntryForSchoolId(String schoolIdValue) {
@@ -1338,14 +1386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           loginCard,
                           const SizedBox(height: 16),
                           TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ParentSignUpScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: _openParentSignup,
                             child: Text(
                               s.registerAsParent,
                               style: const TextStyle(
@@ -1390,14 +1431,7 @@ class _LoginScreenState extends State<LoginScreen> {
               right: 0,
               child: Center(
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ParentSignUpScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _openParentSignup,
                   child: Text(
                     s.registerAsParent,
                     style: const TextStyle(
@@ -1567,14 +1601,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ParentSignUpScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: _openParentSignup,
                       child: Text(
                         s.registerAsParent,
                         style: TextStyle(

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
-import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
+import 'package:mayabela/services/parent_student_verify_service.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
@@ -12,7 +15,16 @@ import 'package:mayabela/widgets/registration_terms_dialog.dart';
 
 /// Parent-only registration from the login screen — child link, medical info, account.
 class ParentSignUpScreen extends StatefulWidget {
-  const ParentSignUpScreen({super.key});
+  const ParentSignUpScreen({
+    super.key,
+    this.initialSchoolId,
+    this.initialStudentId,
+    this.initialDob,
+  });
+
+  final String? initialSchoolId;
+  final String? initialStudentId;
+  final String? initialDob;
 
   @override
   State<ParentSignUpScreen> createState() => _ParentSignUpScreenState();
@@ -34,7 +46,33 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
   bool _busy = false;
 
   AppStrings get s => AppLocale.instance.strings;
-  final _studentRegistry = StudentRegistryService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    final school = widget.initialSchoolId?.trim();
+    if (school != null && school.isNotEmpty) {
+      _schoolId.text = school.toUpperCase();
+    }
+    final student = widget.initialStudentId?.trim();
+    if (student != null && student.isNotEmpty) {
+      _children.first.studentIdController.text = student.toUpperCase();
+    }
+    final dob = widget.initialDob?.trim();
+    if (dob != null && dob.isNotEmpty) {
+      _children.first.dobController.text = dob;
+    }
+    if (school != null &&
+        school.isNotEmpty &&
+        student != null &&
+        student.isNotEmpty &&
+        dob != null &&
+        dob.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_lookupStudent(_children.first));
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -50,19 +88,7 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
     super.dispose();
   }
 
-  DateTime? _parseDob(String raw) {
-    final parts = raw.trim().split('/');
-    if (parts.length != 3) return null;
-    try {
-      return DateTime(
-        int.parse(parts[2]),
-        int.parse(parts[1]),
-        int.parse(parts[0]),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
+  DateTime? _parseDob(String raw) => ParentInviteLink.parseDob(raw);
 
   void _setMessage(String msg, {required bool isSuccess}) {
     setState(() {
@@ -83,7 +109,7 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
     });
   }
 
-  void _lookupStudent(ParentChildFormEntry entry) {
+  Future<void> _lookupStudent(ParentChildFormEntry entry) async {
     if (_schoolId.text.trim().isEmpty) {
       _setMessage(s.enterSchoolId, isSuccess: false);
       return;
@@ -93,24 +119,25 @@ class _ParentSignUpScreenState extends State<ParentSignUpScreen> {
       _setMessage(s.invalidDateFormat, isSuccess: false);
       return;
     }
-    final ok = _studentRegistry.verifyStudent(
+    setState(() => entry.verifying = true);
+    final record = await ParentStudentVerifyService.instance.verify(
       schoolId: _schoolId.text,
       studentId: entry.studentIdController.text,
       dateOfBirth: dob,
     );
+    if (!mounted) return;
     setState(() {
-      entry.record = ok
-          ? _studentRegistry.lookupById(entry.studentIdController.text)
-          : null;
-      if (ok) {
+      entry.verifying = false;
+      entry.record = record;
+      if (record != null) {
         applyStudentContactSuggestion(
           entry: entry,
           phoneController: _phone,
           nameController: _fullName,
         );
       }
-      _message = ok ? s.studentFound : s.studentNotFound;
-      _messageIsSuccess = ok;
+      _message = record != null ? s.studentFound : s.studentNotFound;
+      _messageIsSuccess = record != null;
     });
   }
 

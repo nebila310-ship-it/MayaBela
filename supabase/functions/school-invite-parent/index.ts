@@ -36,11 +36,25 @@ Deno.serve(async (req) => {
     const school = await getDoc(sb, "school_registry", schoolId);
     if (!school) return errorResponse("School not found.", 404, "not_found");
 
+    const dobParam = (() => {
+      const raw = String(dateOfBirth || "").trim();
+      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+      const slash = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (slash) {
+        return `${slash[1].padStart(2, "0")}/${slash[2].padStart(2, "0")}/${slash[3]}`;
+      }
+      return raw;
+    })();
+    const inviteUrl =
+      `https://majobridge.com/?role=parent&school=${encodeURIComponent(schoolId)}` +
+      `&student=${encodeURIComponent(studentId)}` +
+      (dobParam ? `&dob=${encodeURIComponent(dobParam)}` : "");
     const text = message ||
       `Welcome. ${studentName || "Your child"} is enrolled.\n` +
+        `Open this link on any phone or computer to register as Parent:\n${inviteUrl}\n` +
         `School ID: ${schoolId}\nStudent ID: ${studentId}\n` +
-        (dateOfBirth ? `Date of birth: ${dateOfBirth}\n` : "") +
-        `Register as Parent using the Student ID and date of birth.`;
+        (dateOfBirth ? `Date of birth: ${dateOfBirth}\n` : "");
 
     const mail = await loadMailSecrets(sb);
     if (!isMailReady(mail)) {
