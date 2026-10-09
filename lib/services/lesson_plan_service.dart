@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
@@ -84,7 +85,18 @@ class LessonPlanService extends ChangeNotifier {
     required String subject,
     DateTime? weekStart,
     String objectives = '',
+    String successCriteria = '',
+    String keyVocabulary = '',
+    String priorKnowledge = '',
+    String starter = '',
     String activities = '',
+    String plenary = '',
+    String differentiation = '',
+    String assessment = '',
+    String homeLearning = '',
+    String inclusionNotes = '',
+    int? durationMinutes,
+    String periodLabel = '',
     List<String> homeworkIds = const [],
     List<String> examPaperIds = const [],
     List<String> learningMaterialIds = const [],
@@ -108,7 +120,18 @@ class LessonPlanService extends ChangeNotifier {
       subject: subject.trim(),
       weekStart: LessonPlan.mondayOf(weekStart ?? now),
       objectives: objectives.trim(),
+      successCriteria: successCriteria.trim(),
+      keyVocabulary: keyVocabulary.trim(),
+      priorKnowledge: priorKnowledge.trim(),
+      starter: starter.trim(),
       activities: activities.trim(),
+      plenary: plenary.trim(),
+      differentiation: differentiation.trim(),
+      assessment: assessment.trim(),
+      homeLearning: homeLearning.trim(),
+      inclusionNotes: inclusionNotes.trim(),
+      durationMinutes: durationMinutes,
+      periodLabel: periodLabel.trim(),
       homeworkIds: List.of(homeworkIds),
       examPaperIds: List.of(examPaperIds),
       learningMaterialIds: List.of(learningMaterialIds),
@@ -137,7 +160,19 @@ class LessonPlanService extends ChangeNotifier {
     String? subject,
     DateTime? weekStart,
     String? objectives,
+    String? successCriteria,
+    String? keyVocabulary,
+    String? priorKnowledge,
+    String? starter,
     String? activities,
+    String? plenary,
+    String? differentiation,
+    String? assessment,
+    String? homeLearning,
+    String? inclusionNotes,
+    int? durationMinutes,
+    bool clearDuration = false,
+    String? periodLabel,
     List<String>? homeworkIds,
     List<String>? examPaperIds,
     List<String>? learningMaterialIds,
@@ -156,7 +191,24 @@ class LessonPlanService extends ChangeNotifier {
     if (subject != null) plan.subject = subject.trim();
     if (weekStart != null) plan.weekStart = LessonPlan.mondayOf(weekStart);
     if (objectives != null) plan.objectives = objectives.trim();
+    if (successCriteria != null) plan.successCriteria = successCriteria.trim();
+    if (keyVocabulary != null) plan.keyVocabulary = keyVocabulary.trim();
+    if (priorKnowledge != null) plan.priorKnowledge = priorKnowledge.trim();
+    if (starter != null) plan.starter = starter.trim();
     if (activities != null) plan.activities = activities.trim();
+    if (plenary != null) plan.plenary = plenary.trim();
+    if (differentiation != null) {
+      plan.differentiation = differentiation.trim();
+    }
+    if (assessment != null) plan.assessment = assessment.trim();
+    if (homeLearning != null) plan.homeLearning = homeLearning.trim();
+    if (inclusionNotes != null) plan.inclusionNotes = inclusionNotes.trim();
+    if (clearDuration) {
+      plan.durationMinutes = null;
+    } else if (durationMinutes != null) {
+      plan.durationMinutes = durationMinutes;
+    }
+    if (periodLabel != null) plan.periodLabel = periodLabel.trim();
     if (homeworkIds != null) plan.homeworkIds = List.of(homeworkIds);
     if (examPaperIds != null) plan.examPaperIds = List.of(examPaperIds);
     if (learningMaterialIds != null) {
@@ -273,6 +325,9 @@ class LessonPlanService extends ChangeNotifier {
   List<Map<String, dynamic>> snapshotMaps() {
     return _plans.map((p) {
       final map = Map<String, dynamic>.from(p.toMap());
+      map['attachmentPaths'] = p.attachmentPaths
+          .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
+          .toList();
       final studentIds = StudentRegistryService.instance
           .studentsForClass(p.className)
           .map((s) => s.studentId.trim())
