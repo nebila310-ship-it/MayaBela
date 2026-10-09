@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -5,9 +7,11 @@ import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
+import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/setup/dashboard_setup.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 
 void main() {
@@ -208,5 +212,82 @@ void main() {
       ['lesson_plan_attachments/slides.pdf'],
     );
     AuthService.currentUser = null;
+  });
+
+  test('teacher, parent, and student dashboards include lesson plans', () {
+    registerAllDashboards();
+    expect(
+      sectionDefinitionsFor(AuthService.roleTeacher).expand((s) => s.entryIds),
+      contains('lesson_plans'),
+    );
+    expect(
+      sectionDefinitionsFor(AuthService.roleParent).expand((s) => s.entryIds),
+      contains('lesson_plans'),
+    );
+    expect(
+      sectionDefinitionsFor(AuthService.roleStudent).expand((s) => s.entryIds),
+      contains('lesson_plans'),
+    );
+    expect(
+      DashboardRegistry.find(AuthService.roleTeacher, 'lesson_plans'),
+      isNotNull,
+    );
+    expect(
+      DashboardRegistry.find(AuthService.roleParent, 'lesson_plans'),
+      isNotNull,
+    );
+    expect(
+      DashboardRegistry.find(AuthService.roleStudent, 'lesson_plans'),
+      isNotNull,
+    );
+  });
+
+  test('parent JWT class names see an admin-published lesson plan', () async {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.plans',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+    );
+    final plan = await LessonPlanService.instance.createPlan(
+      title: 'Admin weekly plan',
+      className: '4A',
+      subject: 'Science',
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.setStatus(
+      plan.id,
+      LessonPlanStatus.published,
+    );
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.plans',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      linkedStudentIds: const ['STU-LP-1'],
+    );
+    AuthService.applyCloudAccessScope(
+      linkedClassNames: const ['Grade 4A'],
+      linkedStudentIds: const ['STU-LP-1'],
+    );
+    expect(
+      LessonPlanService.instance
+          .publishedForClass('Grade 4A', schoolId: 'TB-001')
+          .map((p) => p.title),
+      contains('Admin weekly plan'),
+    );
+    AuthService.clearCloudAccessScope();
+    AuthService.currentUser = null;
+  });
+
+  test('parent lesson-plan SQL allows published class reads', () {
+    final sql = File(
+      'supabase/migrations/20261009140000_lesson_plans_parent_reads.sql',
+    ).readAsStringSync();
+    expect(sql, contains("'lesson_plans'"));
+    expect(sql, contains("r = 'parent'"));
+    expect(sql, contains("<> 'published'"));
+    expect(sql, contains("'daily_activities',\n      'lesson_plans'"));
   });
 }

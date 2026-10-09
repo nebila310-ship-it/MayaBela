@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
@@ -13,7 +14,9 @@ import 'package:mayabela/widgets/class_picker_bar.dart';
 
 /// Teacher dashboard: weekly plans for my classes.
 class TeacherLessonPlansScreen extends StatefulWidget {
-  const TeacherLessonPlansScreen({super.key});
+  const TeacherLessonPlansScreen({super.key, this.initialClass});
+
+  final String? initialClass;
 
   @override
   State<TeacherLessonPlansScreen> createState() =>
@@ -25,8 +28,13 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
   final _access = TeacherAccessService.instance;
   String? _selectedClass;
 
-  List<String> get _classOptions =>
-      _access.myClasses.map((a) => a.className).toSet().toList()..sort();
+  List<String> get _classOptions {
+    final names = <String>{
+      ..._access.myClasses.map((a) => a.className),
+      ...AuthService.accessClassNamesForSync(),
+    };
+    return names.where((name) => name.trim().isNotEmpty).toList()..sort();
+  }
 
   List<String> get _subjects {
     final fromSlots = _access.myClasses
@@ -43,7 +51,12 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
     super.initState();
     _plans.ensureLoaded();
     CurriculumService.instance.ensureLoaded();
-    if (_classOptions.isNotEmpty) _selectedClass = _classOptions.first;
+    if (widget.initialClass != null &&
+        widget.initialClass!.trim().isNotEmpty) {
+      _selectedClass = widget.initialClass!.trim();
+    } else if (_classOptions.isNotEmpty) {
+      _selectedClass = _classOptions.first;
+    }
   }
 
   @override

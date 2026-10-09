@@ -270,8 +270,18 @@ class LessonPlanService extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Map<String, dynamic>> snapshotMaps() =>
-      _plans.map((p) => p.toMap()).toList();
+  List<Map<String, dynamic>> snapshotMaps() {
+    return _plans.map((p) {
+      final map = Map<String, dynamic>.from(p.toMap());
+      final studentIds = StudentRegistryService.instance
+          .studentsForClass(p.className)
+          .map((s) => s.studentId.trim())
+          .where((id) => id.isNotEmpty)
+          .toList();
+      if (studentIds.isNotEmpty) map['studentIds'] = studentIds;
+      return map;
+    }).toList();
+  }
 
   Future<void> _persist() async {
     notifyListeners();

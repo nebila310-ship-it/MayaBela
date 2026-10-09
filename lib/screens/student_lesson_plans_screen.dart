@@ -33,6 +33,10 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
       final n = child.className.trim();
       if (n.isNotEmpty) names.add(n);
     }
+    for (final name in AuthService.accessClassNamesForSync()) {
+      final n = name.trim();
+      if (n.isNotEmpty) names.add(n);
+    }
     return names.toList();
   }
 
@@ -57,8 +61,13 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
             if (seen.add(plan.id)) items.add(plan);
           }
         }
+        if (items.isEmpty) {
+          for (final plan in _plans.forSchool()) {
+            if (plan.isPublished && seen.add(plan.id)) items.add(plan);
+          }
+        }
         items.sort((a, b) => b.weekStart.compareTo(a.weekStart));
-        final emptyClass = classNames.isEmpty;
+        final emptyClass = classNames.isEmpty && items.isEmpty;
         final emptyHint =
             AuthService.currentUser?.roleKey == AuthService.roleParent
                 ? 'No linked student class yet.'

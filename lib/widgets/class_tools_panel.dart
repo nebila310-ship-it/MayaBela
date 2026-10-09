@@ -8,6 +8,7 @@ import 'package:mayabela/screens/class_daily_activities_screen.dart';
 import 'package:mayabela/screens/gallery_screen.dart';
 import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
+import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/qr_entry_exit_screen.dart';
 import 'package:mayabela/services/lms_classroom_service.dart';
@@ -73,6 +74,12 @@ class ClassToolsPanel extends StatelessWidget {
         label: s.homeworkTitle,
         color: Colors.cyan,
         onTap: () => open(HomeworkScreen(initialClass: className)),
+      ),
+      ClassToolChip(
+        icon: Icons.event_note_outlined,
+        label: s.dashboardTitle('lesson_plans'),
+        color: const Color(0xFF5D4037),
+        onTap: () => open(TeacherLessonPlansScreen(initialClass: className)),
       ),
       if (access.canMessageInClass(className)) ...[
         ClassToolChip(

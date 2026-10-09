@@ -17,6 +17,7 @@ import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/daily_activities_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/student_lesson_plans_screen.dart';
+import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
@@ -312,6 +313,25 @@ List<DashboardEntry> _teacherEntries() {
             context,
             MaterialPageRoute(
               builder: (_) => const LearningMaterialsScreen(),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'lesson_plans',
+      icon: Icons.event_note_outlined,
+      color: const Color(0xFF5D4037),
+      isVisible: () => access.canAccessTeacherDashboardTile('lesson_plans'),
+      builder: (context) => DashboardCard(
+        icon: Icons.event_note_outlined,
+        title: _t('lesson_plans', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('lesson_plans', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TeacherLessonPlansScreen(),
             ),
           );
         }),
@@ -880,6 +900,24 @@ List<DashboardEntry> _studentEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'lesson_plans',
+      icon: Icons.event_note_outlined,
+      color: const Color(0xFF5D4037),
+      builder: (context) => DashboardCard(
+        icon: Icons.event_note_outlined,
+        title: _t('lesson_plans', role),
+        color: const Color(0xFF5D4037),
+        onTap: () => _openTile('lesson_plans', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentLessonPlansScreen(),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'gallery',
       icon: Icons.photo_library,
       color: Colors.purple,
@@ -1335,7 +1373,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'Teaching tools',
           icon: Icons.menu_book,
-          entryIds: ['homework', 'grades', 'timetable', 'learning_materials', 'gallery', 'qr'],
+          entryIds: ['homework', 'grades', 'timetable', 'learning_materials', 'lesson_plans', 'gallery', 'qr'],
         ),
         const DashboardSectionDefinition(
           title: 'Communication',
@@ -1411,7 +1449,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'daily_activities', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'daily_activities', 'lesson_plans', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',
