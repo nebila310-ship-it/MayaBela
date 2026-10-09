@@ -4839,14 +4839,16 @@ class SchoolDataService {
         entries: rosterAligned,
         previousByKey: previousByKey,
       );
-      _notifyParentTeacherAdmin(
-        title: 'Attendance taken',
-        body: '$conductedBy recorded attendance for $className.',
-        type: NotificationType.attendance,
-        fromRole: AuthService.roleTeacher,
-        fromName: conductedBy,
-        targetClassName: className,
-      );
+      if (existing == null) {
+        _notifyParentTeacherAdmin(
+          title: 'Attendance taken',
+          body: '$conductedBy recorded attendance for $className.',
+          type: NotificationType.attendance,
+          fromRole: AuthService.roleTeacher,
+          fromName: conductedBy,
+          targetClassName: className,
+        );
+      }
     }
     _alertStaffWhenAbsenceStreakStarts(
       className: className,

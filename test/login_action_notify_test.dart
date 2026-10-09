@@ -162,19 +162,19 @@ void main() {
 
   test('homework, attendance, daily activity, grades, announcements, and calendar notify PTA',
       () {
-    seedStudent();
+    seedStudent(className: 'Grade 4N-PTA');
     signIn(username: 'teacher.act', roleKey: AuthService.roleTeacher);
 
     SchoolDataService.instance.addHomework(
-      className: 'Grade 4A',
+      className: 'Grade 4N-PTA',
       subject: 'Math',
       description: 'Page 12',
       teacherName: 'Miss Belen',
       teacherId: 'TCH-1001',
     );
     SchoolDataService.instance.saveAttendanceSession(
-      className: 'Grade 4A',
-      date: DateTime.now(),
+      className: 'Grade 4N-PTA',
+      date: DateTime.utc(2026, 10, 9),
       conductedBy: 'Miss Belen',
       entries: [
         StudentAttendanceEntry(
@@ -187,7 +187,7 @@ void main() {
     SchoolDataService.instance.saveDailyActivity(
       studentId: 'STU-NTFY-1',
       studentName: 'Notify Kid',
-      className: 'Grade 4A',
+      className: 'Grade 4N-PTA',
       date: DateTime.now(),
       selectedOptionIds: const [],
       teacherComment: 'Great day',
@@ -217,7 +217,7 @@ void main() {
       fromRole: AuthService.roleTeacher,
       fromName: 'Miss Belen',
       recipientRole: AuthService.roleParent,
-      targetClassName: 'Grade 4A',
+      targetClassName: 'Grade 4N-PTA',
       targetStudentId: 'STU-NTFY-1',
       showOnMessagesBadge: false,
     );
@@ -228,7 +228,7 @@ void main() {
       fromRole: AuthService.roleTeacher,
       fromName: 'Miss Belen',
       recipientRole: AuthService.roleAdmin,
-      targetClassName: 'Grade 4A',
+      targetClassName: 'Grade 4N-PTA',
       showOnMessagesBadge: false,
     );
 
