@@ -14,7 +14,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
-import 'package:mayabela/widgets/course_attachment_picker.dart';
+import 'package:mayabela/widgets/lesson_plan_view_card.dart';
 
 /// Staff lesson plans — weekly planning that can link homework, materials, and exam papers.
 class WebLessonPlansPage extends StatefulWidget {
@@ -95,9 +95,10 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
             Text('Lesson plans', style: WebErpTheme.sectionTitle(context)),
             const SizedBox(height: 4),
             Text(
-              'Weekly plans for a class and subject. Link existing homework, '
-              'learning materials, or an exam paper. This does not enter grades — '
-              'scores still come from the markbook and exam desk.',
+              'International-school weekly plan: learning objectives, success '
+              'criteria, lesson sequence, differentiation, assessment, home '
+              'learning, and resources. Publish so teachers, parents, and students '
+              'can expand the same plan. This does not enter grades.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -173,58 +174,45 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
                 padding: const EdgeInsets.all(20),
                 decoration: WebErpTheme.cardDecoration(context),
                 child: const Text(
-                  'No lesson plans yet. Create a weekly plan and publish it so students can see it.',
+                  'No lesson plans yet. Create a weekly plan with objectives and a '
+                  'lesson sequence, then publish it so the class can open it.',
                 ),
               )
             else
-              for (final plan in items) _planCard(plan),
+              for (final plan in items)
+                _planCard(plan, expand: items.length == 1),
           ],
         );
       },
     );
   }
 
-  Widget _planCard(LessonPlan plan) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DecoratedBox(
-        decoration: WebErpTheme.cardDecoration(context),
-        child: ListTile(
-          title: Text(plan.title),
-          subtitle: Text(
-            '${plan.className} · ${plan.subject} · '
-            '${_weekLabel(plan.weekStart)} · '
-            '${plan.isPublished ? 'Published' : 'Draft'}'
-            '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${_reviewLabel(plan.reviewStatus)}'}'
-            '${plan.hasLinks ? ' · linked work' : ''}'
-            '${plan.attachmentPaths.isEmpty ? '' : ' · ${plan.attachmentPaths.length} file(s)'}'
-            '${plan.hasOnlineSession ? (plan.onlineSessionIsLive ? ' · live class' : ' · recorded class') : ''}',
+  Widget _planCard(LessonPlan plan, {required bool expand}) {
+    return LessonPlanViewCard(
+      key: ValueKey(plan.id),
+      plan: plan,
+      initiallyExpanded: expand,
+      actions: [
+        if (_canManage) ...[
+          if (!plan.isPublished)
+            TextButton(
+              onPressed: () =>
+                  _plans.setStatus(plan.id, LessonPlanStatus.published),
+              child: const Text('Publish'),
+            )
+          else
+            TextButton(
+              onPressed: () =>
+                  _plans.setStatus(plan.id, LessonPlanStatus.draft),
+              child: const Text('Unpublish'),
+            ),
+          FilledButton.tonalIcon(
+            onPressed: () => _edit(plan),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit'),
           ),
-          trailing: _canManage
-              ? Wrap(
-                  spacing: 4,
-                  children: [
-                    if (!plan.isPublished)
-                      TextButton(
-                        onPressed: () =>
-                            _plans.setStatus(plan.id, LessonPlanStatus.published),
-                        child: const Text('Publish'),
-                      )
-                    else
-                      TextButton(
-                        onPressed: () =>
-                            _plans.setStatus(plan.id, LessonPlanStatus.draft),
-                        child: const Text('Unpublish'),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => _edit(plan),
-                    ),
-                  ],
-                )
-              : null,
-        ),
-      ),
+        ],
+      ],
     );
   }
 
@@ -238,13 +226,6 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
       ),
     );
   }
-
-  static String _reviewLabel(LessonPlanReviewStatus status) => switch (status) {
-        LessonPlanReviewStatus.none => '',
-        LessonPlanReviewStatus.pending => 'Review pending',
-        LessonPlanReviewStatus.approved => 'DH approved',
-        LessonPlanReviewStatus.changesRequested => 'Changes requested',
-      };
 
   static String _weekLabel(DateTime start) {
     final end = start.add(const Duration(days: 6));
@@ -271,7 +252,18 @@ class LessonPlanEditorDialog extends StatefulWidget {
 class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
   late final TextEditingController _title;
   late final TextEditingController _objectives;
+  late final TextEditingController _successCriteria;
+  late final TextEditingController _vocabulary;
+  late final TextEditingController _priorKnowledge;
+  late final TextEditingController _starter;
   late final TextEditingController _activities;
+  late final TextEditingController _plenary;
+  late final TextEditingController _differentiation;
+  late final TextEditingController _assessment;
+  late final TextEditingController _homeLearning;
+  late final TextEditingController _inclusion;
+  late final TextEditingController _duration;
+  late final TextEditingController _period;
   late final TextEditingController _onlineUrl;
   late final TextEditingController _onlineLabel;
   late String _className;
@@ -290,7 +282,20 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     final p = widget.existing;
     _title = TextEditingController(text: p?.title ?? '');
     _objectives = TextEditingController(text: p?.objectives ?? '');
+    _successCriteria = TextEditingController(text: p?.successCriteria ?? '');
+    _vocabulary = TextEditingController(text: p?.keyVocabulary ?? '');
+    _priorKnowledge = TextEditingController(text: p?.priorKnowledge ?? '');
+    _starter = TextEditingController(text: p?.starter ?? '');
     _activities = TextEditingController(text: p?.activities ?? '');
+    _plenary = TextEditingController(text: p?.plenary ?? '');
+    _differentiation = TextEditingController(text: p?.differentiation ?? '');
+    _assessment = TextEditingController(text: p?.assessment ?? '');
+    _homeLearning = TextEditingController(text: p?.homeLearning ?? '');
+    _inclusion = TextEditingController(text: p?.inclusionNotes ?? '');
+    _duration = TextEditingController(
+      text: p?.durationMinutes == null ? '' : '${p!.durationMinutes}',
+    );
+    _period = TextEditingController(text: p?.periodLabel ?? '');
     _className = p?.className ?? widget.classes.firstOrNull ?? '';
     _subject = p?.subject ??
         (widget.subjects.contains('Science')
@@ -311,7 +316,18 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
   void dispose() {
     _title.dispose();
     _objectives.dispose();
+    _successCriteria.dispose();
+    _vocabulary.dispose();
+    _priorKnowledge.dispose();
+    _starter.dispose();
     _activities.dispose();
+    _plenary.dispose();
+    _differentiation.dispose();
+    _assessment.dispose();
+    _homeLearning.dispose();
+    _inclusion.dispose();
+    _duration.dispose();
+    _period.dispose();
     _onlineUrl.dispose();
     _onlineLabel.dispose();
     super.dispose();
@@ -358,6 +374,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
       );
       return;
     }
+    final minutes = int.tryParse(_duration.text.trim());
     final LessonPlan plan;
     if (widget.existing == null) {
       plan = await LessonPlanService.instance.createPlan(
@@ -366,7 +383,18 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         subject: _subject,
         weekStart: _weekStart,
         objectives: _objectives.text,
+        successCriteria: _successCriteria.text,
+        keyVocabulary: _vocabulary.text,
+        priorKnowledge: _priorKnowledge.text,
+        starter: _starter.text,
         activities: _activities.text,
+        plenary: _plenary.text,
+        differentiation: _differentiation.text,
+        assessment: _assessment.text,
+        homeLearning: _homeLearning.text,
+        inclusionNotes: _inclusion.text,
+        durationMinutes: minutes,
+        periodLabel: _period.text,
         homeworkIds: _homework.toList(),
         examPaperIds: _papers.toList(),
         learningMaterialIds: _materials.toList(),
@@ -384,7 +412,19 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
         subject: _subject,
         weekStart: _weekStart,
         objectives: _objectives.text,
+        successCriteria: _successCriteria.text,
+        keyVocabulary: _vocabulary.text,
+        priorKnowledge: _priorKnowledge.text,
+        starter: _starter.text,
         activities: _activities.text,
+        plenary: _plenary.text,
+        differentiation: _differentiation.text,
+        assessment: _assessment.text,
+        homeLearning: _homeLearning.text,
+        inclusionNotes: _inclusion.text,
+        durationMinutes: minutes,
+        clearDuration: _duration.text.trim().isEmpty,
+        periodLabel: _period.text,
         homeworkIds: _homework.toList(),
         examPaperIds: _papers.toList(),
         learningMaterialIds: _materials.toList(),
@@ -410,14 +450,28 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
     return AlertDialog(
       title: Text(widget.existing == null ? 'New lesson plan' : 'Edit lesson plan'),
       content: SizedBox(
-        width: 520,
+        width: 640,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Write a weekly plan in the shape international schools use: '
+                  'learning intentions, a starter–main–plenary sequence, '
+                  'support for every learner, assessment, home learning, and '
+                  'worksheets. Empty sections stay hidden when the class opens it.',
+                  style: TextStyle(height: 1.35, fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _title,
-                decoration: const InputDecoration(labelText: 'Title'),
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'Grade 4 Science — Plant parts',
+                ),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
@@ -481,15 +535,133 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: _period,
+                decoration: const InputDecoration(
+                  labelText: 'Period / block (optional)',
+                  hintText: 'Period 3–4',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _duration,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Duration (minutes)',
+                  hintText: '40',
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Learning intentions',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: _objectives,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Objectives'),
+                decoration: const InputDecoration(
+                  labelText: 'Learning objectives',
+                  hintText: 'By the end of this week, learners will be able to…',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _successCriteria,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Success criteria',
+                  hintText: 'I can… / Learners can show…',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _vocabulary,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Key vocabulary',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _priorKnowledge,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Prior knowledge / connection',
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Lesson sequence',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _starter,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Starter / hook',
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _activities,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Main teaching & learning',
+                  hintText: 'Modelling, guided practice, independent work…',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _plenary,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Plenary'),
+              ),
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Support, assessment & home learning',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _differentiation,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Activities'),
+                decoration: const InputDecoration(
+                  labelText: 'Differentiation (support / core / challenge)',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _inclusion,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Inclusion / SEN notes',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _assessment,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Assessment for learning',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _homeLearning,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Home learning',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -514,10 +686,8 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
                 onChanged: (v) => setState(() => _onlineLive = v),
               ),
               const SizedBox(height: 12),
-              CourseAttachmentPicker(
+              LessonPlanAttachmentPicker(
                 paths: _attachments,
-                subdir: 'lesson_plan_attachments',
-                sectionTitle: 'Course files',
                 onChanged: (next) => setState(() => _attachments = next),
               ),
               const SizedBox(height: 12),

@@ -14,7 +14,18 @@ class LessonPlan {
     required this.createdAt,
     required this.updatedAt,
     this.objectives = '',
+    this.successCriteria = '',
+    this.keyVocabulary = '',
+    this.priorKnowledge = '',
+    this.starter = '',
     this.activities = '',
+    this.plenary = '',
+    this.differentiation = '',
+    this.assessment = '',
+    this.homeLearning = '',
+    this.inclusionNotes = '',
+    this.durationMinutes,
+    this.periodLabel = '',
     this.homeworkIds = const [],
     this.examPaperIds = const [],
     this.learningMaterialIds = const [],
@@ -37,7 +48,18 @@ class LessonPlan {
   String subject;
   DateTime weekStart;
   String objectives;
+  String successCriteria;
+  String keyVocabulary;
+  String priorKnowledge;
+  String starter;
   String activities;
+  String plenary;
+  String differentiation;
+  String assessment;
+  String homeLearning;
+  String inclusionNotes;
+  int? durationMinutes;
+  String periodLabel;
   List<String> homeworkIds;
   List<String> examPaperIds;
   List<String> learningMaterialIds;
@@ -64,7 +86,24 @@ class LessonPlan {
       examPaperIds.isNotEmpty ||
       learningMaterialIds.isNotEmpty;
 
+  bool get hasSequence =>
+      starter.trim().isNotEmpty ||
+      activities.trim().isNotEmpty ||
+      plenary.trim().isNotEmpty;
+
+  String get reviewLabel => switch (reviewStatus) {
+        LessonPlanReviewStatus.none => '',
+        LessonPlanReviewStatus.pending => 'Review pending',
+        LessonPlanReviewStatus.approved => 'Approved',
+        LessonPlanReviewStatus.changesRequested => 'Changes requested',
+      };
+
   DateTime get weekEnd => weekStart.add(const Duration(days: 6));
+
+  String get weekLabel {
+    final end = weekEnd;
+    return '${weekStart.day}/${weekStart.month}–${end.day}/${end.month}';
+  }
 
   bool covers(DateTime day) {
     final d = DateTime(day.year, day.month, day.day);
@@ -79,7 +118,18 @@ class LessonPlan {
         'subject': subject,
         'weekStart': weekStart.toIso8601String(),
         'objectives': objectives,
+        'successCriteria': successCriteria,
+        'keyVocabulary': keyVocabulary,
+        'priorKnowledge': priorKnowledge,
+        'starter': starter,
         'activities': activities,
+        'plenary': plenary,
+        'differentiation': differentiation,
+        'assessment': assessment,
+        'homeLearning': homeLearning,
+        'inclusionNotes': inclusionNotes,
+        if (durationMinutes != null) 'durationMinutes': durationMinutes,
+        'periodLabel': periodLabel,
         'homeworkIds': homeworkIds,
         'examPaperIds': examPaperIds,
         'learningMaterialIds': learningMaterialIds,
@@ -109,7 +159,18 @@ class LessonPlan {
         DateTime.tryParse(map['weekStart'] as String? ?? '') ?? DateTime.now(),
       ),
       objectives: map['objectives'] as String? ?? '',
+      successCriteria: map['successCriteria'] as String? ?? '',
+      keyVocabulary: map['keyVocabulary'] as String? ?? '',
+      priorKnowledge: map['priorKnowledge'] as String? ?? '',
+      starter: map['starter'] as String? ?? '',
       activities: map['activities'] as String? ?? '',
+      plenary: map['plenary'] as String? ?? '',
+      differentiation: map['differentiation'] as String? ?? '',
+      assessment: map['assessment'] as String? ?? '',
+      homeLearning: map['homeLearning'] as String? ?? '',
+      inclusionNotes: map['inclusionNotes'] as String? ?? '',
+      durationMinutes: (map['durationMinutes'] as num?)?.toInt(),
+      periodLabel: map['periodLabel'] as String? ?? '',
       homeworkIds: _ids(map['homeworkIds']),
       examPaperIds: _ids(map['examPaperIds']),
       learningMaterialIds: _ids(map['learningMaterialIds']),

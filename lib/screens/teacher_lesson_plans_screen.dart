@@ -11,6 +11,7 @@ import 'package:mayabela/theme/teacher_theme.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/web_erp/pages/web_lesson_plans_page.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
+import 'package:mayabela/widgets/lesson_plan_view_card.dart';
 
 /// Teacher dashboard: weekly plans for my classes.
 class TeacherLessonPlansScreen extends StatefulWidget {
@@ -114,16 +115,13 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                           itemCount: items.length,
                           itemBuilder: (context, i) {
                             final plan = items[i];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                title: Text(plan.title),
-                                subtitle: Text(
-                                  '${plan.subject} · ${plan.isPublished ? 'Published' : 'Draft'}'
-                                  '${plan.reviewStatus == LessonPlanReviewStatus.none ? '' : ' · ${_reviewLabel(plan.reviewStatus)}'}'
-                                  '${plan.hasOnlineSession ? (plan.onlineSessionIsLive ? ' · live class' : ' · recorded class') : ''}',
-                                ),
-                                trailing: TextButton(
+                            return LessonPlanViewCard(
+                              key: ValueKey(plan.id),
+                              plan: plan,
+                              accent: accent,
+                              initiallyExpanded: items.length == 1,
+                              actions: [
+                                TextButton(
                                   onPressed: () {
                                     if (plan.isPublished &&
                                         plan.reviewStatus !=
@@ -147,8 +145,12 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                                             : 'Submit',
                                   ),
                                 ),
-                                onTap: () => _openEditor(plan),
-                              ),
+                                FilledButton.tonalIcon(
+                                  onPressed: () => _openEditor(plan),
+                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  label: const Text('Edit'),
+                                ),
+                              ],
                             );
                           },
                         ),
@@ -170,11 +172,4 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
       ),
     );
   }
-
-  static String _reviewLabel(LessonPlanReviewStatus status) => switch (status) {
-        LessonPlanReviewStatus.none => '',
-        LessonPlanReviewStatus.pending => 'Review pending',
-        LessonPlanReviewStatus.approved => 'DH approved',
-        LessonPlanReviewStatus.changesRequested => 'Changes requested',
-      };
 }
