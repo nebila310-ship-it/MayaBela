@@ -975,6 +975,25 @@ class AppStrings implements AppStringsLike {
         'School events, holidays, and schedule reminders',
         'የትምህርት ቤት ክስተቶች፣ በዓላት እና የጊዜ ሰንጠረዥ ማስታወሻዎች',
       );
+  String get notifyLessonPlans => t('Lesson plans', 'የትምህርት ዕቅዶች');
+  String get notifyLessonPlansHint => t(
+        'When a teacher publishes a weekly plan for your class',
+        'መምህር ለክፍሉ ሳምንታዊ ዕቅድ ሲያትም',
+      );
+  String loginSchoolUpdatesOnLogin(int count) {
+    if (count <= 1) {
+      return t(
+        'You have a new school update',
+        'አዲስ የትምህርት ቤት ማሳወቂያ አለዎት',
+        'Odeeffannoo mana barumsaa haaraa qabda',
+      );
+    }
+    return t(
+      'You have new school updates',
+      'አዲስ የትምህርት ቤት ማሳወቂያዎች አሉዎት',
+      'Odeeffannoowwan mana barumsaa haaraa qabda',
+    );
+  }
   String get changeLanguage => t('Change Language', 'ቋንቋ ቀይር');
 
   // —— Screen titles ——

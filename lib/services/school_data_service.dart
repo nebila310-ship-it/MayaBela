@@ -2279,15 +2279,42 @@ class SchoolDataService {
     required String fromRole,
     required String fromName,
   }) {
-    NotificationService.instance.push(
+    _notifyParentTeacherAdmin(
       title: title,
       body: body,
       type: type,
       fromRole: fromRole,
       fromName: fromName,
-      recipientRole: AuthService.roleParent,
       targetClassName: className,
     );
+  }
+
+  void _notifyParentTeacherAdmin({
+    required String title,
+    required String body,
+    required NotificationType type,
+    required String fromRole,
+    required String fromName,
+    String? targetClassName,
+    String? targetStudentId,
+  }) {
+    for (final role in [
+      AuthService.roleParent,
+      AuthService.roleTeacher,
+      AuthService.roleAdmin,
+    ]) {
+      NotificationService.instance.push(
+        title: title,
+        body: body,
+        type: type,
+        fromRole: fromRole,
+        fromName: fromName,
+        recipientRole: role,
+        targetClassName: targetClassName,
+        targetStudentId: role == AuthService.roleParent ? targetStudentId : null,
+        showOnMessagesBadge: type == NotificationType.message,
+      );
+    }
   }
 
   void _notifyByAudiences({
@@ -2297,6 +2324,7 @@ class SchoolDataService {
     required NotificationType type,
     required String fromRole,
     required String fromName,
+    bool? showOnMessagesBadge,
   }) {
     final roles = <String>{};
     for (final key in audienceKeys) {
@@ -2310,8 +2338,10 @@ class SchoolDataService {
         fromRole: fromRole,
         fromName: fromName,
         recipientRole: role,
-        showOnMessagesBadge: role == AuthService.roleParent ||
-            role == AuthService.roleTeacher,
+        showOnMessagesBadge: showOnMessagesBadge ??
+            (type == NotificationType.message &&
+                (role == AuthService.roleParent ||
+                    role == AuthService.roleTeacher)),
       );
     }
   }
@@ -3415,6 +3445,7 @@ class SchoolDataService {
     _notifyParentForDailyActivity(
       studentId: canonicalId,
       studentName: studentName,
+      className: className,
       teacherName: teacherName,
     );
     _persistDailyActivities();
@@ -3458,15 +3489,16 @@ class SchoolDataService {
   void _notifyParentForDailyActivity({
     required String studentId,
     required String studentName,
+    required String className,
     required String teacherName,
   }) {
-    NotificationService.instance.push(
+    _notifyParentTeacherAdmin(
       title: 'Daily activity report',
       body: '$teacherName posted today\'s activities for $studentName.',
       type: NotificationType.dailyActivity,
       fromRole: AuthService.roleTeacher,
       fromName: teacherName,
-      recipientRole: AuthService.roleParent,
+      targetClassName: className,
       targetStudentId: studentId,
     );
   }
@@ -4807,6 +4839,14 @@ class SchoolDataService {
         entries: rosterAligned,
         previousByKey: previousByKey,
       );
+      _notifyParentTeacherAdmin(
+        title: 'Attendance taken',
+        body: '$conductedBy recorded attendance for $className.',
+        type: NotificationType.attendance,
+        fromRole: AuthService.roleTeacher,
+        fromName: conductedBy,
+        targetClassName: className,
+      );
     }
     _alertStaffWhenAbsenceStreakStarts(
       className: className,
@@ -5704,7 +5744,7 @@ class SchoolDataService {
     final scoreInt = score.round();
     final s = AppLocale.instance.strings;
 
-    NotificationService.instance.push(
+    _notifyParentTeacherAdmin(
       title: updated
           ? s.gradeUpdatedNotificationTitle(subject, report.studentName)
           : s.gradePublishedNotificationTitle(subject, report.studentName),
@@ -5726,8 +5766,7 @@ class SchoolDataService {
       type: NotificationType.grade,
       fromRole: AuthService.roleTeacher,
       fromName: teacherName,
-      recipientRole: AuthService.roleParent,
-      showOnMessagesBadge: false,
+      targetClassName: report.className,
       targetStudentId: studentId,
     );
   }
@@ -7960,6 +7999,19 @@ class SchoolDataService {
       autoAnnounce: autoAnnounce,
     );
     _calendarEvents.add(event);
+    _notifyByAudiences(
+      audienceKeys: [event.audience],
+      title: 'New calendar event',
+      body: event.time == null || event.time!.isEmpty
+          ? '$title — ${event.date.day}/${event.date.month}'
+          : '$title — ${event.date.day}/${event.date.month} at ${event.time}',
+      type: NotificationType.calendar,
+      fromRole: AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
+      fromName: AuthService.displayNameForRole(
+        AuthService.currentUser?.roleKey ?? AuthService.roleAdmin,
+      ),
+      showOnMessagesBadge: false,
+    );
     _persistSchoolContent();
     return event;
   }

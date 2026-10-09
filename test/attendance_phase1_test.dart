@@ -93,6 +93,7 @@ void main() {
       NotificationService.instance.itemsForTests().where(
         (n) =>
             n.type == NotificationType.attendance &&
+            n.recipientRole == AuthService.roleParent &&
             n.body.contains('Grade 9Z-P1N'),
       ),
       isEmpty,

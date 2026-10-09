@@ -51,6 +51,7 @@ class _NotificationPreferenceSettingsState
       NotificationPreferenceKey.dailyActivity => s.notifyDailyActivity,
       NotificationPreferenceKey.fees => s.notifyFees,
       NotificationPreferenceKey.calendar => s.notifyCalendar,
+      NotificationPreferenceKey.lessonPlans => s.notifyLessonPlans,
     };
   }
 
@@ -67,6 +68,7 @@ class _NotificationPreferenceSettingsState
       NotificationPreferenceKey.dailyActivity => s.notifyDailyActivityHint,
       NotificationPreferenceKey.fees => s.notifyFeesHint,
       NotificationPreferenceKey.calendar => s.notifyCalendarHint,
+      NotificationPreferenceKey.lessonPlans => s.notifyLessonPlansHint,
     };
   }
 
@@ -83,6 +85,7 @@ class _NotificationPreferenceSettingsState
       NotificationPreferenceKey.dailyActivity => Icons.today_outlined,
       NotificationPreferenceKey.fees => Icons.payments_outlined,
       NotificationPreferenceKey.calendar => Icons.calendar_month_outlined,
+      NotificationPreferenceKey.lessonPlans => Icons.event_note_outlined,
     };
   }
 

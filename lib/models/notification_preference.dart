@@ -13,6 +13,7 @@ enum NotificationPreferenceKey {
   dailyActivity,
   fees,
   calendar,
+  lessonPlans,
 }
 
 NotificationPreferenceKey preferenceKeyForType(NotificationType type) {
@@ -30,7 +31,31 @@ NotificationPreferenceKey preferenceKeyForType(NotificationType type) {
     NotificationType.fee => NotificationPreferenceKey.fees,
     NotificationType.materialPurchase => NotificationPreferenceKey.fees,
     NotificationType.calendar => NotificationPreferenceKey.calendar,
+    NotificationType.lessonPlan => NotificationPreferenceKey.lessonPlans,
     NotificationType.qrScan || NotificationType.general =>
       NotificationPreferenceKey.announcements,
   };
 }
+
+/// Login toast + tile badges for parents, teachers, and administration.
+const loginActionNotificationTypes = <NotificationType>[
+  NotificationType.message,
+  NotificationType.homework,
+  NotificationType.lessonPlan,
+  NotificationType.attendance,
+  NotificationType.dailyActivity,
+  NotificationType.grade,
+  NotificationType.announcement,
+  NotificationType.calendar,
+];
+
+const loginActionTileIds = <String>[
+  'messages',
+  'homework',
+  'lesson_plans',
+  'attendance',
+  'daily_activities',
+  'grades',
+  'announcements',
+  'calendar',
+];

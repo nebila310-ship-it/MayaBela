@@ -77,6 +77,7 @@ const List<WebErpNavItem> webErpAllNavItems = [
       label: 'Homework',
       icon: Icons.assignment_outlined,
       section: 'Academics',
+      badgeId: 'homework',
     ),
     WebErpNavItem(
       id: 'at_risk',
@@ -119,6 +120,7 @@ const List<WebErpNavItem> webErpAllNavItems = [
       label: 'Lesson plans',
       icon: Icons.event_note_outlined,
       section: 'Academics',
+      badgeId: 'lesson_plans',
     ),
     WebErpNavItem(
       id: 'curriculum',

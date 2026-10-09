@@ -150,14 +150,12 @@ class NotificationService extends ChangeNotifier {
     )) {
       return false;
     }
+    final prefs = NotificationPreferenceService.instance;
+    if (!prefs.isEnabled(role, NotificationPreferenceKey.master) ||
+        !prefs.isEnabled(role, preferenceKeyForType(item.type))) {
+      return false;
+    }
     if (role == AuthService.roleParent) {
-      if (item.type == NotificationType.attendance &&
-          !NotificationPreferenceService.instance.isEnabled(
-            AuthService.roleParent,
-            NotificationPreferenceKey.attendance,
-          )) {
-        return false;
-      }
       return _matchesLinkedStudentScope(
         item,
         AuthService.activeLinkedStudentIds()
@@ -173,12 +171,29 @@ class NotificationService extends ChangeNotifier {
       if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
       return _matchesLinkedStudentScope(item, {linkedStudentId});
     }
+    if (role == AuthService.roleTeacher &&
+        !_matchesTeacherClassScope(item)) {
+      return false;
+    }
     if (item.type == NotificationType.message &&
         !_hasDirectPersonTarget(item) &&
         staffTarget.isEmpty) {
       return false;
     }
     return true;
+  }
+
+  bool _matchesTeacherClassScope(AppNotification item) {
+    final className = item.targetClassName?.trim();
+    if (className == null || className.isEmpty) return true;
+    final names = AuthService.accessClassNamesForSync()
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (names.isEmpty) return true;
+    return names.any(
+      (name) => StudentRegistryService.classNamesMatch(name, className),
+    );
   }
 
   bool _hasDirectPersonTarget(AppNotification item) {
@@ -337,17 +352,18 @@ class NotificationService extends ChangeNotifier {
       return;
     }
     final staffTarget = recipientStaffRole?.trim() ?? '';
-    if (staffTarget.isEmpty &&
+    if (type == NotificationType.message &&
+        staffTarget.isEmpty &&
         !hasPersonTarget &&
         recipientRole == fromRole &&
         AuthService.currentUser?.roleKey == fromRole) {
       return;
     }
-    if (type == NotificationType.attendance &&
-        !NotificationPreferenceService.instance.isEnabled(
-          recipientRole,
-          NotificationPreferenceKey.attendance,
-        )) {
+    final prefs = NotificationPreferenceService.instance;
+    if (!prefs.isEnabled(recipientRole, NotificationPreferenceKey.master)) {
+      return;
+    }
+    if (!prefs.isEnabled(recipientRole, preferenceKeyForType(type))) {
       return;
     }
 

@@ -11,6 +11,7 @@ enum NotificationType {
   fee,
   bus,
   calendar,
+  lessonPlan,
   materialPurchase,
   general,
 }

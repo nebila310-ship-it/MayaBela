@@ -137,7 +137,7 @@ List<DashboardEntry> _erpAlignedEntries() {
           title: item.label,
           color: color,
           badgeCount: item.badgeId == null ? 0 : _badge(item.badgeId!),
-          onTap: () => _openTile(item.id, () {
+          onTap: () => _openTile(item.badgeId ?? item.id, () {
             webErpOpenRoute(context, item.id);
           }),
         ),
@@ -327,6 +327,7 @@ List<DashboardEntry> _teacherEntries() {
         icon: Icons.event_note_outlined,
         title: _t('lesson_plans', role),
         color: const Color(0xFF5D4037),
+        badgeCount: _badge('lesson_plans'),
         onTap: () => _openTile('lesson_plans', () {
           Navigator.push(
             context,
@@ -580,6 +581,7 @@ List<DashboardEntry> _parentEntries() {
         icon: Icons.today,
         title: AppLocale.instance.strings.dailyActivities,
         color: const Color(0xFF00796B),
+        badgeCount: _badge('daily_activities'),
         onTap: () => _openTile(
           'daily_activities',
           () => openParentDailyActivity(context),
@@ -594,6 +596,7 @@ List<DashboardEntry> _parentEntries() {
         icon: Icons.event_note_outlined,
         title: _t('lesson_plans', role),
         color: const Color(0xFF5D4037),
+        badgeCount: _badge('lesson_plans'),
         onTap: () => _openTile('lesson_plans', () {
           Navigator.push(
             context,
@@ -907,6 +910,7 @@ List<DashboardEntry> _studentEntries() {
         icon: Icons.event_note_outlined,
         title: _t('lesson_plans', role),
         color: const Color(0xFF5D4037),
+        badgeCount: _badge('lesson_plans'),
         onTap: () => _openTile('lesson_plans', () {
           Navigator.push(
             context,
@@ -976,6 +980,7 @@ List<DashboardEntry> _studentEntries() {
         icon: Icons.today,
         title: AppLocale.instance.strings.dailyActivities,
         color: const Color(0xFF00796B),
+        badgeCount: _badge('daily_activities'),
         onTap: () => _openTile(
           'daily_activities',
           () => openStudentDailyActivity(context),
