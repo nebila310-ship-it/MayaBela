@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/exam_models.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
-import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/exam_service.dart';
