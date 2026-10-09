@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
 import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
 
 import 'file_attachment_share_service_io.dart'
@@ -38,13 +41,21 @@ class FileAttachmentShareService {
     return p.basename(path);
   }
 
+  Future<Uint8List?> _bytesFor(String path) async {
+    final cached = WebAttachmentCache.instance.read(path);
+    if (cached != null && cached.isNotEmpty) return cached;
+    return ProfilePhotoCodec.bytesFromStoredPath(path);
+  }
+
   Future<AttachmentShareResult> sharePath(
     String path, {
     String? subject,
   }) async {
-    if (kIsWeb || WebAttachmentCache.instance.isWebPath(path)) {
-      final bytes = WebAttachmentCache.instance.read(path);
-      if (bytes == null) {
+    if (kIsWeb ||
+        WebAttachmentCache.instance.isWebPath(path) ||
+        ProfilePhotoCodec.isPrivateSchoolFilesUrl(path)) {
+      final bytes = await _bytesFor(path);
+      if (bytes == null || bytes.isEmpty) {
         return const AttachmentShareResult(success: false, message: 'not_found');
       }
       final name = displayName(path);
@@ -59,9 +70,11 @@ class FileAttachmentShareService {
   }
 
   Future<AttachmentShareResult> downloadPath(String path) async {
-    if (kIsWeb || WebAttachmentCache.instance.isWebPath(path)) {
-      final bytes = WebAttachmentCache.instance.read(path);
-      if (bytes == null) {
+    if (kIsWeb ||
+        WebAttachmentCache.instance.isWebPath(path) ||
+        ProfilePhotoCodec.isPrivateSchoolFilesUrl(path)) {
+      final bytes = await _bytesFor(path);
+      if (bytes == null || bytes.isEmpty) {
         return const AttachmentShareResult(success: false, message: 'not_found');
       }
       await WebFileUtils.downloadBytes(

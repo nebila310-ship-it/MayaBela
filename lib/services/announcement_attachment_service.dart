@@ -271,25 +271,36 @@ class AnnouncementAttachmentService {
       return OpenResult(type: ResultType.done);
     }
     final path = attachment.filePath;
+    final privateFile = ProfilePhotoCodec.isPrivateSchoolFilesUrl(path);
+    List<int>? bytes;
+    if (privateFile ||
+        WebAttachmentCache.instance.isWebPath(path) ||
+        path.startsWith('http://') ||
+        path.startsWith('https://')) {
+      bytes = await ProfilePhotoCodec.bytesFromStoredPath(path);
+    }
+
+    if (kIsWeb || WebAttachmentCache.instance.isWebPath(path)) {
+      final opened = await WebFileUtils.openOrDownload(
+        filePath: path,
+        fileName: attachment.fileName,
+        bytes: bytes,
+      );
+      return OpenResult(type: opened ? ResultType.done : ResultType.error);
+    }
+
+    if (bytes != null && bytes.isNotEmpty) {
+      final temp = await writeTempAttachment(
+        fileName: attachment.fileName,
+        bytes: bytes,
+      );
+      if (temp != null) return OpenFile.open(temp);
+    }
+
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      List<int>? privateBytes;
-      if (ProfilePhotoCodec.isPrivateSchoolFilesUrl(path)) {
-        privateBytes = await ProfilePhotoCodec.fetchRemoteBytes(path);
-      }
-      if (kIsWeb) {
-        final opened = await WebFileUtils.openOrDownload(
-          filePath: path,
-          fileName: attachment.fileName,
-          bytes: privateBytes,
-        );
-        return OpenResult(type: opened ? ResultType.done : ResultType.error);
-      }
-      if (privateBytes != null && privateBytes.isNotEmpty) {
-        final temp = await writeTempAttachment(
-          fileName: attachment.fileName,
-          bytes: privateBytes,
-        );
-        if (temp != null) return OpenFile.open(temp);
+      // A public school-files URL 404s in the browser. Do not launch it.
+      if (privateFile) {
+        return OpenResult(type: ResultType.error);
       }
       final uri = Uri.tryParse(path);
       if (uri != null &&
@@ -297,13 +308,6 @@ class AnnouncementAttachmentService {
         return OpenResult(type: ResultType.done);
       }
       return OpenResult(type: ResultType.noAppToOpen);
-    }
-    if (kIsWeb || WebAttachmentCache.instance.isWebPath(path)) {
-      final opened = await WebFileUtils.openOrDownload(
-        filePath: path,
-        fileName: attachment.fileName,
-      );
-      return OpenResult(type: opened ? ResultType.done : ResultType.error);
     }
     return OpenFile.open(path);
   }
