@@ -3446,6 +3446,12 @@ class AppStrings implements AppStringsLike {
   String get emergencyPhone => t('Phone number', 'ስልክ');
   String get sendInviteToContacts =>
       t('Send invite to contacts', 'ግብዣ ለግንኙነቶች ላክ');
+  String get parentInviteLink =>
+      t('Parent invite link', 'የወላጅ መጋበዣ አገናኝ');
+  String get copyParentInviteLink =>
+      t('Copy parent invite link', 'የወላጅ መጋበዣ አገናኝ ቅዳ');
+  String get parentInviteLinkCopied =>
+      t('Parent invite link copied', 'የወላጅ መጋበዣ አገናኝ ተቀድቷል');
   String get contactNumbersOnFile =>
       t('numbers on file', 'ቁጥሮች');
   String get sendAllViaSms => t('Send SMS to all contacts', 'SMS ለሁሉም ላክ');

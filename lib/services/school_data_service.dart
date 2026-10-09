@@ -49,6 +49,7 @@ import 'package:mayabela/models/leave_request.dart';
 import 'package:mayabela/services/leave_request_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/utils/student_id_utils.dart';
 /// Mock data layer — replace method bodies with API calls when backend is ready.
 class SchoolDataService {
   SchoolDataService._() {
@@ -5930,29 +5931,78 @@ class SchoolDataService {
     if (user?.roleKey == AuthService.roleStudent) {
       final studentId = user!.linkedStudentId?.trim().toUpperCase();
       if (studentId == null || studentId.isEmpty) return const [];
+      ensureLinkedChildrenVisible();
       return _children
-          .where((child) => child.studentId?.toUpperCase() == studentId)
+          .where((child) => studentIdsMatch(child.studentId, studentId))
           .map(_withLiveAttendance)
           .toList();
     }
     if (user?.roleKey == AuthService.roleParent) {
       EnrollmentService.instance.ensureSeeded();
-      final ids = AuthService.activeLinkedStudentIds()
-          .map((id) => id.toUpperCase())
-          .toSet();
-      if (ids.isNotEmpty) {
-        return _children
-            .where(
-              (child) =>
-                  child.studentId != null &&
-                  ids.contains(child.studentId!.toUpperCase()),
-            )
-            .map(_withLiveAttendance)
-            .toList();
-      }
-      return const [];
+      ensureLinkedChildrenVisible();
+      final ids = AuthService.activeLinkedStudentIds();
+      if (ids.isEmpty) return const [];
+      return _children
+          .where(
+            (child) =>
+                ids.any((id) => studentIdsMatch(child.studentId, id)),
+          )
+          .map(_withLiveAttendance)
+          .toList();
     }
     return _children.map(_withLiveAttendance).toList(growable: false);
+  }
+
+  /// Build My Children from the login token / registry on a fresh phone.
+  void ensureLinkedChildrenVisible() {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+    if (user.roleKey != AuthService.roleParent &&
+        user.roleKey != AuthService.roleStudent) {
+      return;
+    }
+    final ids = <String>[
+      ...AuthService.activeLinkedStudentIds(),
+      if (user.roleKey == AuthService.roleStudent)
+        user.linkedStudentId?.trim().toUpperCase() ?? '',
+    ].where((id) => id.trim().isNotEmpty).toList();
+    final names = AuthService.cloudLinkedStudentNames;
+    final classNames = AuthService.cloudLinkedClassNames;
+
+    for (var i = 0; i < ids.length; i++) {
+      final id = ids[i];
+      syncChildFromRegistry(id);
+      if (_childIndexForId(id) >= 0) continue;
+      final name = _linkedNameAt(names, i, fallback: id);
+      final className = _linkedNameAt(classNames, i, fallback: '');
+      _children.add(
+        ChildProfile(
+          studentId: id,
+          name: name,
+          grade: className,
+          className: className,
+          section: ChildProfile.sectionFromClassName(className),
+          teacher: 'Staff',
+          attendanceRate: 0.9,
+        ),
+      );
+    }
+  }
+
+  int _childIndexForId(String studentId) {
+    return _children.indexWhere(
+      (child) => studentIdsMatch(child.studentId, studentId),
+    );
+  }
+
+  String _linkedNameAt(List<String> values, int index, {required String fallback}) {
+    if (index < values.length && values[index].trim().isNotEmpty) {
+      return values[index].trim();
+    }
+    if (values.length == 1 && values.first.trim().isNotEmpty) {
+      return values.first.trim();
+    }
+    return fallback;
   }
 
   ChildProfile _withLiveAttendance(ChildProfile child) {
@@ -6186,9 +6236,7 @@ class SchoolDataService {
     _ensureClassShell(record.className);
     _upsertStudentOnRoster(record);
 
-    final existing = _children.indexWhere(
-      (c) => c.studentId?.toUpperCase() == record.studentId.toUpperCase(),
-    );
+    final existing = _childIndexForId(record.studentId);
     final profile = ChildProfile(
       studentId: record.studentId,
       name: record.fullName,
@@ -6661,11 +6709,10 @@ class SchoolDataService {
   }
 
   ChildProfile? getChildById(String studentId) {
-    final normalized = studentId.trim().toUpperCase();
     try {
       return _withLiveAttendance(
         _children.firstWhere(
-          (c) => c.studentId?.toUpperCase() == normalized,
+          (c) => studentIdsMatch(c.studentId, studentId),
         ),
       );
     } catch (_) {

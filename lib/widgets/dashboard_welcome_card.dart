@@ -6,6 +6,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
@@ -375,7 +376,12 @@ class ParentDashboardSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: InstitutionService.instance,
+      listenable: Listenable.merge([
+        InstitutionService.instance,
+        AuthService.sessionListenable,
+        EnrollmentService.instance,
+        StaffRegistryNotifier.instance,
+      ]),
       builder: (context, _) => _buildCard(context),
     );
   }

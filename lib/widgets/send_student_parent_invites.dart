@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
@@ -21,7 +23,23 @@ Future<void> showSendStudentParentInvites(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(s.inviteParent),
-        content: Text(s.inviteParentNoPhone),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.inviteParentNoPhone),
+            const SizedBox(height: 12),
+            Text(s.parentInviteLink, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            SelectableText(
+              ParentInviteLink.build(
+                schoolId: student.schoolId,
+                studentId: student.studentId,
+                dateOfBirth: student.dateOfBirth,
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.cancel)),
           TextButton(onPressed: () => Navigator.pop(context, true), child: Text(s.share)),
@@ -74,6 +92,46 @@ Future<void> showSendStudentParentInvites(
                 Text(
                   '${contacts.length} ${s.contactNumbersOnFile}',
                   style: const TextStyle(color: Colors.white54, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  s.parentInviteLink,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  ParentInviteLink.build(
+                    schoolId: student.schoolId,
+                    studentId: student.studentId,
+                    dateOfBirth: student.dateOfBirth,
+                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(
+                          text: ParentInviteLink.build(
+                            schoolId: student.schoolId,
+                            studentId: student.studentId,
+                            dateOfBirth: student.dateOfBirth,
+                          ),
+                        ),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(s.parentInviteLinkCopied)),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.copy, color: Colors.white70, size: 16),
+                    label: Text(
+                      s.copyParentInviteLink,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ...contacts.map(

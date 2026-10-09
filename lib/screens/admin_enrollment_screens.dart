@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/enrollment.dart';
@@ -10,6 +11,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
+import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
@@ -1465,11 +1467,21 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       if (withPortal != null) portalStudent = withPortal;
     }
 
+    final inviteUrl = ParentInviteLink.build(
+      schoolId: student.schoolId,
+      studentId: student.studentId,
+      dateOfBirth: student.dateOfBirth,
+    );
     final summaryItems = <AdminDialogSummaryItem>[
       AdminDialogSummaryItem(
         icon: Icons.badge_outlined,
         label: s.studentId,
         value: student.studentId,
+      ),
+      AdminDialogSummaryItem(
+        icon: Icons.link,
+        label: s.parentInviteLink,
+        value: inviteUrl,
       ),
       AdminDialogSummaryItem(
         icon: Icons.person_outline,
@@ -1545,6 +1557,18 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
           icon: Icons.qr_code_2,
           onPressed: () {
             showAdminStudentQrSheet(context, student: student);
+          },
+        ),
+        AdminDialogAction(
+          label: s.copyParentInviteLink,
+          icon: Icons.copy,
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: inviteUrl));
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(s.parentInviteLinkCopied)),
+              );
+            }
           },
         ),
         AdminDialogAction(

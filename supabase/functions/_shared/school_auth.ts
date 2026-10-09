@@ -1457,7 +1457,13 @@ export async function enrichAccessProfile(
         if (studentId) ids.add(studentId);
       }
     }
-    enriched.linkedStudentIds = uniqueStrings([...ids]);
+    const expanded = new Set<string>();
+    for (const id of ids) {
+      for (const candidate of studentRegistryIdCandidates(id)) {
+        expanded.add(candidate);
+      }
+    }
+    enriched.linkedStudentIds = uniqueStrings([...expanded]);
 
     if (!hasClassNames || !((enriched.linkedStudentNames as string[]) || []).length) {
       const classNames = new Set<string>(
@@ -1466,10 +1472,17 @@ export async function enrichAccessProfile(
       const studentNames = new Set<string>(
         (enriched.linkedStudentNames as string[]) || [],
       );
-      for (const studentId of enriched.linkedStudentIds as string[]) {
-        const stu = await getDoc(sb, "student_registry", studentId, schoolId);
+      const seen = new Set<string>();
+      for (const studentId of ids) {
+        const found = await findStudentRegistryRecord(sb, studentId, schoolId);
+        const stu = found?.data;
+        const resolved = String(found?.id || studentId).trim().toUpperCase();
+        if (seen.has(resolved)) continue;
+        seen.add(resolved);
         if (!stu) continue;
-        if (schoolId && stu.schoolId && stu.schoolId !== schoolId) continue;
+        if (schoolId && stu.schoolId && String(stu.schoolId).trim().toUpperCase() !== schoolId) {
+          continue;
+        }
         if (stu.className) classNames.add(String(stu.className).trim());
         const fullName = String(stu.fullName || stu.name || "").trim();
         if (fullName) studentNames.add(fullName);

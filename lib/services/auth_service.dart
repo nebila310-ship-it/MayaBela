@@ -832,7 +832,21 @@ class AuthService {
       EnrollmentService.instance.ensureSeeded();
       final approved = EnrollmentService.instance
           .approvedStudentIdsForParent(user.username);
-      if (approved.isNotEmpty) return approved;
+      final merged = <String>[];
+      void add(String? raw) {
+        final id = raw?.trim().toUpperCase() ?? '';
+        if (id.isEmpty) return;
+        if (merged.any((existing) => studentIdsMatch(existing, id))) return;
+        merged.add(id);
+      }
+
+      for (final id in approved) {
+        add(id);
+      }
+      for (final id in user.linkedStudentIds) {
+        add(id);
+      }
+      return merged;
     }
     return user.linkedStudentIds;
   }
