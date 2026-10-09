@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/screens/announcements_screen.dart';
+import 'package:mayabela/screens/attendance_screen.dart';
 import 'package:mayabela/screens/calendar_screen.dart';
+import 'package:mayabela/screens/daily_activities_screen.dart';
 import 'package:mayabela/screens/gallery_screen.dart';
 import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
+import 'package:mayabela/screens/student_lesson_plans_screen.dart';
+import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
@@ -60,6 +64,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Icons.directions_bus;
       case NotificationType.calendar:
         return Icons.calendar_month;
+      case NotificationType.lessonPlan:
+        return Icons.event_note;
       case NotificationType.general:
         return Icons.notifications;
     }
@@ -92,6 +98,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Colors.blue;
       case NotificationType.calendar:
         return Colors.purple;
+      case NotificationType.lessonPlan:
+        return const Color(0xFF5D4037);
       case NotificationType.general:
         return Colors.grey;
     }
@@ -181,6 +189,59 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           context,
           MaterialPageRoute(builder: (_) => const CalendarScreen()),
         );
+        return;
+      case NotificationType.lessonPlan:
+        final planRole = AuthService.currentUser?.roleKey;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                planRole == AuthService.roleParent ||
+                    planRole == AuthService.roleStudent
+                ? const StudentLessonPlansScreen()
+                : const TeacherLessonPlansScreen(),
+          ),
+        );
+        return;
+      case NotificationType.attendance:
+        final attendanceRole = AuthService.currentUser?.roleKey;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AttendanceScreen(
+              readOnly:
+                  attendanceRole == AuthService.roleParent ||
+                  attendanceRole == AuthService.roleStudent,
+              initialClass: item.targetClassName,
+            ),
+          ),
+        );
+        return;
+      case NotificationType.dailyActivity:
+      case NotificationType.dailyActivitySeen:
+        final studentId = item.targetStudentId;
+        final record = studentId == null
+            ? null
+            : StudentRegistryService.instance.lookupById(studentId);
+        if (record != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DailyActivitiesScreen(
+                studentId: record.studentId,
+                studentName: record.fullName,
+                className: record.className,
+                mode: AuthService.currentUser?.roleKey == AuthService.roleParent
+                    ? DailyActivityMode.parent
+                    : DailyActivityMode.teacher,
+              ),
+            ),
+          );
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(item.body)));
         return;
       case NotificationType.materialPurchase:
         Navigator.push(

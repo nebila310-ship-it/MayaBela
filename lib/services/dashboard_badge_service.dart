@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_service.dart';
@@ -20,6 +21,11 @@ class DashboardBadgeService extends ChangeNotifier {
     'attendance': [NotificationType.attendance],
     'announcements': [NotificationType.announcement],
     'calendar': [NotificationType.calendar],
+    'lesson_plans': [NotificationType.lessonPlan],
+    'daily_activities': [
+      NotificationType.dailyActivity,
+      NotificationType.dailyActivitySeen,
+    ],
     'timetable': [NotificationType.calendar],
     'fees': [NotificationType.fee],
     'finance': [NotificationType.fee],
@@ -62,6 +68,14 @@ class DashboardBadgeService extends ChangeNotifier {
 
   DateTime? _dismissedAt(String tileId, {String? roleKey}) =>
       _tileDismissedAt[_tileKey(tileId, roleKey)];
+
+  int countForLoginActions({String? roleKey}) {
+    var total = 0;
+    for (final tileId in loginActionTileIds) {
+      total += countFor(tileId, roleKey: roleKey);
+    }
+    return total;
+  }
 
   int countFor(String tileId, {String? roleKey}) {
     if (tileId == 'settings') return 0;
@@ -133,15 +147,18 @@ class DashboardBadgeService extends ChangeNotifier {
       NotificationType.attendance => 'attendance',
       NotificationType.announcement => 'announcements',
       NotificationType.calendar => 'calendar',
+      NotificationType.lessonPlan => 'lesson_plans',
       NotificationType.fee => 'fees',
       NotificationType.materialPurchase => 'learning_materials',
       NotificationType.bus => 'bus',
       NotificationType.qrScan => 'qr',
       NotificationType.dailyActivity ||
       NotificationType.dailyActivitySeen =>
-        AuthService.currentUser?.roleKey == AuthService.roleParent
-            ? 'children'
-            : 'classes',
+        switch (AuthService.currentUser?.roleKey) {
+          AuthService.roleParent || AuthService.roleStudent =>
+            'daily_activities',
+          _ => 'classes',
+        },
       NotificationType.general => 'issue',
     };
   }

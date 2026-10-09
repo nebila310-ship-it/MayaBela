@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/message.dart';
+import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/notification_service.dart';
@@ -86,13 +87,26 @@ class InboxLoginReminder extends StatefulWidget {
     for (final item
         in NotificationService.instance.notificationsForCurrentUser()) {
       if (item.isRead) continue;
-      if (messagesOnly && item.type != NotificationType.message) continue;
+      if (messagesOnly) {
+        if (item.type != NotificationType.message) continue;
+      } else if (!loginActionNotificationTypes.contains(item.type)) {
+        continue;
+      }
       groups.add({
         'n:${item.id}',
         'n:${item.type.name}|${item.title}|${item.body}|${item.recipientRole}',
       });
     }
     return groups;
+  }
+
+  static bool hasNonMessageLoginNotices() {
+    return NotificationService.instance.notificationsForCurrentUser().any(
+      (item) =>
+          !item.isRead &&
+          item.type != NotificationType.message &&
+          loginActionNotificationTypes.contains(item.type),
+    );
   }
 
   static List<String> currentUnseenKeys({bool messagesOnly = true}) {
@@ -150,6 +164,7 @@ class InboxLoginReminder extends StatefulWidget {
 class _InboxLoginReminderState extends State<InboxLoginReminder> {
   Timer? _hideTimer;
   bool _visible = false;
+  bool _messagesOnly = true;
   int _unread = 0;
 
   @override
@@ -175,7 +190,7 @@ class _InboxLoginReminderState extends State<InboxLoginReminder> {
 
   void _openInbox() {
     _hideToast();
-    unawaited(InboxLoginReminder.acknowledgeCurrent());
+    if (!_messagesOnly) return;
     if (widget.onOpenMessages != null) {
       widget.onOpenMessages!();
       return;
@@ -194,22 +209,31 @@ class _InboxLoginReminderState extends State<InboxLoginReminder> {
     await NotificationService.instance.hydratePersistedReads();
     if (!mounted) return;
 
-    final unread = DashboardBadgeService.instance.countFor('messages');
-    if (unread <= 0) return;
-
-    final unseen = InboxLoginReminder.currentUnseenKeys();
+    final unseen = InboxLoginReminder.currentUnseenKeys(messagesOnly: false);
     if (unseen.isEmpty) return;
-    if (await InboxLoginReminder._alreadyAcknowledged()) return;
+    if (await InboxLoginReminder._alreadyAcknowledged(messagesOnly: false)) {
+      return;
+    }
     if (!mounted) return;
 
+    final unread = DashboardBadgeService.instance.countForLoginActions();
+    if (unread <= 0) return;
+
+    final messagesOnly = !InboxLoginReminder.hasNonMessageLoginNotices();
+    final displayCount = messagesOnly
+        ? DashboardBadgeService.instance.countFor('messages')
+        : unread;
+    if (displayCount <= 0) return;
+
     // Remember before showing so a rebuild or next login cannot repeat it.
+    // Tile badges stay until the matching tile is opened.
     InboxLoginReminder.shownForGeneration = generation;
     await InboxLoginReminder._persistAck(unseen);
-    NotificationService.instance.markMessagesBadgeRead();
 
     if (!mounted) return;
     setState(() {
-      _unread = unread;
+      _unread = displayCount;
+      _messagesOnly = messagesOnly;
       _visible = true;
     });
     _hideTimer?.cancel();
@@ -251,17 +275,21 @@ class _InboxLoginReminderState extends State<InboxLoginReminder> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.mark_email_unread_rounded,
+                        Icon(
+                          _messagesOnly
+                              ? Icons.mark_email_unread_rounded
+                              : Icons.notifications_active_rounded,
                           color: ClassroomPalette.green,
                           size: 22,
                         ),
                         const SizedBox(width: 10),
                         Flexible(
                           child: Text(
-                            AppLocale.instance.strings.inboxUnreadOnLogin(
-                              _unread,
-                            ),
+                            _messagesOnly
+                                ? AppLocale.instance.strings
+                                      .inboxUnreadOnLogin(_unread)
+                                : AppLocale.instance.strings
+                                      .loginSchoolUpdatesOnLogin(_unread),
                             style: const TextStyle(
                               color: ClassroomPalette.green,
                               fontWeight: FontWeight.w600,

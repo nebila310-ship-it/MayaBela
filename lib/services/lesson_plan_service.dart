@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/lesson_plan_persistence_service.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -354,6 +356,7 @@ class LessonPlanService extends ChangeNotifier {
   Future<LessonPlan?> setStatus(String id, LessonPlanStatus status) async {
     final plan = planById(id);
     if (plan == null) return null;
+    final wasPublished = plan.isPublished;
     plan.status = status;
     plan.updatedAt = DateTime.now();
     plan.publishedAt =
@@ -363,6 +366,9 @@ class LessonPlanService extends ChangeNotifier {
       plan.reviewStatus = LessonPlanReviewStatus.pending;
     }
     await _persist();
+    if (!wasPublished && plan.isPublished) {
+      _notifyPublished(plan);
+    }
     return plan;
   }
 
@@ -370,12 +376,44 @@ class LessonPlanService extends ChangeNotifier {
   Future<LessonPlan?> submitForReview(String id) async {
     final plan = planById(id);
     if (plan == null) return null;
+    final wasPublished = plan.isPublished;
     plan.status = LessonPlanStatus.published;
     plan.reviewStatus = LessonPlanReviewStatus.pending;
     plan.updatedAt = DateTime.now();
     plan.publishedAt = plan.updatedAt;
     await _persist();
+    if (!wasPublished) {
+      _notifyPublished(plan);
+    }
     return plan;
+  }
+
+  void _notifyPublished(LessonPlan plan) {
+    final fromRole =
+        AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
+    final fullName = AuthService.currentUser?.fullName?.trim() ?? '';
+    final fromName = fullName.isNotEmpty
+        ? fullName
+        : AuthService.displayNameForRole(fromRole);
+    final title = 'New lesson plan — ${plan.subject}';
+    final body =
+        '${plan.title} for ${plan.className}, week ${plan.weekLabel}.';
+    for (final role in [
+      AuthService.roleParent,
+      AuthService.roleTeacher,
+      AuthService.roleAdmin,
+    ]) {
+      NotificationService.instance.push(
+        title: title,
+        body: body,
+        type: NotificationType.lessonPlan,
+        fromRole: fromRole,
+        fromName: fromName,
+        recipientRole: role,
+        targetClassName: plan.className,
+        showOnMessagesBadge: false,
+      );
+    }
   }
 
   void applyPersistedData(List<LessonPlan> incoming, {bool merge = false}) {
