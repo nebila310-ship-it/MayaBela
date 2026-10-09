@@ -582,6 +582,22 @@ class CloudAppStore {
         .toList();
   }
 
+  List<String> _studentIdQueryValues(List<String> ids) {
+    final out = <String>{};
+    for (final raw in ids) {
+      final id = raw.trim().toUpperCase();
+      if (id.isEmpty) continue;
+      out.add(id);
+      if (id.startsWith('STU-')) {
+        final rest = id.substring(4).trim();
+        if (rest.isNotEmpty) out.add(rest);
+      } else if (RegExp(r'^\d{3,}$').hasMatch(id)) {
+        out.add('STU-$id');
+      }
+    }
+    return out.toList();
+  }
+
   /// Parent keeps linked-student scope. Staff/admin always get school-wide
   /// students so integration sync works across roles and browsers.
   Future<List<Map<String, dynamic>>> _scopedStudentRead(String collection) {
@@ -590,7 +606,9 @@ class CloudAppStore {
       return _schoolRead(
         collection,
         whereInField: 'studentId',
-        whereInValues: AuthService.activeLinkedStudentIds(),
+        whereInValues: _studentIdQueryValues(
+          AuthService.activeLinkedStudentIds(),
+        ),
       );
     }
     // Admin + teacher/staff: full school directory (clear sync route).
@@ -606,7 +624,9 @@ class CloudAppStore {
       return _schoolRead(
         collection,
         whereInField: 'studentId',
-        whereInValues: AuthService.activeLinkedStudentIds(),
+        whereInValues: _studentIdQueryValues(
+          AuthService.activeLinkedStudentIds(),
+        ),
       );
     }
     if (role == AuthService.roleTeacher && AuthService.usesScopedCloudReads) {
@@ -2213,14 +2233,20 @@ class CloudAppStore {
     final role = AuthService.currentUser?.roleKey;
     var rows = await _schoolRead(AppCollections.parentLinkRequests);
     if (role == AuthService.roleParent) {
-      final username = AuthService.currentUser?.username;
+      final user = AuthService.currentUser;
+      final username = user?.username;
       if (username == null || username.trim().isEmpty) return;
       rows = rows.where((map) {
         final stored = '${map['parentUsername'] ?? ''}';
-        final a = stored.trim().toLowerCase();
-        final b = username.trim().toLowerCase();
-        if (a.isNotEmpty && a == b) return true;
-        return PhoneUtils.matches(stored, username);
+        if (_parentUsernamesMatch(stored, username)) return true;
+        final phone = user?.phone;
+        if (phone != null && _parentUsernamesMatch(stored, phone)) return true;
+        final email = user?.email;
+        if (email != null &&
+            stored.trim().toLowerCase() == email.trim().toLowerCase()) {
+          return true;
+        }
+        return false;
       }).toList();
     }
     if (rows.isEmpty) return;
@@ -2273,7 +2299,16 @@ class CloudAppStore {
       await StudentPersistenceService.instance.saveRegistryFromService(
         pushCloud: false,
       );
+      SchoolDataService.instance.ensureLinkedChildrenVisible();
     }
+  }
+
+  bool _parentUsernamesMatch(String stored, String incoming) {
+    final a = stored.trim().toLowerCase();
+    final b = incoming.trim().toLowerCase();
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+    return PhoneUtils.matches(stored, incoming);
   }
 
   /// Upload photos that still only exist as a path on this device.

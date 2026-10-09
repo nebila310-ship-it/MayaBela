@@ -16,6 +16,7 @@ import 'package:mayabela/screens/transport_live_map_screen.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -29,12 +30,16 @@ class MyChildrenScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = SchoolDataService.instance.getChildren();
-
     return ListenableBuilder(
-      listenable: AppLocale.instance,
+      listenable: Listenable.merge([
+        AppLocale.instance,
+        AuthService.sessionListenable,
+        EnrollmentService.instance,
+        StaffRegistryNotifier.instance,
+      ]),
       builder: (context, _) {
         final s = AppLocale.instance.strings;
+        final children = SchoolDataService.instance.getChildren();
         return Scaffold(
           backgroundColor: ParentChildPalette.surface,
           body: CustomScrollView(

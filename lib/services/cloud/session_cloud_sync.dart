@@ -583,7 +583,10 @@ abstract final class SessionCloudSync {
     EnrollmentService.instance.ensureSeeded();
     final approved =
         EnrollmentService.instance.approvedStudentIdsForParent(user.username);
-    if (approved.isNotEmpty) {
+    final linkedIds = AuthService.activeLinkedStudentIds();
+    if (linkedIds.isNotEmpty) {
+      AuthService.updateParentLinks(user.username, linkedIds);
+    } else if (approved.isNotEmpty) {
       AuthService.updateParentLinks(user.username, approved);
     }
 
@@ -595,9 +598,7 @@ abstract final class SessionCloudSync {
       } catch (_) {}
     }
 
-    for (final studentId in approved) {
-      SchoolDataService.instance.syncChildFromRegistry(studentId);
-    }
+    SchoolDataService.instance.ensureLinkedChildrenVisible();
     SchoolDataService.instance.syncEnrollmentFromRegistry(
       schoolId: user.schoolId ?? AuthService.activeSchoolId,
     );
