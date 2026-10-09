@@ -343,6 +343,10 @@ class CloudAppStore {
   static String gradeDocIdForTest(Map<String, dynamic> map) =>
       _gradeDocIdFromMap(map);
 
+  @visibleForTesting
+  Map<String, dynamic> homeworkCloudMapForTest(HomeworkItem item) =>
+      _homeworkCloudMap(item);
+
   String? _pullGroupKey(String collection) {
     switch (collection) {
       case AppCollections.conversations:
@@ -1793,6 +1797,9 @@ class CloudAppStore {
 
   Map<String, dynamic> _homeworkCloudMap(HomeworkItem item) {
     final map = Map<String, dynamic>.from(item.toMap());
+    map['attachmentPaths'] = item.attachmentPaths
+        .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
+        .toList();
     map['studentIds'] = StudentRegistryService.instance
         .studentsForClass(item.className)
         .map((s) => s.studentId.trim())
