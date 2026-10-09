@@ -67,6 +67,18 @@ class SchoolContentPersistenceService {
     }
   }
 
+  /// Gallery-only persist so a class photo save is not aborted by other-class
+  /// fees/attendance seed rows.
+  Future<void> saveGalleryFromService({bool pushCloud = true}) async {
+    final data = SchoolDataService.instance;
+    await LocalJsonStore.writeList(
+      _galleryKey,
+      data.gallerySnapshot().map(AppDataMaps.galleryPostToMap).toList(),
+    );
+    if (!pushCloud) return;
+    await CloudAppStore.instance.pushAllGalleryPosts();
+  }
+
   /// Attendance-only persist so a teacher save cannot dump fees/gallery
   /// seed rows that RLS will reject (aborting the taken session).
   Future<void> saveAttendanceFromService({

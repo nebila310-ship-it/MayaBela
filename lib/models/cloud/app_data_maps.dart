@@ -10,6 +10,7 @@ import 'package:mayabela/models/platform_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 /// Firestore / LocalJsonStore serialization for app content models.
 abstract final class AppDataMaps {
@@ -94,6 +95,11 @@ abstract final class AppDataMaps {
     final attachments = post.attachmentPaths
         .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
         .toList();
+    final studentIds = StudentRegistryService.instance
+        .studentsForClass(post.className)
+        .map((s) => s.studentId.trim())
+        .where((id) => id.isNotEmpty)
+        .toList();
     return {
       'id': post.id,
       'className': post.className,
@@ -105,6 +111,7 @@ abstract final class AppDataMaps {
       if (post.mediaLabel != null) 'mediaLabel': post.mediaLabel,
       if (cloudMedia != null) 'mediaPath': cloudMedia,
       'attachmentPaths': attachments,
+      if (studentIds.isNotEmpty) 'studentIds': studentIds,
     };
   }
 

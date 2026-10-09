@@ -24,7 +24,6 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/attachment_share_actions.dart';
 import 'package:mayabela/widgets/course_attachment_picker.dart';
 import 'package:mayabela/widgets/homework_attachments_panel.dart';
-import 'package:mayabela/widgets/platform_path_image.dart';
 
 enum GalleryViewMode { teacher, parent, school }
 
@@ -51,16 +50,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
   final _access = TeacherAccessService.instance;
   final _share = GalleryShareService.instance;
   String? _selectedClass;
+  bool _openingMedia = false;
 
   bool get _isSchoolWide => widget.mode == GalleryViewMode.school;
 
+  bool get _isFamilyViewer {
+    final role = AuthService.currentUser?.roleKey;
+    return widget.mode == GalleryViewMode.parent ||
+        role == AuthService.roleParent ||
+        role == AuthService.roleStudent;
+  }
+
   List<String> get _classOptions {
-    if (widget.mode == GalleryViewMode.parent) {
-      return _data
-          .getChildren()
-          .map((child) => child.className)
-          .toSet()
-          .toList();
+    if (_isFamilyViewer) {
+      return _data.galleryClassOptionsForViewer();
     }
     if (_isSchoolWide) {
       final schoolId = AuthService.activeSchoolId ?? '';
@@ -75,10 +78,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   List<GalleryPost> get _posts {
-    if (widget.mode == GalleryViewMode.parent) {
+    if (_isFamilyViewer) {
       final className = _selectedClass;
-      if (className != null) {
-        return _data.getGalleryForClass(className);
+      if (className != null && className != _allClasses) {
+        final forClass = _data.getGalleryForClass(className);
+        if (forClass.isNotEmpty) return forClass;
       }
       return _data.getGalleryForParent();
     }
@@ -102,7 +106,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   bool get _canPost {
-    if (widget.mode == GalleryViewMode.parent) return false;
+    if (_isFamilyViewer) return false;
     if (_isSchoolWide) return ModuleAccess.canManage('gallery');
     final className = _selectedClass;
     return className != null && _access.canPostGallery(className);
@@ -115,7 +119,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     unawaited(GalleryMediaService.instance.promotePendingToCloud());
     if (widget.initialClass != null) {
       _selectedClass = widget.initialClass;
-    } else if (_isSchoolWide) {
+    } else if (_isSchoolWide || _isFamilyViewer) {
       _selectedClass = _allClasses;
     } else if (_classOptions.isNotEmpty) {
       _selectedClass = _classOptions.first;
@@ -534,50 +538,78 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
+  String? _pathToOpen(GalleryPost post) {
+    final media = post.mediaPath?.trim();
+    if (media != null && media.isNotEmpty) return media;
+    for (final path in post.attachmentPaths) {
+      final trimmed = path.trim();
+      if (trimmed.isNotEmpty && attachmentPathIsImage(trimmed)) return trimmed;
+    }
+    for (final path in post.attachmentPaths) {
+      final trimmed = path.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
+  }
+
+  Widget _brokenPhoto() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.broken_image_outlined,
+          color: Colors.white54,
+          size: 64,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          AppLocale.instance.strings.galleryPhotoOpenFailed,
+          style: const TextStyle(color: Colors.white70),
+        ),
+      ],
+    );
+  }
+
   Future<void> _openMedia(GalleryPost post) async {
-    final path = post.mediaPath;
-    if (path == null || path.isEmpty) return;
+    if (_openingMedia) return;
+    final path = _pathToOpen(post);
+    if (path == null) return;
     if (post.type == GalleryPostType.photo || attachmentPathIsImage(path)) {
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AttachmentImagePreviewScreen(
-            path: path,
-            allowShareDownload: widget.mode == GalleryViewMode.parent,
-            image: PlatformPathImage(
+      _openingMedia = true;
+      try {
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AttachmentImagePreviewScreen(
               path: path,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.broken_image_outlined,
-                    color: Colors.white54,
-                    size: 64,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    AppLocale.instance.strings.galleryPhotoOpenFailed,
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
+              allowShareDownload: _isFamilyViewer,
+              image: _GalleryBytesImage(
+                path: path,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => _brokenPhoto(),
               ),
             ),
           ),
-        ),
-      );
+        );
+      } finally {
+        _openingMedia = false;
+      }
       return;
     }
-    await openAttachmentWithFeedback(context, path: path);
+    _openingMedia = true;
+    try {
+      await openAttachmentWithFeedback(context, path: path);
+    } finally {
+      _openingMedia = false;
+    }
   }
 
   Widget _mediaPreview(GalleryPost post, Color color, AppStrings s) {
     Widget child;
-    final path = post.mediaPath;
+    final path = _pathToOpen(post);
     if (path != null &&
         (post.type == GalleryPostType.photo || attachmentPathIsImage(path))) {
-      child = PlatformPathImage(
+      child = _GalleryBytesImage(
         path: path,
         fit: BoxFit.cover,
         width: double.infinity,
@@ -656,13 +688,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Widget _classFilter(AppStrings s) {
-    final showFilter = (widget.mode == GalleryViewMode.teacher &&
-            _classOptions.length > 1) ||
+    final showFilter = (_isFamilyViewer && _classOptions.length > 1) ||
+        (widget.mode == GalleryViewMode.teacher && _classOptions.length > 1) ||
         _isSchoolWide;
     if (!showFilter) return const SizedBox.shrink();
 
     final items = <DropdownMenuItem<String>>[
-      if (_isSchoolWide)
+      if (_isSchoolWide || _isFamilyViewer)
         DropdownMenuItem(
           value: _allClasses,
           child: Text(s.allClasses),
@@ -674,6 +706,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
       ),
     ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final selected = items.any((item) => item.value == _selectedClass)
+        ? _selectedClass
+        : items.first.value;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -683,8 +719,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
         12,
       ),
       child: DropdownButtonFormField<String>(
-        key: ValueKey(_selectedClass),
-        initialValue: _selectedClass,
+        key: ValueKey(selected),
+        initialValue: selected,
         decoration: InputDecoration(
           labelText: s.className,
           border: const OutlineInputBorder(),
@@ -710,88 +746,90 @@ class _GalleryScreenState extends State<GalleryScreen> {
         final color = _colorForType(post.type);
         return Card(
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                height: 120,
-                color: color.withValues(alpha: 0.12),
-                child: _mediaPreview(post, color, s),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        Chip(
-                          label: Text(post.className),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        Chip(
-                          label: Text(_typeLabel(post.type, s)),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
-                    ),
-                    Text(
-                      post.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(post.caption),
-                    if (post.attachmentPaths.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      HomeworkAttachmentsPanel(
-                        attachmentPaths: post.attachmentPaths,
-                        compact: true,
-                        allowShareDownload:
-                            widget.mode == GalleryViewMode.parent,
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Text(
-                      '${post.authorName} · ${post.postedAt.day}/${post.postedAt.month}/${post.postedAt.year}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    if (widget.mode == GalleryViewMode.parent) ...[
-                      const SizedBox(height: 12),
-                      Row(
+          child: InkWell(
+            onTap: _pathToOpen(post) == null ? null : () => _openMedia(post),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  height: 120,
+                  color: color.withValues(alpha: 0.12),
+                  child: _mediaPreview(post, color, s),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
                         children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _sharePost(post),
-                              icon: const Icon(Icons.share),
-                              label: Text(s.share),
-                            ),
+                          Chip(
+                            label: Text(post.className),
+                            visualDensity: VisualDensity.compact,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _downloadPost(post),
-                              icon: const Icon(Icons.download),
-                              label: Text(s.download),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
+                          Chip(
+                            label: Text(_typeLabel(post.type, s)),
+                            visualDensity: VisualDensity.compact,
                           ),
                         ],
                       ),
+                      Text(
+                        post.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(post.caption),
+                      if (post.attachmentPaths.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        HomeworkAttachmentsPanel(
+                          attachmentPaths: post.attachmentPaths,
+                          compact: true,
+                          allowShareDownload: _isFamilyViewer,
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      Text(
+                        '${post.authorName} · ${post.postedAt.day}/${post.postedAt.month}/${post.postedAt.year}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      if (_isFamilyViewer) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _sharePost(post),
+                                icon: const Icon(Icons.share),
+                                label: Text(s.share),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _downloadPost(post),
+                                icon: const Icon(Icons.download),
+                                label: Text(s.download),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -854,7 +892,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           appBar: AppBar(
             backgroundColor: Colors.purple,
             title: Text(
-              widget.mode == GalleryViewMode.parent
+              _isFamilyViewer
                   ? s.classGallery
                   : s.dashboardTitle('gallery'),
             ),
@@ -871,6 +909,173 @@ class _GalleryScreenState extends State<GalleryScreen> {
         );
       },
     );
+  }
+}
+
+/// Copies attachment bytes so Flutter web can open the same gallery photo
+/// more than once. [Image.memory] can transfer the cached buffer on the
+/// first decode, which left later taps with nothing to display.
+class _GalleryBytesImage extends StatefulWidget {
+  const _GalleryBytesImage({
+    required this.path,
+    this.fit = BoxFit.cover,
+    this.width,
+    this.height,
+    this.errorBuilder,
+  });
+
+  final String path;
+  final BoxFit fit;
+  final double? width;
+  final double? height;
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
+
+  @override
+  State<_GalleryBytesImage> createState() => _GalleryBytesImageState();
+}
+
+class _GalleryBytesImageState extends State<_GalleryBytesImage> {
+  Uint8List? _bytes;
+  bool _failed = false;
+  bool _retried = false;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  @override
+  void didUpdateWidget(_GalleryBytesImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      _bytes = null;
+      _failed = false;
+      _retried = false;
+      unawaited(_load());
+    }
+  }
+
+  Future<void> _load({bool bypassCache = false}) async {
+    final gen = ++_generation;
+    final path = widget.path.trim();
+    if (path.isEmpty) {
+      if (mounted) setState(() => _failed = true);
+      return;
+    }
+    if (path.startsWith('asset:')) return;
+    if ((path.startsWith('http://') || path.startsWith('https://')) &&
+        !ProfilePhotoCodec.isPrivateSchoolFilesUrl(path) &&
+        !bypassCache) {
+      return;
+    }
+    try {
+      if (bypassCache) {
+        WebAttachmentCache.instance.remove(path);
+      }
+      var bytes = await ProfilePhotoCodec.bytesFromStoredPath(path);
+      if ((bytes == null || bytes.isEmpty) && !bypassCache) {
+        WebAttachmentCache.instance.remove(path);
+        bytes = await ProfilePhotoCodec.bytesFromStoredPath(path);
+      }
+      if (!mounted || gen != _generation) return;
+      final loaded = bytes;
+      if (loaded == null || loaded.isEmpty) {
+        setState(() => _failed = true);
+        return;
+      }
+      setState(() {
+        _bytes = Uint8List.fromList(loaded);
+        _failed = false;
+      });
+    } catch (_) {
+      if (mounted && gen == _generation) {
+        setState(() => _failed = true);
+      }
+    }
+  }
+
+  Widget _error(BuildContext context, Object error, StackTrace? stack) {
+    return widget.errorBuilder?.call(context, error, stack) ??
+        Icon(
+          Icons.broken_image_outlined,
+          size: widget.width ?? widget.height ?? 40,
+        );
+  }
+
+  Widget _loadingBox() {
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: const ColoredBox(color: Color(0x33000000)),
+    );
+  }
+
+  Widget _memoryImage(Uint8List bytes) {
+    return Image.memory(
+      Uint8List.fromList(bytes),
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      gaplessPlayback: true,
+      errorBuilder: (context, error, stack) {
+        if (!_retried) {
+          _retried = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(_load(bypassCache: true));
+          });
+        }
+        return _error(context, error, stack);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.path.trim();
+    if (value.isEmpty) {
+      return _error(context, Exception('empty path'), StackTrace.current);
+    }
+    if (_failed) {
+      return _error(context, Exception('gallery photo'), StackTrace.current);
+    }
+
+    final cached = _bytes ?? WebAttachmentCache.instance.read(value);
+    if (cached != null && cached.isNotEmpty) {
+      return _memoryImage(cached);
+    }
+
+    if (ProfilePhotoCodec.isPrivateSchoolFilesUrl(value)) {
+      return _loadingBox();
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return Image.network(
+        value,
+        width: widget.width,
+        height: widget.height,
+        fit: widget.fit,
+        errorBuilder: widget.errorBuilder,
+      );
+    }
+
+    if (value.startsWith('asset:')) {
+      return Image.asset(
+        value.substring('asset:'.length),
+        width: widget.width,
+        height: widget.height,
+        fit: widget.fit,
+        errorBuilder: widget.errorBuilder,
+      );
+    }
+
+    if (kIsWeb || WebAttachmentCache.instance.isWebPath(value)) {
+      return _error(context, Exception('missing web cache'), StackTrace.current);
+    }
+
+    return _loadingBox();
   }
 }
 

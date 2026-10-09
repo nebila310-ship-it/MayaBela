@@ -1027,6 +1027,16 @@ class SchoolDataService {
     } catch (_) {}
   }
 
+  void _persistGallery() {
+    unawaited(_saveGalleryBestEffort());
+  }
+
+  Future<void> _saveGalleryBestEffort() async {
+    try {
+      await SchoolContentPersistenceService.instance.saveGalleryFromService();
+    } catch (_) {}
+  }
+
   List<Conversation> getConversationsForRole(String? roleKey) {
     final list = _conversations
         .where((c) => MessagingAccessService.canView(c, roleKey))
@@ -4130,8 +4140,15 @@ class SchoolDataService {
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
 
+  List<String> galleryClassOptionsForViewer() {
+    return {
+      ...getChildren().map((child) => child.className),
+      ...AuthService.accessClassNamesForSync(),
+    }.where((name) => name.trim().isNotEmpty).toSet().toList();
+  }
+
   List<GalleryPost> getGalleryForParent() {
-    final classNames = getChildren().map((child) => child.className).toSet();
+    final classNames = galleryClassOptionsForViewer().toSet();
     return _galleryPosts
         .where(
           (post) => classNames.any((name) => _classNamesMatch(name, post.className)),
@@ -4175,7 +4192,7 @@ class SchoolDataService {
       fromName: authorName,
     );
     SchoolContentSyncService.instance.markDataChanged();
-    _persistSchoolContent();
+    _persistGallery();
   }
 
   DateTime _calendarDay(DateTime date) {
