@@ -14,6 +14,23 @@ import 'package:mayabela/screens/qr_entry_exit_screen.dart';
 import 'package:mayabela/services/lms_classroom_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/teacher_theme.dart';
+import 'package:mayabela/utils/adaptive_breakpoints.dart';
+import 'package:mayabela/widgets/dashboard_card.dart';
+import 'package:mayabela/widgets/dashboard_module_section.dart';
+
+class _ClassTool {
+  const _ClassTool({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+}
 
 /// Quick-action grid for a class (homeroom gets full tools including daily activities).
 class ClassToolsPanel extends StatelessWidget {
@@ -45,20 +62,21 @@ class ClassToolsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
     final access = TeacherAccessService.instance;
+    final desktop = AdaptiveBreakpoints.isDesktop(context);
 
     void open(Widget screen) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
     }
 
-    final tools = <Widget>[
+    final tools = <_ClassTool>[
       if (access.canTakeAttendance(className))
-        ClassToolChip(
+        _ClassTool(
           icon: Icons.check_circle,
           label: s.attendanceTitle,
           color: Colors.green,
           onTap: () => open(AttendanceScreen(initialClass: className)),
         ),
-      ClassToolChip(
+      _ClassTool(
         icon: Icons.bar_chart,
         label: s.gradesBtn,
         color: Colors.deepOrange,
@@ -69,32 +87,33 @@ class ClassToolsPanel extends StatelessWidget {
           ),
         ),
       ),
-      ClassToolChip(
+      _ClassTool(
         icon: Icons.assignment,
         label: s.homeworkTitle,
         color: Colors.cyan,
         onTap: () => open(HomeworkScreen(initialClass: className)),
       ),
-      ClassToolChip(
+      _ClassTool(
         icon: Icons.event_note_outlined,
         label: s.dashboardTitle('lesson_plans'),
         color: const Color(0xFF5D4037),
         onTap: () => open(TeacherLessonPlansScreen(initialClass: className)),
       ),
       if (access.canMessageInClass(className)) ...[
-        ClassToolChip(
+        _ClassTool(
           icon: Icons.message,
           label: s.dashboardTitle('messages'),
           color: Colors.orange,
           onTap: () => open(const MessagesScreen()),
         ),
-        ClassToolChip(
+        _ClassTool(
           icon: Icons.forum_outlined,
           label: 'Class discussion',
           color: Colors.indigo,
           onTap: () {
-            final id = LmsClassroomService.instance
-                .ensureClassDiscussion(className);
+            final id = LmsClassroomService.instance.ensureClassDiscussion(
+              className,
+            );
             open(
               ChatScreen(
                 conversationId: id,
@@ -105,7 +124,7 @@ class ClassToolsPanel extends StatelessWidget {
           },
         ),
       ],
-      ClassToolChip(
+      _ClassTool(
         icon: Icons.qr_code_scanner,
         label: s.dashboardTitle('qr'),
         color: Colors.black87,
@@ -116,20 +135,20 @@ class ClassToolsPanel extends StatelessWidget {
           ),
         ),
       ),
-      ClassToolChip(
+      _ClassTool(
         icon: Icons.calendar_month,
         label: isHomeroom ? s.dashboardTitle('calendar') : s.calendarReadOnly,
         color: Colors.teal,
         onTap: () => open(const CalendarScreen()),
       ),
       if (isHomeroom) ...[
-        ClassToolChip(
+        _ClassTool(
           icon: Icons.today,
           label: s.dailyActivities,
           color: Colors.teal.shade700,
           onTap: () => open(ClassDailyActivitiesScreen(className: className)),
         ),
-        ClassToolChip(
+        _ClassTool(
           icon: Icons.photo_library,
           label: s.dashboardTitle('gallery'),
           color: Colors.purple,
@@ -137,6 +156,47 @@ class ClassToolsPanel extends StatelessWidget {
         ),
       ],
     ];
+
+    final title = isHomeroom
+        ? s.classToolsFullAccess
+        : s.classToolsSubjectAccess;
+    final crossAxis = desktop
+        ? AdaptiveBreakpoints.dashboardCrossAxisCount(context)
+        : 3;
+    final grid = GridView.count(
+      key: const Key('class-tools-grid'),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: crossAxis,
+      crossAxisSpacing: desktop ? 16 : 10,
+      mainAxisSpacing: desktop ? 16 : 10,
+      childAspectRatio: desktop ? 1.15 : 0.95,
+      children: [
+        for (final tool in tools)
+          desktop
+              ? DashboardCard(
+                  icon: tool.icon,
+                  title: tool.label,
+                  color: tool.color,
+                  onTap: tool.onTap,
+                )
+              : ClassToolChip(
+                  icon: tool.icon,
+                  label: tool.label,
+                  color: tool.color,
+                  onTap: tool.onTap,
+                ),
+      ],
+    );
+
+    if (desktop) {
+      return DashboardModuleSection(
+        title: showClassName ? className : title,
+        icon: Icons.grid_view_rounded,
+        accent: accent,
+        child: grid,
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +213,7 @@ class ClassToolsPanel extends StatelessWidget {
           const SizedBox(height: 6),
         ],
         Text(
-          isHomeroom ? s.classToolsFullAccess : s.classToolsSubjectAccess,
+          title,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -161,15 +221,7 @@ class ClassToolsPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 0.95,
-          children: tools,
-        ),
+        grid,
       ],
     );
   }
