@@ -3552,22 +3552,61 @@ class SchoolDataService {
 
   bool _homeworkBelongsToSchool(HomeworkItem item, String schoolId) {
     if (schoolId.isEmpty) return true;
+    // A school created today must not show June/July posts from another campus.
+    if (_postedBeforeSchoolOpened(item, schoolId)) return false;
+
     final itemSchool = (item.schoolId ?? '').trim().toUpperCase();
     if (itemSchool.isNotEmpty) return itemSchool == schoolId;
-    return _legacyHomeworkMatchesSchool(item.className, schoolId);
+
+    // Old rows with no school id: keep only if this school's teacher/admin
+    // posted them. Matching Grade 1A is not enough — many schools share names.
+    return _homeworkAuthorBelongsToSchool(item, schoolId);
   }
 
-  bool _legacyHomeworkMatchesSchool(String className, String schoolId) {
-    final students = StudentRegistryService.instance.studentsForSchool(schoolId);
-    if (students.any((s) => _classNamesMatch(className, s.className))) {
-      return true;
-    }
+  bool _postedBeforeSchoolOpened(HomeworkItem item, String schoolId) {
+    final opened = SchoolRegistryService.instance.lookup(schoolId)?.registeredAt;
+    if (opened == null) return false;
+    final posted = DateTime(
+      item.postedAt.year,
+      item.postedAt.month,
+      item.postedAt.day,
+    );
+    final start = DateTime(opened.year, opened.month, opened.day);
+    return posted.isBefore(start);
+  }
+
+  bool _homeworkAuthorBelongsToSchool(HomeworkItem item, String schoolId) {
+    final tid = item.teacherId.trim();
+    final name = item.teacherName.trim().toLowerCase();
     for (final teacher in TeacherRegistryService.instance.teachersForSchool(
       schoolId,
     )) {
-      for (final assignment in teacher.classAssignments) {
-        if (_classNamesMatch(className, assignment.className)) return true;
+      if (tid.isNotEmpty) {
+        if (teacher.teacherId.toUpperCase() == tid.toUpperCase()) return true;
+        if (StaffMemberOption.idsEqual(
+          StaffMemberOption.teacherKey(teacher.teacherId),
+          tid,
+        )) {
+          return true;
+        }
+        final login = (teacher.loginUsername ?? '').trim();
+        if (login.isNotEmpty && login.toLowerCase() == tid.toLowerCase()) {
+          return true;
+        }
       }
+      if (name.isNotEmpty && teacher.fullName.trim().toLowerCase() == name) {
+        return true;
+      }
+    }
+    final user = AuthService.currentUser;
+    if (user != null &&
+        (user.schoolId ?? '').trim().toUpperCase() == schoolId) {
+      if (tid.isNotEmpty &&
+          user.username.trim().toLowerCase() == tid.toLowerCase()) {
+        return true;
+      }
+      final fullName = (user.fullName ?? '').trim().toLowerCase();
+      if (name.isNotEmpty && fullName == name) return true;
     }
     return false;
   }
