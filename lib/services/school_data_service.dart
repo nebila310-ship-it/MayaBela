@@ -350,6 +350,7 @@ class SchoolDataService {
       description: 'Complete pages 68–69 (fractions practice)',
       teacherName: 'Miss Belen',
       teacherId: 'TCH-1001',
+      schoolId: 'TB-001',
       postedAt: DateTime.now().subtract(const Duration(hours: 5)),
     ),
     HomeworkItem(
@@ -359,6 +360,7 @@ class SchoolDataService {
       description: 'Read Chapter 4 and answer review questions 1–5',
       teacherName: 'Miss Hana',
       teacherId: 'TCH-1003',
+      schoolId: 'TB-001',
       postedAt: DateTime.now().subtract(const Duration(hours: 2)),
     ),
   ];
@@ -3516,14 +3518,14 @@ class SchoolDataService {
 
   List<HomeworkItem> getHomeworkForParent() {
     final classes = homeworkClassOptionsForViewer().toSet();
-    return _homework
+    return homeworkForSchool()
         .where((item) => classes.any((c) => _classNamesMatch(c, item.className)))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
 
   List<HomeworkItem> getHomeworkForClass(String className) {
-    return _homework
+    return homeworkForSchool()
         .where((item) => _classNamesMatch(className, item.className))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
@@ -3531,7 +3533,7 @@ class SchoolDataService {
 
   List<HomeworkItem> getHomeworkForTeacher(String teacherId) {
     final classNames = getTeacherClassNames(teacherId);
-    return _homework
+    return homeworkForSchool()
         .where(
           (item) => classNames.any((c) => _classNamesMatch(c, item.className)),
         )
@@ -3540,6 +3542,35 @@ class SchoolDataService {
   }
 
   List<HomeworkItem> homeworkSnapshot() => List.unmodifiable(_homework);
+
+  /// Homework the signed-in school may see. Other schools' posts stay hidden.
+  List<HomeworkItem> homeworkForSchool([String? schoolId]) {
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final items = _homework.where((item) => _homeworkBelongsToSchool(item, sid));
+    return List.unmodifiable(items);
+  }
+
+  bool _homeworkBelongsToSchool(HomeworkItem item, String schoolId) {
+    if (schoolId.isEmpty) return true;
+    final itemSchool = (item.schoolId ?? '').trim().toUpperCase();
+    if (itemSchool.isNotEmpty) return itemSchool == schoolId;
+    return _legacyHomeworkMatchesSchool(item.className, schoolId);
+  }
+
+  bool _legacyHomeworkMatchesSchool(String className, String schoolId) {
+    final students = StudentRegistryService.instance.studentsForSchool(schoolId);
+    if (students.any((s) => _classNamesMatch(className, s.className))) {
+      return true;
+    }
+    for (final teacher in TeacherRegistryService.instance.teachersForSchool(
+      schoolId,
+    )) {
+      for (final assignment in teacher.classAssignments) {
+        if (_classNamesMatch(className, assignment.className)) return true;
+      }
+    }
+    return false;
+  }
 
   void applyPersistedHomework(List<HomeworkItem> items) {
     for (final persisted in items) {
@@ -3550,6 +3581,7 @@ class SchoolDataService {
         description: persisted.description,
         teacherName: persisted.teacherName,
         teacherId: persisted.teacherId,
+        schoolId: persisted.schoolId,
         postedAt: persisted.postedAt,
         subjectId: persisted.subjectId,
         teachingSlotId: persisted.teachingSlotId,
@@ -3593,6 +3625,7 @@ class SchoolDataService {
     List<String> attachmentPaths = const [],
   }) {
     final canonicalClass = _canonicalClassName(className);
+    final schoolId = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
     _homework.insert(
       0,
       HomeworkItem(
@@ -3602,6 +3635,7 @@ class SchoolDataService {
         description: description.trim(),
         teacherName: teacherName,
         teacherId: teacherId,
+        schoolId: schoolId.isEmpty ? null : schoolId,
         postedAt: DateTime.now(),
         subjectId: subjectId,
         teachingSlotId: teachingSlotId,
@@ -3609,6 +3643,7 @@ class SchoolDataService {
         attachmentPaths: List.from(attachmentPaths),
       ),
     );
+    SchoolContentSyncService.instance.markDataChanged();
 
     _notifyParentsInClass(
       className: canonicalClass,
@@ -3645,6 +3680,7 @@ class SchoolDataService {
           ..clear()
           ..addAll(attachmentPaths);
       }
+      SchoolContentSyncService.instance.markDataChanged();
       _persistHomework();
       return true;
     } catch (_) {

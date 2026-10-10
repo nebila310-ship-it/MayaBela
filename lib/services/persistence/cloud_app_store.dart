@@ -1801,7 +1801,10 @@ class CloudAppStore {
         .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
         .toList();
     map['studentIds'] = StudentRegistryService.instance
-        .studentsForClass(item.className)
+        .studentsForClass(
+          item.className,
+          schoolId: item.schoolId,
+        )
         .map((s) => s.studentId.trim())
         .where((id) => id.isNotEmpty)
         .toList();

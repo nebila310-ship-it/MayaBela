@@ -214,6 +214,7 @@ class HomeworkItem {
     Map<String, String>? teacherComments,
     this.dueReminderSent = false,
     this.overdueReminderSent = false,
+    this.schoolId,
   })  : attachmentPaths = attachmentPaths ?? [],
         studentWorksheetPaths = studentWorksheetPaths ?? {},
         studentScores = studentScores ?? {},
@@ -225,6 +226,8 @@ class HomeworkItem {
   String description;
   final String teacherName;
   final String teacherId;
+  /// School that posted this assignment. Empty on old rows until inferred.
+  final String? schoolId;
   final DateTime postedAt;
   final String? subjectId;
   final String? teachingSlotId;
@@ -254,6 +257,7 @@ extension HomeworkItemPersistence on HomeworkItem {
         'description': description,
         'teacherName': teacherName,
         'teacherId': teacherId,
+        if ((schoolId ?? '').trim().isNotEmpty) 'schoolId': schoolId!.trim(),
         'postedAt': postedAt.toIso8601String(),
         if (subjectId != null) 'subjectId': subjectId,
         if (teachingSlotId != null) 'teachingSlotId': teachingSlotId,
@@ -285,6 +289,7 @@ extension HomeworkItemPersistence on HomeworkItem {
       description: map['description'] as String? ?? '',
       teacherName: map['teacherName'] as String? ?? 'Teacher',
       teacherId: map['teacherId'] as String? ?? '',
+      schoolId: (map['schoolId'] as String?)?.trim(),
       postedAt: DateTime.parse(map['postedAt'] as String),
       subjectId: map['subjectId'] as String?,
       teachingSlotId: map['teachingSlotId'] as String?,

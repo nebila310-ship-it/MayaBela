@@ -109,7 +109,7 @@ class LmsClassroomService {
     for (final plan in LessonPlanService.instance.forSchool(schoolId)) {
       remember(plan.className, plan.subject);
     }
-    for (final item in SchoolDataService.instance.homeworkSnapshot()) {
+    for (final item in SchoolDataService.instance.homeworkForSchool(schoolId)) {
       remember(item.className, item.subject);
     }
     for (final item in SchoolDataService.instance.learningMaterialsSnapshot()) {

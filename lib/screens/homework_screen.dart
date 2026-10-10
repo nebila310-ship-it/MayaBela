@@ -127,6 +127,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         clearDueDate: dueDate == null,
       );
     }
+    if (mounted) setState(() {});
     final outcome = await CloudSaveHonesty.settle(
       persist: HomeworkPersistenceService.instance.saveFromService(),
     );
