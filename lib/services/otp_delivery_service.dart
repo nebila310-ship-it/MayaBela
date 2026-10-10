@@ -42,6 +42,34 @@ class OtpDeliveryService {
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  /// Opens WhatsApp (app or web) already addressed to [phone].
+  static Uri whatsAppChatUri({
+    required String phone,
+    required String message,
+  }) {
+    final digits = PhoneUtils.whatsAppInternationalDigits(phone);
+    return Uri.parse(
+      'https://wa.me/$digits?text=${Uri.encodeComponent(message)}',
+    );
+  }
+
+  /// Opens Telegram already addressed to [phone] — never the share picker.
+  static Uri? telegramChatUri({
+    required String phone,
+    required String message,
+  }) {
+    final digits = PhoneUtils.whatsAppInternationalDigits(phone);
+    if (digits.length < 10) return null;
+    return Uri(
+      scheme: 'tg',
+      host: 'resolve',
+      queryParameters: {
+        'phone': digits,
+        'text': message,
+      },
+    );
+  }
+
   Future<bool> _sendWhatsApp({
     required String phone,
     required String message,
@@ -50,9 +78,7 @@ class OtpDeliveryService {
     if (digits.length < 10) return false;
 
     final candidates = <Uri>[
-      Uri.parse(
-        'https://wa.me/$digits?text=${Uri.encodeComponent(message)}',
-      ),
+      whatsAppChatUri(phone: phone, message: message),
       Uri(
         scheme: 'whatsapp',
         path: 'send',
@@ -82,38 +108,21 @@ class OtpDeliveryService {
     return false;
   }
 
-  /// Opens the installed Telegram app — never telegram.org in the browser.
+  /// Opens the Telegram chat for this phone — never a "pick a contact" share sheet.
   Future<bool> _sendTelegram({
     required String phone,
     required String message,
   }) async {
-    final candidates = <Uri>[];
+    final targeted = telegramChatUri(phone: phone, message: message);
+    if (targeted == null) return false;
 
-    final local = PhoneUtils.normalizeLocal(phone);
-    if (local != null) {
-      // Chat with the account linked to this phone number.
-      candidates.add(
-        Uri(
-          scheme: 'tg',
-          host: 'resolve',
-          queryParameters: {
-            'phone': '251${local.substring(1)}',
-            'text': message,
-          },
-        ),
-      );
-    }
-
-    candidates.addAll([
-      // Pre-filled message compose inside Telegram.
-      Uri(scheme: 'tg', host: 'msg', queryParameters: {'text': message}),
-      Uri(
-        scheme: 'tg',
-        host: 'msg_url',
-        queryParameters: {'url': '', 'text': message},
+    final digits = PhoneUtils.whatsAppInternationalDigits(phone);
+    final candidates = <Uri>[
+      targeted,
+      Uri.parse(
+        'tg://resolve?phone=$digits&text=${Uri.encodeComponent(message)}',
       ),
-      Uri.parse('telegram://msg?text=${Uri.encodeComponent(message)}'),
-    ]);
+    ];
 
     for (final uri in candidates) {
       try {
