@@ -1821,7 +1821,7 @@ class CloudAppStore {
 
   Future<void> pushAllHomework() async {
     final items = _teacherWritableByClass(
-      SchoolDataService.instance.homeworkSnapshot(),
+      SchoolDataService.instance.homeworkForSchool(),
       (item) => item.className,
     );
     if (items.isEmpty) return;
