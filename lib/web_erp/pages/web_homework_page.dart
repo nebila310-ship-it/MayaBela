@@ -7,6 +7,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
 import 'package:mayabela/services/persistence/homework_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -39,7 +40,9 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
   List<String> get _classes {
     final names = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
-      ...SchoolDataService.instance.homeworkSnapshot().map((h) => h.className),
+      ...SchoolDataService.instance
+          .homeworkForSchool(_schoolId)
+          .map((h) => h.className),
       ...StudentRegistryService.instance
           .registrySnapshot()
           .where(
@@ -54,7 +57,7 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
   }
 
   List<HomeworkItem> _itemsForFilter() {
-    final all = SchoolDataService.instance.homeworkSnapshot();
+    final all = SchoolDataService.instance.homeworkForSchool(_schoolId);
     if (_className == null) {
       return all.toList()..sort((a, b) => b.postedAt.compareTo(a.postedAt));
     }
@@ -91,6 +94,7 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
         clearDueDate: dueDate == null,
       );
     }
+    if (mounted) setState(() {});
     final outcome = await CloudSaveHonesty.settle(
       persist: HomeworkPersistenceService.instance.saveFromService(),
     );
@@ -288,8 +292,11 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
     if (!_canView) {
       return const Center(child: Text('You do not have access to homework.'));
     }
-    final items = _itemsForFilter();
-    return ListView(
+    return ListenableBuilder(
+      listenable: SchoolContentSyncService.instance,
+      builder: (context, _) {
+        final items = _itemsForFilter();
+        return ListView(
       padding: EdgeInsets.all(narrow ? 12 : 20),
       children: [
         Row(
@@ -347,6 +354,8 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
         else
           for (final item in items) _card(item),
       ],
+        );
+      },
     );
   }
 

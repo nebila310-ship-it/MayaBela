@@ -965,7 +965,7 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final papers = ExamService.instance.papersForSchool();
-    final homework = SchoolDataService.instance.homeworkSnapshot();
+    final homework = SchoolDataService.instance.homeworkForSchool();
     return AlertDialog(
       title: Text(widget.existing == null ? 'New curriculum unit' : 'Edit unit'),
       content: SizedBox(
