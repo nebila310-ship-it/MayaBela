@@ -10,6 +10,41 @@ function clip(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
 }
 
+function ensureInviteLink(message: string, inviteUrl: string): string {
+  if (!message) return "";
+  if (
+    message.includes(inviteUrl) ||
+    message.includes("role=parent") ||
+    message.includes("majobridge.com") ||
+    message.includes("mayabela.pages.dev")
+  ) {
+    return message;
+  }
+  return `${message}\n\nRegister here:\n${inviteUrl}`;
+}
+
+function inviteHtml(opts: {
+  schoolName: string;
+  inviteUrl: string;
+  text: string;
+}): string {
+  const escaped = opts.text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const linked = escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1">$1</a>',
+  );
+  return (
+    `<p style="font-size:18px;font-weight:700">Welcome to ${opts.schoolName}!</p>` +
+    `<p><a href="${opts.inviteUrl}" style="display:inline-block;padding:10px 16px;` +
+    `background:#1d4ed8;color:#ffffff;text-decoration:none;border-radius:8px">` +
+    `Register as a parent</a></p>` +
+    `<p>${linked.replace(/\n/g, "<br/>")}</p>`
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -20,8 +55,10 @@ Deno.serve(async (req) => {
     const email = clip(body?.email, 120).toLowerCase();
     const studentId = clip(body?.studentId, 24).toUpperCase();
     const studentName = clip(body?.studentName, 120);
+    const requestedSchoolName = clip(body?.schoolName, 120);
     const dateOfBirth = clip(body?.dateOfBirth, 32);
     const message = clip(body?.message, 4000);
+    const html = clip(body?.html, 12000);
 
     if (!schoolId || !email || !email.includes("@") || !studentId) {
       return errorResponse(
@@ -50,11 +87,21 @@ Deno.serve(async (req) => {
       `https://majobridge.com/?role=parent&school=${encodeURIComponent(schoolId)}` +
       `&student=${encodeURIComponent(studentId)}` +
       (dobParam ? `&dob=${encodeURIComponent(dobParam)}` : "");
-    const text = message ||
-      `Welcome. ${studentName || "Your child"} is enrolled.\n` +
-        `Open this link on any phone or computer to register as Parent:\n${inviteUrl}\n` +
-        `School ID: ${schoolId}\nStudent ID: ${studentId}\n` +
-        (dateOfBirth ? `Date of birth: ${dateOfBirth}\n` : "");
+    const schoolName = requestedSchoolName ||
+      String(school.name ?? school.schoolName ?? "").trim() ||
+      schoolId;
+    const defaultText =
+      `Welcome to ${schoolName}!\n\n` +
+      `Dear parent,\n\n` +
+      `We are so happy to welcome ${studentName || "your child"} into the ${schoolName} family. ` +
+      `Please tap the link below to register as a parent:\n\n${inviteUrl}\n\n` +
+      `School ID: ${schoolId}\nStudent ID: ${studentId}\n` +
+      (dateOfBirth ? `Date of birth: ${dateOfBirth}\n` : "") +
+      `\nWith warm regards,\n${schoolName}`;
+    const text = ensureInviteLink(message, inviteUrl) || defaultText;
+    const htmlBody = html.includes(inviteUrl)
+      ? html
+      : inviteHtml({ schoolName, inviteUrl, text });
 
     const mail = await loadMailSecrets(sb);
     if (!isMailReady(mail)) {
@@ -62,8 +109,9 @@ Deno.serve(async (req) => {
     }
     await sendPlainEmail({
       to: email,
-      subject: `Parent invite — ${studentName || studentId} (${schoolId})`,
+      subject: `Welcome to ${schoolName}`,
       text,
+      html: htmlBody,
     }, mail);
     return jsonResponse({ ok: true, via: "email" });
   } catch (e) {

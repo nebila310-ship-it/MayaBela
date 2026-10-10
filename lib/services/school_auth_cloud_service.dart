@@ -562,8 +562,10 @@ class SchoolAuthCloudService {
     required String email,
     required String studentId,
     required String studentName,
+    String? schoolName,
     required DateTime dateOfBirth,
     required String message,
+    String? html,
   }) async {
     if (!isAvailable) {
       return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
@@ -575,11 +577,13 @@ class SchoolAuthCloudService {
         'email': email.trim(),
         'studentId': studentId.trim().toUpperCase(),
         'studentName': studentName.trim(),
+        if ((schoolName ?? '').trim().isNotEmpty) 'schoolName': schoolName!.trim(),
         'dateOfBirth':
             '${dateOfBirth.year.toString().padLeft(4, '0')}-'
             '${dateOfBirth.month.toString().padLeft(2, '0')}-'
             '${dateOfBirth.day.toString().padLeft(2, '0')}',
         'message': message,
+        if ((html ?? '').trim().isNotEmpty) 'html': html!.trim(),
       });
       if (data == null || data['error'] != null) {
         return SchoolAuthCloudResult(

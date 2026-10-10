@@ -8,6 +8,7 @@ import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 
@@ -41,10 +42,59 @@ class ParentInviteService {
   static const appName = 'Maya School';
   static const appLink = ParentInviteLink.liveOrigin;
 
+  static const _genericSchoolNames = {
+    'maya school',
+    'maya school management',
+    'majo e-school bridge',
+    'majo bridge',
+    'mayabela',
+  };
+
   static String formatDob(DateTime dob) {
     final day = dob.day.toString().padLeft(2, '0');
     final month = dob.month.toString().padLeft(2, '0');
     return '$day/$month/${dob.year}';
+  }
+
+  /// The campus name on the invite — never the MaJo Bridge product brand.
+  static String schoolNameFor(String schoolId, [String? override]) {
+    final named = (override ?? '').trim();
+    if (named.isNotEmpty && !_isGenericSchoolName(named)) return named;
+    final registry =
+        SchoolRegistryService.instance.lookup(schoolId)?.name.trim() ?? '';
+    if (registry.isNotEmpty && !_isGenericSchoolName(registry)) return registry;
+    final display = AuthService.schoolDisplayName.trim();
+    if (display.isNotEmpty && !_isGenericSchoolName(display)) return display;
+    return registry.isNotEmpty ? registry : 'our school';
+  }
+
+  static bool _isGenericSchoolName(String name) {
+    final lower = name.trim().toLowerCase();
+    return _genericSchoolNames.contains(lower);
+  }
+
+  String inviteUrlFor({
+    required String schoolId,
+    required String studentId,
+    DateTime? dateOfBirth,
+  }) {
+    return ParentInviteLink.build(
+      schoolId: schoolId,
+      studentId: studentId,
+      dateOfBirth: dateOfBirth,
+    );
+  }
+
+  String inviteUrlForRecord(AdminStudentRecord student) {
+    return inviteUrlFor(
+      schoolId: student.schoolId,
+      studentId: student.studentId,
+      dateOfBirth: student.dateOfBirth,
+    );
+  }
+
+  String welcomeSubject(String schoolId, [String? schoolName]) {
+    return 'Welcome to ${schoolNameFor(schoolId, schoolName)}';
   }
 
   String buildMessage({
@@ -56,31 +106,36 @@ class ParentInviteService {
     bool transportEnabled = false,
     String? transportId,
   }) {
-    final name = schoolName ?? AuthService.schoolDisplayName;
-    final inviteUrl = ParentInviteLink.build(
+    final name = schoolNameFor(schoolId, schoolName);
+    final inviteUrl = inviteUrlFor(
       schoolId: schoolId,
       studentId: studentId,
       dateOfBirth: childDateOfBirth,
     );
     final dobLine = childDateOfBirth != null
-        ? 'Student DOB (use when registering): ${formatDob(childDateOfBirth)}'
+        ? 'Student date of birth: ${formatDob(childDateOfBirth)}'
         : 'Use the student\'s date of birth (DD/MM/YYYY) when registering.';
 
     final buffer = StringBuffer()
-      ..writeln('Welcome to Maya School!')
+      ..writeln('Welcome to $name!')
       ..writeln()
-      ..writeln('We are delighted that $childName is enrolled at $name.')
+      ..writeln('Dear parent,')
       ..writeln()
-      ..writeln('Open this link on any phone or computer to register as Parent:')
+      ..writeln(
+        'We are so happy to welcome $childName into the $name family. '
+        'Please tap the link below to register as a parent and stay close to '
+        '$childName\'s classes, homework, and school life:',
+      )
+      ..writeln()
       ..writeln(inviteUrl)
       ..writeln()
       ..writeln(
-        'The form will already have the School ID, Student ID, and date of birth filled in.',
+        'The form is already filled with the School ID, Student ID, and date of birth.',
       )
       ..writeln()
       ..writeln('School ID: $schoolId')
       ..writeln('Student ID: $studentId')
-      ..writeln('Student Name: $childName')
+      ..writeln('Student name: $childName')
       ..writeln(dobLine);
 
     if (transportEnabled) {
@@ -148,11 +203,73 @@ class ParentInviteService {
     return buffer.toString().trim();
   }
 
+  String buildHtmlMessage({
+    required String schoolId,
+    required String studentId,
+    required String childName,
+    String? schoolName,
+    DateTime? childDateOfBirth,
+    bool transportEnabled = false,
+    String? transportId,
+  }) {
+    final name = schoolNameFor(schoolId, schoolName);
+    return htmlFromInviteText(
+      text: buildMessage(
+        schoolId: schoolId,
+        studentId: studentId,
+        childName: childName,
+        schoolName: name,
+        childDateOfBirth: childDateOfBirth,
+        transportEnabled: transportEnabled,
+        transportId: transportId,
+      ),
+      inviteUrl: inviteUrlFor(
+        schoolId: schoolId,
+        studentId: studentId,
+        dateOfBirth: childDateOfBirth,
+      ),
+      schoolName: name,
+    );
+  }
+
+  static String htmlFromInviteText({
+    required String text,
+    required String inviteUrl,
+    required String schoolName,
+  }) {
+    final escaped = text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    final linked = escaped.replaceAllMapped(
+      RegExp(r'https?:\/\/[^\s<]+'),
+      (match) => '<a href="${match[0]}">${match[0]}</a>',
+    );
+    return '<p style="font-size:18px;font-weight:700">Welcome to $schoolName!</p>'
+        '<p><a href="$inviteUrl" style="display:inline-block;padding:10px 16px;'
+        'background:#1d4ed8;color:#ffffff;text-decoration:none;border-radius:8px">'
+        'Register as a parent</a></p>'
+        '<p>${linked.replaceAll('\n', '<br/>')}</p>';
+  }
+
   String buildMessageForRecord(AdminStudentRecord student) {
     return buildMessage(
       schoolId: student.schoolId,
       studentId: student.studentId,
       childName: student.fullName,
+      schoolName: schoolNameFor(student.schoolId),
+      childDateOfBirth: student.dateOfBirth,
+      transportEnabled: student.transportEnabled,
+      transportId: student.transportId,
+    );
+  }
+
+  String buildHtmlMessageForRecord(AdminStudentRecord student) {
+    return buildHtmlMessage(
+      schoolId: student.schoolId,
+      studentId: student.studentId,
+      childName: student.fullName,
+      schoolName: schoolNameFor(student.schoolId),
       childDateOfBirth: student.dateOfBirth,
       transportEnabled: student.transportEnabled,
       transportId: student.transportId,
@@ -244,8 +361,41 @@ class ParentInviteService {
     );
   }
 
-  Future<void> shareMessage(String message) async {
-    await Share.share(message, subject: '$appName — Parent registration');
+  Future<void> shareMessage(
+    String message, {
+    String? subject,
+    String? inviteUrl,
+  }) async {
+    final body = inviteUrl != null &&
+            inviteUrl.isNotEmpty &&
+            !message.contains(inviteUrl)
+        ? '$message\n\n$inviteUrl'
+        : message;
+    await Share.share(
+      body,
+      subject: subject ?? welcomeSubject(AuthService.activeSchoolId ?? ''),
+    );
+  }
+
+  Future<void> shareInviteForRecord(AdminStudentRecord student) {
+    return shareMessage(
+      buildMessageForRecord(student),
+      subject: welcomeSubject(student.schoolId),
+      inviteUrl: inviteUrlForRecord(student),
+    );
+  }
+
+  Future<bool> invitePrimaryViaChannel(
+    AdminStudentRecord student,
+    OtpDeliveryChannel channel,
+  ) async {
+    final phone = student.primaryContactPhone;
+    if (phone == null || phone.trim().isEmpty) return false;
+    return sendViaChannel(
+      phone: phone,
+      message: buildMessageForRecord(student),
+      channel: channel,
+    );
   }
 
   Future<bool> inviteStudent(AdminStudentRecord student) async {
@@ -254,7 +404,7 @@ class ParentInviteService {
     if (phone != null && phone.isNotEmpty) {
       return sendSms(phone: phone, message: message);
     }
-    await shareMessage(message);
+    await shareInviteForRecord(student);
     return true;
   }
 
@@ -336,6 +486,7 @@ class ParentInviteService {
       return ParentInviteOutcome.noEmail;
     }
     final message = buildMessageForRecord(student);
+    final html = buildHtmlMessageForRecord(student);
     NotificationService.instance.push(
       title: 'Parent invite — ${student.fullName}',
       body: 'Register with Student ID ${student.studentId} and the date of birth.',
@@ -356,8 +507,10 @@ class ParentInviteService {
       email: email,
       studentId: student.studentId,
       studentName: student.fullName,
+      schoolName: schoolNameFor(student.schoolId),
       dateOfBirth: student.dateOfBirth,
       message: message,
+      html: html,
     );
     return result.ok ? ParentInviteOutcome.sent : ParentInviteOutcome.failed;
   }
