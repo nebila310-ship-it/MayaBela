@@ -11,11 +11,20 @@ String staffRoleLabel(StaffRole role, AppStrings s) {
 }
 
 /// Compact role chips for staff lists ("Procurement Manager +1").
-String staffRolesSummary(List<String> roleKeys, AppStrings s) {
+String staffRolesSummary(
+  List<String> roleKeys,
+  AppStrings s, {
+  String? schoolId,
+}) {
   final labels = [
     for (final key in roleKeys)
-      if (SchoolRoleCatalogService.instance.lookup(key) != null)
-        staffRoleLabel(SchoolRoleCatalogService.instance.lookup(key)!, s)
+      if (SchoolRoleCatalogService.instance
+              .lookup(key, schoolId: schoolId) !=
+          null)
+        staffRoleLabel(
+          SchoolRoleCatalogService.instance.lookup(key, schoolId: schoolId)!,
+          s,
+        )
       else if (StaffRoles.lookup(key) != null)
         staffRoleLabel(StaffRoles.lookup(key)!, s),
   ];
@@ -23,6 +32,9 @@ String staffRolesSummary(List<String> roleKeys, AppStrings s) {
   if (labels.length == 1) return labels.first;
   return '${labels.first} +${labels.length - 1}';
 }
+
+bool isAdministrationStaffRecord(AdminTeacherRecord teacher) =>
+    teacher.staffRoles.isNotEmpty;
 
 /// Classroom placement summary, e.g. "Grade 2C HR (Homeroom Teacher) · Math".
 String classroomAssignmentSummary(AdminTeacherRecord teacher, AppStrings s) {

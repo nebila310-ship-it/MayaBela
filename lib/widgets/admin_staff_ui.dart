@@ -426,12 +426,14 @@ class StaffInfoTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final Color color;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -492,6 +494,7 @@ class StaffInfoTile extends StatelessWidget {
               ],
             ),
           ),
+          if (trailing != null) trailing!,
         ],
       ),
     );

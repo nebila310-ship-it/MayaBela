@@ -13,6 +13,7 @@ import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/services/persistence/transfer_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -29,6 +30,8 @@ import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/web_erp/widgets/student_sis_record_view.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/student_qr_card.dart';
+import 'package:mayabela/utils/email_utils.dart';
+import 'package:mayabela/widgets/send_teacher_credentials.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 
@@ -51,6 +54,7 @@ Future<void> showWebTeacherProfileDialog(
   BuildContext context, {
   required String teacherId,
   VoidCallback? onUpdated,
+  bool? administrationStaff,
 }) async {
   await showDialog<void>(
     context: context,
@@ -58,6 +62,7 @@ Future<void> showWebTeacherProfileDialog(
     builder: (dialogContext) => _WebTeacherProfileDialog(
       teacherId: teacherId,
       onUpdated: onUpdated,
+      administrationStaff: administrationStaff,
     ),
   );
 }
@@ -361,10 +366,12 @@ class _WebTeacherProfileDialog extends StatefulWidget {
   const _WebTeacherProfileDialog({
     required this.teacherId,
     this.onUpdated,
+    this.administrationStaff,
   });
 
   final String teacherId;
   final VoidCallback? onUpdated;
+  final bool? administrationStaff;
 
   @override
   State<_WebTeacherProfileDialog> createState() =>
@@ -378,13 +385,165 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
   bool get _canHireStaff => ModuleAccess.canHireStaff;
   bool get _canAssignTeachers => ModuleAccess.canAssignTeachers;
 
+  bool _isStaff(AdminTeacherRecord teacher) =>
+      widget.administrationStaff ?? isAdministrationStaffRecord(teacher);
+
+  Color _accent(bool staff) =>
+      staff ? AdminFormTheme.staff.primary : AdminFormTheme.teacher.primary;
+
+  Future<void> _renameRole(AdminTeacherRecord teacher) async {
+    final changed = await showRenameStaffRoleTitleDialog(
+      context: context,
+      teacher: teacher,
+      onSaved: widget.onUpdated,
+    );
+    if (changed && mounted) setState(() {});
+  }
+
+  Future<void> _editStaff(AdminTeacherRecord teacher) async {
+    final s = AppLocale.instance.strings;
+    final nameCtrl = TextEditingController(text: teacher.fullName);
+    final phoneCtrl = TextEditingController(text: teacher.phone ?? '');
+    final emailCtrl = TextEditingController(text: teacher.email ?? '');
+    final roleTitle = staffRolesSummary(
+      teacher.staffRoles,
+      s,
+      schoolId: teacher.schoolId,
+    );
+    final roleCtrl = TextEditingController(text: roleTitle);
+    final theme = AdminFormTheme.staff;
+
+    final saved = await showAdminFormDialog(
+      context: context,
+      title: s.editStaff,
+      subtitle: teacher.fullName,
+      accent: theme.primary,
+      icon: Icons.badge_outlined,
+      saveBlockedReason: (_) {
+        if (nameCtrl.text.trim().isEmpty) return s.enterName;
+        if (!EmailUtils.isRealMailbox(emailCtrl.text)) return s.emailRequired;
+        return null;
+      },
+      canSave: (_) =>
+          nameCtrl.text.trim().isNotEmpty &&
+          EmailUtils.isRealMailbox(emailCtrl.text),
+      builder: (ctx, setDialogState) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AdminFormDialogSection(
+            title: s.fullName,
+            icon: Icons.badge_outlined,
+            color: theme.primary,
+            children: [
+              adminDialogField(
+                TextField(
+                  controller: nameCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: adminFieldDecoration(
+                    label: s.fullName,
+                    icon: Icons.person_outline,
+                    accent: theme.primary,
+                  ),
+                ),
+              ),
+              if (teacher.staffRoles.isNotEmpty)
+                adminDialogField(
+                  TextField(
+                    controller: roleCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: adminFieldDecoration(
+                      label: s.staffJobTitle,
+                      hint: s.renameRoleTitleExample,
+                      icon: Icons.workspace_premium_outlined,
+                      accent: theme.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          AdminFormDialogSection(
+            title: s.contactNumbersOnFile,
+            icon: Icons.contact_phone_outlined,
+            color: theme.secondary,
+            children: [
+              adminDialogField(
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: adminFieldDecoration(
+                    label: s.phoneNumber,
+                    icon: Icons.phone_outlined,
+                    accent: theme.secondary,
+                  ),
+                ),
+              ),
+              adminDialogField(
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: adminFieldDecoration(
+                    label: s.emailForPasswordReset,
+                    hint: s.emailForPasswordResetHint,
+                    icon: Icons.email_outlined,
+                    accent: theme.secondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final nextName = nameCtrl.text.trim();
+    final nextPhone = phoneCtrl.text.trim();
+    final nextEmail = EmailUtils.userFacing(emailCtrl.text);
+    final nextRole = roleCtrl.text.trim();
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    emailCtrl.dispose();
+    roleCtrl.dispose();
+
+    if (saved != true || !mounted) return;
+
+    final updated = teacher.copyWith(
+      fullName: nextName,
+      phone: nextPhone,
+      email: nextEmail,
+    );
+    TeacherRegistryService.instance.updateTeacher(updated);
+    AuthService.syncTeacherAuthProfile(updated);
+    await TeacherPersistenceService.instance.saveRegistryFromService();
+
+    if (nextRole.isNotEmpty &&
+        nextRole != roleTitle &&
+        teacher.staffRoles.isNotEmpty) {
+      await SchoolRoleCatalogService.instance.renameRole(
+        roleKey: teacher.staffRoles.first,
+        label: nextRole,
+        schoolId: teacher.schoolId,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {});
+    widget.onUpdated?.call();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(s.staffUpdated),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   Future<void> _deleteStaff(AdminTeacherRecord teacher) async {
     final s = AppLocale.instance.strings;
+    final staff = _isStaff(teacher);
     final confirmed = await showAdminConfirmDialog(
       context: context,
       title: s.deactivateTeacher,
       message: s.confirmDeactivateTeacher,
-      accent: AdminFormTheme.teacher.primary,
+      accent: _accent(staff),
       icon: Icons.person_off_outlined,
       confirmLabel: s.deactivateTeacher,
       destructive: true,
@@ -406,11 +565,20 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
   Widget build(BuildContext context) {
     final s = AppLocale.instance.strings;
     final teacher = _teacher;
+    final staff = teacher != null && _isStaff(teacher);
+    final accent = _accent(staff);
+    final roleTitle = teacher == null
+        ? ''
+        : staffRolesSummary(
+            teacher.staffRoles,
+            s,
+            schoolId: teacher.schoolId,
+          );
 
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
         child: teacher == null
             ? Padding(
                 padding: const EdgeInsets.all(24),
@@ -447,7 +615,7 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                             staffId: teacher.teacherId,
                             name: teacher.fullName,
                             radius: 44,
-                            fallbackColor: StaffPalette.teachers.primary,
+                            fallbackColor: accent,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -455,20 +623,39 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                           icon: Icons.badge_outlined,
                           label: 'Staff ID',
                           value: teacher.employeeId ?? teacher.teacherId,
-                          color: StaffPalette.teachers.primary,
+                          color: accent,
                         ),
-                        StaffInfoTile(
-                          icon: Icons.menu_book_outlined,
-                          label: 'Subjects',
-                          value: teacher.subjects.join(', '),
-                          color: StaffPalette.teachers.secondary,
-                        ),
-                        StaffInfoTile(
-                          icon: Icons.class_outlined,
-                          label: s.assignedClasses,
-                          value: teacher.assignedClass,
-                          color: StaffPalette.teachers.primary,
-                        ),
+                        if (staff)
+                          StaffInfoTile(
+                            icon: Icons.workspace_premium_outlined,
+                            label: s.staffJobTitle,
+                            value: roleTitle,
+                            color: AdminFormTheme.staff.secondary,
+                            trailing: AuthService.canAssignStaffRoles
+                                ? IconButton(
+                                    tooltip: s.renameRoleTitle,
+                                    icon: Icon(
+                                      Icons.edit_outlined,
+                                      color: AdminFormTheme.staff.secondary,
+                                    ),
+                                    onPressed: () => _renameRole(teacher),
+                                  )
+                                : null,
+                          )
+                        else ...[
+                          StaffInfoTile(
+                            icon: Icons.menu_book_outlined,
+                            label: 'Subjects',
+                            value: teacher.subjects.join(', '),
+                            color: StaffPalette.teachers.secondary,
+                          ),
+                          StaffInfoTile(
+                            icon: Icons.class_outlined,
+                            label: s.assignedClasses,
+                            value: teacher.assignedClass,
+                            color: StaffPalette.teachers.primary,
+                          ),
+                        ],
                         if (teacher.phone?.isNotEmpty == true)
                           StaffInfoTile(
                             icon: Icons.phone_outlined,
@@ -476,6 +663,11 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                             value: teacher.phone!,
                             color: const Color(0xFF2E7D32),
                           ),
+                        const SizedBox(height: 16),
+                        StaffLoginResendBar(
+                          teacher: teacher,
+                          administrationStaff: staff,
+                        ),
                       ],
                     ),
                   ),
@@ -491,7 +683,10 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                               await showStaffRolesDialog(
                                 context: context,
                                 teacher: teacher,
-                                onSaved: widget.onUpdated,
+                                onSaved: () {
+                                  widget.onUpdated?.call();
+                                  if (mounted) setState(() {});
+                                },
                               );
                             },
                             icon: const Icon(
@@ -499,9 +694,19 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                             ),
                             label: Text(s.staffRolesTitle),
                           ),
-                        if (_canHireStaff || _canAssignTeachers)
+                        if (staff && AuthService.canAssignStaffRoles)
+                          OutlinedButton.icon(
+                            onPressed: () => _renameRole(teacher),
+                            icon: const Icon(Icons.badge_outlined),
+                            label: Text(s.renameRoleTitle),
+                          ),
+                        if (_canHireStaff || (!staff && _canAssignTeachers))
                           OutlinedButton.icon(
                             onPressed: () {
+                              if (staff && _canHireStaff) {
+                                unawaited(_editStaff(teacher));
+                                return;
+                              }
                               Navigator.pop(context);
                               Navigator.push<void>(
                                 context,
@@ -519,7 +724,7 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                             ),
                             label: Text(
                               _canHireStaff
-                                  ? s.editTeacher
+                                  ? (staff ? s.editStaff : s.editTeacher)
                                   : s.assignTeacherClasses,
                             ),
                           ),

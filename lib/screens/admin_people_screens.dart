@@ -11,6 +11,7 @@ import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/phone_launch_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
@@ -28,6 +29,7 @@ import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/widgets/send_driver_credentials.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
+import 'package:mayabela/widgets/send_teacher_credentials.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 import 'package:mayabela/widgets/teacher_class_assignment_editor.dart';
 import 'package:mayabela/widgets/admin_student_edit_dialog.dart';
@@ -576,6 +578,9 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
 
   AppStrings get s => AppLocale.instance.strings;
 
+  bool _isStaff(AdminTeacherRecord teacher) =>
+      isAdministrationStaffRecord(teacher);
+
   Future<void> _changePhoto(AdminTeacherRecord teacher) async {
     if (!ModuleAccess.canHireStaff) return;
     final bytes = await pickAlignedPhotoOrSnack(
@@ -599,10 +604,17 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
   Future<void> _editTeacher(AdminTeacherRecord teacher) async {
     if (!ModuleAccess.canHireStaff) return;
     final nameCtrl = TextEditingController(text: teacher.fullName);
+    final staff = _isStaff(teacher);
     var selectedSubjects = List<String>.from(teacher.subjects);
     final phoneCtrl = TextEditingController(text: teacher.phone ?? '');
     final emailCtrl = TextEditingController(text: teacher.email ?? '');
-    final theme = AdminFormTheme.teacher;
+    final roleTitle = staffRolesSummary(
+      teacher.staffRoles,
+      s,
+      schoolId: teacher.schoolId,
+    );
+    final roleCtrl = TextEditingController(text: roleTitle);
+    final theme = staff ? AdminFormTheme.staff : AdminFormTheme.teacher;
     final campusOptions = SchoolRegistryService.instance
         .campusesForSchool(teacher.schoolId)
         .toList();
@@ -613,10 +625,10 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
 
     final saved = await showAdminFormDialog(
       context: context,
-      title: s.editTeacher,
+      title: staff ? s.editStaff : s.editTeacher,
       subtitle: teacher.fullName,
       accent: theme.primary,
-      icon: Icons.school_outlined,
+      icon: staff ? Icons.badge_outlined : Icons.school_outlined,
       saveBlockedReason: (_) {
         if (nameCtrl.text.trim().isEmpty) return s.enterName;
         if (!EmailUtils.isRealMailbox(emailCtrl.text)) return s.emailRequired;
@@ -644,15 +656,29 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                   ),
                 ),
               ),
-              adminDialogField(
-                SubjectMultiPicker(
-                  selected: selectedSubjects,
-                  onChanged: (values) =>
-                      setDialogState(() => selectedSubjects = values),
-                  accent: theme.primary,
-                  label: s.subject,
+              if (staff)
+                adminDialogField(
+                  TextField(
+                    controller: roleCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: adminFieldDecoration(
+                      label: s.staffJobTitle,
+                      hint: s.renameRoleTitleExample,
+                      icon: Icons.workspace_premium_outlined,
+                      accent: theme.primary,
+                    ),
+                  ),
+                )
+              else
+                adminDialogField(
+                  SubjectMultiPicker(
+                    selected: selectedSubjects,
+                    onChanged: (values) =>
+                        setDialogState(() => selectedSubjects = values),
+                    accent: theme.primary,
+                    label: s.subject,
+                  ),
                 ),
-              ),
               if (campusOptions.length > 1)
                 adminDialogField(
                   DropdownButtonFormField<String>(
@@ -712,12 +738,14 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
       nameCtrl.dispose();
       phoneCtrl.dispose();
       emailCtrl.dispose();
+      roleCtrl.dispose();
       return;
     }
 
+    final nextRole = roleCtrl.text.trim();
     final updated = teacher.copyWith(
       fullName: nameCtrl.text.trim(),
-      subjects: selectedSubjects,
+      subjects: staff ? teacher.subjects : selectedSubjects,
       phone: phoneCtrl.text.trim(),
       email: EmailUtils.userFacing(emailCtrl.text),
       campus: selectedCampus,
@@ -726,15 +754,26 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
     nameCtrl.dispose();
     phoneCtrl.dispose();
     emailCtrl.dispose();
+    roleCtrl.dispose();
 
     TeacherRegistryService.instance.updateTeacher(updated);
     AuthService.syncTeacherAuthProfile(updated);
     await TeacherPersistenceService.instance.saveRegistryFromService();
+    if (staff &&
+        nextRole.isNotEmpty &&
+        nextRole != roleTitle &&
+        teacher.staffRoles.isNotEmpty) {
+      await SchoolRoleCatalogService.instance.renameRole(
+        roleKey: teacher.staffRoles.first,
+        label: nextRole,
+        schoolId: teacher.schoolId,
+      );
+    }
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(s.teacherUpdated),
+        content: Text(staff ? s.staffUpdated : s.teacherUpdated),
         backgroundColor: Colors.green,
       ),
     );
@@ -884,13 +923,21 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
       );
     }
 
+    final staff = _isStaff(teacher);
+    final roleTitle = staffRolesSummary(
+      teacher.staffRoles,
+      s,
+      schoolId: teacher.schoolId,
+    );
+    final palette = staff ? StaffPalette.employees : StaffPalette.teachers;
+
     return ListenableBuilder(
       listenable: AppLocale.instance,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: StaffPalette.teachers.primary.withValues(alpha: 0.04),
+          backgroundColor: palette.primary.withValues(alpha: 0.04),
           appBar: AppBar(
-            backgroundColor: StaffPalette.teachers.primary,
+            backgroundColor: palette.primary,
             foregroundColor: Colors.white,
             title: Text(teacher.fullName),
           ),
@@ -898,16 +945,18 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
             padding: listPagePadding(context),
             children: [
               AdminProfilePhotoHeader(
-                palette: StaffPalette.teachers,
+                palette: palette,
                 name: teacher.fullName,
                 staffId: teacher.teacherId,
-                subtitleLines: [teacher.subject, teacher.assignedClass],
+                subtitleLines: staff
+                    ? [roleTitle.isEmpty ? 'Administration Staff' : roleTitle]
+                    : [teacher.subject, teacher.assignedClass],
                 onChangePhoto: () => _changePhoto(teacher),
                 avatar: StaffRegistryAvatar(
                   staffId: teacher.teacherId,
                   name: teacher.fullName,
                   radius: 44,
-                  fallbackColor: StaffPalette.teachers.primary,
+                  fallbackColor: palette.primary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -923,27 +972,55 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                 value: teacher.email ?? '—',
                 color: Colors.blue,
               ),
-              StaffInfoTile(
-                icon: Icons.class_rounded,
-                label: s.assignedClasses,
-                value: teacher.classAssignments.isNotEmpty
-                    ? teacher.classAssignments
-                        .map((a) {
-                          final role = s.teacherRoleLabel(a.role);
-                          if (a.teachingSlots.isEmpty) {
-                            return '${a.className} · $role';
-                          }
-                          final slots = a.teachingSlots
-                              .map(
-                                (slot) =>
-                                    '${slot.subjectName} (${slot.subjectId}, ${slot.slotId})',
-                              )
-                              .join('; ');
-                          return '${a.className} · $role · $slots';
-                        })
-                        .join('\n')
-                    : teacher.assignedClass,
-                color: StaffPalette.teachers.secondary,
+              if (staff)
+                StaffInfoTile(
+                  icon: Icons.workspace_premium_outlined,
+                  label: s.staffJobTitle,
+                  value: roleTitle,
+                  color: palette.secondary,
+                  trailing: AuthService.canAssignStaffRoles
+                      ? IconButton(
+                          tooltip: s.renameRoleTitle,
+                          icon: Icon(Icons.edit_outlined, color: palette.secondary),
+                          onPressed: () async {
+                            await showRenameStaffRoleTitleDialog(
+                              context: context,
+                              teacher: teacher,
+                              onSaved: () {
+                                if (mounted) setState(() {});
+                              },
+                            );
+                          },
+                        )
+                      : null,
+                )
+              else
+                StaffInfoTile(
+                  icon: Icons.class_rounded,
+                  label: s.assignedClasses,
+                  value: teacher.classAssignments.isNotEmpty
+                      ? teacher.classAssignments
+                          .map((a) {
+                            final role = s.teacherRoleLabel(a.role);
+                            if (a.teachingSlots.isEmpty) {
+                              return '${a.className} · $role';
+                            }
+                            final slots = a.teachingSlots
+                                .map(
+                                  (slot) =>
+                                      '${slot.subjectName} (${slot.subjectId}, ${slot.slotId})',
+                                )
+                                .join('; ');
+                            return '${a.className} · $role · $slots';
+                          })
+                          .join('\n')
+                      : teacher.assignedClass,
+                  color: StaffPalette.teachers.secondary,
+                ),
+              const SizedBox(height: 16),
+              StaffLoginResendBar(
+                teacher: teacher,
+                administrationStaff: staff,
               ),
               const SizedBox(height: 8),
               StaffActionGrid(
@@ -955,7 +1032,11 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                     onPressed: () => openAdminChat(
                       context,
                       name: teacher.fullName,
-                      role: s.teacherLabelShort,
+                      role: staff
+                          ? (roleTitle.isEmpty
+                              ? 'Administration Staff'
+                              : roleTitle)
+                          : s.teacherLabelShort,
                       staffParticipantId:
                           StaffMemberOption.teacherKey(teacher.teacherId),
                     ),
@@ -979,17 +1060,17 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                     StaffActionItem(
                       icon: Icons.camera_alt_rounded,
                       label: s.changeProfilePhoto,
-                      color: StaffPalette.teachers.primary,
+                      color: palette.primary,
                       onPressed: () => _changePhoto(teacher),
                     ),
                   if (ModuleAccess.canHireStaff)
                     StaffActionItem(
                       icon: Icons.edit_rounded,
-                      label: s.editTeacher,
+                      label: staff ? s.editStaff : s.editTeacher,
                       color: Colors.blue,
                       onPressed: () => _editTeacher(teacher),
                     ),
-                  if (ModuleAccess.canAssignTeachers)
+                  if (!staff && ModuleAccess.canAssignTeachers)
                     StaffActionItem(
                       icon: Icons.class_outlined,
                       label: s.assignTeacherClasses,
@@ -1009,7 +1090,22 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                         },
                       ),
                     ),
-                  if (ModuleAccess.canAssignTeachers)
+                  if (staff && AuthService.canAssignStaffRoles)
+                    StaffActionItem(
+                      icon: Icons.badge_outlined,
+                      label: s.renameRoleTitle,
+                      color: palette.secondary,
+                      onPressed: () async {
+                        await showRenameStaffRoleTitleDialog(
+                          context: context,
+                          teacher: teacher,
+                          onSaved: () {
+                            if (mounted) setState(() {});
+                          },
+                        );
+                      },
+                    ),
+                  if (!staff && ModuleAccess.canAssignTeachers)
                     StaffActionItem(
                       icon: Icons.swap_horiz_rounded,
                       label: s.transferTeacher,

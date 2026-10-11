@@ -44,15 +44,24 @@ class TeacherCredentialsService {
     return AuthService.tempPassword;
   }
 
+  bool isAdministrationStaff(AdminTeacherRecord teacher) =>
+      teacher.staffRoles.isNotEmpty;
+
   String buildMessage(AdminTeacherRecord teacher) {
     final schoolName =
         SchoolRegistryService.instance.displayName(teacher.schoolId);
     final login = loginFor(teacher);
     final password = passwordFor(teacher);
+    final staff = isAdministrationStaff(teacher);
+    final accountLine = staff
+        ? 'Your administration staff account is ready:'
+        : 'Your teacher account is ready:';
+    final signInLine =
+        staff ? 'Sign in as Administration Staff.' : 'Sign in as Teacher.';
 
     return '''Welcome to $appName!
 
-Your administration staff account is ready:
+$accountLine
 
 Name: ${teacher.fullName}
 School: $schoolName
@@ -61,7 +70,7 @@ Staff ID: ${teacher.employeeId ?? teacher.teacherId}
 Login phone: $login
 Temp password: $password
 
-Sign in as Administration Staff.
+$signInLine
 Download: $appLink
 Please change your password after first login.''';
   }
@@ -83,7 +92,9 @@ Please change your password after first login.''';
   Future<void> share(AdminTeacherRecord teacher) async {
     await Share.share(
       buildMessage(teacher),
-      subject: '$appName — Teacher login for ${teacher.fullName}',
+      subject: isAdministrationStaff(teacher)
+          ? '$appName — Staff login for ${teacher.fullName}'
+          : '$appName — Teacher login for ${teacher.fullName}',
     );
   }
 }

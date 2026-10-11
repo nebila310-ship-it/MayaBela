@@ -317,6 +317,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                             onTap: () => showWebTeacherProfileDialog(
                               context,
                               teacherId: t.teacherId,
+                              administrationStaff: _isStaffDir,
                               onUpdated: () => setState(() {}),
                             ),
                             trailing: AuthService.canAssignStaffRoles
@@ -447,6 +448,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                               onTap: () => showWebTeacherProfileDialog(
                                 context,
                                 teacherId: t.teacherId,
+                                administrationStaff: _isStaffDir,
                                 onUpdated: () => setState(() {}),
                               ),
                               child: Text(
@@ -490,6 +492,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                                         showWebTeacherProfileDialog(
                                           context,
                                           teacherId: t.teacherId,
+                                          administrationStaff: _isStaffDir,
                                           onUpdated: () => setState(() {}),
                                         ),
                                   ),
