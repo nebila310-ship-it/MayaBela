@@ -1,32 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/teacher_credentials_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
+import 'package:mayabela/widgets/staff_role_labels.dart';
 
 enum _TeacherCredSendOption { sms, whatsApp, telegram, share }
 
-/// Send onboarding login details to a teacher (SMS / WhatsApp / Telegram / Share).
+bool _isStaffRecord(AdminTeacherRecord teacher, bool? override) =>
+    override ?? isAdministrationStaffRecord(teacher);
+
+/// Send onboarding login details (SMS / WhatsApp / Telegram / Share).
 Future<void> showSendTeacherCredentials(
   BuildContext context,
-  AdminTeacherRecord teacher,
-) async {
+  AdminTeacherRecord teacher, {
+  bool? administrationStaff,
+}) async {
+  final isStaff = _isStaffRecord(teacher, administrationStaff);
   final creds = TeacherCredentialsService.instance;
   final phone = teacher.phone?.trim();
   final hasPhone = phone != null && phone.isNotEmpty;
+  final s = AppLocale.instance.strings;
 
   if (!hasPhone) {
     final share = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Send teacher login'),
-        content: const Text(
-          'No phone number on file. Use Share to send the login details manually.',
+        title: Text(isStaff ? s.sendStaffLogin : 'Send teacher login'),
+        content: Text(
+          isStaff
+              ? s.sendLoginNoPhoneStaff
+              : 'No phone number on file. Use Share to send the login details manually.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Share')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(s.share),
+          ),
         ],
       ),
     );
@@ -35,7 +51,6 @@ Future<void> showSendTeacherCredentials(
     return;
   }
 
-  final s = AppLocale.instance.strings;
   final choice = await showModalBottomSheet<_TeacherCredSendOption>(
     context: context,
     backgroundColor: const Color(0xFF1E293B),
@@ -61,7 +76,7 @@ Future<void> showSendTeacherCredentials(
             ),
             const SizedBox(height: 16),
             Text(
-              s.sendLoginToTeacher,
+              isStaff ? s.sendLoginToStaff : s.sendLoginToTeacher,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -135,9 +150,144 @@ Future<void> showSendTeacherCredentials(
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
-        ok ? 'Opened $channelLabel with teacher login message' : s.otpDeliveryFailed,
+        ok
+            ? s.openedLoginChannel(channelLabel, staff: isStaff)
+            : s.otpDeliveryFailed,
       ),
       backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
     ),
   );
+}
+
+Future<void> sendStaffLoginToRegisteredNumber(
+  BuildContext context,
+  AdminTeacherRecord teacher,
+  OtpDeliveryChannel channel,
+) async {
+  final s = AppLocale.instance.strings;
+  final phone = teacher.phone?.trim();
+  if (phone == null || phone.isEmpty) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.sendLoginNoPhoneStaff)),
+      );
+    }
+    return;
+  }
+  final ok = await TeacherCredentialsService.instance.sendViaChannel(
+    teacher: teacher,
+    channel: channel,
+  );
+  if (!context.mounted) return;
+  final channelLabel = switch (channel) {
+    OtpDeliveryChannel.sms => s.sendViaSms,
+    OtpDeliveryChannel.whatsApp => s.sendViaWhatsApp,
+    OtpDeliveryChannel.telegram => s.sendViaTelegram,
+  };
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        ok
+            ? s.openedLoginChannel(channelLabel, staff: true)
+            : s.otpDeliveryFailed,
+      ),
+      backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
+    ),
+  );
+}
+
+Future<void> copyStaffLoginDetails(
+  BuildContext context,
+  AdminTeacherRecord teacher,
+) async {
+  final s = AppLocale.instance.strings;
+  await Clipboard.setData(
+    ClipboardData(
+      text: TeacherCredentialsService.instance.buildMessage(teacher),
+    ),
+  );
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(s.staffLoginCopied)),
+  );
+}
+
+/// WhatsApp / Telegram / copy — same pattern as [ParentInviteResendBar].
+class StaffLoginResendBar extends StatelessWidget {
+  const StaffLoginResendBar({
+    super.key,
+    required this.teacher,
+    this.administrationStaff = true,
+  });
+
+  final AdminTeacherRecord teacher;
+  final bool administrationStaff;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppLocale.instance,
+      builder: (context, _) {
+        final s = AppLocale.instance.strings;
+        final phone = teacher.phone?.trim();
+        final hasPhone = phone != null && phone.isNotEmpty;
+        final buttons = <Widget>[
+          if (hasPhone) ...[
+            FilledButton.icon(
+              onPressed: () => sendStaffLoginToRegisteredNumber(
+                context,
+                teacher,
+                OtpDeliveryChannel.whatsApp,
+              ),
+              icon: const Icon(Icons.chat),
+              label: Text(s.sendViaWhatsApp),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: () => sendStaffLoginToRegisteredNumber(
+                context,
+                teacher,
+                OtpDeliveryChannel.telegram,
+              ),
+              icon: const Icon(Icons.send),
+              label: Text(s.sendViaTelegram),
+            ),
+          ],
+          OutlinedButton.icon(
+            onPressed: () => copyStaffLoginDetails(context, teacher),
+            icon: const Icon(Icons.copy_all_outlined),
+            label: Text(s.copyStaffLogin),
+          ),
+          TextButton.icon(
+            onPressed: () => showSendTeacherCredentials(
+              context,
+              teacher,
+              administrationStaff: administrationStaff,
+            ),
+            icon: const Icon(Icons.sms_outlined),
+            label: Text(
+              administrationStaff ? s.sendLoginToStaff : s.sendLoginToTeacher,
+            ),
+          ),
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.staffLoginResendTitle,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              hasPhone
+                  ? s.staffLoginSendsTo(teacher.fullName, phone)
+                  : s.sendLoginNoPhoneStaff,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: buttons),
+          ],
+        );
+      },
+    );
+  }
 }

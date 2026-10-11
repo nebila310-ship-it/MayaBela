@@ -3317,6 +3317,38 @@ class AppStrings implements AppStringsLike {
       t('Send login to teacher', 'መግቢያ ለመምህር ላክ');
   String get sendLoginToStaff =>
       t('Send login to staff', 'መግቢያ ለሰራተኛ ላክ');
+  String get sendStaffLogin =>
+      t('Send staff login', 'የሰራተኛ መግቢያ ላክ');
+  String get staffLoginResendTitle =>
+      t('Resend login information', 'የመግቢያ መረጃ እንደገና ላክ');
+  String staffLoginSendsTo(String name, String phone) => t(
+        'Sends to $name · $phone',
+        'ወደ $name · $phone ይላካል',
+      );
+  String get copyStaffLogin => t('Copy full login', 'ሙሉ መግቢያ ቅዳ');
+  String get staffLoginCopied =>
+      t('Login details copied', 'የመግቢያ መረጃ ተቀድቷል');
+  String get sendLoginNoPhoneStaff => t(
+        'No phone number on file. Copy the login details and send them manually.',
+        'ስልክ ቁጥር የለም። የመግቢያ መረጃውን ቅዱ እና በእጅ ይላኩ።',
+      );
+  String get staffJobTitle => t('Role title', 'የሚና ስም');
+  String get renameRoleTitle => t('Rename role title', 'የሚና ስም ቀይር');
+  String get renameRoleTitleHint => t(
+        'What this school calls the role',
+        'ትምህርት ቤቱ ይህን ሚና የሚጠራበት ስም',
+      );
+  String get renameRoleTitleExample => t('e.g. CEO', 'ለምሳሌ CEO');
+  String get assignRoleFirst => t(
+        'Assign a staff role first, then you can rename its title.',
+        'መጀመሪያ ሚና ይመድቡ፣ ከዚያ ስሙን መቀየር ይችላሉ።',
+      );
+  String get pickRoleToRename =>
+      t('Which role title do you want to rename?', 'የትኛውን የሚና ስም መቀየር ይፈልጋሉ?');
+  String openedLoginChannel(String channel, {required bool staff}) => t(
+        'Opened $channel with ${staff ? 'staff' : 'teacher'} login message',
+        '$channel ከ${staff ? 'ሰራተኛ' : 'መምህር'} መግቢያ መልእክት ጋር ተከፍቷል',
+      );
   String get sendLoginToDriver =>
       t('Send login to driver', 'ለሾፌር መግቢያ ላክ', 'Gara konkolaachisaa seensaa ergi');
   String get sendLoginNoPhoneDriver => t(
@@ -4071,6 +4103,7 @@ class AppStrings implements AppStringsLike {
   String get deleteStudent => t('Remove student', 'ተማሪ አስወግድ');
   String get transferStudent => t('Transfer student', 'ተማሪ አዛድር');
   String get editTeacher => t('Edit teacher', 'መምህር አርትዕ');
+  String get editStaff => t('Edit staff', 'ሰራተኛ አርትዕ');
   String get assignTeacherClasses => t('Assign classes', 'ክፍሎች መድብ');
   String get transferTeacher => t('Transfer classes', 'ክፍሎች አዛድር');
   String get deactivateTeacher => t('Remove staff', 'ሰራተኛ አስወግድ');
@@ -4117,6 +4150,8 @@ class AppStrings implements AppStringsLike {
       );
   String get studentUpdated => t('Student updated', 'ተማሪ ተዘምኗል');
   String get teacherUpdated => t('Teacher updated', 'መምህር ተዘምኗል');
+  String get staffUpdated => t('Staff updated', 'ሰራተኛ ተዘምኗል');
+  String get roleTitleSaved => t('Role title saved', 'የሚና ስም ተቀምጧል');
   String get studentTransferred => t('Student transferred', 'ተማሪ ተዛውሯል');
   String get teacherTransferred => t('Classes updated', 'ክፍሎች ተዘምነዋል');
 
