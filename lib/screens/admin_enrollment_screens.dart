@@ -902,7 +902,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       context: context,
       title: _isStaff ? 'Administration staff created' : 'Teacher created',
       subtitle: teacher.fullName,
-      accent: AdminFormTheme.teacher.primary,
+      accent: (_isStaff ? AdminFormTheme.staff : AdminFormTheme.teacher).primary,
       icon: Icons.check_circle_outline,
       items: [
         AdminDialogSummaryItem(
@@ -942,7 +942,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
               'Section Director assigns classes and subjects later.',
       actions: [
         AdminDialogAction(
-          label: s.sendLoginToTeacher,
+          label: _isStaff ? s.sendLoginToStaff : s.sendLoginToTeacher,
           icon: Icons.send_rounded,
           onPressed: () async {
             Navigator.pop(context);
@@ -967,7 +967,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       listenable: AppLocale.instance,
       builder: (context, _) {
         final s = AppLocale.instance.strings;
-        final theme = AdminFormTheme.teacher;
+        final theme = _isStaff ? AdminFormTheme.staff : AdminFormTheme.teacher;
         final schoolCampuses = SchoolRegistryService.instance
             .campusesForSchool(AuthService.activeSchoolId);
         final roles = _assignableRoles;
@@ -980,7 +980,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
           body: [
             AdminPhotoPicker(
               photoBytes: _pickedPhotoBytes,
-              hint: s.teacherPhotoHint,
+              hint: _isStaff ? s.staffPhotoHint : s.teacherPhotoHint,
               accent: theme.primary,
               onTap: _pickPhoto,
               onView: _pickedPhotoBytes == null

@@ -29,6 +29,13 @@ class AdminFormTheme {
     icon: Icons.school_outlined,
   );
 
+  static AdminFormTheme staff = AdminFormTheme._(
+    primary: const Color(0xFF0F766E),
+    secondary: const Color(0xFF0D9488),
+    accent: const Color(0xFF5EEAD4),
+    icon: Icons.badge_outlined,
+  );
+
   static AdminFormTheme driver = AdminFormTheme._(
     primary: const Color(0xFFE65100),
     secondary: const Color(0xFFEF6C00),

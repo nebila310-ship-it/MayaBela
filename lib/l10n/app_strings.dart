@@ -3311,8 +3311,12 @@ class AppStrings implements AppStringsLike {
       t('Staff ID (optional)', 'የሰራተኛ መለያ (አማራጭ)', 'ID Hojjettootaa (filannoo)');
   String get teacherPhotoHint =>
       t('Tap to add teacher photo', 'የመምህር ፎቶ ለመጨመር ይንኩ');
+  String get staffPhotoHint =>
+      t('Tap to add staff photo', 'የሰራተኛ ፎቶ ለመጨመር ይንኩ');
   String get sendLoginToTeacher =>
       t('Send login to teacher', 'መግቢያ ለመምህር ላክ');
+  String get sendLoginToStaff =>
+      t('Send login to staff', 'መግቢያ ለሰራተኛ ላክ');
   String get sendLoginToDriver =>
       t('Send login to driver', 'ለሾፌር መግቢያ ላክ', 'Gara konkolaachisaa seensaa ergi');
   String get sendLoginNoPhoneDriver => t(

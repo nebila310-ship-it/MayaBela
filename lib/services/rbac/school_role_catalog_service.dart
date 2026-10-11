@@ -363,10 +363,59 @@ class SchoolRoleCatalogService {
     return _persist(sid, catalog);
   }
 
+  /// Rename a built-in or custom role. The key stays the same so permissions
+  /// and logins keep working; staff see the new title after next sign-in.
+  Future<String?> renameRole({
+    required String roleKey,
+    required String label,
+    String? schoolId,
+  }) async {
+    if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
+      return 'not_allowed';
+    }
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    if (sid.isEmpty) return 'no_school';
+    final cleanLabel = label.trim();
+    if (cleanLabel.isEmpty) return 'empty_label';
+
+    await ensureLoaded(sid);
+    final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
+    final key = StaffRoles.canonicalize(roleKey);
+    final customIdx = catalog.customRoles.indexWhere((r) => r.key == key);
+    if (customIdx >= 0) {
+      catalog.customRoles[customIdx] = catalog.customRoles[customIdx].copyWith(
+        labelEn: cleanLabel,
+        labelAm: cleanLabel,
+        labelOm: cleanLabel,
+      );
+    } else {
+      final base = StaffRoles.lookup(key);
+      if (base == null) return 'unknown_role';
+      catalog.labelOverrides[key] = cleanLabel;
+    }
+    final cloudErr = await _persist(sid, catalog);
+    await SchoolAuditLogService.instance.log(
+      action: 'staff_role_renamed',
+      schoolId: sid,
+      entityType: 'staff_role',
+      entityId: key,
+      detail: 'Role title set to "$cleanLabel"',
+    );
+    return cloudErr;
+  }
+
   StaffRole _applyOverride(StaffRole base, _SchoolRoleCatalog? catalog) {
     final override = catalog?.overrides[base.key];
-    if (override == null) return base;
-    return base.copyWith(permissions: StaffDashboardModules.withBaseline(override));
+    final label = catalog?.labelOverrides[base.key];
+    if (override == null && (label == null || label.isEmpty)) return base;
+    return base.copyWith(
+      permissions: override == null
+          ? null
+          : StaffDashboardModules.withBaseline(override),
+      labelEn: label,
+      labelAm: label,
+      labelOm: label,
+    );
   }
 
   Future<void> _load(String sid) async {
@@ -529,13 +578,16 @@ class SchoolRoleCatalogService {
 class _SchoolRoleCatalog {
   _SchoolRoleCatalog({
     Map<String, Set<String>>? overrides,
+    Map<String, String>? labelOverrides,
     List<StaffRole>? customRoles,
     Map<String, Map<String, String>>? moduleRights,
   })  : overrides = overrides ?? {},
+        labelOverrides = labelOverrides ?? {},
         customRoles = customRoles ?? [],
         moduleRights = moduleRights ?? {};
 
   final Map<String, Set<String>> overrides;
+  final Map<String, String> labelOverrides;
   final List<StaffRole> customRoles;
 
   /// roleKey → moduleId → none|read|edit. Presence of the role key means the
@@ -551,6 +603,7 @@ class _SchoolRoleCatalog {
           for (final e in moduleRights.entries)
             e.key: Map<String, String>.from(e.value),
         },
+        'labelOverrides': Map<String, String>.from(labelOverrides),
         'customRoles': [
           for (final r in customRoles)
             {
@@ -611,8 +664,18 @@ class _SchoolRoleCatalog {
         );
       }
     }
+    final labels = <String, String>{};
+    final labelsRaw = json['labelOverrides'];
+    if (labelsRaw is Map) {
+      for (final e in labelsRaw.entries) {
+        final value = e.value?.toString().trim() ?? '';
+        if (value.isEmpty) continue;
+        labels[e.key.toString()] = value;
+      }
+    }
     return _SchoolRoleCatalog(
       overrides: overrides,
+      labelOverrides: labels,
       customRoles: custom,
       moduleRights: moduleRights,
     );
