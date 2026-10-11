@@ -37,8 +37,6 @@ class WebAdminOverviewPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _classroomWelcome(context),
-          const SizedBox(height: 16),
-          _schoolBusBanner(context),
           const SizedBox(height: 20),
           _statGrid(stats),
           const SizedBox(height: 20),
@@ -326,80 +324,6 @@ class WebAdminOverviewPage extends StatelessWidget {
                   height: 1.35,
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _schoolBusBanner(BuildContext context) {
-    final canDriver = ModuleAccess.canView('add_driver');
-    final canGps = ModuleAccess.canView('transport_live_gps');
-    if (!canDriver && !canGps) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          colors: [
-            ClassroomPalette.green,
-            Color.lerp(ClassroomPalette.green, ClassroomPalette.teal, 0.45)!,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: ClassroomPalette.green.withValues(alpha: 0.28),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'SCHOOL BUS',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Register a driver, link the bus and students, then open Live GPS. '
-            'The same links sit at the top of the left menu.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (canDriver)
-                FilledButton.icon(
-                  onPressed:
-                      onNavigate == null ? null : () => onNavigate!('add_driver'),
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Register Driver'),
-                ),
-              if (canGps)
-                FilledButton.tonalIcon(
-                  onPressed: onNavigate == null
-                      ? null
-                      : () => onNavigate!('transport_live_gps'),
-                  icon: const Icon(Icons.gps_fixed),
-                  label: const Text('Live GPS'),
-                ),
             ],
           ),
         ],

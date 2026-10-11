@@ -141,11 +141,6 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _greetingHeader(context, narrow),
-              if (ModuleAccess.canView('add_driver') ||
-                  ModuleAccess.canView('transport_live_gps')) ...[
-                const SizedBox(height: 12),
-                _schoolBusBanner(context),
-              ],
               const SizedBox(height: 16),
               if (stats.isNotEmpty) ...[
                 Text('Today at a glance',
@@ -998,54 +993,6 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
                   ],
                 ),
               ),
-        ],
-      ),
-    );
-  }
-
-  Widget _schoolBusBanner(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          colors: [
-            ClassroomPalette.green,
-            Color.lerp(ClassroomPalette.green, ClassroomPalette.teal, 0.4)!,
-          ],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'SCHOOL BUS',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (ModuleAccess.canView('add_driver'))
-                FilledButton.icon(
-                  onPressed: () => _open('add_driver'),
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Register Driver'),
-                ),
-              if (ModuleAccess.canView('transport_live_gps'))
-                FilledButton.tonalIcon(
-                  onPressed: () => _open('transport_live_gps'),
-                  icon: const Icon(Icons.gps_fixed),
-                  label: const Text('Live GPS'),
-                ),
-            ],
-          ),
         ],
       ),
     );
