@@ -550,6 +550,9 @@ class FinanceControlTotals {
     required this.expensesPaid,
     required this.cashOnHand,
     required this.pendingExpenses,
+    this.payablesOutstanding = 0,
+    this.budgetApproved = 0,
+    this.budgetActual = 0,
   });
 
   final double billed;
@@ -559,8 +562,13 @@ class FinanceControlTotals {
   final double expensesPaid;
   final double cashOnHand;
   final double pendingExpenses;
+  final double payablesOutstanding;
+  final double budgetApproved;
+  final double budgetActual;
 
   double get netCashMovement => collected - expensesPaid;
+  double get budgetConsumedPercent =>
+      budgetApproved <= 0 ? 0 : (budgetActual / budgetApproved) * 100;
 }
 
 class FinanceExpenseCategories {
@@ -578,4 +586,152 @@ class FinanceExpenseCategories {
     'Staff-related (not payroll run)',
     'Other',
   ];
+
+  static String departmentFor(String category) {
+    final key = category.toLowerCase();
+    if (key.contains('education') || key.contains('event')) return 'Academics';
+    if (key.contains('transport') || key.contains('fuel')) return 'Transport';
+    if (key.contains('market')) return 'Marketing';
+    if (key.contains('office') ||
+        key.contains('internet') ||
+        key.contains('staff')) {
+      return 'Administration';
+    }
+    if (key.contains('maintenance') ||
+        key.contains('clean') ||
+        key.contains('utilit')) {
+      return 'Facilities';
+    }
+    return 'Other';
+  }
+}
+
+class FinanceDepartments {
+  static const values = [
+    'Academics',
+    'Transport',
+    'Administration',
+    'Marketing',
+    'Facilities',
+    'Other',
+  ];
+}
+
+class FinanceBudget {
+  const FinanceBudget({
+    required this.id,
+    required this.schoolId,
+    required this.department,
+    required this.academicYear,
+    required this.amount,
+    this.period = 'Annual',
+  });
+
+  final String id;
+  final String schoolId;
+  final String department;
+  final String academicYear;
+  final String period;
+  final double amount;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'schoolId': schoolId,
+        'department': department,
+        'academicYear': academicYear,
+        'period': period,
+        'amount': amount,
+      };
+
+  factory FinanceBudget.fromMap(Map<String, dynamic> map) {
+    return FinanceBudget(
+      id: (map['id'] as String? ?? '').trim(),
+      schoolId: (map['schoolId'] as String? ?? '').trim().toUpperCase(),
+      department: map['department'] as String? ?? 'Other',
+      academicYear: map['academicYear'] as String? ?? '',
+      period: map['period'] as String? ?? 'Annual',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class FinanceBudgetUsage {
+  const FinanceBudgetUsage({
+    required this.budget,
+    required this.actual,
+  });
+
+  final FinanceBudget budget;
+  final double actual;
+
+  double get remaining => budget.amount - actual;
+  double get consumedPercent =>
+      budget.amount <= 0 ? 0 : (actual / budget.amount) * 100;
+  bool get overrun => actual > budget.amount + 0.004;
+}
+
+class FinancePayable {
+  FinancePayable({
+    required this.id,
+    required this.schoolId,
+    required this.supplier,
+    required this.department,
+    required this.amount,
+    required this.dueDate,
+    this.invoiceRef,
+    this.purpose,
+    this.paidAmount = 0,
+  });
+
+  final String id;
+  final String schoolId;
+  final String supplier;
+  final String department;
+  final double amount;
+  final DateTime dueDate;
+  final String? invoiceRef;
+  final String? purpose;
+  double paidAmount;
+
+  double get outstanding =>
+      (amount - paidAmount).clamp(0, double.infinity).toDouble();
+
+  bool get isPaid => outstanding <= 0.004;
+
+  FinanceInvoiceStatus get status {
+    if (isPaid) return FinanceInvoiceStatus.paid;
+    final today = DateTime.now();
+    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final now = DateTime(today.year, today.month, today.day);
+    if (now.isAfter(due)) return FinanceInvoiceStatus.overdue;
+    if (paidAmount > 0) return FinanceInvoiceStatus.partial;
+    return FinanceInvoiceStatus.pending;
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'schoolId': schoolId,
+        'supplier': supplier,
+        'department': department,
+        'amount': amount,
+        'dueDate': dueDate.toIso8601String(),
+        if (invoiceRef != null) 'invoiceRef': invoiceRef,
+        if (purpose != null) 'purpose': purpose,
+        'paidAmount': paidAmount,
+      };
+
+  factory FinancePayable.fromMap(Map<String, dynamic> map) {
+    return FinancePayable(
+      id: (map['id'] as String? ?? '').trim(),
+      schoolId: (map['schoolId'] as String? ?? '').trim().toUpperCase(),
+      supplier: map['supplier'] as String? ?? '',
+      department: map['department'] as String? ?? 'Other',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      dueDate: DateTime.tryParse(map['dueDate'] as String? ?? '') ??
+          DateTime.now(),
+      invoiceRef: map['invoiceRef'] as String?,
+      purpose: map['purpose'] as String?,
+      paidAmount: (map['paidAmount'] as num?)?.toDouble() ?? 0,
+    );
+  }
 }

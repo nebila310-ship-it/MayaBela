@@ -13,6 +13,8 @@ class FinancePersistenceService {
   static const _cashMovesKey = 'finance_cash_moves_v1';
   static const _cashClosesKey = 'finance_cash_closes_v1';
   static const _expensesKey = 'finance_expenses_v1';
+  static const _budgetsKey = 'finance_budgets_v1';
+  static const _payablesKey = 'finance_payables_v1';
   static const _auditKey = 'finance_audit_v1';
 
   Future<void> loadIntoService() async {
@@ -37,6 +39,8 @@ class FinancePersistenceService {
       cashMoves: await read(_cashMovesKey, FinanceCashMovement.fromMap),
       cashCloses: await read(_cashClosesKey, FinanceCashClose.fromMap),
       expenses: await read(_expensesKey, FinanceExpense.fromMap),
+      budgets: await read(_budgetsKey, FinanceBudget.fromMap),
+      payables: await read(_payablesKey, FinancePayable.fromMap),
       audit: await read(_auditKey, FinanceAuditEvent.fromMap),
     );
   }
@@ -70,6 +74,14 @@ class FinancePersistenceService {
     await LocalJsonStore.writeList(
       _expensesKey,
       svc.expenses.map((e) => e.toMap()).toList(),
+    );
+    await LocalJsonStore.writeList(
+      _budgetsKey,
+      svc.budgets.map((e) => e.toMap()).toList(),
+    );
+    await LocalJsonStore.writeList(
+      _payablesKey,
+      svc.payables.map((e) => e.toMap()).toList(),
     );
     await LocalJsonStore.writeList(
       _auditKey,
