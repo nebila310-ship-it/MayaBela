@@ -307,6 +307,14 @@ void main() {
   );
 
   test('ensureClassDiscussion restamps parents onto an existing thread', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.live',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      linkedTeacherId: 'TCH-1001',
+      fullName: 'Miss Belen',
+    );
     const className = 'Grade 5B';
     SchoolDataService.instance.ensureNamedGroupConversation(
       groupName: LmsClassroomService.discussionTitle(className),

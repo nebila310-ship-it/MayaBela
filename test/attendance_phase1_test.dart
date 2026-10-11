@@ -109,6 +109,13 @@ void main() {
   test(
     'first QR scan of the day does not mark the rest of the class absent',
     () {
+      AuthService.currentUser = RegisteredUser(
+        username: 'teacher.p1qr',
+        password: 'x',
+        roleKey: AuthService.roleTeacher,
+        schoolId: 'TB-001',
+        fullName: 'Ms Hana',
+      );
       const className = 'Grade 9Z-P1QR';
       StudentRegistryService.instance.applyPersistedStudents([
         AdminStudentRecord(
