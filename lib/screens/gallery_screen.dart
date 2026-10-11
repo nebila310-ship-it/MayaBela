@@ -7,14 +7,17 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
+import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/gallery_compose.dart';
 import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/gallery_share_service.dart';
+import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_content_sync_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/attachment_path_utils.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
@@ -69,7 +72,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       final schoolId = AuthService.activeSchoolId ?? '';
       final names = <String>{
         ..._data.getAllClassNames(),
-        ..._data.gallerySnapshot().map((post) => post.className),
+        ..._data.galleryForSchool().map((post) => post.className),
         ...SchoolRegistryService.instance.sectionsForSchool(schoolId),
       };
       return names.where((name) => name.trim().isNotEmpty).toList()..sort();
@@ -81,14 +84,19 @@ class _GalleryScreenState extends State<GalleryScreen> {
     if (_isFamilyViewer) {
       final className = _selectedClass;
       if (className != null && className != _allClasses) {
-        final forClass = _data.getGalleryForClass(className);
-        if (forClass.isNotEmpty) return forClass;
+        return _data
+            .getGalleryForParent()
+            .where((post) => StudentRegistryService.classNamesMatch(
+                  post.className,
+                  className,
+                ))
+            .toList();
       }
       return _data.getGalleryForParent();
     }
     if (_isSchoolWide &&
         (_selectedClass == null || _selectedClass == _allClasses)) {
-      return _data.gallerySnapshot().toList()
+      return _data.galleryForSchool().toList()
         ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
     }
     final className = _selectedClass ?? _classOptions.firstOrNull;
@@ -117,6 +125,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     super.initState();
     SchoolContentSyncService.instance.addListener(_refresh);
     unawaited(GalleryMediaService.instance.promotePendingToCloud());
+    unawaited(_pullLatestGallery());
     if (widget.initialClass != null) {
       _selectedClass = widget.initialClass;
     } else if (_isSchoolWide || _isFamilyViewer) {
@@ -133,6 +142,15 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _pullLatestGallery() async {
+    try {
+      await CloudAppStore.instance.pullMappedCollections([
+        AppCollections.galleryPosts,
+      ]);
+    } catch (_) {}
     if (mounted) setState(() {});
   }
 
