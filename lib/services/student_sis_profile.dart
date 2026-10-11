@@ -46,6 +46,7 @@ class StudentSisSnapshot {
   String get groupingSummary {
     final parts = <String>[
       student.className,
+      if (student.fundingType.isScholarship) student.fundingType.label,
       if ((student.house ?? '').trim().isNotEmpty) 'House ${student.house}',
       ...clubNames,
       if (gojoHours > 0) '$gojoHours Gojo hours',

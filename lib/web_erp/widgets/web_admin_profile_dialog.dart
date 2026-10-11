@@ -267,6 +267,17 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                           color: StaffPalette.students.primary,
                         ),
                         StaffInfoTile(
+                          icon: Icons.workspace_premium_outlined,
+                          label: s.studentFundingType,
+                          value: student.fundingType ==
+                                  StudentFundingType.scholarship
+                              ? s.scholarshipStudent
+                              : s.regularStudent,
+                          color: student.fundingType.isScholarship
+                              ? const Color(0xFF6A1B9A)
+                              : StaffPalette.students.secondary,
+                        ),
+                        StaffInfoTile(
                           icon: Icons.home_outlined,
                           label: 'House / grouping',
                           value: StudentSisProfile.load(student.studentId)

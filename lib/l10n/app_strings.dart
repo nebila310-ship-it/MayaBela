@@ -3238,6 +3238,15 @@ class AppStrings implements AppStringsLike {
   String get city => t('City', 'ከተማ');
   String get academicYear =>
       t('Academic Year', 'የትምህርት ዓመት');
+  String get studentFundingType =>
+      t('Student type', 'የተማሪ አይነት', 'Gosa barataa');
+  String get regularStudent =>
+      t('Regular student', 'መደበኛ ተማሪ', 'Barataa idilee');
+  String get scholarshipStudent => t(
+        'Scholarship student',
+        'በስኮላርሺፕ የሚማር ተማሪ',
+        'Barataa scholarship',
+      );
   String get gradeLevelsHint => t('Grade levels (comma-separated)', 'ክፍሎች (comma-separated)');
   String get sectionsHint => t('Sections (Grade 1A, Grade 1B...)', 'ሴክሽኖች (Grade 1A, Grade 1B...)');
   String get principalAccount =>

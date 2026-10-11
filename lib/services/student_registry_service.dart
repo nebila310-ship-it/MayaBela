@@ -11,6 +11,35 @@ import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 import 'package:mayabela/utils/student_id_utils.dart';
 
+/// How the student is enrolled for fees: paying regularly or on scholarship.
+enum StudentFundingType {
+  regular,
+  scholarship,
+}
+
+extension StudentFundingTypeX on StudentFundingType {
+  String get label => switch (this) {
+        StudentFundingType.regular => 'Regular student',
+        StudentFundingType.scholarship => 'Scholarship student',
+      };
+
+  bool get isScholarship => this == StudentFundingType.scholarship;
+
+  static StudentFundingType parse(Object? raw) {
+    if (raw is bool) {
+      return raw ? StudentFundingType.scholarship : StudentFundingType.regular;
+    }
+    final key = (raw?.toString() ?? '').trim().toLowerCase();
+    if (key == 'scholarship' ||
+        key == 'scholar' ||
+        key == 'scholarship_student' ||
+        key == 'scholarshipstudent') {
+      return StudentFundingType.scholarship;
+    }
+    return StudentFundingType.regular;
+  }
+}
+
 class AdminStudentRecord {
   AdminStudentRecord({
     required this.studentId,
@@ -40,6 +69,7 @@ class AdminStudentRecord {
     this.homeroomTeacherId,
     this.academicYear,
     this.house,
+    this.fundingType = StudentFundingType.regular,
     this.hasMedicalCondition = false,
     this.medicalConditionDetails,
     this.otherMedicalInfo,
@@ -83,6 +113,9 @@ class AdminStudentRecord {
   final String? academicYear;
   /// Optional house / Gojo colour group. Not a second campus or class.
   final String? house;
+
+  /// Regular (fee-paying) or scholarship. Existing records default to regular.
+  final StudentFundingType fundingType;
   final bool hasMedicalCondition;
   final String? medicalConditionDetails;
   final String? otherMedicalInfo;
@@ -169,6 +202,7 @@ class AdminStudentRecord {
     String? homeroomTeacherId,
     String? academicYear,
     String? house,
+    StudentFundingType? fundingType,
     String? campus,
     String? gender,
     String? fatherName,
@@ -225,6 +259,7 @@ class AdminStudentRecord {
       homeroomTeacherId: homeroomTeacherId ?? this.homeroomTeacherId,
       academicYear: academicYear ?? this.academicYear,
       house: house ?? this.house,
+      fundingType: fundingType ?? this.fundingType,
       hasMedicalCondition: hasMedicalCondition ?? this.hasMedicalCondition,
       medicalConditionDetails:
           medicalConditionDetails ?? this.medicalConditionDetails,
@@ -271,6 +306,7 @@ class AdminStudentRecord {
         if (homeroomTeacherId != null) 'homeroomTeacherId': homeroomTeacherId,
         if (academicYear != null) 'academicYear': academicYear,
         if (house != null) 'house': house,
+        'fundingType': fundingType.name,
         'hasMedicalCondition': hasMedicalCondition,
         if (medicalConditionDetails != null)
           'medicalConditionDetails': medicalConditionDetails,
@@ -321,6 +357,9 @@ class AdminStudentRecord {
       homeroomTeacherId: map['homeroomTeacherId'] as String?,
       academicYear: map['academicYear'] as String?,
       house: map['house'] as String?,
+      fundingType: StudentFundingTypeX.parse(
+        map['fundingType'] ?? map['studentType'] ?? map['isScholarship'],
+      ),
       hasMedicalCondition: map['hasMedicalCondition'] as bool? ?? false,
       medicalConditionDetails: map['medicalConditionDetails'] as String?,
       otherMedicalInfo: map['otherMedicalInfo'] as String?,
@@ -1029,6 +1068,7 @@ class StudentRegistryService {
     String? homeroomTeacherId,
     String? academicYear,
     String? house,
+    StudentFundingType fundingType = StudentFundingType.regular,
     String? campus,
     bool hasMedicalCondition = false,
     String? medicalConditionDetails,
@@ -1066,6 +1106,7 @@ class StudentRegistryService {
       homeroomTeacherId: _trimOrNull(homeroomTeacherId)?.toUpperCase(),
       academicYear: _trimOrNull(academicYear),
       house: _trimOrNull(house),
+      fundingType: fundingType,
       campus: _trimOrNull(campus) ?? 'Main Campus',
       hasMedicalCondition: hasMedicalCondition,
       medicalConditionDetails: hasMedicalCondition

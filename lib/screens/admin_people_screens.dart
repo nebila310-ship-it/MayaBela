@@ -391,6 +391,16 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
                   value: student.academicYear!,
                   color: const Color(0xFF5D4037),
                 ),
+              StaffInfoTile(
+                icon: Icons.workspace_premium_outlined,
+                label: s.studentFundingType,
+                value: student.fundingType == StudentFundingType.scholarship
+                    ? s.scholarshipStudent
+                    : s.regularStudent,
+                color: student.fundingType.isScholarship
+                    ? const Color(0xFF6A1B9A)
+                    : const Color(0xFF5D4037),
+              ),
               if (homeroomTeacher != null)
                 StaffInfoTile(
                   icon: Icons.school_outlined,

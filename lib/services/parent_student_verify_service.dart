@@ -115,6 +115,7 @@ class ParentStudentVerifyService {
       motherPhone: _optional(data['motherPhone']),
       guardianName: _optional(data['guardianName']),
       guardianPhone: _optional(data['guardianPhone']),
+      fundingType: StudentFundingTypeX.parse(data['fundingType']),
     );
   }
 

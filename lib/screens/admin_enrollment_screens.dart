@@ -1117,6 +1117,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
   final _homeroomTeacherId = TextEditingController();
   final _academicYear = TextEditingController(text: '2025/2026');
   final _house = TextEditingController();
+  StudentFundingType _fundingType = StudentFundingType.regular;
   final _medicalDetails = TextEditingController();
   final _otherMedical = TextEditingController();
   final _transportId = TextEditingController();
@@ -1403,6 +1404,7 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
       homeroomTeacherId: homeroomTeacherId,
       academicYear: _academicYear.text.trim(),
       house: _house.text.trim(),
+      fundingType: _fundingType,
       hasMedicalCondition: _hasMedicalCondition,
       medicalConditionDetails: _medicalDetails.text,
       otherMedicalInfo: _otherMedical.text,
@@ -1818,6 +1820,31 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
                     icon: Icons.home_outlined,
                     accent: theme.secondary,
                   ),
+                ),
+                DropdownButtonFormField<StudentFundingType>(
+                  initialValue: _fundingType,
+                  decoration: adminFieldDecoration(
+                    label: s.studentFundingType,
+                    icon: Icons.workspace_premium_outlined,
+                    accent: theme.secondary,
+                  ),
+                  items: StudentFundingType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            type == StudentFundingType.scholarship
+                                ? s.scholarshipStudent
+                                : s.regularStudent,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _fundingType = value);
+                    }
+                  },
                 ),
                 const SizedBox(height: 12),
                 Text(

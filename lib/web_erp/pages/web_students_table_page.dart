@@ -23,7 +23,7 @@ class WebStudentsTablePage extends StatefulWidget {
   final ValueChanged<String>? onNavigate;
 
   /// Wide enough for the checkbox, identity, family, transport, and actions.
-  static const double directoryMinTableWidth = 1280;
+  static const double directoryMinTableWidth = 1400;
 
   @override
   State<WebStudentsTablePage> createState() => _WebStudentsTablePageState();
@@ -292,6 +292,7 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                             const DataColumn(label: Text('Parent')),
                             const DataColumn(label: Text('Transport')),
                             const DataColumn(label: Text('Status')),
+                            const DataColumn(label: Text('Student type')),
                             const DataColumn(label: Text('Actions')),
                           ],
                           rows: [
@@ -352,6 +353,7 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                                     ),
                                   ),
                                   DataCell(Text(s.lifecycleStatus.label)),
+                                  DataCell(Text(s.fundingType.label)),
                                   DataCell(
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
