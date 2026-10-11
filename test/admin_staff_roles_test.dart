@@ -111,5 +111,39 @@ void main() {
         .firstWhere((m) => m.name == 'Belen Mulugeta');
     expect(belen.kind, InstitutionStaffKind.admin);
     expect(belen.title, 'CEO');
+    expect(
+      InstitutionStaffMember.directoryLine(belen),
+      startsWith('CEO · '),
+    );
+    expect(InstitutionStaffMember.directoryLine(belen), isNot(contains('Teacher')));
+  });
+
+  test('signed-in administration staff see the renamed job title', () async {
+    await SchoolRoleCatalogService.instance.renameRole(
+      roleKey: StaffRoles.generalManager,
+      label: 'CEO',
+      schoolId: schoolId,
+    );
+    TeacherRegistryService.instance.addTeacher(
+      schoolId: schoolId,
+      fullName: 'Belen Mulugeta',
+      email: 'belen@school.test',
+      phone: '0911000000',
+      assignedClass: '',
+      roles: const [],
+      loginUsername: 'belen.gm',
+      staffRoles: const [StaffRoles.generalManager],
+    );
+    AuthService.currentUser = RegisteredUser(
+      username: 'belen.gm',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: schoolId,
+      fullName: 'Belen Mulugeta',
+      staffRoles: const [StaffRoles.generalManager],
+    );
+
+    expect(signedInJobTitle(AppLocale.instance.strings), 'CEO');
+    expect(signedInJobTitle(AppLocale.instance.strings), isNot(contains('Teacher')));
   });
 }

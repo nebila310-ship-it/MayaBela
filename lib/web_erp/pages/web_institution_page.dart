@@ -2547,11 +2547,7 @@ class _StaffPicker extends StatelessWidget {
                           value: selectedKeys.contains(member.key),
                           title: Text(member.name),
                           subtitle: Text(
-                            [
-                              InstitutionStaffMember.kindLabel(member.kind),
-                              member.personId,
-                              if (member.title.isNotEmpty) member.title,
-                            ].join(' · '),
+                            InstitutionStaffMember.directoryLine(member),
                           ),
                           onChanged: (_) => onToggle(member),
                         ),

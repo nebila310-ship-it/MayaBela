@@ -14,6 +14,7 @@ import 'package:mayabela/services/student_portal_sync_service.dart';
 import 'package:mayabela/setup/dashboard_setup.dart';
 import 'package:mayabela/widgets/adaptive_dashboard_shell.dart';
 import 'package:mayabela/widgets/dashboard_welcome_card.dart';
+import 'package:mayabela/widgets/staff_role_labels.dart';
 import 'package:mayabela/widgets/teacher_profile_avatar.dart';
 
 class RoleDashboardShell extends StatelessWidget {
@@ -74,9 +75,15 @@ class RoleDashboardShell extends StatelessWidget {
           fallback: s.schoolName(AuthService.activeSchoolId),
         );
         final schoolId = AuthService.activeSchoolId;
-        final subtitle = schoolId != null
-            ? '$schoolName · $schoolId'
-            : schoolName;
+        final jobTitle = (roleKey == AuthService.roleTeacher ||
+                roleKey == AuthService.roleStaff)
+            ? signedInJobTitle(s)
+            : null;
+        final subtitle = [
+          if (jobTitle case final title? when title.isNotEmpty) title,
+          schoolName,
+          if (schoolId != null) schoolId,
+        ].join(' · ');
 
         return AdaptiveDashboardShell(
           title: _portalTitle(s, schoolName),

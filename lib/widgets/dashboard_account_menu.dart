@@ -7,6 +7,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/utils/auth_navigation.dart';
+import 'package:mayabela/widgets/staff_role_labels.dart';
 
 /// Modern account sheet — profile, settings, logout (all role dashboards).
 Future<void> showDashboardAccountMenu(
@@ -20,7 +21,7 @@ Future<void> showDashboardAccountMenu(
       : AuthService.displayNameForRole(roleKey);
   final roleLabel = switch (roleKey) {
     AuthService.roleAdmin => s.roleAdminLabel,
-    AuthService.roleTeacher => s.teacherLabelShort,
+    AuthService.roleTeacher || AuthService.roleStaff => signedInJobTitle(s),
     AuthService.roleParent => s.parentLabel,
     AuthService.roleDriver => s.roleDriverLabel,
     _ => roleKey,
