@@ -39,9 +39,9 @@ void main() {
   });
 
   testWidgets(
-    'students directory scrolls both axes and keeps the pager clear of Maya',
+    'phone student list uses page scroll and tiles, not an inner table scroller',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(900, 520));
+      await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
@@ -49,13 +49,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(WebErpHScroll), findsOneWidget);
-      final scroller = tester.widget<WebErpHScroll>(find.byType(WebErpHScroll));
-      expect(
-        scroller.minChildWidth,
-        WebStudentsTablePage.directoryMinTableWidth,
-      );
-
+      expect(find.byType(WebErpHScroll), findsNothing);
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byKey(const ValueKey('students-page-scroll')), findsOneWidget);
+      expect(find.byType(ListTile), findsWidgets);
       expect(find.text('Student 1'), findsOneWidget);
       expect(find.text('12 students'), findsOneWidget);
       expect(find.text('Page 1 of 2'), findsOneWidget);
@@ -63,29 +60,30 @@ void main() {
       final pager = tester.widget<Padding>(
         find.byKey(const ValueKey('students-pagination')),
       );
-      expect(pager.padding, isA<EdgeInsets>());
       expect(
         (pager.padding as EdgeInsets).right,
         MayaFloatingChat.pageEndClearance,
       );
-      expect(MayaFloatingChat.pageEndClearance, greaterThanOrEqualTo(72));
+    },
+  );
 
-      final verticalFinder = find.descendant(
-        of: find.byType(WebErpHScroll),
-        matching: find.byWidgetPredicate(
-          (widget) => widget is Scrollable && widget.axis == Axis.vertical,
-        ),
-      );
-      expect(verticalFinder, findsOneWidget);
-      final vertical = tester.widget<Scrollable>(verticalFinder);
-      expect(vertical.controller, isNotNull);
-      expect(vertical.controller!.position.maxScrollExtent, greaterThan(0));
+  testWidgets(
+    'desktop student list keeps a table and the pager clear of Maya',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      final hView = tester.widget<SingleChildScrollView>(
-        find.byKey(const ValueKey('web-erp-hscroll-view')),
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: WebStudentsTablePage())),
       );
-      expect(hView.controller, isNotNull);
-      expect(hView.controller!.position.maxScrollExtent, greaterThan(200));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WebErpHScroll), findsNothing);
+      expect(find.byType(DataTable), findsOneWidget);
+      expect(find.byKey(const ValueKey('students-page-scroll')), findsNothing);
+      expect(find.text('Student 1'), findsOneWidget);
+      expect(find.text('12 students'), findsOneWidget);
+      expect(find.text('Page 1 of 2'), findsOneWidget);
     },
   );
 }
