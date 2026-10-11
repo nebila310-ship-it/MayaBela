@@ -361,7 +361,7 @@ class _StudentAttemptPageState extends State<_StudentAttemptPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$number. ${question.prompt}',
+              '$number. ${question.displayPrompt}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             if (question.attachmentPaths.isNotEmpty) ...[

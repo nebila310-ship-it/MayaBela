@@ -289,7 +289,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
           for (final question in questions)
             _card(
               child: ListTile(
-                title: Text(question.prompt),
+                title: Text(question.displayPrompt),
                 subtitle: Text(
                   '${question.subject} · ${_categoryOrUnfiled(question.category)} · '
                   '${_typeLabel(question.type)} · '
@@ -528,7 +528,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
             for (final question in questions)
               _card(
                 child: ListTile(
-                  title: Text(question.prompt),
+                  title: Text(question.displayPrompt),
                   subtitle: Text(
                     '${question.subject} · ${_categoryOrUnfiled(question.category)} · '
                     '${_typeLabel(question.type)} · '
@@ -1028,9 +1028,16 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
   }
 
   Future<void> _save() async {
-    final prompt = _prompt.text.trim();
+    final prompt = ExamQuestion.promptFromInput(_prompt.text, _attachments);
     final points = double.tryParse(_points.text.trim()) ?? 1;
-    if (prompt.isEmpty) return;
+    if (prompt.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Write a question or attach a question file.'),
+        ),
+      );
+      return;
+    }
     final choices = <ExamChoice>[];
     if (_type == ExamQuestionType.mcq) {
       const ids = ['A', 'B', 'C', 'D'];
@@ -1174,7 +1181,11 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
               TextField(
                 controller: _prompt,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Prompt'),
+                decoration: const InputDecoration(
+                  labelText: 'Question',
+                  helperText:
+                      'Type the question here, or leave blank and attach a file only.',
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -1252,6 +1263,13 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late String _bankCategory;
   late ExamVaultAccess _vaultAccess;
   late final TextEditingController _customCategory;
+  late final TextEditingController _qPrompt;
+  late final TextEditingController _qPoints;
+  late final List<TextEditingController> _qChoices;
+  ExamQuestionType _qType = ExamQuestionType.shortAnswer;
+  String? _qCorrectId = 'A';
+  List<String> _qAttachments = const [];
+  bool _addingQuestion = false;
 
   @override
   void initState() {
@@ -1282,12 +1300,22 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
           ? _bankCategory
           : '',
     );
+    _qPrompt = TextEditingController();
+    _qPoints = TextEditingController(text: '1');
+    _qChoices = [
+      for (var i = 0; i < 4; i++) TextEditingController(),
+    ];
   }
 
   @override
   void dispose() {
     _title.dispose();
     _customCategory.dispose();
+    _qPrompt.dispose();
+    _qPoints.dispose();
+    for (final c in _qChoices) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -1296,13 +1324,83 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
     return _bankCategory.trim();
   }
 
-  Future<void> _save() async {
-    final title = _title.text.trim();
-    if (title.isEmpty || _className.isEmpty || _selected.isEmpty) {
+  Future<void> _addQuestion() async {
+    if (_addingQuestion) return;
+    final prompt = ExamQuestion.promptFromInput(_qPrompt.text, _qAttachments);
+    if (prompt.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title, class, and at least one question are required.')),
+        const SnackBar(
+          content: Text('Type a question or attach a question file, then add it.'),
+        ),
       );
       return;
+    }
+    final choices = <ExamChoice>[];
+    if (_qType == ExamQuestionType.mcq) {
+      const ids = ['A', 'B', 'C', 'D'];
+      for (var i = 0; i < ids.length; i++) {
+        final text = _qChoices[i].text.trim();
+        if (text.isEmpty) continue;
+        choices.add(ExamChoice(id: ids[i], text: text));
+      }
+      if (choices.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Add at least two MCQ choices.')),
+        );
+        return;
+      }
+    }
+    setState(() => _addingQuestion = true);
+    try {
+      final question = await ExamService.instance.createQuestion(
+        subject: _subject,
+        prompt: prompt,
+        type: _qType,
+        points: double.tryParse(_qPoints.text.trim()) ?? 1,
+        choices: choices,
+        correctChoiceId: _qType == ExamQuestionType.mcq ? _qCorrectId : null,
+        attachmentPaths: _qAttachments,
+        category: _resolvedBankCategory,
+        vaultAccess: _vaultAccess,
+      );
+      if (!mounted) return;
+      setState(() {
+        _selected.add(question.id);
+        _qPrompt.clear();
+        _qPoints.text = '1';
+        for (final c in _qChoices) {
+          c.clear();
+        }
+        _qAttachments = const [];
+        _qType = ExamQuestionType.shortAnswer;
+        _qCorrectId = 'A';
+      });
+    } finally {
+      if (mounted) setState(() => _addingQuestion = false);
+    }
+  }
+
+  Future<void> _save() async {
+    final title = _title.text.trim();
+    if (title.isEmpty || _className.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Title and class are required.')),
+      );
+      return;
+    }
+    if (_selected.isEmpty && _attachments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add a question one by one, or attach the paper file.',
+          ),
+        ),
+      );
+      return;
+    }
+    var sitting = _sittingMode;
+    if (_selected.isEmpty && sitting == ExamSittingMode.online) {
+      sitting = ExamSittingMode.offline;
     }
     if (widget.existing == null) {
       await ExamService.instance.createPaper(
@@ -1313,7 +1411,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         markbookCategoryId: _categoryId,
         attachmentPaths: _attachments,
         kind: _kind,
-        sittingMode: _sittingMode,
+        sittingMode: sitting,
         startAt: _startAt,
         endAt: _endAt,
         category: _resolvedBankCategory,
@@ -1327,7 +1425,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         markbookCategoryId: _categoryId,
         attachmentPaths: _attachments,
         kind: _kind,
-        sittingMode: _sittingMode,
+        sittingMode: sitting,
         startAt: _startAt,
         endAt: _endAt,
         clearWindow: _startAt == null && _endAt == null,
@@ -1570,12 +1668,128 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-              if (questions.isEmpty)
+              const SizedBox(height: 4),
+              Text(
+                'Write questions one by one and tap Add question. '
+                'A paper file alone is also enough — no bank question required.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _qPrompt,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Question',
+                  helperText:
+                      'Type the question, or leave blank and attach a file only.',
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<ExamQuestionType>(
+                key: ValueKey('paper-q-type-$_qType'),
+                initialValue: _qType,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: const [
+                  DropdownMenuItem(
+                    value: ExamQuestionType.shortAnswer,
+                    child: Text('Short answer'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamQuestionType.mcq,
+                    child: Text('Multiple choice'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamQuestionType.essay,
+                    child: Text('Essay'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _qType = v ?? _qType),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _qPoints,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Points'),
+              ),
+              if (_qType == ExamQuestionType.mcq) ...[
+                const SizedBox(height: 8),
+                for (var i = 0; i < 4; i++)
+                  RadioListTile<String>(
+                    dense: true,
+                    value: const ['A', 'B', 'C', 'D'][i],
+                    groupValue: _qCorrectId,
+                    onChanged: (v) => setState(() => _qCorrectId = v),
+                    title: TextField(
+                      controller: _qChoices[i],
+                      decoration: InputDecoration(
+                        labelText: 'Choice ${const ['A', 'B', 'C', 'D'][i]}',
+                      ),
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 8),
+              CourseAttachmentPicker(
+                paths: _qAttachments,
+                subdir: 'exam_question_attachments',
+                sectionTitle: 'This question file',
+                onChanged: (next) => setState(() => _qAttachments = next),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  onPressed: _addingQuestion ? null : _addQuestion,
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    _addingQuestion ? 'Adding…' : 'Add question',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_selected.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'On this paper (${_selected.length})',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                for (final id in _selected)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      ExamService.instance.questionById(id)?.displayPrompt ?? id,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      ExamService.instance.questionById(id) == null
+                          ? id
+                          : '${_WebExamDeskPageState._typeLabel(ExamService.instance.questionById(id)!.type)} · '
+                              '${ExamService.instance.questionById(id)!.points.toStringAsFixed(0)} pts',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      onPressed: () => setState(() => _selected.remove(id)),
+                    ),
+                  ),
+              ] else
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No bank questions for this subject yet.'),
-                )
-              else
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No questions on this paper yet. Add one above, or save with the attached paper file only.',
+                  ),
+                ),
+              if (questions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Or pick from your bank',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
                 for (final q in questions)
                   CheckboxListTile(
                     dense: true,
@@ -1587,11 +1801,16 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                         _selected.remove(q.id);
                       }
                     }),
-                    title: Text(q.prompt, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    title: Text(
+                      q.displayPrompt,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     subtitle: Text(
                       '${_WebExamDeskPageState._typeLabel(q.type)} · ${q.points.toStringAsFixed(0)} pts',
                     ),
                   ),
+              ],
             ],
           ),
         ),
@@ -1723,7 +1942,7 @@ class _AttemptScoreDialogState extends State<_AttemptScoreDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            question.prompt,
+            question.displayPrompt,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           if (question.attachmentPaths.isNotEmpty) ...[

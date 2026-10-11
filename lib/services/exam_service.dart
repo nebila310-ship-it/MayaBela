@@ -266,7 +266,7 @@ class ExamService extends ChangeNotifier {
       id: _allocateId('Q', _questions.map((q) => q.id)),
       schoolId: (schoolId ?? _schoolId).toUpperCase(),
       subject: subject.trim(),
-      prompt: prompt.trim(),
+      prompt: ExamQuestion.promptFromInput(prompt, attachmentPaths),
       type: type,
       points: points,
       choices: choices,
