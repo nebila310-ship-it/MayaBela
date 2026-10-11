@@ -61,6 +61,7 @@ import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/persistence/driver_persistence_service.dart';
 import 'package:mayabela/services/persistence/employee_persistence_service.dart';
 import 'package:mayabela/services/persistence/payroll_persistence_service.dart';
+import 'package:mayabela/services/persistence/finance_persistence_service.dart';
 import 'package:mayabela/services/persistence/bus_persistence_service.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
@@ -188,6 +189,7 @@ Future<void> bootstrapBackgroundServices() async {
       LearningMaterialsPersistenceService.instance.loadIntoSchoolDataService(),
       MaterialPurchaseService.instance.load(),
       InventoryPersistenceService.instance.loadIntoService(),
+      FinancePersistenceService.instance.loadIntoService(),
       MessagePersistenceService.instance.loadIntoSchoolDataService(),
       SchoolContentPersistenceService.instance.loadIntoSchoolDataService(),
       TimetablePersistenceService.instance.loadIntoTimetableService(),
