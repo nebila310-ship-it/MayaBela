@@ -10,6 +10,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/course_attachment_picker.dart';
@@ -30,14 +31,27 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
   late final TabController _tabs;
   final _exams = ExamService.instance;
   String? _bankSubject;
+  String? _bankCategory;
+  String? _paperCategory;
+  String? _vaultCategory;
   String? _scorePaperId;
   ExamKind? _kindFilter;
   bool _showHistory = false;
+  String _vaultKind = 'all';
 
-  bool get _canManage => ModuleAccess.canManage('exam_bank');
+  bool get _teacherScoped => AuthService.isClassroomTeacher;
+  bool get _canManage =>
+      ModuleAccess.canManage('exam_bank') || _teacherScoped;
   String get _schoolId => AuthService.activeSchoolId ?? '';
 
   List<String> get _classes {
+    if (_teacherScoped) {
+      final names = <String>{
+        ...TeacherAccessService.instance.myClasses.map((a) => a.className),
+        ...AuthService.accessClassNamesForSync(),
+      };
+      return names.where((n) => n.trim().isNotEmpty).toList()..sort();
+    }
     final names = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
       ...SchoolDataService.instance.getAllGradeReports().map((r) => r.className),
@@ -55,10 +69,29 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
   }
 
   List<String> get _subjects {
+    if (_teacherScoped) {
+      final names = <String>{
+        ..._exams.questionsForTeacher(null, _schoolId).map((q) => q.subject),
+      };
+      for (final className in _classes) {
+        names.addAll(TeacherAccessService.instance.teachableSubjects(className));
+      }
+      if (names.isNotEmpty) return names.toList()..sort();
+    }
     final fromBank = _exams.questionsForSchool(_schoolId).map((q) => q.subject);
     final list = {...fromBank, ...SchoolSubjects.all}.toList()..sort();
     return list;
   }
+
+  List<String> get _mineCategories => _exams.bankCategories(
+        schoolId: _schoolId,
+        mineOnly: _teacherScoped,
+      );
+
+  List<String> get _vaultCategories => _exams.bankCategories(
+        schoolId: _schoolId,
+        vaultOnly: true,
+      );
 
   List<AssessmentCategory> get _examCategories {
     final cats = MarkbookService.instance.settingsForSchool().categories;
@@ -84,7 +117,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     _exams.ensureLoaded();
   }
 
@@ -119,10 +152,16 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Build questions, publish a paper onto a class, score '
-                    'short/essay answers, then push the percent into the '
-                    'weighted markbook (quiz, midterm, or final). Parents still '
-                    'see numbers only after the existing grade approval chain.',
+                    _teacherScoped
+                        ? 'Keep questions and papers in your own categorized '
+                            'list. Share a copy into the school vault so other '
+                            'teachers can open and reuse it. Scoring still writes '
+                            'the markbook; parents see numbers only after approval.'
+                        : 'Build questions, publish a paper onto a class, score '
+                            'short/essay answers, then push the percent into the '
+                            'weighted markbook (quiz, midterm, or final). The '
+                            'school vault holds papers teachers chose to share. '
+                            'Parents still see numbers only after grade approval.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -132,8 +171,11 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                     controller: _tabs,
                     isScrollable: true,
                     tabs: [
-                      const Tab(text: 'Question bank'),
-                      const Tab(text: 'Papers'),
+                      Tab(
+                        text: _teacherScoped ? 'My question bank' : 'Question bank',
+                      ),
+                      Tab(text: _teacherScoped ? 'My papers' : 'Papers'),
+                      const Tab(text: 'School vault'),
                       Tab(
                         text: _exams.unscoredCount(_schoolId) == 0
                             ? 'Scoring desk'
@@ -150,6 +192,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 children: [
                   _bankTab(narrow),
                   _papersTab(narrow),
+                  _vaultTab(narrow),
                   _scoringTab(narrow),
                 ],
               ),
@@ -161,10 +204,17 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
   }
 
   Widget _bankTab(bool narrow) {
-    var questions = _exams.questionsForSchool(_schoolId);
+    var questions = _teacherScoped
+        ? _exams.questionsForTeacher(null, _schoolId)
+        : _exams.questionsForSchool(_schoolId);
     if (_bankSubject != null) {
       questions =
           questions.where((q) => q.subject == _bankSubject).toList();
+    }
+    if (_bankCategory != null) {
+      questions = questions
+          .where((q) => q.category.trim() == _bankCategory)
+          .toList();
     }
     return ListView(
       padding: EdgeInsets.all(narrow ? 12 : 20),
@@ -201,6 +251,27 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 onChanged: (v) => setState(() => _bankSubject = v),
               ),
             ),
+            SizedBox(
+              width: 200,
+              child: DropdownButtonFormField<String?>(
+                key: ValueKey('bank-cat-$_bankCategory'),
+                initialValue: _bankCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  for (final name in _mineCategories)
+                    DropdownMenuItem(value: name, child: Text(name)),
+                ],
+                onChanged: (v) => setState(() => _bankCategory = v),
+              ),
+            ),
             TextButton(
               onPressed: () => widget.onNavigate?.call('markbook'),
               child: const Text('Open markbook'),
@@ -209,18 +280,24 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
         ),
         const SizedBox(height: 14),
         if (questions.isEmpty)
-          _emptyCard('No questions in the bank yet. Add an MCQ, short answer, or essay.')
+          _emptyCard(
+            _teacherScoped
+                ? 'Your question list is empty. Add an MCQ, short answer, or essay and file it under a category.'
+                : 'No questions in the bank yet. Add an MCQ, short answer, or essay.',
+          )
         else
           for (final question in questions)
             _card(
               child: ListTile(
                 title: Text(question.prompt),
                 subtitle: Text(
-                  '${question.subject} · ${_typeLabel(question.type)} · '
-                  '${question.points.toStringAsFixed(0)} pts · ${question.id}'
+                  '${question.subject} · ${_categoryOrUnfiled(question.category)} · '
+                  '${_typeLabel(question.type)} · '
+                  '${question.points.toStringAsFixed(0)} pts · '
+                  '${_accessLabel(question.vaultAccess)} · ${question.id}'
                   '${question.attachmentPaths.isEmpty ? '' : ' · ${question.attachmentPaths.length} file(s)'}',
                 ),
-                trailing: _canManage
+                trailing: _exams.canEditQuestion(question)
                     ? IconButton(
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () => _editQuestion(question),
@@ -234,9 +311,16 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
 
   Widget _papersTab(bool narrow) {
     final now = DateTime.now();
-    var papers = _exams.papersForSchool(_schoolId);
+    var papers = _teacherScoped
+        ? _exams.papersForTeacher(null, _schoolId)
+        : _exams.papersForSchool(_schoolId);
     if (_kindFilter != null) {
       papers = papers.where((p) => p.kind == _kindFilter).toList();
+    }
+    if (_paperCategory != null) {
+      papers = papers
+          .where((p) => p.category.trim() == _paperCategory)
+          .toList();
     }
     papers = papers
         .where((p) => _showHistory ? p.isHistoricalAt(now) : !p.isHistoricalAt(now))
@@ -280,6 +364,27 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
               selected: _showHistory,
               onSelected: (v) => setState(() => _showHistory = v),
             ),
+            SizedBox(
+              width: 200,
+              child: DropdownButtonFormField<String?>(
+                key: ValueKey('paper-list-cat-$_paperCategory'),
+                initialValue: _paperCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  for (final name in _mineCategories)
+                    DropdownMenuItem(value: name, child: Text(name)),
+                ],
+                onChanged: (v) => setState(() => _paperCategory = v),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -287,7 +392,9 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
           _emptyCard(
             _showHistory
                 ? 'No closed or expired papers in the historical repository yet.'
-                : 'Compose a paper from the bank, pick a class and markbook category, then publish.',
+                : _teacherScoped
+                    ? 'Compose a paper from your bank, file it in a category, and optionally share it to the school vault.'
+                    : 'Compose a paper from the bank, pick a class and markbook category, then publish.',
           )
         else
           for (final paper in papers)
@@ -296,13 +403,15 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 title: Text(paper.title),
                 subtitle: Text(
                   '${paper.className} · ${paper.subject} · '
+                  '${_categoryOrUnfiled(paper.category)} · '
+                  '${_accessLabel(paper.vaultAccess)} · '
                   '${_kindLabel(paper.kind)} · ${_sittingLabel(paper.sittingMode)} · '
                   '${_categoryLabel(paper.markbookCategoryId)} · '
                   '${paper.questionIds.length} questions · ${_statusLabel(paper.status)}'
                   '${_windowLabel(paper)}'
                   '${paper.attachmentPaths.isEmpty ? '' : ' · ${paper.attachmentPaths.length} file(s)'}',
                 ),
-                trailing: _canManage
+                trailing: _exams.canEditPaper(paper)
                     ? Wrap(
                         spacing: 4,
                         children: [
@@ -342,8 +451,163 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
     );
   }
 
+  Widget _vaultTab(bool narrow) {
+    var questions = _exams.vaultQuestions(_schoolId);
+    var papers = _exams.vaultPapers(_schoolId);
+    if (_vaultCategory != null) {
+      questions = questions
+          .where((q) => q.category.trim() == _vaultCategory)
+          .toList();
+      papers = papers
+          .where((p) => p.category.trim() == _vaultCategory)
+          .toList();
+    }
+    final showQuestions = _vaultKind != 'papers';
+    final showPapers = _vaultKind != 'questions';
+    return ListView(
+      padding: EdgeInsets.all(narrow ? 12 : 20),
+      children: [
+        Text(
+          'Every teacher’s shared exams live here. Copy an item into your own '
+          'list to edit it; the original stays with its author.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            FilterChip(
+              label: const Text('All'),
+              selected: _vaultKind == 'all',
+              onSelected: (_) => setState(() => _vaultKind = 'all'),
+            ),
+            FilterChip(
+              label: const Text('Questions'),
+              selected: _vaultKind == 'questions',
+              onSelected: (_) => setState(() => _vaultKind = 'questions'),
+            ),
+            FilterChip(
+              label: const Text('Papers'),
+              selected: _vaultKind == 'papers',
+              onSelected: (_) => setState(() => _vaultKind = 'papers'),
+            ),
+            SizedBox(
+              width: 200,
+              child: DropdownButtonFormField<String?>(
+                key: ValueKey('vault-cat-$_vaultCategory'),
+                initialValue: _vaultCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  for (final name in _vaultCategories)
+                    DropdownMenuItem(value: name, child: Text(name)),
+                ],
+                onChanged: (v) => setState(() => _vaultCategory = v),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (showQuestions) ...[
+          Text('Shared questions', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (questions.isEmpty)
+            _emptyCard('No shared questions in the vault yet.')
+          else
+            for (final question in questions)
+              _card(
+                child: ListTile(
+                  title: Text(question.prompt),
+                  subtitle: Text(
+                    '${question.subject} · ${_categoryOrUnfiled(question.category)} · '
+                    '${_typeLabel(question.type)} · '
+                    'by ${question.createdBy ?? 'unknown'}',
+                  ),
+                  trailing: _canManage
+                      ? TextButton(
+                          onPressed: () async {
+                            await _exams.copyQuestionToMyBank(question.id);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Copied to your question bank.'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Copy to my list'),
+                        )
+                      : null,
+                ),
+              ),
+          const SizedBox(height: 16),
+        ],
+        if (showPapers) ...[
+          Text('Shared papers', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (papers.isEmpty)
+            _emptyCard('No shared papers in the vault yet.')
+          else
+            for (final paper in papers)
+              _card(
+                child: ListTile(
+                  title: Text(paper.title),
+                  subtitle: Text(
+                    '${paper.className} · ${paper.subject} · '
+                    '${_categoryOrUnfiled(paper.category)} · '
+                    '${_kindLabel(paper.kind)} · '
+                    'by ${paper.createdBy ?? 'unknown'}',
+                  ),
+                  trailing: _canManage
+                      ? TextButton(
+                          onPressed: () async {
+                            await _exams.copyPaperToMyBank(paper.id);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Copied to your papers.'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Copy to my list'),
+                        )
+                      : null,
+                ),
+              ),
+        ],
+      ],
+    );
+  }
+
   Widget _scoringTab(bool narrow) {
-    final papers = _exams.papersForSchool(_schoolId);
+    final papers = _teacherScoped
+        ? () {
+            final byId = <String, ExamPaper>{
+              for (final paper in _exams.papersForTeacher(null, _schoolId))
+                paper.id: paper,
+            };
+            for (final paper in _exams.papersForSchool(_schoolId)) {
+              if (_exams.canEditPaper(paper) ||
+                  TeacherAccessService.instance.assignmentFor(paper.className) !=
+                      null) {
+                byId[paper.id] = paper;
+              }
+            }
+            return byId.values.toList();
+          }()
+        : _exams.papersForSchool(_schoolId);
     final selected =
         _scorePaperId == null ? null : _exams.paperById(_scorePaperId!);
     var attempts = _scorePaperId == null
@@ -351,6 +615,18 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
             .where((a) => _schoolId.isEmpty || a.schoolId == _schoolId.toUpperCase())
             .toList()
         : _exams.attemptsForPaper(_scorePaperId!);
+    if (_teacherScoped) {
+      attempts = attempts.where((a) {
+        final paper = _exams.paperById(a.paperId);
+        if (paper != null && _exams.canEditPaper(paper)) return true;
+        if (TeacherAccessService.instance.assignmentFor(a.className) != null) {
+          return true;
+        }
+        return paper != null &&
+            TeacherAccessService.instance.assignmentFor(paper.className) !=
+                null;
+      }).toList();
+    }
     attempts.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return ListView(
       padding: EdgeInsets.all(narrow ? 12 : 20),
@@ -640,6 +916,16 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
     return id;
   }
 
+  static String _categoryOrUnfiled(String category) {
+    final trimmed = category.trim();
+    return trimmed.isEmpty ? 'Unfiled' : trimmed;
+  }
+
+  static String _accessLabel(ExamVaultAccess access) => switch (access) {
+        ExamVaultAccess.private => 'My list only',
+        ExamVaultAccess.vault => 'School vault',
+      };
+
   static String _statusLabel(ExamPaperStatus status) => switch (status) {
         ExamPaperStatus.draft => 'Draft',
         ExamPaperStatus.published => 'Published',
@@ -689,6 +975,9 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
   late ExamQuestionType _type;
   String? _correctId;
   late List<String> _attachments;
+  late String _category;
+  late ExamVaultAccess _vaultAccess;
+  late final TextEditingController _customCategory;
 
   @override
   void initState() {
@@ -712,16 +1001,30 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
     ];
     _correctId = q?.correctChoiceId ?? 'A';
     _attachments = List<String>.from(q?.attachmentPaths ?? const []);
+    _category = q?.category.trim() ?? '';
+    _vaultAccess = q?.vaultAccess ?? ExamVaultAccess.private;
+    _customCategory = TextEditingController(
+      text: _category.isNotEmpty &&
+              !ExamBankCategories.suggested.contains(_category)
+          ? _category
+          : '',
+    );
   }
 
   @override
   void dispose() {
     _prompt.dispose();
     _points.dispose();
+    _customCategory.dispose();
     for (final c in _choices) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  String get _resolvedCategory {
+    if (_category == '__custom__') return _customCategory.text.trim();
+    return _category.trim();
   }
 
   Future<void> _save() async {
@@ -752,6 +1055,8 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
         choices: choices,
         correctChoiceId: _type == ExamQuestionType.mcq ? _correctId : null,
         attachmentPaths: _attachments,
+        category: _resolvedCategory,
+        vaultAccess: _vaultAccess,
       );
     } else {
       await ExamService.instance.updateQuestion(
@@ -762,6 +1067,8 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
         choices: choices,
         correctChoiceId: _type == ExamQuestionType.mcq ? _correctId : null,
         attachmentPaths: _attachments,
+        category: _resolvedCategory,
+        vaultAccess: _vaultAccess,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -786,6 +1093,59 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
                     DropdownMenuItem(value: name, child: Text(name)),
                 ],
                 onChanged: (v) => setState(() => _subject = v ?? _subject),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                key: ValueKey('q-cat-$_category'),
+                initialValue: _category.isEmpty
+                    ? ''
+                    : ExamBankCategories.suggested.contains(_category)
+                        ? _category
+                        : '__custom__',
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: [
+                  const DropdownMenuItem(value: '', child: Text('Unfiled')),
+                  for (final name in ExamBankCategories.suggested)
+                    DropdownMenuItem(value: name, child: Text(name)),
+                  const DropdownMenuItem(
+                    value: '__custom__',
+                    child: Text('Custom category'),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _category = v ?? _category),
+              ),
+              if (_category == '__custom__' ||
+                  (_category.isNotEmpty &&
+                      !ExamBankCategories.suggested.contains(_category))) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _customCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Custom category name',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              DropdownButtonFormField<ExamVaultAccess>(
+                key: ValueKey('q-vault-$_vaultAccess'),
+                initialValue: _vaultAccess,
+                decoration: const InputDecoration(
+                  labelText: 'Accessibility',
+                  helperText:
+                      'My list stays private. School vault lets every teacher open and copy it.',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: ExamVaultAccess.private,
+                    child: Text('My list only'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamVaultAccess.vault,
+                    child: Text('Share to school vault'),
+                  ),
+                ],
+                onChanged: (v) =>
+                    setState(() => _vaultAccess = v ?? _vaultAccess),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<ExamQuestionType>(
@@ -889,6 +1249,9 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late ExamSittingMode _sittingMode;
   DateTime? _startAt;
   DateTime? _endAt;
+  late String _bankCategory;
+  late ExamVaultAccess _vaultAccess;
+  late final TextEditingController _customCategory;
 
   @override
   void initState() {
@@ -911,12 +1274,26 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
     _sittingMode = p?.sittingMode ?? ExamSittingMode.online;
     _startAt = p?.startAt;
     _endAt = p?.endAt;
+    _bankCategory = p?.category.trim() ?? '';
+    _vaultAccess = p?.vaultAccess ?? ExamVaultAccess.private;
+    _customCategory = TextEditingController(
+      text: _bankCategory.isNotEmpty &&
+              !ExamBankCategories.suggested.contains(_bankCategory)
+          ? _bankCategory
+          : '',
+    );
   }
 
   @override
   void dispose() {
     _title.dispose();
+    _customCategory.dispose();
     super.dispose();
+  }
+
+  String get _resolvedBankCategory {
+    if (_bankCategory == '__custom__') return _customCategory.text.trim();
+    return _bankCategory.trim();
   }
 
   Future<void> _save() async {
@@ -939,6 +1316,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         sittingMode: _sittingMode,
         startAt: _startAt,
         endAt: _endAt,
+        category: _resolvedBankCategory,
+        vaultAccess: _vaultAccess,
       );
     } else {
       await ExamService.instance.updatePaper(
@@ -952,6 +1331,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         startAt: _startAt,
         endAt: _endAt,
         clearWindow: _startAt == null && _endAt == null,
+        category: _resolvedBankCategory,
+        vaultAccess: _vaultAccess,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -960,7 +1341,7 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final questions = ExamService.instance
-        .questionsForSchool()
+        .questionsVisibleToCurrentUser()
         .where((q) => q.subject == _subject)
         .toList();
     return AlertDialog(
@@ -974,6 +1355,62 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
               TextField(
                 controller: _title,
                 decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                key: ValueKey('paper-bank-cat-$_bankCategory'),
+                initialValue: _bankCategory.isEmpty
+                    ? ''
+                    : ExamBankCategories.suggested.contains(_bankCategory)
+                        ? _bankCategory
+                        : '__custom__',
+                decoration: const InputDecoration(
+                  labelText: 'Bank category',
+                ),
+                items: [
+                  const DropdownMenuItem(value: '', child: Text('Unfiled')),
+                  for (final name in ExamBankCategories.suggested)
+                    DropdownMenuItem(value: name, child: Text(name)),
+                  const DropdownMenuItem(
+                    value: '__custom__',
+                    child: Text('Custom category'),
+                  ),
+                ],
+                onChanged: (v) =>
+                    setState(() => _bankCategory = v ?? _bankCategory),
+              ),
+              if (_bankCategory == '__custom__' ||
+                  (_bankCategory.isNotEmpty &&
+                      !ExamBankCategories.suggested.contains(_bankCategory))) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _customCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Custom category name',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              DropdownButtonFormField<ExamVaultAccess>(
+                key: ValueKey('paper-vault-$_vaultAccess'),
+                initialValue: _vaultAccess,
+                decoration: const InputDecoration(
+                  labelText: 'Accessibility',
+                  helperText:
+                      'My list stays private. School vault lets every teacher open and copy it.',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: ExamVaultAccess.private,
+                    child: Text('My list only'),
+                  ),
+                  DropdownMenuItem(
+                    value: ExamVaultAccess.vault,
+                    child: Text('Share to school vault'),
+                  ),
+                ],
+                onChanged: (v) =>
+                    setState(() => _vaultAccess = v ?? _vaultAccess),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(

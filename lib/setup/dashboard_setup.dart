@@ -17,7 +17,9 @@ import 'package:mayabela/screens/grade_reports_screen.dart';
 import 'package:mayabela/screens/daily_activities_screen.dart';
 import 'package:mayabela/screens/homework_screen.dart';
 import 'package:mayabela/screens/student_lesson_plans_screen.dart';
+import 'package:mayabela/screens/teacher_exams_screen.dart';
 import 'package:mayabela/screens/teacher_lesson_plans_screen.dart';
+import 'package:mayabela/services/exam_service.dart';
 import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
@@ -332,6 +334,26 @@ List<DashboardEntry> _teacherEntries() {
             context,
             MaterialPageRoute(
               builder: (_) => const TeacherLessonPlansScreen(),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'exams',
+      icon: Icons.quiz_outlined,
+      color: const Color(0xFF1565C0),
+      isVisible: () => access.canAccessTeacherDashboardTile('exams'),
+      builder: (context) => DashboardCard(
+        icon: Icons.quiz_outlined,
+        title: _t('exams', role),
+        color: const Color(0xFF1565C0),
+        badgeCount: ExamService.instance.unscoredCount(),
+        onTap: () => _openTile('exams', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TeacherExamsScreen(),
             ),
           );
         }),
@@ -1318,7 +1340,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'Teaching tools',
           icon: Icons.menu_book,
-          entryIds: ['homework', 'grades', 'timetable', 'learning_materials', 'lesson_plans', 'gallery', 'qr'],
+          entryIds: ['homework', 'grades', 'timetable', 'learning_materials', 'lesson_plans', 'exams', 'gallery', 'qr'],
         ),
         const DashboardSectionDefinition(
           title: 'Communication',
