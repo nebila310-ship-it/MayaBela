@@ -11,6 +11,7 @@ import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/persistence/institution_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
 /// Institutional Management register — local + cloud snapshot.
@@ -52,10 +53,14 @@ class InstitutionService extends ChangeNotifier {
     final staff = <InstitutionStaffMember>[
       for (final teacher in teachers)
         InstitutionStaffMember(
-          kind: InstitutionStaffKind.teacher,
+          kind: teacher.staffRoles.isNotEmpty
+              ? InstitutionStaffKind.admin
+              : InstitutionStaffKind.teacher,
           personId: teacher.teacherId,
           name: teacher.fullName,
-          title: teacher.subject,
+          title: teacher.staffRoles.isNotEmpty
+              ? _staffRoleTitle(teacher)
+              : teacher.subject,
         ),
     ];
     for (final employee in EmployeeRegistryService.instance.employeesForSchool(
@@ -86,6 +91,24 @@ class InstitutionService extends ChangeNotifier {
     }
     staff.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return staff;
+  }
+
+  String _staffRoleTitle(AdminTeacherRecord teacher) {
+    final labels = <String>[
+      for (final key in teacher.staffRoles)
+        if (SchoolRoleCatalogService.instance
+                .lookup(key, schoolId: teacher.schoolId)
+                ?.labelEn
+                .trim()
+                .isNotEmpty ==
+            true)
+          SchoolRoleCatalogService.instance
+              .lookup(key, schoolId: teacher.schoolId)!
+              .labelEn
+              .trim(),
+    ];
+    if (labels.isEmpty) return 'Administrative staff';
+    return labels.join(', ');
   }
 
   String? messagingStaffIdFor(InstitutionStaffMember member) {
