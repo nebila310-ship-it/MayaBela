@@ -6,6 +6,7 @@ import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/finance_service.dart';
 import 'package:mayabela/services/persistence/finance_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/web_erp/pages/web_finance_statements_panel.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 
@@ -32,6 +33,7 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     (5, 'Budgets', Icons.pie_chart_outline, Color(0xFF0891B2)),
     (6, 'Payables', Icons.storefront_outlined, Color(0xFFB45309)),
     (7, 'Reports', Icons.insights_outlined, Color(0xFF15803D)),
+    (8, 'Statements', Icons.account_balance_outlined, Color(0xFF1D4ED8)),
   ];
 
   bool get _canManage => ModuleAccess.canManage('finance');
@@ -91,8 +93,9 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Record fees, cash, and expenses. Reports stay on the same numbers. '
-            'Payroll stays in Human Resource.',
+            'Record fees, cash, expenses, and supplier bills. The ledger posts '
+            'every tile into trial balance, income & expenditure, balance sheet, '
+            'and cash flow. Payroll stays in Human Resource.',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.92),
               height: 1.35,
@@ -135,12 +138,17 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
       5 => _budgets(),
       6 => _payables(),
       7 => _reports(),
+      8 => const WebFinanceStatementsPanel(),
       _ => _control(),
     };
   }
 
   Widget _control() {
     final totals = FinanceService.instance.controlTotals();
+    final ledger = FinanceService.instance.ledger();
+    final asOf = DateTime.now();
+    final surplus = ledger.incomeAndExpenditure(to: asOf).surplus;
+    final books = ledger.balanceSheet(asOf: asOf);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -168,9 +176,31 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
               totals.budgetActual,
               const Color(0xFF0891B2),
             ),
+            _stat(
+              surplus >= 0 ? 'Ledger surplus' : 'Ledger deficit',
+              surplus,
+              surplus >= 0 ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+            ),
+            _stat(
+              'Balance sheet assets',
+              books.totalAssets,
+              const Color(0xFF7C3AED),
+            ),
           ],
         ),
         const SizedBox(height: 16),
+        _card(
+          color: const Color(0xFF7C3AED),
+          icon: Icons.account_balance_outlined,
+          title: 'Automatic financial statements',
+          body:
+              'The same invoices, receipts, expenses, and payables build a '
+              'Sage 50-style trial balance, income & expenditure, balance sheet, '
+              'and cash flow. No second set of numbers.',
+          action: 'Open statements',
+          onTap: () => setState(() => _section = 8),
+        ),
+        const SizedBox(height: 12),
         _card(
           color: const Color(0xFF1D4ED8),
           icon: Icons.groups_outlined,
@@ -594,6 +624,15 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
           subtitle: totals.budgetApproved <= 0
               ? 'No departmental budgets yet.'
               : '${totals.budgetConsumedPercent.toStringAsFixed(0)}% of ${_etb(totals.budgetApproved)} used',
+        ),
+        _tile(
+          icon: Icons.account_balance_outlined,
+          color: const Color(0xFF1D4ED8),
+          title: 'Formal financial statements',
+          subtitle:
+              'Trial balance, income & expenditure, balance sheet, and cash flow '
+              'are generated from the ledger — not typed in.',
+          onTap: () => setState(() => _section = 8),
         ),
       ],
     );

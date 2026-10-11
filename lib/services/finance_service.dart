@@ -2,10 +2,11 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/finance_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/finance_ledger.dart';
 import 'package:mayabela/services/persistence/finance_persistence_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
-/// Phase 1 school finance desk: fees, cashboxes, expenses, reports.
+/// School finance desk: fees, cash, expenses, payables, and auto-posted ledger.
 /// Payroll stays in HR — this service only records school money movements.
 class FinanceService extends ChangeNotifier {
   FinanceService._();
@@ -176,6 +177,24 @@ class FinanceService extends ChangeNotifier {
     return _payables.where((p) => p.schoolId == sid).toList();
   }
 
+  List<FinanceCashMovement> cashMovesForSchool([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    return _cashMoves.where((m) => m.schoolId == sid).toList();
+  }
+
+  FinanceLedger ledger([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    return FinanceLedger.build(
+      schoolId: sid,
+      invoices: invoicesForSchool(sid),
+      payments: paymentsForSchool(sid),
+      cashboxes: cashboxesForSchool(sid),
+      cashMoves: cashMovesForSchool(sid),
+      expenses: expensesForSchool(sid),
+      payables: payablesForSchool(sid),
+    );
+  }
+
   List<FinanceAuditEvent> auditForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
     return _audit.where((a) => a.schoolId == sid).toList().reversed.toList();
@@ -318,6 +337,7 @@ class FinanceService extends ChangeNotifier {
       department: department.trim(),
       amount: amount,
       dueDate: dueDate,
+      issuedAt: DateTime.now(),
       invoiceRef: invoiceRef?.trim().isEmpty == true ? null : invoiceRef?.trim(),
       purpose: purpose?.trim().isEmpty == true ? null : purpose?.trim(),
     );
@@ -338,6 +358,8 @@ class FinanceService extends ChangeNotifier {
     if (amount <= 0) throw StateError('Payment must be greater than zero.');
     final take = amount > row.outstanding ? row.outstanding : amount;
     row.paidAmount += take;
+    row.paymentMethod = method;
+    row.lastPaidAt = DateTime.now();
     if (method == FinancePaymentMethod.cash) {
       final box = cashboxId ??
           (cashboxesForSchool(row.schoolId).isEmpty
@@ -445,6 +467,7 @@ class FinanceService extends ChangeNotifier {
             structureId: match.id,
             amount: match.installmentAmount,
             dueDate: DateTime(due.year, due.month + n, due.day),
+            issuedAt: DateTime.now(),
           ),
         );
         created += 1;
@@ -692,6 +715,7 @@ class FinanceService extends ChangeNotifier {
     }
     row.status = FinanceExpenseStatus.paid;
     row.paidBy = _actor;
+    row.paidAt = DateTime.now();
     row.paymentMethod = method;
     row.reference = reference?.trim().isEmpty == true ? null : reference?.trim();
     if (method == FinancePaymentMethod.cash) {
