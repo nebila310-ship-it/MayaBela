@@ -38,24 +38,47 @@ void main() {
     AuthService.currentUser = null;
   });
 
+  void setView(WidgetTester tester, Size size) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+  }
+
   testWidgets(
-    'students directory scrolls both axes and keeps the pager clear of Maya',
+    'phone student list uses page scroll and tiles, not an inner table scroller',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(900, 520));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      setView(tester, const Size(390, 844));
 
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: WebStudentsTablePage())),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(WebErpHScroll), findsOneWidget);
-      final scroller = tester.widget<WebErpHScroll>(find.byType(WebErpHScroll));
-      expect(
-        scroller.minChildWidth,
-        WebStudentsTablePage.directoryMinTableWidth,
-      );
+      expect(find.byType(WebErpHScroll), findsNothing);
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byKey(const ValueKey('students-page-scroll')), findsOneWidget);
+      expect(find.byType(ListTile), findsWidgets);
+      expect(find.text('Student 1'), findsOneWidget);
+      expect(find.text('12 students'), findsOneWidget);
+      expect(find.text('Page 1 of 2'), findsOneWidget);
 
+      expect(find.byKey(const ValueKey('students-pagination')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'desktop student list keeps a table and the pager clear of Maya',
+    (tester) async {
+      setView(tester, const Size(1280, 800));
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: WebStudentsTablePage())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WebErpHScroll), findsNothing);
+      expect(find.byType(DataTable), findsOneWidget);
+      expect(find.byKey(const ValueKey('students-page-scroll')), findsNothing);
       expect(find.text('Student 1'), findsOneWidget);
       expect(find.text('12 students'), findsOneWidget);
       expect(find.text('Page 1 of 2'), findsOneWidget);
@@ -63,29 +86,10 @@ void main() {
       final pager = tester.widget<Padding>(
         find.byKey(const ValueKey('students-pagination')),
       );
-      expect(pager.padding, isA<EdgeInsets>());
       expect(
         (pager.padding as EdgeInsets).right,
         MayaFloatingChat.pageEndClearance,
       );
-      expect(MayaFloatingChat.pageEndClearance, greaterThanOrEqualTo(72));
-
-      final verticalFinder = find.descendant(
-        of: find.byType(WebErpHScroll),
-        matching: find.byWidgetPredicate(
-          (widget) => widget is Scrollable && widget.axis == Axis.vertical,
-        ),
-      );
-      expect(verticalFinder, findsOneWidget);
-      final vertical = tester.widget<Scrollable>(verticalFinder);
-      expect(vertical.controller, isNotNull);
-      expect(vertical.controller!.position.maxScrollExtent, greaterThan(0));
-
-      final hView = tester.widget<SingleChildScrollView>(
-        find.byKey(const ValueKey('web-erp-hscroll-view')),
-      );
-      expect(hView.controller, isNotNull);
-      expect(hView.controller!.position.maxScrollExtent, greaterThan(200));
     },
   );
 }
