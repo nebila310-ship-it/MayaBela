@@ -28,6 +28,7 @@ class FinanceLedger {
     required List<FinanceCashMovement> cashMoves,
     required List<FinanceExpense> expenses,
     required List<FinancePayable> payables,
+    List<FinanceBudgetDisbursement> disbursements = const [],
   }) {
     final journals = <FinanceJournalEntry>[];
 
@@ -171,6 +172,7 @@ class FinanceLedger {
       for (final payment in payments) payment.id,
       for (final expense in expenses) expense.id,
       for (final bill in payables) bill.id,
+      for (final row in disbursements) row.id,
     };
 
     for (final move in cashMoves) {

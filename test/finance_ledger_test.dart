@@ -117,6 +117,7 @@ void main() {
       amount: 15000,
       dueDate: DateTime(2026, 2, 1),
     );
+    FinanceService.instance.approvePayable(bill.id);
     FinanceService.instance.payPayable(
       id: bill.id,
       amount: 5000,

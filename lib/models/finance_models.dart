@@ -62,6 +62,24 @@ extension FinanceExpenseStatusX on FinanceExpenseStatus {
   }
 }
 
+enum FinanceCashboxPurpose { general, collections, budget }
+
+extension FinanceCashboxPurposeX on FinanceCashboxPurpose {
+  String get label => switch (this) {
+        FinanceCashboxPurpose.general => 'General / treasury',
+        FinanceCashboxPurpose.collections => 'Fee collections',
+        FinanceCashboxPurpose.budget => 'Budget cashbox',
+      };
+
+  static FinanceCashboxPurpose parse(Object? raw) {
+    final key = (raw?.toString() ?? '').trim();
+    for (final value in FinanceCashboxPurpose.values) {
+      if (value.name == key) return value;
+    }
+    return FinanceCashboxPurpose.general;
+  }
+}
+
 enum FinanceCashKind { receipt, payment, transferIn, transferOut, refund }
 
 extension FinanceCashKindX on FinanceCashKind {
@@ -97,6 +115,11 @@ class FinanceFeeStructure {
     this.fundingType = 'regular',
     this.installmentCount = 1,
     this.term = 'Annual',
+    this.collectionCashboxId,
+    this.lateFeeAmount = 0,
+    this.dueDay,
+    this.notes,
+    this.active = true,
   });
 
   final String id;
@@ -108,6 +131,11 @@ class FinanceFeeStructure {
   final String fundingType;
   final double amount;
   final int installmentCount;
+  final String? collectionCashboxId;
+  final double lateFeeAmount;
+  final int? dueDay;
+  final String? notes;
+  final bool active;
 
   double get installmentAmount =>
       installmentCount <= 1 ? amount : amount / installmentCount;
@@ -122,6 +150,12 @@ class FinanceFeeStructure {
         'fundingType': fundingType,
         'amount': amount,
         'installmentCount': installmentCount,
+        if (collectionCashboxId != null)
+          'collectionCashboxId': collectionCashboxId,
+        'lateFeeAmount': lateFeeAmount,
+        if (dueDay != null) 'dueDay': dueDay,
+        if (notes != null) 'notes': notes,
+        'active': active,
       };
 
   factory FinanceFeeStructure.fromMap(Map<String, dynamic> map) {
@@ -135,6 +169,11 @@ class FinanceFeeStructure {
       fundingType: (map['fundingType'] as String? ?? 'regular').trim(),
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
       installmentCount: (map['installmentCount'] as num?)?.toInt() ?? 1,
+      collectionCashboxId: map['collectionCashboxId'] as String?,
+      lateFeeAmount: (map['lateFeeAmount'] as num?)?.toDouble() ?? 0,
+      dueDay: (map['dueDay'] as num?)?.toInt(),
+      notes: map['notes'] as String?,
+      active: map['active'] as bool? ?? true,
     );
   }
 }
@@ -293,12 +332,16 @@ class FinancePayment {
 }
 
 class FinanceCashbox {
-  const FinanceCashbox({
+  FinanceCashbox({
     required this.id,
     required this.schoolId,
     required this.name,
     this.openingBalance = 0,
     this.cashierName,
+    this.purpose = FinanceCashboxPurpose.general,
+    this.department,
+    this.budgetId,
+    this.location,
   });
 
   final String id;
@@ -306,6 +349,10 @@ class FinanceCashbox {
   final String name;
   final double openingBalance;
   final String? cashierName;
+  final FinanceCashboxPurpose purpose;
+  final String? department;
+  String? budgetId;
+  final String? location;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -313,6 +360,10 @@ class FinanceCashbox {
         'name': name,
         'openingBalance': openingBalance,
         if (cashierName != null) 'cashierName': cashierName,
+        'purpose': purpose.name,
+        if (department != null) 'department': department,
+        if (budgetId != null) 'budgetId': budgetId,
+        if (location != null) 'location': location,
       };
 
   factory FinanceCashbox.fromMap(Map<String, dynamic> map) {
@@ -322,6 +373,10 @@ class FinanceCashbox {
       name: map['name'] as String? ?? 'Cashbox',
       openingBalance: (map['openingBalance'] as num?)?.toDouble() ?? 0,
       cashierName: map['cashierName'] as String?,
+      purpose: FinanceCashboxPurposeX.parse(map['purpose']),
+      department: map['department'] as String?,
+      budgetId: map['budgetId'] as String?,
+      location: map['location'] as String?,
     );
   }
 }
@@ -436,6 +491,11 @@ class FinanceExpense {
     this.approvedBy,
     this.paidBy,
     this.paidAt,
+    this.budgetId,
+    this.cashboxId,
+    this.voucherNo,
+    this.department,
+    this.approvalNote,
   });
 
   final String id;
@@ -452,6 +512,11 @@ class FinanceExpense {
   String? approvedBy;
   String? paidBy;
   DateTime? paidAt;
+  String? budgetId;
+  String? cashboxId;
+  String? voucherNo;
+  String? department;
+  String? approvalNote;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -468,6 +533,11 @@ class FinanceExpense {
         if (approvedBy != null) 'approvedBy': approvedBy,
         if (paidBy != null) 'paidBy': paidBy,
         if (paidAt != null) 'paidAt': paidAt!.toIso8601String(),
+        if (budgetId != null) 'budgetId': budgetId,
+        if (cashboxId != null) 'cashboxId': cashboxId,
+        if (voucherNo != null) 'voucherNo': voucherNo,
+        if (department != null) 'department': department,
+        if (approvalNote != null) 'approvalNote': approvalNote,
       };
 
   factory FinanceExpense.fromMap(Map<String, dynamic> map) {
@@ -488,6 +558,11 @@ class FinanceExpense {
       approvedBy: map['approvedBy'] as String?,
       paidBy: map['paidBy'] as String?,
       paidAt: DateTime.tryParse(map['paidAt'] as String? ?? ''),
+      budgetId: map['budgetId'] as String?,
+      cashboxId: map['cashboxId'] as String?,
+      voucherNo: map['voucherNo'] as String?,
+      department: map['department'] as String?,
+      approvalNote: map['approvalNote'] as String?,
     );
   }
 }
@@ -561,6 +636,7 @@ class FinanceControlTotals {
     this.payablesOutstanding = 0,
     this.budgetApproved = 0,
     this.budgetActual = 0,
+    this.budgetDisbursed = 0,
   });
 
   final double billed;
@@ -573,6 +649,7 @@ class FinanceControlTotals {
   final double payablesOutstanding;
   final double budgetApproved;
   final double budgetActual;
+  final double budgetDisbursed;
 
   double get netCashMovement => collected - expensesPaid;
   double get budgetConsumedPercent =>
@@ -626,13 +703,16 @@ class FinanceDepartments {
 }
 
 class FinanceBudget {
-  const FinanceBudget({
+  FinanceBudget({
     required this.id,
     required this.schoolId,
     required this.department,
     required this.academicYear,
     required this.amount,
     this.period = 'Annual',
+    this.cashboxId,
+    this.custodian,
+    this.notes,
   });
 
   final String id;
@@ -641,6 +721,9 @@ class FinanceBudget {
   final String academicYear;
   final String period;
   final double amount;
+  String? cashboxId;
+  final String? custodian;
+  final String? notes;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -649,6 +732,9 @@ class FinanceBudget {
         'academicYear': academicYear,
         'period': period,
         'amount': amount,
+        if (cashboxId != null) 'cashboxId': cashboxId,
+        if (custodian != null) 'custodian': custodian,
+        if (notes != null) 'notes': notes,
       };
 
   factory FinanceBudget.fromMap(Map<String, dynamic> map) {
@@ -659,6 +745,63 @@ class FinanceBudget {
       academicYear: map['academicYear'] as String? ?? '',
       period: map['period'] as String? ?? 'Annual',
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      cashboxId: map['cashboxId'] as String?,
+      custodian: map['custodian'] as String?,
+      notes: map['notes'] as String?,
+    );
+  }
+}
+
+class FinanceBudgetDisbursement {
+  const FinanceBudgetDisbursement({
+    required this.id,
+    required this.schoolId,
+    required this.budgetId,
+    required this.fromCashboxId,
+    required this.toCashboxId,
+    required this.amount,
+    required this.at,
+    required this.recordedBy,
+    this.voucherNo,
+    this.note,
+  });
+
+  final String id;
+  final String schoolId;
+  final String budgetId;
+  final String fromCashboxId;
+  final String toCashboxId;
+  final double amount;
+  final DateTime at;
+  final String recordedBy;
+  final String? voucherNo;
+  final String? note;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'schoolId': schoolId,
+        'budgetId': budgetId,
+        'fromCashboxId': fromCashboxId,
+        'toCashboxId': toCashboxId,
+        'amount': amount,
+        'at': at.toIso8601String(),
+        'recordedBy': recordedBy,
+        if (voucherNo != null) 'voucherNo': voucherNo,
+        if (note != null) 'note': note,
+      };
+
+  factory FinanceBudgetDisbursement.fromMap(Map<String, dynamic> map) {
+    return FinanceBudgetDisbursement(
+      id: (map['id'] as String? ?? '').trim(),
+      schoolId: (map['schoolId'] as String? ?? '').trim().toUpperCase(),
+      budgetId: map['budgetId'] as String? ?? '',
+      fromCashboxId: map['fromCashboxId'] as String? ?? '',
+      toCashboxId: map['toCashboxId'] as String? ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      at: DateTime.tryParse(map['at'] as String? ?? '') ?? DateTime.now(),
+      recordedBy: map['recordedBy'] as String? ?? '',
+      voucherNo: map['voucherNo'] as String?,
+      note: map['note'] as String?,
     );
   }
 }
@@ -667,14 +810,21 @@ class FinanceBudgetUsage {
   const FinanceBudgetUsage({
     required this.budget,
     required this.actual,
+    this.disbursed = 0,
+    this.cashboxBalance = 0,
   });
 
   final FinanceBudget budget;
   final double actual;
+  final double disbursed;
+  final double cashboxBalance;
 
   double get remaining => budget.amount - actual;
+  double get remainingToDisburse => budget.amount - disbursed;
   double get consumedPercent =>
       budget.amount <= 0 ? 0 : (actual / budget.amount) * 100;
+  double get disbursedPercent =>
+      budget.amount <= 0 ? 0 : (disbursed / budget.amount) * 100;
   bool get overrun => actual > budget.amount + 0.004;
 }
 
@@ -692,6 +842,11 @@ class FinancePayable {
     this.paymentMethod,
     this.lastPaidAt,
     DateTime? issuedAt,
+    this.approved = false,
+    this.approvedBy,
+    this.cashboxId,
+    this.voucherNo,
+    this.budgetId,
   }) : issuedAt = issuedAt ?? dueDate;
 
   final String id;
@@ -706,6 +861,11 @@ class FinancePayable {
   double paidAmount;
   FinancePaymentMethod? paymentMethod;
   DateTime? lastPaidAt;
+  bool approved;
+  String? approvedBy;
+  String? cashboxId;
+  String? voucherNo;
+  String? budgetId;
 
   double get outstanding =>
       (amount - paidAmount).clamp(0, double.infinity).toDouble();
@@ -735,6 +895,11 @@ class FinancePayable {
         'paidAmount': paidAmount,
         if (paymentMethod != null) 'paymentMethod': paymentMethod!.name,
         if (lastPaidAt != null) 'lastPaidAt': lastPaidAt!.toIso8601String(),
+        'approved': approved,
+        if (approvedBy != null) 'approvedBy': approvedBy,
+        if (cashboxId != null) 'cashboxId': cashboxId,
+        if (voucherNo != null) 'voucherNo': voucherNo,
+        if (budgetId != null) 'budgetId': budgetId,
       };
 
   factory FinancePayable.fromMap(Map<String, dynamic> map) {
@@ -754,6 +919,13 @@ class FinancePayable {
           ? null
           : FinancePaymentMethodX.parse(map['paymentMethod']),
       lastPaidAt: DateTime.tryParse(map['lastPaidAt'] as String? ?? ''),
+      approved: map.containsKey('approved')
+          ? map['approved'] == true
+          : true,
+      approvedBy: map['approvedBy'] as String?,
+      cashboxId: map['cashboxId'] as String?,
+      voucherNo: map['voucherNo'] as String?,
+      budgetId: map['budgetId'] as String?,
     );
   }
 }

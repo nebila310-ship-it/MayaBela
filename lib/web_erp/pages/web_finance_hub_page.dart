@@ -186,6 +186,11 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
               books.totalAssets,
               const Color(0xFF7C3AED),
             ),
+            _stat(
+              'Budget disbursed',
+              totals.budgetDisbursed,
+              const Color(0xFF0F766E),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -258,23 +263,64 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         const SizedBox(height: 8),
         Text(
           'Regular and scholarship students can have different amounts. '
-          'Installments split the annual fee automatically.',
+          'Installments split the annual fee. Late fees, due day, and a '
+          'collections cashbox stay on the plan.',
           style: TextStyle(color: Colors.grey.shade700),
         ),
         const SizedBox(height: 12),
         if (rows.isEmpty)
           const Text('No fee plans yet. Add one for each grade you bill.')
         else
-          ...rows.map(
-            (s) => _tile(
+          ...rows.map((s) {
+            final box = s.collectionCashboxId == null
+                ? null
+                : FinanceService.instance.cashboxes
+                    .cast<FinanceCashbox?>()
+                    .firstWhere(
+                      (c) => c!.id == s.collectionCashboxId,
+                      orElse: () => null,
+                    );
+            return _tile(
               icon: Icons.tune_rounded,
-              color: const Color(0xFF7C3AED),
+              color: s.active
+                  ? const Color(0xFF7C3AED)
+                  : Colors.grey,
               title: '${s.title} · ${s.grade}',
               subtitle:
                   '${s.academicYear} · ${s.fundingType} · ${_etb(s.amount)}'
-                  '${s.installmentCount > 1 ? ' · ${s.installmentCount} installments' : ''}',
-            ),
-          ),
+                  '${s.installmentCount > 1 ? ' · ${s.installmentCount} installments' : ''}'
+                  '${s.dueDay == null ? '' : ' · due day ${s.dueDay}'}'
+                  '${s.lateFeeAmount > 0 ? ' · late fee ${_etb(s.lateFeeAmount)}' : ''}'
+                  '${box == null ? '' : ' · collect to ${box.name}'}'
+                  '${s.active ? '' : ' · inactive'}'
+                  '${s.notes == null ? '' : ' · ${s.notes}'}',
+              trailing: !_canManage
+                  ? null
+                  : Wrap(
+                      children: [
+                        TextButton(
+                          onPressed: () => _editStructure(s),
+                          child: const Text('Edit'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            final n = FinanceService.instance.generateInvoices(
+                              academicYear: s.academicYear,
+                              grade: s.grade,
+                              structureId: s.id,
+                            );
+                            _toast(
+                              n == 0
+                                  ? 'No new invoices for this plan.'
+                                  : 'Created $n invoice(s) from ${s.title}.',
+                            );
+                          },
+                          child: const Text('Generate'),
+                        ),
+                      ],
+                    ),
+            );
+          }),
       ],
     );
   }
@@ -363,30 +409,46 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Record cash without a bank connection. Close the day by counting physical cash.',
+          'Treasury, fee collections, and dedicated budget cashboxes. '
+          'Pay expenses and supplier bills from a named box. '
+          'Transfer between boxes or close the day by counting cash.',
         ),
         const SizedBox(height: 12),
         if (boxes.isEmpty) const Text('No cashboxes yet.') else
           ...boxes.map((box) {
             final expected = FinanceService.instance.expectedCash(box.id);
+            final color = switch (box.purpose) {
+              FinanceCashboxPurpose.budget => const Color(0xFF0891B2),
+              FinanceCashboxPurpose.collections => const Color(0xFF0F766E),
+              FinanceCashboxPurpose.general => const Color(0xFF2563EB),
+            };
             return _tile(
-              icon: Icons.point_of_sale_rounded,
-              color: const Color(0xFF2563EB),
-              title: box.name,
+              icon: box.purpose == FinanceCashboxPurpose.budget
+                  ? Icons.savings_outlined
+                  : Icons.point_of_sale_rounded,
+              color: color,
+              title: '${box.name} · ${_etb(expected)}',
               subtitle:
-                  'Expected ${_etb(expected)}'
-                  '${box.cashierName == null ? '' : ' · ${box.cashierName}'}',
+                  '${box.purpose.label}'
+                  '${box.department == null ? '' : ' · ${box.department}'}'
+                  '${box.cashierName == null ? '' : ' · ${box.cashierName}'}'
+                  '${box.location == null ? '' : ' · ${box.location}'}',
+              onTap: () => _showCashboxLedger(box),
               trailing: !_canManage
                   ? null
                   : Wrap(
                       children: [
                         TextButton(
                           onPressed: () => _cashMove(box),
-                          child: const Text('Move cash'),
+                          child: const Text('Move'),
+                        ),
+                        TextButton(
+                          onPressed: () => _transferCash(box),
+                          child: const Text('Transfer'),
                         ),
                         TextButton(
                           onPressed: () => _closeCash(box, expected),
-                          child: const Text('Close day'),
+                          child: const Text('Close'),
                         ),
                       ],
                     ),
@@ -419,33 +481,52 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Request → approve → record payment. Salary runs are not entered here.',
+          'Request → approve → pay from a cashbox. Charge a department budget '
+          'when the money should leave that budget cashbox. Salary stays in HR.',
           style: TextStyle(color: Colors.grey.shade700),
         ),
         const SizedBox(height: 12),
         if (rows.isEmpty) const Text('No expense requests yet.') else
           ...rows.map((e) {
+            final box = e.cashboxId == null
+                ? null
+                : FinanceService.instance.cashboxes
+                    .cast<FinanceCashbox?>()
+                    .firstWhere(
+                      (c) => c!.id == e.cashboxId,
+                      orElse: () => null,
+                    );
             return _tile(
               icon: Icons.payments_outlined,
               color: const Color(0xFFDB2777),
               title: '${e.category} · ${_etb(e.amount)}',
               subtitle:
-                  '${e.status.label} · ${e.supplier ?? e.purpose ?? e.requestedBy}',
+                  '${e.status.label} · ${e.department ?? FinanceExpenseCategories.departmentFor(e.category)}'
+                  '${e.voucherNo == null ? '' : ' · ${e.voucherNo}'}'
+                  ' · ${e.supplier ?? e.purpose ?? e.requestedBy}'
+                  '${box == null ? '' : ' · paid from ${box.name}'}',
               trailing: !_canManage
                   ? null
                   : Wrap(
                       children: [
-                        if (e.status == FinanceExpenseStatus.requested)
+                        if (e.status == FinanceExpenseStatus.requested) ...[
                           TextButton(
                             onPressed: () => _run(() {
                               FinanceService.instance.approveExpense(e.id);
                             }),
                             child: const Text('Approve'),
                           ),
+                          TextButton(
+                            onPressed: () => _run(() {
+                              FinanceService.instance.rejectExpense(e.id);
+                            }),
+                            child: const Text('Reject'),
+                          ),
+                        ],
                         if (e.status == FinanceExpenseStatus.approved)
                           TextButton(
                             onPressed: () => _payExpense(e),
-                            child: const Text('Record payment'),
+                            child: const Text('Pay from cashbox'),
                           ),
                       ],
                     ),
@@ -478,7 +559,8 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Approved amount vs actual spending from paid expenses and supplier payments.',
+          'Allocate a ceiling, then disburse cash from treasury into a dedicated '
+          'budget cashbox. Spending is paid from that box and cannot exceed the allocation.',
         ),
         const SizedBox(height: 12),
         if (rows.isEmpty)
@@ -488,14 +570,33 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
             final color = usage.overrun
                 ? const Color(0xFFDC2626)
                 : const Color(0xFF0891B2);
+            final box = usage.budget.cashboxId == null
+                ? null
+                : FinanceService.instance.cashboxes
+                    .cast<FinanceCashbox?>()
+                    .firstWhere(
+                      (c) => c!.id == usage.budget.cashboxId,
+                      orElse: () => null,
+                    );
             return _tile(
               icon: Icons.pie_chart_outline,
               color: color,
               title: '${usage.budget.department} · ${usage.budget.period}',
               subtitle:
-                  '${usage.budget.academicYear} · used ${_etb(usage.actual)} of ${_etb(usage.budget.amount)}'
-                  ' (${usage.consumedPercent.toStringAsFixed(0)}%)'
-                  '${usage.overrun ? ' · over budget' : ' · remaining ${_etb(usage.remaining)}'}',
+                  '${usage.budget.academicYear}'
+                  ' · allocated ${_etb(usage.budget.amount)}'
+                  ' · disbursed ${_etb(usage.disbursed)}'
+                  ' · spent ${_etb(usage.actual)}'
+                  ' · still to release ${_etb(usage.remainingToDisburse)}'
+                  '${box == null ? '' : ' · ${box.name} ${_etb(usage.cashboxBalance)}'}'
+                  '${usage.overrun ? ' · over budget' : ''}'
+                  '${usage.budget.custodian == null ? '' : ' · ${usage.budget.custodian}'}',
+              trailing: !_canManage
+                  ? null
+                  : TextButton(
+                      onPressed: () => _disburseBudget(usage),
+                      child: const Text('Disburse'),
+                    ),
             );
           }),
       ],
@@ -525,25 +626,49 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Record what the school owes. This is a liability, not an expense, until you pay it.',
+          'Record the bill, approve it, then pay from a cashbox. '
+          'It is a liability until cash leaves. Charge a department budget when needed.',
         ),
         const SizedBox(height: 12),
         if (rows.isEmpty)
           const Text('No supplier bills yet.')
         else
           ...rows.map((bill) {
+            final box = bill.cashboxId == null
+                ? null
+                : FinanceService.instance.cashboxes
+                    .cast<FinanceCashbox?>()
+                    .firstWhere(
+                      (c) => c!.id == bill.cashboxId,
+                      orElse: () => null,
+                    );
             return _tile(
               icon: Icons.storefront_outlined,
               color: _invoiceColor(bill.status),
               title: '${bill.supplier} · ${_etb(bill.outstanding)}',
               subtitle:
                   '${bill.department} · ${_etb(bill.amount)} · ${bill.status.label}'
-                  '${bill.invoiceRef == null ? '' : ' · ${bill.invoiceRef}'}',
+                  '${bill.approved ? ' · approved' : ' · awaiting approval'}'
+                  '${bill.invoiceRef == null ? '' : ' · ${bill.invoiceRef}'}'
+                  '${bill.voucherNo == null ? '' : ' · ${bill.voucherNo}'}'
+                  '${box == null ? '' : ' · paid from ${box.name}'}',
               trailing: bill.isPaid || !_canManage
                   ? null
-                  : TextButton(
-                      onPressed: () => _payPayable(bill),
-                      child: const Text('Record payment'),
+                  : Wrap(
+                      children: [
+                        if (!bill.approved)
+                          TextButton(
+                            onPressed: () => _run(() {
+                              FinanceService.instance.approvePayable(bill.id);
+                            }),
+                            child: const Text('Approve'),
+                          ),
+                        if (bill.approved)
+                          TextButton(
+                            onPressed: () => _payPayable(bill),
+                            child: const Text('Pay from cashbox'),
+                          ),
+                      ],
                     ),
             );
           }),
@@ -760,66 +885,128 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     }
   }
 
-  Future<void> _addStructure() async {
-    final title = TextEditingController(text: 'Annual tuition');
-    final year = TextEditingController(text: _year);
-    final amount = TextEditingController(text: '60000');
-    final installments = TextEditingController(text: '3');
+  Future<void> _addStructure() => _editStructure();
+
+  Future<void> _editStructure([FinanceFeeStructure? existing]) async {
+    final title = TextEditingController(text: existing?.title ?? 'Annual tuition');
+    final year = TextEditingController(text: existing?.academicYear ?? _year);
+    final amount = TextEditingController(
+      text: (existing?.amount ?? 60000).toStringAsFixed(0),
+    );
+    final installments = TextEditingController(
+      text: '${existing?.installmentCount ?? 3}',
+    );
+    final lateFee = TextEditingController(
+      text: (existing?.lateFeeAmount ?? 0).toStringAsFixed(0),
+    );
+    final dueDay = TextEditingController(
+      text: existing?.dueDay?.toString() ?? '',
+    );
+    final notes = TextEditingController(text: existing?.notes ?? '');
     final grades = ClassStructureService.instance.gradesForSchool();
-    var grade = grades.isEmpty ? 'Grade 1' : grades.first;
-    var funding = 'regular';
+    var grade = existing?.grade ?? (grades.isEmpty ? 'Grade 1' : grades.first);
+    var funding = existing?.fundingType ?? 'regular';
+    var collectionId = existing?.collectionCashboxId;
+    var active = existing?.active ?? true;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Fee plan'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+        title: Text(existing == null ? 'Fee plan' : 'Edit fee plan'),
         content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: title,
-                decoration: const InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: year,
-                decoration: const InputDecoration(labelText: 'Academic year'),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: grade,
-                decoration: const InputDecoration(labelText: 'Grade'),
-                items: [
-                  for (final g in (grades.isEmpty ? ['Grade 1'] : grades))
-                    DropdownMenuItem(value: g, child: Text(g)),
-                ],
-                onChanged: (v) => grade = v ?? grade,
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: funding,
-                decoration: const InputDecoration(labelText: 'Student type'),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'regular',
-                    child: Text('Regular student'),
+          width: 460,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: title,
+                  decoration: const InputDecoration(labelText: 'Title'),
+                ),
+                TextField(
+                  controller: year,
+                  decoration: const InputDecoration(labelText: 'Academic year'),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: grade,
+                  decoration: const InputDecoration(labelText: 'Grade'),
+                  items: [
+                    for (final g in (grades.isEmpty ? ['Grade 1'] : grades))
+                      DropdownMenuItem(value: g, child: Text(g)),
+                  ],
+                  onChanged: (v) => grade = v ?? grade,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: funding,
+                  decoration: const InputDecoration(labelText: 'Student type'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'regular',
+                      child: Text('Regular student'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'scholarship',
+                      child: Text('Scholarship student'),
+                    ),
+                  ],
+                  onChanged: (v) => funding = v ?? funding,
+                ),
+                TextField(
+                  controller: amount,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Amount (ETB)'),
+                ),
+                TextField(
+                  controller: installments,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Installments'),
+                ),
+                TextField(
+                  controller: dueDay,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Due day of month (optional)',
                   ),
-                  DropdownMenuItem(
-                    value: 'scholarship',
-                    child: Text('Scholarship student'),
+                ),
+                TextField(
+                  controller: lateFee,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Late fee if overdue (ETB)',
                   ),
-                ],
-                onChanged: (v) => funding = v ?? funding,
-              ),
-              TextField(
-                controller: amount,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount (ETB)'),
-              ),
-              TextField(
-                controller: installments,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Installments'),
-              ),
-            ],
+                ),
+                DropdownButtonFormField<String?>(
+                  initialValue: collectionId,
+                  decoration: const InputDecoration(
+                    labelText: 'Collections cashbox',
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Any collections / treasury box'),
+                    ),
+                    for (final box
+                        in FinanceService.instance.cashboxesForSchool())
+                      DropdownMenuItem(
+                        value: box.id,
+                        child: Text(_cashboxLabel(box)),
+                      ),
+                  ],
+                  onChanged: (v) => collectionId = v,
+                ),
+                TextField(
+                  controller: notes,
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                ),
+                if (existing != null)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Plan is active'),
+                    value: active,
+                    onChanged: (v) => setDialog(() => active = v),
+                  ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -832,16 +1019,38 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
             child: const Text('Save'),
           ),
         ],
+        ),
       ),
     );
     if (ok != true) return;
-    FinanceService.instance.addFeeStructure(
+    if (existing == null) {
+      FinanceService.instance.addFeeStructure(
+        title: title.text,
+        grade: grade,
+        academicYear: year.text,
+        amount: double.tryParse(amount.text) ?? 0,
+        fundingType: funding,
+        installmentCount: int.tryParse(installments.text) ?? 1,
+        collectionCashboxId: collectionId,
+        lateFeeAmount: double.tryParse(lateFee.text) ?? 0,
+        dueDay: int.tryParse(dueDay.text),
+        notes: notes.text,
+      );
+      return;
+    }
+    FinanceService.instance.updateFeeStructure(
+      id: existing.id,
       title: title.text,
       grade: grade,
       academicYear: year.text,
       amount: double.tryParse(amount.text) ?? 0,
       fundingType: funding,
       installmentCount: int.tryParse(installments.text) ?? 1,
+      collectionCashboxId: collectionId,
+      lateFeeAmount: double.tryParse(lateFee.text) ?? 0,
+      dueDay: int.tryParse(dueDay.text),
+      notes: notes.text,
+      active: active,
     );
   }
 
@@ -851,6 +1060,7 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     );
     final reference = TextEditingController();
     var method = FinancePaymentMethod.cash;
+    String? cashboxId = _defaultCollectionsCashbox(invoice);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -874,6 +1084,11 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
                     DropdownMenuItem(value: m, child: Text(m.label)),
                 ],
                 onChanged: (v) => method = v ?? method,
+              ),
+              _cashboxField(
+                value: cashboxId,
+                label: 'Receive into cashbox',
+                onChanged: (v) => cashboxId = v,
               ),
               TextField(
                 controller: reference,
@@ -903,6 +1118,7 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         amount: double.tryParse(amount.text) ?? 0,
         method: method,
         reference: reference.text,
+        cashboxId: cashboxId,
       );
       _toast('Receipt ${pay.receiptNo} recorded.');
     } catch (e) {
@@ -950,27 +1166,60 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     final name = TextEditingController(text: 'Cafeteria');
     final opening = TextEditingController(text: '0');
     final cashier = TextEditingController();
+    final location = TextEditingController();
+    var purpose = FinanceCashboxPurpose.general;
+    String? department;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Cashbox'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: opening,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Opening balance'),
-            ),
-            TextField(
-              controller: cashier,
-              decoration: const InputDecoration(labelText: 'Cashier (optional)'),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              DropdownButtonFormField<FinanceCashboxPurpose>(
+                initialValue: purpose,
+                decoration: const InputDecoration(labelText: 'Purpose'),
+                items: [
+                  for (final p in FinanceCashboxPurpose.values)
+                    DropdownMenuItem(value: p, child: Text(p.label)),
+                ],
+                onChanged: (v) => purpose = v ?? purpose,
+              ),
+              DropdownButtonFormField<String?>(
+                initialValue: department,
+                decoration: const InputDecoration(
+                  labelText: 'Department (budget boxes)',
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not department-specific'),
+                  ),
+                  for (final d in FinanceDepartments.values)
+                    DropdownMenuItem(value: d, child: Text(d)),
+                ],
+                onChanged: (v) => department = v,
+              ),
+              TextField(
+                controller: opening,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Opening balance'),
+              ),
+              TextField(
+                controller: cashier,
+                decoration: const InputDecoration(labelText: 'Custodian / cashier'),
+              ),
+              TextField(
+                controller: location,
+                decoration: const InputDecoration(labelText: 'Location'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -989,6 +1238,9 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
       name: name.text,
       openingBalance: double.tryParse(opening.text) ?? 0,
       cashierName: cashier.text,
+      purpose: purpose,
+      department: department,
+      location: location.text,
     );
   }
 
@@ -1045,6 +1297,112 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     });
   }
 
+  Future<void> _transferCash(FinanceCashbox from) async {
+    final amount = TextEditingController();
+    final note = TextEditingController();
+    final others = FinanceService.instance
+        .cashboxesForSchool()
+        .where((b) => b.id != from.id)
+        .toList();
+    if (others.isEmpty) {
+      _toast('Add a second cashbox before transferring.');
+      return;
+    }
+    var toId = others.first.id;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Transfer from ${from.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Available ${_etb(FinanceService.instance.expectedCash(from.id))}'),
+            DropdownButtonFormField<String>(
+              initialValue: toId,
+              decoration: const InputDecoration(labelText: 'To cashbox'),
+              items: [
+                for (final box in others)
+                  DropdownMenuItem(
+                    value: box.id,
+                    child: Text(_cashboxLabel(box)),
+                  ),
+              ],
+              onChanged: (v) => toId = v ?? toId,
+            ),
+            TextField(
+              controller: amount,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount'),
+            ),
+            TextField(
+              controller: note,
+              decoration: const InputDecoration(labelText: 'Note'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Transfer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    _run(() {
+      FinanceService.instance.transferBetweenCashboxes(
+        fromCashboxId: from.id,
+        toCashboxId: toId,
+        amount: double.tryParse(amount.text) ?? 0,
+        note: note.text,
+      );
+    });
+  }
+
+  void _showCashboxLedger(FinanceCashbox box) {
+    final moves = FinanceService.instance
+        .cashMovesForSchool()
+        .where((m) => m.cashboxId == box.id)
+        .toList()
+        .reversed
+        .take(20);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(box.name),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${box.purpose.label} · on hand '
+                '${_etb(FinanceService.instance.expectedCash(box.id))}',
+              ),
+              const SizedBox(height: 12),
+              if (moves.isEmpty) const Text('No movements yet.'),
+              for (final move in moves)
+                Text(
+                  '${move.kind.label} ${_etb(move.amount)} · ${move.note ?? move.reference ?? move.recordedBy}',
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _closeCash(FinanceCashbox box, double expected) async {
     final counted = TextEditingController(text: expected.toStringAsFixed(0));
     final ok = await showDialog<bool>(
@@ -1089,38 +1447,70 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     final amount = TextEditingController();
     final supplier = TextEditingController();
     final purpose = TextEditingController();
+    final voucher = TextEditingController();
+    var department = FinanceExpenseCategories.departmentFor(category);
+    String? budgetId;
+    String? cashboxId;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Expense request'),
         content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: category,
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: [
-                  for (final c in FinanceExpenseCategories.values)
-                    DropdownMenuItem(value: c, child: Text(c)),
-                ],
-                onChanged: (v) => category = v ?? category,
-              ),
-              TextField(
-                controller: amount,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount (ETB)'),
-              ),
-              TextField(
-                controller: supplier,
-                decoration: const InputDecoration(labelText: 'Supplier / payee'),
-              ),
-              TextField(
-                controller: purpose,
-                decoration: const InputDecoration(labelText: 'Purpose'),
-              ),
-            ],
+          width: 460,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: category,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: [
+                    for (final c in FinanceExpenseCategories.values)
+                      DropdownMenuItem(value: c, child: Text(c)),
+                  ],
+                  onChanged: (v) {
+                    category = v ?? category;
+                    department =
+                        FinanceExpenseCategories.departmentFor(category);
+                  },
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: department,
+                  decoration: const InputDecoration(labelText: 'Department'),
+                  items: [
+                    for (final d in FinanceDepartments.values)
+                      DropdownMenuItem(value: d, child: Text(d)),
+                  ],
+                  onChanged: (v) => department = v ?? department,
+                ),
+                TextField(
+                  controller: amount,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Amount (ETB)'),
+                ),
+                TextField(
+                  controller: supplier,
+                  decoration: const InputDecoration(labelText: 'Supplier / payee'),
+                ),
+                TextField(
+                  controller: purpose,
+                  decoration: const InputDecoration(labelText: 'Purpose'),
+                ),
+                TextField(
+                  controller: voucher,
+                  decoration: const InputDecoration(labelText: 'Voucher no.'),
+                ),
+                _budgetField(
+                  value: budgetId,
+                  onChanged: (v) => budgetId = v,
+                ),
+                _cashboxField(
+                  value: cashboxId,
+                  label: 'Preferred paying cashbox',
+                  onChanged: (v) => cashboxId = v,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -1142,20 +1532,28 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         amount: double.tryParse(amount.text) ?? 0,
         supplier: supplier.text,
         purpose: purpose.text,
+        department: department,
+        voucherNo: voucher.text,
+        budgetId: budgetId,
+        cashboxId: cashboxId,
       );
     });
   }
 
   Future<void> _payExpense(FinanceExpense expense) async {
-    var method = FinancePaymentMethod.bankTransfer;
+    var method = FinancePaymentMethod.cash;
     final reference = TextEditingController();
+    String? cashboxId = expense.cashboxId ??
+        _budgetCashboxId(expense.budgetId) ??
+        _fallbackPayCashbox();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Record expense payment'),
+        title: const Text('Pay expense from cashbox'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Text('${expense.category} · ${_etb(expense.amount)}'),
             DropdownButtonFormField<FinancePaymentMethod>(
               initialValue: method,
               items: [
@@ -1164,9 +1562,14 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
               ],
               onChanged: (v) => method = v ?? method,
             ),
+            _cashboxField(
+              value: cashboxId,
+              label: 'Pay from cashbox',
+              onChanged: (v) => cashboxId = v,
+            ),
             TextField(
               controller: reference,
-              decoration: const InputDecoration(labelText: 'Reference'),
+              decoration: const InputDecoration(labelText: 'Reference / cheque'),
             ),
           ],
         ),
@@ -1188,6 +1591,7 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         id: expense.id,
         method: method,
         reference: reference.text,
+        cashboxId: cashboxId,
       );
     });
   }
@@ -1197,44 +1601,65 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     final year = TextEditingController(text: _year);
     final amount = TextEditingController();
     var period = 'Annual';
+    final custodian = TextEditingController();
+    final notes = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Department budget'),
+        title: const Text('Allocate department budget'),
         content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: department,
-                decoration: const InputDecoration(labelText: 'Department'),
-                items: [
-                  for (final d in FinanceDepartments.values)
-                    DropdownMenuItem(value: d, child: Text(d)),
-                ],
-                onChanged: (v) => department = v ?? department,
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: period,
-                decoration: const InputDecoration(labelText: 'Period'),
-                items: const [
-                  DropdownMenuItem(value: 'Annual', child: Text('Annual')),
-                  DropdownMenuItem(value: 'Term', child: Text('Term')),
-                  DropdownMenuItem(value: 'Month', child: Text('Month')),
-                ],
-                onChanged: (v) => period = v ?? period,
-              ),
-              TextField(
-                controller: year,
-                decoration: const InputDecoration(labelText: 'Academic year'),
-              ),
-              TextField(
-                controller: amount,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Approved amount'),
-              ),
-            ],
+          width: 460,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: department,
+                  decoration: const InputDecoration(labelText: 'Department'),
+                  items: [
+                    for (final d in FinanceDepartments.values)
+                      DropdownMenuItem(value: d, child: Text(d)),
+                  ],
+                  onChanged: (v) => department = v ?? department,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: period,
+                  decoration: const InputDecoration(labelText: 'Period'),
+                  items: const [
+                    DropdownMenuItem(value: 'Annual', child: Text('Annual')),
+                    DropdownMenuItem(value: 'Term', child: Text('Term')),
+                    DropdownMenuItem(value: 'Month', child: Text('Month')),
+                  ],
+                  onChanged: (v) => period = v ?? period,
+                ),
+                TextField(
+                  controller: year,
+                  decoration: const InputDecoration(labelText: 'Academic year'),
+                ),
+                TextField(
+                  controller: amount,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Allocated ceiling (ETB)',
+                  ),
+                ),
+                TextField(
+                  controller: custodian,
+                  decoration: const InputDecoration(
+                    labelText: 'Budget cashbox custodian',
+                  ),
+                ),
+                TextField(
+                  controller: notes,
+                  decoration: const InputDecoration(labelText: 'Notes'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'A dedicated budget cashbox is opened with zero cash. '
+                  'Use Disburse to move money from treasury into that box.',
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -1255,7 +1680,87 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
       academicYear: year.text,
       amount: double.tryParse(amount.text) ?? 0,
       period: period,
+      custodian: custodian.text,
+      notes: notes.text,
     );
+  }
+
+  Future<void> _disburseBudget(FinanceBudgetUsage usage) async {
+    final amount = TextEditingController(
+      text: usage.remainingToDisburse.clamp(0, double.infinity).toStringAsFixed(0),
+    );
+    final voucher = TextEditingController();
+    final note = TextEditingController();
+    final sources = FinanceService.instance
+        .cashboxesForSchool()
+        .where((b) => b.id != usage.budget.cashboxId)
+        .toList();
+    if (sources.isEmpty) {
+      _toast('Open a treasury or collections cashbox first.');
+      return;
+    }
+    var fromId = sources.first.id;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Disburse ${usage.budget.department}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Allocated ${_etb(usage.budget.amount)} · '
+              'already released ${_etb(usage.disbursed)} · '
+              'still to release ${_etb(usage.remainingToDisburse)}',
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: fromId,
+              decoration: const InputDecoration(labelText: 'From treasury cashbox'),
+              items: [
+                for (final box in sources)
+                  DropdownMenuItem(
+                    value: box.id,
+                    child: Text(_cashboxLabel(box)),
+                  ),
+              ],
+              onChanged: (v) => fromId = v ?? fromId,
+            ),
+            TextField(
+              controller: amount,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount to release'),
+            ),
+            TextField(
+              controller: voucher,
+              decoration: const InputDecoration(labelText: 'Voucher / warrant no.'),
+            ),
+            TextField(
+              controller: note,
+              decoration: const InputDecoration(labelText: 'Note'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Disburse'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    _run(() {
+      FinanceService.instance.disburseBudget(
+        budgetId: usage.budget.id,
+        amount: double.tryParse(amount.text) ?? 0,
+        fromCashboxId: fromId,
+        voucherNo: voucher.text,
+        note: note.text,
+      );
+    });
   }
 
   Future<void> _addPayable() async {
@@ -1264,6 +1769,8 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     final amount = TextEditingController();
     final invoiceRef = TextEditingController();
     final purpose = TextEditingController();
+    final voucher = TextEditingController();
+    String? budgetId;
     final due = TextEditingController(
       text: DateTime.now().add(const Duration(days: 14)).toIso8601String().split('T').first,
     );
@@ -1272,41 +1779,51 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
       builder: (ctx) => AlertDialog(
         title: const Text('Supplier bill'),
         content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: supplier,
-                decoration: const InputDecoration(labelText: 'Supplier'),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: department,
-                decoration: const InputDecoration(labelText: 'Department'),
-                items: [
-                  for (final d in FinanceDepartments.values)
-                    DropdownMenuItem(value: d, child: Text(d)),
-                ],
-                onChanged: (v) => department = v ?? department,
-              ),
-              TextField(
-                controller: amount,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount owed'),
-              ),
-              TextField(
-                controller: due,
-                decoration: const InputDecoration(labelText: 'Due date YYYY-MM-DD'),
-              ),
-              TextField(
-                controller: invoiceRef,
-                decoration: const InputDecoration(labelText: 'Supplier invoice no.'),
-              ),
-              TextField(
-                controller: purpose,
-                decoration: const InputDecoration(labelText: 'Purpose'),
-              ),
-            ],
+          width: 460,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: supplier,
+                  decoration: const InputDecoration(labelText: 'Supplier'),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: department,
+                  decoration: const InputDecoration(labelText: 'Department'),
+                  items: [
+                    for (final d in FinanceDepartments.values)
+                      DropdownMenuItem(value: d, child: Text(d)),
+                  ],
+                  onChanged: (v) => department = v ?? department,
+                ),
+                TextField(
+                  controller: amount,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Amount owed'),
+                ),
+                TextField(
+                  controller: due,
+                  decoration: const InputDecoration(labelText: 'Due date YYYY-MM-DD'),
+                ),
+                TextField(
+                  controller: invoiceRef,
+                  decoration: const InputDecoration(labelText: 'Supplier invoice no.'),
+                ),
+                TextField(
+                  controller: voucher,
+                  decoration: const InputDecoration(labelText: 'Internal voucher no.'),
+                ),
+                TextField(
+                  controller: purpose,
+                  decoration: const InputDecoration(labelText: 'Purpose'),
+                ),
+                _budgetField(
+                  value: budgetId,
+                  onChanged: (v) => budgetId = v,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -1329,17 +1846,21 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
       dueDate: DateTime.tryParse(due.text) ?? DateTime.now(),
       invoiceRef: invoiceRef.text,
       purpose: purpose.text,
+      voucherNo: voucher.text,
+      budgetId: budgetId,
     );
   }
 
   Future<void> _payPayable(FinancePayable bill) async {
     final amount = TextEditingController(text: bill.outstanding.toStringAsFixed(0));
     final reference = TextEditingController();
-    var method = FinancePaymentMethod.bankTransfer;
+    var method = FinancePaymentMethod.cash;
+    String? cashboxId =
+        bill.cashboxId ?? _budgetCashboxId(bill.budgetId) ?? _fallbackPayCashbox();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Pay ${bill.supplier}'),
+        title: Text('Pay ${bill.supplier} from cashbox'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1356,6 +1877,11 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
                   DropdownMenuItem(value: m, child: Text(m.label)),
               ],
               onChanged: (v) => method = v ?? method,
+            ),
+            _cashboxField(
+              value: cashboxId,
+              label: 'Pay from cashbox',
+              onChanged: (v) => cashboxId = v,
             ),
             TextField(
               controller: reference,
@@ -1382,7 +1908,91 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
         amount: double.tryParse(amount.text) ?? 0,
         method: method,
         reference: reference.text,
+        cashboxId: cashboxId,
       );
     });
+  }
+
+  String _cashboxLabel(FinanceCashbox box) {
+    return '${box.name} · ${box.purpose.label} · '
+        '${_etb(FinanceService.instance.expectedCash(box.id))}';
+  }
+
+  String? _defaultCollectionsCashbox(FinanceInvoice invoice) {
+    final plan = invoice.structureId == null
+        ? null
+        : FinanceService.instance.structures
+            .cast<FinanceFeeStructure?>()
+            .firstWhere(
+              (s) => s!.id == invoice.structureId,
+              orElse: () => null,
+            );
+    return plan?.collectionCashboxId ??
+        FinanceService.instance
+            .cashboxesForSchool()
+            .where((b) => b.purpose == FinanceCashboxPurpose.collections)
+            .cast<FinanceCashbox?>()
+            .firstWhere((_) => true, orElse: () => null)
+            ?.id;
+  }
+
+  String? _budgetCashboxId(String? budgetId) {
+    if (budgetId == null) return null;
+    return FinanceService.instance.budgets
+        .cast<FinanceBudget?>()
+        .firstWhere((b) => b!.id == budgetId, orElse: () => null)
+        ?.cashboxId;
+  }
+
+  String? _fallbackPayCashbox() {
+    final boxes = FinanceService.instance.cashboxesForSchool();
+    if (boxes.isEmpty) return null;
+    return boxes.first.id;
+  }
+
+  Widget _cashboxField({
+    required String? value,
+    required String label,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final boxes = FinanceService.instance.cashboxesForSchool();
+    return DropdownButtonFormField<String?>(
+      initialValue: value,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('Do not move a cashbox'),
+        ),
+        for (final box in boxes)
+          DropdownMenuItem(value: box.id, child: Text(_cashboxLabel(box))),
+      ],
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _budgetField({
+    required String? value,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final budgets = FinanceService.instance.budgetsForSchool();
+    return DropdownButtonFormField<String?>(
+      initialValue: value,
+      decoration: const InputDecoration(labelText: 'Charge department budget'),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('No specific budget'),
+        ),
+        for (final budget in budgets)
+          DropdownMenuItem(
+            value: budget.id,
+            child: Text(
+              '${budget.department} · ${budget.academicYear} · ${_etb(budget.amount)}',
+            ),
+          ),
+      ],
+      onChanged: onChanged,
+    );
   }
 }

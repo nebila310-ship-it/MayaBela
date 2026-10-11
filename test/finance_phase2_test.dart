@@ -63,6 +63,7 @@ void main() {
       amount: 200000,
       dueDate: DateTime.now().add(const Duration(days: 10)),
     );
+    FinanceService.instance.approvePayable(bill.id);
     FinanceService.instance.payPayable(
       id: bill.id,
       amount: 80000,
@@ -87,6 +88,7 @@ void main() {
     expect(bill.status, FinanceInvoiceStatus.overdue);
     expect(FinanceService.instance.controlTotals().payablesOutstanding, 15000);
 
+    FinanceService.instance.approvePayable(bill.id);
     FinanceService.instance.payPayable(
       id: bill.id,
       amount: 5000,

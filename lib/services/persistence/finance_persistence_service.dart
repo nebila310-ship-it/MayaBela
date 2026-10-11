@@ -14,6 +14,7 @@ class FinancePersistenceService {
   static const _cashClosesKey = 'finance_cash_closes_v1';
   static const _expensesKey = 'finance_expenses_v1';
   static const _budgetsKey = 'finance_budgets_v1';
+  static const _disbursementsKey = 'finance_disbursements_v1';
   static const _payablesKey = 'finance_payables_v1';
   static const _auditKey = 'finance_audit_v1';
 
@@ -40,6 +41,8 @@ class FinancePersistenceService {
       cashCloses: await read(_cashClosesKey, FinanceCashClose.fromMap),
       expenses: await read(_expensesKey, FinanceExpense.fromMap),
       budgets: await read(_budgetsKey, FinanceBudget.fromMap),
+      disbursements:
+          await read(_disbursementsKey, FinanceBudgetDisbursement.fromMap),
       payables: await read(_payablesKey, FinancePayable.fromMap),
       audit: await read(_auditKey, FinanceAuditEvent.fromMap),
     );
@@ -78,6 +81,10 @@ class FinancePersistenceService {
     await LocalJsonStore.writeList(
       _budgetsKey,
       svc.budgets.map((e) => e.toMap()).toList(),
+    );
+    await LocalJsonStore.writeList(
+      _disbursementsKey,
+      svc.disbursements.map((e) => e.toMap()).toList(),
     );
     await LocalJsonStore.writeList(
       _payablesKey,
