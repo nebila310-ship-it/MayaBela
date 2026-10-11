@@ -16,6 +16,7 @@ import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
+import 'package:mayabela/services/teacher_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/student_sis_profile.dart';
 import 'package:mayabela/services/student_support_service.dart';
@@ -391,6 +392,35 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
   Color _accent(bool staff) =>
       staff ? AdminFormTheme.staff.primary : AdminFormTheme.teacher.primary;
 
+  Future<void> _changePhoto(AdminTeacherRecord teacher) async {
+    if (!_canHireStaff) return;
+    final s = AppLocale.instance.strings;
+    final staff = _isStaff(teacher);
+    final bytes = await pickAlignedPhotoOrSnack(
+      context,
+      pick: TeacherPhotoService.instance.pickBytes,
+      errorOf: () => TeacherPhotoService.instance.lastError,
+    );
+    if (bytes == null || !mounted) return;
+    final path = await TeacherPhotoService.instance.saveBytesForTeacher(
+      teacher.teacherId,
+      bytes,
+    );
+    if (path == null) return;
+    TeacherPhotoService.instance.rememberPath(teacher.teacherId, path);
+    TeacherPhotoService.instance.rememberBytes(teacher.teacherId, bytes);
+    TeacherRegistryService.instance.updatePhoto(teacher.teacherId, path);
+    if (!mounted) return;
+    setState(() {});
+    widget.onUpdated?.call();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(staff ? s.staffUpdated : s.teacherUpdated),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   Future<void> _renameRole(AdminTeacherRecord teacher) async {
     final changed = await showRenameStaffRoleTitleDialog(
       context: context,
@@ -611,11 +641,34 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                       padding: const EdgeInsets.all(16),
                       children: [
                         Center(
-                          child: StaffRegistryAvatar(
-                            staffId: teacher.teacherId,
-                            name: teacher.fullName,
-                            radius: 44,
-                            fallbackColor: accent,
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              StaffRegistryAvatar(
+                                staffId: teacher.teacherId,
+                                name: teacher.fullName,
+                                photoPath: teacher.photoPath,
+                                radius: 44,
+                                fallbackColor: accent,
+                              ),
+                              if (_canHireStaff)
+                                Material(
+                                  color: accent,
+                                  shape: const CircleBorder(),
+                                  child: InkWell(
+                                    customBorder: const CircleBorder(),
+                                    onTap: () => _changePhoto(teacher),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(6),
+                                      child: Icon(
+                                        Icons.camera_alt_rounded,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -727,6 +780,12 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
                                   ? (staff ? s.editStaff : s.editTeacher)
                                   : s.assignTeacherClasses,
                             ),
+                          ),
+                        if (_canHireStaff)
+                          OutlinedButton.icon(
+                            onPressed: () => _changePhoto(teacher),
+                            icon: const Icon(Icons.camera_alt_outlined),
+                            label: Text(s.changeProfilePhoto),
                           ),
                         if (_canHireStaff)
                           OutlinedButton.icon(
