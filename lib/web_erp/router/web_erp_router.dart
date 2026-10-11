@@ -37,7 +37,7 @@ import 'package:mayabela/web_erp/pages/web_calendar_page.dart';
 import 'package:mayabela/web_erp/pages/web_gallery_page.dart';
 import 'package:mayabela/web_erp/pages/web_campus_management_page.dart';
 import 'package:mayabela/web_erp/pages/web_erp_placeholder_page.dart';
-import 'package:mayabela/web_erp/pages/web_finance_dashboard_page.dart';
+import 'package:mayabela/web_erp/pages/web_finance_hub_page.dart';
 import 'package:mayabela/web_erp/pages/web_institution_page.dart';
 import 'package:mayabela/web_erp/pages/web_learning_materials_page.dart';
 import 'package:mayabela/web_erp/pages/web_library_page.dart';
@@ -153,7 +153,7 @@ class WebErpRouter {
       case 'academic_monitoring':
         return const WebQaPage();
       case 'finance':
-        return const WebFinanceDashboardPage();
+        return WebFinanceHubPage(onNavigate: onNavigate);
       case 'transport':
         return WebTransportDashboardPage(onNavigate: onNavigate);
       case 'attendance':
