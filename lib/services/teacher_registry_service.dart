@@ -348,15 +348,10 @@ class TeacherRegistryService {
   ];
 
   AdminTeacherRecord? lookupByPhone(String phone, {String? schoolId}) {
-    for (final teacher in _teachers.where((t) => t.isActive)) {
-      if (!PhoneUtils.matches(teacher.phone, phone)) continue;
-      if (schoolId != null &&
-          teacher.schoolId.toUpperCase() != schoolId.trim().toUpperCase()) {
-        continue;
-      }
-      return teacher;
-    }
-    return null;
+    final matches = _teachers
+        .where((t) => t.isActive && PhoneUtils.matches(t.phone, phone))
+        .toList();
+    return _preferSchool(matches, schoolId);
   }
 
   /// Resolves the staff record for a logged-in teacher account.
@@ -367,17 +362,12 @@ class TeacherRegistryService {
     String? schoolId,
   }) {
     if (linkedTeacherId != null && linkedTeacherId.trim().isNotEmpty) {
-      final byId = lookupById(linkedTeacherId);
+      final byId = lookupById(linkedTeacherId, schoolId: schoolId);
       if (byId != null) return byId;
     }
     if (username != null && username.trim().isNotEmpty) {
-      final byLogin = lookupByLoginUsername(username);
-      if (byLogin != null) {
-        if (schoolId == null ||
-            byLogin.schoolId.toUpperCase() == schoolId.trim().toUpperCase()) {
-          return byLogin;
-        }
-      }
+      final byLogin = lookupByLoginUsername(username, schoolId: schoolId);
+      if (byLogin != null) return byLogin;
     }
     if (phone != null && phone.trim().isNotEmpty) {
       return lookupByPhone(phone, schoolId: schoolId);
@@ -385,34 +375,61 @@ class TeacherRegistryService {
     return null;
   }
 
-  AdminTeacherRecord? lookupById(String teacherId) {
-    final id = teacherId.trim().toUpperCase();
-    try {
-      return _teachers.firstWhere((t) => t.teacherId == id && t.isActive);
-    } catch (_) {
-      return null;
-    }
+  AdminTeacherRecord? lookupById(String teacherId, {String? schoolId}) {
+    return _lookupById(teacherId, schoolId: schoolId, activeOnly: true);
   }
 
   /// Active or inactive — used when freeing a deleted staff phone.
-  AdminTeacherRecord? lookupAnyById(String teacherId) {
-    final id = teacherId.trim().toUpperCase();
-    try {
-      return _teachers.firstWhere((t) => t.teacherId == id);
-    } catch (_) {
-      return null;
-    }
+  AdminTeacherRecord? lookupAnyById(String teacherId, {String? schoolId}) {
+    return _lookupById(teacherId, schoolId: schoolId, activeOnly: false);
   }
 
-  AdminTeacherRecord? lookupByLoginUsername(String username) {
+  AdminTeacherRecord? lookupByName(String fullName, {String? schoolId}) {
+    final name = fullName.trim().toLowerCase();
+    if (name.isEmpty) return null;
+    final matches = _teachers
+        .where((t) => t.isActive && t.fullName.trim().toLowerCase() == name)
+        .toList();
+    return _preferSchool(matches, schoolId);
+  }
+
+  AdminTeacherRecord? lookupByLoginUsername(
+    String username, {
+    String? schoolId,
+  }) {
     final lower = username.trim().toLowerCase();
-    try {
-      return _teachers.firstWhere(
-        (t) => t.loginUsername?.toLowerCase() == lower && t.isActive,
-      );
-    } catch (_) {
+    if (lower.isEmpty) return null;
+    final matches = _teachers
+        .where((t) => t.isActive && t.loginUsername?.toLowerCase() == lower)
+        .toList();
+    return _preferSchool(matches, schoolId);
+  }
+
+  AdminTeacherRecord? _lookupById(
+    String teacherId, {
+    String? schoolId,
+    required bool activeOnly,
+  }) {
+    final id = teacherId.trim().toUpperCase();
+    final matches = _teachers
+        .where((t) => t.teacherId == id && (!activeOnly || t.isActive))
+        .toList();
+    return _preferSchool(matches, schoolId);
+  }
+
+  AdminTeacherRecord? _preferSchool(
+    List<AdminTeacherRecord> matches,
+    String? schoolId,
+  ) {
+    if (matches.isEmpty) return null;
+    final sid = AuthService.scopedSchoolId(schoolId);
+    if (sid != null) {
+      for (final teacher in matches) {
+        if (teacher.schoolId.toUpperCase() == sid) return teacher;
+      }
       return null;
     }
+    return matches.length == 1 ? matches.first : null;
   }
 
   List<AdminTeacherRecord> getAllTeachers() =>
@@ -437,7 +454,7 @@ class TeacherRegistryService {
   }
 
   void _replace(AdminTeacherRecord updated) {
-    final idx = _teachers.indexWhere((t) => t.teacherId == updated.teacherId);
+    final idx = _indexOfPersistedTeacher(updated);
     if (idx >= 0) _teachers[idx] = updated;
   }
 
@@ -561,12 +578,19 @@ class TeacherRegistryService {
     return list;
   }
 
-  /// Same teacher list as Staff → Teachers tab.
+  /// Same teacher list as Staff → Teachers tab. Empty when no school is set.
   List<AdminTeacherRecord> staffTeachersForSchool(String? schoolId) {
-    if (schoolId == null || schoolId.trim().isEmpty) {
-      return getAllTeachers();
-    }
-    return teachersForSchool(schoolId);
+    return visibleTeachers(schoolId: schoolId);
+  }
+
+  /// Teachers the signed-in school may see. Empty when no school is in session.
+  List<AdminTeacherRecord> visibleTeachers({
+    String? schoolId,
+    bool includeInactive = false,
+  }) {
+    final sid = AuthService.scopedSchoolId(schoolId);
+    if (sid == null) return const [];
+    return teachersForSchool(sid, includeInactive: includeInactive);
   }
 
   void assignHomeroomClass(String teacherId, String className) {
@@ -596,9 +620,11 @@ class TeacherRegistryService {
     return true;
   }
 
-  void removeTeacher(String teacherId) {
-    final id = teacherId.trim().toUpperCase();
-    _teachers.removeWhere((t) => t.teacherId == id);
+  void removeTeacher(String teacherId, {String? schoolId}) {
+    final existing = lookupAnyById(teacherId, schoolId: schoolId);
+    if (existing == null) return;
+    final idx = _indexOfPersistedTeacher(existing);
+    if (idx >= 0) _teachers.removeAt(idx);
   }
 
   AdminTeacherRecord addTeacher({
@@ -657,7 +683,7 @@ class TeacherRegistryService {
     final id = ShortRegistryId.allocate(
       prefix: prefix,
       existingIds: _teachers.map((t) => t.teacherId),
-      isTaken: (id) => lookupAnyById(id) != null,
+      isTaken: _teacherIdTakenAnywhere,
     );
     _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
     return id;
@@ -668,8 +694,7 @@ class TeacherRegistryService {
     int? nextId,
   }) {
     for (final teacher in teachers) {
-      final index =
-          _teachers.indexWhere((item) => item.teacherId == teacher.teacherId);
+      final index = _indexOfPersistedTeacher(teacher);
       if (index >= 0) {
         _teachers[index] = teacher;
       } else {
@@ -680,5 +705,26 @@ class TeacherRegistryService {
     if (clamped > _nextId) {
       _nextId = clamped;
     }
+  }
+
+  /// Merge key is teacher id + school — same `TCH-0001` at two schools
+  /// stays two records.
+  int _indexOfPersistedTeacher(AdminTeacherRecord record) {
+    final id = record.teacherId.trim().toUpperCase();
+    final sid = record.schoolId.trim().toUpperCase();
+    if (id.isEmpty || sid.isEmpty) return -1;
+    for (var i = 0; i < _teachers.length; i++) {
+      final teacher = _teachers[i];
+      if (teacher.teacherId.trim().toUpperCase() == id &&
+          teacher.schoolId.toUpperCase() == sid) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  bool _teacherIdTakenAnywhere(String teacherId) {
+    final id = teacherId.trim().toUpperCase();
+    return _teachers.any((t) => t.teacherId.trim().toUpperCase() == id);
   }
 }

@@ -128,10 +128,9 @@ class TransportService extends ChangeNotifier {
         ..sort((a, b) => a.fullName.compareTo(b.fullName));
     } else {
       students = StudentRegistryService.instance
-          .getAllStudents()
+          .visibleStudents()
           .where(
             (s) =>
-                s.isActive &&
                 s.transportEnabled &&
                 DriverRegistryService.instance
                     .transportReferenceMatchesDriver(s.transportId, id),
@@ -237,11 +236,8 @@ class TransportService extends ChangeNotifier {
 
     final legacy = SchoolDataService.instance.findStudentByQrCode(code);
     if (legacy != null) {
-      final byName = StudentRegistryService.instance
-          .getAllStudents()
-          .where((s) => s.fullName == legacy.name)
-          .toList();
-      if (byName.isNotEmpty) return byName.first.studentId;
+      final byName = StudentRegistryService.instance.lookupByName(legacy.name);
+      if (byName != null) return byName.studentId;
     }
 
     if (driverId != null) {

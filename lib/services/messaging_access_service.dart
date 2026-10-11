@@ -214,11 +214,9 @@ abstract final class MessagingAccessService {
     final normalizedSchoolId = schoolId?.trim().toUpperCase();
     final byKey = <String, ParentRecipientOption>{};
 
-    for (final student in StudentRegistryService.instance.getAllStudents()) {
-      if (normalizedSchoolId != null &&
-          student.schoolId.trim().toUpperCase() != normalizedSchoolId) {
-        continue;
-      }
+    for (final student in StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+    )) {
       if (classFilter != null && !classFilter.contains(student.className)) {
         continue;
       }
@@ -242,6 +240,7 @@ abstract final class MessagingAccessService {
       if (link.status != ParentLinkStatus.approved) continue;
       final student = StudentRegistryService.instance.lookupById(
         link.studentId,
+        schoolId: schoolId,
       );
       if (student == null || !student.isActive) continue;
       if (normalizedSchoolId != null &&

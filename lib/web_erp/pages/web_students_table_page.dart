@@ -77,13 +77,10 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
     final schoolId = AuthService.activeSchoolId;
     final campuses = SchoolRegistryService.instance.campusesForSchool(schoolId);
     final multiCampus = campuses.length > 1;
-    var students = StudentRegistryService.instance.registrySnapshot().toList();
-    if (schoolId != null) {
-      final sid = schoolId.toUpperCase();
-      students = students
-          .where((s) => s.schoolId.toUpperCase() == sid)
-          .toList();
-    }
+    var students = StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+      includeInactive: true,
+    );
     students = switch (_lifecycleFilter) {
       'active' => students.where((s) => s.isActive).toList(),
       'graduated' =>

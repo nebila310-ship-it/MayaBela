@@ -317,9 +317,9 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     final today = DateTime.now();
 
     if (ModuleAccess.canView('students')) {
-      final students = sid == null
-          ? StudentRegistryService.instance.getAllStudents()
-          : StudentRegistryService.instance.studentsForSchool(sid);
+      final students = StudentRegistryService.instance.visibleStudents(
+        schoolId: sid,
+      );
       final active = students.where((s) => s.isActive).length;
       out.add(_StatCard(
         moduleId: 'students',
@@ -437,9 +437,9 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
     }
 
     if (ModuleAccess.canView('hr')) {
-      final teachers = sid == null
-          ? TeacherRegistryService.instance.getAllTeachers().length
-          : TeacherRegistryService.instance.teachersForSchool(sid).length;
+      final teachers = TeacherRegistryService.instance
+          .visibleTeachers(schoolId: sid)
+          .length;
       final staff =
           SchoolDataService.instance.getStaffForActiveSchool().length;
       out.add(_StatCard(

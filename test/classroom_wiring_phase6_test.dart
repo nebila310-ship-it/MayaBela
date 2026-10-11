@@ -33,6 +33,13 @@ void main() {
   });
 
   test('studentsForClass treats 5B and Grade 5B as the same roster', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.tb',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      fullName: 'Teacher TB',
+    );
     final roster = StudentRegistryService.instance.studentsForClass('5B');
     expect(roster.map((s) => s.studentId), contains('STU-1005'));
     expect(roster.any((s) => s.fullName == 'Liya Solomon'), isTrue);

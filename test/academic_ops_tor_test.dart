@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/models/academic_term.dart';
 import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/models/enrollment.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/timetable_conflict_service.dart';
@@ -68,6 +69,14 @@ void main() {
   test(
     'timetable generation fills subjects from allocations and flags clashes',
     () {
+      AuthService.currentUser = RegisteredUser(
+        username: 'admin.ac',
+        password: 'x',
+        roleKey: AuthService.roleAdmin,
+        schoolId: 'AC-001',
+        fullName: 'Academic Admin',
+      );
+      addTearDown(() => AuthService.currentUser = null);
       TeacherRegistryService.instance.applyPersistedTeachers([
         AdminTeacherRecord(
           teacherId: 'TCH-ACAD-1',

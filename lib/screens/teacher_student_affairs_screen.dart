@@ -216,8 +216,8 @@ class _TeacherStudentAffairsScreenState
     final classes = _myClassNames;
     final students =
         StudentRegistryService.instance
-            .getAllStudents()
-            .where((s) => s.isActive && classes.contains(s.className))
+            .visibleStudents()
+            .where((s) => classes.contains(s.className))
             .toList()
           ..sort((a, b) => a.fullName.compareTo(b.fullName));
     if (students.isEmpty) {

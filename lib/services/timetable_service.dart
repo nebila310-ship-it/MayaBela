@@ -150,7 +150,7 @@ class TimetableService {
       if (teacher != null) return teacher;
     }
 
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
       if (TeacherRegistryService.instance
           .homeroomClassesFor(teacher.teacherId)
           .any(
@@ -179,7 +179,7 @@ class TimetableService {
   List<SubjectTeacherAllocation> allocationsForClass(String className) {
     final seen = <String>{};
     final allocations = <SubjectTeacherAllocation>[];
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
       for (final assignment in teacher.classAssignments) {
         if (!StudentRegistryService.classNamesMatch(
           assignment.className,

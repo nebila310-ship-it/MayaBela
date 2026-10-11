@@ -69,9 +69,9 @@ class WebAdminStatsService {
         ? SchoolEnrollmentMetricsService.instance.forSchool(schoolId)
         : null;
 
-    final students = schoolId == null
-        ? StudentRegistryService.instance.getAllStudents()
-        : StudentRegistryService.instance.studentsForSchool(schoolId);
+    final students = StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+    );
     final activeStudents =
         students.where((s) => s.isActive).toList(growable: false);
 
@@ -95,9 +95,9 @@ class WebAdminStatsService {
     final announcements = DashboardBadgeService.instance.countFor('announcements');
     final homework = DashboardBadgeService.instance.countFor('homework');
 
-    final teachers = schoolId == null
-        ? TeacherRegistryService.instance.getAllTeachers()
-        : TeacherRegistryService.instance.teachersForSchool(schoolId);
+    final teachers = TeacherRegistryService.instance.visibleTeachers(
+      schoolId: schoolId,
+    );
     final drivers = schoolId == null
         ? DriverRegistryService.instance.getAllDrivers()
         : DriverRegistryService.instance.driversForSchool(schoolId);

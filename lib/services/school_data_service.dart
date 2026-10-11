@@ -2423,7 +2423,7 @@ class SchoolDataService {
     final cached = _homeroomTeacherIds[className];
     if (cached != null && cached.trim().isNotEmpty) return cached;
 
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
       for (final assignment in teacher.classAssignments) {
         if (_classNamesMatch(assignment.className, className) &&
             assignment.role == TeacherStaffRole.homeroomTeacher) {
@@ -6080,10 +6080,7 @@ class SchoolDataService {
   }) {
     final name = studentName.trim().toLowerCase();
     if (name.isEmpty) return null;
-    final schoolId = AuthService.activeSchoolId;
-    final roster = schoolId == null || schoolId.trim().isEmpty
-        ? StudentRegistryService.instance.registrySnapshot()
-        : StudentRegistryService.instance.studentsForSchool(schoolId);
+    final roster = StudentRegistryService.instance.visibleStudents();
     AdminStudentRecord? nameOnly;
     for (final student in roster) {
       if (student.fullName.trim().toLowerCase() != name) continue;
@@ -6114,27 +6111,26 @@ class SchoolDataService {
     final wantSchool = schoolId.trim().toUpperCase();
     final id = report.studentId?.trim();
     if (id != null && id.isNotEmpty) {
-      final byId = StudentRegistryService.instance.lookupAnyById(id);
+      final byId = StudentRegistryService.instance.lookupAnyById(
+        id,
+        schoolId: wantSchool,
+      );
       if (byId != null) return byId;
     }
     final name = report.studentName.trim().toLowerCase();
     if (name.isEmpty) return null;
     AdminStudentRecord? sameSchool;
-    AdminStudentRecord? otherSchool;
-    for (final student in StudentRegistryService.instance.registrySnapshot()) {
-      if (!student.isActive) continue;
+    for (final student in StudentRegistryService.instance.studentsForSchool(
+      wantSchool,
+    )) {
       if (student.fullName.trim().toLowerCase() != name) continue;
-      if (student.schoolId.toUpperCase() == wantSchool) {
-        if (report.className.trim().isEmpty ||
-            _classNamesMatch(student.className, report.className)) {
-          return student;
-        }
-        sameSchool ??= student;
-      } else {
-        otherSchool ??= student;
+      if (report.className.trim().isEmpty ||
+          _classNamesMatch(student.className, report.className)) {
+        return student;
       }
+      sameSchool ??= student;
     }
-    return sameSchool ?? otherSchool;
+    return sameSchool;
   }
 
   bool _markbookMissingCountsAsZero() {
@@ -6538,7 +6534,7 @@ class SchoolDataService {
     final seen = <String>{};
     final contacts = <StaffMemberOption>[];
 
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
       if (!teacher.isActive) continue;
       final assigned = teacher.classAssignments.any(
         (a) => _classNamesMatch(a.className, classKey),
@@ -7034,19 +7030,17 @@ class SchoolDataService {
   /// Keeps homeroom class rosters and teacher assignments aligned with registries.
   void syncEnrollmentFromRegistry({String? schoolId}) {
     syncAllStudentsFromRegistry(schoolId: schoolId);
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
-      if (schoolId != null &&
-          teacher.schoolId.toUpperCase() != schoolId.trim().toUpperCase()) {
-        continue;
-      }
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers(
+      schoolId: schoolId,
+    )) {
       syncTeacherFromRegistry(teacher);
     }
   }
 
   void syncAllStudentsFromRegistry({String? schoolId}) {
-    final students = schoolId != null
-        ? StudentRegistryService.instance.studentsForSchool(schoolId)
-        : StudentRegistryService.instance.getAllStudents();
+    final students = StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+    );
     for (final student in students) {
       syncChildFromRegistry(student.studentId);
     }

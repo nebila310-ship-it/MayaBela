@@ -515,13 +515,7 @@ class ParentInviteService {
       final byId = StudentRegistryService.instance.lookupById(registryStudentId);
       if (byId != null) return byId;
     }
-    try {
-      return StudentRegistryService.instance
-          .getAllStudents()
-          .firstWhere((s) => s.fullName == name);
-    } catch (_) {
-      return null;
-    }
+    return StudentRegistryService.instance.lookupByName(name);
   }
 
   /// Email the parent invite after enroll. No SMS.

@@ -408,19 +408,16 @@ class _WebStudentAffairsPageState extends State<WebStudentAffairsPage>
               .map((a) => a.className)
               .toSet()
         : <String>{};
-    final students = StudentRegistryService.instance.getAllStudents().where((
-      s,
-    ) {
-      if (!s.isActive) return false;
-      if (_schoolId.isNotEmpty &&
-          s.schoolId.trim().toUpperCase() != _schoolId.toUpperCase()) {
-        return false;
-      }
-      if (_isClassroomTeacher && !classNames.contains(s.className)) {
-        return false;
-      }
-      return true;
-    }).toList()..sort((a, b) => a.fullName.compareTo(b.fullName));
+    final students = StudentRegistryService.instance
+        .visibleStudents(schoolId: _schoolId)
+        .where((s) {
+          if (_isClassroomTeacher && !classNames.contains(s.className)) {
+            return false;
+          }
+          return true;
+        })
+        .toList()
+      ..sort((a, b) => a.fullName.compareTo(b.fullName));
     if (students.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No active students found.')),

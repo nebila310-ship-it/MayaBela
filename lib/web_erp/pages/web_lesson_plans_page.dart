@@ -49,14 +49,7 @@ class _WebLessonPlansPageState extends State<WebLessonPlansPage> {
     final names = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
       ...SchoolDataService.instance.getAllGradeReports().map((r) => r.className),
-      ...StudentRegistryService.instance
-          .registrySnapshot()
-          .where(
-            (s) =>
-                _schoolId.isEmpty ||
-                s.schoolId.toUpperCase() == _schoolId.toUpperCase(),
-          )
-          .map((s) => s.className),
+      ...StudentRegistryService.instance.classNamesForSchool(_schoolId),
     };
     final list = names.where((n) => n.trim().isNotEmpty).toList()..sort();
     return list;

@@ -231,9 +231,9 @@ class SchoolReportExportService {
     final schoolId = AuthService.activeSchoolId;
     switch (kind) {
       case SchoolReportKind.students:
-        final students = schoolId == null
-            ? StudentRegistryService.instance.getAllStudents()
-            : StudentRegistryService.instance.studentsForSchool(schoolId);
+        final students = StudentRegistryService.instance.visibleStudents(
+          schoolId: schoolId,
+        );
         return [
           ['Student ID', 'Full Name', 'Grade', 'Class', 'Status', 'School ID'],
           for (final s in students)
@@ -247,9 +247,9 @@ class SchoolReportExportService {
             ],
         ];
       case SchoolReportKind.teachers:
-        final teachers = schoolId == null
-            ? TeacherRegistryService.instance.getAllTeachers()
-            : TeacherRegistryService.instance.teachersForSchool(schoolId);
+        final teachers = TeacherRegistryService.instance.visibleTeachers(
+          schoolId: schoolId,
+        );
         final insights = TeacherPerformanceInsights.instance.rows(schoolId);
         final byId = {
           for (final row in insights)
@@ -363,9 +363,9 @@ class SchoolReportExportService {
             ],
         ];
       case SchoolReportKind.academic:
-        final students = schoolId == null
-            ? StudentRegistryService.instance.getAllStudents()
-            : StudentRegistryService.instance.studentsForSchool(schoolId);
+        final students = StudentRegistryService.instance.visibleStudents(
+          schoolId: schoolId,
+        );
         final reports = SchoolDataService.instance.getAllGradeReports();
         final latest = <String, StudentGradeReport>{};
         for (final report in reports) {

@@ -25,9 +25,9 @@ class AdminStudentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final schoolId = AuthService.activeSchoolId;
-    final students = schoolId == null
-        ? StudentRegistryService.instance.getAllStudents()
-        : StudentRegistryService.instance.studentsForSchool(schoolId);
+    final students = StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+    );
 
     return ListenableBuilder(
       listenable: AppLocale.instance,
@@ -160,9 +160,8 @@ class _AdminStaffScreenState extends State<AdminStaffScreen>
         StaffRegistryNotifier.instance,
       ]),
       builder: (context, _) {
-        final teachers = (schoolId == null
-                ? TeacherRegistryService.instance.getAllTeachers()
-                : TeacherRegistryService.instance.teachersForSchool(schoolId))
+        final teachers = TeacherRegistryService.instance
+            .visibleTeachers(schoolId: schoolId)
             .where((t) => t.staffRoles.isEmpty)
             .toList();
         final employees =
