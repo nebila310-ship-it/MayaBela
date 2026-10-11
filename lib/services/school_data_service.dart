@@ -59,9 +59,13 @@ class SchoolDataService {
 
   int _nextAnnouncementId = 4;
   int _nextHomeworkId = 3;
+  bool _homeworkApplyPrimed = false;
+  final Set<String> _notifiedHomeworkIds = {};
   int _nextGalleryId = 3;
   int _nextLearningMaterialId = 1;
   int _nextActivityId = 2;
+  bool _dailyActivityApplyPrimed = false;
+  final Set<String> _notifiedDailyActivityKeys = {};
   final Set<String> _busArrivalNotified = {};
   final Map<String, StudentConductRating> _studentConduct = {};
 
@@ -986,6 +990,14 @@ class SchoolDataService {
   }
 
   @visibleForTesting
+  void resetActivityNotifyStateForTests() {
+    _homeworkApplyPrimed = false;
+    _dailyActivityApplyPrimed = false;
+    _notifiedHomeworkIds.clear();
+    _notifiedDailyActivityKeys.clear();
+  }
+
+  @visibleForTesting
   static String conversationPersistErrorText(Object e) {
     final s = '$e'.toLowerCase();
     if (s.contains('without schoolid') || s.contains('school id')) {
@@ -1715,22 +1727,45 @@ class SchoolDataService {
     final me = StaffMemberOption.viewerCompositeStaffId(senderRole);
     final senderUsername =
         AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    final discussion = conversation.isClassDiscussion;
+    final type =
+        discussion ? NotificationType.classDiscussion : NotificationType.message;
+    final className = conversation.classDiscussionClassName;
+    final alertTitle = discussion
+        ? 'Class discussion — ${className ?? conversation.name}'
+        : title;
+    final myStudentId =
+        AuthService.currentUser?.linkedStudentId?.trim().toUpperCase() ?? '';
 
     for (final staffId in conversation.groupStaffIds) {
       if (StaffMemberOption.idsEqual(me, staffId)) continue;
       final member = StaffMemberOption.resolve(staffId);
       NotificationService.instance.push(
-        title: title,
+        title: alertTitle,
         body: body,
-        type: NotificationType.message,
+        type: type,
         fromRole: senderRole,
         fromName: senderName,
         recipientRole: member?.roleKey ?? AuthService.roleTeacher,
         recipientStaffId: staffId,
+        targetClassName: className,
+        showOnMessagesBadge: !discussion,
       );
     }
 
-    if (conversation.groupParentNames.isNotEmpty) {
+    if (discussion &&
+        (className != null || conversation.linkedStudentIds.isNotEmpty)) {
+      NotificationService.instance.push(
+        title: alertTitle,
+        body: body,
+        type: type,
+        fromRole: senderRole,
+        fromName: senderName,
+        recipientRole: AuthService.roleParent,
+        targetClassName: className,
+        showOnMessagesBadge: false,
+      );
+    } else if (conversation.groupParentNames.isNotEmpty) {
       final usernames = <String>{};
       for (final name in conversation.groupParentNames) {
         final recipient = MessagingAccessService.findParentRecipient(
@@ -1744,27 +1779,35 @@ class SchoolDataService {
       );
       if (usernames.isNotEmpty) {
         NotificationService.instance.push(
-          title: title,
+          title: alertTitle,
           body: body,
-          type: NotificationType.message,
+          type: type,
           fromRole: senderRole,
           fromName: senderName,
           recipientRole: AuthService.roleParent,
           recipientUsernames: usernames.toList(),
+          targetClassName: className,
+          showOnMessagesBadge: !discussion,
         );
       }
     }
 
     for (final studentId in conversation.linkedStudentIds) {
       if (studentId.trim().isEmpty) continue;
+      if (myStudentId.isNotEmpty &&
+          studentId.trim().toUpperCase() == myStudentId) {
+        continue;
+      }
       NotificationService.instance.push(
-        title: title,
+        title: alertTitle,
         body: body,
-        type: NotificationType.message,
+        type: type,
         fromRole: senderRole,
         fromName: senderName,
         recipientRole: AuthService.roleStudent,
         targetStudentId: studentId,
+        targetClassName: className,
+        showOnMessagesBadge: !discussion,
       );
     }
   }
@@ -2304,6 +2347,7 @@ class SchoolDataService {
       AuthService.roleParent,
       AuthService.roleTeacher,
       AuthService.roleAdmin,
+      AuthService.roleStudent,
     ]) {
       NotificationService.instance.push(
         title: title,
@@ -2313,7 +2357,10 @@ class SchoolDataService {
         fromName: fromName,
         recipientRole: role,
         targetClassName: targetClassName,
-        targetStudentId: role == AuthService.roleParent ? targetStudentId : null,
+        targetStudentId:
+            role == AuthService.roleParent || role == AuthService.roleStudent
+            ? targetStudentId
+            : null,
         showOnMessagesBadge: type == NotificationType.message,
       );
     }
@@ -3353,6 +3400,22 @@ class SchoolDataService {
         _dailyActivities[index] = normalized;
       } else {
         _dailyActivities.add(normalized);
+        final key = _dailyActivityNotifyKey(
+          normalized.studentId,
+          normalized.date,
+        );
+        final shouldNotify = _dailyActivityApplyPrimed &&
+            !_notifiedDailyActivityKeys.contains(key) &&
+            !_currentUserAuthoredName(normalized.teacherName);
+        _notifiedDailyActivityKeys.add(key);
+        if (shouldNotify) {
+          _notifyParentForDailyActivity(
+            studentId: normalized.studentId,
+            studentName: normalized.studentName,
+            className: normalized.className,
+            teacherName: normalized.teacherName,
+          );
+        }
       }
 
       final numeric = RegExp(r'act-(\d+)').firstMatch(normalized.id);
@@ -3363,6 +3426,20 @@ class SchoolDataService {
         }
       }
     }
+    _dailyActivityApplyPrimed = true;
+  }
+
+  String _dailyActivityNotifyKey(String studentId, DateTime date) =>
+      '${studentId.trim().toUpperCase()}|${date.year}-${date.month}-${date.day}';
+
+  bool _currentUserAuthoredName(String authorName) {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    final from = authorName.trim().toLowerCase();
+    if (from.isEmpty) return false;
+    final fullName = (user.fullName ?? '').trim().toLowerCase();
+    if (fullName.isNotEmpty && fullName == from) return true;
+    return user.username.trim().toLowerCase() == from;
   }
 
   bool _dailyActivityMatchesStudent(
@@ -3444,6 +3521,7 @@ class SchoolDataService {
       );
     }
 
+    _notifiedDailyActivityKeys.add(_dailyActivityNotifyKey(canonicalId, date));
     _notifyParentForDailyActivity(
       studentId: canonicalId,
       studentName: studentName,
@@ -3640,6 +3718,23 @@ class SchoolDataService {
         _homework[index] = normalized;
       } else {
         _homework.add(normalized);
+        final recent = DateTime.now().difference(normalized.postedAt).abs() <=
+            const Duration(minutes: 30);
+        final shouldNotify = _homeworkApplyPrimed &&
+            recent &&
+            !_notifiedHomeworkIds.contains(normalized.id) &&
+            !_isCurrentUserHomeworkAuthor(normalized);
+        _notifiedHomeworkIds.add(normalized.id);
+        if (shouldNotify) {
+          _notifyParentsInClass(
+            className: normalized.className,
+            title: 'New homework — ${normalized.subject}',
+            body: '${normalized.teacherName}: ${normalized.description}',
+            type: NotificationType.homework,
+            fromRole: AuthService.roleTeacher,
+            fromName: normalized.teacherName,
+          );
+        }
       }
 
       final numeric = RegExp(r'hw-(\d+)').firstMatch(normalized.id);
@@ -3650,6 +3745,19 @@ class SchoolDataService {
         }
       }
     }
+    _homeworkApplyPrimed = true;
+  }
+
+  bool _isCurrentUserHomeworkAuthor(HomeworkItem item) {
+    if (_currentUserAuthoredName(item.teacherName)) return true;
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    final tid = item.teacherId.trim().toLowerCase();
+    if (tid.isEmpty) return false;
+    if (tid == user.username.trim().toLowerCase()) return true;
+    final teacherKey = user.linkedTeacherId?.trim().toLowerCase() ?? '';
+    return teacherKey.isNotEmpty &&
+        (tid == teacherKey || tid == 'teacher:$teacherKey');
   }
 
   void addHomework({
@@ -3684,6 +3792,7 @@ class SchoolDataService {
     );
     SchoolContentSyncService.instance.markDataChanged();
 
+    _notifiedHomeworkIds.add(_homework.first.id);
     _notifyParentsInClass(
       className: canonicalClass,
       title: 'New homework — $subject',

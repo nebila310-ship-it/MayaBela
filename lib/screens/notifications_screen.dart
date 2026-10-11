@@ -40,6 +40,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _iconForType(NotificationType type) {
     switch (type) {
       case NotificationType.message:
+      case NotificationType.classDiscussion:
         return Icons.message;
       case NotificationType.homework:
         return Icons.assignment;
@@ -74,6 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _colorForType(NotificationType type) {
     switch (type) {
       case NotificationType.message:
+      case NotificationType.classDiscussion:
         return Colors.orange;
       case NotificationType.homework:
         return Colors.cyan;
@@ -117,6 +119,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     switch (item.type) {
       case NotificationType.message:
+      case NotificationType.classDiscussion:
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const MessagesScreen()),

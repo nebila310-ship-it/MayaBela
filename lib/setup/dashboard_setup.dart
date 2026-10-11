@@ -646,6 +646,7 @@ List<DashboardEntry> _parentEntries() {
         icon: Icons.forum_outlined,
         title: AppLocale.instance.strings.classDiscussion,
         color: const Color(0xFF1565C0),
+        badgeCount: _badge('class_discussion'),
         onTap: () => _openTile('class_discussion', () {
           _ensureClassDiscussionsForViewer();
           Navigator.push(
@@ -1071,6 +1072,7 @@ List<DashboardEntry> _studentEntries() {
         icon: Icons.forum_outlined,
         title: AppLocale.instance.strings.classDiscussion,
         color: const Color(0xFF1565C0),
+        badgeCount: _badge('class_discussion'),
         onTap: () => _openTile('class_discussion', () {
           _ensureClassDiscussionsForViewer();
           Navigator.push(

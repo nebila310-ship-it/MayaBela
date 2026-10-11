@@ -204,6 +204,21 @@ class Conversation {
 
   String name;
 
+  /// `{class} class discussion` threads used by the Class discussion tile.
+  bool get isClassDiscussion {
+    final n = name.trim().toLowerCase();
+    return n.endsWith(' class discussion');
+  }
+
+  /// Class label parsed from a class-discussion title, or null.
+  String? get classDiscussionClassName {
+    const suffix = ' class discussion';
+    final raw = name.trim();
+    if (!raw.toLowerCase().endsWith(suffix)) return null;
+    final className = raw.substring(0, raw.length - suffix.length).trim();
+    return className.isEmpty ? null : className;
+  }
+
   final String role;
 
   final List<ChatMessage> messages;

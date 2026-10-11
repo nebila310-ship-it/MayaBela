@@ -19,7 +19,9 @@ enum NotificationPreferenceKey {
 NotificationPreferenceKey preferenceKeyForType(NotificationType type) {
   return switch (type) {
     NotificationType.homework => NotificationPreferenceKey.homework,
-    NotificationType.message => NotificationPreferenceKey.messages,
+    NotificationType.message ||
+    NotificationType.classDiscussion =>
+      NotificationPreferenceKey.messages,
     NotificationType.bus => NotificationPreferenceKey.transport,
     NotificationType.announcement => NotificationPreferenceKey.announcements,
     NotificationType.grade => NotificationPreferenceKey.grades,
@@ -40,6 +42,7 @@ NotificationPreferenceKey preferenceKeyForType(NotificationType type) {
 /// Login toast + tile badges for parents, teachers, and administration.
 const loginActionNotificationTypes = <NotificationType>[
   NotificationType.message,
+  NotificationType.classDiscussion,
   NotificationType.homework,
   NotificationType.lessonPlan,
   NotificationType.attendance,
@@ -51,6 +54,7 @@ const loginActionNotificationTypes = <NotificationType>[
 
 const loginActionTileIds = <String>[
   'messages',
+  'class_discussion',
   'homework',
   'lesson_plans',
   'attendance',
