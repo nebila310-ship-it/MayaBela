@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/ethiopia_payroll_tax.dart';
+import 'package:mayabela/services/hr_workforce_service.dart';
 import 'package:mayabela/services/payroll_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/pages/web_hr_hub_page.dart';
@@ -34,6 +35,7 @@ void main() {
       ),
     ]);
     PayrollService.instance.applyPersistedData(profiles: const [], runs: const []);
+    HrWorkforceService.instance.resetForTests();
   });
 
   tearDown(() {
@@ -76,6 +78,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Teachers'), findsOneWidget);
+    expect(find.text('Leave & contracts'), findsOneWidget);
     expect(find.text('Payroll'), findsOneWidget);
     expect(find.byKey(const ValueKey('hr-register-driver')), findsNothing);
     expect(find.byKey(const ValueKey('hr-live-gps')), findsNothing);
@@ -248,5 +251,27 @@ void main() {
     expect(find.byKey(const ValueKey('hr-live-gps')), findsOneWidget);
     expect(find.text('Register Driver'), findsOneWidget);
     expect(find.text('Live GPS'), findsOneWidget);
+  });
+
+  testWidgets('Leave & contracts tab hosts workforce desk, not payroll',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebHrHubPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Leave & contracts'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('hr-workforce-page-scroll')), findsOneWidget);
+    expect(find.textContaining('Salaries stay in Payroll'), findsOneWidget);
+    expect(find.text('Record leave'), findsOneWidget);
+    expect(find.text('Employment file'), findsOneWidget);
+    expect(find.text('Run payroll'), findsNothing);
   });
 }

@@ -6,6 +6,8 @@ const Map<String, String> kModuleIdAliases = {
   'staff': 'hr',
   'employees': 'hr',
   'payroll': 'hr',
+  'hr_workforce': 'hr',
+  'workforce': 'hr',
   'add_teacher': 'hr',
   'add_staff': 'teachers',
   'grades': 'examinations',

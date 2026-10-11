@@ -122,4 +122,47 @@ void main() {
       expect(vertical.controller!.position.maxScrollExtent, greaterThan(100));
     },
   );
+
+  test('vertical wheel over a wide table leaves page scroll to the parent', () {
+    expect(
+      webErpHScrollWheelClaim(
+        dx: 0,
+        dy: 240,
+        shift: false,
+        canScrollHorizontal: true,
+        canScrollVertical: false,
+      ),
+      WebErpHScrollWheelClaim.none,
+    );
+    expect(
+      webErpHScrollWheelClaim(
+        dx: 280,
+        dy: 0,
+        shift: false,
+        canScrollHorizontal: true,
+        canScrollVertical: false,
+      ),
+      WebErpHScrollWheelClaim.horizontal,
+    );
+    expect(
+      webErpHScrollWheelClaim(
+        dx: 0,
+        dy: 180,
+        shift: true,
+        canScrollHorizontal: true,
+        canScrollVertical: false,
+      ),
+      WebErpHScrollWheelClaim.horizontal,
+    );
+    expect(
+      webErpHScrollWheelClaim(
+        dx: 0,
+        dy: 120,
+        shift: false,
+        canScrollHorizontal: true,
+        canScrollVertical: true,
+      ),
+      WebErpHScrollWheelClaim.vertical,
+    );
+  });
 }

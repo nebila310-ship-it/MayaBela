@@ -124,5 +124,7 @@ void main() {
     expect(list, contains('staff-page-scroll'));
     expect(list, contains('_attachPhoto'));
     expect(list, contains('SingleChildScrollView'));
+    expect(list, contains('AlwaysScrollableScrollPhysics'));
+    expect(list, contains('ClampingScrollPhysics'));
   });
 }
