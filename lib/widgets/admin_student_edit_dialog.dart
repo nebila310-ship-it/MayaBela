@@ -44,6 +44,7 @@ Future<bool?> showAdminStudentEditDialog(
   final academicYearCtrl =
       TextEditingController(text: student.academicYear ?? '2025/2026');
   final houseCtrl = TextEditingController(text: student.house ?? '');
+  var selectedFundingType = student.fundingType;
   final medicalDetailsCtrl = TextEditingController(
     text: student.medicalConditionDetails ?? '',
   );
@@ -443,6 +444,31 @@ Future<bool?> showAdminStudentEditDialog(
                   ),
                 ),
               ),
+              adminDialogField(
+                DropdownButtonFormField<StudentFundingType>(
+                  initialValue: selectedFundingType,
+                  decoration: adminFieldDecoration(
+                    label: s.studentFundingType,
+                    icon: Icons.workspace_premium_outlined,
+                    accent: theme.secondary,
+                  ),
+                  items: StudentFundingType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            type == StudentFundingType.scholarship
+                                ? s.scholarshipStudent
+                                : s.regularStudent,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) selectedFundingType = value;
+                  },
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
@@ -714,6 +740,7 @@ Future<bool?> showAdminStudentEditDialog(
       campus: selectedCampus,
       academicYear: academicYearCtrl.text.trim(),
       house: houseCtrl.text.trim().isEmpty ? null : houseCtrl.text.trim(),
+      fundingType: selectedFundingType,
       hasMedicalCondition: hasMedicalCondition,
       medicalConditionDetails: hasMedicalCondition
           ? medicalDetailsCtrl.text.trim()

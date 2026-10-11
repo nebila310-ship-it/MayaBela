@@ -639,6 +639,8 @@ class GoliveService extends ChangeNotifier {
       emergencyContact2Name: null,
       homeroomTeacherId: existing.homeroomTeacherId,
       academicYear: existing.academicYear,
+      house: existing.house,
+      fundingType: existing.fundingType,
       hasMedicalCondition: false,
       medicalConditionDetails: null,
       otherMedicalInfo: null,

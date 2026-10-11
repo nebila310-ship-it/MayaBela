@@ -87,6 +87,8 @@ class AdminStudentsScreen extends StatelessWidget {
                       student.studentId,
                       student.grade,
                       student.className,
+                      if (student.fundingType.isScholarship)
+                        student.fundingType.label,
                       if (student.house != null && student.house!.trim().isNotEmpty)
                         student.house,
                     ].join(' · '),

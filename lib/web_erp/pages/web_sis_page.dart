@@ -214,6 +214,7 @@ class _WebSisPageState extends State<WebSisPage> {
                             Text(
                               'DOB ${ParentInviteService.formatDob(student.dateOfBirth)}'
                               ' · ${student.lifecycleStatus.label}'
+                              ' · ${student.fundingType.label}'
                               ' · ${snapshot!.groupingSummary}',
                             ),
                             Text(
