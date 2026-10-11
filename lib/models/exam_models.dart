@@ -89,6 +89,21 @@ class ExamQuestion {
 
   bool get isMcq => type == ExamQuestionType.mcq;
 
+  /// Typed prompt, or a label when the question is a file only.
+  String get displayPrompt {
+    final typed = prompt.trim();
+    if (typed.isNotEmpty) return typed;
+    if (attachmentPaths.isNotEmpty) return 'Attached question';
+    return 'Untitled question';
+  }
+
+  static String promptFromInput(String prompt, List<String> attachments) {
+    final typed = prompt.trim();
+    if (typed.isNotEmpty) return typed;
+    if (attachments.isNotEmpty) return 'Attached question';
+    return '';
+  }
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'schoolId': schoolId,
@@ -185,6 +200,9 @@ class ExamPaper {
   DateTime updatedAt;
 
   bool get inSchoolVault => vaultAccess == ExamVaultAccess.vault;
+
+  bool get hasContent =>
+      questionIds.isNotEmpty || attachmentPaths.isNotEmpty;
 
   bool get isPublished => status == ExamPaperStatus.published;
 
