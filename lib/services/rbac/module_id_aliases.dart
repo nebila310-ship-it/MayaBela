@@ -37,6 +37,7 @@ const Map<String, String> kModuleIdAliases = {
   'special_needs': 'student_affairs',
   'college_guidance': 'student_affairs',
   'student_support': 'student_affairs',
+  'clinic_reports': 'student_affairs',
   'clubs': 'student_affairs',
   'gojo': 'student_affairs',
   'scholarships': 'student_affairs',

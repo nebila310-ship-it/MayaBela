@@ -5,6 +5,8 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_support_service.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 
 /// Maps dashboard tile ids to unread notification counts for every role.
 class DashboardBadgeService extends ChangeNotifier {
@@ -92,6 +94,12 @@ class DashboardBadgeService extends ChangeNotifier {
     if (tileId == 'parent_approvals') {
       EnrollmentService.instance.ensureSeeded();
       return EnrollmentService.instance.pendingCountForCurrentUser();
+    }
+
+    if (tileId == 'clinic_reports') {
+      return StudentSupportService.instance.clinicReportBadgeCount(
+        TeacherAccessService.instance.homeroomClassNames,
+      );
     }
 
     final types = _tileTypes[tileId];

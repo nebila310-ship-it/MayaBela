@@ -190,6 +190,13 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
         all.where((r) => r.type == HealthRecordType.accident).toList(),
       'due' => due,
       'followup' => followUps,
+      'homeroom' => _svc.clinicReportsForClasses(
+          all
+              .map((row) => row.className ?? '')
+              .where((name) => name.trim().isNotEmpty)
+              .toSet(),
+          schoolId: _schoolId,
+        ),
       _ => all,
     };
     return _listTab(
@@ -233,7 +240,9 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
           '${summary.checkups} check-ups · '
           '${summary.accidents} accidents'
           '${due.isEmpty ? '' : ' · ${due.length} vaccine(s) due'}'
-          '${followUps.isEmpty ? '' : ' · ${followUps.length} follow-up(s)'}',
+          '${followUps.isEmpty ? '' : ' · ${followUps.length} follow-up(s)'}'
+          '. Homeroom teachers get a Clinic reports tile for clinic and '
+          'incident visits that need class follow-up.',
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -250,6 +259,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
               ('checkup', 'Check-ups'),
               ('accident', 'Accidents'),
               ('alert', 'Emergencies'),
+              ('homeroom', 'Teacher reports'),
             ])
               ChoiceChip(
                 label: Text(label),
@@ -1301,6 +1311,12 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
                     decoration: const InputDecoration(
                       labelText: 'Staff notes (not shown to parents)',
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Clinic visits, accidents, and emergencies also go to '
+                    'the homeroom teacher as an expandable class report. '
+                    'Clinic-only staff notes stay off that tile.',
                   ),
                 ],
               ),
