@@ -2,6 +2,29 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// Which axis [WebErpHScroll] should claim from a mouse-wheel / trackpad event.
+enum WebErpHScrollWheelClaim { none, horizontal, vertical }
+
+/// Vertical wheel over a wide table must not steal the parent page scroll.
+/// Shift+wheel or a real horizontal delta still pans the table.
+WebErpHScrollWheelClaim webErpHScrollWheelClaim({
+  required double dx,
+  required double dy,
+  required bool shift,
+  required bool canScrollHorizontal,
+  required bool canScrollVertical,
+}) {
+  final horizontalDelta = dx != 0 ? dx : (shift ? dy : 0.0);
+  if (horizontalDelta != 0 && canScrollHorizontal) {
+    return WebErpHScrollWheelClaim.horizontal;
+  }
+  if (dx == 0 && !shift && dy != 0 && canScrollVertical) {
+    return WebErpHScrollWheelClaim.vertical;
+  }
+  return WebErpHScrollWheelClaim.none;
+}
 
 /// Horizontal scroller for wide [DataTable]s.
 ///
@@ -56,34 +79,63 @@ class _WebErpHScrollState extends State<WebErpHScroll> {
     super.dispose();
   }
 
+  bool _shiftHeld() {
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    return keys.contains(LogicalKeyboardKey.shiftLeft) ||
+        keys.contains(LogicalKeyboardKey.shiftRight) ||
+        keys.contains(LogicalKeyboardKey.shift);
+  }
+
+  bool _canJump(ScrollController controller, double delta) {
+    if (!controller.hasClients || delta == 0) return false;
+    final pos = controller.position;
+    if (!pos.hasContentDimensions || pos.maxScrollExtent <= 0) return false;
+    final next = (pos.pixels + delta)
+        .clamp(pos.minScrollExtent, pos.maxScrollExtent);
+    return next != pos.pixels;
+  }
+
+  void _jump(ScrollController controller, double delta) {
+    if (!_canJump(controller, delta)) return;
+    final pos = controller.position;
+    controller.jumpTo(
+      (pos.pixels + delta).clamp(pos.minScrollExtent, pos.maxScrollExtent),
+    );
+  }
+
+  /// Only consume wheel events we can actually apply.
+  ///
+  /// A plain vertical wheel over a wide table used to be remapped onto
+  /// horizontal scroll, which made Administration Staff Directory (and other
+  /// page-scrolled directories) feel stuck. Vertical wheel now bubbles to the
+  /// parent page unless this pane has its own bounded vertical scroller.
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
-    GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
-      final e = resolved as PointerScrollEvent;
-      if (_horizontal.hasClients) {
-        final pos = _horizontal.position;
-        if (pos.hasContentDimensions && pos.maxScrollExtent > 0) {
-          final delta =
-              e.scrollDelta.dx != 0 ? e.scrollDelta.dx : e.scrollDelta.dy;
-          final next = (pos.pixels + delta)
-              .clamp(pos.minScrollExtent, pos.maxScrollExtent);
-          if (next != pos.pixels) {
-            _horizontal.jumpTo(next);
-            return;
-          }
-        }
-      }
-      if (_vertical.hasClients) {
-        final pos = _vertical.position;
-        if (pos.hasContentDimensions && pos.maxScrollExtent > 0) {
-          final next = (pos.pixels + e.scrollDelta.dy)
-              .clamp(pos.minScrollExtent, pos.maxScrollExtent);
-          if (next != pos.pixels) {
-            _vertical.jumpTo(next);
-          }
-        }
-      }
-    });
+    final dx = event.scrollDelta.dx;
+    final dy = event.scrollDelta.dy;
+    final horizontalDelta = dx != 0 ? dx : (_shiftHeld() ? dy : 0.0);
+    final claim = webErpHScrollWheelClaim(
+      dx: dx,
+      dy: dy,
+      shift: _shiftHeld(),
+      canScrollHorizontal: _canJump(_horizontal, horizontalDelta),
+      canScrollVertical: _canJump(_vertical, dy),
+    );
+    if (claim == WebErpHScrollWheelClaim.horizontal) {
+      GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
+        final e = resolved as PointerScrollEvent;
+        final delta =
+            e.scrollDelta.dx != 0 ? e.scrollDelta.dx : e.scrollDelta.dy;
+        _jump(_horizontal, delta);
+      });
+      return;
+    }
+    if (claim == WebErpHScrollWheelClaim.vertical) {
+      GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
+        final e = resolved as PointerScrollEvent;
+        _jump(_vertical, e.scrollDelta.dy);
+      });
+    }
   }
 
   @override

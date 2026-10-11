@@ -186,6 +186,9 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
 
     return SingleChildScrollView(
       key: ValueKey(_isStaffDir ? 'staff-page-scroll' : 'teachers-page-scroll'),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: ClampingScrollPhysics(),
+      ),
       padding: EdgeInsets.fromLTRB(
         widget.embedded ? 8 : (narrow ? 12 : 16),
         widget.embedded ? 8 : 12,

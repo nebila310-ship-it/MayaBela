@@ -239,6 +239,12 @@ const List<WebErpNavItem> webErpAllNavItems = [
       section: 'HR Branch',
     ),
     WebErpNavItem(
+      id: 'hr_workforce',
+      label: 'Leave & contracts',
+      icon: Icons.event_available_outlined,
+      section: 'HR Branch',
+    ),
+    WebErpNavItem(
       id: 'payroll',
       label: 'Payroll',
       icon: Icons.payments_outlined,
