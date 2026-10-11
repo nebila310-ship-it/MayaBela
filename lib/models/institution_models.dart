@@ -809,6 +809,16 @@ class InstitutionStaffMember {
     InstitutionStaffKind.admin => 'Administrative staff',
   };
 
+  /// Meeting / directory line. Admin staff show their job title, never Teacher.
+  static String directoryLine(InstitutionStaffMember member) {
+    final head = member.title.trim().isNotEmpty
+        ? member.title.trim()
+        : kindLabel(member.kind);
+    final id = member.personId.trim();
+    if (id.isEmpty) return head;
+    return '$head · $id';
+  }
+
   static String namesLabel(List<InstitutionStaffMember> list) => list
       .map((m) => m.name.trim())
       .where((name) => name.isNotEmpty)

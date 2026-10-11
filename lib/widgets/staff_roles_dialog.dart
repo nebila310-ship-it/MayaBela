@@ -6,7 +6,6 @@ import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/rbac/staff_role_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
-import 'package:mayabela/widgets/staff_role_labels.dart';
 import 'package:mayabela/widgets/staff_role_picker_table.dart';
 
 export 'package:mayabela/widgets/staff_role_labels.dart';
@@ -30,7 +29,7 @@ Future<void> showStaffRolesDialog({
   }
 
   await SchoolRoleCatalogService.instance.ensureLoaded(teacher.schoolId);
-  final templates =
+  var templates =
       SchoolRoleCatalogService.instance.rolesForAssign(schoolId: teacher.schoolId);
 
   final selected = <String>{
@@ -79,7 +78,28 @@ Future<void> showStaffRolesDialog({
                 s.staffRolesSubtitle,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
               ),
-              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await _renameRoleTitle(
+                      context,
+                      templates.firstWhere(
+                        (r) => selected.contains(r.key),
+                        orElse: () => templates.first,
+                      ),
+                      schoolId: teacher.schoolId,
+                    );
+                    if (!context.mounted) return;
+                    templates = SchoolRoleCatalogService.instance
+                        .rolesForAssign(schoolId: teacher.schoolId);
+                    setDialogState(() {});
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text('Rename selected title (e.g. CEO)'),
+                ),
+              ),
+              const SizedBox(height: 8),
               Flexible(
                 child: SingleChildScrollView(
                   child: StaffRolePickerTable(
@@ -137,4 +157,43 @@ Future<void> showStaffRolesDialog({
     ),
   );
   onSaved?.call();
+}
+
+Future<void> _renameRoleTitle(
+  BuildContext context,
+  StaffRole role, {
+  required String schoolId,
+}) async {
+  final s = AppLocale.instance.strings;
+  final label = TextEditingController(text: staffRoleLabel(role, s));
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Role title'),
+      content: TextField(
+        controller: label,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: 'What this school calls the role',
+          hintText: 'e.g. CEO',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(s.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(s.save),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  await SchoolRoleCatalogService.instance.renameRole(
+    roleKey: role.key,
+    label: label.text,
+    schoolId: schoolId,
+  );
 }

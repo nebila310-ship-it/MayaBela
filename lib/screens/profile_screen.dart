@@ -7,6 +7,7 @@ import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/services/teacher_credentials_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
+import 'package:mayabela/widgets/staff_role_labels.dart';
 import 'package:mayabela/widgets/teacher_profile_avatar.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -78,7 +79,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                s.roleLabel(roleKey),
+                signedInJobTitle(s),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
               ),
@@ -89,10 +90,14 @@ class ProfileScreen extends StatelessWidget {
                   _row(s.schoolId, schoolId ?? '—'),
                   _row('School', schoolName),
                   if (teacherRecord != null) ...[
-                    _row(s.teacherId, teacherRecord.teacherId),
-                    if (teacherRecord.employeeId != null)
-                      _row(s.employeeId, teacherRecord.employeeId!),
-                    if (teacherRecord.subject.isNotEmpty)
+                    _row(
+                      teacherRecord.staffRoles.isNotEmpty
+                          ? 'Staff ID'
+                          : s.teacherId,
+                      teacherRecord.employeeId ?? teacherRecord.teacherId,
+                    ),
+                    if (teacherRecord.staffRoles.isEmpty &&
+                        teacherRecord.subject.isNotEmpty)
                       _row(s.subject, teacherRecord.subject),
                   ],
                   if (user?.phone != null && user!.phone!.isNotEmpty)
