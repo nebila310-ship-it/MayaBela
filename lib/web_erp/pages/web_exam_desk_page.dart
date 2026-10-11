@@ -287,23 +287,23 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
           )
         else
           for (final question in questions)
-            _card(
-              child: ListTile(
-                title: Text(question.prompt),
-                subtitle: Text(
+            _ExpandableQuestionCard(
+              question: question,
+              subtitle:
                   '${question.subject} · ${_categoryOrUnfiled(question.category)} · '
                   '${_typeLabel(question.type)} · '
                   '${question.points.toStringAsFixed(0)} pts · '
                   '${_accessLabel(question.vaultAccess)} · ${question.id}'
                   '${question.attachmentPaths.isEmpty ? '' : ' · ${question.attachmentPaths.length} file(s)'}',
-                ),
-                trailing: _exams.canEditQuestion(question)
-                    ? IconButton(
-                        icon: const Icon(Icons.edit_outlined),
+              actions: _exams.canEditQuestion(question)
+                  ? [
+                      TextButton.icon(
                         onPressed: () => _editQuestion(question),
-                      )
-                    : null,
-              ),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit'),
+                      ),
+                    ]
+                  : const [],
             ),
       ],
     );
@@ -399,7 +399,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
         else
           for (final paper in papers)
             _card(
-              child: ListTile(
+              child: ExpansionTile(
                 title: Text(paper.title),
                 subtitle: Text(
                   '${paper.className} · ${paper.subject} · '
@@ -411,8 +411,21 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                   '${_windowLabel(paper)}'
                   '${paper.attachmentPaths.isEmpty ? '' : ' · ${paper.attachmentPaths.length} file(s)'}',
                 ),
-                trailing: _exams.canEditPaper(paper)
-                    ? Wrap(
+                children: [
+                  for (final question in _exams.questionsOnPaper(paper))
+                    _ExpandableQuestionCard(
+                      question: question,
+                      dense: true,
+                    ),
+                  if (paper.questionIds.isEmpty)
+                    const ListTile(
+                      dense: true,
+                      title: Text('No typed questions — this paper is a file only.'),
+                    ),
+                  if (_exams.canEditPaper(paper))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      child: Wrap(
                         spacing: 4,
                         children: [
                           if (paper.status == ExamPaperStatus.draft)
@@ -438,13 +451,15 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                             },
                             child: const Text('Template'),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
+                          TextButton.icon(
                             onPressed: () => _editPaper(paper),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Edit'),
                           ),
                         ],
-                      )
-                    : null,
+                      ),
+                    ),
+                ],
               ),
             ),
       ],
@@ -526,16 +541,15 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
             _emptyCard('No shared questions in the vault yet.')
           else
             for (final question in questions)
-              _card(
-                child: ListTile(
-                  title: Text(question.prompt),
-                  subtitle: Text(
+              _ExpandableQuestionCard(
+                question: question,
+                subtitle:
                     '${question.subject} · ${_categoryOrUnfiled(question.category)} · '
                     '${_typeLabel(question.type)} · '
                     'by ${question.createdBy ?? 'unknown'}',
-                  ),
-                  trailing: _canManage
-                      ? TextButton(
+                actions: _canManage
+                    ? [
+                        TextButton(
                           onPressed: () async {
                             await _exams.copyQuestionToMyBank(question.id);
                             if (mounted) {
@@ -547,9 +561,9 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                             }
                           },
                           child: const Text('Copy to my list'),
-                        )
-                      : null,
-                ),
+                        ),
+                      ]
+                    : const [],
               ),
           const SizedBox(height: 16),
         ],
@@ -561,7 +575,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
           else
             for (final paper in papers)
               _card(
-                child: ListTile(
+                child: ExpansionTile(
                   title: Text(paper.title),
                   subtitle: Text(
                     '${paper.className} · ${paper.subject} · '
@@ -569,8 +583,16 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                     '${_kindLabel(paper.kind)} · '
                     'by ${paper.createdBy ?? 'unknown'}',
                   ),
-                  trailing: _canManage
-                      ? TextButton(
+                  children: [
+                    for (final question in _exams.questionsOnPaper(paper))
+                      _ExpandableQuestionCard(
+                        question: question,
+                        dense: true,
+                      ),
+                    if (_canManage)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
                           onPressed: () async {
                             await _exams.copyPaperToMyBank(paper.id);
                             if (mounted) {
@@ -582,8 +604,9 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                             }
                           },
                           child: const Text('Copy to my list'),
-                        )
-                      : null,
+                        ),
+                      ),
+                  ],
                 ),
               ),
         ],
@@ -968,16 +991,13 @@ class _QuestionEditorDialog extends StatefulWidget {
 }
 
 class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
-  late final TextEditingController _prompt;
-  late final TextEditingController _points;
-  late final List<TextEditingController> _choices;
   late String _subject;
-  late ExamQuestionType _type;
-  String? _correctId;
-  late List<String> _attachments;
   late String _category;
   late ExamVaultAccess _vaultAccess;
   late final TextEditingController _customCategory;
+  late final List<_QuestionDraft> _drafts;
+
+  static const _maxDrafts = 100;
 
   @override
   void initState() {
@@ -987,20 +1007,6 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
         (widget.subjects.contains('Science')
             ? 'Science'
             : widget.subjects.firstOrNull ?? 'Science');
-    _type = q?.type ?? ExamQuestionType.mcq;
-    _prompt = TextEditingController(text: q?.prompt ?? '');
-    _points = TextEditingController(
-      text: (q?.points ?? 1).toStringAsFixed(0),
-    );
-    final existingChoices = q?.choices ?? const <ExamChoice>[];
-    _choices = [
-      for (var i = 0; i < 4; i++)
-        TextEditingController(
-          text: i < existingChoices.length ? existingChoices[i].text : '',
-        ),
-    ];
-    _correctId = q?.correctChoiceId ?? 'A';
-    _attachments = List<String>.from(q?.attachmentPaths ?? const []);
     _category = q?.category.trim() ?? '';
     _vaultAccess = q?.vaultAccess ?? ExamVaultAccess.private;
     _customCategory = TextEditingController(
@@ -1009,15 +1015,16 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
           ? _category
           : '',
     );
+    _drafts = [
+      q == null ? _QuestionDraft() : _QuestionDraft.fromQuestion(q),
+    ];
   }
 
   @override
   void dispose() {
-    _prompt.dispose();
-    _points.dispose();
     _customCategory.dispose();
-    for (final c in _choices) {
-      c.dispose();
+    for (final draft in _drafts) {
+      draft.dispose();
     }
     super.dispose();
   }
@@ -1027,59 +1034,71 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
     return _category.trim();
   }
 
+  void _addDraft() {
+    if (_drafts.length >= _maxDrafts) return;
+    setState(() => _drafts.add(_QuestionDraft()));
+  }
+
   Future<void> _save() async {
-    final prompt = _prompt.text.trim();
-    final points = double.tryParse(_points.text.trim()) ?? 1;
-    if (prompt.isEmpty) return;
-    final choices = <ExamChoice>[];
-    if (_type == ExamQuestionType.mcq) {
-      const ids = ['A', 'B', 'C', 'D'];
-      for (var i = 0; i < ids.length; i++) {
-        final text = _choices[i].text.trim();
-        if (text.isEmpty) continue;
-        choices.add(ExamChoice(id: ids[i], text: text));
+    if (widget.existing != null) {
+      final error = _drafts.first.validate();
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+        return;
       }
-      if (choices.length < 2) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add at least two MCQ choices.')),
-        );
+      final write = _drafts.first.toWrite(
+        subject: _subject,
+        category: _resolvedCategory,
+        vaultAccess: _vaultAccess,
+      );
+      await ExamService.instance.updateQuestion(
+        widget.existing!.id,
+        subject: write.subject,
+        prompt: write.prompt,
+        points: write.points,
+        choices: write.choices,
+        correctChoiceId: write.correctChoiceId,
+        attachmentPaths: write.attachmentPaths,
+        category: write.category,
+        vaultAccess: write.vaultAccess,
+      );
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    }
+    final filled = _drafts.where((d) => !d.isBlank).toList();
+    if (filled.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Write or attach at least one question before saving.'),
+        ),
+      );
+      return;
+    }
+    for (final draft in filled) {
+      final error = draft.validate();
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
         return;
       }
     }
-    if (widget.existing == null) {
-      await ExamService.instance.createQuestion(
-        subject: _subject,
-        prompt: prompt,
-        type: _type,
-        points: points,
-        choices: choices,
-        correctChoiceId: _type == ExamQuestionType.mcq ? _correctId : null,
-        attachmentPaths: _attachments,
-        category: _resolvedCategory,
-        vaultAccess: _vaultAccess,
-      );
-    } else {
-      await ExamService.instance.updateQuestion(
-        widget.existing!.id,
-        subject: _subject,
-        prompt: prompt,
-        points: points,
-        choices: choices,
-        correctChoiceId: _type == ExamQuestionType.mcq ? _correctId : null,
-        attachmentPaths: _attachments,
-        category: _resolvedCategory,
-        vaultAccess: _vaultAccess,
-      );
-    }
+    await ExamService.instance.createManyQuestions([
+      for (final draft in filled)
+        draft.toWrite(
+          subject: _subject,
+          category: _resolvedCategory,
+          vaultAccess: _vaultAccess,
+        ),
+    ]);
     if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final creating = widget.existing == null;
     return AlertDialog(
-      title: Text(widget.existing == null ? 'New question' : 'Edit question'),
+      title: Text(creating ? 'New questions' : 'Edit question'),
       content: SizedBox(
-        width: 480,
+        width: 520,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1147,65 +1166,39 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
                 onChanged: (v) =>
                     setState(() => _vaultAccess = v ?? _vaultAccess),
               ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<ExamQuestionType>(
-                key: ValueKey('q-type-$_type'),
-                initialValue: _type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: const [
-                  DropdownMenuItem(
-                    value: ExamQuestionType.mcq,
-                    child: Text('Multiple choice'),
+              if (creating) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Add as many questions as you need (up to $_maxDrafts), then save once.',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  DropdownMenuItem(
-                    value: ExamQuestionType.shortAnswer,
-                    child: Text('Short answer'),
-                  ),
-                  DropdownMenuItem(
-                    value: ExamQuestionType.essay,
-                    child: Text('Essay'),
-                  ),
-                ],
-                onChanged: widget.existing == null
-                    ? (v) => setState(() => _type = v ?? _type)
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _prompt,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Prompt'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _points,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Points'),
-              ),
-              if (_type == ExamQuestionType.mcq) ...[
-                const SizedBox(height: 12),
-                for (var i = 0; i < 4; i++)
-                  RadioListTile<String>(
-                    dense: true,
-                    value: const ['A', 'B', 'C', 'D'][i],
-                    groupValue: _correctId,
-                    onChanged: (v) => setState(() => _correctId = v),
-                    title: TextField(
-                      controller: _choices[i],
-                      decoration: InputDecoration(
-                        labelText: 'Choice ${const ['A', 'B', 'C', 'D'][i]}',
-                      ),
-                    ),
-                  ),
-                const Text('Select the radio next to the correct choice.'),
+                ),
               ],
-              const SizedBox(height: 12),
-              CourseAttachmentPicker(
-                paths: _attachments,
-                subdir: 'exam_question_attachments',
-                sectionTitle: 'Question files',
-                onChanged: (next) => setState(() => _attachments = next),
-              ),
+              for (var i = 0; i < _drafts.length; i++) ...[
+                const SizedBox(height: 12),
+                _DraftQuestionFields(
+                  index: i,
+                  draft: _drafts[i],
+                  canRemove: creating && _drafts.length > 1,
+                  onChanged: () => setState(() {}),
+                  onRemove: () => setState(() {
+                    _drafts.removeAt(i).dispose();
+                  }),
+                ),
+              ],
+              if (creating && _drafts.length < _maxDrafts) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _addDraft,
+                    icon: const Icon(Icons.add),
+                    label: Text('Add question ${_drafts.length + 1}'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -1215,7 +1208,10 @@ class _QuestionEditorDialogState extends State<_QuestionEditorDialog> {
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        FilledButton(
+          onPressed: _save,
+          child: Text(creating && _drafts.length > 1 ? 'Save all' : 'Save'),
+        ),
       ],
     );
   }
@@ -1252,6 +1248,9 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late String _bankCategory;
   late ExamVaultAccess _vaultAccess;
   late final TextEditingController _customCategory;
+  late final List<_QuestionDraft> _drafts;
+
+  static const _maxDrafts = 100;
 
   @override
   void initState() {
@@ -1282,12 +1281,16 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
           ? _bankCategory
           : '',
     );
+    _drafts = [_QuestionDraft()];
   }
 
   @override
   void dispose() {
     _title.dispose();
     _customCategory.dispose();
+    for (final draft in _drafts) {
+      draft.dispose();
+    }
     super.dispose();
   }
 
@@ -1298,22 +1301,55 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
 
   Future<void> _save() async {
     final title = _title.text.trim();
-    if (title.isEmpty || _className.isEmpty || _selected.isEmpty) {
+    if (title.isEmpty || _className.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title, class, and at least one question are required.')),
+        const SnackBar(content: Text('Title and class are required.')),
       );
       return;
+    }
+    final filled = _drafts.where((d) => !d.isBlank).toList();
+    for (final draft in filled) {
+      final error = draft.validate();
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+        return;
+      }
+    }
+    if (_selected.isEmpty && filled.isEmpty && _attachments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add questions below, pick from your bank, or attach the paper file.',
+          ),
+        ),
+      );
+      return;
+    }
+    final created = filled.isEmpty
+        ? const <ExamQuestion>[]
+        : await ExamService.instance.createManyQuestions([
+            for (final draft in filled)
+              draft.toWrite(
+                subject: _subject,
+                category: _resolvedBankCategory,
+                vaultAccess: _vaultAccess,
+              ),
+          ]);
+    final questionIds = {..._selected, ...created.map((q) => q.id)}.toList();
+    var sitting = _sittingMode;
+    if (questionIds.isEmpty && sitting == ExamSittingMode.online) {
+      sitting = ExamSittingMode.offline;
     }
     if (widget.existing == null) {
       await ExamService.instance.createPaper(
         title: title,
         className: _className,
         subject: _subject,
-        questionIds: _selected.toList(),
+        questionIds: questionIds,
         markbookCategoryId: _categoryId,
         attachmentPaths: _attachments,
         kind: _kind,
-        sittingMode: _sittingMode,
+        sittingMode: sitting,
         startAt: _startAt,
         endAt: _endAt,
         category: _resolvedBankCategory,
@@ -1323,11 +1359,11 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
       await ExamService.instance.updatePaper(
         widget.existing!.id,
         title: title,
-        questionIds: _selected.toList(),
+        questionIds: questionIds,
         markbookCategoryId: _categoryId,
         attachmentPaths: _attachments,
         kind: _kind,
-        sittingMode: _sittingMode,
+        sittingMode: sitting,
         startAt: _startAt,
         endAt: _endAt,
         clearWindow: _startAt == null && _endAt == null,
@@ -1570,12 +1606,66 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-              if (questions.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No bank questions for this subject yet.'),
-                )
-              else
+              const SizedBox(height: 4),
+              Text(
+                'Fill two or more questions here, then save the paper once. '
+                'A paper file alone is also enough.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              for (var i = 0; i < _drafts.length; i++) ...[
+                const SizedBox(height: 12),
+                _DraftQuestionFields(
+                  index: i,
+                  draft: _drafts[i],
+                  canRemove: _drafts.length > 1,
+                  onChanged: () => setState(() {}),
+                  onRemove: () => setState(() {
+                    _drafts.removeAt(i).dispose();
+                  }),
+                ),
+              ],
+              if (_drafts.length < _maxDrafts) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => setState(() => _drafts.add(_QuestionDraft())),
+                    icon: const Icon(Icons.add),
+                    label: Text('Add question ${_drafts.length + 1}'),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              if (_selected.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Also on this paper from your bank (${_selected.length})',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                for (final id in _selected)
+                  _ExpandableQuestionCard(
+                    question: ExamService.instance.questionById(id),
+                    fallbackId: id,
+                    dense: true,
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: () => setState(() => _selected.remove(id)),
+                      ),
+                    ],
+                  ),
+              ],
+              if (questions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Or pick from your bank',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
                 for (final q in questions)
                   CheckboxListTile(
                     dense: true,
@@ -1587,11 +1677,16 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                         _selected.remove(q.id);
                       }
                     }),
-                    title: Text(q.prompt, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    title: Text(
+                      q.displayPrompt,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     subtitle: Text(
                       '${_WebExamDeskPageState._typeLabel(q.type)} · ${q.points.toStringAsFixed(0)} pts',
                     ),
                   ),
+              ],
             ],
           ),
         ),
@@ -1723,7 +1818,7 @@ class _AttemptScoreDialogState extends State<_AttemptScoreDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            question.prompt,
+            question.displayPrompt,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           if (question.attachmentPaths.isNotEmpty) ...[
@@ -1757,6 +1852,307 @@ class _AttemptScoreDialogState extends State<_AttemptScoreDialog> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _QuestionDraft {
+  _QuestionDraft()
+      : prompt = TextEditingController(),
+        points = TextEditingController(text: '1'),
+        choices = [for (var i = 0; i < 4; i++) TextEditingController()];
+
+  factory _QuestionDraft.fromQuestion(ExamQuestion question) {
+    final draft = _QuestionDraft();
+    draft.prompt.text = question.prompt;
+    draft.points.text = question.points.toStringAsFixed(0);
+    draft.type = question.type;
+    draft.correctId = question.correctChoiceId ?? 'A';
+    draft.attachments = List.of(question.attachmentPaths);
+    for (var i = 0; i < 4 && i < question.choices.length; i++) {
+      draft.choices[i].text = question.choices[i].text;
+    }
+    return draft;
+  }
+
+  final TextEditingController prompt;
+  final TextEditingController points;
+  final List<TextEditingController> choices;
+  ExamQuestionType type = ExamQuestionType.mcq;
+  String? correctId = 'A';
+  List<String> attachments = [];
+
+  bool get isBlank => prompt.text.trim().isEmpty && attachments.isEmpty;
+
+  String? validate() {
+    if (ExamQuestion.promptFromInput(prompt.text, attachments).isEmpty) {
+      return 'Write a question or attach a file.';
+    }
+    if (type == ExamQuestionType.mcq) {
+      final filled = choices.where((c) => c.text.trim().isNotEmpty).length;
+      if (filled < 2) return 'Add at least two MCQ choices.';
+    }
+    return null;
+  }
+
+  List<ExamChoice> get builtChoices {
+    const ids = ['A', 'B', 'C', 'D'];
+    return [
+      for (var i = 0; i < ids.length; i++)
+        if (choices[i].text.trim().isNotEmpty)
+          ExamChoice(id: ids[i], text: choices[i].text.trim()),
+    ];
+  }
+
+  ExamQuestionWrite toWrite({
+    required String subject,
+    required String category,
+    required ExamVaultAccess vaultAccess,
+  }) {
+    return ExamQuestionWrite(
+      subject: subject,
+      prompt: ExamQuestion.promptFromInput(prompt.text, attachments),
+      type: type,
+      points: double.tryParse(points.text.trim()) ?? 1,
+      choices: type == ExamQuestionType.mcq ? builtChoices : const [],
+      correctChoiceId: type == ExamQuestionType.mcq ? correctId : null,
+      attachmentPaths: attachments,
+      category: category,
+      vaultAccess: vaultAccess,
+    );
+  }
+
+  void dispose() {
+    prompt.dispose();
+    points.dispose();
+    for (final c in choices) {
+      c.dispose();
+    }
+  }
+}
+
+class _DraftQuestionFields extends StatelessWidget {
+  const _DraftQuestionFields({
+    required this.index,
+    required this.draft,
+    required this.onChanged,
+    required this.onRemove,
+    this.canRemove = false,
+  });
+
+  final int index;
+  final _QuestionDraft draft;
+  final VoidCallback onChanged;
+  final VoidCallback onRemove;
+  final bool canRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Question ${index + 1}',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                if (canRemove)
+                  IconButton(
+                    tooltip: 'Remove this question',
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+              ],
+            ),
+            TextField(
+              controller: draft.prompt,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Question',
+                helperText:
+                    'Type the question, or leave blank and attach a file only.',
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ExamQuestionType>(
+              key: ValueKey('draft-$index-type-${draft.type}'),
+              initialValue: draft.type,
+              decoration: const InputDecoration(labelText: 'Type'),
+              items: const [
+                DropdownMenuItem(
+                  value: ExamQuestionType.mcq,
+                  child: Text('Multiple choice'),
+                ),
+                DropdownMenuItem(
+                  value: ExamQuestionType.shortAnswer,
+                  child: Text('Short answer'),
+                ),
+                DropdownMenuItem(
+                  value: ExamQuestionType.essay,
+                  child: Text('Essay'),
+                ),
+              ],
+              onChanged: (v) {
+                draft.type = v ?? draft.type;
+                onChanged();
+              },
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: draft.points,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Points'),
+            ),
+            if (draft.type == ExamQuestionType.mcq) ...[
+              const SizedBox(height: 8),
+              const Text('Select the radio next to the correct choice.'),
+              for (var i = 0; i < 4; i++)
+                RadioListTile<String>(
+                  dense: true,
+                  value: const ['A', 'B', 'C', 'D'][i],
+                  groupValue: draft.correctId,
+                  onChanged: (v) {
+                    draft.correctId = v;
+                    onChanged();
+                  },
+                  title: TextField(
+                    controller: draft.choices[i],
+                    decoration: InputDecoration(
+                      labelText: 'Choice ${const ['A', 'B', 'C', 'D'][i]}',
+                    ),
+                  ),
+                ),
+            ],
+            const SizedBox(height: 8),
+            CourseAttachmentPicker(
+              paths: draft.attachments,
+              subdir: 'exam_question_attachments',
+              sectionTitle: 'This question file',
+              onChanged: (next) {
+                draft.attachments = next;
+                onChanged();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpandableQuestionCard extends StatelessWidget {
+  const _ExpandableQuestionCard({
+    required this.question,
+    this.subtitle,
+    this.actions = const [],
+    this.fallbackId,
+    this.dense = false,
+  });
+
+  final ExamQuestion? question;
+  final String? subtitle;
+  final List<Widget> actions;
+  final String? fallbackId;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final q = question;
+    if (q == null) {
+      return ListTile(
+        dense: dense,
+        contentPadding: dense ? EdgeInsets.zero : null,
+        title: Text(fallbackId ?? 'Question'),
+        trailing: actions.isEmpty ? null : Row(mainAxisSize: MainAxisSize.min, children: actions),
+      );
+    }
+    return Padding(
+      padding: EdgeInsets.only(bottom: dense ? 4 : 10),
+      child: DecoratedBox(
+        decoration: dense
+            ? const BoxDecoration()
+            : WebErpTheme.cardDecoration(context),
+        child: ExpansionTile(
+          tilePadding: dense
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          title: Text(q.displayPrompt),
+          subtitle: Text(
+            subtitle ??
+                '${_WebExamDeskPageState._typeLabel(q.type)} · ${q.points.toStringAsFixed(0)} pts',
+          ),
+          children: [
+            if (q.isMcq && q.choices.isNotEmpty) ...[
+              for (final choice in q.choices)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    choice.id == q.correctChoiceId
+                        ? Icons.check_circle
+                        : Icons.circle_outlined,
+                    color: choice.id == q.correctChoiceId
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.outline,
+                  ),
+                  title: Text('${choice.id}. ${choice.text}'),
+                  trailing: choice.id == q.correctChoiceId
+                      ? const Text(
+                          'Answer',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      : null,
+                ),
+              if (q.correctChoiceId != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Correct answer: ${q.correctChoiceId}'
+                    '${q.choices.cast<ExamChoice?>().firstWhere((c) => c?.id == q.correctChoiceId, orElse: () => null)?.text != null ? ' — ${q.choices.firstWhere((c) => c.id == q.correctChoiceId).text}' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ] else
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  q.type == ExamQuestionType.essay
+                      ? 'Essay — teacher scores the written answer.'
+                      : 'Short answer — teacher scores the written answer.',
+                ),
+              ),
+            if (q.attachmentPaths.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              CourseAttachmentPicker(
+                paths: q.attachmentPaths,
+                subdir: 'exam_question_attachments',
+                canEdit: false,
+                allowShareDownload: true,
+                sectionTitle: 'Question file',
+              ),
+            ],
+            if (actions.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(spacing: 8, children: actions),
+              ),
+          ],
+        ),
       ),
     );
   }
