@@ -261,27 +261,58 @@ class ExamService extends ChangeNotifier {
     String category = '',
     ExamVaultAccess vaultAccess = ExamVaultAccess.private,
   }) async {
+    final created = await createManyQuestions([
+      ExamQuestionWrite(
+        subject: subject,
+        prompt: prompt,
+        type: type,
+        points: points,
+        choices: choices,
+        correctChoiceId: correctChoiceId,
+        gradeLevel: gradeLevel,
+        attachmentPaths: attachmentPaths,
+        schoolId: schoolId,
+        category: category,
+        vaultAccess: vaultAccess,
+      ),
+    ]);
+    return created.first;
+  }
+
+  /// Saves many questions in one persist so teachers are not stuck
+  /// save-then-new-question for a whole paper.
+  Future<List<ExamQuestion>> createManyQuestions(
+    List<ExamQuestionWrite> writes,
+  ) async {
+    if (writes.isEmpty) return const [];
     final now = DateTime.now();
-    final question = ExamQuestion(
-      id: _allocateId('Q', _questions.map((q) => q.id)),
-      schoolId: (schoolId ?? _schoolId).toUpperCase(),
-      subject: subject.trim(),
-      prompt: ExamQuestion.promptFromInput(prompt, attachmentPaths),
-      type: type,
-      points: points,
-      choices: choices,
-      correctChoiceId: correctChoiceId,
-      gradeLevel: gradeLevel,
-      attachmentPaths: List.of(attachmentPaths),
-      category: category.trim(),
-      vaultAccess: vaultAccess,
-      createdBy: AuthService.currentUser?.username,
-      createdAt: now,
-      updatedAt: now,
-    );
-    _questions.add(question);
+    final created = <ExamQuestion>[];
+    for (final write in writes) {
+      final question = ExamQuestion(
+        id: _allocateId(
+          'Q',
+          [..._questions.map((q) => q.id), ...created.map((q) => q.id)],
+        ),
+        schoolId: (write.schoolId ?? _schoolId).toUpperCase(),
+        subject: write.subject.trim(),
+        prompt: ExamQuestion.promptFromInput(write.prompt, write.attachmentPaths),
+        type: write.type,
+        points: write.points,
+        choices: List.of(write.choices),
+        correctChoiceId: write.correctChoiceId,
+        gradeLevel: write.gradeLevel,
+        attachmentPaths: List.of(write.attachmentPaths),
+        category: write.category.trim(),
+        vaultAccess: write.vaultAccess,
+        createdBy: AuthService.currentUser?.username,
+        createdAt: now,
+        updatedAt: now,
+      );
+      _questions.add(question);
+      created.add(question);
+    }
     await _persist();
-    return question;
+    return created;
   }
 
   Future<ExamQuestion?> updateQuestion(
@@ -821,4 +852,33 @@ class ExamService extends ChangeNotifier {
       isTaken: (id) => existing.contains(id),
     );
   }
+}
+
+/// One question to create; used by [ExamService.createManyQuestions].
+class ExamQuestionWrite {
+  const ExamQuestionWrite({
+    required this.subject,
+    required this.prompt,
+    required this.type,
+    this.points = 1,
+    this.choices = const [],
+    this.correctChoiceId,
+    this.gradeLevel,
+    this.attachmentPaths = const [],
+    this.schoolId,
+    this.category = '',
+    this.vaultAccess = ExamVaultAccess.private,
+  });
+
+  final String subject;
+  final String prompt;
+  final ExamQuestionType type;
+  final double points;
+  final List<ExamChoice> choices;
+  final String? correctChoiceId;
+  final String? gradeLevel;
+  final List<String> attachmentPaths;
+  final String? schoolId;
+  final String category;
+  final ExamVaultAccess vaultAccess;
 }

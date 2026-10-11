@@ -149,6 +149,31 @@ void main() {
     expect(question.attachmentPaths, ['exam_question_attachments/q1.png']);
   });
 
+  test('createManyQuestions saves every draft in one persist', () async {
+    signIn('teacher.sci');
+    final created = await ExamService.instance.createManyQuestions([
+      for (var i = 1; i <= 3; i++)
+        ExamQuestionWrite(
+          subject: 'Science',
+          prompt: 'Question $i',
+          type: ExamQuestionType.mcq,
+          choices: const [
+            ExamChoice(id: 'A', text: 'Yes'),
+            ExamChoice(id: 'B', text: 'No'),
+          ],
+          correctChoiceId: 'A',
+          category: 'Quiz',
+          schoolId: 'TB-001',
+        ),
+    ]);
+    expect(created, hasLength(3));
+    expect(
+      ExamService.instance.questionsForTeacher().map((q) => q.prompt),
+      containsAll(['Question 1', 'Question 2', 'Question 3']),
+    );
+    expect(created.first.correctChoiceId, 'A');
+  });
+
   test('teacher dashboard includes exams in teaching tools', () {
     registerAllDashboards();
     expect(
