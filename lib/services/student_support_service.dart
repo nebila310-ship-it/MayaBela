@@ -6,10 +6,12 @@ import 'package:mayabela/models/student_support_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/messaging_access_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/persistence/student_support_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
 /// Phase G student-support desk. Clinic, counseling, IEP, and college sit on
@@ -372,8 +374,40 @@ class StudentSupportService extends ChangeNotifier {
     if (shouldAlert) {
       _pushHealthParentNotification(record);
     }
+    if (record.isClinicIncident) {
+      _notifyHomeroomTeacher(record);
+    }
     await _persist();
     return record;
+  }
+
+  /// Clinic / incident notes for a homeroom class. Staff notes stay off.
+  List<HealthRecord> clinicReportsForClasses(
+    Iterable<String> classNames, {
+    String? schoolId,
+  }) {
+    final names = classNames
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (names.isEmpty) return const [];
+    return healthForSchool(schoolId)
+        .where((row) {
+          if (!row.isClinicIncident) return false;
+          final className = (row.className ?? '').trim();
+          if (className.isEmpty) return false;
+          return names.any(
+            (name) => StudentRegistryService.classNamesMatch(name, className),
+          );
+        })
+        .map(_publicHealth)
+        .toList();
+  }
+
+  int clinicReportBadgeCount(Iterable<String> classNames, {String? schoolId}) {
+    return clinicReportsForClasses(classNames, schoolId: schoolId)
+        .where((row) => row.needsSpecialAttention)
+        .length;
   }
 
   List<HealthRecord> clinicLogForDate(DateTime day, [String? schoolId]) {
@@ -1532,8 +1566,50 @@ class StudentSupportService extends ChangeNotifier {
         parentNotifiedBy: row.parentNotifiedBy,
         disposition: row.disposition,
         followUpAt: row.followUpAt,
+        vitalNotes: row.vitalNotes,
         parentContactMethod: row.parentContactMethod,
       );
+
+  void _notifyHomeroomTeacher(HealthRecord row) {
+    final className = (row.className ?? '').trim();
+    if (className.isEmpty) return;
+    final teacherId =
+        SchoolDataService.instance.homeroomTeacherIdForClass(className);
+    final teacher = teacherId == null || teacherId.trim().isEmpty
+        ? null
+        : TeacherRegistryService.instance.lookupById(
+            teacherId,
+            schoolId: row.schoolId,
+          );
+    final attention = row.needsSpecialAttention
+        ? 'Needs special attention or follow-up in class'
+        : 'Clinic report for your homeroom';
+    NotificationService.instance.push(
+      title: '${row.teacherTypeLabel} — ${row.studentName}',
+      body: [
+        attention,
+        if (row.title.trim().isNotEmpty) row.title.trim(),
+        if (row.disposition.isNotEmpty)
+          StudentSupportPlaybook.label(
+            StudentSupportPlaybook.dispositions,
+            row.disposition,
+          ),
+        if (row.followUpAt != null)
+          'Follow-up ${row.followUpAt!.toIso8601String().split('T').first}',
+      ].join(' · '),
+      type: NotificationType.general,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'School clinic',
+      recipientRole: AuthService.roleTeacher,
+      showOnMessagesBadge: false,
+      targetStudentId: row.studentId,
+      targetClassName: className,
+      recipientStaffId: teacher == null
+          ? null
+          : StaffMemberOption.teacherKey(teacher.teacherId),
+      recipientUsername: teacher?.loginUsername,
+    );
+  }
 
   CounselingRecord _publicCounseling(CounselingRecord row) => CounselingRecord(
         id: row.id,

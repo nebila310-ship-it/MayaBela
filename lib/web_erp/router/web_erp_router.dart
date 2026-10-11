@@ -10,6 +10,7 @@ import 'package:mayabela/screens/admin_grade_workflow_settings_screen.dart';
 import 'package:mayabela/screens/admin_student_password_reset_screen.dart';
 import 'package:mayabela/screens/admin_student_portal_settings_screen.dart';
 import 'package:mayabela/screens/class_timetable_screen.dart';
+import 'package:mayabela/screens/teacher_clinic_reports_screen.dart';
 import 'package:mayabela/screens/grade_approval_queue_screen.dart';
 import 'package:mayabela/screens/maya_assistant_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
@@ -121,6 +122,8 @@ class WebErpRouter {
         return const ParentApprovalsScreen();
       case 'student_affairs':
         return const WebStudentAffairsPage();
+      case 'clinic_reports':
+        return const TeacherClinicReportsScreen(embedded: true);
       case 'student_support':
       case 'health':
       case 'counseling':

@@ -58,6 +58,7 @@ abstract final class SchoolModuleCatalog {
     'grades': 'examinations',
     'exams': 'examinations',
     'parent_approvals': 'parents',
+    'clinic_reports': 'student_support',
     'feedback': 'quality_assurance',
     'passengers': 'transport',
     'scan': 'transport',

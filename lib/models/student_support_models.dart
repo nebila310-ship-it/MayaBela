@@ -363,6 +363,35 @@ class HealthRecord {
   bool get isUrgent =>
       severity == 'urgent' || type == HealthRecordType.emergencyAlert;
 
+  /// Incident or infirmary visit the homeroom teacher may see.
+  bool get isClinicIncident =>
+      type == HealthRecordType.clinicVisit ||
+      type == HealthRecordType.accident ||
+      type == HealthRecordType.emergencyAlert;
+
+  /// Child may need class watch, rest, or a later clinic check.
+  bool get needsSpecialAttention {
+    if (!isClinicIncident) return false;
+    if (isUrgent) return true;
+    if (type == HealthRecordType.accident ||
+        type == HealthRecordType.emergencyAlert) {
+      return true;
+    }
+    if (followUpAt != null) return true;
+    return disposition == 'observeClinic' ||
+        disposition == 'sendHome' ||
+        disposition == 'referExternal';
+  }
+
+  String get teacherTypeLabel => switch (type) {
+        HealthRecordType.clinicVisit => 'Taken to clinic',
+        HealthRecordType.accident => 'Accident / incident',
+        HealthRecordType.emergencyAlert => 'Emergency clinic alert',
+        HealthRecordType.medicalCheckup => 'Medical check-up',
+        HealthRecordType.vaccination => 'Vaccination',
+        HealthRecordType.medication => 'Medication given',
+      };
+
   Map<String, dynamic> toMap({bool includeStaffNotes = true}) => {
         'id': id,
         'schoolId': schoolId,

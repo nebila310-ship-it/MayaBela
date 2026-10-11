@@ -547,6 +547,7 @@ class AppStrings implements AppStringsLike {
           roleKey == 'parent' ? 'ጠባይ እና ፈቃድ' : 'የተማሪ ጉዳዮች',
         'student_support' =>
           roleKey == 'student' ? 'የኮሌጅ መመሪያ' : 'የተማሪ ድጋፍ',
+        'clinic_reports' => 'የክሊኒክ ሪፖርት',
         'college_guidance' => 'የኮሌጅ መመሪያ',
         'safeguarding' => 'ሕፃናት ጥበቃ',
         'student_programs' => 'የተማሪ ፕሮግራሞች',
@@ -618,6 +619,7 @@ class AppStrings implements AppStringsLike {
           roleKey == 'parent' ? 'Amala fi Hayyama' : 'Dhimma Barattootaa',
         'student_support' =>
           roleKey == 'student' ? 'Qajeelfama kolleejjii' : 'Deeggarsa barataa',
+        'clinic_reports' => 'Gabaasa kilinikaa',
         'college_guidance' => 'Qajeelfama kolleejjii',
         'safeguarding' => 'Eegumsa daa\'immanii',
         'student_programs' => 'Sagantaalee barataa',
@@ -688,6 +690,7 @@ class AppStrings implements AppStringsLike {
         roleKey == 'parent' ? 'Behaviour & Leave' : 'Student Affairs',
       'student_support' =>
         roleKey == 'student' ? 'College guidance' : 'Student support',
+      'clinic_reports' => 'Clinic reports',
       'college_guidance' => 'College guidance',
       'safeguarding' => 'Safeguarding',
       'student_programs' => 'Student programs',

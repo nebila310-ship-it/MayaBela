@@ -24,6 +24,7 @@ import 'package:mayabela/screens/learning_materials_screen.dart';
 import 'package:mayabela/screens/messages_screen.dart';
 import 'package:mayabela/screens/parent_student_affairs_screen.dart';
 import 'package:mayabela/screens/teacher_attendance_insights_screen.dart';
+import 'package:mayabela/screens/teacher_clinic_reports_screen.dart';
 import 'package:mayabela/screens/teacher_student_affairs_screen.dart';
 import 'package:mayabela/screens/maya_assistant_screen.dart';
 import 'package:mayabela/widgets/parent_child_picker.dart';
@@ -493,6 +494,26 @@ List<DashboardEntry> _teacherEntries() {
             context,
             MaterialPageRoute(
               builder: (_) => const TeacherStudentAffairsScreen(),
+            ),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'clinic_reports',
+      icon: Icons.health_and_safety_outlined,
+      color: const Color(0xFF00897B),
+      isVisible: () => access.hasAnyHomeroomClass,
+      builder: (context) => DashboardCard(
+        icon: Icons.health_and_safety_outlined,
+        title: _t('clinic_reports', role),
+        color: const Color(0xFF00897B),
+        badgeCount: _badge('clinic_reports'),
+        onTap: () => _openTile('clinic_reports', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TeacherClinicReportsScreen(),
             ),
           );
         }),
@@ -1335,7 +1356,14 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'My classroom',
           icon: Icons.class_,
-          entryIds: ['classes', 'attendance', 'at_risk', 'parent_approvals', 'student_affairs'],
+          entryIds: [
+            'classes',
+            'attendance',
+            'at_risk',
+            'parent_approvals',
+            'student_affairs',
+            'clinic_reports',
+          ],
         ),
         const DashboardSectionDefinition(
           title: 'Teaching tools',
