@@ -20,6 +20,7 @@ class FinanceService extends ChangeNotifier {
   final List<FinanceCashClose> _cashCloses = [];
   final List<FinanceExpense> _expenses = [];
   final List<FinanceBudget> _budgets = [];
+  final List<FinanceBudgetDisbursement> _disbursements = [];
   final List<FinancePayable> _payables = [];
   final List<FinanceAuditEvent> _audit = [];
   int _seq = 1;
@@ -33,6 +34,8 @@ class FinanceService extends ChangeNotifier {
   List<FinanceCashClose> get cashCloses => List.unmodifiable(_cashCloses);
   List<FinanceExpense> get expenses => List.unmodifiable(_expenses);
   List<FinanceBudget> get budgets => List.unmodifiable(_budgets);
+  List<FinanceBudgetDisbursement> get disbursements =>
+      List.unmodifiable(_disbursements);
   List<FinancePayable> get payables => List.unmodifiable(_payables);
   List<FinanceAuditEvent> get audit => List.unmodifiable(_audit);
 
@@ -56,6 +59,7 @@ class FinanceService extends ChangeNotifier {
     _cashCloses.clear();
     _expenses.clear();
     _budgets.clear();
+    _disbursements.clear();
     _payables.clear();
     _audit.clear();
     _seq = 1;
@@ -71,6 +75,7 @@ class FinanceService extends ChangeNotifier {
     List<FinanceCashClose>? cashCloses,
     List<FinanceExpense>? expenses,
     List<FinanceBudget>? budgets,
+    List<FinanceBudgetDisbursement>? disbursements,
     List<FinancePayable>? payables,
     List<FinanceAuditEvent>? audit,
   }) {
@@ -113,6 +118,11 @@ class FinanceService extends ChangeNotifier {
       _budgets
         ..clear()
         ..addAll(budgets);
+    }
+    if (disbursements != null) {
+      _disbursements
+        ..clear()
+        ..addAll(disbursements);
     }
     if (payables != null) {
       _payables
@@ -192,7 +202,13 @@ class FinanceService extends ChangeNotifier {
       cashMoves: cashMovesForSchool(sid),
       expenses: expensesForSchool(sid),
       payables: payablesForSchool(sid),
+      disbursements: disbursementsForSchool(sid),
     );
+  }
+
+  List<FinanceBudgetDisbursement> disbursementsForSchool([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    return _disbursements.where((d) => d.schoolId == sid).toList();
   }
 
   List<FinanceAuditEvent> auditForSchool([String? schoolId]) {
@@ -236,7 +252,9 @@ class FinanceService extends ChangeNotifier {
       budgetApproved: budgetsForSchool(schoolId)
           .fold<double>(0, (s, b) => s + b.amount),
       budgetActual: budgetsForSchool(schoolId)
-          .fold<double>(0, (s, b) => s + departmentActual(b.department, schoolId)),
+          .fold<double>(0, (s, b) => s + budgetSpent(b, schoolId)),
+      budgetDisbursed: disbursementsForSchool(schoolId)
+          .fold<double>(0, (s, d) => s + d.amount),
     );
   }
 
@@ -258,11 +276,45 @@ class FinanceService extends ChangeNotifier {
   List<FinanceBudgetUsage> budgetUsage([String? schoolId]) {
     return [
       for (final budget in budgetsForSchool(schoolId))
-        FinanceBudgetUsage(
-          budget: budget,
-          actual: departmentActual(budget.department, schoolId),
-        ),
+        usageForBudget(budget, schoolId),
     ];
+  }
+
+  FinanceBudgetUsage usageForBudget(FinanceBudget budget, [String? schoolId]) {
+    return FinanceBudgetUsage(
+      budget: budget,
+      actual: budgetSpent(budget, schoolId),
+      disbursed: disbursedFor(budget.id, schoolId),
+      cashboxBalance:
+          budget.cashboxId == null ? 0 : expectedCash(budget.cashboxId!),
+    );
+  }
+
+  double disbursedFor(String budgetId, [String? schoolId]) {
+    return disbursementsForSchool(schoolId)
+        .where((d) => d.budgetId == budgetId)
+        .fold<double>(0, (s, d) => s + d.amount);
+  }
+
+  double budgetSpent(FinanceBudget budget, [String? schoolId]) {
+    var total = 0.0;
+    for (final expense in expensesForSchool(schoolId)) {
+      if (expense.status != FinanceExpenseStatus.paid) continue;
+      if (expense.budgetId == budget.id ||
+          (expense.budgetId == null &&
+              (expense.department ??
+                      FinanceExpenseCategories.departmentFor(expense.category)) ==
+                  budget.department)) {
+        total += expense.amount;
+      }
+    }
+    for (final payable in payablesForSchool(schoolId)) {
+      if (payable.budgetId == budget.id ||
+          (payable.budgetId == null && payable.department == budget.department)) {
+        total += payable.paidAmount;
+      }
+    }
+    return total;
   }
 
   List<FinanceStudentStatement> statementsForStudentIds(
@@ -303,21 +355,193 @@ class FinanceService extends ChangeNotifier {
     required String academicYear,
     required double amount,
     String period = 'Annual',
+    bool createCashbox = true,
+    String? custodian,
+    String? notes,
     String? schoolId,
   }) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    final id = _id('BUD');
+    String? boxId;
+    if (createCashbox) {
+      final box = FinanceCashbox(
+        id: _id('BOX'),
+        schoolId: sid,
+        name: '${department.trim()} budget · ${academicYear.trim()}',
+        purpose: FinanceCashboxPurpose.budget,
+        department: department.trim(),
+        budgetId: id,
+        cashierName: custodian?.trim().isEmpty == true ? null : custodian?.trim(),
+      );
+      _cashboxes.add(box);
+      boxId = box.id;
+      _auditAdd(sid, 'cashbox', 'Opened ${box.name}');
+    }
     final row = FinanceBudget(
-      id: _id('BUD'),
+      id: id,
       schoolId: sid,
       department: department.trim(),
       academicYear: academicYear.trim(),
       period: period.trim().isEmpty ? 'Annual' : period.trim(),
       amount: amount,
+      cashboxId: boxId,
+      custodian: custodian?.trim().isEmpty == true ? null : custodian?.trim(),
+      notes: notes?.trim().isEmpty == true ? null : notes?.trim(),
     );
     _budgets.add(row);
-    _auditAdd(sid, 'budget', '${row.department} ${_etb(row.amount)}');
+    _auditAdd(sid, 'budget', '${row.department} allocated ${_etb(row.amount)}');
     _persist();
     return row;
+  }
+
+  FinanceBudgetDisbursement disburseBudget({
+    required String budgetId,
+    required double amount,
+    required String fromCashboxId,
+    String? voucherNo,
+    String? note,
+  }) {
+    final budget = _budgets.firstWhere((b) => b.id == budgetId);
+    if (amount <= 0) throw StateError('Disbursement must be greater than zero.');
+    final usage = usageForBudget(budget, budget.schoolId);
+    if (amount > usage.remainingToDisburse + 0.004) {
+      throw StateError(
+        'Cannot disburse more than the remaining allocation '
+        '(${_etb(usage.remainingToDisburse)} left).',
+      );
+    }
+    if (fromCashboxId == budget.cashboxId) {
+      throw StateError(
+        'Disburse from the treasury / collections cashbox into the budget cashbox.',
+      );
+    }
+    _requireFunds(fromCashboxId, amount);
+    final destId = _ensureBudgetCashbox(budget);
+    final row = FinanceBudgetDisbursement(
+      id: _id('DISB'),
+      schoolId: budget.schoolId,
+      budgetId: budget.id,
+      fromCashboxId: fromCashboxId,
+      toCashboxId: destId,
+      amount: amount,
+      at: DateTime.now(),
+      recordedBy: _actor,
+      voucherNo: voucherNo?.trim().isEmpty == true ? null : voucherNo?.trim(),
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+    );
+    _disbursements.add(row);
+    _cashMoves.add(
+      FinanceCashMovement(
+        id: _id('CSHM'),
+        schoolId: budget.schoolId,
+        cashboxId: fromCashboxId,
+        kind: FinanceCashKind.transferOut,
+        amount: amount,
+        at: row.at,
+        recordedBy: _actor,
+        note: 'Budget disbursement ${budget.department}',
+        reference: row.id,
+      ),
+    );
+    _cashMoves.add(
+      FinanceCashMovement(
+        id: _id('CSHM'),
+        schoolId: budget.schoolId,
+        cashboxId: destId,
+        kind: FinanceCashKind.transferIn,
+        amount: amount,
+        at: row.at,
+        recordedBy: _actor,
+        note: 'Budget disbursement ${budget.department}',
+        reference: row.id,
+      ),
+    );
+    _auditAdd(
+      budget.schoolId,
+      'budget_disburse',
+      '${budget.department} ${_etb(amount)}',
+    );
+    _persist();
+    return row;
+  }
+
+  String _ensureBudgetCashbox(FinanceBudget budget) {
+    if (budget.cashboxId != null) return budget.cashboxId!;
+    final box = FinanceCashbox(
+      id: _id('BOX'),
+      schoolId: budget.schoolId,
+      name: '${budget.department} budget · ${budget.academicYear}',
+      purpose: FinanceCashboxPurpose.budget,
+      department: budget.department,
+      budgetId: budget.id,
+      cashierName: budget.custodian,
+    );
+    _cashboxes.add(box);
+    budget.cashboxId = box.id;
+    return box.id;
+  }
+
+  void _requireFunds(String cashboxId, double amount) {
+    final available = expectedCash(cashboxId);
+    if (available + 0.004 < amount) {
+      final box = _cashboxes.cast<FinanceCashbox?>().firstWhere(
+            (c) => c!.id == cashboxId,
+            orElse: () => null,
+          );
+      throw StateError(
+        'Not enough money in ${box?.name ?? 'the cashbox'} '
+        '(${_etb(available)} on hand).',
+      );
+    }
+  }
+
+  void _assertBudgetAllows(String? budgetId, double amount, String schoolId) {
+    if (budgetId == null || budgetId.isEmpty) return;
+    final budget = _budgets.cast<FinanceBudget?>().firstWhere(
+          (b) => b!.id == budgetId,
+          orElse: () => null,
+        );
+    if (budget == null) return;
+    final usage = usageForBudget(budget, schoolId);
+    if (usage.actual + amount > budget.amount + 0.004) {
+      throw StateError(
+        'This payment would exceed the ${budget.department} allocation '
+        '(${_etb(usage.remaining)} remaining).',
+      );
+    }
+  }
+
+  void _payout({
+    required String schoolId,
+    required String cashboxId,
+    required double amount,
+    required String note,
+    required String reference,
+  }) {
+    _requireFunds(cashboxId, amount);
+    _cashMoves.add(
+      FinanceCashMovement(
+        id: _id('CSHM'),
+        schoolId: schoolId,
+        cashboxId: cashboxId,
+        kind: FinanceCashKind.payment,
+        amount: amount,
+        at: DateTime.now(),
+        recordedBy: _actor,
+        note: note,
+        reference: reference,
+      ),
+    );
+  }
+
+  String? _fallbackCashbox(String schoolId, {String? preferred}) {
+    if (preferred != null && preferred.isNotEmpty) return preferred;
+    final boxes = cashboxesForSchool(schoolId);
+    if (boxes.isEmpty) return null;
+    final general = boxes.where(
+      (b) => b.purpose != FinanceCashboxPurpose.budget,
+    );
+    return (general.isEmpty ? boxes.first : general.first).id;
   }
 
   FinancePayable addPayable({
@@ -327,6 +551,8 @@ class FinanceService extends ChangeNotifier {
     required DateTime dueDate,
     String? invoiceRef,
     String? purpose,
+    String? voucherNo,
+    String? budgetId,
     String? schoolId,
   }) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
@@ -340,6 +566,8 @@ class FinanceService extends ChangeNotifier {
       issuedAt: DateTime.now(),
       invoiceRef: invoiceRef?.trim().isEmpty == true ? null : invoiceRef?.trim(),
       purpose: purpose?.trim().isEmpty == true ? null : purpose?.trim(),
+      voucherNo: voucherNo?.trim().isEmpty == true ? null : voucherNo?.trim(),
+      budgetId: budgetId?.trim().isEmpty == true ? null : budgetId?.trim(),
     );
     _payables.add(row);
     _auditAdd(sid, 'payable', '${row.supplier} ${_etb(row.amount)}');
@@ -355,37 +583,43 @@ class FinanceService extends ChangeNotifier {
     String? cashboxId,
   }) {
     final row = _payables.firstWhere((p) => p.id == id);
+    if (!row.approved) {
+      throw StateError('Approve the supplier bill before recording payment.');
+    }
     if (amount <= 0) throw StateError('Payment must be greater than zero.');
     final take = amount > row.outstanding ? row.outstanding : amount;
+    _assertBudgetAllows(row.budgetId, take, row.schoolId);
     row.paidAmount += take;
     row.paymentMethod = method;
     row.lastPaidAt = DateTime.now();
-    if (method == FinancePaymentMethod.cash) {
-      final box = cashboxId ??
-          (cashboxesForSchool(row.schoolId).isEmpty
-              ? null
-              : cashboxesForSchool(row.schoolId).first.id);
-      if (box != null) {
-        _cashMoves.add(
-          FinanceCashMovement(
-            id: _id('CSHM'),
-            schoolId: row.schoolId,
-            cashboxId: box,
-            kind: FinanceCashKind.payment,
-            amount: take,
-            at: DateTime.now(),
-            recordedBy: _actor,
-            note: 'Supplier ${row.supplier}',
-            reference: row.id,
-          ),
-        );
-      }
+    final box = cashboxId ??
+        (method == FinancePaymentMethod.cash
+            ? _fallbackCashbox(row.schoolId)
+            : null);
+    if (box != null) {
+      _payout(
+        schoolId: row.schoolId,
+        cashboxId: box,
+        amount: take,
+        note: 'Supplier ${row.supplier}',
+        reference: row.id,
+      );
+      row.cashboxId = box;
     }
     _auditAdd(
       row.schoolId,
       'payable_pay',
       '${row.supplier} ${_etb(take)}',
     );
+    _persist();
+    return row;
+  }
+
+  FinancePayable approvePayable(String id) {
+    final row = _payables.firstWhere((p) => p.id == id);
+    row.approved = true;
+    row.approvedBy = _actor;
+    _auditAdd(row.schoolId, 'payable_approve', '${row.supplier} ${row.id}');
     _persist();
     return row;
   }
@@ -400,6 +634,10 @@ class FinanceService extends ChangeNotifier {
     String fundingType = 'regular',
     int installmentCount = 1,
     String term = 'Annual',
+    String? collectionCashboxId,
+    double lateFeeAmount = 0,
+    int? dueDay,
+    String? notes,
     String? schoolId,
   }) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
@@ -413,9 +651,53 @@ class FinanceService extends ChangeNotifier {
       fundingType: fundingType.trim().isEmpty ? 'regular' : fundingType.trim(),
       installmentCount: installmentCount < 1 ? 1 : installmentCount,
       term: term.trim().isEmpty ? 'Annual' : term.trim(),
+      collectionCashboxId: collectionCashboxId,
+      lateFeeAmount: lateFeeAmount,
+      dueDay: dueDay,
+      notes: notes?.trim().isEmpty == true ? null : notes?.trim(),
     );
     _structures.add(row);
     _auditAdd(sid, 'fee_structure', 'Created ${row.title} for ${row.grade}');
+    _persist();
+    return row;
+  }
+
+  FinanceFeeStructure updateFeeStructure({
+    required String id,
+    required String title,
+    required String grade,
+    required String academicYear,
+    required double amount,
+    String fundingType = 'regular',
+    int installmentCount = 1,
+    String term = 'Annual',
+    String? collectionCashboxId,
+    double lateFeeAmount = 0,
+    int? dueDay,
+    String? notes,
+    bool active = true,
+  }) {
+    final index = _structures.indexWhere((s) => s.id == id);
+    if (index < 0) throw StateError('Fee plan not found.');
+    final previous = _structures[index];
+    final row = FinanceFeeStructure(
+      id: previous.id,
+      schoolId: previous.schoolId,
+      title: title.trim(),
+      grade: grade.trim(),
+      academicYear: academicYear.trim(),
+      amount: amount,
+      fundingType: fundingType.trim().isEmpty ? 'regular' : fundingType.trim(),
+      installmentCount: installmentCount < 1 ? 1 : installmentCount,
+      term: term.trim().isEmpty ? 'Annual' : term.trim(),
+      collectionCashboxId: collectionCashboxId,
+      lateFeeAmount: lateFeeAmount,
+      dueDay: dueDay,
+      notes: notes?.trim().isEmpty == true ? null : notes?.trim(),
+      active: active,
+    );
+    _structures[index] = row;
+    _auditAdd(row.schoolId, 'fee_structure', 'Updated ${row.title}');
     _persist();
     return row;
   }
@@ -425,6 +707,7 @@ class FinanceService extends ChangeNotifier {
     String? grade,
     String? schoolId,
     DateTime? firstDue,
+    String? structureId,
   }) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
     final students = StudentRegistryService.instance.visibleStudents(
@@ -438,8 +721,16 @@ class FinanceService extends ChangeNotifier {
           student.grade.trim() != grade.trim()) {
         continue;
       }
-      final match = _structureFor(student, academicYear, sid);
+      final match = structureId == null
+          ? _structureFor(student, academicYear, sid)
+          : structuresForSchool(sid)
+              .cast<FinanceFeeStructure?>()
+              .firstWhere(
+                (s) => s!.id == structureId && s.active,
+                orElse: () => null,
+              );
       if (match == null) continue;
+      if (structureId != null && match.grade != student.grade) continue;
       final already = _invoices.any(
         (i) =>
             i.schoolId == sid &&
@@ -466,7 +757,11 @@ class FinanceService extends ChangeNotifier {
             fundingType: student.fundingType.name,
             structureId: match.id,
             amount: match.installmentAmount,
-            dueDate: DateTime(due.year, due.month + n, due.day),
+            dueDate: DateTime(
+              due.year,
+              due.month + n,
+              match.dueDay ?? due.day,
+            ),
             issuedAt: DateTime.now(),
           ),
         );
@@ -488,14 +783,16 @@ class FinanceService extends ChangeNotifier {
     final year = academicYear.trim();
     final type = student.fundingType.name;
     final matches = structuresForSchool(schoolId).where((s) {
-      return s.academicYear == year &&
+      return s.active &&
+          s.academicYear == year &&
           s.grade == student.grade &&
           s.fundingType == type;
     }).toList();
     if (matches.isEmpty) {
       return structuresForSchool(schoolId).cast<FinanceFeeStructure?>().firstWhere(
             (s) =>
-                s!.academicYear == year &&
+                s!.active &&
+                s.academicYear == year &&
                 s.grade == student.grade &&
                 s.fundingType == 'regular',
             orElse: () => null,
@@ -534,26 +831,33 @@ class FinanceService extends ChangeNotifier {
       note: note?.trim().isEmpty == true ? null : note?.trim(),
     );
     _payments.add(payment);
-    if (method == FinancePaymentMethod.cash) {
-      final box = cashboxId ??
-          (cashboxesForSchool(invoice.schoolId).isEmpty
-              ? null
-              : cashboxesForSchool(invoice.schoolId).first.id);
-      if (box != null) {
-        _cashMoves.add(
-          FinanceCashMovement(
-            id: _id('CSHM'),
-            schoolId: invoice.schoolId,
-            cashboxId: box,
-            kind: FinanceCashKind.receipt,
-            amount: take,
-            at: payment.paidAt,
-            recordedBy: _actor,
-            note: 'Fee receipt ${payment.receiptNo}',
-            reference: payment.id,
-          ),
-        );
-      }
+    final plan = invoice.structureId == null
+        ? null
+        : _structures.cast<FinanceFeeStructure?>().firstWhere(
+              (s) => s!.id == invoice.structureId,
+              orElse: () => null,
+            );
+    final box = cashboxId ??
+        (method == FinancePaymentMethod.cash
+            ? _fallbackCashbox(
+                invoice.schoolId,
+                preferred: plan?.collectionCashboxId,
+              )
+            : null);
+    if (box != null) {
+      _cashMoves.add(
+        FinanceCashMovement(
+          id: _id('CSHM'),
+          schoolId: invoice.schoolId,
+          cashboxId: box,
+          kind: FinanceCashKind.receipt,
+          amount: take,
+          at: payment.paidAt,
+          recordedBy: _actor,
+          note: 'Fee receipt ${payment.receiptNo}',
+          reference: payment.id,
+        ),
+      );
     }
     _auditAdd(
       invoice.schoolId,
@@ -576,6 +880,10 @@ class FinanceService extends ChangeNotifier {
     required String name,
     double openingBalance = 0,
     String? cashierName,
+    FinanceCashboxPurpose purpose = FinanceCashboxPurpose.general,
+    String? department,
+    String? location,
+    String? budgetId,
     String? schoolId,
   }) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
@@ -587,6 +895,10 @@ class FinanceService extends ChangeNotifier {
       cashierName: cashierName?.trim().isEmpty == true
           ? null
           : cashierName?.trim(),
+      purpose: purpose,
+      department: department?.trim().isEmpty == true ? null : department?.trim(),
+      location: location?.trim().isEmpty == true ? null : location?.trim(),
+      budgetId: budgetId,
     );
     _cashboxes.add(box);
     _auditAdd(sid, 'cashbox', 'Opened ${box.name}');
@@ -618,6 +930,58 @@ class FinanceService extends ChangeNotifier {
     _auditAdd(box.schoolId, 'cash', '${kind.label} ${amount.toStringAsFixed(0)} ETB');
     _persist();
     return move;
+  }
+
+  void transferBetweenCashboxes({
+    required String fromCashboxId,
+    required String toCashboxId,
+    required double amount,
+    String? note,
+  }) {
+    if (fromCashboxId == toCashboxId) {
+      throw StateError('Choose two different cashboxes.');
+    }
+    if (amount <= 0) throw StateError('Amount must be greater than zero.');
+    _requireFunds(fromCashboxId, amount);
+    final from = _cashboxes.firstWhere((c) => c.id == fromCashboxId);
+    final to = _cashboxes.firstWhere((c) => c.id == toCashboxId);
+    final ref = _id('XFER');
+    _cashMoves.add(
+      FinanceCashMovement(
+        id: _id('CSHM'),
+        schoolId: from.schoolId,
+        cashboxId: from.id,
+        kind: FinanceCashKind.transferOut,
+        amount: amount,
+        at: DateTime.now(),
+        recordedBy: _actor,
+        note: note?.trim().isEmpty == true
+            ? 'Transfer to ${to.name}'
+            : note?.trim(),
+        reference: ref,
+      ),
+    );
+    _cashMoves.add(
+      FinanceCashMovement(
+        id: _id('CSHM'),
+        schoolId: to.schoolId,
+        cashboxId: to.id,
+        kind: FinanceCashKind.transferIn,
+        amount: amount,
+        at: DateTime.now(),
+        recordedBy: _actor,
+        note: note?.trim().isEmpty == true
+            ? 'Transfer from ${from.name}'
+            : note?.trim(),
+        reference: ref,
+      ),
+    );
+    _auditAdd(
+      from.schoolId,
+      'cash_transfer',
+      '${from.name} → ${to.name} ${_etb(amount)}',
+    );
+    _persist();
   }
 
   double expectedCash(String cashboxId) {
@@ -664,6 +1028,10 @@ class FinanceService extends ChangeNotifier {
     String? supplier,
     String? purpose,
     DateTime? date,
+    String? budgetId,
+    String? cashboxId,
+    String? voucherNo,
+    String? department,
     String? schoolId,
   }) {
     if (category.toLowerCase().contains('payroll') ||
@@ -680,6 +1048,12 @@ class FinanceService extends ChangeNotifier {
       requestedBy: _actor,
       supplier: supplier?.trim().isEmpty == true ? null : supplier?.trim(),
       purpose: purpose?.trim().isEmpty == true ? null : purpose?.trim(),
+      budgetId: budgetId?.trim().isEmpty == true ? null : budgetId?.trim(),
+      cashboxId: cashboxId?.trim().isEmpty == true ? null : cashboxId?.trim(),
+      voucherNo: voucherNo?.trim().isEmpty == true ? null : voucherNo?.trim(),
+      department: department?.trim().isEmpty == true
+          ? FinanceExpenseCategories.departmentFor(category)
+          : department?.trim(),
     );
     _expenses.add(row);
     _auditAdd(sid, 'expense_request', '${row.category} ${amount.toStringAsFixed(0)} ETB');
@@ -687,7 +1061,7 @@ class FinanceService extends ChangeNotifier {
     return row;
   }
 
-  FinanceExpense approveExpense(String id) {
+  FinanceExpense approveExpense(String id, {String? note}) {
     final row = _expenses.firstWhere((e) => e.id == id);
     final isOwner = AuthService.currentUser?.roleKey == AuthService.roleAdmin;
     if (!isOwner && row.requestedBy == _actor) {
@@ -695,6 +1069,7 @@ class FinanceService extends ChangeNotifier {
     }
     row.status = FinanceExpenseStatus.approved;
     row.approvedBy = _actor;
+    row.approvalNote = note?.trim().isEmpty == true ? null : note?.trim();
     _auditAdd(row.schoolId, 'expense_approve', row.id);
     _persist();
     return row;
@@ -713,32 +1088,36 @@ class FinanceService extends ChangeNotifier {
     if (row.status == FinanceExpenseStatus.rejected) {
       throw StateError('A rejected expense cannot be paid.');
     }
+    final box = cashboxId ??
+        row.cashboxId ??
+        (method == FinancePaymentMethod.cash
+            ? _fallbackCashbox(row.schoolId)
+            : null);
+    if (box != null) {
+      final dest = _cashboxes.cast<FinanceCashbox?>().firstWhere(
+            (c) => c!.id == box,
+            orElse: () => null,
+          );
+      if (dest?.budgetId != null) {
+        row.budgetId ??= dest!.budgetId;
+      }
+    }
+    _assertBudgetAllows(row.budgetId, row.amount, row.schoolId);
+    if (box != null) {
+      _payout(
+        schoolId: row.schoolId,
+        cashboxId: box,
+        amount: row.amount,
+        note: 'Expense ${row.id}',
+        reference: row.id,
+      );
+      row.cashboxId = box;
+    }
     row.status = FinanceExpenseStatus.paid;
     row.paidBy = _actor;
     row.paidAt = DateTime.now();
     row.paymentMethod = method;
     row.reference = reference?.trim().isEmpty == true ? null : reference?.trim();
-    if (method == FinancePaymentMethod.cash) {
-      final box = cashboxId ??
-          (cashboxesForSchool(row.schoolId).isEmpty
-              ? null
-              : cashboxesForSchool(row.schoolId).first.id);
-      if (box != null) {
-        _cashMoves.add(
-          FinanceCashMovement(
-            id: _id('CSHM'),
-            schoolId: row.schoolId,
-            cashboxId: box,
-            kind: FinanceCashKind.payment,
-            amount: row.amount,
-            at: DateTime.now(),
-            recordedBy: _actor,
-            note: 'Expense ${row.id}',
-            reference: row.id,
-          ),
-        );
-      }
-    }
     _auditAdd(row.schoolId, 'expense_pay', row.id);
     _persist();
     return row;
