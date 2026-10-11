@@ -18,6 +18,8 @@ class FinanceService extends ChangeNotifier {
   final List<FinanceCashMovement> _cashMoves = [];
   final List<FinanceCashClose> _cashCloses = [];
   final List<FinanceExpense> _expenses = [];
+  final List<FinanceBudget> _budgets = [];
+  final List<FinancePayable> _payables = [];
   final List<FinanceAuditEvent> _audit = [];
   int _seq = 1;
   bool _loaded = false;
@@ -29,6 +31,8 @@ class FinanceService extends ChangeNotifier {
   List<FinanceCashMovement> get cashMoves => List.unmodifiable(_cashMoves);
   List<FinanceCashClose> get cashCloses => List.unmodifiable(_cashCloses);
   List<FinanceExpense> get expenses => List.unmodifiable(_expenses);
+  List<FinanceBudget> get budgets => List.unmodifiable(_budgets);
+  List<FinancePayable> get payables => List.unmodifiable(_payables);
   List<FinanceAuditEvent> get audit => List.unmodifiable(_audit);
 
   static const payrollStaysInHr =
@@ -50,6 +54,8 @@ class FinanceService extends ChangeNotifier {
     _cashMoves.clear();
     _cashCloses.clear();
     _expenses.clear();
+    _budgets.clear();
+    _payables.clear();
     _audit.clear();
     _seq = 1;
     _loaded = true;
@@ -63,6 +69,8 @@ class FinanceService extends ChangeNotifier {
     List<FinanceCashMovement>? cashMoves,
     List<FinanceCashClose>? cashCloses,
     List<FinanceExpense>? expenses,
+    List<FinanceBudget>? budgets,
+    List<FinancePayable>? payables,
     List<FinanceAuditEvent>? audit,
   }) {
     if (structures != null) {
@@ -99,6 +107,16 @@ class FinanceService extends ChangeNotifier {
       _expenses
         ..clear()
         ..addAll(expenses);
+    }
+    if (budgets != null) {
+      _budgets
+        ..clear()
+        ..addAll(budgets);
+    }
+    if (payables != null) {
+      _payables
+        ..clear()
+        ..addAll(payables);
     }
     if (audit != null) {
       _audit
@@ -148,6 +166,16 @@ class FinanceService extends ChangeNotifier {
     return _expenses.where((e) => e.schoolId == sid).toList();
   }
 
+  List<FinanceBudget> budgetsForSchool([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    return _budgets.where((b) => b.schoolId == sid).toList();
+  }
+
+  List<FinancePayable> payablesForSchool([String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    return _payables.where((p) => p.schoolId == sid).toList();
+  }
+
   List<FinanceAuditEvent> auditForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
     return _audit.where((a) => a.schoolId == sid).toList().reversed.toList();
@@ -184,8 +212,163 @@ class FinanceService extends ChangeNotifier {
       pendingExpenses: expenses
           .where((e) => e.status != FinanceExpenseStatus.paid)
           .fold<double>(0, (s, e) => s + e.amount),
+      payablesOutstanding: payablesForSchool(schoolId)
+          .fold<double>(0, (s, p) => s + p.outstanding),
+      budgetApproved: budgetsForSchool(schoolId)
+          .fold<double>(0, (s, b) => s + b.amount),
+      budgetActual: budgetsForSchool(schoolId)
+          .fold<double>(0, (s, b) => s + departmentActual(b.department, schoolId)),
     );
   }
+
+  double departmentActual(String department, [String? schoolId]) {
+    final dept = department.trim();
+    var total = 0.0;
+    for (final expense in expensesForSchool(schoolId)) {
+      if (expense.status != FinanceExpenseStatus.paid) continue;
+      if (FinanceExpenseCategories.departmentFor(expense.category) == dept) {
+        total += expense.amount;
+      }
+    }
+    for (final payable in payablesForSchool(schoolId)) {
+      if (payable.department == dept) total += payable.paidAmount;
+    }
+    return total;
+  }
+
+  List<FinanceBudgetUsage> budgetUsage([String? schoolId]) {
+    return [
+      for (final budget in budgetsForSchool(schoolId))
+        FinanceBudgetUsage(
+          budget: budget,
+          actual: departmentActual(budget.department, schoolId),
+        ),
+    ];
+  }
+
+  List<FinanceStudentStatement> statementsForStudentIds(
+    Iterable<String> studentIds, {
+    String? schoolId,
+  }) {
+    final statements = <FinanceStudentStatement>[];
+    for (final raw in studentIds) {
+      final id = raw.trim().toUpperCase();
+      if (id.isEmpty) continue;
+      final existing = statementForStudent(id);
+      if (existing != null) {
+        statements.add(existing);
+        continue;
+      }
+      final student = StudentRegistryService.instance.lookupById(
+        id,
+        schoolId: schoolId ?? _schoolId,
+      );
+      statements.add(
+        FinanceStudentStatement(
+          studentId: id,
+          studentName: student?.fullName ?? id,
+          invoices: const [],
+          payments: const [],
+        ),
+      );
+    }
+    return statements;
+  }
+
+  List<FinanceStudentStatement> statementsForCurrentParent() {
+    return statementsForStudentIds(AuthService.activeLinkedStudentIds());
+  }
+
+  FinanceBudget addBudget({
+    required String department,
+    required String academicYear,
+    required double amount,
+    String period = 'Annual',
+    String? schoolId,
+  }) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    final row = FinanceBudget(
+      id: _id('BUD'),
+      schoolId: sid,
+      department: department.trim(),
+      academicYear: academicYear.trim(),
+      period: period.trim().isEmpty ? 'Annual' : period.trim(),
+      amount: amount,
+    );
+    _budgets.add(row);
+    _auditAdd(sid, 'budget', '${row.department} ${_etb(row.amount)}');
+    _persist();
+    return row;
+  }
+
+  FinancePayable addPayable({
+    required String supplier,
+    required String department,
+    required double amount,
+    required DateTime dueDate,
+    String? invoiceRef,
+    String? purpose,
+    String? schoolId,
+  }) {
+    final sid = (schoolId ?? _schoolId).trim().toUpperCase();
+    final row = FinancePayable(
+      id: _id('APB'),
+      schoolId: sid,
+      supplier: supplier.trim(),
+      department: department.trim(),
+      amount: amount,
+      dueDate: dueDate,
+      invoiceRef: invoiceRef?.trim().isEmpty == true ? null : invoiceRef?.trim(),
+      purpose: purpose?.trim().isEmpty == true ? null : purpose?.trim(),
+    );
+    _payables.add(row);
+    _auditAdd(sid, 'payable', '${row.supplier} ${_etb(row.amount)}');
+    _persist();
+    return row;
+  }
+
+  FinancePayable payPayable({
+    required String id,
+    required double amount,
+    required FinancePaymentMethod method,
+    String? reference,
+    String? cashboxId,
+  }) {
+    final row = _payables.firstWhere((p) => p.id == id);
+    if (amount <= 0) throw StateError('Payment must be greater than zero.');
+    final take = amount > row.outstanding ? row.outstanding : amount;
+    row.paidAmount += take;
+    if (method == FinancePaymentMethod.cash) {
+      final box = cashboxId ??
+          (cashboxesForSchool(row.schoolId).isEmpty
+              ? null
+              : cashboxesForSchool(row.schoolId).first.id);
+      if (box != null) {
+        _cashMoves.add(
+          FinanceCashMovement(
+            id: _id('CSHM'),
+            schoolId: row.schoolId,
+            cashboxId: box,
+            kind: FinanceCashKind.payment,
+            amount: take,
+            at: DateTime.now(),
+            recordedBy: _actor,
+            note: 'Supplier ${row.supplier}',
+            reference: row.id,
+          ),
+        );
+      }
+    }
+    _auditAdd(
+      row.schoolId,
+      'payable_pay',
+      '${row.supplier} ${_etb(take)}',
+    );
+    _persist();
+    return row;
+  }
+
+  String _etb(double value) => '${value.toStringAsFixed(0)} ETB';
 
   FinanceFeeStructure addFeeStructure({
     required String title,

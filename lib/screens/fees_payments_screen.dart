@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/fee_record.dart';
+import 'package:mayabela/models/finance_models.dart';
+import 'package:mayabela/screens/finance_coming_soon_screen.dart';
+import 'package:mayabela/services/finance_service.dart';
 import 'package:mayabela/services/persistence/cloud_save_honesty.dart';
+import 'package:mayabela/services/persistence/finance_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
@@ -28,6 +32,7 @@ class _FeesPaymentsScreenState extends State<FeesPaymentsScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    FinancePersistenceService.instance.loadIntoService();
   }
 
   @override
@@ -133,12 +138,13 @@ class _FeesPaymentsScreenState extends State<FeesPaymentsScreen>
       listenable: AppLocale.instance,
       builder: (context, _) {
         final s = AppLocale.instance.strings;
+        if (widget.view == FeesView.parent) {
+          return _parentStatements(s);
+        }
         return Scaffold(
           appBar: AppBar(
             backgroundColor: Colors.indigo,
-            title: Text(
-              widget.view == FeesView.parent ? s.feesTitle : s.finance,
-            ),
+            title: Text(s.finance),
             bottom: TabBar(
               controller: _tabs,
               tabs: [
@@ -154,7 +160,7 @@ class _FeesPaymentsScreenState extends State<FeesPaymentsScreen>
                 child: TabBarView(
                   controller: _tabs,
                   children: [
-                    _feeList(pending, s, showPayButton: widget.view == FeesView.parent),
+                    _feeList(pending, s, showPayButton: false),
                     _feeList(paid, s, showPayButton: false),
                   ],
                 ),
@@ -313,6 +319,147 @@ class _FeesPaymentsScreenState extends State<FeesPaymentsScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _parentStatements(AppStrings s) {
+    return ListenableBuilder(
+      listenable: FinanceService.instance,
+      builder: (context, _) {
+        final statements = FinanceService.instance.statementsForCurrentParent();
+        final billed = statements.fold<double>(0, (sum, row) => sum + row.billed);
+        final paid = statements.fold<double>(0, (sum, row) => sum + row.paid);
+        final due = statements.fold<double>(0, (sum, row) => sum + row.outstanding);
+        return Scaffold(
+          backgroundColor: FinancePalette.surface,
+          appBar: AppBar(
+            backgroundColor: FinancePalette.primary,
+            foregroundColor: Colors.white,
+            title: Text(s.feesTitle),
+          ),
+          body: ListView(
+            padding: listPagePadding(context, bottom: kScrollBottomSpacing),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: FinancePalette.gradient,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      s.paymentSummary,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${due.toStringAsFixed(0)} ETB outstanding',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Billed ${billed.toStringAsFixed(0)} ETB · Paid ${paid.toStringAsFixed(0)} ETB',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'The school records payments after they receive them. You can see invoices, receipts, and balances for your linked children only.',
+                      style: TextStyle(color: Colors.white70, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (statements.isEmpty)
+                Text(s.noRecordsHere)
+              else
+                ...statements.map(_childStatementCard),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _childStatementCard(FinanceStudentStatement statement) {
+    final upcoming = statement.invoices
+        .where((i) => !i.isPaid)
+        .toList()
+      ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              statement.studentName,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Billed ${statement.billed.toStringAsFixed(0)} ETB · '
+              'Paid ${statement.paid.toStringAsFixed(0)} ETB · '
+              'Outstanding ${statement.outstanding.toStringAsFixed(0)} ETB',
+            ),
+            const SizedBox(height: 10),
+            if (statement.invoices.isEmpty)
+              const Text('No invoices yet for this child.')
+            else ...[
+              const Text(
+                'Invoices',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              for (final invoice in statement.invoices)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    '${invoice.title} · ${invoice.status.label} · '
+                    '${invoice.outstanding.toStringAsFixed(0)} ETB open · '
+                    'due ${invoice.dueDate.day}/${invoice.dueDate.month}/${invoice.dueDate.year}',
+                  ),
+                ),
+            ],
+            if (statement.payments.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Receipts',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              for (final payment in statement.payments)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    '${payment.receiptNo} · ${payment.amount.toStringAsFixed(0)} ETB · '
+                    '${payment.method.label}'
+                    '${payment.reference == null ? '' : ' · ${payment.reference}'}',
+                  ),
+                ),
+            ],
+            if (upcoming.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Next due: ${upcoming.first.title} on '
+                '${upcoming.first.dueDate.day}/${upcoming.first.dueDate.month}/${upcoming.first.dueDate.year}',
+                style: const TextStyle(
+                  color: FinancePalette.deep,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

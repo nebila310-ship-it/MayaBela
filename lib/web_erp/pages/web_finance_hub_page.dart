@@ -29,7 +29,9 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     (2, 'Invoices', Icons.receipt_long_outlined, Color(0xFF0F766E)),
     (3, 'Cash', Icons.point_of_sale_rounded, Color(0xFF2563EB)),
     (4, 'Expenses', Icons.payments_outlined, Color(0xFFDB2777)),
-    (5, 'Reports', Icons.insights_outlined, Color(0xFF15803D)),
+    (5, 'Budgets', Icons.pie_chart_outline, Color(0xFF0891B2)),
+    (6, 'Payables', Icons.storefront_outlined, Color(0xFFB45309)),
+    (7, 'Reports', Icons.insights_outlined, Color(0xFF15803D)),
   ];
 
   bool get _canManage => ModuleAccess.canManage('finance');
@@ -130,7 +132,9 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
       2 => _invoices(),
       3 => _cash(),
       4 => _expenses(),
-      5 => _reports(),
+      5 => _budgets(),
+      6 => _payables(),
+      7 => _reports(),
       _ => _control(),
     };
   }
@@ -153,6 +157,16 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
               'Net cash movement',
               totals.netCashMovement,
               const Color(0xFF15803D),
+            ),
+            _stat(
+              'Supplier payables',
+              totals.payablesOutstanding,
+              const Color(0xFFB45309),
+            ),
+            _stat(
+              'Budget used',
+              totals.budgetActual,
+              const Color(0xFF0891B2),
             ),
           ],
         ),
@@ -411,6 +425,102 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     );
   }
 
+  Widget _budgets() {
+    final rows = FinanceService.instance.budgetUsage();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Department budgets',
+                style: WebErpTheme.sectionTitle(context),
+              ),
+            ),
+            if (_canManage)
+              FilledButton.icon(
+                onPressed: _addBudget,
+                icon: const Icon(Icons.add),
+                label: const Text('Add budget'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Approved amount vs actual spending from paid expenses and supplier payments.',
+        ),
+        const SizedBox(height: 12),
+        if (rows.isEmpty)
+          const Text('No budgets yet. Add one per department.')
+        else
+          ...rows.map((usage) {
+            final color = usage.overrun
+                ? const Color(0xFFDC2626)
+                : const Color(0xFF0891B2);
+            return _tile(
+              icon: Icons.pie_chart_outline,
+              color: color,
+              title: '${usage.budget.department} · ${usage.budget.period}',
+              subtitle:
+                  '${usage.budget.academicYear} · used ${_etb(usage.actual)} of ${_etb(usage.budget.amount)}'
+                  ' (${usage.consumedPercent.toStringAsFixed(0)}%)'
+                  '${usage.overrun ? ' · over budget' : ' · remaining ${_etb(usage.remaining)}'}',
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _payables() {
+    final rows = FinanceService.instance.payablesForSchool();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Supplier payables',
+                style: WebErpTheme.sectionTitle(context),
+              ),
+            ),
+            if (_canManage)
+              FilledButton.icon(
+                onPressed: _addPayable,
+                icon: const Icon(Icons.add),
+                label: const Text('Add supplier bill'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Record what the school owes. This is a liability, not an expense, until you pay it.',
+        ),
+        const SizedBox(height: 12),
+        if (rows.isEmpty)
+          const Text('No supplier bills yet.')
+        else
+          ...rows.map((bill) {
+            return _tile(
+              icon: Icons.storefront_outlined,
+              color: _invoiceColor(bill.status),
+              title: '${bill.supplier} · ${_etb(bill.outstanding)}',
+              subtitle:
+                  '${bill.department} · ${_etb(bill.amount)} · ${bill.status.label}'
+                  '${bill.invoiceRef == null ? '' : ' · ${bill.invoiceRef}'}',
+              trailing: bill.isPaid || !_canManage
+                  ? null
+                  : TextButton(
+                      onPressed: () => _payPayable(bill),
+                      child: const Text('Record payment'),
+                    ),
+            );
+          }),
+      ],
+    );
+  }
+
   Widget _reports() {
     final totals = FinanceService.instance.controlTotals();
     final overdue = FinanceService.instance
@@ -468,6 +578,22 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
                     '${b.name} ${_etb(FinanceService.instance.expectedCash(b.id))}',
               )
               .join(' · '),
+        ),
+        _tile(
+          icon: Icons.storefront_outlined,
+          color: const Color(0xFFB45309),
+          title: 'Supplier payables',
+          subtitle: totals.payablesOutstanding <= 0
+              ? 'No unpaid supplier bills.'
+              : '${_etb(totals.payablesOutstanding)} still owed',
+        ),
+        _tile(
+          icon: Icons.pie_chart_outline,
+          color: const Color(0xFF0891B2),
+          title: 'Budget utilization',
+          subtitle: totals.budgetApproved <= 0
+              ? 'No departmental budgets yet.'
+              : '${totals.budgetConsumedPercent.toStringAsFixed(0)}% of ${_etb(totals.budgetApproved)} used',
         ),
       ],
     );
@@ -1021,6 +1147,200 @@ class _WebFinanceHubPageState extends State<WebFinanceHubPage> {
     _run(() {
       FinanceService.instance.payExpense(
         id: expense.id,
+        method: method,
+        reference: reference.text,
+      );
+    });
+  }
+
+  Future<void> _addBudget() async {
+    var department = FinanceDepartments.values.first;
+    final year = TextEditingController(text: _year);
+    final amount = TextEditingController();
+    var period = 'Annual';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Department budget'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: department,
+                decoration: const InputDecoration(labelText: 'Department'),
+                items: [
+                  for (final d in FinanceDepartments.values)
+                    DropdownMenuItem(value: d, child: Text(d)),
+                ],
+                onChanged: (v) => department = v ?? department,
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: period,
+                decoration: const InputDecoration(labelText: 'Period'),
+                items: const [
+                  DropdownMenuItem(value: 'Annual', child: Text('Annual')),
+                  DropdownMenuItem(value: 'Term', child: Text('Term')),
+                  DropdownMenuItem(value: 'Month', child: Text('Month')),
+                ],
+                onChanged: (v) => period = v ?? period,
+              ),
+              TextField(
+                controller: year,
+                decoration: const InputDecoration(labelText: 'Academic year'),
+              ),
+              TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Approved amount'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    FinanceService.instance.addBudget(
+      department: department,
+      academicYear: year.text,
+      amount: double.tryParse(amount.text) ?? 0,
+      period: period,
+    );
+  }
+
+  Future<void> _addPayable() async {
+    var department = FinanceDepartments.values.first;
+    final supplier = TextEditingController();
+    final amount = TextEditingController();
+    final invoiceRef = TextEditingController();
+    final purpose = TextEditingController();
+    final due = TextEditingController(
+      text: DateTime.now().add(const Duration(days: 14)).toIso8601String().split('T').first,
+    );
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supplier bill'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: supplier,
+                decoration: const InputDecoration(labelText: 'Supplier'),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: department,
+                decoration: const InputDecoration(labelText: 'Department'),
+                items: [
+                  for (final d in FinanceDepartments.values)
+                    DropdownMenuItem(value: d, child: Text(d)),
+                ],
+                onChanged: (v) => department = v ?? department,
+              ),
+              TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount owed'),
+              ),
+              TextField(
+                controller: due,
+                decoration: const InputDecoration(labelText: 'Due date YYYY-MM-DD'),
+              ),
+              TextField(
+                controller: invoiceRef,
+                decoration: const InputDecoration(labelText: 'Supplier invoice no.'),
+              ),
+              TextField(
+                controller: purpose,
+                decoration: const InputDecoration(labelText: 'Purpose'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    FinanceService.instance.addPayable(
+      supplier: supplier.text,
+      department: department,
+      amount: double.tryParse(amount.text) ?? 0,
+      dueDate: DateTime.tryParse(due.text) ?? DateTime.now(),
+      invoiceRef: invoiceRef.text,
+      purpose: purpose.text,
+    );
+  }
+
+  Future<void> _payPayable(FinancePayable bill) async {
+    final amount = TextEditingController(text: bill.outstanding.toStringAsFixed(0));
+    final reference = TextEditingController();
+    var method = FinancePaymentMethod.bankTransfer;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Pay ${bill.supplier}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Outstanding ${_etb(bill.outstanding)}'),
+            TextField(
+              controller: amount,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount paid'),
+            ),
+            DropdownButtonFormField<FinancePaymentMethod>(
+              initialValue: method,
+              items: [
+                for (final m in FinancePaymentMethod.values)
+                  DropdownMenuItem(value: m, child: Text(m.label)),
+              ],
+              onChanged: (v) => method = v ?? method,
+            ),
+            TextField(
+              controller: reference,
+              decoration: const InputDecoration(labelText: 'Reference'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Record'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    _run(() {
+      FinanceService.instance.payPayable(
+        id: bill.id,
+        amount: double.tryParse(amount.text) ?? 0,
         method: method,
         reference: reference.text,
       );
