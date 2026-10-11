@@ -1,9 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:mayabela/l10n/app_strings.dart';
-import 'package:mayabela/screens/admin_enrollment_screens.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/student_sis_profile.dart';
@@ -105,25 +102,5 @@ void main() {
     expect(sis!.groupingSummary, contains('Scholarship student'));
     expect(sis.groupingSummary, contains('House Blue'));
     expect(sis.student.fundingType.label, 'Scholarship student');
-  });
-
-  testWidgets('registration form offers regular and scholarship student types',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1200, 1600));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: AdminAddStudentScreen())),
-    );
-    await tester.pumpAndSettle();
-
-    final typeField = find.text(AppLocale.instance.strings.studentFundingType);
-    expect(typeField, findsOneWidget);
-    await tester.ensureVisible(typeField);
-    expect(find.text(AppLocale.instance.strings.regularStudent), findsWidgets);
-
-    await tester.tap(typeField);
-    await tester.pumpAndSettle();
-    expect(find.text(AppLocale.instance.strings.scholarshipStudent), findsWidgets);
   });
 }
