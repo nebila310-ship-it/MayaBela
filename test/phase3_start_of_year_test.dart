@@ -273,7 +273,9 @@ void main() {
 
     final invite = read('supabase/functions/school-invite-parent/index.ts');
     expect(invite, contains('sendPlainEmail'));
-    expect(invite, contains('Parent invite'));
+    expect(invite, contains('Welcome to'));
+    expect(invite, contains('html'));
+    expect(invite, contains('Register as a parent'));
 
     final attendance = read('lib/web_erp/pages/web_attendance_hub_page.dart');
     expect(attendance, contains('Export class CSV'));

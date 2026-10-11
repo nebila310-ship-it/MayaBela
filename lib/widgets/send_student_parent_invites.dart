@@ -3,26 +3,28 @@ import 'package:flutter/services.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/services/otp_delivery_service.dart';
-import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 enum _ParentInviteSendOption { sms, whatsApp, telegram, share, allSms }
 
-/// Send parent registration invite to one or all contact numbers on the student.
+/// Send parent registration invite to the number on the student record.
 Future<void> showSendStudentParentInvites(
   BuildContext context,
   AdminStudentRecord student,
 ) async {
   final invite = ParentInviteService.instance;
+  final primary = student.primaryContactPhone;
   final contacts = invite.contactLinesForRecord(student);
   final s = AppLocale.instance.strings;
+  final schoolName = ParentInviteService.schoolNameFor(student.schoolId);
+  final inviteUrl = invite.inviteUrlForRecord(student);
 
-  if (contacts.isEmpty) {
+  if (primary == null || primary.trim().isEmpty) {
     final share = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(s.inviteParent),
+        title: Text('Welcome to $schoolName'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,13 +33,7 @@ Future<void> showSendStudentParentInvites(
             const SizedBox(height: 12),
             Text(s.parentInviteLink, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            SelectableText(
-              ParentInviteLink.build(
-                schoolId: student.schoolId,
-                studentId: student.studentId,
-                dateOfBirth: student.dateOfBirth,
-              ),
-            ),
+            SelectableText(inviteUrl),
           ],
         ),
         actions: [
@@ -47,7 +43,7 @@ Future<void> showSendStudentParentInvites(
       ),
     );
     if (share != true || !context.mounted) return;
-    await invite.shareMessage(invite.buildMessageForRecord(student));
+    await invite.shareInviteForRecord(student);
     return;
   }
 
@@ -60,6 +56,7 @@ Future<void> showSendStudentParentInvites(
     ),
     builder: (context) {
       final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
+      final parentLabel = student.primaryParentName ?? contacts.first.label;
       return SafeArea(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),
@@ -81,7 +78,7 @@ Future<void> showSendStudentParentInvites(
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  s.sendInviteToContacts,
+                  'Welcome to $schoolName',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -90,7 +87,7 @@ Future<void> showSendStudentParentInvites(
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${contacts.length} ${s.contactNumbersOnFile}',
+                  'Opens WhatsApp or Telegram to $parentLabel · $primary',
                   style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
@@ -100,26 +97,14 @@ Future<void> showSendStudentParentInvites(
                 ),
                 const SizedBox(height: 6),
                 SelectableText(
-                  ParentInviteLink.build(
-                    schoolId: student.schoolId,
-                    studentId: student.studentId,
-                    dateOfBirth: student.dateOfBirth,
-                  ),
+                  inviteUrl,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                 ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: () async {
-                      await Clipboard.setData(
-                        ClipboardData(
-                          text: ParentInviteLink.build(
-                            schoolId: student.schoolId,
-                            studentId: student.studentId,
-                            dateOfBirth: student.dateOfBirth,
-                          ),
-                        ),
-                      );
+                      await Clipboard.setData(ClipboardData(text: inviteUrl));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(s.parentInviteLinkCopied)),
@@ -133,33 +118,44 @@ Future<void> showSendStudentParentInvites(
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...contacts.map(
-                  (c) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.contact_phone, color: Colors.white54, size: 20),
-                    title: Text(c.label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                    subtitle: Text(c.phone, style: const TextStyle(color: Colors.white)),
-                  ),
-                ),
                 const Divider(color: Colors.white24),
-                ListTile(
-                  leading: const Icon(Icons.sms_outlined, color: Colors.tealAccent),
-                  title: Text(s.sendAllViaSms, style: const TextStyle(color: Colors.white)),
-                  subtitle: Text(s.sendAllViaSmsHint, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                  onTap: () => Navigator.pop(context, _ParentInviteSendOption.allSms),
-                ),
                 ListTile(
                   leading: const Icon(Icons.chat, color: Colors.greenAccent),
                   title: Text(s.sendViaWhatsApp, style: const TextStyle(color: Colors.white)),
+                  subtitle: Text(
+                    primary,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                   onTap: () => Navigator.pop(context, _ParentInviteSendOption.whatsApp),
                 ),
                 ListTile(
                   leading: const Icon(Icons.send, color: Colors.lightBlueAccent),
                   title: Text(s.sendViaTelegram, style: const TextStyle(color: Colors.white)),
+                  subtitle: Text(
+                    primary,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                   onTap: () => Navigator.pop(context, _ParentInviteSendOption.telegram),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.sms_outlined, color: Colors.tealAccent),
+                  title: Text(s.sendViaSms, style: const TextStyle(color: Colors.white)),
+                  subtitle: Text(
+                    primary,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  onTap: () => Navigator.pop(context, _ParentInviteSendOption.sms),
+                ),
+                if (contacts.length > 1)
+                  ListTile(
+                    leading: const Icon(Icons.sms_outlined, color: Colors.white54),
+                    title: Text(s.sendAllViaSms, style: const TextStyle(color: Colors.white70)),
+                    subtitle: Text(
+                      s.sendAllViaSmsHint,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    onTap: () => Navigator.pop(context, _ParentInviteSendOption.allSms),
+                  ),
                 ListTile(
                   leading: const Icon(Icons.share_outlined, color: Colors.white70),
                   title: Text(s.share, style: const TextStyle(color: Colors.white)),
@@ -175,30 +171,8 @@ Future<void> showSendStudentParentInvites(
 
   if (!context.mounted || choice == null) return;
 
-  Future<bool> confirmBefore(ParentContactLine contact, int index) async {
-    if (index == 0) return true;
-    final proceed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(s.sendInviteNextContactTitle),
-        content: Text(s.sendInviteNextContactBody(contact.label, contact.phone)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(s.sendInviteSkipRemaining),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(s.sendInviteContinue),
-          ),
-        ],
-      ),
-    );
-    return proceed ?? false;
-  }
-
   if (choice == _ParentInviteSendOption.share) {
-    await invite.shareMessage(invite.buildMessageForRecord(student));
+    await invite.shareInviteForRecord(student);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.inviteParentSent), backgroundColor: Colors.green.shade700),
@@ -208,10 +182,7 @@ Future<void> showSendStudentParentInvites(
   }
 
   if (choice == _ParentInviteSendOption.allSms) {
-    final result = await invite.inviteAllContactsViaSms(
-      student,
-      confirmBefore: confirmBefore,
-    );
+    final result = await invite.inviteAllContactsViaSms(student);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -231,21 +202,13 @@ Future<void> showSendStudentParentInvites(
     _ParentInviteSendOption.share => OtpDeliveryChannel.sms,
   };
 
-  final result = await invite.inviteAllContactsViaChannel(
-    student,
-    channel,
-    confirmBefore: confirmBefore,
-  );
+  final ok = await invite.invitePrimaryViaChannel(student, channel);
   if (!context.mounted) return;
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(
-        result.sent > 0
-            ? s.inviteBulkContactsDone(result.sent, result.skipped)
-            : s.otpDeliveryFailed,
-      ),
-      backgroundColor: result.sent > 0 ? Colors.green.shade700 : Colors.red.shade700,
+      content: Text(ok ? s.inviteParentSent : s.otpDeliveryFailed),
+      backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
     ),
   );
 }

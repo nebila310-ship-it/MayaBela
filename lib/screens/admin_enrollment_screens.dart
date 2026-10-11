@@ -11,6 +11,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
+import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/parent_invite_link.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
@@ -1571,6 +1572,50 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
             }
           },
         ),
+        if (student.primaryContactPhone != null)
+          AdminDialogAction(
+            label: s.sendViaWhatsApp,
+            icon: Icons.chat,
+            onPressed: () async {
+              Navigator.pop(context);
+              final ok = await ParentInviteService.instance
+                  .invitePrimaryViaChannel(
+                student,
+                OtpDeliveryChannel.whatsApp,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok ? s.inviteParentSent : s.otpDeliveryFailed),
+                    backgroundColor:
+                        ok ? Colors.green.shade700 : Colors.red.shade700,
+                  ),
+                );
+              }
+            },
+          ),
+        if (student.primaryContactPhone != null)
+          AdminDialogAction(
+            label: s.sendViaTelegram,
+            icon: Icons.send,
+            onPressed: () async {
+              Navigator.pop(context);
+              final ok = await ParentInviteService.instance
+                  .invitePrimaryViaChannel(
+                student,
+                OtpDeliveryChannel.telegram,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok ? s.inviteParentSent : s.otpDeliveryFailed),
+                    backgroundColor:
+                        ok ? Colors.green.shade700 : Colors.red.shade700,
+                  ),
+                );
+              }
+            },
+          ),
         AdminDialogAction(
           label: s.sendInviteToContacts,
           icon: Icons.mail_outline,
