@@ -2708,7 +2708,7 @@ class CloudAppStore {
 
   Future<void> pushAllGalleryPosts() async {
     final posts = _teacherWritableByClass(
-      SchoolDataService.instance.gallerySnapshot(),
+      SchoolDataService.instance.galleryForSchool(),
       (post) => post.className,
     );
     if (posts.isEmpty) return;
@@ -2716,6 +2716,14 @@ class CloudAppStore {
           collection: AppCollections.galleryPosts,
           items: posts.map(AppDataMaps.galleryPostToMap).toList(),
           docIdFor: (item) => item['id'] as String,
+        ));
+  }
+
+  Future<void> pushGalleryPost(GalleryPost post) async {
+    await _pushSafe(() => _crud.createOrUpdate(
+          collection: AppCollections.galleryPosts,
+          docId: post.id,
+          data: AppDataMaps.galleryPostToMap(post),
         ));
   }
 

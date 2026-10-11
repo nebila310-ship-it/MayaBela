@@ -4350,27 +4350,131 @@ class SchoolDataService {
   }
 
   List<GalleryPost> getGalleryForClass(String className) {
-    return _galleryPosts
+    return galleryForSchool()
         .where((post) => _classNamesMatch(post.className, className))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
   }
 
   List<String> galleryClassOptionsForViewer() {
+    ensureLinkedChildrenVisible();
     return {
       ...getChildren().map((child) => child.className),
       ...AuthService.accessClassNamesForSync(),
+      ..._linkedStudentClassNames(),
     }.where((name) => name.trim().isNotEmpty).toSet().toList();
   }
 
+  List<String> _linkedStudentClassNames() {
+    final names = <String>{};
+    for (final id in AuthService.activeLinkedStudentIds()) {
+      final student = StudentRegistryService.instance.lookupById(id) ??
+          StudentRegistryService.instance.lookupAnyById(id);
+      final className = student?.className.trim() ?? '';
+      if (className.isNotEmpty) names.add(className);
+    }
+    final studentId = AuthService.currentUser?.linkedStudentId?.trim();
+    if (studentId != null && studentId.isNotEmpty) {
+      final student = StudentRegistryService.instance.lookupAnyById(studentId);
+      final className = student?.className.trim() ?? '';
+      if (className.isNotEmpty) names.add(className);
+    }
+    return names.toList();
+  }
+
   List<GalleryPost> getGalleryForParent() {
+    ensureLinkedChildrenVisible();
     final classNames = galleryClassOptionsForViewer().toSet();
-    return _galleryPosts
-        .where(
-          (post) => classNames.any((name) => _classNamesMatch(name, post.className)),
-        )
+    final linkedIds = <String>{
+      ...AuthService.activeLinkedStudentIds().map((id) => id.trim().toUpperCase()),
+      if ((AuthService.currentUser?.linkedStudentId ?? '').trim().isNotEmpty)
+        AuthService.currentUser!.linkedStudentId!.trim().toUpperCase(),
+    }..removeWhere((id) => id.isEmpty);
+    return galleryForSchool()
+        .where((post) => _galleryVisibleToFamily(post, classNames, linkedIds))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
+  }
+
+  bool _galleryVisibleToFamily(
+    GalleryPost post,
+    Set<String> classNames,
+    Set<String> linkedStudentIds,
+  ) {
+    if (classNames.any((name) => _classNamesMatch(name, post.className))) {
+      return true;
+    }
+    if (linkedStudentIds.isEmpty) return false;
+    if (post.studentIds.any(
+      (id) => linkedStudentIds.contains(id.trim().toUpperCase()),
+    )) {
+      return true;
+    }
+    for (final id in linkedStudentIds) {
+      final student = StudentRegistryService.instance.lookupById(id) ??
+          StudentRegistryService.instance.lookupAnyById(id);
+      if (student != null &&
+          _classNamesMatch(student.className, post.className)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<GalleryPost> galleryForSchool([String? schoolId]) {
+    final sid =
+        (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    return List.unmodifiable(
+      _galleryPosts.where((post) => _galleryBelongsToSchool(post, sid)),
+    );
+  }
+
+  bool _galleryBelongsToSchool(GalleryPost post, String schoolId) {
+    if (schoolId.isEmpty) return true;
+    if (_galleryPostedBeforeSchoolOpened(post, schoolId)) return false;
+    final itemSchool = (post.schoolId ?? '').trim().toUpperCase();
+    if (itemSchool.isNotEmpty) return itemSchool == schoolId;
+    return _galleryAuthorBelongsToSchool(post, schoolId);
+  }
+
+  bool _galleryPostedBeforeSchoolOpened(GalleryPost post, String schoolId) {
+    final opened = SchoolRegistryService.instance.lookup(schoolId)?.registeredAt;
+    if (opened == null) return false;
+    final posted = DateTime(
+      post.postedAt.year,
+      post.postedAt.month,
+      post.postedAt.day,
+    );
+    final start = DateTime(opened.year, opened.month, opened.day);
+    return posted.isBefore(start);
+  }
+
+  bool _galleryAuthorBelongsToSchool(GalleryPost post, String schoolId) {
+    final name = post.authorName.trim().toLowerCase();
+    if (name.isEmpty) return false;
+    for (final teacher in TeacherRegistryService.instance.teachersForSchool(
+      schoolId,
+    )) {
+      if (teacher.fullName.trim().toLowerCase() == name) return true;
+    }
+    final user = AuthService.currentUser;
+    if (user != null &&
+        (user.schoolId ?? '').trim().toUpperCase() == schoolId) {
+      final fullName = (user.fullName ?? '').trim().toLowerCase();
+      if (fullName.isNotEmpty && fullName == name) return true;
+    }
+    return false;
+  }
+
+  List<String> _studentIdsForGalleryClass(String className, String schoolId) {
+    return StudentRegistryService.instance
+        .studentsForClass(
+          className,
+          schoolId: schoolId.isEmpty ? null : schoolId,
+        )
+        .map((s) => s.studentId.trim())
+        .where((id) => id.isNotEmpty)
+        .toList();
   }
 
   void addGalleryPost({
@@ -4383,32 +4487,35 @@ class SchoolDataService {
     String? mediaPath,
     List<String> attachmentPaths = const [],
   }) {
-    _galleryPosts.insert(
-      0,
-      GalleryPost(
-        id: 'gal-${_nextGalleryId++}',
-        className: className,
-        type: type,
-        title: title.trim(),
-        caption: caption.trim(),
-        authorName: authorName,
-        postedAt: DateTime.now(),
-        mediaLabel: mediaLabel,
-        mediaPath: mediaPath,
-        attachmentPaths: List<String>.from(attachmentPaths),
-      ),
+    final canonicalClass = _canonicalClassName(className);
+    final schoolId = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final post = GalleryPost(
+      id: 'gal-${_nextGalleryId++}',
+      className: canonicalClass,
+      type: type,
+      title: title.trim(),
+      caption: caption.trim(),
+      authorName: authorName,
+      postedAt: DateTime.now(),
+      mediaLabel: mediaLabel,
+      mediaPath: mediaPath,
+      schoolId: schoolId.isEmpty ? null : schoolId,
+      attachmentPaths: List<String>.from(attachmentPaths),
+      studentIds: _studentIdsForGalleryClass(canonicalClass, schoolId),
     );
+    _galleryPosts.insert(0, post);
 
     _notifyParentsInClass(
-      className: className,
+      className: canonicalClass,
       title: 'New gallery post',
-      body: '$authorName shared "$title" with $className.',
+      body: '$authorName shared "$title" with $canonicalClass.',
       type: NotificationType.gallery,
       fromRole: AuthService.roleTeacher,
       fromName: authorName,
     );
     SchoolContentSyncService.instance.markDataChanged();
     _persistGallery();
+    unawaited(CloudAppStore.instance.pushGalleryPost(post));
   }
 
   DateTime _calendarDay(DateTime date) {
@@ -8399,13 +8506,40 @@ class SchoolDataService {
   List<GalleryPost> gallerySnapshot() => List.unmodifiable(_galleryPosts);
 
   void applyPersistedGallery(List<GalleryPost> posts) {
-    for (final post in posts) {
-      final index = _galleryPosts.indexWhere((p) => p.id == post.id);
+    var changed = false;
+    for (final persisted in posts) {
+      final schoolId = (persisted.schoolId ?? '').trim().toUpperCase();
+      final normalized = GalleryPost(
+        id: persisted.id,
+        className: _canonicalClassName(persisted.className),
+        type: persisted.type,
+        title: persisted.title,
+        caption: persisted.caption,
+        authorName: persisted.authorName,
+        postedAt: persisted.postedAt,
+        mediaLabel: persisted.mediaLabel,
+        mediaPath: persisted.mediaPath,
+        schoolId: schoolId.isEmpty ? persisted.schoolId : schoolId,
+        attachmentPaths: List<String>.from(persisted.attachmentPaths),
+        studentIds: List<String>.from(persisted.studentIds),
+      );
+      final index = _galleryPosts.indexWhere((p) => p.id == normalized.id);
       if (index >= 0) {
-        _galleryPosts[index] = post;
+        _galleryPosts[index] = normalized;
       } else {
-        _galleryPosts.add(post);
+        _galleryPosts.add(normalized);
       }
+      changed = true;
+      final numeric = RegExp(r'gal-(\d+)').firstMatch(normalized.id);
+      if (numeric != null) {
+        final value = int.tryParse(numeric.group(1)!);
+        if (value != null && value >= _nextGalleryId) {
+          _nextGalleryId = value + 1;
+        }
+      }
+    }
+    if (changed) {
+      SchoolContentSyncService.instance.markDataChanged();
     }
   }
 

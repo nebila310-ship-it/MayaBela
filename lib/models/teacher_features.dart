@@ -398,8 +398,11 @@ class GalleryPost {
     required this.postedAt,
     this.mediaLabel,
     this.mediaPath,
+    this.schoolId,
     List<String>? attachmentPaths,
-  }) : attachmentPaths = attachmentPaths ?? [];
+    List<String>? studentIds,
+  })  : attachmentPaths = attachmentPaths ?? [],
+        studentIds = studentIds ?? [];
 
   final String id;
   final String className;
@@ -410,11 +413,16 @@ class GalleryPost {
   final DateTime postedAt;
   final String? mediaLabel;
   final String? mediaPath;
+  /// School that posted this. Empty on old rows until inferred.
+  final String? schoolId;
   List<String> attachmentPaths;
+  List<String> studentIds;
 
   GalleryPost copyWith({
     String? mediaPath,
+    String? schoolId,
     List<String>? attachmentPaths,
+    List<String>? studentIds,
   }) {
     return GalleryPost(
       id: id,
@@ -426,7 +434,9 @@ class GalleryPost {
       postedAt: postedAt,
       mediaLabel: mediaLabel,
       mediaPath: mediaPath ?? this.mediaPath,
+      schoolId: schoolId ?? this.schoolId,
       attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      studentIds: studentIds ?? this.studentIds,
     );
   }
 }

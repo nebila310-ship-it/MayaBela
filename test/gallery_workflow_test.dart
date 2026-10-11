@@ -13,6 +13,8 @@ import 'package:mayabela/services/gallery_compose.dart';
 import 'package:mayabela/services/gallery_media_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/setup/dashboard_setup.dart';
 import 'package:mayabela/utils/attachment_size_limit.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
@@ -192,6 +194,146 @@ void main() {
     if (WebAttachmentCache.instance.isWebPath(pick.filePath)) {
       expect(WebAttachmentCache.instance.read(pick.filePath), isNotNull);
     }
+  });
+
+  test('teacher gallery post is visible to the parent of that class', () {
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-GAL-VIS',
+        fullName: 'Gallery Kid',
+        grade: '1',
+        className: 'Grade 1A',
+        schoolId: 'TB-001',
+        dateOfBirth: DateTime(2018, 3, 1),
+      ),
+    ], replace: false);
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.gallery',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      fullName: 'Miss Hana',
+    );
+    SchoolDataService.instance.addGalleryPost(
+      className: '1A',
+      type: GalleryPostType.photo,
+      title: 'Morning circle',
+      caption: 'From homeroom',
+      authorName: 'Miss Hana',
+      mediaPath:
+          'https://example.supabase.co/storage/v1/object/public/school-files/'
+          'schools/TB-001/gallery_media/circle.jpg',
+    );
+
+    final posted = SchoolDataService.instance
+        .getGalleryForClass('Grade 1A')
+        .firstWhere((post) => post.title == 'Morning circle');
+    expect(posted.schoolId, 'TB-001');
+    expect(posted.studentIds, contains('STU-GAL-VIS'));
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.gallery.vis',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      linkedStudentIds: const ['STU-GAL-VIS'],
+    );
+    AuthService.clearCloudAccessScope();
+
+    expect(
+      SchoolDataService.instance
+          .getGalleryForParent()
+          .map((post) => post.title),
+      contains('Morning circle'),
+    );
+    expect(
+      AppDataMaps.galleryPostToMap(posted)['schoolId'],
+      'TB-001',
+    );
+    expect(
+      AppDataMaps.galleryPostToMap(posted)['studentIds'],
+      contains('STU-GAL-VIS'),
+    );
+  });
+
+  test('parent sees a cloud gallery post stamped with their child id', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.gallery.ids',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'TB-001',
+      linkedStudentIds: const ['STU-GAL-CLOUD'],
+    );
+    SchoolDataService.instance.applyPersistedGallery([
+      GalleryPost(
+        id: 'gal-cloud-parent-1',
+        className: 'Grade 2B',
+        type: GalleryPostType.photo,
+        title: 'Art day',
+        caption: 'Paintings',
+        authorName: 'Abebe',
+        postedAt: DateTime.now(),
+        schoolId: 'TB-001',
+        mediaPath:
+            'https://example.supabase.co/storage/v1/object/public/school-files/'
+            'schools/TB-001/gallery_media/art.jpg',
+        studentIds: const ['STU-GAL-CLOUD'],
+      ),
+    ]);
+
+    expect(
+      SchoolDataService.instance
+          .getGalleryForParent()
+          .map((post) => post.title),
+      contains('Art day'),
+    );
+  });
+
+  test('new school hides leftover gallery from teachers it does not have', () {
+    SchoolRegistryService.instance.upsertSchool(
+      SchoolRecord(
+        id: 'SCH-GAL-NEW',
+        name: 'New Gallery School',
+        registeredAt: DateTime(2026, 10, 10),
+        sections: const ['Grade 1A'],
+      ),
+    );
+    AuthService.currentUser = RegisteredUser(
+      username: 'parent.gal.new',
+      password: 'x',
+      roleKey: AuthService.roleParent,
+      schoolId: 'SCH-GAL-NEW',
+      linkedStudentIds: const ['STU-GAL-NEW'],
+    );
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-GAL-NEW',
+        fullName: 'New Kid',
+        grade: '1',
+        className: 'Grade 1A',
+        schoolId: 'SCH-GAL-NEW',
+        dateOfBirth: DateTime(2018, 1, 1),
+      ),
+    ], replace: false);
+    SchoolDataService.instance.applyPersistedGallery([
+      GalleryPost(
+        id: 'gal-ghost-old',
+        className: 'Grade 1A',
+        type: GalleryPostType.photo,
+        title: 'Old campus photo',
+        caption: 'From July',
+        authorName: 'Yared',
+        postedAt: DateTime(2026, 7, 30),
+      ),
+    ]);
+
+    expect(
+      SchoolDataService.instance
+          .getGalleryForParent()
+          .any((post) => post.id == 'gal-ghost-old'),
+      isFalse,
+    );
   });
 
   test('parent gallery uses JWT class names on a fresh phone', () {

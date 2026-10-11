@@ -95,11 +95,17 @@ abstract final class AppDataMaps {
     final attachments = post.attachmentPaths
         .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
         .toList();
-    final studentIds = StudentRegistryService.instance
-        .studentsForClass(post.className)
-        .map((s) => s.studentId.trim())
-        .where((id) => id.isNotEmpty)
-        .toList();
+    final schoolId = (post.schoolId ?? '').trim();
+    final studentIds = <String>{
+      ...post.studentIds.map((id) => id.trim()).where((id) => id.isNotEmpty),
+      ...StudentRegistryService.instance
+          .studentsForClass(
+            post.className,
+            schoolId: schoolId.isEmpty ? null : schoolId,
+          )
+          .map((s) => s.studentId.trim())
+          .where((id) => id.isNotEmpty),
+    }.toList();
     return {
       'id': post.id,
       'className': post.className,
@@ -111,6 +117,7 @@ abstract final class AppDataMaps {
       if (post.mediaLabel != null) 'mediaLabel': post.mediaLabel,
       if (cloudMedia != null) 'mediaPath': cloudMedia,
       'attachmentPaths': attachments,
+      if (schoolId.isNotEmpty) 'schoolId': schoolId,
       if (studentIds.isNotEmpty) 'studentIds': studentIds,
     };
   }
@@ -126,9 +133,16 @@ abstract final class AppDataMaps {
         postedAt: DateTime.parse(map['postedAt'] as String),
         mediaLabel: map['mediaLabel'] as String?,
         mediaPath: map['mediaPath'] as String?,
+        schoolId: (map['schoolId'] as String?)?.trim(),
         attachmentPaths:
             (map['attachmentPaths'] as List?)
                 ?.map((item) => item.toString())
+                .toList() ??
+            const [],
+        studentIds:
+            (map['studentIds'] as List?)
+                ?.map((item) => item.toString().trim())
+                .where((id) => id.isNotEmpty)
                 .toList() ??
             const [],
       );
