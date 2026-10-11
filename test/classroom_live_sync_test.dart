@@ -291,14 +291,17 @@ void main() {
         AuthService.roleStudent,
       ).expand((s) => s.entryIds).toSet();
       expect(parentIds, containsAll(['daily_activities', 'class_discussion']));
-      expect(studentIds, containsAll(['daily_activities', 'class_discussion']));
+      expect(studentIds, isNot(contains('daily_activities')));
+      expect(studentIds, isNot(contains('class_discussion')));
+      expect(studentIds, isNot(contains('messages')));
+      expect(studentIds, contains('lesson_plans'));
       expect(
         DashboardRegistry.find(AuthService.roleParent, 'class_discussion'),
         isNotNull,
       );
       expect(
         DashboardRegistry.find(AuthService.roleStudent, 'daily_activities'),
-        isNotNull,
+        isNull,
       );
     },
   );

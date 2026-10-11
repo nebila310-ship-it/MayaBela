@@ -36,7 +36,6 @@ import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/screens/student_profile_screen.dart';
-import 'package:mayabela/services/student_account_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/widgets/parent_bus_link_card.dart';
@@ -844,9 +843,6 @@ List<DashboardEntry> _parentEntries() {
 
 List<DashboardEntry> _studentEntries() {
   const role = AuthService.roleStudent;
-  final settings = StudentAccountService.instance.settingsForSchool(
-    AuthService.activeSchoolId,
-  );
 
   return [
     DashboardEntry(
@@ -974,21 +970,6 @@ List<DashboardEntry> _studentEntries() {
       ),
     ),
     DashboardEntry(
-      id: 'daily_activities',
-      icon: Icons.today,
-      color: const Color(0xFF00796B),
-      builder: (context) => DashboardCard(
-        icon: Icons.today,
-        title: AppLocale.instance.strings.dailyActivities,
-        color: const Color(0xFF00796B),
-        badgeCount: _badge('daily_activities'),
-        onTap: () => _openTile(
-          'daily_activities',
-          () => openStudentDailyActivity(context),
-        ),
-      ),
-    ),
-    DashboardEntry(
       id: 'timetable',
       icon: Icons.schedule,
       color: Colors.indigo,
@@ -1039,49 +1020,6 @@ List<DashboardEntry> _studentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AnnouncementsScreen()),
-          );
-        }),
-      ),
-    ),
-    DashboardEntry(
-      id: 'messages',
-      icon: Icons.message,
-      color: Colors.orange,
-      builder: (context) => DashboardCard(
-        icon: Icons.message,
-        title: _t('messages', role),
-        color: Colors.orange,
-        badgeCount: _badge('messages'),
-        onTap: () => _openTile('messages', () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MessagesScreen(
-                canCompose: settings.allowStudentMessaging,
-              ),
-            ),
-          );
-        }),
-      ),
-    ),
-    DashboardEntry(
-      id: 'class_discussion',
-      icon: Icons.forum_outlined,
-      color: const Color(0xFF1565C0),
-      builder: (context) => DashboardCard(
-        icon: Icons.forum_outlined,
-        title: AppLocale.instance.strings.classDiscussion,
-        color: const Color(0xFF1565C0),
-        badgeCount: _badge('class_discussion'),
-        onTap: () => _openTile('class_discussion', () {
-          _ensureClassDiscussionsForViewer();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MessagesScreen(
-                canCompose: settings.allowStudentMessaging,
-              ),
-            ),
           );
         }),
       ),
@@ -1456,12 +1394,12 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My school',
           icon: Icons.school_outlined,
-          entryIds: ['profile', 'grades', 'homework', 'daily_activities', 'lesson_plans', 'learning_materials', 'attendance', 'timetable'],
+          entryIds: ['profile', 'grades', 'homework', 'lesson_plans', 'learning_materials', 'attendance', 'timetable'],
         ),
         DashboardSectionDefinition(
           title: 'Updates',
           icon: Icons.campaign,
-          entryIds: ['announcements', 'calendar', 'messages', 'class_discussion', 'gallery'],
+          entryIds: ['announcements', 'calendar', 'gallery'],
         ),
         DashboardSectionDefinition(
           title: 'Assistant',

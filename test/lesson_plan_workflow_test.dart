@@ -12,6 +12,7 @@ import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/dashboard_registry.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/setup/dashboard_setup.dart';
@@ -275,6 +276,70 @@ void main() {
       DashboardRegistry.find(AuthService.roleStudent, 'lesson_plans'),
       isNotNull,
     );
+  });
+
+  test('student sees only published lesson plans for their class', () async {
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-LP-STU',
+        fullName: 'Plan Kid',
+        grade: '4',
+        className: 'Grade 4A',
+        schoolId: 'TB-001',
+        dateOfBirth: DateTime(2016, 5, 1),
+      ),
+    ], replace: false);
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.plans',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+    );
+    final mine = await LessonPlanService.instance.createPlan(
+      title: '4A published science',
+      className: 'Grade 4A',
+      subject: 'Science',
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.setStatus(
+      mine.id,
+      LessonPlanStatus.published,
+    );
+    final draft = await LessonPlanService.instance.createPlan(
+      title: '4A draft math',
+      className: 'Grade 4A',
+      subject: 'Mathematics',
+      schoolId: 'TB-001',
+    );
+    expect(draft.isPublished, isFalse);
+    final other = await LessonPlanService.instance.createPlan(
+      title: '5B published english',
+      className: 'Grade 5B',
+      subject: 'English',
+      schoolId: 'TB-001',
+    );
+    await LessonPlanService.instance.setStatus(
+      other.id,
+      LessonPlanStatus.published,
+    );
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'student.plans',
+      password: 'x',
+      roleKey: AuthService.roleStudent,
+      schoolId: 'TB-001',
+      linkedStudentId: 'STU-LP-STU',
+    );
+    AuthService.clearCloudAccessScope();
+
+    final titles = LessonPlanService.instance
+        .publishedForCurrentStudent()
+        .map((p) => p.title)
+        .toList();
+    expect(titles, contains('4A published science'));
+    expect(titles, isNot(contains('4A draft math')));
+    expect(titles, isNot(contains('5B published english')));
+    AuthService.currentUser = null;
   });
 
   test('parent JWT class names see an admin-published lesson plan', () async {

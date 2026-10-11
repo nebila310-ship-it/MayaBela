@@ -69,7 +69,6 @@ void main() {
     for (final role in [
       AuthService.roleTeacher,
       AuthService.roleParent,
-      AuthService.roleStudent,
       AuthService.roleDriver,
     ]) {
       signIn(role);
@@ -78,6 +77,13 @@ void main() {
       ).map((e) => e.id).toSet();
       expect(ids, contains('messages'), reason: role);
     }
+    signIn(AuthService.roleStudent);
+    expect(
+      DashboardRegistry.visibleEntriesFor(
+        AuthService.roleStudent,
+      ).map((e) => e.id),
+      isNot(contains('messages')),
+    );
   });
 
   test('admin and staff dashboards expose the Messages (support) tile', () {

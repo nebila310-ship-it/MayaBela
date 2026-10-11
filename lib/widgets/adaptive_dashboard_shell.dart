@@ -325,9 +325,10 @@ class _DesktopDashboardShellState extends State<_DesktopDashboardShell> {
                                   ),
                                 ),
                               ),
-                              InboxMessagesAction(
-                                iconColor: ClassroomPalette.inkOf(context),
-                              ),
+                              if (widget.roleKey != AuthService.roleStudent)
+                                InboxMessagesAction(
+                                  iconColor: ClassroomPalette.inkOf(context),
+                                ),
                               IconButton(
                                 onPressed: () {
                                   Navigator.push(
