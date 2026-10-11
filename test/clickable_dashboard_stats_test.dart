@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/web_erp/pages/web_admin_overview_page.dart';
 import 'package:mayabela/web_erp/pages/web_transport_dashboard_page.dart';
+import 'package:mayabela/web_erp/shell/web_erp_sidebar.dart';
 import 'package:mayabela/web_erp/widgets/web_stat_card.dart';
 
 void main() {
@@ -72,5 +75,37 @@ void main() {
     await tester.pump();
 
     expect(opened, containsAll(['transport_buses', 'add_driver', 'transport_live_gps']));
+  });
+
+  testWidgets(
+    'admin sidebar does not pin a School bus block at the top',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(420, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: WebErpSidebar(
+              collapsed: false,
+              selectedId: 'dashboard',
+              onSelect: (_) {},
+              onToggleCollapse: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SCHOOL BUS'), findsNothing);
+      expect(find.text('Dashboard'), findsOneWidget);
+    },
+  );
+
+  test('sidebar source no longer hard-codes a School bus pin', () {
+    final src = File('lib/web_erp/shell/web_erp_sidebar.dart').readAsStringSync();
+    expect(src, isNot(contains('School bus')));
+    expect(src, isNot(contains("id: 'add_driver'")));
+    expect(src, isNot(contains("id: 'transport_live_gps'")));
   });
 }
