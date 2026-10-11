@@ -1,5 +1,6 @@
 enum NotificationType {
   message,
+  classDiscussion,
   homework,
   gallery,
   dailyActivity,

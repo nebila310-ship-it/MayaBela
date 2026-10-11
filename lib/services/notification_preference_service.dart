@@ -64,6 +64,18 @@ class NotificationPreferenceService extends ChangeNotifier {
           NotificationPreferenceKey.announcements,
           NotificationPreferenceKey.calendar,
         ],
+      AuthService.roleStudent => [
+          NotificationPreferenceKey.master,
+          NotificationPreferenceKey.messages,
+          NotificationPreferenceKey.homework,
+          NotificationPreferenceKey.dailyActivity,
+          NotificationPreferenceKey.lessonPlans,
+          NotificationPreferenceKey.attendance,
+          NotificationPreferenceKey.grades,
+          NotificationPreferenceKey.announcements,
+          NotificationPreferenceKey.calendar,
+          NotificationPreferenceKey.gallery,
+        ],
       _ => [
           NotificationPreferenceKey.master,
           NotificationPreferenceKey.messages,

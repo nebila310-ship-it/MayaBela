@@ -132,15 +132,22 @@ class ConversationRealtimeSync extends ChangeNotifier {
       ),
     );
 
+    final discussion = conversation.isClassDiscussion;
+    final className = conversation.classDiscussionClassName;
     NotificationService.instance.push(
-      title: 'New message from $senderName',
+      title: discussion
+          ? 'Class discussion — ${className ?? conversation.name}'
+          : 'New message from $senderName',
       body: preview,
-      type: NotificationType.message,
+      type: discussion
+          ? NotificationType.classDiscussion
+          : NotificationType.message,
       fromRole: message.senderRole,
       fromName: senderName,
       recipientRole: recipientRole,
       recipientUsername: AuthService.currentUser?.username,
-      showOnMessagesBadge: true,
+      targetClassName: className,
+      showOnMessagesBadge: !discussion,
     );
   }
 }

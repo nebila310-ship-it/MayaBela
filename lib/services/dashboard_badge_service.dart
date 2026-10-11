@@ -8,7 +8,9 @@ import 'package:mayabela/services/school_data_service.dart';
 
 /// Maps dashboard tile ids to unread notification counts for every role.
 class DashboardBadgeService extends ChangeNotifier {
-  DashboardBadgeService._();
+  DashboardBadgeService._() {
+    NotificationService.instance.addListener(notifyListeners);
+  }
   static final instance = DashboardBadgeService._();
 
   /// When a tile was last opened — badges hide older unread items per tile only.
@@ -16,6 +18,7 @@ class DashboardBadgeService extends ChangeNotifier {
 
   static const _tileTypes = <String, List<NotificationType>>{
     'homework': [NotificationType.homework],
+    'class_discussion': [NotificationType.classDiscussion],
     'gallery': [NotificationType.gallery],
     'grades': [NotificationType.grade],
     'attendance': [NotificationType.attendance],
@@ -45,11 +48,13 @@ class DashboardBadgeService extends ChangeNotifier {
       NotificationType.dailyActivity,
       NotificationType.dailyActivitySeen,
       NotificationType.homework,
+      NotificationType.classDiscussion,
       NotificationType.grade,
       NotificationType.attendance,
     ],
     'children': [
       NotificationType.homework,
+      NotificationType.classDiscussion,
       NotificationType.grade,
       NotificationType.attendance,
       NotificationType.gallery,
@@ -141,6 +146,7 @@ class DashboardBadgeService extends ChangeNotifier {
   String? tileIdForNotificationType(NotificationType type) {
     return switch (type) {
       NotificationType.message => 'messages',
+      NotificationType.classDiscussion => 'class_discussion',
       NotificationType.homework => 'homework',
       NotificationType.gallery => 'gallery',
       NotificationType.grade => 'grades',

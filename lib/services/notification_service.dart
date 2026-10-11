@@ -165,11 +165,17 @@ class NotificationService extends ChangeNotifier {
       );
     }
     if (role == AuthService.roleStudent) {
-      final linkedStudentId = AuthService.currentUser?.linkedStudentId
+      final ids = <String>{
+        ...?AuthService.currentUser?.linkedStudentIds
+            .map((id) => id.trim().toUpperCase())
+            .where((id) => id.isNotEmpty),
+      };
+      final linked = AuthService.currentUser?.linkedStudentId
           ?.trim()
           .toUpperCase();
-      if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
-      return _matchesLinkedStudentScope(item, {linkedStudentId});
+      if (linked != null && linked.isNotEmpty) ids.add(linked);
+      if (ids.isEmpty) return false;
+      return _matchesLinkedStudentScope(item, ids);
     }
     if (role == AuthService.roleTeacher &&
         !_matchesTeacherClassScope(item)) {
@@ -177,7 +183,11 @@ class NotificationService extends ChangeNotifier {
     }
     if (item.type == NotificationType.message &&
         !_hasDirectPersonTarget(item) &&
-        staffTarget.isEmpty) {
+        staffTarget.isEmpty &&
+        (item.targetStudentId == null ||
+            item.targetStudentId!.trim().isEmpty) &&
+        (item.targetClassName == null ||
+            item.targetClassName!.trim().isEmpty)) {
       return false;
     }
     return true;
@@ -202,6 +212,17 @@ class NotificationService extends ChangeNotifier {
     final username = item.recipientUsername?.trim();
     if (username != null && username.isNotEmpty) return true;
     return item.recipientUsernames.any((u) => u.trim().isNotEmpty);
+  }
+
+  bool _isSelfSend({required String fromRole, required String fromName}) {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    if (user.roleKey != fromRole) return false;
+    final from = fromName.trim().toLowerCase();
+    if (from.isEmpty) return false;
+    final fullName = (user.fullName ?? '').trim().toLowerCase();
+    if (fullName.isNotEmpty && fullName == from) return true;
+    return user.username.trim().toLowerCase() == from;
   }
 
   /// Direct staff/username notices stay with that person; role-wide
@@ -348,7 +369,8 @@ class NotificationService extends ChangeNotifier {
           recipientStaffId: recipientStaffId,
           recipientUsername: recipientUsername,
           recipientUsernames: usernames,
-        )) {
+        ) &&
+        _isSelfSend(fromRole: fromRole, fromName: fromName)) {
       return;
     }
     final staffTarget = recipientStaffRole?.trim() ?? '';
