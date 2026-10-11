@@ -6,8 +6,10 @@ import 'package:mayabela/models/markbook.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/persistence/exam_persistence_service.dart';
+import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_access_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
 /// Question bank, exam papers, attempts, and markbook push.
@@ -42,6 +44,109 @@ class ExamService extends ChangeNotifier {
       (AuthService.activeSchoolId ?? AuthService.currentUser?.schoolId ?? '')
           .trim()
           .toUpperCase();
+
+  String get currentActor =>
+      (AuthService.currentUser?.username ?? '').trim();
+
+  bool ownedByCurrentUser(String? createdBy) {
+    final actor = currentActor.toLowerCase();
+    if (actor.isEmpty || createdBy == null || createdBy.trim().isEmpty) {
+      return false;
+    }
+    return createdBy.trim().toLowerCase() == actor;
+  }
+
+  /// Academic office (owner / VP / section director) sees every school item.
+  bool get isExamOffice {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    if (user.roleKey == AuthService.roleAdmin) return true;
+    return ModuleAccess.canManage('examinations');
+  }
+
+  bool get _canUseTeacherVault {
+    final user = AuthService.currentUser;
+    if (user == null) return false;
+    if (user.roleKey == AuthService.roleAdmin) return true;
+    if (AuthService.isClassroomTeacher) return true;
+    return ModuleAccess.canView('exam_bank') ||
+        ModuleAccess.canManage('examinations');
+  }
+
+  bool canViewQuestion(ExamQuestion question, [String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).toUpperCase();
+    if (sid.isNotEmpty && question.schoolId != sid) return false;
+    if (isExamOffice) return true;
+    if (ownedByCurrentUser(question.createdBy)) return true;
+    return question.inSchoolVault && _canUseTeacherVault;
+  }
+
+  bool canEditQuestion(ExamQuestion question) =>
+      isExamOffice || ownedByCurrentUser(question.createdBy);
+
+  bool canViewPaper(ExamPaper paper, [String? schoolId]) {
+    final sid = (schoolId ?? _schoolId).toUpperCase();
+    if (sid.isNotEmpty && paper.schoolId != sid) return false;
+    if (isExamOffice) return true;
+    if (ownedByCurrentUser(paper.createdBy)) return true;
+    return paper.inSchoolVault && _canUseTeacherVault;
+  }
+
+  bool canEditPaper(ExamPaper paper) =>
+      isExamOffice || ownedByCurrentUser(paper.createdBy);
+
+  List<ExamQuestion> questionsForTeacher([String? username, String? schoolId]) {
+    final actor = (username ?? currentActor).trim().toLowerCase();
+    if (actor.isEmpty) return const [];
+    return questionsForSchool(schoolId)
+        .where((q) => (q.createdBy ?? '').trim().toLowerCase() == actor)
+        .toList();
+  }
+
+  List<ExamPaper> papersForTeacher([String? username, String? schoolId]) {
+    final actor = (username ?? currentActor).trim().toLowerCase();
+    if (actor.isEmpty) return const [];
+    return papersForSchool(schoolId)
+        .where((p) => (p.createdBy ?? '').trim().toLowerCase() == actor)
+        .toList();
+  }
+
+  List<ExamQuestion> vaultQuestions([String? schoolId]) => questionsForSchool(
+        schoolId,
+      ).where((q) => q.inSchoolVault).toList();
+
+  List<ExamPaper> vaultPapers([String? schoolId]) =>
+      papersForSchool(schoolId).where((p) => p.inSchoolVault).toList();
+
+  List<ExamQuestion> questionsVisibleToCurrentUser([String? schoolId]) =>
+      questionsForSchool(schoolId).where(canViewQuestion).toList();
+
+  List<String> bankCategories({
+    String? schoolId,
+    bool mineOnly = false,
+    bool vaultOnly = false,
+  }) {
+    final names = <String>{...ExamBankCategories.suggested};
+    final questions = vaultOnly
+        ? vaultQuestions(schoolId)
+        : mineOnly
+            ? questionsForTeacher(null, schoolId)
+            : questionsForSchool(schoolId);
+    final papers = vaultOnly
+        ? vaultPapers(schoolId)
+        : mineOnly
+            ? papersForTeacher(null, schoolId)
+            : papersForSchool(schoolId);
+    for (final question in questions) {
+      if (question.category.trim().isNotEmpty) {
+        names.add(question.category.trim());
+      }
+    }
+    for (final paper in papers) {
+      if (paper.category.trim().isNotEmpty) names.add(paper.category.trim());
+    }
+    return names.toList()..sort();
+  }
 
   List<ExamQuestion> questionsForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).toUpperCase();
@@ -122,7 +227,21 @@ class ExamService extends ChangeNotifier {
         .toList();
   }
 
-  int unscoredCount([String? schoolId]) => scoringQueue(schoolId).length;
+  List<ExamAttempt> scoringQueueForCurrentUser([String? schoolId]) {
+    final queue = scoringQueue(schoolId);
+    if (isExamOffice) return queue;
+    return queue.where((attempt) {
+      final paper = paperById(attempt.paperId);
+      if (paper != null && canEditPaper(paper)) return true;
+      final className =
+          attempt.className.trim().isEmpty ? paper?.className : attempt.className;
+      if (className == null || className.trim().isEmpty) return false;
+      return TeacherAccessService.instance.assignmentFor(className) != null;
+    }).toList();
+  }
+
+  int unscoredCount([String? schoolId]) =>
+      scoringQueueForCurrentUser(schoolId).length;
 
   List<ExamQuestion> questionsOnPaper(ExamPaper paper) => [
         for (final id in paper.questionIds)
@@ -139,6 +258,8 @@ class ExamService extends ChangeNotifier {
     String? gradeLevel,
     List<String> attachmentPaths = const [],
     String? schoolId,
+    String category = '',
+    ExamVaultAccess vaultAccess = ExamVaultAccess.private,
   }) async {
     final now = DateTime.now();
     final question = ExamQuestion(
@@ -152,6 +273,8 @@ class ExamService extends ChangeNotifier {
       correctChoiceId: correctChoiceId,
       gradeLevel: gradeLevel,
       attachmentPaths: List.of(attachmentPaths),
+      category: category.trim(),
+      vaultAccess: vaultAccess,
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -169,6 +292,8 @@ class ExamService extends ChangeNotifier {
     List<ExamChoice>? choices,
     String? correctChoiceId,
     List<String>? attachmentPaths,
+    String? category,
+    ExamVaultAccess? vaultAccess,
   }) async {
     final question = questionById(id);
     if (question == null) return null;
@@ -180,6 +305,8 @@ class ExamService extends ChangeNotifier {
     if (attachmentPaths != null) {
       question.attachmentPaths = List.of(attachmentPaths);
     }
+    if (category != null) question.category = category.trim();
+    if (vaultAccess != null) question.vaultAccess = vaultAccess;
     question.updatedAt = DateTime.now();
     await _persist();
     return question;
@@ -197,6 +324,8 @@ class ExamService extends ChangeNotifier {
     ExamKind kind = ExamKind.school,
     ExamSittingMode sittingMode = ExamSittingMode.online,
     String? schoolId,
+    String category = '',
+    ExamVaultAccess vaultAccess = ExamVaultAccess.private,
   }) async {
     final now = DateTime.now();
     final paper = ExamPaper(
@@ -212,6 +341,8 @@ class ExamService extends ChangeNotifier {
       attachmentPaths: List.of(attachmentPaths),
       kind: kind,
       sittingMode: sittingMode,
+      category: category.trim(),
+      vaultAccess: vaultAccess,
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -232,6 +363,8 @@ class ExamService extends ChangeNotifier {
     List<String>? attachmentPaths,
     ExamKind? kind,
     ExamSittingMode? sittingMode,
+    String? category,
+    ExamVaultAccess? vaultAccess,
   }) async {
     final paper = paperById(id);
     if (paper == null) return null;
@@ -252,6 +385,8 @@ class ExamService extends ChangeNotifier {
     }
     if (kind != null) paper.kind = kind;
     if (sittingMode != null) paper.sittingMode = sittingMode;
+    if (category != null) paper.category = category.trim();
+    if (vaultAccess != null) paper.vaultAccess = vaultAccess;
     paper.updatedAt = DateTime.now();
     await _persist();
     return paper;
@@ -283,6 +418,61 @@ class ExamService extends ChangeNotifier {
       kind: paper.kind,
       sittingMode: paper.sittingMode,
       schoolId: paper.schoolId,
+      category: paper.category,
+      vaultAccess: ExamVaultAccess.private,
+    );
+  }
+
+  /// Copies a vault (or own) question onto the signed-in teacher's list.
+  Future<ExamQuestion> copyQuestionToMyBank(String id) async {
+    final question = questionById(id);
+    if (question == null || !canViewQuestion(question)) {
+      throw StateError('Exam question not found.');
+    }
+    return createQuestion(
+      subject: question.subject,
+      prompt: question.prompt,
+      type: question.type,
+      points: question.points,
+      choices: List.of(question.choices),
+      correctChoiceId: question.correctChoiceId,
+      gradeLevel: question.gradeLevel,
+      attachmentPaths: List.of(question.attachmentPaths),
+      schoolId: question.schoolId,
+      category: question.category,
+      vaultAccess: ExamVaultAccess.private,
+    );
+  }
+
+  /// Copies a vault paper and its questions onto the signed-in teacher's list.
+  Future<ExamPaper> copyPaperToMyBank(String id) async {
+    final paper = paperById(id);
+    if (paper == null || !canViewPaper(paper)) {
+      throw StateError('Exam paper not found.');
+    }
+    final questionIds = <String>[];
+    for (final questionId in paper.questionIds) {
+      final question = questionById(questionId);
+      if (question == null || !canViewQuestion(question)) continue;
+      if (ownedByCurrentUser(question.createdBy)) {
+        questionIds.add(question.id);
+        continue;
+      }
+      final copy = await copyQuestionToMyBank(question.id);
+      questionIds.add(copy.id);
+    }
+    return createPaper(
+      title: '${paper.title} (my copy)',
+      className: paper.className,
+      subject: paper.subject,
+      questionIds: questionIds,
+      markbookCategoryId: paper.markbookCategoryId,
+      attachmentPaths: List.of(paper.attachmentPaths),
+      kind: paper.kind,
+      sittingMode: paper.sittingMode,
+      schoolId: paper.schoolId,
+      category: paper.category,
+      vaultAccess: ExamVaultAccess.private,
     );
   }
 

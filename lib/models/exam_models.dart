@@ -16,6 +16,24 @@ enum ExamKind { school, national, model }
 /// not a lockdown browser.
 enum ExamSittingMode { online, offline }
 
+/// Who else at the school may open this bank item.
+///
+/// `private` stays on the author's list. `vault` is the school teacher vault.
+enum ExamVaultAccess { private, vault }
+
+/// Teacher-defined folders for their own bank and papers.
+abstract final class ExamBankCategories {
+  static const suggested = <String>[
+    'Quiz',
+    'Midterm',
+    'Final',
+    'Worksheet',
+    'Practice',
+    'Model paper',
+    'National',
+  ];
+}
+
 class ExamChoice {
   const ExamChoice({required this.id, required this.text});
 
@@ -47,6 +65,8 @@ class ExamQuestion {
     this.gradeLevel,
     this.createdBy,
     this.attachmentPaths = const [],
+    this.category = '',
+    this.vaultAccess = ExamVaultAccess.private,
   });
 
   final String id;
@@ -60,8 +80,12 @@ class ExamQuestion {
   String? gradeLevel;
   String? createdBy;
   List<String> attachmentPaths;
+  String category;
+  ExamVaultAccess vaultAccess;
   final DateTime createdAt;
   DateTime updatedAt;
+
+  bool get inSchoolVault => vaultAccess == ExamVaultAccess.vault;
 
   bool get isMcq => type == ExamQuestionType.mcq;
 
@@ -77,6 +101,8 @@ class ExamQuestion {
         if (gradeLevel != null) 'gradeLevel': gradeLevel,
         if (createdBy != null) 'createdBy': createdBy,
         'attachmentPaths': attachmentPaths,
+        if (category.trim().isNotEmpty) 'category': category.trim(),
+        'vaultAccess': vaultAccess.name,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -104,6 +130,11 @@ class ExamQuestion {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      category: (map['category'] as String? ?? '').trim(),
+      vaultAccess: ExamVaultAccess.values.firstWhere(
+        (v) => v.name == map['vaultAccess'],
+        orElse: () => ExamVaultAccess.vault,
+      ),
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
@@ -130,6 +161,8 @@ class ExamPaper {
     this.attachmentPaths = const [],
     this.kind = ExamKind.school,
     this.sittingMode = ExamSittingMode.online,
+    this.category = '',
+    this.vaultAccess = ExamVaultAccess.private,
   });
 
   final String id;
@@ -146,8 +179,12 @@ class ExamPaper {
   List<String> attachmentPaths;
   ExamKind kind;
   ExamSittingMode sittingMode;
+  String category;
+  ExamVaultAccess vaultAccess;
   final DateTime createdAt;
   DateTime updatedAt;
+
+  bool get inSchoolVault => vaultAccess == ExamVaultAccess.vault;
 
   bool get isPublished => status == ExamPaperStatus.published;
 
@@ -182,6 +219,8 @@ class ExamPaper {
         'attachmentPaths': attachmentPaths,
         'kind': kind.name,
         'sittingMode': sittingMode.name,
+        if (category.trim().isNotEmpty) 'category': category.trim(),
+        'vaultAccess': vaultAccess.name,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -220,6 +259,11 @@ class ExamPaper {
       sittingMode: ExamSittingMode.values.firstWhere(
         (v) => v.name == map['sittingMode'],
         orElse: () => ExamSittingMode.online,
+      ),
+      category: (map['category'] as String? ?? '').trim(),
+      vaultAccess: ExamVaultAccess.values.firstWhere(
+        (v) => v.name == map['vaultAccess'],
+        orElse: () => ExamVaultAccess.vault,
       ),
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),

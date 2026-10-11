@@ -78,7 +78,16 @@ void main() {
         ['exam_paper_attachments/cover.pdf'],
       );
       expect(ExamPaper.fromMap(paper.toMap()).isOpenAt(now), isTrue);
+      expect(
+        ExamQuestion.fromMap(question.toMap()).vaultAccess,
+        ExamVaultAccess.private,
+      );
+      expect(ExamPaper.fromMap(paper.toMap()).vaultAccess, ExamVaultAccess.private);
       expect(ExamAttempt.fromMap(attempt.toMap()).percent, 100);
+      expect(
+        ExamQuestion.fromMap({'id': 'Q-LEG', 'schoolId': 'TB-001'}).vaultAccess,
+        ExamVaultAccess.vault,
+      );
     });
   });
 
