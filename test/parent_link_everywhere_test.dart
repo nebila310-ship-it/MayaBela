@@ -144,6 +144,36 @@ void main() {
     expect(source, isNot(contains('telegram://msg')));
     expect(source, isNot(contains('t.me/share')));
     expect(source, contains('tg://resolve?phone='));
+    expect(source, contains('launchExternal'));
+    expect(source, isNot(contains('canLaunchUrl(')));
+  });
+
+  test('chat invite is short and still has the school name plus live link', () {
+    final chat = ParentInviteService.instance.buildChatMessage(
+      schoolId: 'SCH-MAGIC',
+      studentId: 'STU-22',
+      childName: 'Kidus',
+      schoolName: 'Majestic Smart Academy',
+      childDateOfBirth: DateTime(2018, 3, 4),
+    );
+    expect(chat, contains('Welcome to Majestic Smart Academy!'));
+    expect(chat, contains('https://majobridge.com/'));
+    expect(chat, contains('role=parent'));
+    expect(chat.length, lessThan(900));
+  });
+
+  test('student profile keeps WhatsApp, Telegram, and copy-full invite', () {
+    final web = File('lib/web_erp/widgets/web_admin_profile_dialog.dart')
+        .readAsStringSync();
+    expect(web, contains('ParentInviteResendBar'));
+    final people = File('lib/screens/admin_people_screens.dart').readAsStringSync();
+    expect(people, contains('sendViaWhatsApp'));
+    expect(people, contains('copyFullParentInvite'));
+    expect(people, isNot(contains("canManage('parents')")));
+    final enroll = File('lib/screens/admin_enrollment_screens.dart')
+        .readAsStringSync();
+    expect(enroll, contains('copyFullParentInvite'));
+    expect(enroll, isNot(contains('copyParentInviteLink')));
   });
 
   test('cloud verify remembers the child so a fresh phone can link', () async {

@@ -10,6 +10,7 @@ import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/dosa_service.dart';
 import 'package:mayabela/services/library_rental_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
+import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/services/persistence/transfer_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -299,6 +300,8 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                             height: 1.35,
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        ParentInviteResendBar(student: student),
                       ],
                     ),
                   ),
