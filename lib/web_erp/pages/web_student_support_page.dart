@@ -74,13 +74,7 @@ class _WebStudentSupportPageState extends State<WebStudentSupportPage>
 
   List<AdminStudentRecord> get _students {
     return StudentRegistryService.instance
-        .getAllStudents()
-        .where(
-          (s) =>
-              s.isActive &&
-              (_schoolId.isEmpty ||
-                  s.schoolId.trim().toUpperCase() == _schoolId.toUpperCase()),
-        )
+        .visibleStudents(schoolId: _schoolId)
         .toList()
       ..sort((a, b) => a.fullName.compareTo(b.fullName));
   }

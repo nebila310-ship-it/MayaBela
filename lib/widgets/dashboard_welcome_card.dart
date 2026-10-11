@@ -328,12 +328,7 @@ class AdminDashboardSummary extends StatelessWidget {
         .length;
     final staffCount = teacherCount + transportCount;
     final studentCount = StudentRegistryService.instance
-        .getAllStudents()
-        .where(
-          (student) =>
-              student.isActive &&
-              (schoolId == null || student.schoolId == schoolId),
-        )
+        .visibleStudents(schoolId: schoolId)
         .length;
 
     return DashboardWelcomeCard(

@@ -43,14 +43,7 @@ class _WebHomeworkPageState extends State<WebHomeworkPage> {
       ...SchoolDataService.instance
           .homeworkForSchool(_schoolId)
           .map((h) => h.className),
-      ...StudentRegistryService.instance
-          .registrySnapshot()
-          .where(
-            (s) =>
-                _schoolId.isEmpty ||
-                s.schoolId.toUpperCase() == _schoolId.toUpperCase(),
-          )
-          .map((s) => s.className),
+      ...StudentRegistryService.instance.classNamesForSchool(_schoolId),
     };
     final list = names.where((n) => n.trim().isNotEmpty).toList()..sort();
     return list;

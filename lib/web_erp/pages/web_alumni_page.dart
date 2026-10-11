@@ -31,14 +31,8 @@ class _WebAlumniPageState extends State<WebAlumniPage> {
     final narrow = WebViewport.isNarrow(context);
     final schoolId = AuthService.activeSchoolId;
     var alumni = StudentRegistryService.instance
-        .registrySnapshot()
-        .where((s) {
-          if (s.lifecycleStatus != StudentLifecycleStatus.graduated) {
-            return false;
-          }
-          if (schoolId == null || schoolId.isEmpty) return true;
-          return s.schoolId.toUpperCase() == schoolId.toUpperCase();
-        })
+        .visibleStudents(schoolId: schoolId, includeInactive: true)
+        .where((s) => s.lifecycleStatus == StudentLifecycleStatus.graduated)
         .toList();
     final q = _query.trim().toLowerCase();
     if (q.isNotEmpty) {

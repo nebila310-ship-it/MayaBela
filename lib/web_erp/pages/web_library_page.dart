@@ -306,9 +306,9 @@ class _WebLibraryPageState extends State<WebLibraryPage>
               onChanged: (v) {
                 final q = v.trim().toLowerCase();
                 final schoolId = AuthService.activeSchoolId;
-                final all = schoolId == null
-                    ? StudentRegistryService.instance.getAllStudents()
-                    : StudentRegistryService.instance.studentsForSchool(schoolId);
+                final all = StudentRegistryService.instance.visibleStudents(
+                  schoolId: schoolId,
+                );
                 setDialogState(() {
                   studentHits = q.isEmpty
                       ? <AdminStudentRecord>[]
@@ -562,9 +562,9 @@ class _WebLibraryPageState extends State<WebLibraryPage>
               onChanged: (v) {
                 final q = v.trim().toLowerCase();
                 final schoolId = AuthService.activeSchoolId;
-                final all = schoolId == null
-                    ? StudentRegistryService.instance.getAllStudents()
-                    : StudentRegistryService.instance.studentsForSchool(schoolId);
+                final all = StudentRegistryService.instance.visibleStudents(
+                  schoolId: schoolId,
+                );
                 setDialogState(() {
                   studentHits = q.isEmpty
                       ? <AdminStudentRecord>[]

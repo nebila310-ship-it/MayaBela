@@ -77,9 +77,9 @@ class _WebSisPageState extends State<WebSisPage> {
     final q = _search.text.trim();
     if (q.isEmpty) return const [];
     final schoolId = AuthService.activeSchoolId;
-    var students = schoolId == null
-        ? StudentRegistryService.instance.getAllStudents()
-        : StudentRegistryService.instance.studentsForSchool(schoolId);
+    var students = StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+    );
     return students
         .where(
           (s) => PaginatedDirectory.matchesText(q, [s.fullName, s.studentId]),

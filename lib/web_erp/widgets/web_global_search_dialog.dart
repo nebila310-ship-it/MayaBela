@@ -81,9 +81,9 @@ class _WebGlobalSearchDialogState extends State<_WebGlobalSearchDialog> {
       }
     }
 
-    final students = schoolId == null
-        ? StudentRegistryService.instance.getAllStudents()
-        : StudentRegistryService.instance.studentsForSchool(schoolId);
+    final students = StudentRegistryService.instance.visibleStudents(
+      schoolId: schoolId,
+    );
     for (final s in students) {
       if (q.isEmpty ||
           s.fullName.toLowerCase().contains(q) ||
@@ -100,9 +100,9 @@ class _WebGlobalSearchDialogState extends State<_WebGlobalSearchDialog> {
       }
     }
 
-    final teachers = schoolId == null
-        ? TeacherRegistryService.instance.getAllTeachers()
-        : TeacherRegistryService.instance.teachersForSchool(schoolId);
+    final teachers = TeacherRegistryService.instance.visibleTeachers(
+      schoolId: schoolId,
+    );
     for (final t in teachers) {
       if (q.isEmpty ||
           t.fullName.toLowerCase().contains(q) ||

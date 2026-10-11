@@ -92,12 +92,10 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
     final schoolId = AuthService.activeSchoolId;
     final campuses = SchoolRegistryService.instance.campusesForSchool(schoolId);
     final multiCampus = campuses.length > 1;
-    var teachers = schoolId == null
-        ? TeacherRegistryService.instance.allTeachersIncludingInactive()
-        : TeacherRegistryService.instance.teachersForSchool(
-            schoolId,
-            includeInactive: true,
-          );
+    var teachers = TeacherRegistryService.instance.visibleTeachers(
+      schoolId: schoolId,
+      includeInactive: true,
+    );
 
     teachers = teachers.where((t) {
       final hasStaffRole = t.staffRoles.isNotEmpty;

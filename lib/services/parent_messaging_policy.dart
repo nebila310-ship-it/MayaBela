@@ -19,9 +19,10 @@ abstract final class ParentMessagingPolicy {
       if (seen.add(option.id)) contacts.add(option);
     }
     // Vice President / messaging staff appear as school contacts for parents.
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers(
+      schoolId: schoolId,
+    )) {
       if (!teacher.isActive) continue;
-      if (id != null && teacher.schoolId.trim().toUpperCase() != id) continue;
       final roles = teacher.staffRoles.map(StaffRoles.canonicalize).toSet();
       // EDUABA parent endpoints: Homeroom (separate) + Section Director,
       // Student Affairs, Registrar, Finance, Transport Head, leadership.
@@ -55,12 +56,17 @@ abstract final class ParentMessagingPolicy {
 
     final homeroomId = student.homeroomTeacherId?.trim();
     if (homeroomId != null && homeroomId.isNotEmpty) {
-      final teacher = TeacherRegistryService.instance.lookupById(homeroomId);
+      final teacher = TeacherRegistryService.instance.lookupById(
+        homeroomId,
+        schoolId: student.schoolId,
+      );
       final option = StaffMemberOption.fromTeacher(teacher);
       if (option != null) return option;
     }
 
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers(
+      schoolId: student.schoolId,
+    )) {
       if (!teacher.isActive) continue;
       for (final assignment in teacher.classAssignments) {
         if (!StudentRegistryService.classNamesMatch(
@@ -89,7 +95,7 @@ abstract final class ParentMessagingPolicy {
 
     if (homeroomTeacherName != null && homeroomTeacherName.trim().isNotEmpty) {
       final target = homeroomTeacherName.trim().toLowerCase();
-      for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+      for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
         if (teacher.fullName.trim().toLowerCase() == target) {
           return StaffMemberOption.fromTeacher(teacher);
         }

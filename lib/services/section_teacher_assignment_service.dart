@@ -42,7 +42,7 @@ class SectionTeacherAssignmentService {
     if (targetClass.isEmpty) return;
 
     // Clear existing HR rows for this class on every teacher.
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
       final before = teacher.classAssignments.length;
       final next = teacher.classAssignments
           .where(

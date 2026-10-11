@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/models/transfer_models.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
@@ -570,36 +571,55 @@ class StudentRegistryService {
     return aliasesA.intersection(aliasesB).isNotEmpty;
   }
 
-  AdminStudentRecord? lookupById(String studentId) {
-    final id = studentId.trim().toUpperCase();
-    try {
-      return _students.firstWhere(
-        (s) => studentIdsMatch(s.studentId, id) && s.isActive,
-      );
-    } catch (_) {
-      return null;
-    }
+  AdminStudentRecord? lookupById(String studentId, {String? schoolId}) {
+    return _lookupById(studentId, schoolId: schoolId, activeOnly: true);
   }
 
-  AdminStudentRecord? lookupAnyById(String studentId) {
-    final id = studentId.trim().toUpperCase();
-    try {
-      return _students.firstWhere((s) => studentIdsMatch(s.studentId, id));
-    } catch (_) {
-      return null;
-    }
+  AdminStudentRecord? lookupAnyById(String studentId, {String? schoolId}) {
+    return _lookupById(studentId, schoolId: schoolId, activeOnly: false);
   }
 
-  AdminStudentRecord? lookupByLoginUsername(String username) {
+  AdminStudentRecord? _lookupById(
+    String studentId, {
+    String? schoolId,
+    required bool activeOnly,
+  }) {
+    final id = studentId.trim().toUpperCase();
+    final matches = _students
+        .where(
+          (s) =>
+              studentIdsMatch(s.studentId, id) && (!activeOnly || s.isActive),
+        )
+        .toList();
+    if (matches.isEmpty) return null;
+    final sid = AuthService.scopedSchoolId(schoolId);
+    if (sid != null) {
+      for (final student in matches) {
+        if (student.schoolId.toUpperCase() == sid) return student;
+      }
+      return null;
+    }
+    return matches.length == 1 ? matches.first : null;
+  }
+
+  AdminStudentRecord? lookupByLoginUsername(
+    String username, {
+    String? schoolId,
+  }) {
     final key = username.trim().toLowerCase();
     if (key.isEmpty) return null;
-    try {
-      return _students.firstWhere(
-        (s) => (s.loginUsername?.trim().toLowerCase() ?? '') == key,
-      );
-    } catch (_) {
+    final matches = _students
+        .where((s) => (s.loginUsername?.trim().toLowerCase() ?? '') == key)
+        .toList();
+    if (matches.isEmpty) return null;
+    final sid = AuthService.scopedSchoolId(schoolId);
+    if (sid != null) {
+      for (final student in matches) {
+        if (student.schoolId.toUpperCase() == sid) return student;
+      }
       return null;
     }
+    return matches.length == 1 ? matches.first : null;
   }
 
   /// Sara Bekele portal row for the public student demo. In-memory only.
@@ -645,43 +665,51 @@ class StudentRegistryService {
 
   void replaceStudent(AdminStudentRecord updated) => updateStudent(updated);
 
-  AdminStudentRecord? lookupByName(String fullName) {
-    final name = fullName.trim().toLowerCase();
-    if (name.isEmpty) return null;
-    try {
-      return _students.firstWhere(
-        (s) => s.isActive && s.fullName.trim().toLowerCase() == name,
-      );
-    } catch (_) {
-      return null;
-    }
+  AdminStudentRecord? lookupByName(String fullName, {String? schoolId}) {
+    return _lookupByName(fullName, schoolId: schoolId, activeOnly: true);
   }
 
-  AdminStudentRecord? lookupAnyByName(String fullName) {
+  AdminStudentRecord? lookupAnyByName(String fullName, {String? schoolId}) {
+    return _lookupByName(fullName, schoolId: schoolId, activeOnly: false);
+  }
+
+  AdminStudentRecord? _lookupByName(
+    String fullName, {
+    String? schoolId,
+    required bool activeOnly,
+  }) {
     final name = fullName.trim().toLowerCase();
     if (name.isEmpty) return null;
-    try {
-      return _students.firstWhere(
-        (s) => s.fullName.trim().toLowerCase() == name,
-      );
-    } catch (_) {
-      return null;
-    }
+    final sid = AuthService.scopedSchoolId(schoolId);
+    final matches = _students.where((s) {
+      if (activeOnly && !s.isActive) return false;
+      if (s.fullName.trim().toLowerCase() != name) return false;
+      if (sid == null) return true;
+      return s.schoolId.toUpperCase() == sid;
+    }).toList();
+    if (sid == null && matches.length != 1) return null;
+    return matches.isEmpty ? null : matches.first;
   }
 
   /// Resolve a saved student for photo display by STU-id, slug, or name.
-  AdminStudentRecord? resolveForPhoto({String? studentId, String? name}) {
+  AdminStudentRecord? resolveForPhoto({
+    String? studentId,
+    String? name,
+    String? schoolId,
+  }) {
     if (studentId != null && studentId.trim().isNotEmpty) {
-      final byId = lookupAnyById(studentId);
+      final byId = lookupAnyById(studentId, schoolId: schoolId);
       if (byId != null) return byId;
     }
     if (name != null && name.trim().isNotEmpty) {
-      final byName = lookupAnyByName(name);
+      final byName = lookupAnyByName(name, schoolId: schoolId);
       if (byName != null) return byName;
     }
     if (studentId != null && studentId.trim().isNotEmpty) {
       final slug = studentId.trim().toLowerCase();
+      final sid = AuthService.scopedSchoolId(schoolId);
       for (final student in _students) {
+        if (sid != null && student.schoolId.toUpperCase() != sid) continue;
         final generated = student.fullName
             .toLowerCase()
             .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
@@ -697,7 +725,7 @@ class StudentRegistryService {
     required String studentId,
     required DateTime dateOfBirth,
   }) {
-    final student = lookupById(studentId);
+    final student = lookupById(studentId, schoolId: schoolId);
     if (student == null) return false;
     if (student.schoolId.toUpperCase() != schoolId.trim().toUpperCase()) {
       return false;
@@ -723,9 +751,8 @@ class StudentRegistryService {
   /// Distinct class names with enrolled students, scoped to [schoolId]
   /// when it is set.
   List<String> classNamesForSchool(String? schoolId) {
-    final students = (schoolId == null || schoolId.trim().isEmpty)
-        ? getAllStudents()
-        : studentsForSchool(schoolId);
+    final sid = AuthService.scopedSchoolId(schoolId);
+    final students = sid == null ? const <AdminStudentRecord>[] : studentsForSchool(sid);
     final names = <String>[];
     for (final student in students) {
       final className = student.className.trim();
@@ -752,7 +779,7 @@ class StudentRegistryService {
     final id = ShortRegistryId.allocate(
       prefix: 'STU',
       existingIds: _students.map((s) => s.studentId),
-      isTaken: (id) => lookupAnyById(id) != null,
+      isTaken: _studentIdTakenAnywhere,
       persistedNext: _nextId,
     );
     _nextId = (ShortRegistryId.parseNumber(id) ?? 0) + 1;
@@ -771,7 +798,7 @@ class StudentRegistryService {
         ..addAll(students);
     } else {
       for (final record in students) {
-        final idx = _students.indexWhere((s) => s.studentId == record.studentId);
+        final idx = _indexOfPersistedStudent(record);
         if (idx >= 0) {
           _students[idx] = record;
         } else {
@@ -784,6 +811,21 @@ class StudentRegistryService {
       _nextId = clamped;
     }
     StaffRegistryNotifier.instance.notifyChanged();
+  }
+
+  /// Students the signed-in school may see. Empty when no school is in session.
+  List<AdminStudentRecord> visibleStudents({
+    String? schoolId,
+    bool includeInactive = false,
+  }) {
+    final sid = AuthService.scopedSchoolId(schoolId);
+    if (sid == null) return const [];
+    if (includeInactive) {
+      return _students
+          .where((s) => s.schoolId.toUpperCase() == sid)
+          .toList();
+    }
+    return studentsForSchool(sid);
   }
 
   List<AdminStudentRecord> studentsForSchool(String schoolId) {
@@ -810,20 +852,31 @@ class StudentRegistryService {
     String? schoolId,
   }) {
     final normalizedClass = className.trim();
+    final sid = AuthService.scopedSchoolId(schoolId);
+    if (sid == null) return const [];
     return _students.where((student) {
       if (!student.isActive ||
           !classNamesMatch(student.className, normalizedClass)) {
         return false;
       }
-      if (schoolId == null) return true;
-      return student.schoolId.toUpperCase() == schoolId.trim().toUpperCase();
+      return student.schoolId.toUpperCase() == sid;
     }).toList();
   }
 
-  List<AdminStudentRecord> studentsForHomeroomTeacher(String teacherId) {
+  List<AdminStudentRecord> studentsForHomeroomTeacher(
+    String teacherId, {
+    String? schoolId,
+  }) {
     final id = teacherId.trim().toUpperCase();
+    final sid = AuthService.scopedSchoolId(schoolId);
     return _students
-        .where((s) => s.isActive && s.homeroomTeacherId?.toUpperCase() == id)
+        .where((s) {
+          if (!s.isActive || s.homeroomTeacherId?.toUpperCase() != id) {
+            return false;
+          }
+          if (sid == null) return false;
+          return s.schoolId.toUpperCase() == sid;
+        })
         .toList();
   }
 
@@ -831,7 +884,7 @@ class StudentRegistryService {
     final existing = lookupAnyById(studentId) ?? lookupById(studentId);
     if (existing == null) return;
     if (existing.photoPath == photoPath) return;
-    final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
+    final idx = _indexOfPersistedStudent(existing);
     if (idx >= 0) _students[idx] = existing.copyWith(photoPath: photoPath);
     StaffRegistryNotifier.instance.notifyChanged();
     if (persist) _persistRegistry(syncStudentId: existing.studentId);
@@ -845,7 +898,7 @@ class StudentRegistryService {
   }) {
     final existing = lookupById(studentId);
     if (existing == null) return;
-    final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
+    final idx = _indexOfPersistedStudent(existing);
     if (idx >= 0) {
       _students[idx] = existing.copyWith(
         grade: grade,
@@ -857,7 +910,7 @@ class StudentRegistryService {
   }
 
   void updateStudent(AdminStudentRecord updated) {
-    final idx = _students.indexWhere((s) => s.studentId == updated.studentId);
+    final idx = _indexOfPersistedStudent(updated);
     if (idx >= 0) {
       _students[idx] = updated;
       _persistRegistry(syncStudentId: updated.studentId);
@@ -880,7 +933,7 @@ class StudentRegistryService {
   bool setLifecycleStatus(String studentId, StudentLifecycleStatus status) {
     final existing = lookupAnyById(studentId);
     if (existing == null) return false;
-    final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
+    final idx = _indexOfPersistedStudent(existing);
     if (idx < 0) return false;
     _students[idx] = existing.copyWith(
       lifecycleStatus: status,
@@ -896,7 +949,7 @@ class StudentRegistryService {
   }) {
     final existing = lookupById(studentId);
     if (existing == null) return;
-    final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
+    final idx = _indexOfPersistedStudent(existing);
     if (idx < 0) return;
     _students[idx] = existing.copyWith(
       transportEnabled: true,
@@ -912,7 +965,7 @@ class StudentRegistryService {
   }) {
     final existing = lookupById(studentId);
     if (existing == null) return;
-    final idx = _students.indexWhere((s) => s.studentId == existing.studentId);
+    final idx = _indexOfPersistedStudent(existing);
     if (idx < 0) return;
     _students[idx] = existing.copyWith(campus: toCampus.trim());
     _persistRegistry();
@@ -1024,9 +1077,32 @@ class StudentRegistryService {
     return record;
   }
 
-  void removeStudent(String studentId) {
+  void removeStudent(String studentId, {String? schoolId}) {
+    final existing = lookupAnyById(studentId, schoolId: schoolId);
+    if (existing == null) return;
+    final idx = _indexOfPersistedStudent(existing);
+    if (idx >= 0) _students.removeAt(idx);
+  }
+
+  /// Merge key is student id + school — same `STU-0001` at two schools
+  /// stays two records.
+  int _indexOfPersistedStudent(AdminStudentRecord record) {
+    final id = record.studentId.trim().toUpperCase();
+    final sid = record.schoolId.trim().toUpperCase();
+    if (id.isEmpty || sid.isEmpty) return -1;
+    for (var i = 0; i < _students.length; i++) {
+      final student = _students[i];
+      if (studentIdsMatch(student.studentId, id) &&
+          student.schoolId.toUpperCase() == sid) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  bool _studentIdTakenAnywhere(String studentId) {
     final id = studentId.trim().toUpperCase();
-    _students.removeWhere((s) => s.studentId == id);
+    return _students.any((s) => studentIdsMatch(s.studentId, id));
   }
 
   String? _trimOrNull(String? value) {

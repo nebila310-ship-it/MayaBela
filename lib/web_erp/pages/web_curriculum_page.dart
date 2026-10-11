@@ -40,14 +40,7 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
     final names = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
       ...SchoolDataService.instance.getAllGradeReports().map((r) => r.className),
-      ...StudentRegistryService.instance
-          .registrySnapshot()
-          .where(
-            (s) =>
-                _schoolId.isEmpty ||
-                s.schoolId.toUpperCase() == _schoolId.toUpperCase(),
-          )
-          .map((s) => s.className),
+      ...StudentRegistryService.instance.classNamesForSchool(_schoolId),
     };
     return names.where((n) => n.trim().isNotEmpty).toList()..sort();
   }

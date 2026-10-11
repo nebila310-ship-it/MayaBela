@@ -32,14 +32,7 @@ class _WebAttendanceHubPageState extends State<WebAttendanceHubPage>
   List<String> get _classes {
     final names = <String>{
       ...SchoolRegistryService.instance.sectionsForSchool(_schoolId),
-      ...StudentRegistryService.instance
-          .registrySnapshot()
-          .where(
-            (s) =>
-                _schoolId.isEmpty ||
-                s.schoolId.toUpperCase() == _schoolId.toUpperCase(),
-          )
-          .map((s) => s.className),
+      ...StudentRegistryService.instance.classNamesForSchool(_schoolId),
     };
     final list = names.where((n) => n.trim().isNotEmpty).toList()..sort();
     return list;

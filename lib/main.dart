@@ -254,7 +254,7 @@ Future<void> bootstrapAppServices() async {
 }
 
 Future<void> _syncStudentsInBackground() async {
-  for (final student in StudentRegistryService.instance.getAllStudents()) {
+  for (final student in StudentRegistryService.instance.visibleStudents()) {
     SchoolDataService.instance.syncChildFromRegistry(student.studentId);
   }
   SchoolDataService.instance.publishDueCalendarAnnouncements();

@@ -131,10 +131,7 @@ class ClassStructureService {
   }
 
   List<AdminStudentRecord> _students() {
-    if (_schoolId == null) {
-      return StudentRegistryService.instance.getAllStudents();
-    }
-    return StudentRegistryService.instance.studentsForSchool(_schoolId!);
+    return StudentRegistryService.instance.visibleStudents(schoolId: _schoolId);
   }
 
   String _sectionLabel(String className, String grade) {

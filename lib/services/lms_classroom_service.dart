@@ -72,7 +72,7 @@ class LmsClassroomService {
     }
 
     final staffIds = <String>{};
-    for (final teacher in TeacherRegistryService.instance.getAllTeachers()) {
+    for (final teacher in TeacherRegistryService.instance.visibleTeachers()) {
       final assigned = teacher.classAssignments.any(
             (a) => StudentRegistryService.classNamesMatch(
               a.className,

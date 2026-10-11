@@ -638,7 +638,7 @@ abstract final class SessionCloudSync {
 
     final driverId = AuthService.resolvedLinkedDriverId;
     if (driverId != null) {
-      for (final student in StudentRegistryService.instance.getAllStudents()) {
+      for (final student in StudentRegistryService.instance.visibleStudents()) {
         if (!student.transportEnabled) continue;
         if (!DriverRegistryService.instance
             .transportReferenceMatchesDriver(student.transportId, driverId)) {

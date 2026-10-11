@@ -532,13 +532,7 @@ class QaMonitorService extends ChangeNotifier {
 
   List<AdminTeacherRecord> teachersForPicker() {
     return TeacherRegistryService.instance
-        .getAllTeachers()
-        .where(
-          (t) =>
-              t.isActive &&
-              (_schoolId.isEmpty ||
-                  t.schoolId.trim().toUpperCase() == _schoolId),
-        )
+        .visibleTeachers(schoolId: _schoolId)
         .toList()
       ..sort((a, b) => a.fullName.compareTo(b.fullName));
   }

@@ -672,6 +672,13 @@ class AuthService {
 
   static String? get activeSchoolId => sessionSchoolId ?? currentUser?.schoolId;
 
+  /// Uppercase school id for roster reads. Empty / missing means "no school"
+  /// so lists must not fall back to every school on the device.
+  static String? scopedSchoolId([String? schoolId]) {
+    final raw = (schoolId ?? activeSchoolId ?? '').trim();
+    return raw.isEmpty ? null : raw.toUpperCase();
+  }
+
   static String get schoolDisplayName =>
       SchoolRegistryService.instance.displayName(activeSchoolId);
 
