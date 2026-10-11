@@ -155,7 +155,8 @@ class FinanceInvoice {
     this.fundingType = 'regular',
     this.structureId,
     this.paidAmount = 0,
-  });
+    DateTime? issuedAt,
+  }) : issuedAt = issuedAt ?? dueDate;
 
   final String id;
   final String schoolId;
@@ -170,6 +171,7 @@ class FinanceInvoice {
   final String? structureId;
   final double amount;
   final DateTime dueDate;
+  final DateTime issuedAt;
   double paidAmount;
 
   double get outstanding =>
@@ -201,6 +203,7 @@ class FinanceInvoice {
         if (structureId != null) 'structureId': structureId,
         'amount': amount,
         'dueDate': dueDate.toIso8601String(),
+        'issuedAt': issuedAt.toIso8601String(),
         'paidAmount': paidAmount,
       };
 
@@ -220,6 +223,7 @@ class FinanceInvoice {
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
       dueDate: DateTime.tryParse(map['dueDate'] as String? ?? '') ??
           DateTime.now(),
+      issuedAt: DateTime.tryParse(map['issuedAt'] as String? ?? ''),
       paidAmount: (map['paidAmount'] as num?)?.toDouble() ?? 0,
     );
   }
@@ -431,6 +435,7 @@ class FinanceExpense {
     this.status = FinanceExpenseStatus.requested,
     this.approvedBy,
     this.paidBy,
+    this.paidAt,
   });
 
   final String id;
@@ -446,6 +451,7 @@ class FinanceExpense {
   FinanceExpenseStatus status;
   String? approvedBy;
   String? paidBy;
+  DateTime? paidAt;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -461,6 +467,7 @@ class FinanceExpense {
         'status': status.name,
         if (approvedBy != null) 'approvedBy': approvedBy,
         if (paidBy != null) 'paidBy': paidBy,
+        if (paidAt != null) 'paidAt': paidAt!.toIso8601String(),
       };
 
   factory FinanceExpense.fromMap(Map<String, dynamic> map) {
@@ -480,6 +487,7 @@ class FinanceExpense {
       status: FinanceExpenseStatusX.parse(map['status']),
       approvedBy: map['approvedBy'] as String?,
       paidBy: map['paidBy'] as String?,
+      paidAt: DateTime.tryParse(map['paidAt'] as String? ?? ''),
     );
   }
 }
@@ -681,7 +689,10 @@ class FinancePayable {
     this.invoiceRef,
     this.purpose,
     this.paidAmount = 0,
-  });
+    this.paymentMethod,
+    this.lastPaidAt,
+    DateTime? issuedAt,
+  }) : issuedAt = issuedAt ?? dueDate;
 
   final String id;
   final String schoolId;
@@ -689,9 +700,12 @@ class FinancePayable {
   final String department;
   final double amount;
   final DateTime dueDate;
+  final DateTime issuedAt;
   final String? invoiceRef;
   final String? purpose;
   double paidAmount;
+  FinancePaymentMethod? paymentMethod;
+  DateTime? lastPaidAt;
 
   double get outstanding =>
       (amount - paidAmount).clamp(0, double.infinity).toDouble();
@@ -715,9 +729,12 @@ class FinancePayable {
         'department': department,
         'amount': amount,
         'dueDate': dueDate.toIso8601String(),
+        'issuedAt': issuedAt.toIso8601String(),
         if (invoiceRef != null) 'invoiceRef': invoiceRef,
         if (purpose != null) 'purpose': purpose,
         'paidAmount': paidAmount,
+        if (paymentMethod != null) 'paymentMethod': paymentMethod!.name,
+        if (lastPaidAt != null) 'lastPaidAt': lastPaidAt!.toIso8601String(),
       };
 
   factory FinancePayable.fromMap(Map<String, dynamic> map) {
@@ -729,9 +746,14 @@ class FinancePayable {
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
       dueDate: DateTime.tryParse(map['dueDate'] as String? ?? '') ??
           DateTime.now(),
+      issuedAt: DateTime.tryParse(map['issuedAt'] as String? ?? ''),
       invoiceRef: map['invoiceRef'] as String?,
       purpose: map['purpose'] as String?,
       paidAmount: (map['paidAmount'] as num?)?.toDouble() ?? 0,
+      paymentMethod: map['paymentMethod'] == null
+          ? null
+          : FinancePaymentMethodX.parse(map['paymentMethod']),
+      lastPaidAt: DateTime.tryParse(map['lastPaidAt'] as String? ?? ''),
     );
   }
 }
