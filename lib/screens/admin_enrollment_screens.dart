@@ -38,7 +38,7 @@ import 'package:mayabela/widgets/student_medical_info_panel.dart';
 import 'package:mayabela/widgets/phone_contact_field.dart';
 import 'package:mayabela/widgets/school_branding_header.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
-import 'package:mayabela/widgets/send_student_parent_invites.dart';
+import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/widgets/student_qr_card.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
 import 'package:mayabela/widgets/send_teacher_credentials.dart';
@@ -1560,38 +1560,16 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
             showAdminStudentQrSheet(context, student: student);
           },
         ),
-        AdminDialogAction(
-          label: s.copyParentInviteLink,
-          icon: Icons.copy,
-          onPressed: () async {
-            await Clipboard.setData(ClipboardData(text: inviteUrl));
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.parentInviteLinkCopied)),
-              );
-            }
-          },
-        ),
         if (student.primaryContactPhone != null)
           AdminDialogAction(
             label: s.sendViaWhatsApp,
             icon: Icons.chat,
             onPressed: () async {
-              Navigator.pop(context);
-              final ok = await ParentInviteService.instance
-                  .invitePrimaryViaChannel(
+              await sendParentInviteToRegisteredNumber(
+                context,
                 student,
                 OtpDeliveryChannel.whatsApp,
               );
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(ok ? s.inviteParentSent : s.otpDeliveryFailed),
-                    backgroundColor:
-                        ok ? Colors.green.shade700 : Colors.red.shade700,
-                  ),
-                );
-              }
             },
           ),
         if (student.primaryContactPhone != null)
@@ -1599,29 +1577,18 @@ class _AdminAddStudentScreenState extends State<AdminAddStudentScreen> {
             label: s.sendViaTelegram,
             icon: Icons.send,
             onPressed: () async {
-              Navigator.pop(context);
-              final ok = await ParentInviteService.instance
-                  .invitePrimaryViaChannel(
+              await sendParentInviteToRegisteredNumber(
+                context,
                 student,
                 OtpDeliveryChannel.telegram,
               );
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(ok ? s.inviteParentSent : s.otpDeliveryFailed),
-                    backgroundColor:
-                        ok ? Colors.green.shade700 : Colors.red.shade700,
-                  ),
-                );
-              }
             },
           ),
         AdminDialogAction(
-          label: s.sendInviteToContacts,
-          icon: Icons.mail_outline,
+          label: s.copyFullParentInvite,
+          icon: Icons.copy_all_outlined,
           onPressed: () async {
-            Navigator.pop(context);
-            await showSendStudentParentInvites(context, student);
+            await copyFullParentInvite(context, student);
           },
         ),
         AdminDialogAction(

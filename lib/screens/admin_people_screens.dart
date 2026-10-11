@@ -7,6 +7,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/driver_credentials_service.dart';
 import 'package:mayabela/services/driver_photo_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/phone_launch_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -457,13 +458,32 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
               const SizedBox(height: 8),
               StaffActionGrid(
                 actions: [
-                  if (ModuleAccess.canManage('parents'))
-                    StaffActionItem(
-                      icon: Icons.sms_outlined,
-                      label: s.inviteParent,
-                      color: Colors.indigo,
-                      onPressed: () => inviteParentForRecord(context, student),
+                  StaffActionItem(
+                    icon: Icons.chat,
+                    label: s.sendViaWhatsApp,
+                    color: const Color(0xFF25D366),
+                    onPressed: () => sendParentInviteToRegisteredNumber(
+                      context,
+                      student,
+                      OtpDeliveryChannel.whatsApp,
                     ),
+                  ),
+                  StaffActionItem(
+                    icon: Icons.send,
+                    label: s.sendViaTelegram,
+                    color: const Color(0xFF229ED9),
+                    onPressed: () => sendParentInviteToRegisteredNumber(
+                      context,
+                      student,
+                      OtpDeliveryChannel.telegram,
+                    ),
+                  ),
+                  StaffActionItem(
+                    icon: Icons.copy_all_outlined,
+                    label: s.copyFullParentInvite,
+                    color: Colors.indigo,
+                    onPressed: () => copyFullParentInvite(context, student),
+                  ),
                   StaffActionItem(
                     icon: Icons.message_rounded,
                     label: s.messageInternally,

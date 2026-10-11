@@ -3480,8 +3480,18 @@ class AppStrings implements AppStringsLike {
       t('Parent invite link', 'የወላጅ መጋበዣ አገናኝ');
   String get copyParentInviteLink =>
       t('Copy parent invite link', 'የወላጅ መጋበዣ አገናኝ ቅዳ');
+  String get copyFullParentInvite =>
+      t('Copy full invitation', 'ሙሉ ግብዣውን ቅዳ');
   String get parentInviteLinkCopied =>
       t('Parent invite link copied', 'የወላጅ መጋበዣ አገናኝ ተቀድቷል');
+  String get fullParentInviteCopied =>
+      t('Full invitation copied', 'ሙሉ ግብዣው ተቀድቷል');
+  String get parentInviteResendTitle =>
+      t('Send parent invitation', 'ወላጅ ጋብዝ');
+  String parentInviteSendsTo(String name, String phone) => t(
+        'Sends to $name · $phone',
+        'ወደ $name · $phone ይላካል',
+      );
   String get contactNumbersOnFile =>
       t('numbers on file', 'ቁጥሮች');
   String get sendAllViaSms => t('Send SMS to all contacts', 'SMS ለሁሉም ላክ');

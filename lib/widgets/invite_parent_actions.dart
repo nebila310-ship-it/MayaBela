@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/widgets/send_student_parent_invites.dart';
@@ -12,6 +14,118 @@ Future<void> inviteParentForRecord(
   AdminStudentRecord record,
 ) async {
   await showSendStudentParentInvites(context, record);
+}
+
+Future<void> sendParentInviteToRegisteredNumber(
+  BuildContext context,
+  AdminStudentRecord student,
+  OtpDeliveryChannel channel,
+) async {
+  final s = AppLocale.instance.strings;
+  final phone = student.primaryContactPhone;
+  if (phone == null || phone.trim().isEmpty) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.inviteParentNoPhone)),
+      );
+    }
+    return;
+  }
+  final ok = await ParentInviteService.instance.invitePrimaryViaChannel(
+    student,
+    channel,
+  );
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(ok ? s.inviteParentSent : s.otpDeliveryFailed),
+      backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
+    ),
+  );
+}
+
+Future<void> copyFullParentInvite(
+  BuildContext context,
+  AdminStudentRecord student,
+) async {
+  final s = AppLocale.instance.strings;
+  await Clipboard.setData(
+    ClipboardData(
+      text: ParentInviteService.instance.buildMessageForRecord(student),
+    ),
+  );
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(s.fullParentInviteCopied)),
+  );
+}
+
+/// WhatsApp / Telegram go to the registered parent number. Copy pastes the
+/// full welcome text, not only the URL.
+class ParentInviteResendBar extends StatelessWidget {
+  const ParentInviteResendBar({
+    super.key,
+    required this.student,
+  });
+
+  final AdminStudentRecord student;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppLocale.instance,
+      builder: (context, _) {
+        final s = AppLocale.instance.strings;
+        final phone = student.primaryContactPhone;
+        final name = student.primaryParentName ?? student.fullName;
+        final buttons = <Widget>[
+          if (phone != null && phone.trim().isNotEmpty) ...[
+            FilledButton.icon(
+              onPressed: () => sendParentInviteToRegisteredNumber(
+                context,
+                student,
+                OtpDeliveryChannel.whatsApp,
+              ),
+              icon: const Icon(Icons.chat),
+              label: Text(s.sendViaWhatsApp),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: () => sendParentInviteToRegisteredNumber(
+                context,
+                student,
+                OtpDeliveryChannel.telegram,
+              ),
+              icon: const Icon(Icons.send),
+              label: Text(s.sendViaTelegram),
+            ),
+          ],
+          OutlinedButton.icon(
+            onPressed: () => copyFullParentInvite(context, student),
+            icon: const Icon(Icons.copy_all_outlined),
+            label: Text(s.copyFullParentInvite),
+          ),
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.parentInviteResendTitle,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              phone == null || phone.trim().isEmpty
+                  ? s.inviteParentNoPhone
+                  : s.parentInviteSendsTo(name, phone),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: buttons),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class InviteParentButton extends StatelessWidget {

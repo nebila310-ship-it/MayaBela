@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:mayabela/utils/phone_utils.dart';
@@ -70,6 +71,28 @@ class OtpDeliveryService {
     );
   }
 
+  /// Browsers often lie on [canLaunchUrl] for wa.me / tg://, so we just open.
+  static Future<bool> launchExternal(Uri uri) async {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+        webOnlyWindowName: kIsWeb ? '_blank' : null,
+      );
+      if (launched) return true;
+    } catch (_) {}
+    try {
+      return await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> _sendWhatsApp({
     required String phone,
     required String message,
@@ -93,17 +116,7 @@ class OtpDeliveryService {
     ];
 
     for (final uri in candidates) {
-      try {
-        if (await canLaunchUrl(uri)) {
-          final launched = await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
-          if (launched) return true;
-        }
-      } catch (_) {
-        continue;
-      }
+      if (await launchExternal(uri)) return true;
     }
     return false;
   }
@@ -125,17 +138,7 @@ class OtpDeliveryService {
     ];
 
     for (final uri in candidates) {
-      try {
-        if (await canLaunchUrl(uri)) {
-          final launched = await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
-          if (launched) return true;
-        }
-      } catch (_) {
-        continue;
-      }
+      if (await launchExternal(uri)) return true;
     }
     return false;
   }

@@ -203,6 +203,41 @@ class ParentInviteService {
     return buffer.toString().trim();
   }
 
+  /// Shorter text for WhatsApp / Telegram so the chat URL stays under browser limits.
+  String buildChatMessage({
+    required String schoolId,
+    required String studentId,
+    required String childName,
+    String? schoolName,
+    DateTime? childDateOfBirth,
+  }) {
+    final name = schoolNameFor(schoolId, schoolName);
+    final inviteUrl = inviteUrlFor(
+      schoolId: schoolId,
+      studentId: studentId,
+      dateOfBirth: childDateOfBirth,
+    );
+    final dob = childDateOfBirth != null
+        ? formatDob(childDateOfBirth)
+        : 'the student date of birth';
+    return [
+      'Welcome to $name!',
+      '',
+      'Dear parent, we are so happy to welcome $childName to $name.',
+      '',
+      'Please tap this link to register as a parent:',
+      inviteUrl,
+      '',
+      'School ID: $schoolId',
+      'Student ID: $studentId',
+      'Student name: $childName',
+      'Date of birth: $dob',
+      '',
+      'With warm regards,',
+      name,
+    ].join('\n');
+  }
+
   String buildHtmlMessage({
     required String schoolId,
     required String studentId,
@@ -273,6 +308,16 @@ class ParentInviteService {
       childDateOfBirth: student.dateOfBirth,
       transportEnabled: student.transportEnabled,
       transportId: student.transportId,
+    );
+  }
+
+  String buildChatMessageForRecord(AdminStudentRecord student) {
+    return buildChatMessage(
+      schoolId: student.schoolId,
+      studentId: student.studentId,
+      childName: student.fullName,
+      schoolName: schoolNameFor(student.schoolId),
+      childDateOfBirth: student.dateOfBirth,
     );
   }
 
@@ -391,9 +436,12 @@ class ParentInviteService {
   ) async {
     final phone = student.primaryContactPhone;
     if (phone == null || phone.trim().isEmpty) return false;
+    final message = channel == OtpDeliveryChannel.sms
+        ? buildMessageForRecord(student)
+        : buildChatMessageForRecord(student);
     return sendViaChannel(
       phone: phone,
-      message: buildMessageForRecord(student),
+      message: message,
       channel: channel,
     );
   }
