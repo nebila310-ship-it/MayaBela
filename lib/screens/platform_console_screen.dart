@@ -498,7 +498,7 @@ class _PlatformConsoleScreenState extends State<PlatformConsoleScreen> {
             child: Text(
               'Register Driver and Live GPS are not in this Owner console.\n'
               'Sign out, choose Admin, then enter School ID + admin phone + password. '
-              'SCHOOL BUS is at the top of the left menu.',
+              'Both sit under HR Branch.',
               style: TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
             ),
           ),

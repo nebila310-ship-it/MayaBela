@@ -117,37 +117,6 @@ class WebErpSidebar extends StatelessWidget {
                       ),
                   const SizedBox(height: 8),
                 ],
-                if (ModuleAccess.canView('add_driver') ||
-                    ModuleAccess.canView('transport_live_gps')) ...[
-                  if (!collapsed) _sectionLabel('School bus', highlight: true),
-                  if (ModuleAccess.canView('add_driver'))
-                    _NavTile(
-                      item:
-                          webErpNavItemById('add_driver') ??
-                          const WebErpNavItem(
-                            id: 'add_driver',
-                            label: 'Register Driver',
-                            icon: Icons.person_add_alt_1_outlined,
-                          ),
-                      collapsed: collapsed,
-                      selected: selectedId == 'add_driver',
-                      onTap: () => onSelect('add_driver'),
-                    ),
-                  if (ModuleAccess.canView('transport_live_gps'))
-                    _NavTile(
-                      item:
-                          webErpNavItemById('transport_live_gps') ??
-                          const WebErpNavItem(
-                            id: 'transport_live_gps',
-                            label: 'Live GPS',
-                            icon: Icons.gps_fixed,
-                          ),
-                      collapsed: collapsed,
-                      selected: selectedId == 'transport_live_gps',
-                      onTap: () => onSelect('transport_live_gps'),
-                    ),
-                  const SizedBox(height: 8),
-                ],
                 ..._sectionedTiles(items, selectedId, collapsed, onSelect),
               ],
             ),
@@ -186,7 +155,7 @@ class WebErpSidebar extends StatelessWidget {
     return out;
   }
 
-  Widget _sectionLabel(String text, {bool highlight = false}) {
+  Widget _sectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
       child: Builder(
@@ -194,10 +163,8 @@ class WebErpSidebar extends StatelessWidget {
           return Text(
             text.toUpperCase(),
             style: TextStyle(
-              color: highlight
-                  ? ClassroomPalette.green
-                  : ClassroomPalette.mutedOf(context),
-              fontSize: highlight ? 12 : 10,
+              color: ClassroomPalette.mutedOf(context),
+              fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.1,
             ),
