@@ -78,6 +78,41 @@ class LessonPlanService extends ChangeNotifier {
       ..sort((a, b) => b.weekStart.compareTo(a.weekStart));
   }
 
+  /// Published plans for the signed-in student's class only. Never falls
+  /// back to every plan in the school.
+  List<LessonPlan> publishedForCurrentStudent({String? schoolId}) {
+    final names = currentStudentClassNames();
+    if (names.isEmpty) return const [];
+    final seen = <String>{};
+    final items = <LessonPlan>[];
+    for (final name in names) {
+      for (final plan in publishedForClass(name, schoolId: schoolId)) {
+        if (seen.add(plan.id)) items.add(plan);
+      }
+    }
+    items.sort((a, b) => b.weekStart.compareTo(a.weekStart));
+    return items;
+  }
+
+  List<String> currentStudentClassNames() {
+    final names = <String>{};
+    final user = AuthService.currentUser;
+    if (user?.roleKey == AuthService.roleStudent) {
+      final linked = user?.linkedStudentId?.trim();
+      if (linked != null && linked.isNotEmpty) {
+        final record = StudentRegistryService.instance.lookupAnyById(linked) ??
+            StudentRegistryService.instance.lookupById(linked);
+        final className = record?.className.trim() ?? '';
+        if (className.isNotEmpty) names.add(className);
+      }
+    }
+    for (final name in AuthService.accessClassNamesForSync()) {
+      final trimmed = name.trim();
+      if (trimmed.isNotEmpty) names.add(trimmed);
+    }
+    return names.toList();
+  }
+
   List<LessonPlan> forClass(String className, {String? schoolId}) {
     return visibleForCurrentUser(className: className, schoolId: schoolId);
   }

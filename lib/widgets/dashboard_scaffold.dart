@@ -277,7 +277,8 @@ class _DashboardScaffoldState extends State<DashboardScaffold> {
             ),
             title: Text(widget.title),
             actions: [
-              const InboxMessagesAction(iconColor: Colors.white),
+              if (widget.roleKey != AuthService.roleStudent)
+                const InboxMessagesAction(iconColor: Colors.white),
               IconButton(
                 onPressed: () {
                   Navigator.push(

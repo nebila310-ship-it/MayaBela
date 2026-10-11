@@ -24,6 +24,10 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
   final _plans = LessonPlanService.instance;
 
   List<String> get _classNames {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleStudent) {
+      return _plans.currentStudentClassNames();
+    }
     final names = <String>{};
     final profile = StudentProfileService.profileForCurrentUser();
     if (profile != null && profile.className.trim().isNotEmpty) {
@@ -55,19 +59,7 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
       listenable: Listenable.merge([_plans, AppLocale.instance]),
       builder: (context, _) {
         final classNames = _classNames;
-        final seen = <String>{};
-        final items = <LessonPlan>[];
-        for (final name in classNames) {
-          for (final plan in _plans.publishedForClass(name)) {
-            if (seen.add(plan.id)) items.add(plan);
-          }
-        }
-        if (items.isEmpty && classNames.isEmpty) {
-          for (final plan in _plans.forSchool()) {
-            if (plan.isPublished && seen.add(plan.id)) items.add(plan);
-          }
-        }
-        items.sort((a, b) => b.weekStart.compareTo(a.weekStart));
+        final items = _publishedPlans(classNames);
         final isParent =
             AuthService.currentUser?.roleKey == AuthService.roleParent;
         final emptyClass = classNames.isEmpty && items.isEmpty;
@@ -117,4 +109,18 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
     );
   }
 
+  List<LessonPlan> _publishedPlans(List<String> classNames) {
+    if (AuthService.currentUser?.roleKey == AuthService.roleStudent) {
+      return _plans.publishedForCurrentStudent();
+    }
+    final seen = <String>{};
+    final list = <LessonPlan>[];
+    for (final name in classNames) {
+      for (final plan in _plans.publishedForClass(name)) {
+        if (seen.add(plan.id)) list.add(plan);
+      }
+    }
+    list.sort((a, b) => b.weekStart.compareTo(a.weekStart));
+    return list;
+  }
 }
