@@ -23,7 +23,7 @@ class WebStudentsTablePage extends StatefulWidget {
   final ValueChanged<String>? onNavigate;
 
   /// Wide enough for identity, family, transport, type, and actions.
-  static const double directoryMinTableWidth = 1400;
+  static const double directoryMinTableWidth = 1560;
 
   @override
   State<WebStudentsTablePage> createState() => _WebStudentsTablePageState();
@@ -138,7 +138,7 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
       multiCampus: multiCampus,
       narrow: narrow,
     );
-    final pager = _pager(students.length, pageCount);
+    final pager = _pager(students.length, pageCount, narrow: narrow);
 
     if (narrow) {
       return SingleChildScrollView(
@@ -247,54 +247,66 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
           icon: const Icon(Icons.search),
           label: const Text('Search'),
         ),
-        DropdownButton<String?>(
-          value: _gradeFilter,
-          hint: const Text('Grade'),
-          items: [
-            const DropdownMenuItem(
-              value: null,
-              child: Text('All grades'),
-            ),
-            for (final g in grades)
-              DropdownMenuItem(value: g, child: Text(g)),
-          ],
-          onChanged: (v) => setState(() {
-            _gradeFilter = v;
-            _page = 0;
-          }),
-        ),
-        DropdownButton<String>(
-          value: _lifecycleFilter,
-          items: const [
-            DropdownMenuItem(value: 'active', child: Text('Active')),
-            DropdownMenuItem(value: 'graduated', child: Text('Alumni')),
-            DropdownMenuItem(
-              value: 'left',
-              child: Text('Withdrawn / transferred'),
-            ),
-            DropdownMenuItem(value: 'all', child: Text('All statuses')),
-          ],
-          onChanged: (v) => setState(() {
-            _lifecycleFilter = v ?? 'active';
-            _page = 0;
-          }),
-        ),
-        if (multiCampus)
-          DropdownButton<String?>(
-            value: _campusFilter,
-            hint: const Text('Campus'),
+        SizedBox(
+          width: narrow ? double.infinity : null,
+          child: DropdownButton<String?>(
+            isExpanded: narrow,
+            value: _gradeFilter,
+            hint: const Text('Grade'),
             items: [
               const DropdownMenuItem(
                 value: null,
-                child: Text('All campuses'),
+                child: Text('All grades'),
               ),
-              for (final c in campuses)
-                DropdownMenuItem(value: c, child: Text(c)),
+              for (final g in grades)
+                DropdownMenuItem(value: g, child: Text(g)),
             ],
             onChanged: (v) => setState(() {
-              _campusFilter = v;
+              _gradeFilter = v;
               _page = 0;
             }),
+          ),
+        ),
+        SizedBox(
+          width: narrow ? double.infinity : null,
+          child: DropdownButton<String>(
+            isExpanded: narrow,
+            value: _lifecycleFilter,
+            items: const [
+              DropdownMenuItem(value: 'active', child: Text('Active')),
+              DropdownMenuItem(value: 'graduated', child: Text('Alumni')),
+              DropdownMenuItem(
+                value: 'left',
+                child: Text('Withdrawn'),
+              ),
+              DropdownMenuItem(value: 'all', child: Text('All statuses')),
+            ],
+            onChanged: (v) => setState(() {
+              _lifecycleFilter = v ?? 'active';
+              _page = 0;
+            }),
+          ),
+        ),
+        if (multiCampus)
+          SizedBox(
+            width: narrow ? double.infinity : null,
+            child: DropdownButton<String?>(
+              isExpanded: narrow,
+              value: _campusFilter,
+              hint: const Text('Campus'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All campuses'),
+                ),
+                for (final c in campuses)
+                  DropdownMenuItem(value: c, child: Text(c)),
+              ],
+              onChanged: (v) => setState(() {
+                _campusFilter = v;
+                _page = 0;
+              }),
+            ),
           ),
         FilledButton.tonalIcon(
           onPressed: students.isEmpty
@@ -325,28 +337,36 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
     );
   }
 
-  Widget _pager(int studentCount, int pageCount) {
+  Widget _pager(int studentCount, int pageCount, {required bool narrow}) {
     return Padding(
       key: const ValueKey('students-pagination'),
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         top: 8,
-        right: MayaFloatingChat.pageEndClearance,
+        right: narrow ? 8 : MayaFloatingChat.pageEndClearance,
         bottom: 8,
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.spaceBetween,
         children: [
           Text('$studentCount students'),
-          const Spacer(),
-          IconButton(
-            onPressed: _page > 0 ? () => setState(() => _page--) : null,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Text('Page ${_page + 1} of ${pageCount == 0 ? 1 : pageCount}'),
-          IconButton(
-            onPressed: _page + 1 < pageCount
-                ? () => setState(() => _page++)
-                : null,
-            icon: const Icon(Icons.chevron_right),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: _page > 0 ? () => setState(() => _page--) : null,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Text('Page ${_page + 1} of ${pageCount == 0 ? 1 : pageCount}'),
+              IconButton(
+                onPressed: _page + 1 < pageCount
+                    ? () => setState(() => _page++)
+                    : null,
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
           ),
         ],
       ),
@@ -454,9 +474,15 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                     if (multiCampus) const DataColumn(label: Text('Campus')),
                     const DataColumn(label: Text('Parent')),
                     const DataColumn(label: Text('Transport')),
-                    const DataColumn(label: Text('Status')),
-                    const DataColumn(label: Text('Student type')),
-                    const DataColumn(label: Text('Actions')),
+                    const DataColumn(
+                      label: SizedBox(width: 160, child: Text('Status')),
+                    ),
+                    const DataColumn(
+                      label: SizedBox(width: 150, child: Text('Student type')),
+                    ),
+                    const DataColumn(
+                      label: SizedBox(width: 152, child: Text('Actions')),
+                    ),
                   ],
                   rows: [
                     for (final s in slice)
@@ -502,38 +528,56 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
                               size: 18,
                             ),
                           ),
-                          DataCell(Text(s.lifecycleStatus.label)),
-                          DataCell(Text(s.fundingType.label)),
                           DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  tooltip: AppLocale
-                                      .instance
-                                      .strings
-                                      .generateStudentQr,
-                                  icon: const Icon(Icons.qr_code_2),
-                                  onPressed: () => showAdminStudentQrSheet(
-                                    context,
-                                    student: s,
+                            SizedBox(
+                              width: 160,
+                              child: Text(s.lifecycleStatus.label),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 150,
+                              child: Text(s.fundingType.label),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: 152,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: AppLocale
+                                        .instance
+                                        .strings
+                                        .generateStudentQr,
+                                    visualDensity: VisualDensity.compact,
+                                    icon: const Icon(Icons.qr_code_2),
+                                    onPressed: () => showAdminStudentQrSheet(
+                                      context,
+                                      student: s,
+                                    ),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.visibility_outlined),
-                                  onPressed: () => _openProfile(s),
-                                ),
-                                IconButton(
-                                  tooltip: 'Open SIS',
-                                  icon: const Icon(
-                                    Icons.folder_shared_outlined,
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    icon: const Icon(
+                                      Icons.visibility_outlined,
+                                    ),
+                                    onPressed: () => _openProfile(s),
                                   ),
-                                  onPressed: () {
-                                    SisRoute.pendingStudentId = s.studentId;
-                                    widget.onNavigate?.call('sis');
-                                  },
-                                ),
-                              ],
+                                  IconButton(
+                                    tooltip: 'Open SIS',
+                                    visualDensity: VisualDensity.compact,
+                                    icon: const Icon(
+                                      Icons.folder_shared_outlined,
+                                    ),
+                                    onPressed: () {
+                                      SisRoute.pendingStudentId = s.studentId;
+                                      widget.onNavigate?.call('sis');
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

@@ -38,11 +38,16 @@ void main() {
     AuthService.currentUser = null;
   });
 
+  void setView(WidgetTester tester, Size size) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+  }
+
   testWidgets(
     'phone student list uses page scroll and tiles, not an inner table scroller',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      setView(tester, const Size(390, 844));
 
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: WebStudentsTablePage())),
@@ -57,21 +62,14 @@ void main() {
       expect(find.text('12 students'), findsOneWidget);
       expect(find.text('Page 1 of 2'), findsOneWidget);
 
-      final pager = tester.widget<Padding>(
-        find.byKey(const ValueKey('students-pagination')),
-      );
-      expect(
-        (pager.padding as EdgeInsets).right,
-        MayaFloatingChat.pageEndClearance,
-      );
+      expect(find.byKey(const ValueKey('students-pagination')), findsOneWidget);
     },
   );
 
   testWidgets(
     'desktop student list keeps a table and the pager clear of Maya',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1280, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      setView(tester, const Size(1280, 800));
 
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: WebStudentsTablePage())),
@@ -84,6 +82,14 @@ void main() {
       expect(find.text('Student 1'), findsOneWidget);
       expect(find.text('12 students'), findsOneWidget);
       expect(find.text('Page 1 of 2'), findsOneWidget);
+
+      final pager = tester.widget<Padding>(
+        find.byKey(const ValueKey('students-pagination')),
+      );
+      expect(
+        (pager.padding as EdgeInsets).right,
+        MayaFloatingChat.pageEndClearance,
+      );
     },
   );
 }
