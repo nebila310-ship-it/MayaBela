@@ -49,6 +49,7 @@ void main() {
 
     expect(opened, containsAll(['students', 'attendance', 'hr', 'transport', 'finance']));
     expect(find.byType(WebStatCard), findsWidgets);
+    expect(find.text('SCHOOL BUS'), findsNothing);
   });
 
   testWidgets('transport info tiles open buses, driver, and GPS', (tester) async {
