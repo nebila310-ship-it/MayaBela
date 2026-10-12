@@ -4247,30 +4247,21 @@ class SchoolDataService {
     required String studentName,
     String? studentId,
   }) {
-    if (_gradeReportIdsMatch(report.studentId, studentId)) return true;
+    final reportId = report.studentId?.trim();
+    if (reportId != null && reportId.isNotEmpty) {
+      if (!_gradeReportIdsMatch(reportId, studentId)) return false;
+      final reportName = report.studentName.trim().toLowerCase();
+      final rosterName = studentName.trim().toLowerCase();
+      if (reportName.isEmpty || rosterName.isEmpty) return true;
+      return reportName == rosterName;
+    }
     return _gradeReportNamesMatch(report.studentName, studentName);
   }
 
   bool _gradeReportOnActiveSchool(StudentGradeReport report) {
     final schoolId = AuthService.activeSchoolId?.trim();
     if (schoolId == null || schoolId.isEmpty) return true;
-    final roster = StudentRegistryService.instance.studentsForSchool(schoolId);
-    if (roster.isEmpty) return true;
-    final classNames = getAllClassNames();
-    for (final student in roster) {
-      if (!_gradeReportMatchesRosterStudent(
-        report,
-        studentName: student.fullName,
-        studentId: student.studentId,
-      )) {
-        continue;
-      }
-      if (classNames.any((name) => _classNamesMatch(name, report.className))) {
-        return true;
-      }
-      if (_classNamesMatch(student.className, report.className)) return true;
-    }
-    return false;
+    return _studentForAdminGradeQueue(report, schoolId: schoolId) != null;
   }
 
   StudentGradeReport? _findGradeReport({
@@ -5640,16 +5631,16 @@ class SchoolDataService {
 
   /// All grade submissions that entered the admin review workflow (any status).
   List<SubjectGradePendingItem> adminGradeReviewItems({String? schoolId}) {
-    final normalizedSchool = schoolId?.trim().toUpperCase();
+    final normalizedSchool =
+        (schoolId ?? AuthService.activeSchoolId)?.trim().toUpperCase();
     final items = <SubjectGradePendingItem>[];
     for (final report in _gradeReports) {
+      // A grade is visible only when the student is on this school's roster.
+      // A missing match used to keep the row, which showed Magic Smart
+      // students inside Mayu International (and the reverse).
       if (normalizedSchool != null && normalizedSchool.isNotEmpty) {
-        final student = _studentForAdminGradeQueue(
-          report,
-          schoolId: normalizedSchool,
-        );
-        if (student != null &&
-            student.schoolId.toUpperCase() != normalizedSchool) {
+        if (_studentForAdminGradeQueue(report, schoolId: normalizedSchool) ==
+            null) {
           continue;
         }
       }
@@ -6109,21 +6100,28 @@ class SchoolDataService {
     required String schoolId,
   }) {
     final wantSchool = schoolId.trim().toUpperCase();
+    if (wantSchool.isEmpty) return null;
     final id = report.studentId?.trim();
+    final reportName = report.studentName.trim().toLowerCase();
     if (id != null && id.isNotEmpty) {
       final byId = StudentRegistryService.instance.lookupAnyById(
         id,
         schoolId: wantSchool,
       );
-      if (byId != null) return byId;
+      if (byId == null) return null;
+      if (byId.schoolId.trim().toUpperCase() != wantSchool) return null;
+      final rosterName = byId.fullName.trim().toLowerCase();
+      if (reportName.isNotEmpty && rosterName != reportName) return null;
+      return byId;
     }
-    final name = report.studentName.trim().toLowerCase();
-    if (name.isEmpty) return null;
+    if (reportName.isEmpty) return null;
     AdminStudentRecord? sameSchool;
-    for (final student in StudentRegistryService.instance.studentsForSchool(
-      wantSchool,
-    )) {
-      if (student.fullName.trim().toLowerCase() != name) continue;
+    final roster = [
+      ...StudentRegistryService.instance.studentsForSchool(wantSchool),
+      ...StudentRegistryService.instance.inactiveStudentsForSchool(wantSchool),
+    ];
+    for (final student in roster) {
+      if (student.fullName.trim().toLowerCase() != reportName) continue;
       if (report.className.trim().isEmpty ||
           _classNamesMatch(student.className, report.className)) {
         return student;
@@ -7308,9 +7306,15 @@ class SchoolDataService {
 
   List<StudentGradeReport> getGradeReportsForClass(String className) {
     final roster = getStudentsForClass(className);
+    final schoolId = AuthService.activeSchoolId?.trim();
     final classReports = [
       for (final report in _gradeReports)
-        if (_classNamesMatch(report.className, className)) report,
+        if (_classNamesMatch(report.className, className) &&
+            (schoolId == null ||
+                schoolId.isEmpty ||
+                _studentForAdminGradeQueue(report, schoolId: schoolId) !=
+                    null))
+          report,
     ];
 
     if (roster.isEmpty) {
@@ -7356,12 +7360,16 @@ class SchoolDataService {
         .whereType<String>()
         .toSet();
     final childNames = getChildren().map((c) => c.name).toSet();
+    final schoolId = AuthService.activeSchoolId?.trim();
     return _gradeReports
         .where(
           (r) =>
-              (r.studentId != null &&
-                  childIds.contains(r.studentId!.toUpperCase())) ||
-              childNames.contains(r.studentName),
+              (schoolId == null ||
+                  schoolId.isEmpty ||
+                  _studentForAdminGradeQueue(r, schoolId: schoolId) != null) &&
+              ((r.studentId != null &&
+                      childIds.contains(r.studentId!.toUpperCase())) ||
+                  childNames.contains(r.studentName)),
         )
         .map(_parentVisibleGradeReport)
         .where((report) => report.subjects.isNotEmpty)
