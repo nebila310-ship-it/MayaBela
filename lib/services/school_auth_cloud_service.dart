@@ -72,15 +72,48 @@ class SchoolAuthCloudService {
     try {
       final session = SupabaseBootstrap.client.auth.currentSession;
       if (session == null) return null;
+      final fromToken = accessTokenSchoolId();
+      if (fromToken != null && fromToken.isNotEmpty) return fromToken;
+      // User object can lag a refreshed token; only used when the access
+      // token has no school claim.
       final meta = session.user.appMetadata;
       final fromMeta = '${meta['schoolId'] ?? meta['school_id'] ?? ''}'.trim();
       if (fromMeta.isNotEmpty) return fromMeta.toUpperCase();
-      final fromJwt = _claimsFromAccessToken(session.accessToken);
-      final tokenSchool =
-          '${fromJwt['schoolId'] ?? fromJwt['school_id'] ?? ''}'.trim();
-      if (tokenSchool.isNotEmpty) return tokenSchool.toUpperCase();
     } catch (_) {}
     return null;
+  }
+
+  /// School id PostgREST `jwt_school_id()` will see — access-token payload
+  /// only. `session.user.appMetadata` can still show a school after the JWT
+  /// itself lost the claim, which is what produced the 403 upsert storm.
+  static String? accessTokenSchoolId() {
+    if (!SupabaseBootstrap.isInitialized) return null;
+    try {
+      final token =
+          SupabaseBootstrap.client.auth.currentSession?.accessToken.trim() ??
+              '';
+      if (token.isEmpty) return null;
+      return schoolIdFromJwtPayload(_jwtPayload(token));
+    } catch (_) {}
+    return null;
+  }
+
+  /// Mirrors `public.jwt_school_id()`: app_metadata, then user_metadata.
+  @visibleForTesting
+  static String? schoolIdFromJwtPayload(Map<String, dynamic> payload) {
+    String? from(Map<String, dynamic>? map) {
+      if (map == null || map.isEmpty) return null;
+      final v = '${map['schoolId'] ?? map['school_id'] ?? ''}'.trim();
+      return v.isEmpty ? null : v.toUpperCase();
+    }
+
+    final app = payload['app_metadata'];
+    final fromApp = from(app is Map ? Map<String, dynamic>.from(app) : null);
+    if (fromApp != null) return fromApp;
+    final user = payload['user_metadata'];
+    final fromUser = from(user is Map ? Map<String, dynamic>.from(user) : null);
+    if (fromUser != null) return fromUser;
+    return from(payload);
   }
 
   @visibleForTesting
@@ -108,7 +141,7 @@ class SchoolAuthCloudService {
   static Map<String, dynamic> schoolClaimsFromAccessToken(String accessToken) =>
       _claimsFromAccessToken(accessToken);
 
-  static Map<String, dynamic> _claimsFromAccessToken(String accessToken) {
+  static Map<String, dynamic> _jwtPayload(String accessToken) {
     try {
       final parts = accessToken.split('.');
       if (parts.length < 2) return const {};
@@ -118,16 +151,21 @@ class SchoolAuthCloudService {
       final normalized = payload.replaceAll('-', '+').replaceAll('_', '/');
       final decoded = jsonDecode(utf8.decode(base64.decode(normalized)));
       if (decoded is! Map) return const {};
-      final map = Map<String, dynamic>.from(decoded);
-      final appMeta = map['app_metadata'];
-      if (appMeta is Map) {
-        return Map<String, dynamic>.from(appMeta);
-      }
-      // Some tokens flatten custom claims at the root.
-      return map;
+      return Map<String, dynamic>.from(decoded);
     } catch (_) {
       return const {};
     }
+  }
+
+  static Map<String, dynamic> _claimsFromAccessToken(String accessToken) {
+    final map = _jwtPayload(accessToken);
+    if (map.isEmpty) return const {};
+    final appMeta = map['app_metadata'];
+    if (appMeta is Map) {
+      return Map<String, dynamic>.from(appMeta);
+    }
+    // Some tokens flatten custom claims at the root.
+    return map;
   }
 
   /// Confirm school role claims before cloud writes.

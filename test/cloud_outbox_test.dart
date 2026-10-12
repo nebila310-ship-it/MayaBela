@@ -52,6 +52,31 @@ void main() {
     );
   });
 
+  test('resolvedSchoolId prefers the queued field then payload', () async {
+    await CloudOutboxService.instance.enqueue(
+      collection: 'fees',
+      docId: 'FEE-1',
+      schoolId: 'fr-001',
+      data: {'schoolId': 'OTHER', 'amount': 10},
+    );
+    expect(
+      CloudOutboxService.instance.snapshotMutations().single.resolvedSchoolId,
+      'FR-001',
+    );
+    await CloudOutboxService.instance.enqueue(
+      collection: 'fees',
+      docId: 'FEE-2',
+      data: {'school_id': 'tb-009'},
+    );
+    expect(
+      CloudOutboxService.instance
+          .snapshotMutations()
+          .firstWhere((m) => m.docId == 'FEE-2')
+          .resolvedSchoolId,
+      'TB-009',
+    );
+  });
+
   test('delete replaces a prior upsert for the same id', () async {
     await CloudOutboxService.instance.enqueue(
       collection: 'homework',

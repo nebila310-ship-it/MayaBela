@@ -25,6 +25,17 @@ class CloudOutboxMutation {
   final Map<String, dynamic>? data;
   final String updatedAt;
 
+  /// School this mutation would write, from the queued field or payload.
+  String? get resolvedSchoolId {
+    final fromField = schoolId?.trim();
+    if (fromField != null && fromField.isNotEmpty) {
+      return fromField.toUpperCase();
+    }
+    final v = data?['schoolId'] ?? data?['school_id'];
+    if (v is String && v.trim().isNotEmpty) return v.trim().toUpperCase();
+    return null;
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'collection': collection,

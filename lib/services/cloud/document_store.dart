@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 
 /// Generic document CRUD against Supabase `app_documents`
 /// (Firestore-compatible API for existing stores).
@@ -47,6 +48,8 @@ class DocumentStore {
   }
 
   String? _resolvedSchoolId() {
+    final jwt = SchoolAuthCloudService.accessTokenSchoolId();
+    if (jwt != null && jwt.isNotEmpty) return jwt;
     final active = AuthService.activeSchoolId?.trim();
     if (active != null && active.isNotEmpty) return active.toUpperCase();
     final fromUser = AuthService.currentUser?.schoolId?.trim();
@@ -55,6 +58,38 @@ class DocumentStore {
     final fromMeta = '${meta?['schoolId'] ?? meta?['school_id'] ?? ''}'.trim();
     if (fromMeta.isNotEmpty) return fromMeta.toUpperCase();
     return null;
+  }
+
+  /// INSERT WITH CHECK requires `upper(school_id) = jwt_school_id()`.
+  @visibleForTesting
+  static bool canWriteSchoolRow({
+    required String? jwtSchoolId,
+    required String? rowSchoolId,
+  }) {
+    final jwt = jwtSchoolId?.trim().toUpperCase() ?? '';
+    final row = rowSchoolId?.trim().toUpperCase() ?? '';
+    if (jwt.isEmpty || row.isEmpty) return false;
+    return jwt == row;
+  }
+
+  /// Optimistic-concurrency reject from `app_documents_reject_stale`.
+  static bool isStaleWrite(Object e) {
+    final s = '$e'.toLowerCase();
+    return s.contains('stale_write') || s.contains('updated elsewhere');
+  }
+
+  /// PostgREST 403 / `42501` RLS WITH CHECK failure. Retrying these every 5s
+  /// is the upsert storm (JWT school empty, or row school ≠ token school).
+  static bool isRlsForbidden(Object e) {
+    final s = '$e'.toLowerCase();
+    if (s.contains('jwt has no school')) return false;
+    return s.contains('row-level security') ||
+        s.contains('42501') ||
+        s.contains('pgrst301') ||
+        s.contains('write_denied') ||
+        s.contains('not allowed to save') ||
+        s.contains('does not match signed-in school') ||
+        RegExp(r'(^|[^0-9])403([^0-9]|$)').hasMatch(s);
   }
 
   Map<String, dynamic> _rowToDoc(Map<String, dynamic> row) {
@@ -106,16 +141,8 @@ class DocumentStore {
     return copy;
   }
 
-  /// Optimistic-concurrency reject from `app_documents_reject_stale`.
-  @visibleForTesting
-  static bool isStaleWrite(Object e) {
-    final s = '$e'.toLowerCase();
-    return s.contains('stale_write') || s.contains('updated elsewhere');
-  }
-
   static bool _isGuardError(Object e) {
-    final s = '$e'.toLowerCase();
-    return isStaleWrite(e) || s.contains('write_denied');
+    return isStaleWrite(e) || isRlsForbidden(e);
   }
 
   /// Page size for `readBySchool` / `readAll`. Stays at 1000 so a hosted
@@ -220,6 +247,26 @@ class DocumentStore {
       );
     }
 
+    final jwtSchool = SchoolAuthCloudService.accessTokenSchoolId();
+    if (!canWriteSchoolRow(jwtSchoolId: jwtSchool, rowSchoolId: schoolId)) {
+      if ((jwtSchool ?? '').trim().isEmpty) {
+        await CloudOutboxService.instance.enqueue(
+          collection: collection,
+          docId: docId,
+          op: 'upsert',
+          schoolId: schoolId,
+          data: payload,
+          reason: 'JWT has no school',
+        );
+        throw StateError(
+          'Cannot save $collection/$docId — JWT has no school.',
+        );
+      }
+      throw StateError(
+        'Cannot save $collection/$docId — school does not match signed-in school.',
+      );
+    }
+
     if (!available) {
       await CloudOutboxService.instance.enqueue(
         collection: collection,
@@ -300,10 +347,17 @@ class DocumentStore {
     final scoped = _withSchoolScope(Map<String, dynamic>.from(data));
     scoped.remove('_docId');
     scoped['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+    final schoolId = _schoolIdOf(scoped);
+    if (!canWriteSchoolRow(
+      jwtSchoolId: SchoolAuthCloudService.accessTokenSchoolId(),
+      rowSchoolId: schoolId,
+    )) {
+      return;
+    }
     await db.from('app_documents').insert({
       'collection': collection,
       'doc_id': docId,
-      'school_id': _schoolIdOf(scoped),
+      'school_id': schoolId,
       'data': scoped,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
@@ -497,6 +551,15 @@ class DocumentStore {
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
+    final jwtSchool = SchoolAuthCloudService.accessTokenSchoolId();
+    if ((jwtSchool ?? '').trim().isEmpty) {
+      if (kDebugMode) {
+        debugPrint(
+          '[DocumentStore] skip writeBatch $collection — JWT has no school',
+        );
+      }
+      return;
+    }
     final loaded = await _existingDocsById(collection);
     if (_isVersioned(collection) && loaded.loadFailed) {
       if (kDebugMode) {
@@ -531,10 +594,17 @@ class DocumentStore {
             incoming: scoped,
           );
         }
+        final rowSchool = _schoolIdOf(scoped);
+        if (!canWriteSchoolRow(
+          jwtSchoolId: jwtSchool,
+          rowSchoolId: rowSchool,
+        )) {
+          continue;
+        }
         rows.add({
           'collection': collection,
           'doc_id': id,
-          'school_id': _schoolIdOf(scoped),
+          'school_id': rowSchool,
           'data': scoped,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         });
