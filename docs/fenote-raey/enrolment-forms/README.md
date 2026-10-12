@@ -8,11 +8,13 @@ Paper forms that match **MayaBela** registration screens. Families and staff fil
 | Teacher | Admin → Add Teacher | [Fenote_Raey_Teacher_Enrolment_Form.pdf](Fenote_Raey_Teacher_Enrolment_Form.pdf) |
 | Administrative staff | Admin → Add Administration Staff | [Fenote_Raey_Administrative_Staff_Enrolment_Form.pdf](Fenote_Raey_Administrative_Staff_Enrolment_Form.pdf) |
 | All three + how-to | Print this pack | [Fenote_Raey_Enrolment_Forms_Pack.pdf](Fenote_Raey_Enrolment_Forms_Pack.pdf) |
+| Excel (forms + registers) | Type in Excel, dropdowns, gold = after save | [Fenote_Raey_Enrolment_Forms.xlsx](Fenote_Raey_Enrolment_Forms.xlsx) |
 
 Regenerate after field changes:
 
 ```bash
 python3 tools/generate_fenote_enrolment_forms.py
+python3 tools/generate_fenote_enrolment_excel.py
 ```
 
 Do **not** write Student ID / Teacher ID / Staff ID before saving in MayaBela. The software issues `STU-####`, `TCH-####`, or a role prefix such as `QA-####` / `HR-####` / `REG-####`.
