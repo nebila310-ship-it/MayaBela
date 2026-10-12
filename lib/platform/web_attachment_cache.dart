@@ -32,4 +32,10 @@ class WebAttachmentCache {
   }
 
   void remove(String path) => _bytes.remove(path);
+
+  /// Drop cached attachment bytes (call on logout so the next user
+  /// cannot keep the previous school's files in RAM).
+  void clear() => _bytes.clear();
+
+  int get cachedCount => _bytes.length;
 }

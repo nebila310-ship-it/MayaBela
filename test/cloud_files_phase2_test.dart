@@ -137,6 +137,7 @@ void main() {
     ).readAsStringSync();
     expect(voice, contains('uploadSavedAttachment'));
     expect(voice, contains('message_attachments'));
+    expect(voice, contains('AttachmentSizeLimit.exceeds'));
 
     final community = File(
       'lib/services/community_photo_service.dart',

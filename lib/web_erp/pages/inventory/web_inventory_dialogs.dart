@@ -198,6 +198,10 @@ Future<void> showInventoryItemDialog(
             imagePick = await storage.pickImage();
             if (imagePick != null) {
               setDialogState(() => imagePath = imagePick!.fileName);
+            } else if (storage.lastPickError != null && ctx.mounted) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(content: Text(storage.lastPickError!)),
+              );
             }
           },
           icon: const Icon(Icons.image_outlined),
@@ -395,7 +399,13 @@ Future<void> showStockInDialog(BuildContext context) async {
         OutlinedButton.icon(
           onPressed: () async {
             invoicePick = await storage.pickInvoiceFile();
-            if (invoicePick != null) setDialogState(() {});
+            if (invoicePick != null) {
+              setDialogState(() {});
+            } else if (storage.lastPickError != null && ctx.mounted) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(content: Text(storage.lastPickError!)),
+              );
+            }
           },
           icon: const Icon(Icons.attach_file),
           label: Text(
@@ -762,6 +772,10 @@ Future<void> showAssetDialog(
             photoPick = await storage.pickImage();
             if (photoPick != null) {
               setDialogState(() => imagePath = photoPick!.fileName);
+            } else if (storage.lastPickError != null && ctx.mounted) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(content: Text(storage.lastPickError!)),
+              );
             }
           },
           icon: const Icon(Icons.photo_camera_outlined),

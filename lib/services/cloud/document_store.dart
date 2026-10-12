@@ -118,6 +118,32 @@ class DocumentStore {
     return isStaleWrite(e) || s.contains('write_denied');
   }
 
+  /// Page size for `readBySchool` / `readAll`. Stays at 1000 so a hosted
+  /// Data API cap of 1000 cannot silently truncate the first page.
+  @visibleForTesting
+  static const readPageSize = 1000;
+
+  /// Hard stop so a runaway loop cannot download unbounded rows.
+  @visibleForTesting
+  static const readMaxRows = 50000;
+
+  @visibleForTesting
+  static bool shouldFetchNextPage(
+    int pageLength, {
+    int pageSize = readPageSize,
+  }) {
+    return pageLength >= pageSize;
+  }
+
+  @visibleForTesting
+  static (int from, int to) pageRange(
+    int pageIndex, {
+    int pageSize = readPageSize,
+  }) {
+    final from = pageIndex * pageSize;
+    return (from, from + pageSize - 1);
+  }
+
   /// Version the server expects: the value last stored, not a local 0 default.
   @visibleForTesting
   static int writeRowVersion({
@@ -371,16 +397,13 @@ class DocumentStore {
     }
 
     try {
-      var query = db.from('app_documents').select().eq('collection', collection);
-      if (sid != null && sid.isNotEmpty) {
-        query = query.eq('school_id', sid.trim().toUpperCase());
-      }
-      if (updatedSince != null) {
-        query = query.gt('updated_at', updatedSince.toUtc().toIso8601String());
-      }
-      final rows = await query;
+      final rows = await _readPagedRows(
+        collection: collection,
+        schoolId: sid,
+        updatedSince: updatedSince,
+      );
       var docs = rows
-          .map((r) => _rowToDoc(Map<String, dynamic>.from(r as Map)))
+          .map((r) => _rowToDoc(Map<String, dynamic>.from(r)))
           .toList();
 
       for (final entry in equals.entries) {
@@ -411,6 +434,43 @@ class DocumentStore {
       }
       rethrow;
     }
+  }
+
+  /// Walks PostgREST `.range()` pages until a short page, so a 1000-row
+  /// (or 5000-row) Data API cap cannot hide the rest of the school.
+  Future<List<Map<String, dynamic>>> _readPagedRows({
+    required String collection,
+    String? schoolId,
+    DateTime? updatedSince,
+  }) async {
+    final rows = <Map<String, dynamic>>[];
+    var pageIndex = 0;
+    while (rows.length < readMaxRows) {
+      final (from, to) = pageRange(pageIndex);
+      var query = db.from('app_documents').select().eq('collection', collection);
+      if (schoolId != null && schoolId.isNotEmpty) {
+        query = query.eq('school_id', schoolId.trim().toUpperCase());
+      }
+      if (updatedSince != null) {
+        query = query.gt('updated_at', updatedSince.toUtc().toIso8601String());
+      }
+      final page = await query.order('doc_id').range(from, to);
+      final list = page as List;
+      for (final row in list) {
+        if (row is Map) {
+          rows.add(Map<String, dynamic>.from(row));
+        }
+      }
+      if (!shouldFetchNextPage(list.length)) break;
+      pageIndex++;
+    }
+    if (kDebugMode && rows.length >= readMaxRows) {
+      debugPrint(
+        '[DocumentStore] $collection hit readMaxRows=$readMaxRows; '
+        'further rows were not fetched',
+      );
+    }
+    return rows;
   }
 
   Future<({Map<String, Map<String, dynamic>> byId, bool loadFailed})>
