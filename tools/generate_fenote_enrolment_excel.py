@@ -315,9 +315,13 @@ def how_to_sheet(wb: Workbook) -> None:
         "",
         "Use this Excel the same way as the paper PDFs. Yellow cells are for the family or staff member. Gold cells are for the office AFTER MayaBela saves the person.",
         "",
+        "Import into MayaBela",
+        "  Students directory, Teachers / Administration Staff directory, or Go-live → Import → pick this file.",
+        "  Full rows and partial rows both work. Empty rows are skipped. Gold office columns are ignored — the software still issues STU- / TCH- / QA- / HR- IDs.",
+        "",
         "Sheets",
         "  • Student form / Teacher form / Admin staff form — one person at a time. Type in column B. Dropdowns are provided.",
-        "  • Student register / Teacher register / Staff register — many people, one row each. Use this to collect a class or a hiring batch, then type into MayaBela.",
+        "  • Student register / Teacher register / Staff register — many people, one row each.",
         "",
         "Required in software (*)",
         "  Student: full name, gender, date of birth (DD/MM/YYYY), grade, section.",
@@ -699,7 +703,27 @@ def build() -> Path:
     register_sheet(wb, "Staff register", staff_cols, office_from=11)
 
     wb.save(OUT_XLSX)
+    _rewrite_relative_sheet_targets(OUT_XLSX)
     return OUT_XLSX
+
+
+def _rewrite_relative_sheet_targets(path: Path) -> None:
+    """openpyxl writes Target="/xl/worksheets/sheetN.xml"; excel_plus looks up xl/$target."""
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(path, "r") as zin, zipfile.ZipFile(
+        buf, "w", compression=zipfile.ZIP_DEFLATED
+    ) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == "xl/_rels/workbook.xml.rels":
+                text = data.decode("utf-8")
+                text = text.replace('Target="/xl/worksheets/', 'Target="worksheets/')
+                data = text.encode("utf-8")
+            zout.writestr(item, data)
+    path.write_bytes(buf.getvalue())
 
 
 if __name__ == "__main__":

@@ -8,7 +8,9 @@ Paper forms that match **MayaBela** registration screens. Families and staff fil
 | Teacher | Admin → Add Teacher | [Fenote_Raey_Teacher_Enrolment_Form.pdf](Fenote_Raey_Teacher_Enrolment_Form.pdf) |
 | Administrative staff | Admin → Add Administration Staff | [Fenote_Raey_Administrative_Staff_Enrolment_Form.pdf](Fenote_Raey_Administrative_Staff_Enrolment_Form.pdf) |
 | All three + how-to | Print this pack | [Fenote_Raey_Enrolment_Forms_Pack.pdf](Fenote_Raey_Enrolment_Forms_Pack.pdf) |
-| Excel (forms + registers) | Type in Excel, dropdowns, gold = after save | [Fenote_Raey_Enrolment_Forms.xlsx](Fenote_Raey_Enrolment_Forms.xlsx) |
+| Excel (forms + registers) | Fill in Excel (full or partial), then **Import Excel** in MayaBela | [Fenote_Raey_Enrolment_Forms.xlsx](Fenote_Raey_Enrolment_Forms.xlsx) |
+
+MayaBela reads this workbook on **Students**, **Classroom Teachers**, **Administration Staff**, and **Go-live → Import**. Empty rows are skipped. Missing optional fields stay blank. Gold office ID columns are ignored — the software issues `STU-####` / `TCH-####` / role-prefix IDs after save. Students need a full name and date of birth; teachers and staff need name, a real email, and a login phone.
 
 Regenerate after field changes:
 

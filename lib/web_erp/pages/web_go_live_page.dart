@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:mayabela/content/training_manuals.dart';
 import 'package:mayabela/models/golive_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/enrolment_excel_import.dart';
+import 'package:mayabela/services/enrolment_import_service.dart';
 import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/student_excel_import.dart';
@@ -687,19 +689,21 @@ class _ImportTab extends StatefulWidget {
 
 class _ImportTabState extends State<_ImportTab> {
   List<StudentImportRow> _preview = const [];
+  EnrolmentWorkbookDraft? _fenote;
   String? _message;
 
   @override
   Widget build(BuildContext context) {
+    final fenoteReady = _fenote?.readyCount ?? 0;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
-          'CSV or Excel with Full Name, Grade, Class, and Date of Birth. '
-          'Optional: Gender, Father/Mother name and phone, Student id. '
-          'Duplicates (same name + class, or an existing id) are skipped. '
-          'New rows call addStudent and get a STU-#### id. Grades and exams '
-          'are not written.',
+          'Fenote enrolment workbook (Student / Teacher / Staff form and '
+          'register sheets): full or partial rows. Gold office ID columns are '
+          'ignored — MayaBela issues STU-####, TCH-####, and role-prefix IDs. '
+          'Legacy class-list CSV/Excel (Full Name, Grade, Class, Date of Birth) '
+          'still works on the first sheet. Grades and exams are not written.',
         ),
         const SizedBox(height: 12),
         if (widget.canManage)
@@ -711,7 +715,13 @@ class _ImportTabState extends State<_ImportTab> {
                 icon: const Icon(Icons.upload_file_outlined),
                 label: const Text('Pick CSV / Excel'),
               ),
-              if (_preview.isNotEmpty)
+              if (fenoteReady > 0)
+                OutlinedButton.icon(
+                  onPressed: _importFenote,
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: Text('Import $fenoteReady Fenote rows'),
+                )
+              else if (_preview.isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: _import,
                   icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -724,16 +734,42 @@ class _ImportTabState extends State<_ImportTab> {
           Text(_message!),
         ],
         const SizedBox(height: 12),
-        for (final row in _preview.take(40))
-          ListTile(
-            dense: true,
-            title: Text(row.fullName),
-            subtitle: Text(
-              '${row.grade} · ${row.className} · '
-              '${row.dateOfBirth.toIso8601String().split('T').first}',
+        if (_fenote != null) ...[
+          for (final row in _fenote!.students.take(20))
+            ListTile(
+              dense: true,
+              title: Text(row.fullName),
+              subtitle: Text(
+                'Student · ${row.grade} · ${row.className} · '
+                '${row.dateOfBirth.toIso8601String().split('T').first}',
+              ),
             ),
-          ),
-        if (_preview.length > 40) Text('+ ${_preview.length - 40} more'),
+          for (final row in _fenote!.teachers.take(12))
+            ListTile(
+              dense: true,
+              title: Text(row.fullName),
+              subtitle: Text('Teacher · ${row.phone} · ${row.email}'),
+            ),
+          for (final row in _fenote!.staff.take(12))
+            ListTile(
+              dense: true,
+              title: Text(row.fullName),
+              subtitle: Text(
+                'Staff · ${row.staffRoles.join(', ')} · ${row.phone}',
+              ),
+            ),
+        ] else ...[
+          for (final row in _preview.take(40))
+            ListTile(
+              dense: true,
+              title: Text(row.fullName),
+              subtitle: Text(
+                '${row.grade} · ${row.className} · '
+                '${row.dateOfBirth.toIso8601String().split('T').first}',
+              ),
+            ),
+          if (_preview.length > 40) Text('+ ${_preview.length - 40} more'),
+        ],
       ],
     );
   }
@@ -752,11 +788,24 @@ class _ImportTabState extends State<_ImportTab> {
       return;
     }
     try {
+      if (EnrolmentExcelImport.looksLikeFenote(bytes)) {
+        final draft = EnrolmentExcelImport.parseBytes(bytes);
+        setState(() {
+          _fenote = draft;
+          _preview = const [];
+          _message =
+              '${draft.students.length} student(s), ${draft.teachers.length} '
+              'teacher(s), ${draft.staff.length} staff ready. '
+              '${draft.skipped.length} skipped.';
+        });
+        return;
+      }
       final rows = StudentExcelImport.parseBytes(
         bytes: bytes,
         filename: file.name,
       );
       setState(() {
+        _fenote = null;
         _preview = rows;
         _message = '${rows.length} preview rows.';
       });
@@ -774,6 +823,25 @@ class _ImportTabState extends State<_ImportTab> {
             'Created ${result.createdIds.length}: ${result.createdIds.join(', ')}. '
             'Skipped ${result.skipped.length}.';
         _preview = const [];
+      });
+    } catch (e) {
+      setState(() => _message = e.toString());
+    }
+  }
+
+  Future<void> _importFenote() async {
+    final draft = _fenote;
+    if (draft == null) return;
+    try {
+      final result = await EnrolmentImportService.instance.importDraft(draft);
+      setState(() {
+        _message =
+            'Created ${result.createdCount} '
+            '(${result.createdStudentIds.length} students, '
+            '${result.createdTeacherIds.length} teachers, '
+            '${result.createdStaffIds.length} staff). '
+            'Skipped ${result.skipped.length}.';
+        _fenote = null;
       });
     } catch (e) {
       setState(() => _message = e.toString());
