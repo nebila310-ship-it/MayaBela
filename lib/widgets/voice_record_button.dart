@@ -36,7 +36,9 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton> {
       if (attachment != null) {
         widget.onRecorded(attachment);
       } else {
-        _showSnack(AppLocale.instance.strings.voiceRecordFailed);
+        _showSnack(
+          _voice.lastError ?? AppLocale.instance.strings.voiceRecordFailed,
+        );
       }
       setState(() {});
     } finally {

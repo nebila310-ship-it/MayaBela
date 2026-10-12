@@ -69,4 +69,13 @@ void main() {
       'classroom_inventory',
     });
   });
+
+  test('cloud reads page at 1000 so a Data API cap cannot hide later rows', () {
+    expect(DocumentStore.readPageSize, 1000);
+    expect(DocumentStore.pageRange(0), (0, 999));
+    expect(DocumentStore.pageRange(1), (1000, 1999));
+    expect(DocumentStore.shouldFetchNextPage(1000), isTrue);
+    expect(DocumentStore.shouldFetchNextPage(999), isFalse);
+    expect(DocumentStore.shouldFetchNextPage(0), isFalse);
+  });
 }

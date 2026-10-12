@@ -7,19 +7,23 @@ import 'package:record/record.dart';
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/announcement_attachment_service.dart';
+import 'package:mayabela/utils/attachment_size_limit.dart';
 
 /// Records voice clips with live amplitude samples for waveform UI.
 class VoiceMessageService {
   VoiceMessageService._();
   static final instance = VoiceMessageService._();
 
-  final AudioRecorder _recorder = AudioRecorder();
+  AudioRecorder? _recorder;
   final _amplitudeController = StreamController<List<double>>.broadcast();
+
+  AudioRecorder get _rec => _recorder ??= AudioRecorder();
 
   String? _activePath;
   bool _recording = false;
   StreamSubscription<Amplitude>? _amplitudeSub;
   List<double> _samples = [];
+  String? lastError;
 
   static const _maxSamples = 48;
 
@@ -27,11 +31,11 @@ class VoiceMessageService {
   Stream<List<double>> get amplitudeStream => _amplitudeController.stream;
   List<double> get currentSamples => List.unmodifiable(_samples);
 
-  Future<bool> hasPermission() => _recorder.hasPermission();
+  Future<bool> hasPermission() => _rec.hasPermission();
 
   Future<bool> startRecording() async {
     if (_recording) return true;
-    if (!await _recorder.hasPermission()) return false;
+    if (!await _rec.hasPermission()) return false;
 
     final dir = await _voiceDir();
     final id = DateTime.now().millisecondsSinceEpoch;
@@ -39,7 +43,7 @@ class VoiceMessageService {
     _samples = [];
     _emitSamples();
 
-    await _recorder.start(
+    await _rec.start(
       const RecordConfig(
         encoder: AudioEncoder.aacLc,
         bitRate: 128000,
@@ -49,7 +53,7 @@ class VoiceMessageService {
     );
 
     _amplitudeSub?.cancel();
-    _amplitudeSub = _recorder
+    _amplitudeSub = _rec
         .onAmplitudeChanged(const Duration(milliseconds: 60))
         .listen(_onAmplitude);
 
@@ -77,7 +81,7 @@ class VoiceMessageService {
     if (!_recording) return null;
     await _amplitudeSub?.cancel();
     _amplitudeSub = null;
-    final path = await _recorder.stop();
+    final path = await _rec.stop();
     _recording = false;
     _samples = [];
     _emitSamples();
@@ -94,6 +98,16 @@ class VoiceMessageService {
 
     final length = await file.length();
     if (length <= 0) return null;
+    lastError = null;
+    if (AttachmentSizeLimit.exceeds('voice_message.m4a', length)) {
+      lastError =
+          'That voice note is too large. Use a clip under '
+          '${AttachmentSizeLimit.maxMbForFileName('voice_message.m4a')} MB.';
+      try {
+        await file.delete();
+      } catch (_) {}
+      return null;
+    }
 
     final id = 'voice-${DateTime.now().millisecondsSinceEpoch}';
     final bytes = await file.readAsBytes();
@@ -127,7 +141,9 @@ class VoiceMessageService {
     if (!_recording) return;
     await _amplitudeSub?.cancel();
     _amplitudeSub = null;
-    await _recorder.stop();
+    if (_recorder != null) {
+      await _rec.stop();
+    }
     _recording = false;
     _samples = [];
     _emitSamples();

@@ -22,4 +22,9 @@ class CommunityPhotoService {
       pathCache: _cachedPaths,
     );
   }
+
+  void clearMemoryCache() {
+    _cachedBytes.clear();
+    _cachedPaths.clear();
+  }
 }

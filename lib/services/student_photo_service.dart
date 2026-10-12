@@ -152,4 +152,9 @@ class StudentPhotoService {
       _promoting.remove(id);
     }
   }
+
+  void clearMemoryCache() {
+    _cachedBytes.clear();
+    _cachedPaths.clear();
+  }
 }

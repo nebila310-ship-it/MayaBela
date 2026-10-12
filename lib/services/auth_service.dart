@@ -20,6 +20,7 @@ import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/session_prefs_service.dart';
 import 'package:mayabela/services/cloud/realtime_messaging_bootstrap.dart';
 import 'package:mayabela/services/cloud/role_cloud_live_sync.dart';
+import 'package:mayabela/services/session_resource_cleanup.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/password_hash_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
@@ -808,6 +809,10 @@ class AuthService {
   static Future<void> clearSession() async {
     final logoutGeneration = _bumpSessionGeneration();
     RoleCloudLiveSync.stop();
+    try {
+      await SessionResourceCleanup.onLogout()
+          .timeout(_sessionCleanupTimeout);
+    } catch (_) {}
     currentUser = null;
     sessionSchoolId = null;
     clearCloudAccessScope();

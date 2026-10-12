@@ -7,6 +7,7 @@ import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
 import 'package:mayabela/platform/platform_file_storage.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/inventory_file_bytes.dart';
+import 'package:mayabela/utils/attachment_size_limit.dart';
 
 enum InventoryStorageKind {
   itemImage('items'),
@@ -52,6 +53,8 @@ class InventoryStorageService {
       SupabaseBootstrap.isInitialized && SupabaseStorageBootstrap.isReady;
 
   String? get lastCloudError => SupabaseStorageBootstrap.lastError;
+  String? lastPickError;
+  int? lastRejectedMaxMb;
 
   String get storageSetupHint => SupabaseStorageBootstrap.setupHint;
 
@@ -72,6 +75,15 @@ class InventoryStorageService {
     );
     if (result == null || result.files.isEmpty) return null;
     final file = result.files.first;
+    lastPickError = null;
+    lastRejectedMaxMb = null;
+    final size = file.size > 0 ? file.size : (file.bytes?.length ?? 0);
+    if (AttachmentSizeLimit.exceeds(file.name, size)) {
+      lastRejectedMaxMb = AttachmentSizeLimit.maxMbForFileName(file.name);
+      lastPickError =
+          'That file is too large. Use a file under $lastRejectedMaxMb MB.';
+      return null;
+    }
     return InventoryPickResult(
       fileName: file.name,
       bytes: file.bytes,

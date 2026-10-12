@@ -83,7 +83,9 @@ class _MessageVoiceInputBarState extends State<MessageVoiceInputBar> {
       if (attachment != null) {
         widget.onSendVoice(attachment);
       } else {
-        _showSnack(AppLocale.instance.strings.voiceRecordFailed);
+        _showSnack(
+          _voice.lastError ?? AppLocale.instance.strings.voiceRecordFailed,
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
