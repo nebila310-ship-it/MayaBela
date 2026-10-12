@@ -6,6 +6,7 @@ import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/report_card_pdf_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -69,6 +70,21 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _deliverCard(StudentGradeReport report, bool openForPrint) async {
+    try {
+      await ReportCardPdfService.instance.deliver(
+        report: report,
+        schoolName: SchoolRegistryService.instance.lookup(_schoolId)?.name,
+        openForPrint: openForPrint,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not prepare the grade report: $e')),
+      );
+    }
   }
 
   Future<void> _openEditor(StudentGradeReport report) async {
@@ -173,20 +189,30 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
                   '${report.className} · ${report.term} · '
                   'avg ${report.average.toStringAsFixed(1)}% · '
                   'GPA ${report.gpa.toStringAsFixed(2)} · '
-                  'attendance ${snap.sessions == 0 ? '—' : '${(snap.rate * 100).round()}%'}',
+                  'attendance ${snap.sessions == 0 ? '—' : '${(snap.rate * 100).round()}%'} · '
+                  '${report.reportCardPublished ? 'Published' : 'Draft'}',
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Chip(
-                      label: Text(
-                        report.reportCardPublished ? 'Published' : 'Draft',
+                    IconButton(
+                      key: ValueKey(
+                        'report-card-list-download-${report.studentId ?? report.studentName}',
                       ),
-                      backgroundColor: report.reportCardPublished
-                          ? Colors.green.withValues(alpha: 0.12)
-                          : Colors.orange.shade50,
+                      tooltip: 'Download PDF',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _deliverCard(report, false),
+                      icon: const Icon(Icons.download_outlined),
                     ),
-                    const SizedBox(width: 8),
+                    IconButton(
+                      key: ValueKey(
+                        'report-card-list-print-${report.studentId ?? report.studentName}',
+                      ),
+                      tooltip: 'Print',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _deliverCard(report, true),
+                      icon: const Icon(Icons.print_outlined),
+                    ),
                     const Icon(Icons.chevron_right),
                   ],
                 ),
@@ -251,6 +277,7 @@ class _ReportCardEditorDialogState extends State<_ReportCardEditorDialog> {
                 report: report,
                 schoolName: widget.schoolName,
                 compact: true,
+                showActions: true,
               ),
               if (GradeAnalyticsService.instance
                       .termTrendForStudent(

@@ -28,6 +28,7 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/platform_path_image.dart';
 import 'package:mayabela/widgets/term_report_card_view.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/services/student_account_service.dart';
 
 enum GradeReportView { teacher, parent, student, admin }
 
@@ -94,6 +95,15 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
   bool get _isStudentPortalView =>
       widget.view == GradeReportView.parent ||
       widget.view == GradeReportView.student;
+
+  /// Admin, teachers, and parents can always save or print the official card.
+  /// Students follow the school portal switch (on by default).
+  bool get _canDownloadReportCard {
+    if (widget.view != GradeReportView.student) return true;
+    return StudentAccountService.instance
+        .settingsForSchool(AuthService.activeSchoolId)
+        .allowReportDownload;
+  }
 
   List<String> get _classOptions {
     if (_isStudentPortalView) {
@@ -712,6 +722,7 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
                   gradeColor: _gradeColor,
                   publishedOnly: _isStudentPortalView,
                   allowShareDownload: _isStudentPortalView,
+                  showReportActions: _canDownloadReportCard,
                   filterSubjects: widget.view == GradeReportView.teacher &&
                       !_access.isHomeroomFor(activeReport.className),
                   canEditSubject: widget.view == GradeReportView.teacher
@@ -929,6 +940,7 @@ class _ReportDetail extends StatelessWidget {
     required this.gradeColor,
     this.publishedOnly = false,
     this.allowShareDownload = false,
+    this.showReportActions = false,
     this.filterSubjects = false,
     this.canEditSubject,
     this.onEditSubject,
@@ -939,6 +951,7 @@ class _ReportDetail extends StatelessWidget {
   final Color Function(double) gradeColor;
   final bool publishedOnly;
   final bool allowShareDownload;
+  final bool showReportActions;
   final bool filterSubjects;
   final bool Function(SubjectGrade subject)? canEditSubject;
   final void Function(SubjectGrade subject)? onEditSubject;
@@ -958,13 +971,6 @@ class _ReportDetail extends StatelessWidget {
           ),
         )
         .toList();
-  }
-
-  double get _visibleAverage {
-    final subjects = _visibleSubjects;
-    if (subjects.isEmpty) return 0;
-    return subjects.map((s) => s.percentage).reduce((a, b) => a + b) /
-        subjects.length;
   }
 
   @override
@@ -989,62 +995,14 @@ class _ReportDetail extends StatelessWidget {
         return ListView(
           padding: listPagePadding(context),
           children: [
-            Card(
-              color: Colors.white.withValues(alpha: 0.95),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: _gradeTeacherAccent.withValues(alpha: 0.15),
-                ),
-              ),
-                child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: report.reportCardPublished
-                    ? TermReportCardView(
-                        report: report,
-                        schoolName: SchoolRegistryService.instance
-                            .lookup(AuthService.activeSchoolId ?? '')
-                            ?.name,
-                        compact: true,
-                      )
-                    : Column(
-                  children: [
-                    Text(
-                      report.studentName,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: _gradeTeacherAccent,
-                      ),
-                    ),
-                    Text('${report.className} · ${report.term}'),
-                    const SizedBox(height: 12),
-                    Text(
-                      filterSubjects || publishedOnly
-                          ? s.averageLabel(_visibleAverage)
-                          : s.averageLabel(report.average),
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: gradeColor(
-                          filterSubjects || publishedOnly
-                              ? _visibleAverage
-                              : report.average,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'GPA ${report.gpa.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            TermReportCardView(
+              report: report.copyWith(subjects: subjects),
+              schoolName: SchoolRegistryService.instance
+                  .lookup(AuthService.activeSchoolId ?? '')
+                  ?.name,
+              compact: true,
+              showActions: showReportActions,
+              showSubjectRemarks: false,
             ),
             const SizedBox(height: 16),
             Text(
