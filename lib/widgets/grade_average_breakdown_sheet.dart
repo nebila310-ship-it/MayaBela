@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
 import 'package:mayabela/services/grade_workflow_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
+import 'package:mayabela/widgets/term_report_card_view.dart';
 
 Future<void> showGradeAverageBreakdownSheet(
   BuildContext context,
@@ -89,7 +92,37 @@ class GradeAverageBreakdownSheet extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const ValueKey('open-official-grade-report'),
+                      onPressed: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (dialogContext) => Dialog(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 720),
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(16),
+                                child: TermReportCardView(
+                                  report: report,
+                                  schoolName: SchoolRegistryService.instance
+                                      .lookup(AuthService.activeSchoolId ?? '')
+                                      ?.name,
+                                  showActions: true,
+                                  showSubjectRemarks: false,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.badge_outlined),
+                      label: const Text('Official grade report'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     s.approvedSubjectsThatMakeAverage,
                     style: TextStyle(
