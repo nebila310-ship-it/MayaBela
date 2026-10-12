@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/models/payroll_models.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/ethiopia_payroll_tax.dart';
 import 'package:mayabela/services/hr_workforce_service.dart';
@@ -97,9 +98,12 @@ void main() {
     expect(find.text('Income tax'), findsWidgets);
     expect(find.text('Net pay'), findsWidgets);
     expect(find.text('Payroll register'), findsOneWidget);
-    expect(find.textContaining('Every column stays on this page'), findsOneWidget);
+    expect(
+      find.textContaining('Scroll sideways on a phone to see every column'),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('payroll-scroll-right')), findsNothing);
-    expect(find.byKey(const ValueKey('web-erp-hscroll-view')), findsNothing);
+    expect(find.byKey(const ValueKey('web-erp-hscroll-view')), findsOneWidget);
     expect(find.text('Staff ID'), findsWidgets);
     expect(find.text('Staff pension'), findsOneWidget);
     expect(find.text('Total deduct.'), findsOneWidget);
@@ -155,6 +159,105 @@ void main() {
     expect(find.text('Employee 12'), findsOneWidget);
     expect(find.text('Employee 01'), findsNothing);
     expect(find.text('Net pay'), findsWidgets);
+  });
+
+  testWidgets('payroll register stays readable on a phone browser',
+      (tester) async {
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-1014',
+        employeeId: 'TCH-1014',
+        fullName: 'Belen Teacher',
+        assignedClass: 'Grade 1A',
+        schoolId: 'FR-001',
+        phone: '0911000001',
+        subject: 'Teacher',
+      ),
+    ]);
+    PayrollService.instance.applyPersistedData(
+      profiles: [
+        PayrollProfile(
+          id: 'teacher:TCH-1014',
+          schoolId: 'FR-001',
+          kind: PayrollPersonKind.teacher,
+          personId: 'TCH-1014',
+          basicSalary: 50000,
+          updatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      ],
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebPayrollPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(WebPayrollPage.registerMinTableWidth, 1180);
+    expect(find.byKey(const ValueKey('web-erp-hscroll-view')), findsOneWidget);
+    final tableSize = tester.getSize(
+      find.byKey(const ValueKey('payroll-register-table')),
+    );
+    expect(
+      tableSize.width,
+      closeTo(WebPayrollPage.registerMinTableWidth, 0.5),
+    );
+    expect(tableSize.width, greaterThan(390));
+
+    final idSize = tester.getSize(find.text('TCH-1014'));
+    expect(idSize.height, lessThan(24));
+    expect(idSize.width, greaterThan(60));
+
+    final amountSize = tester.getSize(find.text('50,000.00').first);
+    expect(amountSize.height, lessThan(24));
+    expect(amountSize.width, greaterThan(60));
+
+    expect(find.text('Belen Teacher'), findsOneWidget);
+    expect(find.text('Staff ID'), findsWidgets);
+    expect(find.text('Net pay'), findsWidgets);
+
+    final scrollable = find.descendant(
+      of: find.byKey(const ValueKey('web-erp-hscroll-view')),
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.maxScrollExtent, greaterThan(600));
+
+    await tester.ensureVisible(find.text('Staff ID').first);
+    await tester.pumpAndSettle();
+    final staffIdBefore = tester.getTopLeft(find.text('Staff ID').first);
+    await tester.drag(find.text('Staff ID').first, const Offset(-280, 0));
+    await tester.pumpAndSettle();
+    final staffIdAfter = tester.getTopLeft(find.text('Staff ID').first);
+    expect(staffIdAfter.dx, lessThan(staffIdBefore.dx - 80));
+  });
+
+  testWidgets('HR Payroll tab pans sideways on a phone instead of crushing cells',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: WebHrHubPage(initialTab: 4)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('payroll-register-table')), findsOneWidget);
+    expect(find.byKey(const ValueKey('web-erp-hscroll-view')), findsOneWidget);
+    final tableSize = tester.getSize(
+      find.byKey(const ValueKey('payroll-register-table')),
+    );
+    expect(tableSize.width, greaterThan(1000));
+    expect(find.text('Staff ID'), findsWidgets);
+    expect(find.text('Net pay'), findsWidgets);
+    final headerSize = tester.getSize(find.text('Staff ID').first);
+    expect(headerSize.height, lessThan(32));
   });
 
   testWidgets('payroll cells recalc tax, pension, and net as figures are typed',
