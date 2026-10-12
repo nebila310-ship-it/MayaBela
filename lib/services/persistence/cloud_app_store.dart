@@ -131,6 +131,9 @@ import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/services/timetable_service.dart';
 import 'package:mayabela/utils/startup_profiler.dart';
 
+/// Whether a queued mutation should hit PostgREST on this flush.
+enum OutboxWriteDecision { post, hold, drop }
+
 /// Syncs app data between local services and Firestore.
 class CloudAppStore {
   CloudAppStore._();
@@ -911,15 +914,44 @@ class CloudAppStore {
   Future<void> _flushQueuedMutations() async {
     final items = CloudOutboxService.instance.snapshotMutations();
     if (items.isEmpty) return;
+    final jwtSchool = SchoolAuthCloudService.accessTokenSchoolId();
+    if ((jwtSchool ?? '').trim().isEmpty) {
+      if (kDebugMode) {
+        debugPrint('[CloudAppStore] outbox flush skipped: JWT has no school');
+      }
+      return;
+    }
     CloudOutboxService.instance.setFlushing(true);
     try {
       final byRegistry = <String, List<CloudOutboxMutation>>{};
       for (final m in items) {
+        final decision = outboxWriteDecision(
+          jwtSchoolId: jwtSchool,
+          mutationSchoolId: m.resolvedSchoolId,
+        );
+        if (decision == OutboxWriteDecision.hold) {
+          continue;
+        }
+        if (decision == OutboxWriteDecision.drop) {
+          await CloudOutboxService.instance.ack(m.collection, m.docId);
+          if (kDebugMode) {
+            debugPrint(
+              '[CloudAppStore] outbox dropped ${m.collection}/${m.docId} '
+              '(school ${m.resolvedSchoolId} ≠ JWT $jwtSchool)',
+            );
+          }
+          continue;
+        }
         if (m.op == 'delete') {
           try {
             await _crud.deleteDoc(collection: m.collection, docId: m.docId);
             await CloudOutboxService.instance.ack(m.collection, m.docId);
           } catch (e) {
+            if (DocumentStore.isRlsForbidden(e) ||
+                DocumentStore.isStaleWrite(e)) {
+              await CloudOutboxService.instance.ack(m.collection, m.docId);
+              continue;
+            }
             if (kDebugMode) {
               debugPrint('[CloudAppStore] outbox delete failed ${m.docId}: $e');
             }
@@ -942,9 +974,10 @@ class CloudAppStore {
           );
           await CloudOutboxService.instance.ack(m.collection, m.docId);
         } catch (e) {
-          if (DocumentStore.isStaleWrite(e)) {
-            // Cloud already has a newer row. Retrying the stale payload
-            // every 5s is what produced thousands of 40001 errors.
+          if (DocumentStore.isStaleWrite(e) ||
+              DocumentStore.isRlsForbidden(e)) {
+            // Cloud already has a newer row, or RLS will never accept this
+            // token/school pair. Retrying every 5s is the 403 storm.
             await CloudOutboxService.instance.ack(m.collection, m.docId);
             continue;
           }
@@ -1360,9 +1393,13 @@ class CloudAppStore {
 
     // Refresh claims when missing. Do not block an explicit Send on a
     // false-negative claims check — the JWT may still be valid for RLS.
-    if (!await SchoolAuthCloudService.hasSchoolClaims()) {
+    // Background sync must still not POST when the access token has no school.
+    final tokenSchool = SchoolAuthCloudService.accessTokenSchoolId();
+    if (!await SchoolAuthCloudService.hasSchoolClaims() ||
+        (tokenSchool ?? '').trim().isEmpty) {
       final ok = await SchoolAuthCloudService.instance.ensureValidSchoolJwt();
-      if (!ok && !immediate) {
+      final after = SchoolAuthCloudService.accessTokenSchoolId();
+      if ((!ok || (after ?? '').trim().isEmpty) && !immediate) {
         if (rethrowOnError) {
           throw StateError(
             'Cloud session expired — sign out, sign in as Admin, wait for Ready.',
@@ -1413,17 +1450,35 @@ class CloudAppStore {
     }
   }
 
+  /// Hold = JWT has no school (retry later, do not POST).
+  /// Drop = row school can never pass this token's RLS (ack, do not retry).
+  /// Post = school matches (or is empty and createOrUpdate will fill + recheck).
+  @visibleForTesting
+  static OutboxWriteDecision outboxWriteDecision({
+    required String? jwtSchoolId,
+    required String? mutationSchoolId,
+  }) {
+    final jwt = jwtSchoolId?.trim().toUpperCase() ?? '';
+    if (jwt.isEmpty) return OutboxWriteDecision.hold;
+    final row = mutationSchoolId?.trim().toUpperCase() ?? '';
+    if (row.isEmpty) return OutboxWriteDecision.post;
+    if (row != jwt) return OutboxWriteDecision.drop;
+    return OutboxWriteDecision.post;
+  }
+
   /// Full-school dump is for offline catch-up, not version conflicts.
-  /// `stale_write` (40001) plus JWT/deny must not re-queue every fee/inventory
-  /// row — that loop is what filled Postgres logs in a minute.
+  /// `stale_write` (40001) plus JWT/deny/RLS 403 must not re-queue every
+  /// fee/inventory row — that loop is what filled Postgres logs in a minute.
   @visibleForTesting
   static bool shouldEscalateToFullPush(Object error) {
     if (DocumentStore.isStaleWrite(error)) return false;
+    if (DocumentStore.isRlsForbidden(error)) return false;
     final text = error.toString().toLowerCase();
     return !text.contains('sub claim') &&
         !text.contains('jwt') &&
         !text.contains('denied') &&
-        !text.contains('sign in');
+        !text.contains('sign in') &&
+        !text.contains('no school');
   }
 
   // —— CRUD: Auth ——
