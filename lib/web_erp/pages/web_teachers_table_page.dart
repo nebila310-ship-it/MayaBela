@@ -13,10 +13,12 @@ import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/enrolment_excel_import_action.dart';
 import 'package:mayabela/widgets/maya_floating_chat.dart';
 import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
+import 'package:mayabela/services/enrolment_excel_import.dart';
 
 /// Unified directory for administration staff or classroom teachers.
 enum WebTeachersDirectoryMode { administrationStaff, classroomTeachers }
@@ -74,6 +76,10 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
       ? 'Staff with an assigned role. They sign in as Administration Staff and only see that role’s modules.'
       : 'Classroom teachers (no admin role). They sign in as Teacher. Section Director assigns classes later.';
 
+  EnrolmentImportScope get _importScope => _isStaffDir
+      ? EnrolmentImportScope.staff
+      : EnrolmentImportScope.teachers;
+
   void _openAdd() {
     final go = widget.onNavigate;
     if (go != null && ModuleAccess.canManage(_addRoute)) {
@@ -89,6 +95,10 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
         ),
       ),
     );
+  }
+
+  Future<void> _openImport() {
+    return EnrolmentExcelImportAction.run(context, scope: _importScope);
   }
 
   Future<void> _attachPhoto(AdminTeacherRecord teacher) async {
@@ -260,6 +270,15 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                   label: Text(_addLabel),
                 ),
               ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _openImport,
+                  icon: const Icon(Icons.upload_file_outlined),
+                  label: const Text('Import Excel'),
+                ),
+              ),
             ],
           ] else
             Row(
@@ -267,12 +286,19 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                 Expanded(
                   child: Text(_title, style: WebErpTheme.sectionTitle(context)),
                 ),
-                if (canAdd)
+                if (canAdd) ...[
+                  OutlinedButton.icon(
+                    onPressed: _openImport,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Import Excel'),
+                  ),
+                  const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: _openAdd,
                     icon: const Icon(Icons.person_add_alt_1_outlined),
                     label: Text(_addLabel),
                   ),
+                ],
               ],
             ),
           const SizedBox(height: 6),
@@ -335,12 +361,18 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                   _page = 0;
                 }),
               ),
-            if (widget.embedded && canAdd)
+            if (widget.embedded && canAdd) ...[
+              OutlinedButton.icon(
+                onPressed: _openImport,
+                icon: const Icon(Icons.upload_file_outlined),
+                label: const Text('Import Excel'),
+              ),
               FilledButton.icon(
                 onPressed: _openAdd,
                 icon: const Icon(Icons.person_add_alt_1_outlined),
                 label: Text(_addLabel),
               ),
+            ],
           ],
         ),
       ],
@@ -407,6 +439,12 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
               onPressed: _openAdd,
               icon: const Icon(Icons.person_add_alt_1_outlined),
               label: Text(_addLabel),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _openImport,
+              icon: const Icon(Icons.upload_file_outlined),
+              label: const Text('Import Excel'),
             ),
           ],
         ],

@@ -14,10 +14,12 @@ import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_staff_ui.dart';
+import 'package:mayabela/widgets/enrolment_excel_import_action.dart';
 import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/staff_role_labels.dart';
+import 'package:mayabela/services/enrolment_excel_import.dart';
 
 class AdminStudentsScreen extends StatelessWidget {
   const AdminStudentsScreen({super.key});
@@ -38,6 +40,15 @@ class AdminStudentsScreen extends StatelessWidget {
             backgroundColor: Colors.indigo,
             title: Text(s.dashboardTitle('students', roleKey: 'admin')),
             actions: [
+              if (ModuleAccess.canManage('students'))
+                IconButton(
+                  icon: const Icon(Icons.upload_file_outlined),
+                  tooltip: 'Import Excel',
+                  onPressed: () => EnrolmentExcelImportAction.run(
+                    context,
+                    scope: EnrolmentImportScope.students,
+                  ),
+                ),
               IconButton(
                 icon: const Icon(Icons.qr_code_scanner_rounded),
                 tooltip: s.scanStudentQr,
@@ -184,6 +195,17 @@ class _AdminStaffScreenState extends State<AdminStaffScreen>
                 fontSize: 18,
               ),
             ),
+            actions: [
+              if (ModuleAccess.canHireStaff)
+                IconButton(
+                  icon: const Icon(Icons.upload_file_outlined),
+                  tooltip: 'Import Excel',
+                  onPressed: () => EnrolmentExcelImportAction.run(
+                    context,
+                    scope: EnrolmentImportScope.all,
+                  ),
+                ),
+            ],
           ),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

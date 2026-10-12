@@ -14,8 +14,10 @@ import 'package:mayabela/web_erp/widgets/web_admin_profile_dialog.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
+import 'package:mayabela/widgets/enrolment_excel_import_action.dart';
 import 'package:mayabela/widgets/maya_floating_chat.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
+import 'package:mayabela/services/enrolment_excel_import.dart';
 
 class WebStudentsTablePage extends StatefulWidget {
   const WebStudentsTablePage({super.key, this.onNavigate});
@@ -223,6 +225,15 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
               label: const Text('Add Student'),
             ),
           ),
+        if (_canManage)
+          OutlinedButton.icon(
+            onPressed: () => EnrolmentExcelImportAction.run(
+              context,
+              scope: EnrolmentImportScope.students,
+            ),
+            icon: const Icon(Icons.upload_file_outlined),
+            label: const Text('Import Excel'),
+          ),
         OutlinedButton.icon(
           onPressed: () => widget.onNavigate?.call('sis'),
           icon: const Icon(Icons.badge_outlined),
@@ -392,6 +403,15 @@ class _WebStudentsTablePageState extends State<WebStudentsTablePage> {
               onPressed: _openAdd,
               icon: const Icon(Icons.person_add_alt_1_outlined),
               label: const Text('Add Student'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => EnrolmentExcelImportAction.run(
+                context,
+                scope: EnrolmentImportScope.students,
+              ),
+              icon: const Icon(Icons.upload_file_outlined),
+              label: const Text('Import Excel'),
             ),
           ],
         ],

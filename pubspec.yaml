@@ -54,6 +54,7 @@ dependencies:
   path: ^1.9.1
   path_provider: ^2.1.5
   excel_plus: 2.2.0
+  archive: ^4.0.9
   file_picker: ^10.1.2
   open_file: ^3.5.10
   supabase_flutter: ^2.9.1
