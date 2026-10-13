@@ -1735,6 +1735,12 @@ class AppStrings implements AppStringsLike {
         'This student is not in $className',
         'ይህ ተማሪ በ$className ውስጥ አይደለም',
       );
+  String get qrStudentNotInThisClass => t(
+        'This student is not in this class',
+        'ይህ ተማሪ በዚህ ክፍል ውስጥ አይደለም',
+      );
+  String get qrYourClassesOnly =>
+      t('Your classes only', 'የእርስዎ ክፍሎች ብቻ');
   String noStudentsInClassNamed(String className) => t(
         'No students with QR codes in $className',
         'በ$className ውስጥ QR ያላቸው ተማሪዎች የሉም',

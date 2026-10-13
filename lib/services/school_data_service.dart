@@ -8018,6 +8018,51 @@ class SchoolDataService {
         .toList();
   }
 
+  List<StudentQrProfile> getStudentQrProfilesForClasses(
+    List<String> classNames,
+  ) {
+    final allowed = classNames
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (allowed.isEmpty) return const [];
+    final seen = <String>{};
+    final profiles = <StudentQrProfile>[];
+    for (final profile in getAllStudentQrProfiles()) {
+      final inClass = allowed.any(
+        (name) => _classNamesMatch(profile.className, name),
+      );
+      if (!inClass) continue;
+      if (!seen.add(profile.id.trim().toUpperCase())) continue;
+      profiles.add(profile);
+    }
+    return profiles;
+  }
+
+  /// Classes a teacher may scan. An explicit class wins. Otherwise only the
+  /// signed-in teacher's own classes — never the whole school.
+  List<String> teacherQrClassNames({String? scopedClassName}) {
+    final scoped = scopedClassName?.trim();
+    if (scoped != null && scoped.isNotEmpty) return [scoped];
+
+    final names = <String>{};
+    final user = AuthService.currentUser;
+    if (user?.roleKey == AuthService.roleTeacher) {
+      for (final name in AuthService.accessClassNamesForSync()) {
+        final trimmed = name.trim();
+        if (trimmed.isNotEmpty) names.add(trimmed);
+      }
+    }
+    final teacherId = user?.linkedTeacherId?.trim();
+    if (teacherId != null && teacherId.isNotEmpty) {
+      for (final assignment in getClassAssignmentsForTeacher(teacherId)) {
+        final trimmed = assignment.className.trim();
+        if (trimmed.isNotEmpty) names.add(trimmed);
+      }
+    }
+    return names.toList();
+  }
+
   List<StudentQrProfile> getStudentQrProfilesForParent() {
     final children = getChildren();
     final childIds = children
@@ -8088,18 +8133,28 @@ class SchoolDataService {
     required QrScanAction action,
     required String scannedBy,
     String? allowedClassName,
+    List<String>? allowedClassNames,
     bool syncAttendance = false,
   }) {
     final student = findStudentByQrCode(qrCode);
     if (student == null) return 'Invalid QR code';
 
-    if (allowedClassName != null &&
-        allowedClassName.trim().isNotEmpty &&
-        !StudentRegistryService.classNamesMatch(
+    final allowed = <String>[
+      if (allowedClassName != null && allowedClassName.trim().isNotEmpty)
+        allowedClassName.trim(),
+      if (allowedClassNames != null)
+        for (final name in allowedClassNames)
+          if (name.trim().isNotEmpty) name.trim(),
+    ];
+    if (allowedClassNames != null ||
+        (allowedClassName != null && allowedClassName.trim().isNotEmpty)) {
+      final inClass = allowed.any(
+        (name) => StudentRegistryService.classNamesMatch(
           student.className,
-          allowedClassName,
-        )) {
-      return 'wrong_class:$allowedClassName';
+          name,
+        ),
+      );
+      if (!inClass) return 'wrong_class';
     }
 
     if (syncAttendance) {
