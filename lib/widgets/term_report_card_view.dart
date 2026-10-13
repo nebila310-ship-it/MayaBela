@@ -293,16 +293,13 @@ class _TermReportCardViewState extends State<TermReportCardView> {
                     alignment: Alignment.centerRight,
                     child: Transform.rotate(
                       angle: -0.1,
-                      child: Opacity(
-                        opacity: 0.92,
-                        child: Image.memory(
-                          _stampInk!,
-                          key: const ValueKey('report-card-bottom-stamp'),
-                          height: 118,
-                          width: 118,
-                          fit: BoxFit.contain,
-                          gaplessPlayback: true,
-                        ),
+                      child: Image.memory(
+                        _stampInk!,
+                        key: const ValueKey('report-card-bottom-stamp'),
+                        height: 118,
+                        width: 118,
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true,
                       ),
                     ),
                   ),
@@ -341,110 +338,120 @@ class _TermReportCardViewState extends State<TermReportCardView> {
   }
 
   Widget _banner(String school, StudentGradeReport report) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-      decoration: BoxDecoration(
-        color: _navy,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Row(
-        children: [
-          if (_logo != null) ...[
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 520;
+        final photoW = wide ? 132.0 : 108.0;
+        final photoH = photoW * 160 / 130;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
             Container(
-              key: const ValueKey('report-card-logo'),
-              width: constraints.maxWidth >= 520 ? 188 : 136,
-              height: constraints.maxWidth >= 520 ? 68 : 52,
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                color: _navy,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Image.memory(
-                _logo!,
-                fit: BoxFit.contain,
-                gaplessPlayback: true,
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  school,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'OFFICIAL GRADE REPORT',
-                  style: TextStyle(
-                    color: _gold,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            key: const ValueKey('report-card-photo'),
-            width: 76,
-            height: 92,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _gold, width: 1.6),
+              child: Row(
+                children: [
+                  if (_logo != null) ...[
+                    Container(
+                      key: const ValueKey('report-card-logo'),
+                      width: wide ? 188 : 136,
+                      height: wide ? 68 : 52,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Image.memory(
+                        _logo!,
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true,
+                      ),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    alignment: Alignment.center,
-                    child: StudentPhotoAvatar(
-                      studentId: report.studentId,
-                      name: report.studentName,
-                      radius: 34,
-                      fallbackColor: _navy,
-                      enableViewer: false,
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          school,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'OFFICIAL GRADE REPORT',
+                          style: TextStyle(
+                            color: _gold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                if (_stampInk != null)
-                  Positioned(
-                    key: const ValueKey('report-card-photo-stamp'),
-                    left: -2,
-                    right: -18,
-                    top: 16,
-                    bottom: -16,
-                    child: Transform.rotate(
-                      angle: -0.16,
-                      child: Opacity(
-                        opacity: 0.9,
+                  SizedBox(width: photoW),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SizedBox(
+                key: const ValueKey('report-card-photo'),
+                width: photoW,
+                height: photoH,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _gold, width: 1.6),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: StudentPhotoAvatar(
+                            studentId: report.studentId,
+                            name: report.studentName,
+                            radius: photoH / 2,
+                            fallbackColor: _navy,
+                            enableViewer: false,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_stampInk != null)
+                      Positioned(
+                        key: const ValueKey('report-card-photo-stamp'),
+                        left: photoW * -0.31,
+                        top: photoH * 0.58,
+                        width: photoW * 0.66,
+                        height: photoH * 0.56,
                         child: Image.memory(
                           _stampInk!,
                           fit: BoxFit.contain,
                           gaplessPlayback: true,
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-      ),
+          ],
+        );
+      },
     );
   }
 
