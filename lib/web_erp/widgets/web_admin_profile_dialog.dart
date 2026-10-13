@@ -30,6 +30,7 @@ import 'package:mayabela/widgets/admin_student_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_student_qr_actions.dart';
 import 'package:mayabela/web_erp/widgets/student_sis_record_view.dart';
 import 'package:mayabela/widgets/student_medical_info_panel.dart';
+import 'package:mayabela/widgets/student_portal_credentials_card.dart';
 import 'package:mayabela/widgets/student_qr_card.dart';
 import 'package:mayabela/utils/email_utils.dart';
 import 'package:mayabela/widgets/send_teacher_credentials.dart';
@@ -245,6 +246,8 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                           value: '${student.grade} · ${student.className}',
                           color: StaffPalette.students.secondary,
                         ),
+                        const SizedBox(height: 4),
+                        StudentPortalCredentialsCard(student: student),
                         StaffInfoTile(
                           icon: Icons.cake_outlined,
                           label: s.studentDateOfBirth,

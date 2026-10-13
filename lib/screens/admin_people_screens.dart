@@ -27,6 +27,7 @@ import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/admin_staff_ui.dart';
 import 'package:mayabela/widgets/profile_photo_align_dialog.dart';
 import 'package:mayabela/widgets/invite_parent_actions.dart';
+import 'package:mayabela/widgets/student_portal_credentials_card.dart';
 import 'package:mayabela/widgets/send_driver_credentials.dart';
 import 'package:mayabela/widgets/staff_registry_avatar.dart';
 import 'package:mayabela/widgets/send_teacher_credentials.dart';
@@ -380,6 +381,8 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
                 value: '${student.grade} · ${student.className}',
                 color: StaffPalette.students.secondary,
               ),
+              const SizedBox(height: 4),
+              StudentPortalCredentialsCard(student: student),
               StaffInfoTile(
                 icon: Icons.location_city_outlined,
                 label: s.campus,

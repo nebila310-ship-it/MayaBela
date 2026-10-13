@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:mayabela/widgets/student_portal_credentials_card.dart';
 
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -184,6 +187,29 @@ void main() {
     expect(prepared.change, PortalAccessChange.granted);
     expect(prepared.student.loginUsername, isNotEmpty);
     expect(prepared.student.grade, 'Grade 8');
+  });
+
+  testWidgets('a student profile shows that student login', (tester) async {
+    final student = enroll('Sami Login', 'Grade 8');
+    final created = await StudentAccountService.instance.createPortalAccount(
+      studentId: student.studentId,
+      createdBy: 'admin',
+      schoolId: schoolId,
+    );
+    expect(created, isNotNull);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StudentPortalCredentialsCard(student: created!),
+        ),
+      ),
+    );
+
+    expect(find.text('Student portal login'), findsOneWidget);
+    expect(find.text(created.loginUsername!), findsOneWidget);
+    expect(find.text('EduAba@2026'), findsOneWidget);
+    expect(find.byKey(const ValueKey('student-portal-copy')), findsOneWidget);
   });
 
   test('an active student below the saved grade cannot sign in', () async {

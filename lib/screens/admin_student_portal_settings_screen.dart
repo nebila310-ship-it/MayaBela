@@ -130,7 +130,7 @@ class _AdminStudentPortalSettingsScreenState
           const Padding(
             padding: EdgeInsets.only(top: 8, bottom: 8),
             child: Text(
-              'Save applies this grade to students already enrolled. Students who now qualify receive a login. Students who fall below it lose login until the grade includes them again. A password they already chose is kept and turned back on. Suspended, graduated, and transferred students stay as they are.',
+              'Save applies this grade to students already enrolled. Students who now qualify receive a login. Students who fall below it lose login until the grade includes them again. A password they already chose is kept and turned back on. Open a student from the student list to copy that student\'s username and temporary password. Suspended, graduated, and transferred students stay as they are.',
             ),
           ),
           TextField(
