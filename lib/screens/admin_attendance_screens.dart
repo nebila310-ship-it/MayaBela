@@ -143,6 +143,9 @@ class _AdminAttendanceReportsScreenState
         final s = AppLocale.instance.strings;
         final report = _data.buildDailyAttendanceReport(_selectedDate);
         final hasData = report.totalCount > 0;
+        final notConducted = _data.classesWithoutConductedAttendance(
+          _selectedDate,
+        );
 
         final body = ListView(
             padding: listPagePadding(context),
@@ -197,8 +200,12 @@ class _AdminAttendanceReportsScreenState
                 ),
                 const SizedBox(height: 24),
                 _TeachersRecordedCard(report: report),
-              ] else
+              ] else if (notConducted.isEmpty)
                 _EmptyReportCard(message: s.noAttendanceReportForDay),
+              if (notConducted.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _NotConductedCard(classes: notConducted),
+              ],
             ],
         );
 
@@ -568,6 +575,59 @@ class _TeachersRecordedCard extends StatelessWidget {
   }
 }
 
+class _NotConductedCard extends StatelessWidget {
+  const _NotConductedCard({required this.classes});
+
+  final List<String> classes;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppLocale.instance.strings;
+    return Card(
+      elevation: 0,
+      color: const Color(0xFFFFF4F2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFFE57373)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.event_busy_rounded, color: Color(0xFFC62828)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    s.attendanceNotConducted,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFB71C1C),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...classes.map(
+              (name) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptyReportCard extends StatelessWidget {
   const _EmptyReportCard({required this.message});
 
@@ -620,6 +680,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return const Color(0xFF2E7D32);
       case AttendanceStatus.excused:
         return const Color(0xFF1565C0);
+      case AttendanceStatus.unmarked:
+        return const Color(0xFF607D8B);
     }
   }
 
@@ -633,6 +695,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return s.presentToday;
       case AttendanceStatus.excused:
         return s.excusedToday;
+      case AttendanceStatus.unmarked:
+        return s.notTaken;
     }
   }
 
@@ -646,6 +710,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return s.gradePresentCount(grade, count);
       case AttendanceStatus.excused:
         return s.gradeExcusedCount(grade, count);
+      case AttendanceStatus.unmarked:
+        return '$grade · $count';
     }
   }
 
@@ -759,6 +825,8 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
         return const Color(0xFF2E7D32);
       case AttendanceStatus.excused:
         return const Color(0xFF1565C0);
+      case AttendanceStatus.unmarked:
+        return const Color(0xFF607D8B);
     }
   }
 
@@ -841,6 +909,8 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
         return s.presentToday.toLowerCase();
       case AttendanceStatus.excused:
         return s.excusedToday.toLowerCase();
+      case AttendanceStatus.unmarked:
+        return s.notTaken.toLowerCase();
     }
   }
 }

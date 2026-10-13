@@ -43,6 +43,14 @@ void main() {
 
     final view = data.attendanceRegisterView(className: className, date: day);
     expect(view.entries, hasLength(18));
+    expect(
+      view.entries.every((e) => e.status == AttendanceStatus.unmarked),
+      isTrue,
+    );
+    for (final entry in view.entries) {
+      entry.status = AttendanceStatus.present;
+      entry.updatedAt = DateTime.now();
+    }
     view.entries.last.status = AttendanceStatus.absent;
     view.entries.last.updatedAt = DateTime.now();
 
@@ -99,6 +107,14 @@ void main() {
     }
 
     final view = data.attendanceRegisterView(className: className, date: day);
+    expect(
+      view.entries.every((e) => e.status == AttendanceStatus.unmarked),
+      isTrue,
+    );
+    for (final entry in view.entries) {
+      entry.status = AttendanceStatus.present;
+      entry.updatedAt = DateTime.now();
+    }
     view.entries[0].status = AttendanceStatus.absent;
     view.entries[0].updatedAt = DateTime.now();
     expect(
@@ -125,7 +141,7 @@ void main() {
     expect(report.absentCount, 1);
   });
 
-  test('partial save still reports the full class list as present', () {
+  test('partial save leaves the rest of the class blank', () {
     final data = SchoolDataService.instance;
     const className = 'KG 1C-REP';
     final day = DateTime(2026, 9, 16);
@@ -168,7 +184,13 @@ void main() {
     expect(stored.entries, hasLength(1));
 
     final report = data.buildDailyAttendanceReport(day);
-    expect(report.presentCount, 17);
+    expect(report.presentCount, 0);
     expect(report.absentCount, 1);
+    expect(report.records, hasLength(1));
+    final live = data.attendanceRegisterView(className: className, date: day);
+    expect(
+      live.entries.where((e) => e.status == AttendanceStatus.unmarked),
+      hasLength(17),
+    );
   });
 }

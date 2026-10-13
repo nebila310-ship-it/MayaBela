@@ -44,7 +44,7 @@ class StudentRef {
   String get inviteStudentId => registryStudentId ?? id;
 }
 
-enum AttendanceStatus { present, absent, late, excused }
+enum AttendanceStatus { present, absent, late, excused, unmarked }
 
 class StudentAttendanceEntry {
   StudentAttendanceEntry({

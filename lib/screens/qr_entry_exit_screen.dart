@@ -121,6 +121,8 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
           _lastMessage = s.qrStudentNotInThisClass;
         } else if (error == 'locked') {
           _lastMessage = s.qrAttendanceLocked;
+        } else if (error == 'closed') {
+          _lastMessage = s.attendanceClosedForDay;
         } else {
           _lastMessage = error;
         }
