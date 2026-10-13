@@ -135,19 +135,16 @@ class SchoolMarkService {
     return _stampSeal(source);
   }
 
-  /// Keeps the colored seal and clears the scanned backdrop around it,
-  /// including a black photo surround connected to the edges.
+  /// Keeps the colored seal and clears the scanned backdrop around it.
+  ///
+  /// Letter bodies on a scanned seal are only a little more colored than the
+  /// pale disc, so a strict darkness cut turns the wording into dots. This
+  /// keeps the whole stroke, drops white paper and the black surround, and
+  /// presses the same hue dark enough to read on a photo.
   img.Image _stampSeal(img.Image source) {
     final width = source.width;
     final height = source.height;
-    final strong = List.generate(
-      height,
-      (_) => List<bool>.filled(width, false),
-    );
-    final colors = List.generate(
-      height,
-      (_) => List<int>.filled(width, 0),
-    );
+    final out = img.Image(width: width, height: height, numChannels: 4);
     for (var y = 0; y < height; y++) {
       for (var x = 0; x < width; x++) {
         final pixel = source.getPixel(x, y);
@@ -158,100 +155,31 @@ class SchoolMarkService {
         if (alpha < 16) continue;
         final maxC = math.max(r, math.max(g, b));
         final minC = math.min(r, math.min(g, b));
-        final sat = maxC == 0 ? 0.0 : (maxC - minC) / maxC;
+        final chroma = maxC - minC;
         final luma = (r * 299 + g * 587 + b * 114) / 1000.0;
-        // Keep the colored letters as well as the ring. Near-black scan
-        // noise stays out because it is not saturated.
-        if (luma >= 42 && luma <= 215 && sat >= 0.28) {
-          strong[y][x] = true;
-          colors[y][x] = (_deeperInk(r) << 16) |
-              (_deeperInk(g) << 8) |
-              _deeperInk(b);
-        }
-      }
-    }
-
-    final backdrop = List.generate(
-      height,
-      (_) => List<bool>.filled(width, false),
-    );
-    final stack = <(int, int)>[];
-    for (var x = 0; x < width; x++) {
-      stack.add((x, 0));
-      stack.add((x, height - 1));
-    }
-    for (var y = 0; y < height; y++) {
-      stack.add((0, y));
-      stack.add((width - 1, y));
-    }
-    while (stack.isNotEmpty) {
-      final (x, y) = stack.removeLast();
-      if (x < 0 || y < 0 || x >= width || y >= height) continue;
-      if (backdrop[y][x] || strong[y][x]) continue;
-      backdrop[y][x] = true;
-      stack.add((x + 1, y));
-      stack.add((x - 1, y));
-      stack.add((x, y + 1));
-      stack.add((x, y - 1));
-    }
-
-    final out = img.Image(width: width, height: height, numChannels: 4);
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        if (!strong[y][x] || backdrop[y][x]) continue;
-        final packed = colors[y][x];
+        if (chroma < 16 || luma < 16 || luma > 220) continue;
+        final inkAlpha = math.min(255, 220 + (chroma - 16) * 6);
         out.setPixel(
           x,
           y,
           img.ColorRgba8(
-            (packed >> 16) & 255,
-            (packed >> 8) & 255,
-            packed & 255,
-            255,
+            _readableInk(r, luma),
+            _readableInk(g, luma),
+            _readableInk(b, luma),
+            inkAlpha,
           ),
         );
       }
     }
-    return _pressHarder(out);
-  }
-
-  /// Pale scan colors become a solid press. A light blue ring around 200
-  /// lands near 85, dark enough to read on the photo.
-  int _deeperInk(int channel) {
-    final pulled = (channel * channel / 255 * 0.55).round();
-    return pulled.clamp(0, 255);
-  }
-
-  /// Adds a pixel of ink around each stroke so thin lettering holds.
-  img.Image _pressHarder(img.Image ink) {
-    final width = ink.width;
-    final height = ink.height;
-    final out = img.Image.from(ink);
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        if (ink.getPixel(x, y).a.toInt() > 20) continue;
-        var r = 0;
-        var g = 0;
-        var b = 0;
-        var near = 0;
-        for (var dy = -1; dy <= 1; dy++) {
-          for (var dx = -1; dx <= 1; dx++) {
-            final nx = x + dx;
-            final ny = y + dy;
-            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-            final pixel = ink.getPixel(nx, ny);
-            if (pixel.a.toInt() < 200) continue;
-            r += pixel.r.toInt();
-            g += pixel.g.toInt();
-            b += pixel.b.toInt();
-            near++;
-          }
-        }
-        if (near < 2) continue;
-        out.setPixel(x, y, img.ColorRgba8(r ~/ near, g ~/ near, b ~/ near, 255));
-      }
-    }
     return out;
+  }
+
+  /// Same hue, pressed down so a pale blue letter stays deep blue.
+  int _readableInk(int channel, double luma) {
+    final pulled = (22 + (channel - luma) * 4).round();
+    if (pulled < 0) return 0;
+    if (pulled > 255) return 255;
+    return pulled;
   }
 
   /// Pulls a signature off lined paper. A scan's dark border and ruling
