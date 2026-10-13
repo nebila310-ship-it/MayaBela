@@ -297,6 +297,9 @@
       obs.observe(document.documentElement, { childList: true, subtree: true });
     })();
   </script>
+  <!-- Same-origin barcode library. The live site blocks unpkg.com, which the
+       scanner would otherwise load. -->
+  <script id="mobile-scanner-barcode-reader" src="zxing.min.js" async></script>
 </head>
 <body>
   <div id="splash">
