@@ -8,6 +8,7 @@ import 'package:mayabela/database/models/database_models.dart';
 import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/models/attendance_window.dart';
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/bus_route.dart';
 import 'package:mayabela/models/calendar_event.dart';
@@ -4863,19 +4864,12 @@ class SchoolDataService {
     );
   }
 
-  /// Morning register opens with the school day and closes at 9:00.
-  /// Class starts at 8:30, so an unlocked register locks 30 minutes later.
-  static const attendanceClassStartHour = 8;
-  static const attendanceClassStartMinute = 30;
-  static const attendanceCloseHour = 9;
-  static const attendanceCloseMinute = 0;
-
   /// Tests pin the clock. Release builds use the phone's local time.
   @visibleForTesting
   DateTime? debugAttendanceNow;
 
-  /// Tests turn the 9:00 rule on. Debug builds leave it off so older
-  /// fixtures can still save a register. Release builds always enforce it.
+  /// Tests turn the school hours on. Debug builds leave them off so older
+  /// fixtures can still save a register. Release builds always enforce them.
   @visibleForTesting
   bool? debugEnforceAttendanceWindow;
 
@@ -4887,21 +4881,36 @@ class SchoolDataService {
     return !kDebugMode;
   }
 
-  bool attendanceTakingOpen(DateTime date, {String periodKey = ''}) {
-    if (!attendanceWindowEnforced) return true;
-    if (_normalizeAttendancePeriodKey(periodKey).isNotEmpty) return true;
+  /// Hours set by the school admin. Defaults to 08:30–09:00 until they change it.
+  AttendanceWindowSettings activeAttendanceWindow() {
+    final id = AuthService.activeSchoolId?.trim();
+    if (id == null || id.isEmpty) return const AttendanceWindowSettings();
+    return SchoolRegistryService.instance.lookup(id)?.attendanceWindow ??
+        const AttendanceWindowSettings();
+  }
+
+  AttendanceWindowPhase attendanceWindowPhase(
+    DateTime date, {
+    String periodKey = '',
+  }) {
+    if (!attendanceWindowEnforced) return AttendanceWindowPhase.open;
+    if (_normalizeAttendancePeriodKey(periodKey).isNotEmpty) {
+      return AttendanceWindowPhase.open;
+    }
     final clock = attendanceClock();
     final day = _calendarDay(date);
     final today = _calendarDay(clock);
-    if (day != today) return false;
-    final closes = DateTime(
-      today.year,
-      today.month,
-      today.day,
-      attendanceCloseHour,
-      attendanceCloseMinute,
-    );
-    return clock.isBefore(closes);
+    if (day != today) return AttendanceWindowPhase.closed;
+    final window = activeAttendanceWindow();
+    final minute = clock.hour * 60 + clock.minute;
+    if (minute < window.openMinutes) return AttendanceWindowPhase.beforeOpen;
+    if (minute >= window.closeMinutes) return AttendanceWindowPhase.closed;
+    return AttendanceWindowPhase.open;
+  }
+
+  bool attendanceTakingOpen(DateTime date, {String periodKey = ''}) {
+    return attendanceWindowPhase(date, periodKey: periodKey) ==
+        AttendanceWindowPhase.open;
   }
 
   bool _canWriteDailyAttendance(
@@ -4920,7 +4929,8 @@ class SchoolDataService {
     if (!attendanceWindowEnforced) return;
     final day = _calendarDay(date);
     final today = _calendarDay(attendanceClock());
-    if (day.isAfter(today) || attendanceTakingOpen(date)) return;
+    if (day.isAfter(today)) return;
+    if (attendanceWindowPhase(date) != AttendanceWindowPhase.closed) return;
     final pending = _attendanceSessions
         .where(
           (session) =>

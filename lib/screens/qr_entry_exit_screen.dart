@@ -122,7 +122,11 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
         } else if (error == 'locked') {
           _lastMessage = s.qrAttendanceLocked;
         } else if (error == 'closed') {
-          _lastMessage = s.attendanceClosedForDay;
+          final hours = _data.activeAttendanceWindow();
+          _lastMessage = s.attendanceClosedForDay(
+            hours.openLabel,
+            hours.closeLabel,
+          );
         } else {
           _lastMessage = error;
         }

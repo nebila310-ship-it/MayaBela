@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/models/attendance_window.dart';
 import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 void main() {
@@ -206,5 +208,62 @@ void main() {
       data.classesWithoutConductedAttendance(morning),
       isNot(contains(className)),
     );
+  });
+
+  test('the school opening and closing times apply to every teacher', () {
+    final data = SchoolDataService.instance;
+    data.debugEnforceAttendanceWindow = true;
+    const schoolId = 'WIN838';
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.hours',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: schoolId,
+      fullName: 'Hours Admin',
+    );
+    const window = AttendanceWindowSettings(
+      openHour: 7,
+      openMinute: 15,
+      closeHour: 7,
+      closeMinute: 50,
+    );
+    SchoolRegistryService.instance.upsertSchool(
+      SchoolRecord(
+        id: schoolId,
+        name: 'Window School',
+        attendanceWindow: window,
+      ),
+    );
+    final stored = SchoolRecord.fromJson(
+      SchoolRegistryService.instance.lookup(schoolId)!.toJson(),
+    );
+    expect(stored.attendanceWindow.openLabel, '07:15');
+    expect(stored.attendanceWindow.closeLabel, '07:50');
+
+    final day = DateTime(2026, 10, 14);
+    data.debugAttendanceNow = DateTime(2026, 10, 14, 7, 14);
+    expect(data.attendanceTakingOpen(day), isFalse);
+    expect(
+      data.attendanceWindowPhase(day),
+      AttendanceWindowPhase.beforeOpen,
+    );
+
+    data.debugAttendanceNow = DateTime(2026, 10, 14, 7, 15);
+    expect(data.attendanceTakingOpen(day), isTrue);
+
+    data.debugAttendanceNow = DateTime(2026, 10, 14, 7, 50);
+    expect(data.attendanceTakingOpen(day), isFalse);
+    expect(data.attendanceWindowPhase(day), AttendanceWindowPhase.closed);
+
+    AuthService.currentUser = RegisteredUser(
+      username: 'teacher.hours',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: schoolId,
+      fullName: 'Ms Hana',
+    );
+    expect(data.activeAttendanceWindow().openLabel, '07:15');
+    expect(data.activeAttendanceWindow().closeLabel, '07:50');
+    expect(data.attendanceTakingOpen(day), isFalse);
   });
 }
