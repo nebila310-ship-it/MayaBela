@@ -20,6 +20,7 @@ import 'package:mayabela/services/platform_schools_cloud_service.dart';
 import 'package:mayabela/services/school_admin_credentials_service.dart';
 import 'package:mayabela/services/school_enrollment_metrics_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/services/school_mark_service.dart';
 import 'package:mayabela/services/school_platform_insight.dart';
 import 'package:mayabela/services/rbac/school_module_catalog.dart';
 import 'package:mayabela/services/school_registry_service.dart';
@@ -96,6 +97,56 @@ Future<void> _saveSchoolLogoFromPicker({
     return;
   }
   if (context.mounted) onSaved();
+}
+
+/// Returns an error message, or null when the mark is stored for this school.
+Future<String?> _publishSchoolMark({
+  required String schoolId,
+  required SchoolMarkKind kind,
+  required Uint8List png,
+}) async {
+  final marks = SchoolMarkService.instance;
+  final saved = await marks.saveLocal(schoolId, kind, png);
+  if (saved == null) {
+    return marks.lastError ?? 'Could not save the image.';
+  }
+  final stored = await marks.publish(
+    schoolId: schoolId,
+    kind: kind,
+    png: png,
+  );
+  if (stored == null) {
+    return marks.lastError ?? 'Could not store the image for this school.';
+  }
+  final cloud = await SchoolRegistryService.instance.setSchoolMark(
+    schoolId,
+    kind: kind,
+    localPath: saved,
+    storedUrl: stored,
+  );
+  if (!cloud.ok) {
+    return cloud.errorMessage?.trim().isNotEmpty == true
+        ? cloud.errorMessage!
+        : 'Saved on this device, but cloud sync failed. Try again.';
+  }
+  return null;
+}
+
+Future<Uint8List?> _pickSchoolMarkPng(SchoolMarkKind kind) async {
+  final logos = SchoolLogoService.instance;
+  final picked = await logos.pickLogoXFile();
+  if (picked == null) {
+    SchoolMarkService.instance.lastError =
+        logos.lastError ?? 'Image selection cancelled.';
+    return null;
+  }
+  final raw = await picked.readAsBytes();
+  final png = await SchoolMarkService.instance.normalizeToPng(raw, kind);
+  if (png == null) {
+    SchoolMarkService.instance.lastError ??=
+        'Could not process that image. Try PNG or JPG.';
+  }
+  return png;
 }
 
 /// Hidden owner console — only reachable via secret gesture on login. Not a user role.
@@ -946,6 +997,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
   SchoolRecord? _school;
   String? _logoPath;
   Uint8List? _logoBytes;
+  Uint8List? _stampBytes;
+  Uint8List? _signatureBytes;
   String _snapshot = '';
   bool _editing = false;
   bool _saving = false;
@@ -1043,6 +1096,30 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     }
     setState(() {});
     _loadLogo();
+    _loadMarks();
+  }
+
+  Future<void> _loadMarks() async {
+    final school = _school;
+    if (school == null) return;
+    final marks = SchoolMarkService.instance;
+    final stamp = await marks.resolve(
+      schoolId: school.id,
+      kind: SchoolMarkKind.stamp,
+      storedUrl: school.stampUrl,
+      storedPath: school.stampPath,
+    );
+    final signature = await marks.resolve(
+      schoolId: school.id,
+      kind: SchoolMarkKind.principalSignature,
+      storedUrl: school.principalSignatureUrl,
+      storedPath: school.principalSignaturePath,
+    );
+    if (!mounted) return;
+    setState(() {
+      _stampBytes = stamp;
+      _signatureBytes = signature;
+    });
   }
 
   void _startEdit() => setState(() => _editing = true);
@@ -1381,6 +1458,98 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
     setState(() => _logoBytes = null);
     _load();
     _toast('Logo removed');
+  }
+
+  Future<void> _changeMark(SchoolMarkKind kind) async {
+    if (!_editing) {
+      _toast('Choose Edit before changing the stamp or signature.');
+      return;
+    }
+    final png = await _pickSchoolMarkPng(kind);
+    if (!mounted) return;
+    if (png == null) {
+      final message = SchoolMarkService.instance.lastError;
+      if (message != null &&
+          !message.contains('cancelled') &&
+          !message.contains('No image')) {
+        _toast(message, isError: true);
+      }
+      return;
+    }
+    setState(() {
+      if (kind == SchoolMarkKind.stamp) {
+        _stampBytes = png;
+      } else {
+        _signatureBytes = png;
+      }
+    });
+    final error = await _publishSchoolMark(
+      schoolId: widget.schoolId,
+      kind: kind,
+      png: png,
+    );
+    if (!mounted) return;
+    if (error != null) {
+      _toast(error, isError: true);
+      return;
+    }
+    _load();
+    _toast(
+      kind == SchoolMarkKind.stamp
+          ? 'School stamp saved for grade reports'
+          : 'Principal signature saved for grade reports',
+    );
+  }
+
+  Future<void> _removeMark(SchoolMarkKind kind) async {
+    if (!_editing) {
+      _toast('Choose Edit before changing the stamp or signature.');
+      return;
+    }
+    final label =
+        kind == SchoolMarkKind.stamp ? 'school stamp' : 'principal signature';
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove $label?'),
+        content: Text(
+          'Grade reports for this school will no longer show the $label.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    final cloud = await SchoolRegistryService.instance.clearSchoolMark(
+      widget.schoolId,
+      kind,
+    );
+    if (!mounted) return;
+    if (!cloud.ok) {
+      _toast(
+        cloud.errorMessage ?? 'Still stored in cloud. Try again.',
+        isError: true,
+      );
+      return;
+    }
+    setState(() {
+      if (kind == SchoolMarkKind.stamp) {
+        _stampBytes = null;
+      } else {
+        _signatureBytes = null;
+      }
+    });
+    _load();
+    _toast(kind == SchoolMarkKind.stamp ? 'Stamp removed' : 'Signature removed');
   }
 
   Future<void> _removeSchool() async {
@@ -2168,6 +2337,60 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           ],
         ),
         const SizedBox(height: 16),
+        _sectionTitle('School stamp & principal signature'),
+        const Text(
+          'Used on official grade reports for this school only. The stamp covers the lower half of the student photo and is repeated at the bottom of the card. The signature is placed on the principal line. The school logo is shown in the report header.',
+          style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.35),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _markPreview('School stamp', _stampBytes),
+            _markPreview('Principal signature', _signatureBytes),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _changeMark(SchoolMarkKind.stamp),
+              icon: const Icon(Icons.approval_outlined),
+              label: const Text('Upload school stamp'),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+            ),
+            if (_stampBytes != null ||
+                (_school?.stampUrl?.trim().isNotEmpty ?? false))
+              OutlinedButton.icon(
+                onPressed: () => _removeMark(SchoolMarkKind.stamp),
+                icon: const Icon(Icons.delete_outline, color: Colors.orange),
+                label: const Text(
+                  'Remove stamp',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => _changeMark(SchoolMarkKind.principalSignature),
+              icon: const Icon(Icons.draw_outlined),
+              label: const Text('Upload principal signature'),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+            ),
+            if (_signatureBytes != null ||
+                (_school?.principalSignatureUrl?.trim().isNotEmpty ?? false))
+              OutlinedButton.icon(
+                onPressed: () => _removeMark(SchoolMarkKind.principalSignature),
+                icon: const Icon(Icons.delete_outline, color: Colors.orange),
+                label: const Text(
+                  'Remove signature',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
         _sectionTitle('Access control'),
         Wrap(
           spacing: 8,
@@ -2234,6 +2457,46 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
           label: const Text('Delete school permanently', style: TextStyle(color: Colors.red)),
         ),
       ],
+    );
+  }
+
+  Widget _markPreview(String label, Uint8List? bytes) {
+    return Container(
+      width: 168,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 72,
+            width: double.infinity,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: bytes == null
+                ? const Text(
+                    'Not added',
+                    style: TextStyle(color: Colors.black45, fontSize: 12),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.memory(bytes, fit: BoxFit.contain),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2483,6 +2746,8 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
   String? _pendingLogoPath;
   Uint8List? _pendingLogoBytes;
   SchoolLogoStyle _pendingLogoStyle = SchoolLogoStyle.rectangular;
+  Uint8List? _pendingStampBytes;
+  Uint8List? _pendingSignatureBytes;
   bool _showPassword = true;
   bool _creating = false;
 
@@ -2541,6 +2806,37 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
       _pendingLogoStyle = style;
       _message = '';
     });
+  }
+
+  Future<void> _pickPendingMark(SchoolMarkKind kind) async {
+    final png = await _pickSchoolMarkPng(kind);
+    if (!mounted) return;
+    if (png == null) {
+      final err = SchoolMarkService.instance.lastError;
+      if (err != null &&
+          !err.contains('cancelled') &&
+          !err.contains('No image')) {
+        setState(() => _message = err);
+      }
+      return;
+    }
+    setState(() {
+      if (kind == SchoolMarkKind.stamp) {
+        _pendingStampBytes = png;
+      } else {
+        _pendingSignatureBytes = png;
+      }
+      _message = '';
+    });
+  }
+
+  Future<String?> _storePendingMark(
+    String schoolId,
+    SchoolMarkKind kind,
+    Uint8List? bytes,
+  ) async {
+    if (bytes == null) return null;
+    return _publishSchoolMark(schoolId: schoolId, kind: kind, png: bytes);
   }
 
   Future<void> _create() async {
@@ -2737,6 +3033,22 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
         }
       }
 
+      final markNotes = <String>[];
+      final stampError = await _storePendingMark(
+        school.id,
+        SchoolMarkKind.stamp,
+        _pendingStampBytes,
+      );
+      if (stampError != null) markNotes.add('School stamp: $stampError');
+      final signatureError = await _storePendingMark(
+        school.id,
+        SchoolMarkKind.principalSignature,
+        _pendingSignatureBytes,
+      );
+      if (signatureError != null) {
+        markNotes.add('Principal signature: $signatureError');
+      }
+
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -2772,6 +3084,13 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
                   'Saved in Supabase — other devices will see this school after refresh.',
                   style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
+                if (markNotes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    markNotes.join('\n'),
+                    style: const TextStyle(color: Colors.orangeAccent, fontSize: 12),
+                  ),
+                ],
               ],
             ),
           ),
@@ -2948,6 +3267,66 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
                   ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'School stamp & principal signature (optional)',
+            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'When saved, grade reports for this school show the logo in the header, the stamp across the lower half of the student photo and again at the bottom, and the signature on the principal line.',
+            style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _creating
+                    ? null
+                    : () => _pickPendingMark(SchoolMarkKind.stamp),
+                icon: const Icon(Icons.approval_outlined),
+                label: const Text('Upload school stamp'),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+              ),
+              if (_pendingStampBytes != null)
+                TextButton.icon(
+                  onPressed: _creating
+                      ? null
+                      : () => setState(() => _pendingStampBytes = null),
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Remove stamp'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                ),
+              OutlinedButton.icon(
+                onPressed: _creating
+                    ? null
+                    : () => _pickPendingMark(SchoolMarkKind.principalSignature),
+                icon: const Icon(Icons.draw_outlined),
+                label: const Text('Upload principal signature'),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+              ),
+              if (_pendingSignatureBytes != null)
+                TextButton.icon(
+                  onPressed: _creating
+                      ? null
+                      : () => setState(() => _pendingSignatureBytes = null),
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Remove signature'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _pendingMarkPreview('School stamp', _pendingStampBytes),
+              _pendingMarkPreview('Principal signature', _pendingSignatureBytes),
+            ],
           ),
           const SizedBox(height: 12),
           _field('Academic year', _academicYear),
@@ -3137,6 +3516,50 @@ class _PlatformCreateSchoolPageState extends State<_PlatformCreateSchoolPage> {
                 fontSize: highlight ? 16 : null,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pendingMarkPreview(String label, Uint8List? bytes) {
+    return Container(
+      width: 180,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: bytes != null
+              ? Colors.tealAccent.withValues(alpha: 0.45)
+              : Colors.white12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 72,
+            width: double.infinity,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: bytes == null
+                ? const Text(
+                    'Not added',
+                    style: TextStyle(color: Colors.black45, fontSize: 12),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.memory(bytes, fit: BoxFit.contain),
+                  ),
           ),
         ],
       ),

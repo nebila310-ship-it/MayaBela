@@ -10,13 +10,17 @@ import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/report_card_layout.dart';
 import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/services/school_mark_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/web_file_utils.dart';
 
-/// Official grade-report PDF: subjects in the table, remarks underneath,
-/// school-logo watermark, student photo, and a principal signature line.
+/// Official grade-report PDF: school logo, student photo, stamp, and signature.
+///
+/// When this school has saved a stamp, it covers the lower half of the photo
+/// and is repeated at the bottom of the card. A saved principal signature is
+/// drawn on the principal line. Missing assets are left blank.
 class ReportCardPdfService {
   ReportCardPdfService._();
   static final instance = ReportCardPdfService._();
@@ -63,6 +67,27 @@ class ReportCardPdfService {
     return null;
   }
 
+  Future<Uint8List?> resolveMarkBytes(
+    String? schoolId,
+    SchoolMarkKind kind,
+  ) async {
+    final id = (schoolId ?? AuthService.activeSchoolId ?? '').trim();
+    if (id.isEmpty) return null;
+    final school = SchoolRegistryService.instance.lookup(id);
+    final bytes = await SchoolMarkService.instance.resolve(
+      schoolId: id,
+      kind: kind,
+      storedUrl: kind == SchoolMarkKind.stamp
+          ? school?.stampUrl
+          : school?.principalSignatureUrl,
+      storedPath: kind == SchoolMarkKind.stamp
+          ? school?.stampPath
+          : school?.principalSignaturePath,
+    );
+    if (_decodes(bytes)) return bytes;
+    return null;
+  }
+
   Future<Uint8List?> resolvePhotoBytes(StudentGradeReport report) async {
     final record = StudentRegistryService.instance.resolveForPhoto(
       studentId: report.studentId,
@@ -97,11 +122,16 @@ class ReportCardPdfService {
     String? schoolName,
     Uint8List? logoBytes,
     Uint8List? photoBytes,
+    Uint8List? stampBytes,
+    Uint8List? signatureBytes,
   }) async {
     final school = schoolNameFor(schoolName);
     final lines = ReportCardLayout.lines(report);
     final logo = _decodes(logoBytes) ? pw.MemoryImage(logoBytes!) : null;
     final photo = _decodes(photoBytes) ? pw.MemoryImage(photoBytes!) : null;
+    final stamp = _decodes(stampBytes) ? pw.MemoryImage(stampBytes!) : null;
+    final signature =
+        _decodes(signatureBytes) ? pw.MemoryImage(signatureBytes!) : null;
     final snap = report.attendanceSnapshot;
     final attendance = snap.sessions == 0
         ? '-'
@@ -142,7 +172,9 @@ class ReportCardPdfService {
         build: (context) => [
           _header(
             school: school,
+            logo: logo,
             photo: photo,
+            stamp: stamp,
             studentName: report.studentName,
           ),
           pw.SizedBox(height: 14),
@@ -212,7 +244,14 @@ class ReportCardPdfService {
             ),
           ],
           pw.SizedBox(height: 28),
-          _signatures(),
+          _signatures(signature),
+          if (stamp != null) ...[
+            pw.SizedBox(height: 10),
+            pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Image(stamp, width: 86, height: 86),
+            ),
+          ],
         ],
       ),
     );
@@ -221,15 +260,47 @@ class ReportCardPdfService {
 
   pw.Widget _header({
     required String school,
+    required pw.ImageProvider? logo,
     required pw.ImageProvider? photo,
+    required pw.ImageProvider? stamp,
     required String studentName,
   }) {
+    final portrait = pw.Container(
+      width: 62,
+      height: 74,
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        border: pw.Border.all(color: _gold, width: 1.4),
+      ),
+      child: photo == null
+          ? pw.Center(
+              child: pw.Text(
+                studentName.isEmpty ? '?' : studentName[0].toUpperCase(),
+                style: pw.TextStyle(
+                  fontSize: 22,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _navy,
+                ),
+              ),
+            )
+          : pw.Image(photo, fit: pw.BoxFit.cover),
+    );
     return pw.Container(
       padding: const pw.EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: const pw.BoxDecoration(color: _navy),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
+          if (logo != null) ...[
+            pw.Container(
+              width: 46,
+              height: 46,
+              padding: const pw.EdgeInsets.all(3),
+              color: PdfColors.white,
+              child: pw.Image(logo, fit: pw.BoxFit.contain),
+            ),
+            pw.SizedBox(width: 10),
+          ],
           pw.Expanded(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -256,28 +327,33 @@ class ReportCardPdfService {
             ),
           ),
           pw.SizedBox(width: 12),
-          pw.Container(
-            width: 62,
-            height: 74,
-            decoration: pw.BoxDecoration(
-              color: PdfColors.white,
-              border: pw.Border.all(color: _gold, width: 1.4),
-            ),
-            child: photo == null
-                ? pw.Center(
-                    child: pw.Text(
-                      studentName.isEmpty
-                          ? '?'
-                          : studentName[0].toUpperCase(),
-                      style: pw.TextStyle(
-                        fontSize: 22,
-                        fontWeight: pw.FontWeight.bold,
-                        color: _navy,
-                      ),
+          if (stamp == null)
+            portrait
+          else
+            pw.SizedBox(
+              width: 62,
+              height: 74,
+              child: pw.Stack(
+                children: [
+                  pw.Positioned(
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: portrait,
+                  ),
+                  pw.Positioned(
+                    left: 6,
+                    right: 2,
+                    bottom: 1,
+                    child: pw.SizedBox(
+                      height: 36,
+                      child: pw.Image(stamp, fit: pw.BoxFit.contain),
                     ),
-                  )
-                : pw.Image(photo, fit: pw.BoxFit.cover),
-          ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -392,14 +468,21 @@ class ReportCardPdfService {
     );
   }
 
-  pw.Widget _signatures() {
-    pw.Widget block(String role) {
+  pw.Widget _signatures(pw.ImageProvider? principalSignature) {
+    pw.Widget block(String role, {pw.ImageProvider? image}) {
       return pw.Expanded(
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Container(
-              height: 28,
+              height: 36,
+              alignment: pw.Alignment.bottomLeft,
+              child: image == null
+                  ? pw.SizedBox(height: 36)
+                  : pw.Image(image, height: 32, fit: pw.BoxFit.contain),
+            ),
+            pw.Container(
+              height: 1,
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
                   bottom: pw.BorderSide(color: _ink, width: 0.6),
@@ -431,7 +514,7 @@ class ReportCardPdfService {
           children: [
             block('Homeroom teacher'),
             pw.SizedBox(width: 28),
-            block('Principal'),
+            block('Principal', image: principalSignature),
           ],
         ),
         pw.SizedBox(height: 16),
@@ -466,15 +549,23 @@ class ReportCardPdfService {
     String? schoolName,
     Uint8List? logoBytes,
     Uint8List? photoBytes,
+    Uint8List? stampBytes,
+    Uint8List? signatureBytes,
     required bool openForPrint,
   }) async {
     final resolvedLogo = logoBytes ?? await resolveLogoBytes(null);
     final resolvedPhoto = photoBytes ?? await resolvePhotoBytes(report);
+    final resolvedStamp =
+        stampBytes ?? await resolveMarkBytes(null, SchoolMarkKind.stamp);
+    final resolvedSignature = signatureBytes ??
+        await resolveMarkBytes(null, SchoolMarkKind.principalSignature);
     final bytes = await buildBytes(
       report: report,
       schoolName: schoolName,
       logoBytes: resolvedLogo,
       photoBytes: resolvedPhoto,
+      stampBytes: resolvedStamp,
+      signatureBytes: resolvedSignature,
     );
     final fileName = fileNameFor(report);
     final subject = 'Grade report - ${report.studentName}';

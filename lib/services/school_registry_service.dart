@@ -20,6 +20,7 @@ import 'package:mayabela/services/platform_audit_log_service.dart';
 import 'package:mayabela/services/platform_owner_service.dart';
 import 'package:mayabela/services/platform_schools_cloud_service.dart';
 import 'package:mayabela/services/school_logo_service.dart';
+import 'package:mayabela/services/school_mark_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
@@ -46,6 +47,10 @@ class SchoolRecord {
     this.logoUrl,
     this.identityLogoPath,
     this.identityLogoUrl,
+    this.stampPath,
+    this.stampUrl,
+    this.principalSignaturePath,
+    this.principalSignatureUrl,
     this.logoStyle = SchoolLogoStyle.rectangular,
     this.contractedSeats,
     this.ratePerStudentMonthEtb,
@@ -79,6 +84,10 @@ class SchoolRecord {
   String? logoUrl;
   String? identityLogoPath;
   String? identityLogoUrl;
+  String? stampPath;
+  String? stampUrl;
+  String? principalSignaturePath;
+  String? principalSignatureUrl;
   SchoolLogoStyle logoStyle;
   int? contractedSeats;
   int? ratePerStudentMonthEtb;
@@ -164,6 +173,12 @@ class SchoolRecord {
     String? logoUrl,
     String? identityLogoPath,
     String? identityLogoUrl,
+    String? stampPath,
+    String? stampUrl,
+    bool clearStamp = false,
+    String? principalSignaturePath,
+    String? principalSignatureUrl,
+    bool clearPrincipalSignature = false,
     SchoolLogoStyle? logoStyle,
     int? contractedSeats,
     int? ratePerStudentMonthEtb,
@@ -199,6 +214,14 @@ class SchoolRecord {
       logoUrl: logoUrl ?? this.logoUrl,
       identityLogoPath: identityLogoPath ?? this.identityLogoPath,
       identityLogoUrl: identityLogoUrl ?? this.identityLogoUrl,
+      stampPath: clearStamp ? null : (stampPath ?? this.stampPath),
+      stampUrl: clearStamp ? null : (stampUrl ?? this.stampUrl),
+      principalSignaturePath: clearPrincipalSignature
+          ? null
+          : (principalSignaturePath ?? this.principalSignaturePath),
+      principalSignatureUrl: clearPrincipalSignature
+          ? null
+          : (principalSignatureUrl ?? this.principalSignatureUrl),
       logoStyle: logoStyle ?? this.logoStyle,
       contractedSeats: contractedSeats ?? this.contractedSeats,
       ratePerStudentMonthEtb:
@@ -241,6 +264,10 @@ class SchoolRecord {
     'logoUrl': logoUrl,
     'identityLogoPath': identityLogoPath,
     'identityLogoUrl': identityLogoUrl,
+    'stampPath': stampPath,
+    'stampUrl': stampUrl,
+    'principalSignaturePath': principalSignaturePath,
+    'principalSignatureUrl': principalSignatureUrl,
     'logoStyle': logoStyle.name,
     'contractedSeats': contractedSeats,
     'ratePerStudentMonthEtb': ratePerStudentMonthEtb,
@@ -302,6 +329,10 @@ class SchoolRecord {
       logoUrl: json['logoUrl'] as String?,
       identityLogoPath: json['identityLogoPath'] as String?,
       identityLogoUrl: json['identityLogoUrl'] as String?,
+      stampPath: json['stampPath'] as String?,
+      stampUrl: json['stampUrl'] as String?,
+      principalSignaturePath: json['principalSignaturePath'] as String?,
+      principalSignatureUrl: json['principalSignatureUrl'] as String?,
       logoStyle: SchoolLogoStyle.parse(json['logoStyle'] as String?),
       contractedSeats: json['contractedSeats'] as int?,
       ratePerStudentMonthEtb: json['ratePerStudentMonthEtb'] as int?,
@@ -470,6 +501,16 @@ class SchoolRegistryService {
           record.identityLogoPath,
           prev.identityLogoPath,
         );
+        record.stampUrl = _preferStoredMark(record.stampUrl, prev.stampUrl);
+        record.stampPath = _preferLogoPath(record.stampPath, prev.stampPath);
+        record.principalSignatureUrl = _preferStoredMark(
+          record.principalSignatureUrl,
+          prev.principalSignatureUrl,
+        );
+        record.principalSignaturePath = _preferLogoPath(
+          record.principalSignaturePath,
+          prev.principalSignaturePath,
+        );
       }
       _schools[index] = record;
     } else {
@@ -484,6 +525,23 @@ class SchoolRegistryService {
     final prev = previous?.trim();
     if (prev != null && prev.startsWith('http')) return previous;
     return incoming ?? previous;
+  }
+
+  static String? _preferStoredMark(String? incoming, String? previous) {
+    final next = incoming?.trim();
+    if (next != null &&
+        next.isNotEmpty &&
+        (next.startsWith('http') || next.startsWith('data:'))) {
+      return incoming;
+    }
+    final prev = previous?.trim();
+    if (prev != null &&
+        prev.isNotEmpty &&
+        (prev.startsWith('http') || prev.startsWith('data:'))) {
+      return previous;
+    }
+    if (next == null || next.isEmpty) return previous;
+    return incoming;
   }
 
   static String? _preferLogoPath(String? incoming, String? previous) {
@@ -1080,6 +1138,69 @@ class SchoolRegistryService {
     try {
       await PlatformAuditLogService.instance.log(
         action: 'logo_removed',
+        schoolId: record.id,
+        schoolName: record.name,
+      );
+    } catch (_) {}
+    return cloud;
+  }
+
+  Future<PlatformSchoolCloudResult> setSchoolMark(
+    String schoolId, {
+    required SchoolMarkKind kind,
+    String? localPath,
+    required String storedUrl,
+  }) async {
+    final record = lookup(schoolId);
+    if (record == null) {
+      return const PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'not_found',
+        errorMessage: 'School not found locally.',
+      );
+    }
+    final next = kind == SchoolMarkKind.stamp
+        ? record.copyWith(stampPath: localPath, stampUrl: storedUrl)
+        : record.copyWith(
+            principalSignaturePath: localPath,
+            principalSignatureUrl: storedUrl,
+          );
+    final cloud = await updateSchool(next, preferPlatformCloud: true);
+    try {
+      await PlatformAuditLogService.instance.log(
+        action: kind == SchoolMarkKind.stamp
+            ? 'stamp_updated'
+            : 'signature_updated',
+        schoolId: record.id,
+        schoolName: record.name,
+        detail: kind.fileName,
+      );
+    } catch (_) {}
+    return cloud;
+  }
+
+  Future<PlatformSchoolCloudResult> clearSchoolMark(
+    String schoolId,
+    SchoolMarkKind kind,
+  ) async {
+    final record = lookup(schoolId);
+    if (record == null) {
+      return const PlatformSchoolCloudResult(
+        ok: false,
+        errorCode: 'not_found',
+        errorMessage: 'School not found locally.',
+      );
+    }
+    SchoolMarkService.instance.forget(schoolId, kind);
+    final next = kind == SchoolMarkKind.stamp
+        ? record.copyWith(clearStamp: true)
+        : record.copyWith(clearPrincipalSignature: true);
+    final cloud = await updateSchool(next, preferPlatformCloud: true);
+    try {
+      await PlatformAuditLogService.instance.log(
+        action: kind == SchoolMarkKind.stamp
+            ? 'stamp_removed'
+            : 'signature_removed',
         schoolId: record.id,
         schoolName: record.name,
       );

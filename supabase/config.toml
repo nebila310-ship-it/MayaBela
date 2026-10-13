@@ -65,6 +65,9 @@ verify_jwt = false
 [functions.platform-upload-logo]
 verify_jwt = false
 
+[functions.platform-upload-mark]
+verify_jwt = false
+
 [functions.platform-mail-config]
 verify_jwt = false
 

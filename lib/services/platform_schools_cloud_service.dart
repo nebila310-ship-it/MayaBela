@@ -221,6 +221,8 @@ class PlatformSchoolsCloudService {
 
       stripLocalPath('logoPath');
       stripLocalPath('identityLogoPath');
+      stripLocalPath('stampPath');
+      stripLocalPath('principalSignaturePath');
 
       final res = await SupabaseBootstrap.client.functions.invoke(
         'platform-update-school',
