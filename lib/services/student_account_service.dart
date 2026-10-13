@@ -10,6 +10,58 @@ import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/grade_level_utils.dart';
 import 'package:mayabela/utils/student_username_generator.dart';
 
+enum PortalAccessChange { none, granted, restored, revoked }
+
+class PreparedPortalAccess {
+  const PreparedPortalAccess(this.student, this.change);
+
+  final AdminStudentRecord student;
+  final PortalAccessChange change;
+}
+
+class PortalAccessSyncResult {
+  const PortalAccessSyncResult({
+    this.granted = 0,
+    this.restored = 0,
+    this.revoked = 0,
+  });
+
+  final int granted;
+  final int restored;
+  final int revoked;
+
+  int get changed => granted + restored + revoked;
+
+  String savedMessage() {
+    if (changed == 0) {
+      return 'Student portal settings saved. Enrolled students already match this grade.';
+    }
+    final parts = <String>['Student portal settings saved.'];
+    if (granted > 0) {
+      parts.add(
+        granted == 1
+            ? '1 enrolled student received a login.'
+            : '$granted enrolled students received a login.',
+      );
+    }
+    if (restored > 0) {
+      parts.add(
+        restored == 1
+            ? '1 student login was turned back on.'
+            : '$restored student logins were turned back on.',
+      );
+    }
+    if (revoked > 0) {
+      parts.add(
+        revoked == 1
+            ? '1 student below this grade lost login.'
+            : '$revoked students below this grade lost login.',
+      );
+    }
+    return parts.join(' ');
+  }
+}
+
 class StudentAccountService {
   StudentAccountService._();
   static final instance = StudentAccountService._();
@@ -99,6 +151,122 @@ class StudentAccountService {
     }
     if (hasPortalAccount(student)) return student;
 
+    final prepared = await preparePortalAccess(student, actor: createdBy);
+    if (prepared.change == PortalAccessChange.none) return null;
+    await _storePortalAccess(prepared.student);
+    return prepared.student;
+  }
+
+  /// Gives or removes a login so this student matches the school's portal grade.
+  /// Does not write the registry. Suspended, graduated, and transferred
+  /// students are left unchanged.
+  Future<PreparedPortalAccess> preparePortalAccess(
+    AdminStudentRecord student, {
+    required String actor,
+  }) async {
+    if (!student.isActive) {
+      return PreparedPortalAccess(student, PortalAccessChange.none);
+    }
+    final status = student.portalAccountStatus;
+    if (status == StudentAccountStatus.suspended ||
+        status == StudentAccountStatus.graduated ||
+        status == StudentAccountStatus.transferred) {
+      return PreparedPortalAccess(student, PortalAccessChange.none);
+    }
+
+    final eligible = isEligibleGrade(
+      gradeLabel: student.grade,
+      schoolId: student.schoolId,
+    );
+    final username = student.loginUsername?.trim() ?? '';
+
+    if (eligible) {
+      if (username.isEmpty) {
+        final opened = await _openPortalAccount(student, actor);
+        if (opened == null) {
+          return PreparedPortalAccess(student, PortalAccessChange.none);
+        }
+        return PreparedPortalAccess(opened, PortalAccessChange.granted);
+      }
+      if (status == StudentAccountStatus.inactive) {
+        _logStatus(
+          student: student,
+          actor: actor,
+          detail: 'Login turned on because the student meets the portal grade',
+        );
+        return PreparedPortalAccess(
+          student.copyWith(portalAccountStatus: StudentAccountStatus.active),
+          PortalAccessChange.restored,
+        );
+      }
+      return PreparedPortalAccess(student, PortalAccessChange.none);
+    }
+
+    if (status == StudentAccountStatus.active && username.isNotEmpty) {
+      _logStatus(
+        student: student,
+        actor: actor,
+        detail: 'Login turned off because the student is below the portal grade',
+      );
+      return PreparedPortalAccess(
+        student.copyWith(portalAccountStatus: StudentAccountStatus.inactive),
+        PortalAccessChange.revoked,
+      );
+    }
+    return PreparedPortalAccess(student, PortalAccessChange.none);
+  }
+
+  /// Applies the saved portal grade to every active student already enrolled.
+  Future<PortalAccessSyncResult> syncEnrolledPortalAccess({
+    required String schoolId,
+    required String actor,
+  }) async {
+    final students = List<AdminStudentRecord>.from(
+      StudentRegistryService.instance.studentsForSchool(schoolId),
+    );
+    var granted = 0;
+    var restored = 0;
+    var revoked = 0;
+    for (final student in students) {
+      final prepared = await preparePortalAccess(student, actor: actor);
+      switch (prepared.change) {
+        case PortalAccessChange.granted:
+          granted++;
+          await _storePortalAccess(prepared.student);
+        case PortalAccessChange.restored:
+          restored++;
+          await _storePortalAccess(prepared.student);
+        case PortalAccessChange.revoked:
+          revoked++;
+          await _storePortalAccess(prepared.student);
+        case PortalAccessChange.none:
+          break;
+      }
+    }
+    return PortalAccessSyncResult(
+      granted: granted,
+      restored: restored,
+      revoked: revoked,
+    );
+  }
+
+  /// After a grade or section change, match this student's login to the rule.
+  Future<PortalAccessChange> syncStudentAfterGradeChange({
+    required String studentId,
+    required String actor,
+  }) async {
+    final student = StudentRegistryService.instance.lookupById(studentId);
+    if (student == null) return PortalAccessChange.none;
+    final prepared = await preparePortalAccess(student, actor: actor);
+    await _storePortalAccess(prepared.student);
+    return prepared.change;
+  }
+
+  Future<AdminStudentRecord?> _openPortalAccount(
+    AdminStudentRecord student,
+    String actor,
+  ) async {
+    final sid = student.schoolId.trim().toUpperCase();
     final settings = settingsForSchool(sid);
     final username = generateUniqueStudentUsername(
       fullName: student.fullName,
@@ -107,7 +275,6 @@ class StudentAccountService {
       isTaken: AuthService.isUsernameTaken,
     );
     final tempPassword = generateTempPassword(sid);
-
     final authError = AuthService.registerStudentAccount(
       fullName: student.fullName,
       schoolId: sid,
@@ -121,34 +288,51 @@ class StudentAccountService {
       username: username,
       plainPassword: tempPassword,
     );
-
-    final updated = student.copyWith(
-      loginUsername: username,
-      initialPassword: tempPassword,
-      mustChangePassword: true,
-      portalAccountStatus: StudentAccountStatus.active,
-      portalAccountCreatedAt: DateTime.now(),
-      portalAccountCreatedBy: createdBy,
-      firstLoginCompleted: false,
-    );
-    StudentRegistryService.instance.replaceStudent(updated);
-    await StudentPersistenceService.instance.saveRegistryFromService(
-      syncStudentId: student.studentId,
-      pushCloud: true,
-      immediateUpload: true,
-    );
-
     unawaited(
       StudentPortalAuditService.instance.log(
         action: StudentPortalAuditAction.accountCreated,
         schoolId: sid,
         studentId: student.studentId,
         username: username,
-        actor: createdBy,
+        actor: actor,
         detail: 'Portal account created',
       ),
     );
-    return updated;
+    return student.copyWith(
+      loginUsername: username,
+      initialPassword: tempPassword,
+      mustChangePassword: true,
+      portalAccountStatus: StudentAccountStatus.active,
+      portalAccountCreatedAt: DateTime.now(),
+      portalAccountCreatedBy: actor,
+      firstLoginCompleted: false,
+    );
+  }
+
+  Future<void> _storePortalAccess(AdminStudentRecord student) async {
+    StudentRegistryService.instance.replaceStudent(student);
+    await StudentPersistenceService.instance.saveRegistryFromService(
+      syncStudentId: student.studentId,
+      pushCloud: true,
+      immediateUpload: true,
+    );
+  }
+
+  void _logStatus({
+    required AdminStudentRecord student,
+    required String actor,
+    required String detail,
+  }) {
+    unawaited(
+      StudentPortalAuditService.instance.log(
+        action: StudentPortalAuditAction.accountStatusChanged,
+        schoolId: student.schoolId,
+        studentId: student.studentId,
+        username: student.loginUsername,
+        actor: actor,
+        detail: detail,
+      ),
+    );
   }
 
   Future<AdminStudentRecord?> regeneratePassword({

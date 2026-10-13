@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_account_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
@@ -707,8 +709,7 @@ Future<bool?> showAdminStudentEditDialog(
     }
   }
 
-  StudentRegistryService.instance.updateStudent(
-    student.copyWith(
+  final drafted = student.copyWith(
       fullName: nameCtrl.text.trim(),
       gender: selectedGender,
       fatherName: fatherCtrl.text.trim().isEmpty ? null : fatherCtrl.text.trim(),
@@ -752,8 +753,12 @@ Future<bool?> showAdminStudentEditDialog(
           ? transportIdRaw
           : null,
       clearTransportId: !transportEnabled || transportIdRaw.isEmpty,
-    ),
   );
+  final prepared = await StudentAccountService.instance.preparePortalAccess(
+    drafted,
+    actor: AuthService.currentUser?.username ?? 'admin',
+  );
+  StudentRegistryService.instance.updateStudent(prepared.student);
   SchoolDataService.instance.syncChildFromRegistry(student.studentId);
   return true;
 }

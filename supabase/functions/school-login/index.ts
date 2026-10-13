@@ -21,6 +21,7 @@ import {
   findStudentRegistryForLogin,
   provisionStudentAccountFromRegistry,
   studentMayUsePortalTempPassword,
+  studentPortalLoginBlock,
 } from "../_shared/school_auth.ts";
 
 Deno.serve(async (req) => {
@@ -135,6 +136,39 @@ Deno.serve(async (req) => {
     }
     if (!ok) {
       return errorResponse("Invalid credentials.", 401, "invalid");
+    }
+
+    if (roleKey === "student") {
+      const roster = await findStudentRegistryForLogin(
+        sb,
+        usernameInput,
+        schoolIdInput,
+        { includeBlocked: true },
+      );
+      if (roster) {
+        const block = studentPortalLoginBlock(schoolDoc, roster.data);
+        if (block === "portal_disabled") {
+          return errorResponse(
+            "Student portal is disabled for this school.",
+            403,
+            block,
+          );
+        }
+        if (block === "portal_grade") {
+          return errorResponse(
+            "Student login is not open for this grade.",
+            403,
+            block,
+          );
+        }
+        if (block === "account_inactive") {
+          return errorResponse(
+            "This student account is not active.",
+            403,
+            block,
+          );
+        }
+      }
     }
 
     if (!secret?.passwordHash) {

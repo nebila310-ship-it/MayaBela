@@ -345,6 +345,8 @@ class _LoginScreenState extends State<LoginScreen> {
             'School ID does not match this account. Check the School ID from your school admin.',
           'account_inactive' => 'This student account is not active. Contact your school admin.',
           'portal_disabled' => 'Student portal is disabled for this school.',
+          'portal_grade' =>
+            'Student login is not open for this grade. Ask your school admin.',
           'cloud_required' =>
             kIsWeb
                 ? 'Cloud login could not connect to Supabase. Check your internet and try again. If it keeps failing, the school-login function may be down.'

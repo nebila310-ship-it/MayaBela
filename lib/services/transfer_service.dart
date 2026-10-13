@@ -1,6 +1,8 @@
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/class_structure_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/student_account_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
@@ -30,6 +32,10 @@ class TransferService {
       grade: toGrade.trim(),
       section: section,
       homeroomTeacherId: homeroomId,
+    );
+    await StudentAccountService.instance.syncStudentAfterGradeChange(
+      studentId: studentId,
+      actor: AuthService.currentUser?.username ?? 'admin',
     );
     _data.syncChildFromRegistry(studentId);
     return true;

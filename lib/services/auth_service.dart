@@ -1270,6 +1270,13 @@ class AuthService {
       if (!StudentAccountService.instance.isPortalEnabled(student.schoolId)) {
         return 'portal_disabled';
       }
+      if (!_isBuiltInDemoStudent(user) &&
+          !StudentAccountService.instance.isEligibleGrade(
+            gradeLabel: student.grade,
+            schoolId: student.schoolId,
+          )) {
+        return 'portal_grade';
+      }
     }
 
     setSession(user);
@@ -1329,6 +1336,15 @@ class AuthService {
     if (user == null || entered.isEmpty) return false;
     if (!isStoredPasswordVerifiable(user.password)) return false;
     return _passwordMatches(user, entered);
+  }
+
+  /// Sara Bekele's sandbox login stays on Grade 4. Real students follow the
+  /// school's portal grade.
+  static bool _isBuiltInDemoStudent(RegisteredUser user) {
+    final school = (user.schoolId ?? '').trim().toUpperCase();
+    if (school != demoStudentSchoolId) return false;
+    final name = user.username.trim().toLowerCase();
+    return name == 'student' || name == demoStudentUsername;
   }
 
   static AdminStudentRecord? _studentRecordForUser(RegisteredUser user) {
