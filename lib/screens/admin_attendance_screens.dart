@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/models/attendance_window.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/attendance_export_service.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
@@ -156,6 +159,10 @@ class _AdminAttendanceReportsScreenState
                 report: report,
                 hasData: hasData,
               ),
+              if (_data.canUnlockAttendanceRegister()) ...[
+                const SizedBox(height: 14),
+                const _AttendanceHoursCard(),
+              ],
               const SizedBox(height: 14),
               _ExportExcelButton(
                 enabled: !_exporting,
@@ -566,6 +573,155 @@ class _TeachersRecordedCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttendanceHoursCard extends StatefulWidget {
+  const _AttendanceHoursCard();
+
+  @override
+  State<_AttendanceHoursCard> createState() => _AttendanceHoursCardState();
+}
+
+class _AttendanceHoursCardState extends State<_AttendanceHoursCard> {
+  late TimeOfDay _open;
+  late TimeOfDay _close;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final window = SchoolDataService.instance.activeAttendanceWindow();
+    _open = TimeOfDay(hour: window.openHour, minute: window.openMinute);
+    _close = TimeOfDay(hour: window.closeHour, minute: window.closeMinute);
+  }
+
+  Future<void> _pick(bool opening) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: opening ? _open : _close,
+      helpText: opening
+          ? AppLocale.instance.strings.openingTime
+          : AppLocale.instance.strings.closingTime,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+    if (picked == null) return;
+    setState(() {
+      if (opening) {
+        _open = picked;
+      } else {
+        _close = picked;
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    final s = AppLocale.instance.strings;
+    final window = AttendanceWindowSettings(
+      openHour: _open.hour,
+      openMinute: _open.minute,
+      closeHour: _close.hour,
+      closeMinute: _close.minute,
+    );
+    if (!window.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.attendanceHoursInvalid)),
+      );
+      return;
+    }
+    final schoolId = AuthService.activeSchoolId;
+    final school = schoolId == null
+        ? null
+        : SchoolRegistryService.instance.lookup(schoolId);
+    if (school == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(s.attendanceSaveDenied)),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    await SchoolRegistryService.instance.updateSchool(
+      school.copyWith(attendanceWindow: window),
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(s.attendanceHoursSaved)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppLocale.instance.strings;
+    String label(TimeOfDay time) => AttendanceWindowSettings.format(
+          time.hour,
+          time.minute,
+        );
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.attendanceWindowTitle,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1A237E),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              s.attendanceWindowHint,
+              style: TextStyle(color: Colors.grey.shade700, height: 1.35),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.schedule_outlined),
+              title: Text(s.openingTime),
+              trailing: Text(
+                label(_open),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              onTap: _saving ? null : () => _pick(true),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.lock_clock_outlined),
+              title: Text(s.closingTime),
+              trailing: Text(
+                label(_close),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              onTap: _saving ? null : () => _pick(false),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: Text(s.saveAttendanceHours),
               ),
             ),
           ],

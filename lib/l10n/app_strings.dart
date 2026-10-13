@@ -2822,10 +2822,44 @@ class AppStrings implements AppStringsLike {
         'መገኘት አልተወሰደም',
         'Argamni hin fudhatamne',
       );
-  String get attendanceClosedForDay => t(
-        'Attendance is closed. Class starts at 8:30 and the register locks at 9:00.',
-        'መገኘት ተዘግቷል። ክፍል በ8:30 ይጀምራል፣ መዝገቡ በ9:00 ይቆለፋል።',
-        'Argamni cufameera. Kutaan sa\'aatii 8:30 jalqaba, galmeen sa\'aatii 9:00 cufama.',
+  String attendanceWindowHours(String open, String close) => t(
+        'Opens $open · Closes $close',
+        'ይከፈታል $open · ይዘጋል $close',
+        'Bana $open · Cufama $close',
+      );
+  String attendanceClosedForDay(String open, String close) => t(
+        'Attendance is closed. It opens at $open and closes at $close.',
+        'መገኘት ተዘግቷል። በ$open ይከፈታል፣ በ$close ይዘጋል።',
+        'Argamni cufameera. Sa\'aatii $open bana, sa\'aatii $close cufama.',
+      );
+  String attendanceOpensLater(String open, String close) => t(
+        'Attendance is not open yet. It opens at $open and closes at $close.',
+        'መገኘት እስካሁን አልተከፈተም። በ$open ይከፈታል፣ በ$close ይዘጋል።',
+        'Argamni amma hin banamne. Sa\'aatii $open bana, sa\'aatii $close cufama.',
+      );
+  String get attendanceWindowTitle => t(
+        'Attendance hours',
+        'የመገኘት ሰዓት',
+        'Sa\'aatii argamaa',
+      );
+  String get attendanceWindowHint => t(
+        'Set the opening and closing time. Every teacher in this school follows these hours.',
+        'የመክፈቻ እና የመዝጊያ ሰዓት ያስቀምጡ። በዚህ ትምህርት ቤት ያለ እያንዳንዱ መምህር ይህን ሰዓት ይከተላል።',
+        'Sa\'aatii banuu fi cufuu kaa\'aa. Barsiisaan hundi mana barumsaa kanaa sa\'aatii kana hordofa.',
+      );
+  String get openingTime => t('Opening time', 'የመክፈቻ ሰዓት', 'Sa\'aatii banuu');
+  String get closingTime => t('Closing time', 'የመዝጊያ ሰዓት', 'Sa\'aatii cufuu');
+  String get saveAttendanceHours =>
+      t('Save hours', 'ሰዓቱን አስቀምጥ', 'Sa\'aatii ol kaa\'i');
+  String get attendanceHoursSaved => t(
+        'Attendance hours saved for this school.',
+        'የመገኘት ሰዓት ለዚህ ትምህርት ቤት ተቀምጧል።',
+        'Sa\'aatiin argamaa mana barumsaa kanaaf ol ka\'ameera.',
+      );
+  String get attendanceHoursInvalid => t(
+        'Closing time must be after the opening time.',
+        'የመዝጊያ ሰዓት ከመክፈቻ ሰዓት በኋላ መሆን አለበት።',
+        'Sa\'aatiin cufuu sa\'aatii banuu booda ta\'uu qaba.',
       );
   String attendanceDayTitle(DateTime date) {
     const en = [

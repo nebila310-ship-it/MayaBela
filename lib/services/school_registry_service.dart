@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/academic_term.dart';
+import 'package:mayabela/models/attendance_window.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/school_lifecycle.dart';
 import 'package:mayabela/models/school_logo_style.dart';
@@ -61,6 +62,7 @@ class SchoolRecord {
     this.studentPortal = const StudentPortalSettings(),
     this.gradeWorkflow = const GradeWorkflowSettings(),
     this.markbookSettings = MarkbookSettings.liaDefaults,
+    this.attendanceWindow = const AttendanceWindowSettings(),
     this.allowSelfApproval = false,
     this.enabledModules,
     this.academicTerms = const [],
@@ -98,6 +100,7 @@ class SchoolRecord {
   StudentPortalSettings studentPortal;
   GradeWorkflowSettings gradeWorkflow;
   MarkbookSettings markbookSettings;
+  AttendanceWindowSettings attendanceWindow;
 
   /// Whether a requester may approve their own purchase / issue requests.
   /// Off by default (separation of duties); only the owner can enable it.
@@ -189,6 +192,7 @@ class SchoolRecord {
     StudentPortalSettings? studentPortal,
     GradeWorkflowSettings? gradeWorkflow,
     MarkbookSettings? markbookSettings,
+    AttendanceWindowSettings? attendanceWindow,
     bool? allowSelfApproval,
     Object? enabledModules = _keepEnabledModules,
     List<AcademicTerm>? academicTerms,
@@ -235,6 +239,7 @@ class SchoolRecord {
       studentPortal: studentPortal ?? this.studentPortal,
       gradeWorkflow: gradeWorkflow ?? this.gradeWorkflow,
       markbookSettings: markbookSettings ?? this.markbookSettings,
+      attendanceWindow: attendanceWindow ?? this.attendanceWindow,
       allowSelfApproval: allowSelfApproval ?? this.allowSelfApproval,
       enabledModules: identical(enabledModules, _keepEnabledModules)
           ? (this.enabledModules == null
@@ -278,6 +283,7 @@ class SchoolRecord {
     'studentPortal': studentPortal.toMap(),
     'gradeWorkflow': gradeWorkflow.toMap(),
     'markbookSettings': markbookSettings.toMap(),
+    'attendanceWindow': attendanceWindow.toMap(),
     'academicTerms': academicTerms.map((term) => term.toJson()).toList(),
     // The SQL write-guard reads data->settings->allowSelfApproval.
     // enabledModules: null means all on (key is sent so the owner can clear a pack).
@@ -348,6 +354,11 @@ class SchoolRecord {
       ),
       markbookSettings: MarkbookSettings.fromMap(
         json['markbookSettings'] as Map<String, dynamic>?,
+      ),
+      attendanceWindow: AttendanceWindowSettings.fromMap(
+        json['attendanceWindow'] is Map
+            ? Map<String, dynamic>.from(json['attendanceWindow'] as Map)
+            : null,
       ),
       allowSelfApproval: (settings?['allowSelfApproval'] as bool?) ?? false,
       enabledModules: _enabledModulesFromSettings(settings),

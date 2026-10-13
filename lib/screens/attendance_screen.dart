@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/models/attendance_window.dart';
 import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -502,6 +503,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             ? s.conductedByName(conductedBy!)
                             : s.attendanceNotTakenYet,
                       ),
+                      Text(
+                        s.attendanceWindowHours(
+                          _data.activeAttendanceWindow().openLabel,
+                          _data.activeAttendanceWindow().closeLabel,
+                        ),
+                      ),
                       if (!widget.readOnly)
                         DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -534,13 +541,26 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       ? null
                       : TextButton(onPressed: _pickDate, child: Text(s.change)),
                 ),
-                if (!widget.readOnly && !_windowOpen) ...[
+                if (!widget.readOnly &&
+                    !_windowOpen &&
+                    !_data.canUnlockAttendanceRegister()) ...[
                   const SizedBox(height: 8),
                   ListTile(
                     dense: true,
                     tileColor: ClassroomPalette.red.withValues(alpha: 0.08),
                     leading: const Icon(Icons.lock_clock_outlined),
-                    title: Text(s.attendanceClosedForDay),
+                    title: Text(
+                      _data.attendanceWindowPhase(selectedDate) ==
+                              AttendanceWindowPhase.beforeOpen
+                          ? s.attendanceOpensLater(
+                              _data.activeAttendanceWindow().openLabel,
+                              _data.activeAttendanceWindow().closeLabel,
+                            )
+                          : s.attendanceClosedForDay(
+                              _data.activeAttendanceWindow().openLabel,
+                              _data.activeAttendanceWindow().closeLabel,
+                            ),
+                    ),
                   ),
                 ] else if (_locked && !widget.readOnly) ...[
                   const SizedBox(height: 8),
