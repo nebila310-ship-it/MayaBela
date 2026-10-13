@@ -22,6 +22,7 @@ class _AdminStudentPortalSettingsScreenState
   bool _allowReportDownload = true;
   bool _allowStudentMessaging = false;
   bool _allowClassRank = false;
+  bool _saving = false;
   final _tempPassword = TextEditingController(text: 'EduAba@2026');
 
   @override
@@ -55,10 +56,11 @@ class _AdminStudentPortalSettingsScreenState
 
   Future<void> _save() async {
     final schoolId = AuthService.activeSchoolId;
-    if (schoolId == null) return;
+    if (schoolId == null || _saving) return;
     final school = SchoolRegistryService.instance.lookup(schoolId);
     if (school == null) return;
 
+    setState(() => _saving = true);
     final updated = school.copyWith(
       studentPortal: StudentPortalSettings(
         enabled: _enabled,
@@ -71,9 +73,14 @@ class _AdminStudentPortalSettingsScreenState
       ),
     );
     await SchoolRegistryService.instance.updateSchool(updated);
+    final result = await StudentAccountService.instance.syncEnrolledPortalAccess(
+      schoolId: schoolId,
+      actor: AuthService.currentUser?.username ?? 'admin',
+    );
     if (!mounted) return;
+    setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Student portal settings saved')),
+      SnackBar(content: Text(result.savedMessage())),
     );
   }
 
@@ -93,7 +100,9 @@ class _AdminStudentPortalSettingsScreenState
         children: [
           SwitchListTile(
             title: const Text('Enable Student Portal'),
-            subtitle: const Text('Allow Grade 7+ students to log in'),
+            subtitle: Text(
+              'Students in grade $_minimumGrade and above can sign in',
+            ),
             value: _enabled,
             onChanged: (value) => setState(() => _enabled = value),
           ),
@@ -116,6 +125,12 @@ class _AdminStudentPortalSettingsScreenState
                   if (value != null) setState(() => _minimumGrade = value);
                 },
               ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8, bottom: 8),
+            child: Text(
+              'Save applies this grade to students already enrolled. Students who now qualify receive a login. Students who fall below it lose login until the grade includes them again. A password they already chose is kept and turned back on. Suspended, graduated, and transferred students stay as they are.',
             ),
           ),
           TextField(
@@ -148,7 +163,12 @@ class _AdminStudentPortalSettingsScreenState
             onChanged: (value) => setState(() => _allowClassRank = value),
           ),
           const SizedBox(height: 24),
-          FilledButton(onPressed: _save, child: const Text('Save settings')),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: Text(
+              _saving ? 'Applying to enrolled students…' : 'Save settings',
+            ),
+          ),
         ],
       ),
     );

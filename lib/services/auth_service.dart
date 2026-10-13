@@ -1270,6 +1270,12 @@ class AuthService {
       if (!StudentAccountService.instance.isPortalEnabled(student.schoolId)) {
         return 'portal_disabled';
       }
+      if (!StudentAccountService.instance.isEligibleGrade(
+        gradeLabel: student.grade,
+        schoolId: student.schoolId,
+      )) {
+        return 'portal_grade';
+      }
     }
 
     setSession(user);

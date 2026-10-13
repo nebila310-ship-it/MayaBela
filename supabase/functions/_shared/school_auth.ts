@@ -867,16 +867,62 @@ function studentPortalCanLogin(
   if (!data) return false;
   if (data.isActive === false) return false;
   const status = String(data.portalAccountStatus || "").trim().toLowerCase();
-  if (status === "suspended" || status === "graduated" || status === "transferred") {
+  if (
+    status === "inactive" ||
+    status === "suspended" ||
+    status === "graduated" ||
+    status === "transferred"
+  ) {
     return false;
   }
   return String(data.loginUsername || "").trim().length > 0;
+}
+
+export function parseGradeNumber(gradeLabel: unknown): number | null {
+  const trimmed = String(gradeLabel ?? "").trim();
+  if (!trimmed) return null;
+  if (/^\d{1,2}$/.test(trimmed)) {
+    const direct = Number(trimmed);
+    return Number.isFinite(direct) ? direct : null;
+  }
+  const match = trimmed.match(/(\d{1,2})/);
+  if (!match) return null;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Why this enrolled student may not sign in, or null when the portal grade allows it. */
+export function studentPortalLoginBlock(
+  school: Record<string, unknown> | null | undefined,
+  student: Record<string, unknown>,
+): "account_inactive" | "portal_disabled" | "portal_grade" | null {
+  if (student.isActive === false) return "account_inactive";
+  const status = String(student.portalAccountStatus || "").trim().toLowerCase();
+  if (
+    status === "inactive" ||
+    status === "suspended" ||
+    status === "graduated" ||
+    status === "transferred"
+  ) {
+    return "account_inactive";
+  }
+  const portal = school?.studentPortal && typeof school.studentPortal === "object"
+    ? school.studentPortal as Record<string, unknown>
+    : {};
+  if (portal.enabled === false) return "portal_disabled";
+  const minimum = Number(portal.minimumGrade ?? 7);
+  const grade = parseGradeNumber(student.grade);
+  if (!Number.isFinite(minimum) || grade == null || grade < minimum) {
+    return "portal_grade";
+  }
+  return null;
 }
 
 export async function findStudentRegistryForLogin(
   sb: SupabaseClient,
   identifier: string,
   schoolId: string,
+  options?: { includeBlocked?: boolean },
 ): Promise<{ id: string; data: Record<string, unknown> } | null> {
   const sid = String(schoolId || "").trim().toUpperCase();
   const raw = String(identifier || "").trim();
@@ -885,7 +931,7 @@ export async function findStudentRegistryForLogin(
 
   for (const candidate of studentRegistryIdCandidates(raw)) {
     const byId = await getDoc(sb, "student_registry", candidate, sid);
-    if (byId && studentPortalCanLogin(byId)) {
+    if (byId && (options?.includeBlocked || studentPortalCanLogin(byId))) {
       const recSchool = String(byId.schoolId || "").trim().toUpperCase();
       if (!recSchool || recSchool === sid) {
         const login = String(byId.loginUsername || "").trim();
@@ -911,7 +957,7 @@ export async function findStudentRegistryForLogin(
   if (error) throw error;
   for (const row of rows || []) {
     const data = { ...(row.data as Record<string, unknown>) };
-    if (!studentPortalCanLogin(data)) continue;
+    if (!options?.includeBlocked && !studentPortalCanLogin(data)) continue;
     const recSchool = String(data.schoolId || "").trim().toUpperCase();
     if (recSchool && recSchool !== sid) continue;
     if (!usernamesMatch(data.loginUsername, raw)) continue;
@@ -930,7 +976,7 @@ export async function findStudentRegistryForLogin(
     if (idError) throw idError;
     for (const row of idRows || []) {
       const data = { ...(row.data as Record<string, unknown>) };
-      if (!studentPortalCanLogin(data)) continue;
+      if (!options?.includeBlocked && !studentPortalCanLogin(data)) continue;
       const recSchool = String(data.schoolId || "").trim().toUpperCase();
       if (recSchool && recSchool !== sid) continue;
       const id = String(data.studentId || row.doc_id || "").trim().toUpperCase();
