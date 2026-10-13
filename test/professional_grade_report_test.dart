@@ -73,6 +73,8 @@ void main() {
       schoolName: 'Mayu International Academy',
       logoBytes: _png,
       photoBytes: _png,
+      stampBytes: _png,
+      signatureBytes: _png,
     );
     expect(bytes.length, greaterThan(400));
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
@@ -107,7 +109,14 @@ void main() {
     expect(find.text('Mayu International Academy'), findsOneWidget);
     expect(find.text('OFFICIAL GRADE REPORT'), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-photo')), findsOneWidget);
+    expect(find.byKey(const ValueKey('report-card-logo')), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-watermark')), findsOneWidget);
+    expect(find.byKey(const ValueKey('report-card-photo-stamp')), findsNothing);
+    expect(find.byKey(const ValueKey('report-card-bottom-stamp')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('report-card-principal-signature')),
+      findsNothing,
+    );
     expect(
       find.byKey(const ValueKey('report-card-principal-sign')),
       findsOneWidget,
@@ -149,5 +158,38 @@ void main() {
     );
     expect(find.textContaining('Midterm'), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-download')), findsNothing);
+  });
+
+  testWidgets('stamp covers the photo and the bottom, signature on principal',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(420, 980));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: TermReportCardView(
+              report: _report(),
+              schoolName: 'Mayu International Academy',
+              showActions: false,
+              logoBytes: _png,
+              stampBytes: _png,
+              signatureBytes: _png,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('report-card-logo')), findsOneWidget);
+    expect(find.byKey(const ValueKey('report-card-photo-stamp')), findsOneWidget);
+    expect(find.byKey(const ValueKey('report-card-bottom-stamp')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('report-card-principal-signature')),
+      findsOneWidget,
+    );
+    expect(find.text('OFFICIAL GRADE REPORT'), findsOneWidget);
   });
 }

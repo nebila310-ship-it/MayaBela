@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/services/report_card_layout.dart';
 import 'package:mayabela/services/report_card_pdf_service.dart';
+import 'package:mayabela/services/school_mark_service.dart';
 import 'package:mayabela/widgets/student_photo_avatar.dart';
 
 /// Official term report card for admin, teachers, parents, and students.
 ///
-/// The subject table lists the subject, score, and grade only. Assessment
-/// detail and teacher comments stay in the remarks under the table, or in
-/// the subject cards beneath this card.
+/// The subject table lists the subject, score, and grade only. When this
+/// school has a logo, stamp, or principal signature, they are drawn on the
+/// card: logo in the header, stamp across the lower half of the photo and
+/// again at the bottom, signature on the principal line.
 class TermReportCardView extends StatefulWidget {
   const TermReportCardView({
     super.key,
@@ -21,6 +23,8 @@ class TermReportCardView extends StatefulWidget {
     this.showActions = false,
     this.showSubjectRemarks = true,
     this.logoBytes,
+    this.stampBytes,
+    this.signatureBytes,
   });
 
   final StudentGradeReport report;
@@ -32,6 +36,8 @@ class TermReportCardView extends StatefulWidget {
   /// lists a description under each subject.
   final bool showSubjectRemarks;
   final Uint8List? logoBytes;
+  final Uint8List? stampBytes;
+  final Uint8List? signatureBytes;
 
   @override
   State<TermReportCardView> createState() => _TermReportCardViewState();
@@ -43,31 +49,52 @@ class _TermReportCardViewState extends State<TermReportCardView> {
   static const _paper = Color(0xFFFFFCF7);
 
   Uint8List? _logo;
+  Uint8List? _stamp;
+  Uint8List? _signature;
   var _busy = false;
 
   @override
   void initState() {
     super.initState();
     _logo = widget.logoBytes;
-    if (_logo == null) _loadLogo();
+    _stamp = widget.stampBytes;
+    _signature = widget.signatureBytes;
+    if (_logo == null || _stamp == null || _signature == null) {
+      _loadMarks();
+    }
   }
 
   @override
   void didUpdateWidget(covariant TermReportCardView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.logoBytes != oldWidget.logoBytes) {
-      _logo = widget.logoBytes;
+    if (widget.logoBytes != oldWidget.logoBytes) _logo = widget.logoBytes;
+    if (widget.stampBytes != oldWidget.stampBytes) {
+      _stamp = widget.stampBytes;
     }
-    if (widget.logoBytes == null &&
+    if (widget.signatureBytes != oldWidget.signatureBytes) {
+      _signature = widget.signatureBytes;
+    }
+    if ((widget.logoBytes == null ||
+            widget.stampBytes == null ||
+            widget.signatureBytes == null) &&
         widget.report.studentId != oldWidget.report.studentId) {
-      _loadLogo();
+      _loadMarks();
     }
   }
 
-  Future<void> _loadLogo() async {
-    final bytes = await ReportCardPdfService.instance.resolveLogoBytes(null);
-    if (!mounted || bytes == null) return;
-    setState(() => _logo = bytes);
+  Future<void> _loadMarks() async {
+    final pdf = ReportCardPdfService.instance;
+    final logo = widget.logoBytes ?? await pdf.resolveLogoBytes(null);
+    final stamp = widget.stampBytes ??
+        await pdf.resolveMarkBytes(null, SchoolMarkKind.stamp);
+    final signature = widget.signatureBytes ??
+        await pdf.resolveMarkBytes(null, SchoolMarkKind.principalSignature);
+    if (!mounted) return;
+    setState(() {
+      if (logo != null) _logo = logo;
+      if (stamp != null) _stamp = stamp;
+      if (signature != null) _signature = signature;
+    });
   }
 
   Future<void> _deliver(bool openForPrint) async {
@@ -78,6 +105,8 @@ class _TermReportCardViewState extends State<TermReportCardView> {
         report: widget.report,
         schoolName: widget.schoolName,
         logoBytes: _logo,
+        stampBytes: _stamp,
+        signatureBytes: _signature,
         openForPrint: openForPrint,
       );
     } catch (e) {
@@ -243,6 +272,19 @@ class _TermReportCardViewState extends State<TermReportCardView> {
                 ],
                 const SizedBox(height: 18),
                 _signatures(),
+                if (_stamp != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Image.memory(
+                      _stamp!,
+                      key: const ValueKey('report-card-bottom-stamp'),
+                      height: 84,
+                      fit: BoxFit.contain,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+                ],
                 if (widget.showActions) ...[
                   const SizedBox(height: 14),
                   Wrap(
@@ -285,6 +327,24 @@ class _TermReportCardViewState extends State<TermReportCardView> {
       ),
       child: Row(
         children: [
+          if (_logo != null) ...[
+            Container(
+              key: const ValueKey('report-card-logo'),
+              width: 46,
+              height: 46,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Image.memory(
+                _logo!,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,20 +372,45 @@ class _TermReportCardViewState extends State<TermReportCardView> {
             ),
           ),
           const SizedBox(width: 10),
-          Container(
+          SizedBox(
             key: const ValueKey('report-card-photo'),
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _gold, width: 1.6),
-            ),
-            child: StudentPhotoAvatar(
-              studentId: report.studentId,
-              name: report.studentName,
-              radius: 28,
-              fallbackColor: _navy,
-              enableViewer: false,
+            width: 64,
+            height: 78,
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _gold, width: 1.6),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    alignment: Alignment.center,
+                    child: StudentPhotoAvatar(
+                      studentId: report.studentId,
+                      name: report.studentName,
+                      radius: 30,
+                      fallbackColor: _navy,
+                      enableViewer: false,
+                    ),
+                  ),
+                ),
+                if (_stamp != null)
+                  Positioned(
+                    key: const ValueKey('report-card-photo-stamp'),
+                    left: 4,
+                    right: 2,
+                    bottom: 2,
+                    height: 38,
+                    child: Image.memory(
+                      _stamp!,
+                      fit: BoxFit.contain,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -421,14 +506,15 @@ class _TermReportCardViewState extends State<TermReportCardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Row(
+        Row(
           children: [
-            Expanded(child: _SignLine(role: 'Homeroom teacher')),
-            SizedBox(width: 18),
+            const Expanded(child: _SignLine(role: 'Homeroom teacher')),
+            const SizedBox(width: 18),
             Expanded(
               child: _SignLine(
                 role: 'Principal',
-                lineKey: ValueKey('report-card-principal-sign'),
+                lineKey: const ValueKey('report-card-principal-sign'),
+                imageBytes: _signature,
               ),
             ),
           ],
@@ -479,10 +565,11 @@ class _Head extends StatelessWidget {
 }
 
 class _SignLine extends StatelessWidget {
-  const _SignLine({required this.role, this.lineKey});
+  const _SignLine({required this.role, this.lineKey, this.imageBytes});
 
   final String role;
   final Key? lineKey;
+  final Uint8List? imageBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -490,11 +577,25 @@ class _SignLine extends StatelessWidget {
       key: lineKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SizedBox(
+          height: 36,
+          width: double.infinity,
+          child: imageBytes == null
+              ? const SizedBox.shrink()
+              : Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Image.memory(
+                    imageBytes!,
+                    key: const ValueKey('report-card-principal-signature'),
+                    height: 34,
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true,
+                  ),
+                ),
+        ),
         Container(
-          height: 28,
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFF1B3A4B), width: 0.8)),
-          ),
+          height: 1,
+          color: const Color(0xFF1B3A4B),
         ),
         const SizedBox(height: 4),
         Text(
