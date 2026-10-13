@@ -52,7 +52,7 @@ void main() {
         final pixel = decoded.getPixel(x, y);
         if (pixel.a.toInt() < 16) {
           clear++;
-        } else if (pixel.r.toInt() > 140 && pixel.g.toInt() < 60) {
+        } else if (pixel.r.toInt() > 50 && pixel.g.toInt() < 40) {
           ink++;
         }
       }
