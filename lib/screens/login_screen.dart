@@ -50,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String selectedRole = AuthService.roleTeacher;
 
   final TextEditingController schoolId = TextEditingController();
+  final TextEditingController _schoolNameDisplay = TextEditingController();
   final TextEditingController username = TextEditingController();
   final TextEditingController password = TextEditingController();
 
@@ -59,6 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
   String message = '';
   bool _prefsLoaded = false;
   bool _schoolIdEditing = false;
+  bool _schoolNameHoldEdit = false;
+  bool _allowSchoolNameReveal = false;
+  bool _schoolNameRevealScheduled = false;
+  String _schoolIdAtEdit = '';
   int _logoTapCount = 0;
   DateTime? _lastLogoTap;
   final FocusNode _schoolIdFocus = FocusNode();
@@ -108,23 +113,76 @@ class _LoginScreenState extends State<LoginScreen> {
       schoolId.text = lastId;
     }
     _syncLoginChrome();
+    _syncSchoolNameLabel();
     if (kIsWeb) {
       _prefsLoaded = true;
       unawaited(_restoreSavedLogin());
     } else {
       _restoreSavedLogin();
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _allowSchoolNameReveal = true;
+      _revealSchoolName();
+    });
+  }
+
+  /// Real school name for [id], never the ID itself and never a generic fallback.
+  String? _knownSchoolName([String? raw]) {
+    final id = (raw ?? schoolId.text).trim();
+    if (id.isEmpty) return null;
+    final name = SchoolPublicBrandService.instance.localName(id)?.trim() ?? '';
+    if (name.isEmpty) return null;
+    if (name.toUpperCase() == id.toUpperCase()) return null;
+    return name;
+  }
+
+  void _syncSchoolNameLabel() {
+    final name = _knownSchoolName();
+    if (name == null) return;
+    if (_schoolNameDisplay.text == name) return;
+    _schoolNameDisplay.text = name;
+  }
+
+  /// Show the school name once the typed ID matches. Login still reads [schoolId].
+  void _revealSchoolName() {
+    if (!_allowSchoolNameReveal || _schoolNameHoldEdit || !mounted) return;
+    if (_knownSchoolName() == null) return;
+    _syncSchoolNameLabel();
+    if (!_schoolIdFocus.hasFocus && !_schoolIdEditing) {
+      setState(() {});
+      return;
+    }
+    if (_schoolNameRevealScheduled) return;
+    _schoolNameRevealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _schoolNameRevealScheduled = false;
+      if (!mounted || _schoolNameHoldEdit) return;
+      if (_knownSchoolName() == null) return;
+      _syncSchoolNameLabel();
+      if (_schoolIdFocus.hasFocus) {
+        _schoolIdFocus.unfocus();
+        return;
+      }
+      if (_schoolIdEditing) {
+        setState(() => _schoolIdEditing = false);
+      } else {
+        setState(() {});
+      }
+    });
   }
 
   void _onSchoolIdFocusChanged() {
     if (_schoolIdFocus.hasFocus) return;
     if (!_schoolIdEditing) return;
+    _schoolNameHoldEdit = false;
     final id = schoolId.text.trim();
     if (id.isNotEmpty) {
       unawaited(_commitTypedSchoolId(id));
       _applySavedEntryForSchoolId(id);
     }
     if (!mounted) return;
+    _syncSchoolNameLabel();
     setState(() => _schoolIdEditing = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -178,6 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _prefsLoaded = true);
     }
     final typed = schoolId.text.trim();
+    _syncSchoolNameLabel();
     if (typed.length >= 3) {
       unawaited(_ensurePublicSchoolBrand(typed));
     }
@@ -244,6 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _publicBrandDebounce?.cancel();
     _schoolIdFocus.dispose();
     schoolId.dispose();
+    _schoolNameDisplay.dispose();
     username.dispose();
     password.dispose();
     super.dispose();
@@ -255,6 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _syncLoginChrome();
     if (mounted) setState(() {});
     _schedulePublicBrandFetch(schoolId.text.trim());
+    _revealSchoolName();
   }
 
   void _schedulePublicBrandFetch(String id) {
@@ -274,6 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (schoolId.text.trim().toUpperCase() != typed.toUpperCase()) return;
     LoginChromeBrand.apply(schoolId: typed);
     if (brand != null) setState(() {});
+    _revealSchoolName();
   }
 
   Future<void> _commitTypedSchoolId(String id) async {
@@ -755,7 +817,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _beginSchoolIdEdit() {
-    setState(() => _schoolIdEditing = true);
+    _schoolIdAtEdit = schoolId.text;
+    setState(() {
+      _schoolNameHoldEdit = true;
+      _schoolIdEditing = true;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _schoolIdFocus.requestFocus();
@@ -778,6 +844,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final savedIds = LoginPrefsService.instance.savedSchoolIds;
     final hasValue = schoolId.text.trim().isNotEmpty;
     final settled = hasValue && !_schoolIdEditing;
+    final knownName = settled ? _knownSchoolName() : null;
+    final showName = knownName != null;
 
     final decoration = _fieldDecoration(
       label: s.schoolId,
@@ -806,30 +874,42 @@ class _LoginScreenState extends State<LoginScreen> {
     final style = kIsWeb
         ? _webFieldTextStyle.copyWith(
             fontWeight: settled ? FontWeight.w700 : FontWeight.w500,
-            letterSpacing: settled ? 0.6 : 0,
+            letterSpacing: showName ? 0 : (settled ? 0.6 : 0),
           )
         : TextStyle(
             fontWeight: settled ? FontWeight.w700 : FontWeight.w500,
             fontSize: settled ? 16 : 14,
-            letterSpacing: settled ? 0.6 : 0,
+            letterSpacing: showName ? 0 : (settled ? 0.6 : 0),
           );
 
     return DomBackedTextField(
       key: const Key('login-school-id'),
-      controller: schoolId,
+      controller: showName ? _schoolNameDisplay : schoolId,
       focusNode: _schoolIdFocus,
       readOnly: settled,
       decoration: decoration,
-      textCapitalization: TextCapitalization.characters,
+      textCapitalization:
+          showName ? TextCapitalization.none : TextCapitalization.characters,
       autofillHint: 'organization',
       style: style,
       onChanged: (value) {
-        if (!_schoolIdEditing) setState(() => _schoolIdEditing = true);
+        if (showName) return;
+        if (value.trim().toUpperCase() !=
+            _schoolIdAtEdit.trim().toUpperCase()) {
+          _schoolNameHoldEdit = false;
+        }
+        final known = _knownSchoolName(value);
+        if (_schoolNameHoldEdit || known == null) {
+          if (!_schoolIdEditing) setState(() => _schoolIdEditing = true);
+          LoginChromeBrand.apply(schoolId: value);
+          setState(() {});
+          return;
+        }
         LoginChromeBrand.apply(schoolId: value);
-        setState(() {});
+        _revealSchoolName();
       },
-      onSubmitted: (value) {
-        final id = value.trim();
+      onSubmitted: (_) {
+        final id = schoolId.text.trim();
         if (id.isNotEmpty) {
           unawaited(_commitTypedSchoolId(id));
           _applySavedEntryForSchoolId(id);
