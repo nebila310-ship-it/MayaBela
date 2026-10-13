@@ -109,6 +109,10 @@ void main() {
     expect(find.text('Mayu International Academy'), findsOneWidget);
     expect(find.text('OFFICIAL GRADE REPORT'), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-photo')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('report-card-photo'))).height,
+      greaterThan(120),
+    );
     expect(find.byKey(const ValueKey('report-card-logo')), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('report-card-logo'))).width,

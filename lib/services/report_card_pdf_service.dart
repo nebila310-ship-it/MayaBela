@@ -18,9 +18,10 @@ import 'package:mayabela/utils/web_file_utils.dart';
 
 /// Official grade-report PDF: school logo, student photo, stamp, and signature.
 ///
-/// When this school has saved a stamp, it covers the lower half of the photo
-/// and is repeated at the bottom of the card. A saved principal signature is
-/// drawn on the principal line. Missing assets are left blank.
+/// When this school has saved a stamp, it sits on the lower-left corner of
+/// the student photo and is repeated at the bottom of the card. A saved
+/// principal signature is drawn on the principal line. Missing assets are
+/// left blank.
 class ReportCardPdfService {
   ReportCardPdfService._();
   static final instance = ReportCardPdfService._();
@@ -263,10 +264,7 @@ class ReportCardPdfService {
               alignment: pw.Alignment.centerRight,
               child: pw.Transform.rotate(
                 angle: -0.12,
-                child: pw.Opacity(
-                  opacity: 0.92,
-                  child: pw.Image(stamp, width: 124, height: 124),
-                ),
+                child: pw.Image(stamp, width: 124, height: 124),
               ),
             ),
           ],
@@ -283,9 +281,11 @@ class ReportCardPdfService {
     required pw.ImageProvider? stamp,
     required String studentName,
   }) {
+    const photoW = 130.0;
+    const photoH = 160.0;
     final portrait = pw.Container(
-      width: 74,
-      height: 90,
+      width: photoW,
+      height: photoH,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         border: pw.Border.all(color: _gold, width: 1.4),
@@ -295,7 +295,7 @@ class ReportCardPdfService {
               child: pw.Text(
                 studentName.isEmpty ? '?' : studentName[0].toUpperCase(),
                 style: pw.TextStyle(
-                  fontSize: 22,
+                  fontSize: 28,
                   fontWeight: pw.FontWeight.bold,
                   color: _navy,
                 ),
@@ -303,81 +303,80 @@ class ReportCardPdfService {
             )
           : pw.Image(photo, fit: pw.BoxFit.cover),
     );
-    return pw.Container(
-      padding: const pw.EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: const pw.BoxDecoration(color: _navy),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          if (logo != null) ...[
-            pw.Container(
-              width: 188,
-              height: 68,
-              padding: const pw.EdgeInsets.all(4),
-              color: PdfColors.white,
-              child: pw.Image(logo, fit: pw.BoxFit.contain),
-            ),
-            pw.SizedBox(width: 10),
-          ],
-          pw.Expanded(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+    return pw.Stack(
+      overflow: pw.Overflow.visible,
+      children: [
+        pw.Container(
+          height: 96,
+          padding: const pw.EdgeInsets.fromLTRB(12, 14, 12, 14),
+          decoration: const pw.BoxDecoration(color: _navy),
+          child: pw.Row(
+            children: [
+              if (logo != null) ...[
+                pw.Container(
+                  width: 188,
+                  height: 68,
+                  padding: const pw.EdgeInsets.all(4),
+                  color: PdfColors.white,
+                  child: pw.Image(logo, fit: pw.BoxFit.contain),
+                ),
+                pw.SizedBox(width: 10),
+              ],
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Text(
+                      school,
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'OFFICIAL GRADE REPORT',
+                      style: pw.TextStyle(
+                        color: _gold,
+                        fontSize: 9,
+                        letterSpacing: 1.2,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(width: photoW + 8),
+            ],
+          ),
+        ),
+        pw.Positioned(
+          top: 0,
+          right: 0,
+          child: pw.SizedBox(
+            width: photoW,
+            height: photoH,
+            child: pw.Stack(
+              overflow: pw.Overflow.visible,
               children: [
-                pw.Text(
-                  school,
-                  style: pw.TextStyle(
-                    color: PdfColors.white,
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
+                portrait,
+                if (stamp != null)
+                  pw.Positioned(
+                    left: -40,
+                    top: 92,
+                    child: pw.SizedBox(
+                      width: 86,
+                      height: 90,
+                      child: pw.Image(stamp, fit: pw.BoxFit.contain),
+                    ),
                   ),
-                ),
-                pw.SizedBox(height: 2),
-                pw.Text(
-                  'OFFICIAL GRADE REPORT',
-                  style: pw.TextStyle(
-                    color: _gold,
-                    fontSize: 9,
-                    letterSpacing: 1.2,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
               ],
             ),
           ),
-          pw.SizedBox(width: 12),
-          if (stamp == null)
-            portrait
-          else
-            pw.SizedBox(
-              width: 74,
-              height: 90,
-              child: pw.Stack(
-                children: [
-                  pw.Positioned(
-                    left: 0,
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: portrait,
-                  ),
-                  pw.Positioned(
-                    left: -2,
-                    right: -8,
-                    top: 18,
-                    bottom: -8,
-                    child: pw.Transform.rotate(
-                      angle: -0.16,
-                      child: pw.Opacity(
-                        opacity: 0.9,
-                        child: pw.Image(stamp, fit: pw.BoxFit.contain),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

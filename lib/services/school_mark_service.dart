@@ -160,9 +160,13 @@ class SchoolMarkService {
         final minC = math.min(r, math.min(g, b));
         final sat = maxC == 0 ? 0.0 : (maxC - minC) / maxC;
         final luma = (r * 299 + g * 587 + b * 114) / 1000.0;
-        if (luma >= 64 && luma <= 210 && sat >= 0.30) {
+        // Keep the colored letters as well as the ring. Near-black scan
+        // noise stays out because it is not saturated.
+        if (luma >= 42 && luma <= 215 && sat >= 0.28) {
           strong[y][x] = true;
-          colors[y][x] = (r << 16) | (g << 8) | b;
+          colors[y][x] = (_deeperInk(r) << 16) |
+              (_deeperInk(g) << 8) |
+              _deeperInk(b);
         }
       }
     }
@@ -199,12 +203,20 @@ class SchoolMarkService {
         out.setPixel(
           x,
           y,
-          img.ColorRgba8((packed >> 16) & 255, (packed >> 8) & 255, packed & 255, 220),
+          img.ColorRgba8(
+            (packed >> 16) & 255,
+            (packed >> 8) & 255,
+            packed & 255,
+            255,
+          ),
         );
       }
     }
     return out;
   }
+
+  /// Pulls scanned seal colors down so the wording stays readable.
+  int _deeperInk(int channel) => (channel * 0.82).round().clamp(0, 255);
 
   /// Pulls a signature off lined paper. A scan's dark border and ruling
   /// lines are dropped, and the pen is laid down as blue ink.
