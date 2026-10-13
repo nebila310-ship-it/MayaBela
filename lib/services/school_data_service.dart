@@ -4610,7 +4610,7 @@ class SchoolDataService {
         StudentAttendanceEntry(
           studentName: student.name,
           studentId: student.inviteStudentId,
-          status: match?.status ?? AttendanceStatus.present,
+          status: match?.status ?? AttendanceStatus.unmarked,
           updatedAt: match?.updatedAt,
         ),
       );
@@ -4642,6 +4642,7 @@ class SchoolDataService {
   }
 
   DailyAttendanceReport buildDailyAttendanceReport(DateTime date) {
+    lockClosedDailyAttendance(date);
     final sessions = getAttendanceSessionsForDate(date);
     final records = <StudentAttendanceRecord>[];
     final summaries = <AttendanceSessionSummary>[];
@@ -4660,6 +4661,7 @@ class SchoolDataService {
       var sessionExcused = 0;
 
       for (final entry in reportEntries) {
+        if (entry.status == AttendanceStatus.unmarked) continue;
         switch (entry.status) {
           case AttendanceStatus.present:
             sessionPresent++;
@@ -4673,6 +4675,8 @@ class SchoolDataService {
           case AttendanceStatus.excused:
             sessionExcused++;
             excused++;
+          case AttendanceStatus.unmarked:
+            break;
         }
         records.add(
           StudentAttendanceRecord(
@@ -4684,6 +4688,10 @@ class SchoolDataService {
             date: _calendarDay(date),
           ),
         );
+      }
+
+      if (sessionPresent + sessionLate + sessionAbsent + sessionExcused == 0) {
+        continue;
       }
 
       summaries.add(
@@ -4843,7 +4851,7 @@ class SchoolDataService {
       return StudentAttendanceEntry(
         studentName: student.name,
         studentId: student.inviteStudentId,
-        status: match?.status ?? AttendanceStatus.present,
+        status: match?.status ?? AttendanceStatus.unmarked,
         updatedAt: match?.updatedAt,
       );
     }).toList();
@@ -4853,6 +4861,103 @@ class SchoolDataService {
       locked: belongs && session!.locked,
       periodLabel: belongs ? session!.periodLabel : '',
     );
+  }
+
+  /// Morning register opens with the school day and closes at 9:00.
+  /// Class starts at 8:30, so an unlocked register locks 30 minutes later.
+  static const attendanceClassStartHour = 8;
+  static const attendanceClassStartMinute = 30;
+  static const attendanceCloseHour = 9;
+  static const attendanceCloseMinute = 0;
+
+  /// Tests pin the clock. Release builds use the phone's local time.
+  @visibleForTesting
+  DateTime? debugAttendanceNow;
+
+  /// Tests turn the 9:00 rule on. Debug builds leave it off so older
+  /// fixtures can still save a register. Release builds always enforce it.
+  @visibleForTesting
+  bool? debugEnforceAttendanceWindow;
+
+  DateTime attendanceClock() => debugAttendanceNow ?? DateTime.now();
+
+  bool get attendanceWindowEnforced {
+    final override = debugEnforceAttendanceWindow;
+    if (override != null) return override;
+    return !kDebugMode;
+  }
+
+  bool attendanceTakingOpen(DateTime date, {String periodKey = ''}) {
+    if (!attendanceWindowEnforced) return true;
+    if (_normalizeAttendancePeriodKey(periodKey).isNotEmpty) return true;
+    final clock = attendanceClock();
+    final day = _calendarDay(date);
+    final today = _calendarDay(clock);
+    if (day != today) return false;
+    final closes = DateTime(
+      today.year,
+      today.month,
+      today.day,
+      attendanceCloseHour,
+      attendanceCloseMinute,
+    );
+    return clock.isBefore(closes);
+  }
+
+  bool _canWriteDailyAttendance(
+    DateTime date, {
+    required String periodKey,
+    required bool autoLock,
+  }) {
+    if (attendanceTakingOpen(date, periodKey: periodKey)) return true;
+    if (canUnlockAttendanceRegister()) return true;
+    return autoLock;
+  }
+
+  /// Lock daily registers whose taking window has passed and that the
+  /// teacher left open.
+  void lockClosedDailyAttendance(DateTime date) {
+    if (!attendanceWindowEnforced) return;
+    final day = _calendarDay(date);
+    final today = _calendarDay(attendanceClock());
+    if (day.isAfter(today) || attendanceTakingOpen(date)) return;
+    final pending = _attendanceSessions
+        .where(
+          (session) =>
+              session.isDaily &&
+              !session.locked &&
+              _isSameDay(session.date, date),
+        )
+        .toList();
+    for (final session in pending) {
+      lockAttendanceSession(
+        className: session.className,
+        date: session.date,
+        lockedBy: session.lockedBy ?? session.conductedBy,
+        periodKey: session.periodKey,
+      );
+    }
+  }
+
+  /// Classes that still have no present, late, absent, or excused mark.
+  List<String> classesWithoutConductedAttendance(DateTime date) {
+    lockClosedDailyAttendance(date);
+    final conducted = <String>[];
+    for (final session in _attendanceSessions) {
+      if (!_isSameDay(session.date, date)) continue;
+      if (!_attendanceSessionInDailyReport(session)) continue;
+      final taken = session.entries.any(
+        (entry) => entry.status != AttendanceStatus.unmarked,
+      );
+      if (!taken) continue;
+      conducted.add(session.className);
+    }
+    return [
+      for (final name in getAllClassNames())
+        if (getStudentsForClass(name).isNotEmpty &&
+            !conducted.any((saved) => _classNamesMatch(saved, name)))
+          name,
+    ];
   }
 
   bool canWriteAttendanceRegister(String className) {
@@ -4993,7 +5098,8 @@ class SchoolDataService {
       );
       if (!covered) continue;
       if (entry.status == AttendanceStatus.present ||
-          entry.status == AttendanceStatus.absent) {
+          entry.status == AttendanceStatus.absent ||
+          entry.status == AttendanceStatus.unmarked) {
         entry.status = AttendanceStatus.excused;
         entry.updatedAt = _attendanceWriteTime(entry.updatedAt);
       }
@@ -5033,7 +5139,8 @@ class SchoolDataService {
           continue;
         }
         if (entry.status == AttendanceStatus.present ||
-            entry.status == AttendanceStatus.absent) {
+            entry.status == AttendanceStatus.absent ||
+            entry.status == AttendanceStatus.unmarked) {
           entry.status = AttendanceStatus.excused;
           entry.updatedAt = _attendanceWriteTime(entry.updatedAt);
           changed = true;
@@ -5067,6 +5174,10 @@ class SchoolDataService {
     final key = _normalizeAttendancePeriodKey(periodKey);
     final existing = getAttendanceSession(className, date, periodKey: key);
     if (existing != null && existing.locked && !canUnlockAttendanceRegister()) {
+      return false;
+    }
+    final autoLock = locked == true && existing != null && !existing.locked;
+    if (!_canWriteDailyAttendance(date, periodKey: key, autoLock: autoLock)) {
       return false;
     }
 
@@ -5221,7 +5332,7 @@ class SchoolDataService {
         fromRole: AuthService.roleTeacher,
         fromName: conductedBy,
         recipientRole: AuthService.roleParent,
-        targetStudentId: entry.studentId ?? student?.studentId,
+        targetStudentId: student?.studentId ?? entry.studentId,
         targetClassName: className,
       );
     }
@@ -6164,6 +6275,8 @@ class SchoolDataService {
             absent++;
           case AttendanceStatus.excused:
             excused++;
+          case AttendanceStatus.unmarked:
+            break;
         }
       }
     }
@@ -8205,10 +8318,10 @@ class SchoolDataService {
     required String scannedBy,
     String? studentId,
   }) {
-    final today = DateTime.now();
+    final today = attendanceClock();
     final session = getAttendanceSession(className, today);
     if (session != null && session.locked) return 'locked';
-    final roster = getStudentsForClass(className);
+    if (!attendanceTakingOpen(today)) return 'closed';
     final targetStatus = switch (action) {
       QrScanAction.present || QrScanAction.entry => AttendanceStatus.present,
       QrScanAction.late => AttendanceStatus.late,
@@ -8216,15 +8329,7 @@ class SchoolDataService {
     };
 
     final entries = session?.entries.map(_copyAttendanceEntry).toList() ??
-        roster
-            .map(
-              (student) => StudentAttendanceEntry(
-                studentName: student.name,
-                studentId: student.inviteStudentId,
-                status: AttendanceStatus.present,
-              ),
-            )
-            .toList();
+        <StudentAttendanceEntry>[];
 
     final index = entries.indexWhere(
       (entry) => entry.matches(
@@ -8248,12 +8353,13 @@ class SchoolDataService {
       );
     }
 
-    saveAttendanceSession(
+    final saved = saveAttendanceSession(
       className: className,
       date: today,
       conductedBy: scannedBy,
       entries: entries,
     );
+    if (!saved) return 'locked';
     return null;
   }
 

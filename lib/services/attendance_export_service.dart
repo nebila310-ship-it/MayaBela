@@ -144,6 +144,8 @@ class AttendanceExportService {
         return labels.absents;
       case AttendanceStatus.excused:
         return labels.excused;
+      case AttendanceStatus.unmarked:
+        return 'Not taken';
     }
   }
 

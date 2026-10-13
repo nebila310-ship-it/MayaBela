@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/class_timetable.dart';
@@ -95,9 +97,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return _data.canWriteAttendanceRegister(selectedClass);
   }
 
+  bool get _windowOpen => _data.attendanceTakingOpen(
+        selectedDate,
+        periodKey: selectedPeriodKey,
+      );
+
   bool get _canEditRegister =>
       _canMarkSelectedClass &&
-      (!_locked || _data.canUnlockAttendanceRegister());
+      (_data.canUnlockAttendanceRegister() || (_windowOpen && !_locked));
 
   List<({String key, String label})> _periodOptions(AppStrings s) {
     final options = <({String key, String label})>[
@@ -139,6 +146,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   void _loadAttendance() {
     final s = AppLocale.instance.strings;
     _syncPeriodSelection(s);
+    _data.lockClosedDailyAttendance(selectedDate);
     final view = _data.attendanceRegisterView(
       className: selectedClass,
       date: selectedDate,
@@ -203,6 +211,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   int get excusedCount =>
       entries.where((entry) => entry.status == AttendanceStatus.excused).length;
 
+  int get unmarkedCount =>
+      entries.where((entry) => entry.status == AttendanceStatus.unmarked).length;
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -224,6 +235,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       entry.status = status;
       entry.updatedAt = DateTime.now();
     });
+    unawaited(_saveAttendance(announce: false));
   }
 
   void _markAllPresent() {
@@ -236,6 +248,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         entry.updatedAt = now;
       }
     });
+    unawaited(_saveAttendance(announce: false));
   }
 
   Widget _lockButton(AppStrings s) {
@@ -296,7 +309,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     _loadAttendance();
   }
 
-  Future<void> _saveAttendance() async {
+  Future<void> _saveAttendance({bool announce = true}) async {
     if (!_canEditRegister) return;
     final s = AppLocale.instance.strings;
     final conductor = AuthService.currentPersonName();
@@ -310,6 +323,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
     if (!saved) {
       if (!mounted) return;
+      _loadAttendance();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(s.attendanceSaveDenied)));
@@ -322,6 +336,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
     if (!mounted) return;
     setState(() {});
+    if (!announce) return;
     ScaffoldMessenger.of(context).showSnackBar(
       CloudSaveHonesty.snackBar(
         savedOk: s.attendanceSavedFor(selectedClass, conductor),
@@ -341,6 +356,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return ClassroomPalette.orange;
       case AttendanceStatus.excused:
         return ClassroomPalette.blue;
+      case AttendanceStatus.unmarked:
+        return const Color(0xFFE7ECF3);
     }
   }
 
@@ -354,6 +371,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return s.late;
       case AttendanceStatus.excused:
         return s.excused;
+      case AttendanceStatus.unmarked:
+        return s.notTaken;
     }
   }
 
@@ -472,7 +491,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     color: TeacherTheme.primaryDark,
                   ),
                   title: Text(
-                    '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                    s.attendanceDayTitle(selectedDate),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,7 +500,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       Text(
                         conductedBy != null
                             ? s.conductedByName(conductedBy!)
-                            : s.selectedDate,
+                            : s.attendanceNotTakenYet,
                       ),
                       if (!widget.readOnly)
                         DropdownButtonHideUnderline(
@@ -514,7 +534,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       ? null
                       : TextButton(onPressed: _pickDate, child: Text(s.change)),
                 ),
-                if (_locked && !widget.readOnly) ...[
+                if (!widget.readOnly && !_windowOpen) ...[
+                  const SizedBox(height: 8),
+                  ListTile(
+                    dense: true,
+                    tileColor: ClassroomPalette.red.withValues(alpha: 0.08),
+                    leading: const Icon(Icons.lock_clock_outlined),
+                    title: Text(s.attendanceClosedForDay),
+                  ),
+                ] else if (_locked && !widget.readOnly) ...[
                   const SizedBox(height: 8),
                   ListTile(
                     dense: true,
@@ -540,6 +568,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       s.excused,
                       excusedCount,
                       ClassroomPalette.blue,
+                    ),
+                    _summaryChip(
+                      s.notTaken,
+                      unmarkedCount,
+                      const Color(0xFF607D8B),
                     ),
                   ],
                 ),
@@ -596,7 +629,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _studentBar(StudentAttendanceEntry entry, AppStrings s) {
+    final blank = entry.status == AttendanceStatus.unmarked;
     final color = _statusColor(entry.status);
+    final ink = blank ? const Color(0xFF1A237E) : Colors.white;
     final key = _entryKey(entry);
     return Material(
       key: ValueKey('attendance-student-$key'),
@@ -621,8 +656,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     entry.studentName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: ink,
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
                       letterSpacing: -0.2,
@@ -630,8 +665,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                   Text(
                     _statusLabel(entry.status, s),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: ink,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
@@ -640,7 +675,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ),
             if (widget.readOnly)
-              const Icon(Icons.circle, color: Colors.white, size: 12)
+              Icon(Icons.circle, color: ink, size: 12)
             else
               FittedBox(
                 child: Row(
@@ -651,24 +686,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       AttendanceStatus.present,
                       Icons.check,
                       s,
+                      blank: blank,
                     ),
                     _statusButton(
                       entry,
                       AttendanceStatus.late,
                       Icons.schedule,
                       s,
+                      blank: blank,
                     ),
                     _statusButton(
                       entry,
                       AttendanceStatus.absent,
                       Icons.close,
                       s,
+                      blank: blank,
                     ),
                     _statusButton(
                       entry,
                       AttendanceStatus.excused,
                       Icons.event_available,
                       s,
+                      blank: blank,
                     ),
                   ],
                 ),
@@ -732,15 +771,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     StudentAttendanceEntry entry,
     AttendanceStatus status,
     IconData icon,
-    AppStrings s,
-  ) {
+    AppStrings s, {
+    bool blank = false,
+  }) {
     final selected = entry.status == status;
+    final idle = blank ? const Color(0xFF5C6B82) : Colors.white.withValues(alpha: 0.55);
     return IconButton(
       visualDensity: VisualDensity.compact,
       tooltip: _statusLabel(status, s),
       onPressed: () => _setStatus(entry, status),
       icon: Icon(icon, size: 22),
-      color: selected ? Colors.white : Colors.white.withValues(alpha: 0.55),
+      color: selected
+          ? (blank ? const Color(0xFF1A237E) : Colors.white)
+          : idle,
       style: IconButton.styleFrom(
         backgroundColor: selected ? Colors.black26 : null,
       ),

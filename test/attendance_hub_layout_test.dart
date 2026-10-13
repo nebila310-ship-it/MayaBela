@@ -140,7 +140,8 @@ void main() {
 
       expect(find.text('Roll Kid 12'), findsOneWidget);
       expect(find.text('Roll Kid 01'), findsNothing);
-      expect(barColor('STU-ATT-11').color, ClassroomPalette.green);
+      expect(barColor('STU-ATT-11').color, const Color(0xFFE7ECF3));
+      expect(find.text('Not taken'), findsWidgets);
     },
   );
 }

@@ -262,6 +262,7 @@ class YearStartSheetService {
         AttendanceStatus.absent => 'A',
         AttendanceStatus.late => 'L',
         AttendanceStatus.excused => 'E',
+        AttendanceStatus.unmarked => '',
       };
 
   static AttendanceStatus? _parseStatus(String raw) {

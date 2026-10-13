@@ -273,7 +273,7 @@ void main() {
     final data = SchoolDataService.instance;
     const className = 'Grade 9Z-P3P';
     final day = DateTime.utc(2026, 12, 11);
-    StudentRegistryService.instance.addStudent(
+    final kid = StudentRegistryService.instance.addStudent(
       schoolId: 'TB-001',
       fullName: 'Period Kid',
       grade: '9',
@@ -290,7 +290,7 @@ void main() {
         entries: [
           StudentAttendanceEntry(
             studentName: 'Period Kid',
-            studentId: 'STU-P3P',
+            studentId: kid.studentId,
             status: AttendanceStatus.present,
             updatedAt: DateTime.utc(2026, 12, 11, 8),
           ),
@@ -309,7 +309,7 @@ void main() {
         entries: [
           StudentAttendanceEntry(
             studentName: 'Period Kid',
-            studentId: 'STU-P3P',
+            studentId: kid.studentId,
             status: AttendanceStatus.absent,
             updatedAt: DateTime.utc(2026, 12, 11, 10),
           ),

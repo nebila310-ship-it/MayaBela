@@ -184,8 +184,15 @@ void main() {
       final others = session.entries.where(
         (e) => e.studentName != 'Phase One Alpha',
       );
-      expect(others, isNotEmpty);
-      expect(others.every((e) => e.status == AttendanceStatus.present), isTrue);
+      expect(others, isEmpty);
+      final view = data.attendanceRegisterView(
+        className: className,
+        date: DateTime.now(),
+      );
+      final beta = view.entries.firstWhere(
+        (e) => e.studentName == 'Phase One Beta',
+      );
+      expect(beta.status, AttendanceStatus.unmarked);
     },
   );
 

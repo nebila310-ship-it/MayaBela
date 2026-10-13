@@ -2811,6 +2811,53 @@ class AppStrings implements AppStringsLike {
       t('View history', 'ታሪክ ይመልከቱ');
   String get selectedDate =>
       t('Selected date', 'የተመረጠ ቀን');
+  String get attendanceNotTakenYet => t(
+        'No attendance taken yet',
+        'መገኘት እስካሁን አልተወሰደም',
+        'Argamni hamma ammaatti hin fudhatamne',
+      );
+  String get notTaken => t('Not taken', 'አልተወሰደም', 'Hin fudhatamne');
+  String get attendanceNotConducted => t(
+        'Attendance has not been conducted',
+        'መገኘት አልተወሰደም',
+        'Argamni hin fudhatamne',
+      );
+  String get attendanceClosedForDay => t(
+        'Attendance is closed. Class starts at 8:30 and the register locks at 9:00.',
+        'መገኘት ተዘግቷል። ክፍል በ8:30 ይጀምራል፣ መዝገቡ በ9:00 ይቆለፋል።',
+        'Argamni cufameera. Kutaan sa\'aatii 8:30 jalqaba, galmeen sa\'aatii 9:00 cufama.',
+      );
+  String attendanceDayTitle(DateTime date) {
+    const en = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const am = ['ሰኞ', 'ማክሰኞ', 'ረቡዕ', 'ሐሙስ', 'ዓርብ', 'ቅዳሜ', 'እሁድ'];
+    const om = [
+      'Wiixata',
+      'Kibxata',
+      'Roobii',
+      'Kamiisa',
+      'Jimaata',
+      'Sanbata',
+      'Dilbata',
+    ];
+    final index = date.weekday - 1;
+    final name = isAmharic
+        ? am[index]
+        : isOromo
+            ? om[index]
+            : en[index];
+    if (isAmharic || isOromo) {
+      return '$name · ${date.day}/${date.month}/${date.year}';
+    }
+    return '$name, ${date.day} ${monthName(date.month)} ${date.year}';
+  }
   String get change => t('Change', 'ቀይር');
   String conductedByName(String name) =>
       t('Conducted by: $name', 'የተመዘገበ በ: $name');

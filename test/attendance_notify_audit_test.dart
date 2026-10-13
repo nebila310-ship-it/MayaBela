@@ -45,11 +45,31 @@ void main() {
       ),
     ], replace: true);
 
-    final report = SchoolDataService.instance.buildDailyAttendanceReport(
-      DateTime.now(),
-    );
+    final data = SchoolDataService.instance;
+    final report = data.buildDailyAttendanceReport(DateTime.now());
     expect(report.records.any((r) => r.studentName == 'Sara Bekele'), isFalse);
-    expect(report.records.any((r) => r.studentName == 'Maya Live'), isTrue);
+    expect(report.records.any((r) => r.studentName == 'Maya Live'), isFalse);
+
+    expect(
+      data.saveAttendanceSession(
+        className: 'Grade 4A',
+        date: DateTime.now(),
+        conductedBy: 'Homeroom',
+        notifyParents: false,
+        entries: [
+          StudentAttendanceEntry(
+            studentName: 'Maya Live',
+            studentId: 'STU-LIVE-01',
+            status: AttendanceStatus.present,
+            updatedAt: DateTime.now(),
+          ),
+        ],
+      ),
+      isTrue,
+    );
+    final taken = data.buildDailyAttendanceReport(DateTime.now());
+    expect(taken.records.any((r) => r.studentName == 'Sara Bekele'), isFalse);
+    expect(taken.records.any((r) => r.studentName == 'Maya Live'), isTrue);
   });
 
   test('saving an absence notifies the linked parent', () {
