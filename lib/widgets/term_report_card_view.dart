@@ -51,6 +51,8 @@ class _TermReportCardViewState extends State<TermReportCardView> {
   Uint8List? _logo;
   Uint8List? _stamp;
   Uint8List? _signature;
+  Uint8List? _stampInk;
+  Uint8List? _signatureInk;
   var _busy = false;
 
   @override
@@ -59,6 +61,7 @@ class _TermReportCardViewState extends State<TermReportCardView> {
     _logo = widget.logoBytes;
     _stamp = widget.stampBytes;
     _signature = widget.signatureBytes;
+    _applyInk();
     if (_logo == null || _stamp == null || _signature == null) {
       _loadMarks();
     }
@@ -74,6 +77,7 @@ class _TermReportCardViewState extends State<TermReportCardView> {
     if (widget.signatureBytes != oldWidget.signatureBytes) {
       _signature = widget.signatureBytes;
     }
+    _applyInk();
     if ((widget.logoBytes == null ||
             widget.stampBytes == null ||
             widget.signatureBytes == null) &&
@@ -94,7 +98,18 @@ class _TermReportCardViewState extends State<TermReportCardView> {
       if (logo != null) _logo = logo;
       if (stamp != null) _stamp = stamp;
       if (signature != null) _signature = signature;
+      _applyInk();
     });
+  }
+
+  void _applyInk() {
+    final marks = SchoolMarkService.instance;
+    _stampInk = _stamp == null
+        ? null
+        : marks.forReport(_stamp!, SchoolMarkKind.stamp);
+    _signatureInk = _signature == null
+        ? null
+        : marks.forReport(_signature!, SchoolMarkKind.principalSignature);
   }
 
   Future<void> _deliver(bool openForPrint) async {
@@ -272,16 +287,23 @@ class _TermReportCardViewState extends State<TermReportCardView> {
                 ],
                 const SizedBox(height: 18),
                 _signatures(),
-                if (_stamp != null) ...[
-                  const SizedBox(height: 8),
+                if (_stampInk != null) ...[
+                  const SizedBox(height: 6),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Image.memory(
-                      _stamp!,
-                      key: const ValueKey('report-card-bottom-stamp'),
-                      height: 84,
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true,
+                    child: Transform.rotate(
+                      angle: -0.1,
+                      child: Opacity(
+                        opacity: 0.92,
+                        child: Image.memory(
+                          _stampInk!,
+                          key: const ValueKey('report-card-bottom-stamp'),
+                          height: 118,
+                          width: 118,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -325,14 +347,15 @@ class _TermReportCardViewState extends State<TermReportCardView> {
         color: _navy,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) => Row(
         children: [
           if (_logo != null) ...[
             Container(
               key: const ValueKey('report-card-logo'),
-              width: 46,
-              height: 46,
-              padding: const EdgeInsets.all(3),
+              width: constraints.maxWidth >= 520 ? 188 : 136,
+              height: constraints.maxWidth >= 520 ? 68 : 52,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -374,10 +397,10 @@ class _TermReportCardViewState extends State<TermReportCardView> {
           const SizedBox(width: 10),
           SizedBox(
             key: const ValueKey('report-card-photo'),
-            width: 64,
-            height: 78,
+            width: 76,
+            height: 92,
             child: Stack(
-              clipBehavior: Clip.hardEdge,
+              clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
                   child: Container(
@@ -391,29 +414,36 @@ class _TermReportCardViewState extends State<TermReportCardView> {
                     child: StudentPhotoAvatar(
                       studentId: report.studentId,
                       name: report.studentName,
-                      radius: 30,
+                      radius: 34,
                       fallbackColor: _navy,
                       enableViewer: false,
                     ),
                   ),
                 ),
-                if (_stamp != null)
+                if (_stampInk != null)
                   Positioned(
                     key: const ValueKey('report-card-photo-stamp'),
-                    left: 4,
-                    right: 2,
-                    bottom: 2,
-                    height: 38,
-                    child: Image.memory(
-                      _stamp!,
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true,
+                    left: -2,
+                    right: -18,
+                    top: 16,
+                    bottom: -16,
+                    child: Transform.rotate(
+                      angle: -0.16,
+                      child: Opacity(
+                        opacity: 0.9,
+                        child: Image.memory(
+                          _stampInk!,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
+                      ),
                     ),
                   ),
               ],
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -514,7 +544,7 @@ class _TermReportCardViewState extends State<TermReportCardView> {
               child: _SignLine(
                 role: 'Principal',
                 lineKey: const ValueKey('report-card-principal-sign'),
-                imageBytes: _signature,
+                imageBytes: _signatureInk,
               ),
             ),
           ],
@@ -578,24 +608,41 @@ class _SignLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 36,
+          height: 50,
           width: double.infinity,
-          child: imageBytes == null
-              ? const SizedBox.shrink()
-              : Align(
-                  alignment: Alignment.bottomLeft,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomLeft,
+            children: [
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFF1B3A4B), width: 0.9),
+                    ),
+                  ),
+                  child: SizedBox(height: 1),
+                ),
+              ),
+              if (imageBytes != null)
+                Positioned(
+                  left: 0,
+                  right: 4,
+                  bottom: -6,
+                  height: 46,
                   child: Image.memory(
                     imageBytes!,
                     key: const ValueKey('report-card-principal-signature'),
-                    height: 34,
                     fit: BoxFit.contain,
+                    alignment: Alignment.bottomCenter,
                     gaplessPlayback: true,
                   ),
                 ),
-        ),
-        Container(
-          height: 1,
-          color: const Color(0xFF1B3A4B),
+            ],
+          ),
         ),
         const SizedBox(height: 4),
         Text(

@@ -129,9 +129,21 @@ class ReportCardPdfService {
     final lines = ReportCardLayout.lines(report);
     final logo = _decodes(logoBytes) ? pw.MemoryImage(logoBytes!) : null;
     final photo = _decodes(photoBytes) ? pw.MemoryImage(photoBytes!) : null;
-    final stamp = _decodes(stampBytes) ? pw.MemoryImage(stampBytes!) : null;
+    final stampInk = _decodes(stampBytes)
+        ? SchoolMarkService.instance.forReport(
+            stampBytes!,
+            SchoolMarkKind.stamp,
+          )
+        : null;
+    final signatureInk = _decodes(signatureBytes)
+        ? SchoolMarkService.instance.forReport(
+            signatureBytes!,
+            SchoolMarkKind.principalSignature,
+          )
+        : null;
+    final stamp = _decodes(stampInk) ? pw.MemoryImage(stampInk!) : null;
     final signature =
-        _decodes(signatureBytes) ? pw.MemoryImage(signatureBytes!) : null;
+        _decodes(signatureInk) ? pw.MemoryImage(signatureInk!) : null;
     final snap = report.attendanceSnapshot;
     final attendance = snap.sessions == 0
         ? '-'
@@ -246,10 +258,16 @@ class ReportCardPdfService {
           pw.SizedBox(height: 28),
           _signatures(signature),
           if (stamp != null) ...[
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 8),
             pw.Align(
               alignment: pw.Alignment.centerRight,
-              child: pw.Image(stamp, width: 86, height: 86),
+              child: pw.Transform.rotate(
+                angle: -0.12,
+                child: pw.Opacity(
+                  opacity: 0.92,
+                  child: pw.Image(stamp, width: 124, height: 124),
+                ),
+              ),
             ),
           ],
         ],
@@ -266,8 +284,8 @@ class ReportCardPdfService {
     required String studentName,
   }) {
     final portrait = pw.Container(
-      width: 62,
-      height: 74,
+      width: 74,
+      height: 90,
       decoration: pw.BoxDecoration(
         color: PdfColors.white,
         border: pw.Border.all(color: _gold, width: 1.4),
@@ -293,9 +311,9 @@ class ReportCardPdfService {
         children: [
           if (logo != null) ...[
             pw.Container(
-              width: 46,
-              height: 46,
-              padding: const pw.EdgeInsets.all(3),
+              width: 188,
+              height: 68,
+              padding: const pw.EdgeInsets.all(4),
               color: PdfColors.white,
               child: pw.Image(logo, fit: pw.BoxFit.contain),
             ),
@@ -331,8 +349,8 @@ class ReportCardPdfService {
             portrait
           else
             pw.SizedBox(
-              width: 62,
-              height: 74,
+              width: 74,
+              height: 90,
               child: pw.Stack(
                 children: [
                   pw.Positioned(
@@ -343,12 +361,16 @@ class ReportCardPdfService {
                     child: portrait,
                   ),
                   pw.Positioned(
-                    left: 6,
-                    right: 2,
-                    bottom: 1,
-                    child: pw.SizedBox(
-                      height: 36,
-                      child: pw.Image(stamp, fit: pw.BoxFit.contain),
+                    left: -2,
+                    right: -8,
+                    top: 18,
+                    bottom: -8,
+                    child: pw.Transform.rotate(
+                      angle: -0.16,
+                      child: pw.Opacity(
+                        opacity: 0.9,
+                        child: pw.Image(stamp, fit: pw.BoxFit.contain),
+                      ),
                     ),
                   ),
                 ],
@@ -474,19 +496,35 @@ class ReportCardPdfService {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Container(
-              height: 36,
-              alignment: pw.Alignment.bottomLeft,
-              child: image == null
-                  ? pw.SizedBox(height: 36)
-                  : pw.Image(image, height: 32, fit: pw.BoxFit.contain),
-            ),
-            pw.Container(
-              height: 1,
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(color: _ink, width: 0.6),
-                ),
+            pw.SizedBox(
+              height: 40,
+              child: pw.Stack(
+                children: [
+                  if (image != null)
+                    pw.Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: -4,
+                      child: pw.Image(
+                        image,
+                        height: 42,
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
+                  pw.Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: pw.Container(
+                      height: 1,
+                      decoration: const pw.BoxDecoration(
+                        border: pw.Border(
+                          bottom: pw.BorderSide(color: _ink, width: 0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             pw.SizedBox(height: 4),
