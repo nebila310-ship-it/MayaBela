@@ -4,6 +4,7 @@ import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/scan_feedback_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/advanced_qr_scanner_shell.dart';
 import 'package:mayabela/widgets/qr_scanner_theme.dart';
@@ -38,6 +39,9 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
   String get _scannedBy => AuthService.currentPersonName();
 
   List<StudentQrProfile> get _scannableStudents {
+    if (widget.role == QrScreenRole.teacher) {
+      return _data.getStudentQrProfilesForClasses(_teacherClasses);
+    }
     final scoped = widget.scopedClassName?.trim();
     if (scoped != null && scoped.isNotEmpty) {
       return _data.getStudentQrProfilesForClass(scoped);
@@ -45,11 +49,42 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
     return _data.getAllStudentQrProfiles();
   }
 
+  List<String> get _teacherClasses => _data.teacherQrClassNames(
+        scopedClassName: widget.scopedClassName,
+      );
+
   List<QrScanRecord> get _visibleHistory {
-    final scoped = widget.scopedClassName?.trim();
     final history = _data.getQrScanHistory();
-    if (scoped == null || scoped.isEmpty) return history;
-    return history.where((record) => record.className == scoped).toList();
+    if (widget.role != QrScreenRole.teacher) {
+      final scoped = widget.scopedClassName?.trim();
+      if (scoped == null || scoped.isEmpty) return history;
+      return history
+          .where((record) => record.className == scoped)
+          .toList();
+    }
+    final classes = _teacherClasses;
+    return history
+        .where(
+          (record) => classes.any(
+            (name) => StudentRegistryService.classNamesMatch(
+              record.className,
+              name,
+            ),
+          ),
+        )
+        .toList();
+  }
+
+  String? _scopeSubtitle(AppStrings s) {
+    if (widget.role != QrScreenRole.teacher) {
+      final scoped = widget.scopedClassName?.trim();
+      if (scoped == null || scoped.isEmpty) return null;
+      return s.qrScopedToClass(scoped);
+    }
+    final classes = _teacherClasses;
+    if (classes.length == 1) return s.qrScopedToClass(classes.first);
+    if (classes.length > 1) return s.qrYourClassesOnly;
+    return null;
   }
 
   @override
@@ -75,15 +110,15 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
       qrCode: code,
       action: _action,
       scannedBy: _scannedBy,
-      allowedClassName: widget.scopedClassName,
+      allowedClassNames:
+          widget.role == QrScreenRole.teacher ? _teacherClasses : null,
       syncAttendance: syncAttendance,
     );
 
     if (error != null) {
       setState(() {
-        if (error.startsWith('wrong_class:')) {
-          final className = error.substring('wrong_class:'.length);
-          _lastMessage = s.qrWrongClassError(className);
+        if (error == 'wrong_class' || error.startsWith('wrong_class:')) {
+          _lastMessage = s.qrStudentNotInThisClass;
         } else if (error == 'locked') {
           _lastMessage = s.qrAttendanceLocked;
         } else {
@@ -186,9 +221,7 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
           backgroundColor: const Color(0xFFEEF2FF),
           appBar: AdvancedQrScannerAppBar(
             title: s.qrEntryExit,
-            subtitle: widget.scopedClassName != null
-                ? s.qrScopedToClass(widget.scopedClassName!)
-                : null,
+            subtitle: _scopeSubtitle(s),
             theme: QrScannerTheme.attendance,
             bottom: TabBar(
               controller: _tabs,
@@ -254,13 +287,16 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
         : (_action == QrScanAction.entry ? 0 : 1);
 
     if (students.isEmpty) {
+      final classLabel = _teacherClasses.length == 1
+          ? _teacherClasses.first
+          : widget.scopedClassName?.trim();
       return Center(
         child: Padding(
           padding: listPagePadding(context),
           child: Text(
-            widget.scopedClassName == null
+            classLabel == null || classLabel.isEmpty
                 ? s.noStudentsInClass
-                : s.noStudentsInClassNamed(widget.scopedClassName!),
+                : s.noStudentsInClassNamed(classLabel),
             textAlign: TextAlign.center,
           ),
         ),
@@ -271,7 +307,7 @@ class _QrEntryExitScreenState extends State<QrEntryExitScreen>
       theme: theme,
       title: s.scannerTab,
       subtitle: s.qrScannerAlignHint,
-      bannerText: widget.scopedClassName,
+      bannerText: _scopeSubtitle(s),
       modeOptions: isTeacher
           ? [
               QrScannerModeOption(
