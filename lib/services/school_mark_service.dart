@@ -137,10 +137,9 @@ class SchoolMarkService {
 
   /// Keeps the colored seal and clears the scanned backdrop around it.
   ///
-  /// Letter bodies on a scanned seal are only a little more colored than the
-  /// pale disc, so a strict darkness cut turns the wording into dots. This
-  /// keeps the whole stroke, drops white paper and the black surround, and
-  /// presses the same hue dark enough to read on a photo.
+  /// Ink strength follows how colored each pixel is, so the stroke, the gaps
+  /// inside letters, and the soft edge stay in place. White paper and the
+  /// black surround drop out, and the same hue is pressed dark enough to read.
   img.Image _stampSeal(img.Image source) {
     final width = source.width;
     final height = source.height;
@@ -157,8 +156,13 @@ class SchoolMarkService {
         final minC = math.min(r, math.min(g, b));
         final chroma = maxC - minC;
         final luma = (r * 299 + g * 587 + b * 114) / 1000.0;
-        if (chroma < 16 || luma < 16 || luma > 220) continue;
-        final inkAlpha = math.min(255, 220 + (chroma - 16) * 6);
+        // Soft ink: a hard cutoff chops thin letters into blocks.
+        if (luma < 12 || chroma <= 10) continue;
+        var t = (chroma - 10) / 28.0;
+        if (t > 1) t = 1;
+        t = t * t * (3 - 2 * t);
+        final inkAlpha = (t * 255).round();
+        if (inkAlpha < 8) continue;
         out.setPixel(
           x,
           y,
@@ -176,7 +180,7 @@ class SchoolMarkService {
 
   /// Same hue, pressed down so a pale blue letter stays deep blue.
   int _readableInk(int channel, double luma) {
-    final pulled = (22 + (channel - luma) * 4).round();
+    final pulled = (20 + (channel - luma) * 3.4).round();
     if (pulled < 0) return 0;
     if (pulled > 255) return 255;
     return pulled;
