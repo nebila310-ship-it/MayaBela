@@ -1,4 +1,4 @@
 /// VM / mobile stub. The browser camera preview is web-only.
-void prepareWebQrScanner() {}
+Future<void> prepareWebQrScanner() async {}
 
 void markWebCameraPreviewInline() {}
