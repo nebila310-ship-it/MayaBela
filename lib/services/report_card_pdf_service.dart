@@ -158,10 +158,11 @@ class ReportCardPdfService {
           margin: const pw.EdgeInsets.fromLTRB(36, 32, 36, 40),
           buildBackground: (context) {
             if (logo == null) return pw.SizedBox();
+            final side = PdfPageFormat.a4.height / 2;
             return pw.Center(
               child: pw.Opacity(
                 opacity: 0.08,
-                child: pw.Image(logo, width: 280, height: 280),
+                child: pw.Image(logo, width: side, height: side),
               ),
             );
           },

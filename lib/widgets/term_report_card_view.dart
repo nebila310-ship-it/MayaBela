@@ -164,18 +164,26 @@ class _TermReportCardViewState extends State<TermReportCardView> {
           if (_logo != null)
             Positioned.fill(
               child: IgnorePointer(
-                child: Center(
-                  child: Opacity(
-                    opacity: 0.08,
-                    child: Image.memory(
-                      _logo!,
-                      key: const ValueKey('report-card-watermark'),
-                      width: 240,
-                      height: 240,
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true,
-                    ),
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final longSide = constraints.maxWidth > constraints.maxHeight
+                        ? constraints.maxWidth
+                        : constraints.maxHeight;
+                    final side = longSide * 0.5;
+                    return Center(
+                      child: Opacity(
+                        opacity: 0.08,
+                        child: Image.memory(
+                          _logo!,
+                          key: const ValueKey('report-card-watermark'),
+                          width: side,
+                          height: side,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

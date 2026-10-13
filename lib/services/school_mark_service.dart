@@ -212,11 +212,47 @@ class SchoolMarkService {
         );
       }
     }
-    return out;
+    return _pressHarder(out);
   }
 
-  /// Pulls scanned seal colors down so the wording stays readable.
-  int _deeperInk(int channel) => (channel * 0.82).round().clamp(0, 255);
+  /// Pale scan colors become a solid press. A light blue ring around 200
+  /// lands near 85, dark enough to read on the photo.
+  int _deeperInk(int channel) {
+    final pulled = (channel * channel / 255 * 0.55).round();
+    return pulled.clamp(0, 255);
+  }
+
+  /// Adds a pixel of ink around each stroke so thin lettering holds.
+  img.Image _pressHarder(img.Image ink) {
+    final width = ink.width;
+    final height = ink.height;
+    final out = img.Image.from(ink);
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        if (ink.getPixel(x, y).a.toInt() > 20) continue;
+        var r = 0;
+        var g = 0;
+        var b = 0;
+        var near = 0;
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            final nx = x + dx;
+            final ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            final pixel = ink.getPixel(nx, ny);
+            if (pixel.a.toInt() < 200) continue;
+            r += pixel.r.toInt();
+            g += pixel.g.toInt();
+            b += pixel.b.toInt();
+            near++;
+          }
+        }
+        if (near < 2) continue;
+        out.setPixel(x, y, img.ColorRgba8(r ~/ near, g ~/ near, b ~/ near, 255));
+      }
+    }
+    return out;
+  }
 
   /// Pulls a signature off lined paper. A scan's dark border and ruling
   /// lines are dropped, and the pen is laid down as blue ink.

@@ -119,6 +119,10 @@ void main() {
       greaterThan(120),
     );
     expect(find.byKey(const ValueKey('report-card-watermark')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('report-card-watermark'))).width,
+      greaterThan(280),
+    );
     expect(find.byKey(const ValueKey('report-card-photo-stamp')), findsNothing);
     expect(find.byKey(const ValueKey('report-card-bottom-stamp')), findsNothing);
     expect(
