@@ -103,6 +103,56 @@ void main() {
     expect(black, 0);
   });
 
+  test('pale seal letters stay a solid stroke and the disc stays clear', () {
+    final source = img.Image(width: 48, height: 48, numChannels: 4);
+    img.fill(source, color: img.ColorRgba8(0, 0, 0, 255));
+    img.fillRect(
+      source,
+      x1: 4,
+      y1: 4,
+      x2: 43,
+      y2: 43,
+      color: img.ColorRgba8(158, 160, 166, 255),
+    );
+    img.fillRect(
+      source,
+      x1: 12,
+      y1: 16,
+      x2: 36,
+      y2: 30,
+      color: img.ColorRgba8(115, 119, 140, 255),
+    );
+    final png = SchoolMarkService.instance.forReport(
+      Uint8List.fromList(img.encodePng(source)),
+      SchoolMarkKind.stamp,
+    );
+    final decoded = img.decodePng(png)!;
+    var stroke = 0;
+    var disc = 0;
+    var black = 0;
+    for (var y = 0; y < decoded.height; y++) {
+      for (var x = 0; x < decoded.width; x++) {
+        final pixel = decoded.getPixel(x, y);
+        final alpha = pixel.a.toInt();
+        if (alpha < 40) continue;
+        final r = pixel.r.toInt();
+        final g = pixel.g.toInt();
+        final b = pixel.b.toInt();
+        final chroma = [r, g, b].reduce((a, c) => a > c ? a : c) -
+            [r, g, b].reduce((a, c) => a < c ? a : c);
+        if (b > r && alpha > 180) {
+          stroke++;
+        } else if (chroma < 12) {
+          disc++;
+        }
+        if (alpha > 200 && r < 15 && g < 15 && b < 15) black++;
+      }
+    }
+    expect(stroke, greaterThan(200));
+    expect(disc, 0);
+    expect(black, 0);
+  });
+
   test('signature ink sits as pen strokes, not lined paper', () {
     final source = img.Image(width: 40, height: 24, numChannels: 4);
     img.fill(source, color: img.ColorRgba8(248, 246, 242, 255));
