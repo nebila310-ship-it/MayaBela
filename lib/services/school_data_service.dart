@@ -7961,8 +7961,43 @@ class SchoolDataService {
     }).toList();
   }
 
-  List<StudentQrProfile> getAllStudentQrProfiles() =>
-      List.unmodifiable(_studentQrProfiles);
+  /// Demo cards (Sara Bekele and the other seed students) are only for the
+  /// public demo school, and only when that school has no real roster.
+  bool _allowSeedQrProfiles() {
+    final sid = AuthService.scopedSchoolId();
+    if (sid == null) return true;
+    if (StudentRegistryService.instance.visibleStudents().isNotEmpty) {
+      return false;
+    }
+    return sid == AuthService.demoStudentSchoolId;
+  }
+
+  List<StudentQrProfile> _profilesFromRoster(
+    List<AdminStudentRecord> students,
+  ) {
+    final sorted = List<AdminStudentRecord>.from(students)
+      ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    return [
+      for (final student in sorted)
+        StudentQrProfile(
+          id: student.studentId.toLowerCase(),
+          name: student.fullName,
+          className: student.className,
+          qrCode: TransportService.qrCodeForStudentId(student.studentId),
+        ),
+    ];
+  }
+
+  List<StudentQrProfile> getAllStudentQrProfiles() {
+    final roster = StudentRegistryService.instance.visibleStudents();
+    if (roster.isNotEmpty) {
+      return List.unmodifiable(_profilesFromRoster(roster));
+    }
+    if (_allowSeedQrProfiles()) {
+      return List.unmodifiable(_studentQrProfiles);
+    }
+    return const [];
+  }
 
   void upsertStudentQrProfile(StudentQrProfile profile) {
     final idx = _studentQrProfiles.indexWhere(
@@ -7978,7 +8013,7 @@ class SchoolDataService {
   }
 
   List<StudentQrProfile> getStudentQrProfilesForClass(String className) {
-    return _studentQrProfiles
+    return getAllStudentQrProfiles()
         .where((profile) => _classNamesMatch(profile.className, className))
         .toList();
   }
@@ -7991,7 +8026,7 @@ class SchoolDataService {
         .where((id) => id.isNotEmpty)
         .toSet();
     final childNames = children.map((c) => c.name.trim()).toSet();
-    return _studentQrProfiles.where((s) {
+    return getAllStudentQrProfiles().where((s) {
       final sid = s.id.trim().toUpperCase();
       if (sid.isNotEmpty && childIds.contains(sid)) return true;
       return childNames.contains(s.name.trim());
@@ -8001,30 +8036,52 @@ class SchoolDataService {
   StudentQrProfile? findStudentByQrCode(String code) {
     final normalized = code.trim();
     if (normalized.isEmpty) return null;
-    try {
-      return _studentQrProfiles.firstWhere(
-        (s) => s.qrCode.toLowerCase() == normalized.toLowerCase(),
-      );
-    } catch (_) {
-      final upper = normalized.toUpperCase();
-      if (upper.startsWith('STUDENT:')) {
-        final id = normalized.substring('STUDENT:'.length).trim().toUpperCase();
-        final record = StudentRegistryService.instance.lookupById(id);
-        if (record != null) {
-          return StudentQrProfile(
-            id: record.studentId.toLowerCase(),
-            name: record.fullName,
-            className: record.className,
-            qrCode: 'STUDENT:${record.studentId.toUpperCase()}',
-          );
-        }
+    final upper = normalized.toUpperCase();
+    if (upper.startsWith('STUDENT:')) {
+      final id = normalized.substring('STUDENT:'.length).trim();
+      final record = StudentRegistryService.instance.lookupById(id);
+      if (record != null) {
+        return StudentQrProfile(
+          id: record.studentId.toLowerCase(),
+          name: record.fullName,
+          className: record.className,
+          qrCode: TransportService.qrCodeForStudentId(record.studentId),
+        );
       }
-      return null;
+      // A signed-in school must not fall through to Sara / Kidus / the
+      // other built-in demo cards when the code is not on its roster.
+      final sid = AuthService.scopedSchoolId();
+      if (sid != null && sid != AuthService.demoStudentSchoolId) {
+        return null;
+      }
     }
+
+    for (final profile in _studentQrProfiles) {
+      if (profile.qrCode.toLowerCase() == normalized.toLowerCase()) {
+        return profile;
+      }
+    }
+    return null;
   }
 
-  List<QrScanRecord> getQrScanHistory() =>
-      List.unmodifiable(_qrScanHistory.reversed);
+  List<QrScanRecord> getQrScanHistory() {
+    final history = _qrScanHistory.reversed.toList();
+    if (_allowSeedQrProfiles() &&
+        StudentRegistryService.instance.visibleStudents().isEmpty) {
+      return List.unmodifiable(history);
+    }
+    final ids = StudentRegistryService.instance
+        .visibleStudents()
+        .map((student) => student.studentId.trim().toUpperCase())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (ids.isEmpty) return const [];
+    return List.unmodifiable(
+      history.where(
+        (record) => ids.contains(record.studentId.trim().toUpperCase()),
+      ),
+    );
+  }
 
   String? recordQrScan({
     required String qrCode,

@@ -3015,10 +3015,15 @@ class AppStrings implements AppStringsLike {
         'ካሜራ ስካነር መከፈት አልተቻለም። እንደገና ይሞክሩ።',
       );
   String get cameraPermissionRequired => t(
-        'Camera permission is required to scan QR codes. Enable it in phone settings, then tap Try again.',
-        'QR ኮዶችን ለመቃኘት የካሜራ ፈቃድ ያስፈልጋል። በስልክ ቅንብሮች ውስጥ ያንቁና «እንደገና ይሞክሩ» ይጫኑ።',
+        'Camera permission is required to scan QR codes. Allow the camera when the browser or phone asks, then tap Try again.',
+        'QR ኮዶችን ለመቃኘት የካሜራ ፈቃድ ያስፈልጋል። አሳሹ ወይም ስልኩ ሲጠይቅ ካሜራውን ይፍቀዱ፣ ከዚያ «እንደገና ይሞክሩ» ይጫኑ።',
       );
   String get cameraStarting => t('Starting camera…', 'ካሜራ በመከፈት ላይ…');
+  String get startCamera => t('Start camera', 'ካሜራ ጀምር');
+  String get startCameraHint => t(
+        'Tap Start camera, then allow the camera when the browser asks.',
+        'ካሜራ ጀምር የሚለውን ይጫኑ፣ ከዚያ አሳሹ ሲጠይቅ ካሜራውን ይፍቀዱ።',
+      );
   String get tryAgain => t('Try again', 'እንደገና ይሞክሩ');
   String get manualCheckIn =>
       t('Manual check-in (for testing)', 'በእጅ መግቢያ (ለሙከራ)');

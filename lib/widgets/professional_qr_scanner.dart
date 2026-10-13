@@ -52,6 +52,7 @@ class _ProfessionalQrScannerPanelState extends State<ProfessionalQrScannerPanel>
 
   late final AnimationController _lineController;
   var _flashSuccess = false;
+  var _cameraLive = false;
 
   @override
   void initState() {
@@ -193,6 +194,10 @@ class _ProfessionalQrScannerPanelState extends State<ProfessionalQrScannerPanel>
                       retryLabel: widget.retryLabel,
                       borderRadius: 20,
                       showLoadingIndicator: true,
+                      onLiveChanged: (live) {
+                        if (!mounted || _cameraLive == live) return;
+                        setState(() => _cameraLive = live);
+                      },
                     ),
                     Positioned.fill(
                       child: IgnorePointer(
@@ -205,6 +210,7 @@ class _ProfessionalQrScannerPanelState extends State<ProfessionalQrScannerPanel>
                                 flash: _flashSuccess,
                                 primary: _primary,
                                 accent: _accent,
+                                showFrame: _cameraLive,
                               ),
                             );
                           },
@@ -273,12 +279,14 @@ class _QrFramePainter extends CustomPainter {
     required this.flash,
     required this.primary,
     required this.accent,
+    required this.showFrame,
   });
 
   final double lineProgress;
   final bool flash;
   final Color primary;
   final Color accent;
+  final bool showFrame;
 
   Color get _corner => primary;
   Color get _cornerAlt => accent;
@@ -286,6 +294,7 @@ class _QrFramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (!showFrame) return;
     final overlay = Paint()..color = Colors.black.withValues(alpha: 0.42);
     final frameSize = math.min(size.width, size.height) * 0.62;
     final left = (size.width - frameSize) / 2;
@@ -343,7 +352,9 @@ class _QrFramePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _QrFramePainter oldDelegate) =>
-      oldDelegate.lineProgress != lineProgress || oldDelegate.flash != flash;
+      oldDelegate.lineProgress != lineProgress ||
+      oldDelegate.flash != flash ||
+      oldDelegate.showFrame != showFrame;
 }
 
 class _ScannerStatusOverlay extends StatelessWidget {

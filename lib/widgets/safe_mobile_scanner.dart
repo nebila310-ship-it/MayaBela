@@ -1,8 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mayabela/l10n/app_strings.dart';
+import 'package:mayabela/widgets/web_camera_preview_stub.dart'
+    if (dart.library.html) 'package:mayabela/widgets/web_camera_preview_web.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-/// Camera QR scanner that mounts [MobileScanner] after ML Kit / camera are ready.
+/// Camera QR scanner that mounts [MobileScanner] after the camera is ready.
+///
+/// Phone browsers require a tap before `getUserMedia`, so web shows a Start
+/// camera button instead of opening the camera on its own.
 class SafeMobileScanner extends StatefulWidget {
   const SafeMobileScanner({
     super.key,
@@ -17,6 +25,7 @@ class SafeMobileScanner extends StatefulWidget {
     this.borderRadius = 16,
     this.showLoadingIndicator = false,
     this.sameCodeCooldown = const Duration(seconds: 2),
+    this.onLiveChanged,
   });
 
   final void Function(String code) onCode;
@@ -30,6 +39,8 @@ class SafeMobileScanner extends StatefulWidget {
   final bool showLoadingIndicator;
   /// Ignore repeat reads of the same QR within this window.
   final Duration sameCodeCooldown;
+  /// True once the camera preview is running.
+  final ValueChanged<bool>? onLiveChanged;
 
   @override
   State<SafeMobileScanner> createState() => _SafeMobileScannerState();
@@ -39,10 +50,12 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
   MobileScannerController? _controller;
   var _scannerKey = 0;
   var _starting = false;
+  var _cameraLive = false;
+  String? _startError;
   final _lastSeenByCode = <String, DateTime>{};
 
   bool get _canScan {
-    if (kIsWeb) return false;
+    if (kIsWeb) return true;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
   }
@@ -50,62 +63,100 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
   @override
   void initState() {
     super.initState();
-    if (_canScan) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _mountScanner());
-    }
+    if (!_canScan) return;
+    if (kIsWeb) prepareWebQrScanner();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_ensureController(autostart: !kIsWeb));
+    });
   }
 
-  Future<void> _mountScanner() async {
-    if (!mounted || _controller != null || _starting) return;
-    _starting = true;
-
-    // Give the route/dialog time to attach before CameraX + ML Kit start.
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) {
-      _starting = false;
-      return;
-    }
-
-    final controller = MobileScannerController(
+  MobileScannerController _createController() {
+    return MobileScannerController(
       autoStart: false,
       detectionSpeed: DetectionSpeed.unrestricted,
       facing: CameraFacing.back,
       formats: const [BarcodeFormat.qrCode],
     );
+  }
 
-    if (!mounted) {
-      await controller.dispose();
-      _starting = false;
-      return;
+  Future<void> _ensureController({required bool autostart}) async {
+    if (!mounted || _controller != null || _starting) return;
+    if (autostart) {
+      // Give the route time to attach before CameraX starts.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || _controller != null) return;
     }
 
+    final controller = _createController();
+    if (!mounted) {
+      await controller.dispose();
+      return;
+    }
     setState(() {
       _scannerKey++;
       _controller = controller;
     });
+    if (!autostart) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await _beginScan();
+  }
+
+  Future<void> _beginScan() async {
+    final controller = _controller;
+    if (controller == null || _starting) return;
+    _starting = true;
+    _startError = null;
+    _setLive(false);
+    if (mounted) setState(() {});
 
     try {
       await controller.start();
-    } catch (_) {
-      if (mounted) {
-        await controller.dispose();
-        setState(() => _controller = null);
+      if (!mounted) return;
+      final error = controller.value.error;
+      if (error != null) {
+        final message = _messageForError(error);
+        if (mounted) setState(() => _startError = message);
+        await _swapControllerAfterFailure();
+        return;
       }
+      if (!mounted) return;
+      setState(() => _scannerKey++);
+      _setLive(true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        markWebCameraPreviewInline();
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (mounted) markWebCameraPreviewInline();
+    } catch (_) {
+      if (mounted) setState(() => _startError = widget.errorMessage);
+      await _swapControllerAfterFailure();
     } finally {
       _starting = false;
+      if (mounted) setState(() {});
     }
   }
 
-  Future<void> _retryScanner() async {
+  Future<void> _swapControllerAfterFailure() async {
     final old = _controller;
     _controller = null;
-    _starting = false;
+    _setLive(false);
     if (old != null) {
       await old.dispose();
     }
     if (!mounted) return;
-    setState(() {});
-    await _mountScanner();
+    final next = _createController();
+    setState(() {
+      _scannerKey++;
+      _controller = next;
+    });
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  void _setLive(bool live) {
+    if (_cameraLive == live) return;
+    _cameraLive = live;
+    widget.onLiveChanged?.call(live);
   }
 
   void _handleDetect(BarcodeCapture capture) {
@@ -174,6 +225,42 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
       return _loadingCard();
     }
 
+    final scanner = _scannerView(controller);
+    if (_startError != null) {
+      return Stack(
+        children: [
+          Offstage(child: scanner),
+          _messageCard(
+            _startError!,
+            Icons.no_photography_outlined,
+            onRetry: _starting ? null : () => unawaited(_beginScan()),
+          ),
+        ],
+      );
+    }
+
+    if (kIsWeb && !_cameraLive) {
+      final strings = AppLocale.instance.strings;
+      return Stack(
+        children: [
+          Offstage(child: scanner),
+          _starting
+              ? _loadingCard()
+              : _messageCard(
+                  strings.startCameraHint,
+                  Icons.photo_camera_outlined,
+                  onRetry: () => unawaited(_beginScan()),
+                  actionLabel: strings.startCamera,
+                  actionIcon: Icons.photo_camera_outlined,
+                ),
+        ],
+      );
+    }
+
+    return scanner;
+  }
+
+  Widget _scannerView(MobileScannerController controller) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
       child: SizedBox(
@@ -187,7 +274,7 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
             error.errorCode == MobileScannerErrorCode.permissionDenied
                 ? Icons.no_photography_outlined
                 : Icons.error_outline,
-            onRetry: _retryScanner,
+            onRetry: _starting ? null : () => unawaited(_beginScan()),
           ),
           onDetect: _handleDetect,
         ),
@@ -230,6 +317,8 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
     String message,
     IconData icon, {
     VoidCallback? onRetry,
+    String? actionLabel,
+    IconData? actionIcon,
   }) {
     return Container(
       height: widget.height,
@@ -264,10 +353,10 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 12),
-                TextButton.icon(
+                FilledButton.icon(
                   onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(widget.retryLabel),
+                  icon: Icon(actionIcon ?? Icons.refresh),
+                  label: Text(actionLabel ?? widget.retryLabel),
                 ),
               ],
             ],

@@ -49,50 +49,76 @@ class AdvancedQrScannerShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(gradient: theme.pageGradient),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          if (bannerText != null && bannerText!.trim().isNotEmpty) ...[
-            _InfoBanner(text: bannerText!, theme: theme),
-            const SizedBox(height: 12),
-          ],
-          _ModeSelector(
-            options: modeOptions,
-            selectedIndex: selectedModeIndex,
-            onSelected: onModeSelected,
-          ),
-          const SizedBox(height: 16),
-          ProfessionalQrScannerPanel(
-            theme: theme,
-            title: title,
-            subtitle: subtitle,
-            height: scannerHeight,
-            onCode: onCode,
-            statusMessage: statusMessage,
-            statusSuccess: statusSuccess,
-            unavailableMessage: unavailableMessage,
-            errorMessage: errorMessage,
-            permissionDeniedMessage: permissionDeniedMessage,
-            startingMessage: startingMessage,
-            retryLabel: retryLabel,
-          ),
-          if (bottomChild != null) ...[
-            const SizedBox(height: 16),
-            bottomChild!,
-          ],
-          if (theme.footerHint != null) ...[
-            const SizedBox(height: 14),
-            Text(
-              theme.footerHint!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.4,
-                color: Colors.blueGrey.shade600,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Keep the camera preview out of the scrolling list. A platform
+          // view inside a ListView often never appears in the phone browser.
+          var previewHeight = scannerHeight;
+          if (constraints.maxHeight.isFinite) {
+            final cap = (constraints.maxHeight - 230).clamp(160.0, scannerHeight);
+            previewHeight = cap;
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (bannerText != null && bannerText!.trim().isNotEmpty) ...[
+                      _InfoBanner(text: bannerText!, theme: theme),
+                      const SizedBox(height: 12),
+                    ],
+                    _ModeSelector(
+                      options: modeOptions,
+                      selectedIndex: selectedModeIndex,
+                      onSelected: onModeSelected,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ProfessionalQrScannerPanel(
+                  theme: theme,
+                  title: title,
+                  subtitle: subtitle,
+                  height: previewHeight,
+                  onCode: onCode,
+                  statusMessage: statusMessage,
+                  statusSuccess: statusSuccess,
+                  unavailableMessage: unavailableMessage,
+                  errorMessage: errorMessage,
+                  permissionDeniedMessage: permissionDeniedMessage,
+                  startingMessage: startingMessage,
+                  retryLabel: retryLabel,
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  children: [
+                    ?bottomChild,
+                    if (theme.footerHint != null) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        theme.footerHint!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: Colors.blueGrey.shade600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
