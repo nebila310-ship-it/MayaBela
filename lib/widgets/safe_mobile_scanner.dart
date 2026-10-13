@@ -51,6 +51,7 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
   var _scannerKey = 0;
   var _starting = false;
   var _cameraLive = false;
+  var _libraryReady = !kIsWeb;
   String? _startError;
   final _lastSeenByCode = <String, DateTime>{};
 
@@ -64,10 +65,33 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
   void initState() {
     super.initState();
     if (!_canScan) return;
-    if (kIsWeb) prepareWebQrScanner();
+    if (kIsWeb) unawaited(_prepareLibrary());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_ensureController(autostart: !kIsWeb));
     });
+  }
+
+  Future<void> _prepareLibrary() async {
+    try {
+      await prepareWebQrScanner();
+      if (!mounted) return;
+      setState(() {
+        _libraryReady = true;
+        _startError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _startError = widget.errorMessage);
+    }
+  }
+
+  Future<void> _onRetry() async {
+    if (kIsWeb && !_libraryReady) {
+      if (mounted) setState(() => _startError = null);
+      await _prepareLibrary();
+      return;
+    }
+    await _beginScan();
   }
 
   MobileScannerController _createController() {
@@ -105,6 +129,7 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
   Future<void> _beginScan() async {
     final controller = _controller;
     if (controller == null || _starting) return;
+    if (kIsWeb && !_libraryReady) return;
     _starting = true;
     _startError = null;
     _setLive(false);
@@ -196,18 +221,22 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
         return widget.errorMessage;
       default:
         final details = error.errorDetails?.message?.trim();
-        if (details == null || details.isEmpty || _looksLikeNativeCrash(details)) {
+        if (details == null ||
+            details.isEmpty ||
+            _looksLikeInternalFailure(details)) {
           return widget.errorMessage;
         }
         return details;
     }
   }
 
-  bool _looksLikeNativeCrash(String message) {
+  bool _looksLikeInternalFailure(String message) {
     final lower = message.toLowerCase();
-    return lower.contains('virtual method') ||
+    return lower.contains('null check operator') ||
+        lower.contains('virtual method') ||
         lower.contains('null object reference') ||
         lower.contains('mlkit') ||
+        lower.contains('barcode library') ||
         RegExp(r'\bm\d+\.\w+\.\w+\.\w+\b').hasMatch(message);
   }
 
@@ -221,6 +250,13 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
     }
 
     final controller = _controller;
+    if (_startError != null && controller == null) {
+      return _messageCard(
+        _startError!,
+        Icons.no_photography_outlined,
+        onRetry: _starting ? null : () => unawaited(_onRetry()),
+      );
+    }
     if (controller == null) {
       return _loadingCard();
     }
@@ -233,7 +269,7 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
           _messageCard(
             _startError!,
             Icons.no_photography_outlined,
-            onRetry: _starting ? null : () => unawaited(_beginScan()),
+            onRetry: _starting ? null : () => unawaited(_onRetry()),
           ),
         ],
       );
@@ -244,12 +280,12 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
       return Stack(
         children: [
           Offstage(child: scanner),
-          _starting
+          _starting || !_libraryReady
               ? _loadingCard()
               : _messageCard(
                   strings.startCameraHint,
                   Icons.photo_camera_outlined,
-                  onRetry: () => unawaited(_beginScan()),
+                  onRetry: () => unawaited(_onRetry()),
                   actionLabel: strings.startCamera,
                   actionIcon: Icons.photo_camera_outlined,
                 ),
@@ -274,7 +310,7 @@ class _SafeMobileScannerState extends State<SafeMobileScanner> {
             error.errorCode == MobileScannerErrorCode.permissionDenied
                 ? Icons.no_photography_outlined
                 : Icons.error_outline,
-            onRetry: _starting ? null : () => unawaited(_beginScan()),
+            onRetry: _starting ? null : () => unawaited(_onRetry()),
           ),
           onDetect: _handleDetect,
         ),
