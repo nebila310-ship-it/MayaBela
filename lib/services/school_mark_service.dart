@@ -89,7 +89,7 @@ class SchoolMarkService {
       lastError = 'Could not process that image. Try PNG or JPG.';
       return null;
     }
-    final ink = _trimContentBounds(_knockOutPaper(decoded));
+    final ink = _trimContentBounds(_isolateInk(decoded, kind));
     final (maxW, maxH) = kind.maxBox;
     var boxW = maxW;
     var boxH = maxH;
@@ -106,23 +106,281 @@ class SchoolMarkService {
     return png != null && png.length <= 280000 ? png : null;
   }
 
-  img.Image _knockOutPaper(img.Image source) {
-    final out = source.numChannels >= 4
-        ? img.Image.from(source)
-        : source.convert(numChannels: 4);
-    for (var y = 0; y < out.height; y++) {
-      for (var x = 0; x < out.width; x++) {
-        final pixel = out.getPixel(x, y);
+  /// Ink-only PNG for the report. Black scan backdrops and lined paper drop
+  /// out, so a saved photo still looks stamped or signed.
+  Uint8List forReport(Uint8List source, SchoolMarkKind kind) {
+    final decoded = img.decodeImage(source);
+    if (decoded == null) return source;
+    final isolated = _trimContentBounds(_isolateInk(decoded, kind));
+    if (_opaqueCount(isolated) < 12) return source;
+    final fitted = _fitBox(isolated, kind.maxBox.$1, kind.maxBox.$2);
+    return Uint8List.fromList(img.encodePng(fitted));
+  }
+
+  int _opaqueCount(img.Image image) {
+    var count = 0;
+    for (var y = 0; y < image.height; y++) {
+      for (var x = 0; x < image.width; x++) {
+        if (image.getPixel(x, y).a.toInt() > 20) count++;
+      }
+    }
+    return count;
+  }
+
+  /// Stamp keeps the colored seal. Signature keeps the pen strokes.
+  img.Image _isolateInk(img.Image source, SchoolMarkKind kind) {
+    if (kind == SchoolMarkKind.principalSignature) {
+      return _signatureInk(source);
+    }
+    return _stampSeal(source);
+  }
+
+  /// Keeps the colored seal and clears the scanned backdrop around it,
+  /// including a black photo surround connected to the edges.
+  img.Image _stampSeal(img.Image source) {
+    final width = source.width;
+    final height = source.height;
+    final strong = List.generate(
+      height,
+      (_) => List<bool>.filled(width, false),
+    );
+    final colors = List.generate(
+      height,
+      (_) => List<int>.filled(width, 0),
+    );
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final pixel = source.getPixel(x, y);
         final r = pixel.r.toInt();
         final g = pixel.g.toInt();
         final b = pixel.b.toInt();
         final alpha = pixel.a.toInt();
-        if (alpha < 16 || (r >= 242 && g >= 242 && b >= 242)) {
-          out.setPixel(x, y, img.ColorRgba8(r, g, b, 0));
+        if (alpha < 16) continue;
+        final maxC = math.max(r, math.max(g, b));
+        final minC = math.min(r, math.min(g, b));
+        final sat = maxC == 0 ? 0.0 : (maxC - minC) / maxC;
+        final luma = (r * 299 + g * 587 + b * 114) / 1000.0;
+        if (luma >= 64 && luma <= 210 && sat >= 0.30) {
+          strong[y][x] = true;
+          colors[y][x] = (r << 16) | (g << 8) | b;
         }
       }
     }
+
+    final backdrop = List.generate(
+      height,
+      (_) => List<bool>.filled(width, false),
+    );
+    final stack = <(int, int)>[];
+    for (var x = 0; x < width; x++) {
+      stack.add((x, 0));
+      stack.add((x, height - 1));
+    }
+    for (var y = 0; y < height; y++) {
+      stack.add((0, y));
+      stack.add((width - 1, y));
+    }
+    while (stack.isNotEmpty) {
+      final (x, y) = stack.removeLast();
+      if (x < 0 || y < 0 || x >= width || y >= height) continue;
+      if (backdrop[y][x] || strong[y][x]) continue;
+      backdrop[y][x] = true;
+      stack.add((x + 1, y));
+      stack.add((x - 1, y));
+      stack.add((x, y + 1));
+      stack.add((x, y - 1));
+    }
+
+    final out = img.Image(width: width, height: height, numChannels: 4);
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        if (!strong[y][x] || backdrop[y][x]) continue;
+        final packed = colors[y][x];
+        out.setPixel(
+          x,
+          y,
+          img.ColorRgba8((packed >> 16) & 255, (packed >> 8) & 255, packed & 255, 220),
+        );
+      }
+    }
     return out;
+  }
+
+  /// Pulls a signature off lined paper. A scan's dark border and ruling
+  /// lines are dropped, and the pen is laid down as blue ink.
+  img.Image _signatureInk(img.Image source) {
+    final width = source.width;
+    final height = source.height;
+    final out = img.Image(width: width, height: height, numChannels: 4);
+    var clear = 0;
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        if (source.getPixel(x, y).a.toInt() < 16) clear++;
+      }
+    }
+    final alreadyCutOut = clear > width * height * 0.35;
+    if (alreadyCutOut) {
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          final pixel = source.getPixel(x, y);
+          final r = pixel.r.toInt();
+          final g = pixel.g.toInt();
+          final b = pixel.b.toInt();
+          final alpha = pixel.a.toInt();
+          final luma = (r * 299 + g * 587 + b * 114) ~/ 1000;
+          if (alpha < 16 || luma > 210) {
+            out.setPixel(x, y, img.ColorRgba8(0, 0, 0, 0));
+          } else {
+            out.setPixel(x, y, img.ColorRgba8(22, 36, 120, alpha));
+          }
+        }
+      }
+      return out;
+    }
+
+    final luma = List.generate(height, (_) => List<int>.filled(width, 0));
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final pixel = source.getPixel(x, y);
+        luma[y][x] = (pixel.r.toInt() * 299 +
+                pixel.g.toInt() * 587 +
+                pixel.b.toInt() * 114) ~/
+            1000;
+      }
+    }
+    final ink = List.generate(height, (_) => List<bool>.filled(width, false));
+    final sampleFrom = (width * 0.22).floor();
+    for (var y = 0; y < height; y++) {
+      final sample = <int>[
+        for (var x = sampleFrom; x < width; x++) luma[y][x],
+      ];
+      final paper = _median(sample);
+      for (var x = 0; x < width; x++) {
+        final value = luma[y][x];
+        if (value > paper - 24 || value < 8) continue;
+        ink[y][x] = true;
+      }
+    }
+    for (var x = 0; x < width; x++) {
+      var column = 0;
+      for (var y = 0; y < height; y++) {
+        if (ink[y][x]) column++;
+      }
+      if (column > height * 0.25) {
+        for (var y = 0; y < height; y++) {
+          ink[y][x] = false;
+        }
+      }
+    }
+    for (var y = 0; y < height; y++) {
+      var x = 0;
+      while (x < width) {
+        if (!ink[y][x]) {
+          x++;
+          continue;
+        }
+        var end = x;
+        while (end < width && ink[y][end]) {
+          end++;
+        }
+        if (end - x > width * 0.42) {
+          for (var i = x; i < end; i++) {
+            ink[y][i] = false;
+          }
+        }
+        x = end;
+      }
+    }
+
+    final dilated = List.generate(height, (_) => List<bool>.filled(width, false));
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        if (!ink[y][x]) continue;
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            final nx = x + dx;
+            final ny = y + dy;
+            if (nx >= 0 && ny >= 0 && nx < width && ny < height) {
+              dilated[ny][nx] = true;
+            }
+          }
+        }
+      }
+    }
+
+    final seen = List.generate(height, (_) => List<bool>.filled(width, false));
+    List<(int, int)>? best;
+    var bestCount = 0;
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        if (!dilated[y][x] || seen[y][x]) continue;
+        final cells = <(int, int)>[];
+        final stack = <(int, int)>[(x, y)];
+        seen[y][x] = true;
+        var touchesEdge = false;
+        var minX = x;
+        var maxX = x;
+        var minY = y;
+        var maxY = y;
+        while (stack.isNotEmpty) {
+          final (cx, cy) = stack.removeLast();
+          cells.add((cx, cy));
+          if (cx < 2 || cy < 2 || cx > width - 3 || cy > height - 3) {
+            touchesEdge = true;
+          }
+          if (cx < minX) minX = cx;
+          if (cx > maxX) maxX = cx;
+          if (cy < minY) minY = cy;
+          if (cy > maxY) maxY = cy;
+          for (final (dx, dy) in const [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+            (1, 1),
+            (-1, -1),
+            (1, -1),
+            (-1, 1),
+          ]) {
+            final nx = cx + dx;
+            final ny = cy + dy;
+            if (nx >= 0 &&
+                ny >= 0 &&
+                nx < width &&
+                ny < height &&
+                dilated[ny][nx] &&
+                !seen[ny][nx]) {
+              seen[ny][nx] = true;
+              stack.add((nx, ny));
+            }
+          }
+        }
+        final boxW = maxX - minX + 1;
+        final boxH = maxY - minY + 1;
+        if (touchesEdge || boxW < 6 || boxH < 6) continue;
+        if (cells.length > bestCount) {
+          bestCount = cells.length;
+          best = cells;
+        }
+      }
+    }
+
+    final paint = best ??
+        <(int, int)>[
+          for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+              if (ink[y][x]) (x, y),
+        ];
+    for (final (x, y) in paint) {
+      out.setPixel(x, y, img.ColorRgba8(22, 36, 120, 230));
+    }
+    return out;
+  }
+
+  int _median(List<int> values) {
+    if (values.isEmpty) return 255;
+    final copy = List<int>.from(values)..sort();
+    return copy[copy.length ~/ 2];
   }
 
   img.Image _trimContentBounds(img.Image source) {

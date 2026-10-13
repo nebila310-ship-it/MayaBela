@@ -61,6 +61,90 @@ void main() {
     expect(ink, greaterThan(0));
   });
 
+  test('stamp ink drops a black scan backdrop and keeps the blue seal', () {
+    final source = img.Image(width: 32, height: 32, numChannels: 4);
+    img.fill(source, color: img.ColorRgba8(0, 0, 0, 255));
+    img.fillRect(
+      source,
+      x1: 8,
+      y1: 6,
+      x2: 24,
+      y2: 26,
+      color: img.ColorRgba8(37, 78, 196, 255),
+    );
+    final png = SchoolMarkService.instance.forReport(
+      Uint8List.fromList(img.encodePng(source)),
+      SchoolMarkKind.stamp,
+    );
+    final decoded = img.decodePng(png)!;
+    var black = 0;
+    var blue = 0;
+    for (var y = 0; y < decoded.height; y++) {
+      for (var x = 0; x < decoded.width; x++) {
+        final pixel = decoded.getPixel(x, y);
+        if (pixel.a.toInt() < 16 &&
+            pixel.r.toInt() < 20 &&
+            pixel.g.toInt() < 20 &&
+            pixel.b.toInt() < 20) {
+          // transparent, not a painted black square
+        }
+        if (pixel.a.toInt() > 40 && pixel.b.toInt() > pixel.r.toInt()) {
+          blue++;
+        }
+        if (pixel.a.toInt() > 200 &&
+            pixel.r.toInt() < 15 &&
+            pixel.g.toInt() < 15 &&
+            pixel.b.toInt() < 15) {
+          black++;
+        }
+      }
+    }
+    expect(blue, greaterThan(20));
+    expect(black, 0);
+  });
+
+  test('signature ink sits as pen strokes, not lined paper', () {
+    final source = img.Image(width: 40, height: 24, numChannels: 4);
+    img.fill(source, color: img.ColorRgba8(248, 246, 242, 255));
+    for (final y in [6, 12, 18]) {
+      img.drawLine(
+        source,
+        x1: 0,
+        y1: y,
+        x2: 39,
+        y2: y,
+        color: img.ColorRgba8(186, 170, 214, 255),
+      );
+    }
+    img.drawLine(
+      source,
+      x1: 8,
+      y1: 16,
+      x2: 30,
+      y2: 8,
+      color: img.ColorRgba8(20, 24, 40, 255),
+    );
+    final png = SchoolMarkService.instance.forReport(
+      Uint8List.fromList(img.encodePng(source)),
+      SchoolMarkKind.principalSignature,
+    );
+    final decoded = img.decodePng(png)!;
+    var paper = 0;
+    var pen = 0;
+    for (var y = 0; y < decoded.height; y++) {
+      for (var x = 0; x < decoded.width; x++) {
+        final pixel = decoded.getPixel(x, y);
+        if (pixel.a.toInt() < 16) continue;
+        paper++;
+        if (pixel.b.toInt() > pixel.r.toInt() && pixel.r.toInt() < 80) pen++;
+      }
+    }
+    expect(pen, greaterThan(0));
+    expect(paper, pen);
+    expect(decoded.height, greaterThan(4));
+    expect(decoded.width, lessThan(38));
+  });
+
   test('school record keeps stamp and signature across json and stale sync', () {
     final registry = SchoolRegistryService.instance;
     final dataUrl = SchoolMarkService.dataUrlFor(

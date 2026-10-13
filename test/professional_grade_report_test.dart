@@ -110,6 +110,10 @@ void main() {
     expect(find.text('OFFICIAL GRADE REPORT'), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-photo')), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-logo')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('report-card-logo'))).width,
+      greaterThan(120),
+    );
     expect(find.byKey(const ValueKey('report-card-watermark')), findsOneWidget);
     expect(find.byKey(const ValueKey('report-card-photo-stamp')), findsNothing);
     expect(find.byKey(const ValueKey('report-card-bottom-stamp')), findsNothing);
