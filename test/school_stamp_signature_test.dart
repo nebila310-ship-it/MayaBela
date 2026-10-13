@@ -140,7 +140,7 @@ void main() {
         final b = pixel.b.toInt();
         final chroma = [r, g, b].reduce((a, c) => a > c ? a : c) -
             [r, g, b].reduce((a, c) => a < c ? a : c);
-        if (b > r && alpha > 180) {
+        if (b > r && alpha > 100) {
           stroke++;
         } else if (chroma < 12) {
           disc++;
