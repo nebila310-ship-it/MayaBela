@@ -197,15 +197,6 @@ class AuthService {
   }
 
   static final Map<String, RegisteredUser> _users = {
-    demoStudentUsername: RegisteredUser(
-      username: demoStudentUsername,
-      password: demoStudentPassword,
-      roleKey: roleStudent,
-      email: 'demo.student@mayaschool.et',
-      fullName: 'Sara Bekele',
-      schoolId: demoStudentSchoolId,
-      linkedStudentId: 'STU-1001',
-    ),
     demoDriverPhone: RegisteredUser(
       username: demoDriverPhone,
       password: demoDriverPassword,
@@ -237,6 +228,15 @@ class AuthService {
       linkedDriverId: 'DRV-1001',
     ),
     if (kDebugMode) ...{
+      demoStudentUsername: RegisteredUser(
+        username: demoStudentUsername,
+        password: demoStudentPassword,
+        roleKey: roleStudent,
+        email: 'demo.student@mayaschool.et',
+        fullName: 'Sara Bekele',
+        schoolId: demoStudentSchoolId,
+        linkedStudentId: 'STU-1001',
+      ),
       'teacher': RegisteredUser(
         username: 'teacher',
         password: demoPassword,
@@ -703,6 +703,7 @@ class AuthService {
     required String password,
     String? schoolId,
   }) {
+    if (!kDebugMode) return false;
     return roleKey == roleStudent &&
         username.trim().toLowerCase() == demoStudentUsername &&
         password == demoStudentPassword &&

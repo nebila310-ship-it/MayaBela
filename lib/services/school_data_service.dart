@@ -168,7 +168,7 @@ class SchoolDataService {
     ),
   ];
 
-  final Map<String, List<StudentRef>> _classRosters = {
+  final Map<String, List<StudentRef>> _classRosters = kDebugMode ? {
     'Grade 4A': [
       StudentRef(
         id: 'sara-bekele',
@@ -218,17 +218,21 @@ class SchoolDataService {
         parentName: 'Mr. Kebede',
       ),
     ],
-  };
+  } : {};
 
-  final Map<String, String> _homeroomTeacherIds = {
-    'Grade 4A': 'TCH-1001',
-    'Grade 5B': 'TCH-1004',
-  };
+  final Map<String, String> _homeroomTeacherIds = kDebugMode
+      ? {
+          'Grade 4A': 'TCH-1001',
+          'Grade 5B': 'TCH-1004',
+        }
+      : {};
 
-  final Map<String, String> _homeroomTeacherNames = {
-    'Grade 4A': 'Miss Belen',
-    'Grade 5B': 'Mr. Tadesse',
-  };
+  final Map<String, String> _homeroomTeacherNames = kDebugMode
+      ? {
+          'Grade 4A': 'Miss Belen',
+          'Grade 5B': 'Mr. Tadesse',
+        }
+      : {};
 
   final Map<String, String> _classSchedules = {
     'Grade 4A': 'Mon–Fri, 8:00 AM – 3:00 PM',
@@ -241,7 +245,7 @@ class SchoolDataService {
   };
 
   /// teacherId → list of (className, role, optional subject)
-  final List<Map<String, dynamic>> _teacherAssignments = [
+  final List<Map<String, dynamic>> _teacherAssignments = kDebugMode ? [
     {
       'teacherId': 'TCH-1001',
       'className': 'Grade 4A',
@@ -276,9 +280,10 @@ class SchoolDataService {
       'role': ClassTeacherRole.subject,
       'subject': 'Amharic',
     },
-  ];
+  ] : [];
 
-  final Map<String, List<ClassSubjectTeacher>> _classSubjectTeachers = {
+  final Map<String, List<ClassSubjectTeacher>> _classSubjectTeachers =
+      kDebugMode ? {
     'Grade 4A': [
       ClassSubjectTeacher(
         subject: 'Mathematics',
@@ -345,7 +350,7 @@ class SchoolDataService {
         teacherName: 'Miss Belen',
       ),
     ],
-  };
+  } : {};
 
   final List<HomeworkItem> _homework = [
     HomeworkItem(
