@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
@@ -251,7 +253,7 @@ class TeacherRegistryService {
     return names.toList()..sort();
   }
 
-  final List<AdminTeacherRecord> _teachers = [
+  final List<AdminTeacherRecord> _teachers = kDebugMode ? [
     AdminTeacherRecord(
       teacherId: 'TCH-1001',
       fullName: 'Miss Belen',
@@ -345,7 +347,23 @@ class TeacherRegistryService {
         ),
       ],
     ),
-  ];
+  ] : [];
+
+  /// Built-in sample staff. Release builds do not keep them.
+  static bool isBuiltInDemoTeacher(AdminTeacherRecord teacher) {
+    final id = teacher.teacherId.trim().toUpperCase();
+    const names = {
+      'TCH-1001': 'miss belen',
+      'TCH-1002': 'mr. samuel',
+      'TCH-1003': 'miss hana',
+      'TCH-1004': 'mr. tadesse',
+    };
+    final expected = names[id];
+    if (expected == null) return false;
+    final school = teacher.schoolId.trim().toUpperCase();
+    if (school.isEmpty || school == 'TB-001') return true;
+    return teacher.fullName.trim().toLowerCase() == expected;
+  }
 
   AdminTeacherRecord? lookupByPhone(String phone, {String? schoolId}) {
     final matches = _teachers
@@ -693,7 +711,10 @@ class TeacherRegistryService {
     List<AdminTeacherRecord> teachers, {
     int? nextId,
   }) {
-    for (final teacher in teachers) {
+    final incoming = kDebugMode
+        ? teachers
+        : teachers.where((t) => !isBuiltInDemoTeacher(t)).toList();
+    for (final teacher in incoming) {
       final index = _indexOfPersistedTeacher(teacher);
       if (index >= 0) {
         _teachers[index] = teacher;

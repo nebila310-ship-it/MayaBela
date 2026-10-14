@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/models/transfer_models.dart';
@@ -384,7 +386,7 @@ class StudentRegistryService {
 
   int _nextId = 1006;
 
-  final List<AdminStudentRecord> _students = [
+  final List<AdminStudentRecord> _students = kDebugMode ? [
     AdminStudentRecord(
       studentId: 'STU-1001',
       fullName: 'Sara Bekele',
@@ -458,7 +460,24 @@ class StudentRegistryService {
       guardianPhone: '0911777888',
       homeroomTeacherId: 'TCH-1004',
     ),
-  ];
+  ] : [];
+
+  /// Built-in sample people. Release builds do not keep them.
+  static bool isBuiltInDemoStudent(AdminStudentRecord student) {
+    final id = student.studentId.trim().toUpperCase();
+    const names = {
+      'STU-1001': 'sara bekele',
+      'STU-1002': 'kidus bekele',
+      'STU-1003': 'daniel tesfaye',
+      'STU-1004': 'hanna girma',
+      'STU-1005': 'liya solomon',
+    };
+    final expected = names[id];
+    if (expected == null) return false;
+    final school = student.schoolId.trim().toUpperCase();
+    if (school.isEmpty || school == 'TB-001') return true;
+    return student.fullName.trim().toLowerCase() == expected;
+  }
 
   /// Builds roster class name from grade + section, e.g. Grade 4 + A → Grade 4A.
   static String buildClassName(String grade, String section) {
@@ -663,6 +682,7 @@ class StudentRegistryService {
 
   /// Sara Bekele portal row for the public student demo. In-memory only.
   void ensureLocalDemoStudent() {
+    if (!kDebugMode) return;
     const id = 'STU-1001';
     final existing = lookupAnyById(id);
     if (existing != null) {
@@ -831,12 +851,15 @@ class StudentRegistryService {
     int? nextId,
     bool replace = false,
   }) {
+    final incoming = kDebugMode
+        ? students
+        : students.where((s) => !isBuiltInDemoStudent(s)).toList();
     if (replace) {
       _students
         ..clear()
-        ..addAll(students);
+        ..addAll(incoming);
     } else {
-      for (final record in students) {
+      for (final record in incoming) {
         final idx = _indexOfPersistedStudent(record);
         if (idx >= 0) {
           _students[idx] = record;
