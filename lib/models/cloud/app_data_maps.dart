@@ -205,6 +205,7 @@ abstract final class AppDataMaps {
           (e) => {
             'studentName': e.studentName,
             'status': e.status.name,
+            if (e.taken) 'taken': true,
             if (e.studentId != null && e.studentId!.trim().isNotEmpty)
               'studentId': e.studentId,
             if (e.updatedAt != null) 'updatedAt': e.updatedAt!.toIso8601String(),
@@ -231,8 +232,9 @@ abstract final class AppDataMaps {
                 studentName: (e as Map)['studentName'] as String? ?? '',
                 studentId: e['studentId'] as String?,
                 status: AttendanceStatus.values.byName(
-                  e['status'] as String? ?? 'present',
+                  e['status'] as String? ?? 'unmarked',
                 ),
+                taken: e['taken'] == true,
                 updatedAt: e['updatedAt'] is String
                     ? DateTime.tryParse(e['updatedAt'] as String)
                     : null,

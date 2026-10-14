@@ -235,6 +235,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() {
       entry.status = status;
       entry.updatedAt = DateTime.now();
+      entry.taken = true;
     });
     unawaited(_saveAttendance(announce: false));
   }
@@ -244,9 +245,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final now = DateTime.now();
     setState(() {
       for (final entry in entries) {
-        if (entry.status == AttendanceStatus.present) continue;
+        if (entry.status == AttendanceStatus.present && entry.taken) continue;
         entry.status = AttendanceStatus.present;
         entry.updatedAt = now;
+        entry.taken = true;
       }
     });
     unawaited(_saveAttendance(announce: false));
@@ -823,27 +825,49 @@ class _HistoryView extends StatelessWidget {
       listenable: AppLocale.instance,
       builder: (context, _) {
         final s = AppLocale.instance.strings;
-        if (history.isEmpty) {
+        final data = SchoolDataService.instance;
+        final taken = history.where((session) {
+          return session.entries.any(
+            (entry) => data.attendanceMarkCounts(entry, session.date),
+          );
+        }).toList();
+        if (taken.isEmpty) {
           return Center(child: Text(s.noAttendanceHistory(className)));
         }
 
         return ListView.separated(
           padding: listPagePadding(context),
-          itemCount: history.length,
+          itemCount: taken.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final session = history[index];
+            final session = taken[index];
             final present = session.entries
-                .where((entry) => entry.status == AttendanceStatus.present)
+                .where(
+                  (entry) =>
+                      data.effectiveAttendanceStatus(entry, session.date) ==
+                      AttendanceStatus.present,
+                )
                 .length;
             final absent = session.entries
-                .where((entry) => entry.status == AttendanceStatus.absent)
+                .where(
+                  (entry) =>
+                      data.effectiveAttendanceStatus(entry, session.date) ==
+                      AttendanceStatus.absent,
+                )
                 .length;
             final late = session.entries
-                .where((entry) => entry.status == AttendanceStatus.late)
+                .where(
+                  (entry) =>
+                      data.effectiveAttendanceStatus(entry, session.date) ==
+                      AttendanceStatus.late,
+                )
                 .length;
             final excused = session.entries
-                .where((entry) => entry.status == AttendanceStatus.excused)
+                .where(
+                  (entry) =>
+                      data.effectiveAttendanceStatus(entry, session.date) ==
+                      AttendanceStatus.excused,
+                )
                 .length;
             final period = session.isDaily
                 ? s.dailyRegister
