@@ -402,6 +402,7 @@ abstract final class AppDataMaps {
     if (n.recipientUsername != null) 'recipientUsername': n.recipientUsername,
     if (n.recipientUsernames.isNotEmpty)
       'recipientUsernames': n.recipientUsernames,
+    if ((n.schoolId ?? '').trim().isNotEmpty) 'schoolId': n.schoolId!.trim(),
   };
 
   static AppNotification appNotificationFromMap(
@@ -429,6 +430,7 @@ abstract final class AppDataMaps {
             .where((u) => u.trim().isNotEmpty)
             .toList() ??
         const [],
+    schoolId: (map['schoolId'] as String?)?.trim(),
   );
 
   // —— Class timetables ——

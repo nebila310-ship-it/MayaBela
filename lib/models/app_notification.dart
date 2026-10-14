@@ -35,6 +35,7 @@ class AppNotification {
     this.recipientStaffRole,
     this.recipientUsername,
     this.recipientUsernames = const [],
+    this.schoolId,
   });
 
   final String id;
@@ -67,4 +68,7 @@ class AppNotification {
 
   /// Allowed login usernames when several people share a parent thread.
   final List<String> recipientUsernames;
+
+  /// School that created the notice. Empty on older rows.
+  final String? schoolId;
 }

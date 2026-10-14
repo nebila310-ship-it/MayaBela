@@ -544,6 +544,9 @@ class EnrollmentService extends ChangeNotifier {
       fromRole: AuthService.roleAdmin,
       fromName: reviewerName,
       recipientRole: AuthService.roleParent,
+      recipientUsername: link.parentUsername,
+      targetStudentId: link.studentId,
+      targetClassName: student?.className,
     );
     await _persist(syncLinkId: linkId);
     notifyListeners();

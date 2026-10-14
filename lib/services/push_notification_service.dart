@@ -8,7 +8,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
-import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/notification_audience.dart';
 import 'package:mayabela/services/user_preferences_service.dart';
 
 /// Device tray / lock-screen alerts via local notifications.
@@ -128,57 +128,64 @@ class PushNotificationService {
     final category = preferenceKeyForType(type);
     if (!prefs.isEnabled(recipientRole, category)) return false;
 
+    final addressedToThisPerson =
+        (recipientUsername != null && recipientUsername.trim().isNotEmpty) ||
+        (recipientUsernames != null &&
+            recipientUsernames.any((u) => u.trim().isNotEmpty)) ||
+        (recipientStaffId != null && recipientStaffId.trim().isNotEmpty);
+    final preview = AppNotification(
+      id: 'audience',
+      title: '',
+      body: '',
+      type: type,
+      fromRole: '',
+      fromName: '',
+      recipientRole: recipientRole,
+      createdAt: DateTime.now(),
+      targetStudentId: targetStudentId,
+      targetClassName: targetClassName,
+    );
+
     if (recipientRole == AuthService.roleParent) {
       EnrollmentService.instance.ensureSeeded();
       final linked = AuthService.activeLinkedStudentIds()
           .map((id) => id.trim().toUpperCase())
+          .where((id) => id.isNotEmpty)
           .toSet();
-
-      final target = targetStudentId?.trim().toUpperCase();
-      if (target != null && target.isNotEmpty && !linked.contains(target)) {
+      if (!familyNotificationReaches(
+        item: preview,
+        linkedStudentIds: linked,
+        addressedToThisPerson: addressedToThisPerson,
+      )) {
         return false;
-      }
-
-      final className = targetClassName?.trim();
-      if (className != null && className.isNotEmpty) {
-        var inClass = false;
-        for (final studentId in linked) {
-          final student = StudentRegistryService.instance.lookupById(studentId);
-          if (student != null &&
-              StudentRegistryService.classNamesMatch(
-                student.className,
-                className,
-              )) {
-            inClass = true;
-            break;
-          }
-        }
-        if (!inClass) return false;
       }
     }
 
     if (recipientRole == AuthService.roleStudent) {
-      final linkedStudentId = user.linkedStudentId?.trim().toUpperCase();
-      if (linkedStudentId == null || linkedStudentId.isEmpty) return false;
-
-      final target = targetStudentId?.trim().toUpperCase();
-      if (target != null && target.isNotEmpty && target != linkedStudentId) {
+      final linked = <String>{
+        if ((user.linkedStudentId ?? '').trim().isNotEmpty)
+          user.linkedStudentId!.trim().toUpperCase(),
+        ...user.linkedStudentIds
+            .map((id) => id.trim().toUpperCase())
+            .where((id) => id.isNotEmpty),
+      };
+      if (linked.isEmpty) return false;
+      if (!familyNotificationReaches(
+        item: preview,
+        linkedStudentIds: linked,
+        addressedToThisPerson: addressedToThisPerson,
+      )) {
         return false;
       }
+    }
 
-      final className = targetClassName?.trim();
-      if (className != null && className.isNotEmpty) {
-        final student = StudentRegistryService.instance.lookupById(
-          linkedStudentId,
-        );
-        if (student == null ||
-            !StudentRegistryService.classNamesMatch(
-              student.className,
-              className,
-            )) {
-          return false;
-        }
-      }
+    if (recipientRole == AuthService.roleTeacher &&
+        !teacherClassNotificationReaches(
+          targetClassName: targetClassName,
+          assignedClasses: AuthService.accessClassNamesForSync(),
+          addressedToThisPerson: addressedToThisPerson,
+        )) {
+      return false;
     }
 
     if (recipientUsername != null &&
