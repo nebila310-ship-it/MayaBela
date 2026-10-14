@@ -339,7 +339,7 @@ void main() {
     expect(homework, contains('recordHomeworkScore'));
     expect(homework, contains('pushHomeworkScoreToMarkbook'));
     expect(homework, contains('publishHomeworkReminders'));
-    expect(homework, contains('Post homework'));
+    expect(homework, contains('postHomework'));
 
     final exam = read('lib/web_erp/pages/web_exam_desk_page.dart');
     expect(exam, contains('recordStaffOfflineResult'));

@@ -19,7 +19,9 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/attachment_share_actions.dart';
+import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/widgets/homework_attachments_panel.dart';
+import 'package:mayabela/widgets/homework_brief_ui.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
 
 enum HomeworkViewMode { teacher, parent, student }
@@ -44,6 +46,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
   final _data = SchoolDataService.instance;
   final _access = TeacherAccessService.instance;
   String? _selectedClass;
+  String _focus = 'all';
 
   bool get _isParent =>
       widget.mode == HomeworkViewMode.parent ||
@@ -68,7 +71,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     return _access.myClasses.map((assignment) => assignment.className).toList();
   }
 
-  List<HomeworkItem> get _items {
+  List<HomeworkItem> get _classItems {
     if (_isParent) {
       final className = _selectedClass;
       if (className != null) {
@@ -81,6 +84,15 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     final all = _data.getHomeworkForClass(className);
     if (_access.canViewAllHomeworkInClass(className)) return all;
     return all.where((item) => item.teacherId == _access.teacherId).toList();
+  }
+
+  List<HomeworkItem> get _items {
+    final all = _classItems;
+    return switch (_focus) {
+      'soon' => all.where((item) => item.isDueSoon).toList(),
+      'overdue' => all.where((item) => item.isOverdue).toList(),
+      _ => all,
+    };
   }
 
   @override
@@ -97,34 +109,66 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
   Future<void> _saveHomework({
     required String className,
     required String subject,
-    required TextEditingController descriptionController,
+    required String description,
+    required String title,
+    required String taskType,
+    required String learningObjective,
+    required String successCriteria,
+    required int? estimatedMinutes,
+    required String submissionMethod,
+    required String resources,
+    required String supportNote,
+    required String extensionNote,
+    required double maxScore,
     required List<String> attachmentPaths,
     DateTime? dueDate,
     String? homeworkId,
   }) async {
     final s = AppLocale.instance.strings;
-    if (descriptionController.text.trim().isEmpty) return;
+    if (description.trim().isEmpty && title.trim().isEmpty) return;
+    final note = description.trim().isEmpty ? title.trim() : description.trim();
 
     if (homeworkId == null) {
       final slot = _access.teachingSlotFor(className, subject);
       _data.addHomework(
         className: className,
         subject: subject,
-        description: descriptionController.text.trim(),
+        description: note,
         teacherName: _access.teacherName,
         teacherId: _access.teacherId,
         subjectId: slot?.subjectId,
         teachingSlotId: slot?.slotId,
         dueDate: dueDate,
         attachmentPaths: attachmentPaths,
+        title: title,
+        taskType: taskType,
+        learningObjective: learningObjective,
+        successCriteria: successCriteria,
+        estimatedMinutes: estimatedMinutes,
+        submissionMethod: submissionMethod,
+        resources: resources,
+        supportNote: supportNote,
+        extensionNote: extensionNote,
+        maxScore: maxScore,
       );
     } else {
       _data.updateHomework(
         id: homeworkId,
-        description: descriptionController.text.trim(),
+        description: note,
         attachmentPaths: attachmentPaths,
         dueDate: dueDate,
         clearDueDate: dueDate == null,
+        title: title,
+        taskType: taskType,
+        learningObjective: learningObjective,
+        successCriteria: successCriteria,
+        estimatedMinutes: estimatedMinutes,
+        updateEstimatedMinutes: true,
+        submissionMethod: submissionMethod,
+        resources: resources,
+        supportNote: supportNote,
+        extensionNote: extensionNote,
+        maxScore: maxScore,
       );
     }
     if (mounted) setState(() {});
@@ -157,11 +201,26 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       return;
     }
 
+    final titleController = TextEditingController(text: existing?.title ?? '');
     final descriptionController =
         TextEditingController(text: existing?.description ?? '');
+    final objectiveController =
+        TextEditingController(text: existing?.learningObjective ?? '');
+    final criteriaController =
+        TextEditingController(text: existing?.successCriteria ?? '');
+    final resourcesController = TextEditingController(text: existing?.resources ?? '');
+    final supportController = TextEditingController(text: existing?.supportNote ?? '');
+    final extensionController =
+        TextEditingController(text: existing?.extensionNote ?? '');
+    final maxScoreController = TextEditingController(
+      text: (existing?.maxScore ?? 100).toStringAsFixed(0),
+    );
     var subject = existing?.subject ??
         _access.defaultHomeworkSubject(className) ??
         subjects.first;
+    var taskType = existing?.taskType ?? '';
+    var submissionMethod = existing?.submissionMethod ?? '';
+    int? estimatedMinutes = existing?.estimatedMinutes;
     var attachmentPaths = List<String>.from(existing?.attachmentPaths ?? []);
     DateTime? dueDate = existing?.dueDate;
 
@@ -213,40 +272,30 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                 ),
               ),
             ),
-          adminDialogField(
-            TextField(
-              controller: descriptionController,
-              maxLines: 4,
-              decoration: adminFieldDecoration(
-                label: s.homeworkDetails,
-                icon: Icons.notes_outlined,
-                accent: const Color(0xFFEF6C00),
-              ),
-            ),
+          HomeworkPostFields(
+            title: titleController,
+            instructions: descriptionController,
+            objective: objectiveController,
+            criteria: criteriaController,
+            resources: resourcesController,
+            supportNote: supportController,
+            extensionNote: extensionController,
+            maxScore: maxScoreController,
+            taskType: taskType,
+            submissionMethod: submissionMethod,
+            estimatedMinutes: estimatedMinutes,
+            dueDate: dueDate,
+            onTaskType: (value) => setDialogState(() => taskType = value),
+            onSubmission: (value) =>
+                setDialogState(() => submissionMethod = value),
+            onMinutes: (value) =>
+                setDialogState(() => estimatedMinutes = value),
+            onPickDue: () async {
+              final picked = await pickHomeworkDue(context, current: dueDate);
+              if (picked != null) setDialogState(() => dueDate = picked);
+            },
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Due date'),
-            subtitle: Text(
-              dueDate == null
-                  ? 'No due date'
-                  : '${dueDate!.day}/${dueDate!.month}/${dueDate!.year}',
-            ),
-            trailing: TextButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: dueDate ?? DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2035),
-                );
-                if (picked != null) {
-                  setDialogState(() => dueDate = picked);
-                }
-              },
-              child: const Text('Set'),
-            ),
-          ),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () async {
               final picked = await AnnouncementAttachmentService.instance
@@ -289,13 +338,30 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       await _saveHomework(
         className: className,
         subject: subject,
-        descriptionController: descriptionController,
+        description: descriptionController.text.trim(),
+        title: titleController.text.trim(),
+        taskType: taskType,
+        learningObjective: objectiveController.text.trim(),
+        successCriteria: criteriaController.text.trim(),
+        estimatedMinutes: estimatedMinutes,
+        submissionMethod: submissionMethod,
+        resources: resourcesController.text.trim(),
+        supportNote: supportController.text.trim(),
+        extensionNote: extensionController.text.trim(),
+        maxScore: double.tryParse(maxScoreController.text.trim()) ?? 100,
         attachmentPaths: attachmentPaths,
         dueDate: dueDate,
         homeworkId: existing?.id,
       );
     }
+    titleController.dispose();
     descriptionController.dispose();
+    objectiveController.dispose();
+    criteriaController.dispose();
+    resourcesController.dispose();
+    supportController.dispose();
+    extensionController.dispose();
+    maxScoreController.dispose();
   }
 
   String _formatTime(DateTime time) {
@@ -366,8 +432,9 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
               TextField(
                 controller: scoreCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Homework score (0–100)',
+                decoration: InputDecoration(
+                  labelText:
+                      'Homework score (0–${item.scoreCap.toStringAsFixed(0)})',
                 ),
               ),
               const SizedBox(height: 10),
@@ -646,6 +713,11 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                     style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
                   ),
                 ),
+                if (_classOptions.isNotEmpty || _isParent)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: _focusRow(s),
+                  ),
                 Expanded(
                   child: _classOptions.isEmpty && !_isParent
                       ? const SizedBox.shrink()
@@ -659,103 +731,125 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                           final item = _items[index];
                           final canEdit =
                               !_isParent && _access.canEditHomework(item);
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.indigo.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                        child: Text(
-                                          item.subject,
-                                          style: TextStyle(
-                                            color: Colors.indigo.shade800,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
+                          final color = homeworkSubjectColor(item.subject);
+                          return Material(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            elevation: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: color.withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        borderRadius: const BorderRadius.horizontal(
+                                          left: Radius.circular(16),
                                         ),
                                       ),
-                                      const Spacer(),
-                                      if (canEdit)
-                                        IconButton(
-                                          icon: const Icon(Icons.edit_outlined),
-                                          tooltip: s.editHomework,
-                                          onPressed: () => _showHomeworkDialog(
-                                            className: item.className,
-                                            existing: item,
-                                          ),
-                                        ),
-                                      Text(
-                                        item.className,
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    item.description,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ),
-                                  if (item.attachmentPaths.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    HomeworkAttachmentsPanel(
-                                      attachmentPaths: item.attachmentPaths,
-                                      compact: _isParent,
-                                      allowShareDownload: _isParent,
-                                      sectionTitle: _isStudent
-                                          ? s.teacherWorksheetLabel
-                                          : null,
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: color,
+                                                    borderRadius:
+                                                        BorderRadius.circular(20),
+                                                  ),
+                                                  child: Text(
+                                                    item.subject,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight.w800,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    item.className,
+                                                    style: TextStyle(
+                                                      color: Colors.grey.shade700,
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (canEdit)
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit_outlined),
+                                                    tooltip: s.editHomework,
+                                                    onPressed: () =>
+                                                        _showHomeworkDialog(
+                                                      className: item.className,
+                                                      existing: item,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            HomeworkBriefSections(item: item),
+                                            if (item.attachmentPaths.isNotEmpty) ...[
+                                              const SizedBox(height: 10),
+                                              HomeworkAttachmentsPanel(
+                                                attachmentPaths: item.attachmentPaths,
+                                                compact: _isParent,
+                                                allowShareDownload: _isParent,
+                                                sectionTitle: _isStudent
+                                                    ? s.teacherWorksheetLabel
+                                                    : null,
+                                              ),
+                                            ],
+                                            if (_isStudent)
+                                              _studentWorksheetSection(item),
+                                            if (!_isParent)
+                                              _teacherSubmissionInbox(item),
+                                            const SizedBox(height: 10),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.person, size: 16, color: color),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    item.teacherName,
+                                                    style: const TextStyle(fontSize: 13),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  _formatTime(item.postedAt),
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ],
-                                  if (_isStudent) _studentWorksheetSection(item),
-                                  if (!_isParent) _teacherSubmissionInbox(item),
-                                  if (item.dueDate != null) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Due ${item.dueDate!.day}/${item.dueDate!.month}/${item.dueDate!.year}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey.shade800,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.person, size: 16),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        item.teacherName,
-                                        style: const TextStyle(fontSize: 13),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        _formatTime(item.postedAt),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           );
@@ -767,6 +861,47 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _focusRow(AppStrings s) {
+    final soon = _classItems.where((item) => item.isDueSoon).length;
+    final overdue = _classItems.where((item) => item.isOverdue).length;
+    Widget chip(String focus, String label, Color color, String count) {
+      final selected = _focus == focus;
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Material(
+          color: selected ? color : color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => setState(() => _focus = focus),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text(
+                '$label · $count',
+                style: TextStyle(
+                  color: selected ? Colors.white : color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip('all', s.homeworkAllTasks, ClassroomPalette.blue, '${_classItems.length}'),
+          chip('soon', s.homeworkDueSoon, ClassroomPalette.orange, '$soon'),
+          chip('overdue', s.homeworkOverdue, ClassroomPalette.red, '$overdue'),
+        ],
+      ),
     );
   }
 }

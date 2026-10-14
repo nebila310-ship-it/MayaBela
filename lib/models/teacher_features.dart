@@ -196,6 +196,37 @@ class DailyAttendanceReport {
   }
 }
 
+/// Task kinds used on an international-school homework brief.
+abstract final class HomeworkTaskTypes {
+  static const practice = 'practice';
+  static const preparation = 'preparation';
+  static const consolidation = 'consolidation';
+  static const inquiry = 'inquiry';
+  static const project = 'project';
+  static const revision = 'revision';
+  static const reading = 'reading';
+
+  static const values = <String>[
+    practice,
+    preparation,
+    consolidation,
+    inquiry,
+    project,
+    revision,
+    reading,
+  ];
+}
+
+/// How students hand the task in.
+abstract final class HomeworkSubmissionMethods {
+  static const online = 'online';
+  static const inClass = 'inClass';
+  static const oral = 'oral';
+  static const portfolio = 'portfolio';
+
+  static const values = <String>[online, inClass, oral, portfolio];
+}
+
 class HomeworkItem {
   HomeworkItem({
     required this.id,
@@ -215,6 +246,16 @@ class HomeworkItem {
     this.dueReminderSent = false,
     this.overdueReminderSent = false,
     this.schoolId,
+    this.title = '',
+    this.taskType = '',
+    this.learningObjective = '',
+    this.successCriteria = '',
+    this.estimatedMinutes,
+    this.submissionMethod = '',
+    this.resources = '',
+    this.supportNote = '',
+    this.extensionNote = '',
+    this.maxScore = 100,
   })  : attachmentPaths = attachmentPaths ?? [],
         studentWorksheetPaths = studentWorksheetPaths ?? {},
         studentScores = studentScores ?? {},
@@ -238,10 +279,57 @@ class HomeworkItem {
   Map<String, String> teacherComments;
   bool dueReminderSent;
   bool overdueReminderSent;
+  /// Short name shown on the homework desk. Older rows fall back to the note.
+  String title;
+  String taskType;
+  String learningObjective;
+  String successCriteria;
+  int? estimatedMinutes;
+  String submissionMethod;
+  String resources;
+  String supportNote;
+  String extensionNote;
+  double maxScore;
 
   int get submittedStudentCount => studentWorksheetPaths.values
       .where((paths) => paths.isNotEmpty)
       .length;
+
+  /// Headline on the desk. Older assignments used the note as the only text.
+  String get displayTitle {
+    final named = title.trim();
+    if (named.isNotEmpty) return named;
+    final line = description.trim().split('\n').first.trim();
+    if (line.isEmpty) return subject;
+    return line;
+  }
+
+  double get scoreCap => maxScore <= 0 ? 100 : maxScore;
+
+  int get unmarkedSubmissionCount {
+    var waiting = 0;
+    for (final entry in studentWorksheetPaths.entries) {
+      if (entry.value.isEmpty) continue;
+      final key = entry.key.trim().toUpperCase();
+      if (!studentScores.containsKey(key) &&
+          !studentScores.containsKey(entry.key)) {
+        waiting++;
+      }
+    }
+    return waiting;
+  }
+
+  bool get isOverdue {
+    final due = dueDate;
+    if (due == null) return false;
+    return due.isBefore(DateTime.now());
+  }
+
+  bool get isDueSoon {
+    final due = dueDate;
+    if (due == null || isOverdue) return false;
+    return due.difference(DateTime.now()) <= const Duration(days: 3);
+  }
 
   List<String> worksheetsForStudent(String studentId) {
     final key = studentId.trim().toUpperCase();
@@ -262,6 +350,20 @@ extension HomeworkItemPersistence on HomeworkItem {
         if (subjectId != null) 'subjectId': subjectId,
         if (teachingSlotId != null) 'teachingSlotId': teachingSlotId,
         if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
+        if (title.trim().isNotEmpty) 'title': title.trim(),
+        if (taskType.trim().isNotEmpty) 'taskType': taskType.trim(),
+        if (learningObjective.trim().isNotEmpty)
+          'learningObjective': learningObjective.trim(),
+        if (successCriteria.trim().isNotEmpty)
+          'successCriteria': successCriteria.trim(),
+        if (estimatedMinutes != null) 'estimatedMinutes': estimatedMinutes,
+        if (submissionMethod.trim().isNotEmpty)
+          'submissionMethod': submissionMethod.trim(),
+        if (resources.trim().isNotEmpty) 'resources': resources.trim(),
+        if (supportNote.trim().isNotEmpty) 'supportNote': supportNote.trim(),
+        if (extensionNote.trim().isNotEmpty)
+          'extensionNote': extensionNote.trim(),
+        if (maxScore != 100) 'maxScore': maxScore,
         'attachmentPaths': attachmentPaths,
         'studentWorksheetPaths': studentWorksheetPaths.map(
           (key, value) => MapEntry(key, value),
@@ -308,6 +410,16 @@ extension HomeworkItemPersistence on HomeworkItem {
       },
       dueReminderSent: map['dueReminderSent'] == true,
       overdueReminderSent: map['overdueReminderSent'] == true,
+      title: map['title'] as String? ?? '',
+      taskType: map['taskType'] as String? ?? '',
+      learningObjective: map['learningObjective'] as String? ?? '',
+      successCriteria: map['successCriteria'] as String? ?? '',
+      estimatedMinutes: (map['estimatedMinutes'] as num?)?.toInt(),
+      submissionMethod: map['submissionMethod'] as String? ?? '',
+      resources: map['resources'] as String? ?? '',
+      supportNote: map['supportNote'] as String? ?? '',
+      extensionNote: map['extensionNote'] as String? ?? '',
+      maxScore: (map['maxScore'] as num?)?.toDouble() ?? 100,
     );
   }
 }
