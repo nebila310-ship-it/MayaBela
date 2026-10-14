@@ -3704,6 +3704,16 @@ class SchoolDataService {
         subjectId: persisted.subjectId,
         teachingSlotId: persisted.teachingSlotId,
         dueDate: persisted.dueDate,
+        title: persisted.title,
+        taskType: persisted.taskType,
+        learningObjective: persisted.learningObjective,
+        successCriteria: persisted.successCriteria,
+        estimatedMinutes: persisted.estimatedMinutes,
+        submissionMethod: persisted.submissionMethod,
+        resources: persisted.resources,
+        supportNote: persisted.supportNote,
+        extensionNote: persisted.extensionNote,
+        maxScore: persisted.maxScore,
         attachmentPaths: List<String>.from(persisted.attachmentPaths),
         studentWorksheetPaths: persisted.studentWorksheetPaths.map(
           (key, value) => MapEntry(key, List<String>.from(value)),
@@ -3771,9 +3781,20 @@ class SchoolDataService {
     String? teachingSlotId,
     DateTime? dueDate,
     List<String> attachmentPaths = const [],
+    String title = '',
+    String taskType = '',
+    String learningObjective = '',
+    String successCriteria = '',
+    int? estimatedMinutes,
+    String submissionMethod = '',
+    String resources = '',
+    String supportNote = '',
+    String extensionNote = '',
+    double maxScore = 100,
   }) {
     final canonicalClass = _canonicalClassName(className);
     final schoolId = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final headline = title.trim().isNotEmpty ? title.trim() : description.trim();
     _homework.insert(
       0,
       HomeworkItem(
@@ -3789,6 +3810,16 @@ class SchoolDataService {
         teachingSlotId: teachingSlotId,
         dueDate: dueDate,
         attachmentPaths: List.from(attachmentPaths),
+        title: title.trim(),
+        taskType: taskType.trim(),
+        learningObjective: learningObjective.trim(),
+        successCriteria: successCriteria.trim(),
+        estimatedMinutes: estimatedMinutes,
+        submissionMethod: submissionMethod.trim(),
+        resources: resources.trim(),
+        supportNote: supportNote.trim(),
+        extensionNote: extensionNote.trim(),
+        maxScore: maxScore <= 0 ? 100 : maxScore,
       ),
     );
     SchoolContentSyncService.instance.markDataChanged();
@@ -3797,7 +3828,7 @@ class SchoolDataService {
     _notifyParentsInClass(
       className: canonicalClass,
       title: 'New homework — $subject',
-      body: '$teacherName: $description',
+      body: '$teacherName: $headline',
       type: NotificationType.homework,
       fromRole: AuthService.roleTeacher,
       fromName: teacherName,
@@ -3811,10 +3842,37 @@ class SchoolDataService {
     List<String>? attachmentPaths,
     DateTime? dueDate,
     bool clearDueDate = false,
+    String? title,
+    String? taskType,
+    String? learningObjective,
+    String? successCriteria,
+    int? estimatedMinutes,
+    bool updateEstimatedMinutes = false,
+    String? submissionMethod,
+    String? resources,
+    String? supportNote,
+    String? extensionNote,
+    double? maxScore,
   }) {
     try {
       final item = _homework.firstWhere((hw) => hw.id == id);
       item.description = description.trim();
+      if (title != null) item.title = title.trim();
+      if (taskType != null) item.taskType = taskType.trim();
+      if (learningObjective != null) {
+        item.learningObjective = learningObjective.trim();
+      }
+      if (successCriteria != null) {
+        item.successCriteria = successCriteria.trim();
+      }
+      if (updateEstimatedMinutes) item.estimatedMinutes = estimatedMinutes;
+      if (submissionMethod != null) {
+        item.submissionMethod = submissionMethod.trim();
+      }
+      if (resources != null) item.resources = resources.trim();
+      if (supportNote != null) item.supportNote = supportNote.trim();
+      if (extensionNote != null) item.extensionNote = extensionNote.trim();
+      if (maxScore != null) item.maxScore = maxScore <= 0 ? 100 : maxScore;
       if (clearDueDate) {
         item.dueDate = null;
       } else if (dueDate != null) {
@@ -3853,7 +3911,7 @@ class SchoolDataService {
     final item = homeworkById(homeworkId);
     if (item == null) return false;
     item.studentScores[studentId.trim().toUpperCase()] =
-        score.clamp(0, 100).toDouble();
+        score.clamp(0, item.scoreCap).toDouble();
     _persistHomework();
     return true;
   }

@@ -2437,6 +2437,73 @@ class AppStrings implements AppStringsLike {
   String get homeworkPostedForParents => t('Homework posted for parents', 'የቤት ስራ ለወላጆች ተለጠፈ');
   String get noHomeworkPosted =>
       t('No homework posted yet', 'የቤት ስራ አልተለጠፈም');
+  String get homeworkDeskTitle => t('Homework desk', 'የቤት ሥራ ዴስክ');
+  String get homeworkDeskHint => t(
+        'Post a clear task: learning objective, success criteria, time, and how students hand it in.',
+        'ግልጽ ሥራ ይለጥፉ፦ የመማር ዓላማ፣ የስኬት መስፈርት፣ ጊዜ እና ተማሪዎች እንዴት እንደሚያስረክቡ።',
+      );
+  String get homeworkAssignmentTitle => t('Assignment title', 'የሥራ ርዕስ');
+  String get homeworkTaskType => t('Task type', 'የሥራ ዓይነት');
+  String get homeworkLearningObjective =>
+      t('Learning objective', 'የመማር ዓላማ');
+  String get homeworkSuccessCriteria =>
+      t('Success criteria', 'የስኬት መስፈርት');
+  String get homeworkInstructions => t('Instructions', 'መመሪያ');
+  String get homeworkEstimatedTime => t('Estimated time', 'የሚገመት ጊዜ');
+  String get homeworkHowToSubmit =>
+      t('How students hand it in', 'ተማሪዎች እንዴት ያስረክባሉ');
+  String get homeworkResources => t('Resources', 'ግብዓቶች');
+  String get homeworkSupport =>
+      t('Support for learners who need it', 'ለሚፈልጉ ተማሪዎች ድጋፍ');
+  String get homeworkExtension =>
+      t('Extension for learners who are ready', 'ለተዘጋጁ ተማሪዎች ተጨማሪ');
+  String get homeworkMaxScore => t('Maximum score', 'ከፍተኛ ውጤት');
+  String get homeworkOpenTasks => t('Open tasks', 'ክፍት ሥራዎች');
+  String get homeworkDueSoon => t('Due soon', 'በቅርቡ የሚደርስ');
+  String get homeworkOverdue => t('Overdue', 'ጊዜው ያለፈ');
+  String get homeworkWaitingMark => t('Waiting for a mark', 'ውጤት የሚጠብቅ');
+  String get homeworkAllTasks => t('All tasks', 'ሁሉም ሥራዎች');
+  String get homeworkNoDue => t('No due date', 'የመድረሻ ቀን የለም');
+  String get homeworkSetDue => t('Set due date and time', 'ቀን እና ሰዓት ያዘጋጁ');
+  String homeworkMinutes(int minutes) =>
+      t('$minutes min', '$minutes ደቂቃ');
+  String homeworkDueOn(String when) =>
+      t('Due $when', 'የሚደርስበት $when');
+  String homeworkTaskTypeLabel(String code) {
+    switch (code) {
+      case 'practice':
+        return t('Practice', 'ልምምድ');
+      case 'preparation':
+        return t('Preparation', 'ለትምህርቱ ዝግጅት');
+      case 'consolidation':
+        return t('Consolidation', 'ማጠናከሪያ');
+      case 'inquiry':
+        return t('Inquiry', 'ምርምር');
+      case 'project':
+        return t('Project', 'ፕሮጀክት');
+      case 'revision':
+        return t('Revision', 'ድግግም');
+      case 'reading':
+        return t('Reading', 'ንባብ');
+      default:
+        return code;
+    }
+  }
+
+  String homeworkSubmitLabel(String code) {
+    switch (code) {
+      case 'online':
+        return t('Online upload', 'በመስመር ላይ ይላኩ');
+      case 'inClass':
+        return t('Bring to class', 'ወደ ክፍል ያምጡ');
+      case 'oral':
+        return t('Oral response', 'የቃል መልስ');
+      case 'portfolio':
+        return t('Portfolio', 'ፖርትፎሊዮ');
+      default:
+        return code;
+    }
+  }
 
   // —— Gallery ——
   String get classGallery => t('Class Gallery', 'የክፍል ጋለሪ');
