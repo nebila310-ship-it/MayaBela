@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/attendance_window.dart';
 import 'package:mayabela/models/calendar_event.dart';
+import 'package:mayabela/models/cloud/app_data_maps.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -265,5 +266,84 @@ void main() {
     expect(data.activeAttendanceWindow().openLabel, '07:15');
     expect(data.activeAttendanceWindow().closeLabel, '07:50');
     expect(data.attendanceTakingOpen(day), isFalse);
+  });
+
+  test('a closed day that nobody marked stays blank', () {
+    final data = SchoolDataService.instance;
+    data.debugEnforceAttendanceWindow = true;
+    const closedClass = 'Grade 1A-CLOSE';
+    final day = DateTime(2026, 10, 14);
+    data.debugAttendanceNow = DateTime(2026, 10, 14, 16, 22);
+    final alpha = StudentRegistryService.instance.addStudent(
+      schoolId: 'MAL838',
+      fullName: 'Jooalah Yared',
+      grade: 'Grade 1',
+      className: closedClass,
+      dateOfBirth: DateTime(2018, 3, 3),
+    );
+    final beta = StudentRegistryService.instance.addStudent(
+      schoolId: 'MAL838',
+      fullName: 'Maya Nabil',
+      grade: 'Grade 1',
+      className: closedClass,
+      dateOfBirth: DateTime(2018, 4, 4),
+    );
+
+    final parsed = AppDataMaps.attendanceSessionFromMap({
+      'className': closedClass,
+      'date': '2026-10-14T00:00:00.000',
+      'conductedBy': 'Yared H/micheal',
+      'entries': [
+        {
+          'studentName': 'Jooalah Yared',
+          'studentId': alpha.studentId,
+          'status': 'present',
+        },
+        {'studentName': 'Maya Nabil', 'studentId': beta.studentId},
+      ],
+    });
+    expect(parsed.entries.last.status, AttendanceStatus.unmarked);
+    expect(parsed.entries.first.taken, isFalse);
+    data.applyPersistedAttendance([parsed]);
+
+    final view = data.attendanceRegisterView(className: closedClass, date: day);
+    expect(view.entries, hasLength(2));
+    expect(
+      view.entries.every((e) => e.status == AttendanceStatus.unmarked),
+      isTrue,
+    );
+    expect(view.conductedBy, isNull);
+    expect(data.classesWithoutConductedAttendance(day), contains(closedClass));
+
+    final stored = data.getAttendanceSession(closedClass, day);
+    expect(stored, isNotNull);
+    expect(
+      stored!.entries.every((e) => e.status == AttendanceStatus.unmarked),
+      isTrue,
+    );
+
+    final yesterday = DateTime(2026, 10, 13);
+    data.applyPersistedAttendance([
+      AttendanceSession(
+        className: closedClass,
+        date: yesterday,
+        conductedBy: 'Ms Hana',
+        entries: [
+          StudentAttendanceEntry(
+            studentName: 'Jooalah Yared',
+            studentId: alpha.studentId,
+            status: AttendanceStatus.present,
+          ),
+        ],
+      ),
+    ]);
+    final prior = data.attendanceRegisterView(
+      className: closedClass,
+      date: yesterday,
+    );
+    expect(
+      prior.entries.firstWhere((e) => e.studentName == 'Jooalah Yared').status,
+      AttendanceStatus.present,
+    );
   });
 }

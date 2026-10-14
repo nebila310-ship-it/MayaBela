@@ -560,14 +560,17 @@ class SchoolDataService {
         StudentAttendanceEntry(
           studentName: 'Sara Bekele',
           status: AttendanceStatus.present,
+          taken: true,
         ),
         StudentAttendanceEntry(
           studentName: 'Daniel Tesfaye',
           status: AttendanceStatus.present,
+          taken: true,
         ),
         StudentAttendanceEntry(
           studentName: 'Hanna Girma',
           status: AttendanceStatus.late,
+          taken: true,
         ),
       ],
     ),
@@ -579,14 +582,17 @@ class SchoolDataService {
         StudentAttendanceEntry(
           studentName: 'Sara Bekele',
           status: AttendanceStatus.present,
+          taken: true,
         ),
         StudentAttendanceEntry(
           studentName: 'Daniel Tesfaye',
           status: AttendanceStatus.absent,
+          taken: true,
         ),
         StudentAttendanceEntry(
           studentName: 'Hanna Girma',
           status: AttendanceStatus.late,
+          taken: true,
         ),
       ],
     ),
@@ -598,6 +604,7 @@ class SchoolDataService {
         StudentAttendanceEntry(
           studentName: 'Liya Solomon',
           status: AttendanceStatus.absent,
+          taken: true,
         ),
       ],
     ),
@@ -609,6 +616,7 @@ class SchoolDataService {
         StudentAttendanceEntry(
           studentName: 'Kidus Bekele',
           status: AttendanceStatus.late,
+          taken: true,
         ),
       ],
     ),
@@ -4669,8 +4677,11 @@ class SchoolDataService {
         StudentAttendanceEntry(
           studentName: student.name,
           studentId: student.inviteStudentId,
-          status: match?.status ?? AttendanceStatus.unmarked,
+          status: match == null
+              ? AttendanceStatus.unmarked
+              : effectiveAttendanceStatus(match, session.date),
           updatedAt: match?.updatedAt,
+          taken: match?.taken ?? false,
         ),
       );
       seen.add(_attendanceEntryKey(entries.last));
@@ -4683,7 +4694,9 @@ class SchoolDataService {
       if (alreadyNamed) continue;
       if (!_attendanceEntryOnRoster(entry, roster)) continue;
       if (seen.add(_attendanceEntryKey(entry))) {
-        entries.add(_copyAttendanceEntry(entry));
+        final copy = _copyAttendanceEntry(entry);
+        copy.status = effectiveAttendanceStatus(copy, session.date);
+        entries.add(copy);
       }
     }
     return entries;
@@ -4910,13 +4923,19 @@ class SchoolDataService {
       return StudentAttendanceEntry(
         studentName: student.name,
         studentId: student.inviteStudentId,
-        status: match?.status ?? AttendanceStatus.unmarked,
+        status: match == null
+            ? AttendanceStatus.unmarked
+            : effectiveAttendanceStatus(match, date),
         updatedAt: match?.updatedAt,
+        taken: match?.taken ?? false,
       );
     }).toList();
+    final conducted = entries.any(
+      (entry) => entry.status != AttendanceStatus.unmarked,
+    );
     return (
       entries: entries,
-      conductedBy: belongs ? session!.conductedBy : null,
+      conductedBy: belongs && conducted ? session!.conductedBy : null,
       locked: belongs && session!.locked,
       periodLabel: belongs ? session!.periodLabel : '',
     );
@@ -5015,7 +5034,7 @@ class SchoolDataService {
       if (!_isSameDay(session.date, date)) continue;
       if (!_attendanceSessionInDailyReport(session)) continue;
       final taken = session.entries.any(
-        (entry) => entry.status != AttendanceStatus.unmarked,
+        (entry) => attendanceMarkCounts(entry, session.date),
       );
       if (!taken) continue;
       conducted.add(session.className);
@@ -5079,7 +5098,48 @@ class SchoolDataService {
       studentId: (id == null || id.trim().isEmpty) ? null : id,
       status: entry.status,
       updatedAt: entry.updatedAt ?? DateTime.now(),
+      taken: entry.taken,
     );
+  }
+
+  /// Presents saved before this day still count. From 14 Oct 2026 a Present
+  /// counts only when someone actually marked that student.
+  static final DateTime implicitPresentCutoff = DateTime(2026, 10, 14);
+
+  AttendanceStatus effectiveAttendanceStatus(
+    StudentAttendanceEntry entry,
+    DateTime sessionDate,
+  ) {
+    if (entry.status != AttendanceStatus.present || entry.taken) {
+      return entry.status;
+    }
+    final day = _calendarDay(sessionDate);
+    if (day.isBefore(implicitPresentCutoff)) return entry.status;
+    return AttendanceStatus.unmarked;
+  }
+
+  bool attendanceMarkCounts(StudentAttendanceEntry entry, DateTime sessionDate) {
+    return effectiveAttendanceStatus(entry, sessionDate) !=
+        AttendanceStatus.unmarked;
+  }
+
+  bool _resolveAttendanceTaken({
+    required StudentAttendanceEntry incoming,
+    required StudentAttendanceEntry? existing,
+  }) {
+    if (incoming.status == AttendanceStatus.unmarked) return false;
+    if (incoming.taken || existing?.taken == true) return true;
+    if (existing == null) return true;
+    if (existing.status != incoming.status) return true;
+    return false;
+  }
+
+  StudentAttendanceEntry? _existingAttendanceEntry(
+    Map<String, StudentAttendanceEntry> byKey,
+    StudentAttendanceEntry entry,
+  ) {
+    return byKey[_attendanceEntryKey(entry)] ??
+        byKey['name:${entry.studentName.trim().toLowerCase()}'];
   }
 
   String _attendanceEntryKey(StudentAttendanceEntry entry) {
@@ -5094,6 +5154,7 @@ class SchoolDataService {
       studentId: entry.studentId,
       status: entry.status,
       updatedAt: entry.updatedAt,
+      taken: entry.taken,
     );
   }
 
@@ -5102,12 +5163,21 @@ class SchoolDataService {
     StudentAttendanceEntry incoming,
   ) {
     if (existing == null) return incoming;
+    if (existing.taken && !incoming.taken) {
+      final newer = incoming.updatedAt != null &&
+          (existing.updatedAt == null ||
+              incoming.updatedAt!.isAfter(existing.updatedAt!));
+      final realChange = incoming.status != AttendanceStatus.present &&
+          incoming.status != existing.status;
+      if (!(newer && realChange)) return existing;
+    }
     if (incoming.updatedAt == null) {
       return StudentAttendanceEntry(
         studentName: incoming.studentName,
         studentId: incoming.studentId ?? existing.studentId,
         status: incoming.status,
         updatedAt: existing.updatedAt,
+        taken: incoming.taken || existing.taken,
       );
     }
     if (existing.updatedAt == null ||
@@ -5253,11 +5323,23 @@ class SchoolDataService {
       for (final entry in existing?.entries ?? const <StudentAttendanceEntry>[])
         _attendanceEntryKey(entry): entry.status,
     };
+    final existingByKey = {
+      for (final entry in existing?.entries ?? const <StudentAttendanceEntry>[])
+        _attendanceEntryKey(entry): entry,
+    };
 
     final nextLocked = locked ?? existing?.locked ?? false;
-    final hydrated = entries
-        .map((entry) => _hydrateAttendanceEntry(entry, className))
-        .toList();
+    final hydrated = entries.map((entry) {
+      final base = _hydrateAttendanceEntry(entry, className);
+      final prior = _existingAttendanceEntry(existingByKey, base);
+      return StudentAttendanceEntry(
+        studentName: base.studentName,
+        studentId: base.studentId,
+        status: base.status,
+        updatedAt: base.updatedAt,
+        taken: _resolveAttendanceTaken(incoming: base, existing: prior),
+      );
+    }).toList();
     final merged = existing == null
         ? hydrated
         : _mergeAttendanceEntries(existing.entries, hydrated);
@@ -5332,11 +5414,29 @@ class SchoolDataService {
       periodKey: periodKey,
     );
     if (existing == null) return false;
+    final now = DateTime.now();
+    final entries = [
+      for (final entry in existing.entries)
+        if (entry.status == AttendanceStatus.present &&
+            !attendanceMarkCounts(entry, existing.date))
+          StudentAttendanceEntry(
+            studentName: entry.studentName,
+            studentId: entry.studentId,
+            status: AttendanceStatus.unmarked,
+            updatedAt: now,
+          )
+        else
+          _copyAttendanceEntry(entry),
+    ];
     return saveAttendanceSession(
       className: className,
       date: date,
-      conductedBy: existing.conductedBy,
-      entries: existing.entries,
+      conductedBy: entries.any(
+        (entry) => attendanceMarkCounts(entry, existing.date),
+      )
+          ? existing.conductedBy
+          : '',
+      entries: entries,
       notifyParents: false,
       locked: true,
       lockedBy: lockedBy,
@@ -6336,7 +6436,7 @@ class SchoolDataService {
         if (!entry.matches(studentId: studentId, studentName: studentName)) {
           continue;
         }
-        switch (entry.status) {
+        switch (effectiveAttendanceStatus(entry, session.date)) {
           case AttendanceStatus.present:
             present++;
           case AttendanceStatus.late:
@@ -8415,9 +8515,10 @@ class SchoolDataService {
       ),
     );
     if (index >= 0) {
-      if (entries[index].status != targetStatus) {
+      if (entries[index].status != targetStatus || !entries[index].taken) {
         entries[index].status = targetStatus;
         entries[index].updatedAt = DateTime.now();
+        entries[index].taken = true;
       }
     } else {
       entries.add(
@@ -8426,6 +8527,7 @@ class SchoolDataService {
           studentId: studentId,
           status: targetStatus,
           updatedAt: DateTime.now(),
+          taken: true,
         ),
       );
     }

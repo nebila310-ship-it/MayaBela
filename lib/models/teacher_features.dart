@@ -52,12 +52,18 @@ class StudentAttendanceEntry {
     required this.status,
     this.studentId,
     this.updatedAt,
+    this.taken = false,
   });
 
   final String studentName;
   final String? studentId;
   AttendanceStatus status;
   DateTime? updatedAt;
+
+  /// True when a teacher tap, Mark all present, a QR scan, or a new save
+  /// set this status. A stored Present without this flag was the old default
+  /// and is not a taken mark.
+  bool taken;
 
   bool matches({String? studentId, String? studentName}) {
     final mine = this.studentId?.trim();
