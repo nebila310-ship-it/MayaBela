@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,8 @@ import 'package:mayabela/services/payroll_export_service.dart';
 import 'package:mayabela/services/payroll_service.dart';
 import 'package:mayabela/theme/classroom_palette.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
+import 'package:mayabela/web_erp/utils/web_viewport.dart';
+import 'package:mayabela/web_erp/widgets/web_erp_hscroll.dart';
 
 enum _PayrollEditField { basic, advance, other }
 
@@ -29,6 +33,16 @@ class WebPayrollPage extends StatefulWidget {
 
   /// Employees shown on one register page so the list stays on-screen.
   static const registerPageSize = 10;
+
+  /// Floor width for the 11-column register. Flex layout below this width
+  /// wraps IDs and ETB amounts character-by-character on a phone browser.
+  static const registerMinTableWidth = 1180.0;
+
+  /// Salary-advances subtable (5 columns).
+  static const advancesMinTableWidth = 720.0;
+
+  /// Other-deductions subtable (6 columns).
+  static const otherDeductionsMinTableWidth = 860.0;
 
   @override
   State<WebPayrollPage> createState() => _WebPayrollPageState();
@@ -358,7 +372,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
         final totalNet = sum((c) => c.net);
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: WebViewport.pagePadding(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -487,13 +501,14 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                 ),
                 Text(
                   'Amounts in ETB. Click a highlighted cell to edit. '
-                  'Every column stays on this page.',
+                  'Scroll sideways on a phone to see every column.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
                 const SizedBox(height: 8),
                 _fitCard(
+                  minTableWidth: WebPayrollPage.registerMinTableWidth,
                   child: _fitTable(
                     key: const ValueKey('payroll-register-table'),
                     columnWeights: const [
@@ -585,6 +600,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                   ),
                   const SizedBox(height: 8),
                   _fitCard(
+                    minTableWidth: WebPayrollPage.advancesMinTableWidth,
                     child: _fitTable(
                       columnWeights: const [1.2, 1.8, 1.5, 1.4, 1.2],
                       headers: const [
@@ -628,6 +644,7 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
                   ),
                   const SizedBox(height: 8),
                   _fitCard(
+                    minTableWidth: WebPayrollPage.otherDeductionsMinTableWidth,
                     child: _fitTable(
                       columnWeights: const [1.1, 1.6, 1.3, 1.1, 1.6, 1.1],
                       headers: const [
@@ -824,6 +841,9 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
               child: Text(
                 _amount(value),
                 textAlign: TextAlign.right,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12.5,
                   height: 1.2,
@@ -852,6 +872,9 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
       child: Text(
         _amount(value),
         textAlign: TextAlign.right,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 12.5,
           height: 1.2,
@@ -889,6 +912,9 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
           child: Text(
             _amount(value),
             textAlign: TextAlign.right,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 13,
@@ -973,12 +999,26 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
     );
   }
 
-  Widget _fitCard({required Widget child}) {
+  Widget _fitCard({
+    required Widget child,
+    required double minTableWidth,
+  }) {
     return Container(
       width: double.infinity,
       decoration: WebErpTheme.cardDecoration(context),
       clipBehavior: Clip.hardEdge,
-      child: child,
+      child: WebErpHScroll(
+        minChildWidth: minTableWidth,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = math.max(
+              minTableWidth,
+              constraints.minWidth.isFinite ? constraints.minWidth : 0.0,
+            );
+            return SizedBox(width: width, child: child);
+          },
+        ),
+      ),
     );
   }
 
@@ -1037,6 +1077,8 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
       child: Text(
         text,
         textAlign: numeric ? TextAlign.right : TextAlign.left,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10.5,
           height: 1.2,
@@ -1065,6 +1107,9 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
       child: Text(
         text,
         textAlign: numeric ? TextAlign.right : TextAlign.left,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: header ? 10.5 : 12.5,
           height: 1.25,
@@ -1088,24 +1133,34 @@ class _WebPayrollPageState extends State<WebPayrollPage> {
     final lastPage = (total - 1) ~/ size;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.spaceBetween,
         children: [
           Text(
             '$start–$end of $total staff',
             key: const ValueKey('payroll-page-label'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          const Spacer(),
-          TextButton(
-            key: const ValueKey('payroll-page-prev'),
-            onPressed: page > 0 ? () => setState(() => _page = page - 1) : null,
-            child: const Text('Previous'),
-          ),
-          TextButton(
-            key: const ValueKey('payroll-page-next'),
-            onPressed:
-                page < lastPage ? () => setState(() => _page = page + 1) : null,
-            child: const Text('Next'),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                key: const ValueKey('payroll-page-prev'),
+                onPressed:
+                    page > 0 ? () => setState(() => _page = page - 1) : null,
+                child: const Text('Previous'),
+              ),
+              TextButton(
+                key: const ValueKey('payroll-page-next'),
+                onPressed: page < lastPage
+                    ? () => setState(() => _page = page + 1)
+                    : null,
+                child: const Text('Next'),
+              ),
+            ],
           ),
         ],
       ),
