@@ -5391,6 +5391,8 @@ class SchoolDataService {
               entry.studentName,
             );
       final late = entry.status == AttendanceStatus.late;
+      final targetId = (student?.studentId ?? entry.studentId)?.trim();
+      if (targetId == null || targetId.isEmpty) continue;
       NotificationService.instance.push(
         title: late ? 'Late arrival recorded' : 'Absence recorded',
         body: late
@@ -5400,7 +5402,7 @@ class SchoolDataService {
         fromRole: AuthService.roleTeacher,
         fromName: conductedBy,
         recipientRole: AuthService.roleParent,
-        targetStudentId: student?.studentId ?? entry.studentId,
+        targetStudentId: targetId,
         targetClassName: className,
       );
     }
@@ -7863,10 +7865,16 @@ class SchoolDataService {
 
     final childrenOnRoute = _childBusAssignments
         .where((a) => a.routeId == route.id)
-        .map((a) => a.childName)
-        .toSet();
+        .toList();
 
-    for (final childName in childrenOnRoute) {
+    for (final assignment in childrenOnRoute) {
+      final childName = assignment.childName;
+      final studentId = (assignment.studentId ??
+              StudentRegistryService.instance
+                  .lookupByName(childName)
+                  ?.studentId)
+          ?.trim();
+      if (studentId == null || studentId.isEmpty) continue;
       NotificationService.instance.push(
         title: 'Arrived at school',
         body:
@@ -7875,6 +7883,7 @@ class SchoolDataService {
         fromRole: AuthService.roleDriver,
         fromName: route.driverName,
         recipientRole: AuthService.roleParent,
+        targetStudentId: studentId,
         showOnMessagesBadge: false,
       );
     }

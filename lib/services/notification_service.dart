@@ -14,7 +14,7 @@ import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/pending_notification_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
-import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/notification_audience.dart';
 
 class NotificationService extends ChangeNotifier {
   NotificationService._();
@@ -129,6 +129,11 @@ class NotificationService extends ChangeNotifier {
   String get _currentRole =>
       AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
 
+  String? _activeSchoolId() {
+    final id = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    return id.isEmpty ? null : id;
+  }
+
   List<AppNotification> notificationsForCurrentUser() {
     final role = _currentRole;
     return _items.where((item) => _matchesCurrentUser(item, role)).toList()
@@ -143,6 +148,7 @@ class NotificationService extends ChangeNotifier {
     } else if (item.recipientRole != role) {
       return false;
     }
+    if (!notificationSchoolMatchesViewer(item.schoolId)) return false;
     if (!_matchesPersonTarget(
       recipientStaffId: item.recipientStaffId,
       recipientUsername: item.recipientUsername,
@@ -156,12 +162,13 @@ class NotificationService extends ChangeNotifier {
       return false;
     }
     if (role == AuthService.roleParent) {
-      return _matchesLinkedStudentScope(
-        item,
-        AuthService.activeLinkedStudentIds()
+      return familyNotificationReaches(
+        item: item,
+        linkedStudentIds: AuthService.activeLinkedStudentIds()
             .map((id) => id.trim().toUpperCase())
             .where((id) => id.isNotEmpty)
             .toSet(),
+        addressedToThisPerson: _hasDirectPersonTarget(item),
       );
     }
     if (role == AuthService.roleStudent) {
@@ -175,10 +182,18 @@ class NotificationService extends ChangeNotifier {
           .toUpperCase();
       if (linked != null && linked.isNotEmpty) ids.add(linked);
       if (ids.isEmpty) return false;
-      return _matchesLinkedStudentScope(item, ids);
+      return familyNotificationReaches(
+        item: item,
+        linkedStudentIds: ids,
+        addressedToThisPerson: _hasDirectPersonTarget(item),
+      );
     }
     if (role == AuthService.roleTeacher &&
-        !_matchesTeacherClassScope(item)) {
+        !teacherClassNotificationReaches(
+          targetClassName: item.targetClassName,
+          assignedClasses: AuthService.accessClassNamesForSync(),
+          addressedToThisPerson: _hasDirectPersonTarget(item),
+        )) {
       return false;
     }
     if (item.type == NotificationType.message &&
@@ -191,19 +206,6 @@ class NotificationService extends ChangeNotifier {
       return false;
     }
     return true;
-  }
-
-  bool _matchesTeacherClassScope(AppNotification item) {
-    final className = item.targetClassName?.trim();
-    if (className == null || className.isEmpty) return true;
-    final names = AuthService.accessClassNamesForSync()
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty)
-        .toList();
-    if (names.isEmpty) return true;
-    return names.any(
-      (name) => StudentRegistryService.classNamesMatch(name, className),
-    );
   }
 
   bool _hasDirectPersonTarget(AppNotification item) {
@@ -257,35 +259,6 @@ class NotificationService extends ChangeNotifier {
           !StaffMemberOption.idsEqual(viewerStaffId, staffId)) {
         return false;
       }
-    }
-
-    return true;
-  }
-
-  bool _matchesLinkedStudentScope(
-    AppNotification item,
-    Set<String> linkedStudentIds,
-  ) {
-    final target = item.targetStudentId?.trim().toUpperCase();
-    if (target != null && target.isNotEmpty) {
-      if (!linkedStudentIds.contains(target)) return false;
-    }
-
-    final className = item.targetClassName?.trim();
-    if (className != null && className.isNotEmpty) {
-      var inClass = false;
-      for (final studentId in linkedStudentIds) {
-        final student = StudentRegistryService.instance.lookupById(studentId);
-        if (student != null &&
-            StudentRegistryService.classNamesMatch(
-              student.className,
-              className,
-            )) {
-          inClass = true;
-          break;
-        }
-      }
-      if (!inClass) return false;
     }
 
     return true;
@@ -411,6 +384,7 @@ class NotificationService extends ChangeNotifier {
             ? null
             : recipientUsername?.trim(),
         recipientUsernames: usernames,
+        schoolId: _activeSchoolId(),
       ),
     );
     final created = _items.first;
@@ -512,6 +486,7 @@ class NotificationService extends ChangeNotifier {
                 .where((u) => u.trim().isNotEmpty)
                 .toList() ??
             const [],
+        schoolId: item['schoolId'] as String?,
       );
       if (_wasRead(created)) {
         created.isRead = true;

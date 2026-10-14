@@ -10,7 +10,7 @@ import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
-import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/notification_audience.dart';
 
 /// Queues tray notifications for users who are not logged in when an event fires.
 class PendingNotificationStore {
@@ -35,6 +35,7 @@ class PendingNotificationStore {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final existing = _readList(prefs);
+    final schoolId = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
     existing.add({
       'title': title,
       'body': body,
@@ -47,6 +48,7 @@ class PendingNotificationStore {
       'recipientStaffRole': ?recipientStaffRole,
       'targetStudentId': ?targetStudentId,
       'targetClassName': ?targetClassName,
+      if (schoolId.isNotEmpty) 'schoolId': schoolId,
       if (recipientUsernames != null && recipientUsernames.isNotEmpty)
         'recipientUsernames': recipientUsernames,
       'createdAt': DateTime.now().toIso8601String(),
@@ -137,39 +139,71 @@ class PendingNotificationStore {
       }
     }
 
+    if (!notificationSchoolMatchesViewer(item['schoolId'] as String?)) {
+      return false;
+    }
+
+    final type = _typeFromName(item['type'] as String?);
+    final addressedToThisPerson =
+        ((item['recipientUsername'] as String?)?.trim().isNotEmpty ?? false) ||
+        (item['recipientUsernames'] is List &&
+            (item['recipientUsernames'] as List)
+                .any((u) => u.toString().trim().isNotEmpty)) ||
+        ((item['recipientStaffId'] as String?)?.trim().isNotEmpty ?? false);
+    final preview = AppNotification(
+      id: 'pending',
+      title: '',
+      body: '',
+      type: type,
+      fromRole: '',
+      fromName: '',
+      recipientRole: user.roleKey,
+      createdAt: DateTime.now(),
+      targetStudentId: item['targetStudentId'] as String?,
+      targetClassName: item['targetClassName'] as String?,
+      schoolId: item['schoolId'] as String?,
+    );
+
     if (user.roleKey == AuthService.roleParent) {
       EnrollmentService.instance.ensureSeeded();
-      final linked = EnrollmentService.instance
-          .approvedStudentIdsForParent(user.username)
-          .map((id) => id.toUpperCase())
+      final linked = AuthService.activeLinkedStudentIds()
+          .map((id) => id.trim().toUpperCase())
+          .where((id) => id.isNotEmpty)
           .toSet();
-      linked.addAll(user.linkedStudentIds.map((id) => id.toUpperCase()));
-
-      final targetStudent = (item['targetStudentId'] as String?)
-          ?.trim()
-          .toUpperCase();
-      if (targetStudent != null &&
-          targetStudent.isNotEmpty &&
-          !linked.contains(targetStudent)) {
+      if (!familyNotificationReaches(
+        item: preview,
+        linkedStudentIds: linked,
+        addressedToThisPerson: addressedToThisPerson,
+      )) {
         return false;
       }
+    }
 
-      final className = item['targetClassName'] as String?;
-      if (className != null && className.trim().isNotEmpty) {
-        var inClass = false;
-        for (final studentId in linked) {
-          final student = StudentRegistryService.instance.lookupById(studentId);
-          if (student != null &&
-              StudentRegistryService.classNamesMatch(
-                student.className,
-                className,
-              )) {
-            inClass = true;
-            break;
-          }
-        }
-        if (!inClass) return false;
+    if (user.roleKey == AuthService.roleStudent) {
+      final linked = <String>{
+        if ((user.linkedStudentId ?? '').trim().isNotEmpty)
+          user.linkedStudentId!.trim().toUpperCase(),
+        ...user.linkedStudentIds
+            .map((id) => id.trim().toUpperCase())
+            .where((id) => id.isNotEmpty),
+      };
+      if (linked.isEmpty) return false;
+      if (!familyNotificationReaches(
+        item: preview,
+        linkedStudentIds: linked,
+        addressedToThisPerson: addressedToThisPerson,
+      )) {
+        return false;
       }
+    }
+
+    if (user.roleKey == AuthService.roleTeacher &&
+        !teacherClassNotificationReaches(
+          targetClassName: item['targetClassName'] as String?,
+          assignedClasses: AuthService.accessClassNamesForSync(),
+          addressedToThisPerson: addressedToThisPerson,
+        )) {
+      return false;
     }
 
     return true;

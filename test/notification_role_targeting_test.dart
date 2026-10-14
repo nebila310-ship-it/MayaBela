@@ -26,15 +26,20 @@ void main() {
     required String roleKey,
     String? linkedTeacherId,
     String? linkedAdminId,
+    String? linkedStudentId,
+    List<String> linkedStudentIds = const [],
     List<String> staffRoles = const [],
+    String schoolId = 'TB-001',
   }) {
     AuthService.currentUser = RegisteredUser(
       username: username,
       password: 'x',
       roleKey: roleKey,
-      schoolId: 'TB-001',
+      schoolId: schoolId,
       linkedTeacherId: linkedTeacherId,
       linkedAdminId: linkedAdminId,
+      linkedStudentId: linkedStudentId,
+      linkedStudentIds: linkedStudentIds,
       staffRoles: staffRoles,
     );
   }
@@ -252,6 +257,133 @@ void main() {
     expect(
       NotificationService.instance.notificationsForCurrentUser().any(
         (n) => n.title.startsWith('New message from Parent'),
+      ),
+      isFalse,
+    );
+  });
+
+  test('a parent does not see another child\'s notice', () {
+    signIn(username: 'teacher.sara', roleKey: AuthService.roleTeacher);
+    NotificationService.instance.push(
+      title: 'Absence recorded',
+      body: 'Miss Belen marked Kidus Bekele absent in Grade 4A.',
+      type: NotificationType.attendance,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Miss Belen',
+      recipientRole: AuthService.roleParent,
+      targetStudentId: 'STU-1002',
+      targetClassName: 'Grade 4A',
+    );
+    NotificationService.instance.push(
+      title: 'Daily activity report',
+      body: 'Miss Belen posted today\'s activities for Kidus Bekele.',
+      type: NotificationType.dailyActivity,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Miss Belen',
+      recipientRole: AuthService.roleParent,
+      targetStudentId: 'STU-1002',
+      targetClassName: 'Grade 4A',
+    );
+    NotificationService.instance.push(
+      title: 'Arrived at school',
+      body: 'Kidus Bekele reached the gate.',
+      type: NotificationType.bus,
+      fromRole: AuthService.roleDriver,
+      fromName: 'Driver',
+      recipientRole: AuthService.roleParent,
+    );
+    NotificationService.instance.push(
+      title: 'Absence recorded',
+      body: 'Miss Belen marked Sara Bekele absent in Grade 4A.',
+      type: NotificationType.attendance,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Miss Belen',
+      recipientRole: AuthService.roleParent,
+      targetStudentId: 'STU-1001',
+      targetClassName: 'Grade 4A',
+    );
+
+    signIn(
+      username: 'parent.sara',
+      roleKey: AuthService.roleParent,
+      linkedStudentIds: const ['STU-1001'],
+    );
+    final sara = NotificationService.instance.notificationsForCurrentUser();
+    expect(sara.any((n) => n.body.contains('Kidus')), isFalse);
+    expect(sara.any((n) => n.body.contains('Sara Bekele')), isTrue);
+
+    signIn(
+      username: 'student.sara',
+      roleKey: AuthService.roleStudent,
+      linkedStudentId: 'STU-1001',
+    );
+    NotificationService.instance.push(
+      title: 'Report card published',
+      body: 'Math grades for Kidus are ready.',
+      type: NotificationType.grade,
+      fromRole: AuthService.roleAdmin,
+      fromName: 'Office',
+      recipientRole: AuthService.roleStudent,
+      targetStudentId: 'STU-1002',
+      targetClassName: 'Grade 4A',
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.body.contains('Kidus'),
+      ),
+      isFalse,
+    );
+  });
+
+  test('a class homework notice stays in that class only', () {
+    signIn(username: 'teacher.hw', roleKey: AuthService.roleTeacher);
+    NotificationService.instance.push(
+      title: 'New homework — Science',
+      body: 'Read chapter 2',
+      type: NotificationType.homework,
+      fromRole: AuthService.roleTeacher,
+      fromName: 'Miss Hana',
+      recipientRole: AuthService.roleParent,
+      targetClassName: 'Grade 5B',
+    );
+
+    signIn(
+      username: 'parent.sara',
+      roleKey: AuthService.roleParent,
+      linkedStudentIds: const ['STU-1001'],
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title == 'New homework — Science',
+      ),
+      isFalse,
+    );
+  });
+
+  test('a notice from another school stays hidden', () {
+    signIn(
+      username: 'parent.other',
+      roleKey: AuthService.roleParent,
+      linkedStudentIds: const ['STU-1001'],
+      schoolId: 'OTHER1',
+    );
+    NotificationService.instance.push(
+      title: 'School closed Friday',
+      body: 'Other school holiday.',
+      type: NotificationType.announcement,
+      fromRole: AuthService.roleAdmin,
+      fromName: 'Office',
+      recipientRole: AuthService.roleParent,
+    );
+
+    signIn(
+      username: 'parent.sara',
+      roleKey: AuthService.roleParent,
+      linkedStudentIds: const ['STU-1001'],
+    );
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.body == 'Other school holiday.',
       ),
       isFalse,
     );
