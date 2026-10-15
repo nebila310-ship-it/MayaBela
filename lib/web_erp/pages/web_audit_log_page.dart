@@ -2,14 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import 'package:mayabela/models/platform_audit_entry.dart';
 import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/services/auth_service.dart';
-import 'package:mayabela/services/platform_audit_log_service.dart';
 import 'package:mayabela/services/school_audit_log_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 
-/// School operational audit log (Phase F), with platform entries as secondary.
+/// School operational audit log. Platform-wide events (other schools,
+/// owner console actions) stay in the platform console — not here.
 class WebAuditLogPage extends StatefulWidget {
   const WebAuditLogPage({super.key});
 
@@ -21,15 +20,11 @@ class _WebAuditLogPageState extends State<WebAuditLogPage> {
   bool _loading = true;
   String _query = '';
   String _entityType = 'all';
-  int _tab = 0;
 
   @override
   void initState() {
     super.initState();
-    Future.wait([
-      SchoolAuditLogService.instance.load(),
-      PlatformAuditLogService.instance.load(),
-    ]).then((_) {
+    SchoolAuditLogService.instance.load().then((_) {
       if (mounted) setState(() => _loading = false);
     });
   }
@@ -63,19 +58,9 @@ class _WebAuditLogPageState extends State<WebAuditLogPage> {
                 if (me != null && actor == me) return true;
                 final role = (e.actorRole ?? '').toLowerCase();
                 if (role.isNotEmpty && myRoles.contains(role)) return true;
-                // Also show entries that mention this staff member as entity.
                 final entity = (e.entityId ?? '').toLowerCase();
                 return me != null && entity == me;
               }).toList();
-        final platformEntries =
-            PlatformAuditLogService.instance.recent(limit: 100).where((e) {
-          if (!isOwner) return false;
-          if (_query.trim().isEmpty) return true;
-          final q = _query.trim().toLowerCase();
-          return e.action.toLowerCase().contains(q) ||
-              (e.detail ?? '').toLowerCase().contains(q) ||
-              (e.schoolName ?? '').toLowerCase().contains(q);
-        }).toList();
 
         return Padding(
           padding: const EdgeInsets.all(20),
@@ -85,28 +70,12 @@ class _WebAuditLogPageState extends State<WebAuditLogPage> {
               Text('Audit Log', style: WebErpTheme.sectionTitle(context)),
               const SizedBox(height: 4),
               Text(
-                'Who changed what — school operations with before/after, '
-                'plus platform-level events.',
+                'Who changed what in this school — before/after on buses, '
+                'transfers, staff, and procurement. Other schools and '
+                'platform-owner actions are not shown here.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-              ),
-              const SizedBox(height: 12),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(
-                    value: 0,
-                    label: Text('School'),
-                    icon: Icon(Icons.school_outlined),
-                  ),
-                  ButtonSegment(
-                    value: 1,
-                    label: Text('Platform'),
-                    icon: Icon(Icons.cloud_outlined),
-                  ),
-                ],
-                selected: {_tab},
-                onSelectionChanged: (s) => setState(() => _tab = s.first),
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -125,36 +94,30 @@ class _WebAuditLogPageState extends State<WebAuditLogPage> {
                       onChanged: (v) => setState(() => _query = v),
                     ),
                   ),
-                  if (_tab == 0)
-                    DropdownButton<String>(
-                      value: _entityType,
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'all',
-                          child: Text('All entities'),
-                        ),
-                        DropdownMenuItem(value: 'bus', child: Text('Buses')),
-                        DropdownMenuItem(
-                          value: 'transfer',
-                          child: Text('Transfers'),
-                        ),
-                        DropdownMenuItem(value: 'staff', child: Text('Staff')),
-                        DropdownMenuItem(
-                          value: 'procurement',
-                          child: Text('Procurement'),
-                        ),
-                      ],
-                      onChanged: (v) =>
-                          setState(() => _entityType = v ?? 'all'),
-                    ),
+                  DropdownButton<String>(
+                    value: _entityType,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'all',
+                        child: Text('All entities'),
+                      ),
+                      DropdownMenuItem(value: 'bus', child: Text('Buses')),
+                      DropdownMenuItem(
+                        value: 'transfer',
+                        child: Text('Transfers'),
+                      ),
+                      DropdownMenuItem(value: 'staff', child: Text('Staff')),
+                      DropdownMenuItem(
+                        value: 'procurement',
+                        child: Text('Procurement'),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => _entityType = v ?? 'all'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
-              Expanded(
-                child: _tab == 0
-                    ? _schoolList(visibleSchoolEntries)
-                    : _platformList(platformEntries),
-              ),
+              Expanded(child: _schoolList(visibleSchoolEntries)),
             ],
           ),
         );
@@ -194,33 +157,6 @@ class _WebAuditLogPageState extends State<WebAuditLogPage> {
                 ? const Icon(Icons.compare_arrows, size: 18)
                 : null,
             onTap: hasDiff ? () => _showDiff(e) : null,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _platformList(List<PlatformAuditEntry> entries) {
-    if (entries.isEmpty) {
-      return const Center(child: Text('No platform audit entries yet.'));
-    }
-    return Container(
-      decoration: WebErpTheme.cardDecoration(context),
-      child: ListView.separated(
-        itemCount: entries.length,
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final e = entries[index];
-          return ListTile(
-            leading: const Icon(Icons.history),
-            title: Text(e.action),
-            subtitle: Text(
-              [
-                if (e.schoolName != null) e.schoolName!,
-                if (e.detail != null) e.detail!,
-                e.at.toLocal().toString().split('.').first,
-              ].join(' · '),
-            ),
           );
         },
       ),
