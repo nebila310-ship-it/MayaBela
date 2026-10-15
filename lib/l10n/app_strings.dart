@@ -2175,6 +2175,16 @@ class AppStrings implements AppStringsLike {
   String get delete => t('Delete', 'ሰርዝ');
   String get confirm => t('Confirm', 'አረጋግጥ');
   String get search => t('Search', 'ፈልግ');
+  String get searchStudentsHint => t(
+        'Search by name or ID',
+        'በስም ወይም በመለያ ፈልግ',
+        'Maqaa ykn ID tiin barbaadi',
+      );
+  String get noMatchingStudents => t(
+        'No matching students',
+        'የሚዛመድ ተማሪ የለም',
+        'Barataan wal fakkaatu hin jiru',
+      );
   String get filter => t('Filter', 'ማጣሪያ');
   String get today => t('Today', 'ዛሬ');
   String get yesterday => t('Yesterday', 'ትላንት');
