@@ -26,6 +26,7 @@ import 'package:mayabela/widgets/class_picker_bar.dart';
 import 'package:mayabela/widgets/admin_edit_dialog.dart';
 import 'package:mayabela/widgets/admin_form_ui.dart';
 import 'package:mayabela/widgets/platform_path_image.dart';
+import 'package:mayabela/widgets/student_search_dropdown.dart';
 import 'package:mayabela/widgets/term_report_card_view.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_account_service.dart';
@@ -435,10 +436,32 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
     final reports = _reports;
     if (widget.initialStudentName != null &&
         reports.any((r) => r.studentName == widget.initialStudentName)) {
-      _selectedStudent = widget.initialStudentName;
+      final match = reports.firstWhere(
+        (r) => r.studentName == widget.initialStudentName,
+      );
+      _selectedStudent = _studentKey(match);
     } else if (reports.isNotEmpty) {
-      _selectedStudent = reports.first.studentName;
+      _selectedStudent = _studentKey(reports.first);
     }
+  }
+
+  String _studentKey(StudentGradeReport report) {
+    final id = report.studentId?.trim();
+    if (id != null && id.isNotEmpty) return id;
+    return report.studentName;
+  }
+
+  StudentGradeReport? _reportForSelection(List<StudentGradeReport> reports) {
+    if (reports.isEmpty) return null;
+    final selected = _selectedStudent;
+    if (selected != null) {
+      for (final report in reports) {
+        if (_studentKey(report) == selected || report.studentName == selected) {
+          return report;
+        }
+      }
+    }
+    return reports.first;
   }
 
   @override
@@ -566,7 +589,7 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
           _selectedClass = value;
           final updated = _reports;
           _selectedStudent =
-              updated.isNotEmpty ? updated.first.studentName : null;
+              updated.isNotEmpty ? _studentKey(updated.first) : null;
         });
       },
     );
@@ -671,49 +694,22 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
             ),
           ),
         if (!hideStudentPicker)
-          SizedBox(
-            height: 56,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: reports.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-              final report = reports[index];
-              final selected = report.studentName == _selectedStudent;
-              return Material(
-                color: selected
-                    ? _gradeTeacherAccent
-                    : Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(24),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(24),
-                  onTap: () =>
-                      setState(() => _selectedStudent = report.studentName),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: selected
-                            ? _gradeTeacherAccent
-                            : _gradeTeacherAccent.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Text(
-                      report.studentName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : _gradeTeacherAccent,
-                      ),
-                    ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: StudentSearchDropdown(
+              options: [
+                for (final report in reports)
+                  StudentSearchOption(
+                    id: _studentKey(report),
+                    name: report.studentName,
+                    studentId: report.studentId,
                   ),
-                ),
-              );
-            },
+              ],
+              selectedId: _selectedStudent,
+              accent: _gradeTeacherAccent,
+              onSelected: (id) => setState(() => _selectedStudent = id),
+            ),
           ),
-        ),
         Expanded(
           child: activeReport == null
               ? const SizedBox.shrink()
@@ -767,10 +763,7 @@ class _GradeReportsScreenState extends State<GradeReportsScreen>
   @override
   Widget build(BuildContext context) {
     final reports = _reports;
-    final activeReport = reports.cast<StudentGradeReport?>().firstWhere(
-          (r) => r!.studentName == _selectedStudent,
-          orElse: () => reports.isNotEmpty ? reports.first : null,
-        );
+    final activeReport = _reportForSelection(reports);
     final showSubjectHint = widget.view == GradeReportView.teacher &&
         _selectedClass != null &&
         !_access.isHomeroomFor(_selectedClass!);
