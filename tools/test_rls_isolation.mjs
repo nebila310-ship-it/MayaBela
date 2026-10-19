@@ -189,7 +189,7 @@ async function login(username, roleKey, schoolId) {
 }
 
 const TEST_DOC_IDS = [
-  SCHOOL_A, SCHOOL_B, fixtureId("iso-unclassified-a"),
+  SCHOOL_A, SCHOOL_B, BOOTSTRAP_SCHOOL, fixtureId("iso-unclassified-a"),
   accountDocId(SCHOOL_A, PARENT_A), accountDocId(SCHOOL_B, PARENT_B),
   accountDocId(SCHOOL_A, TEACHER_A), accountDocId(SCHOOL_B, TEACHER_B),
   accountDocId(SCHOOL_A, TEACHER_LEAD),
@@ -219,6 +219,24 @@ const TEST_AUTH_EMAILS = [
   `${PARENT_B}@${SCHOOL_B.toLowerCase()}.mayabela.local`,
   `${TEACHER_B}@${SCHOOL_B.toLowerCase()}.mayabela.local`,
 ];
+async function findAuthUsersByEmail(email) {
+  const matches = [];
+  const perPage = 1000;
+  const maxPages = 100;
+  for (let page = 1; page <= maxPages; page += 1) {
+    const result = await rest(`/auth/v1/admin/users?page=${page}&per_page=${perPage}`);
+    if (result.status >= 300) {
+      throw new Error(`Auth user listing failed: HTTP ${result.status}`);
+    }
+    const users = Array.isArray(result.body?.users) ? result.body.users : [];
+    matches.push(...users.filter((user) =>
+      String(user.email || "").toLowerCase() === email.toLowerCase()
+    ));
+    if (users.length < perPage) return matches;
+  }
+  throw new Error("Auth user listing exceeded the safety page limit.");
+}
+
 let testDataOwned = false;
 
 // Never upsert over existing fixtures. If any identifier is already present,
@@ -239,10 +257,8 @@ async function preflight() {
     }
   }
   for (const email of TEST_AUTH_EMAILS) {
-    const result = await rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`);
-    if (result.status >= 300) throw new Error(`preflight auth-user check failed: ${result.status}`);
-    const users = Array.isArray(result.body?.users) ? result.body.users : [];
-    if (users.some((u) => String(u.email || "").toLowerCase() === email)) {
+    const users = await findAuthUsersByEmail(email);
+    if (users.length) {
       throw new Error(`preflight refused: test auth email already exists (${email}); no data changed.`);
     }
   }
@@ -295,12 +311,14 @@ async function cleanup() {
     );
   }
   for (const email of TEST_AUTH_EMAILS) {
-    const result = await attempt(`Auth lookup ${email}`, () =>
-      rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`),
-    );
-    const users = Array.isArray(result?.body?.users) ? result.body.users : [];
+    let users = [];
+    try {
+      users = await findAuthUsersByEmail(email);
+    } catch (error) {
+      errors.push(`Auth lookup ${email}: ${error?.message || String(error)}`);
+      continue;
+    }
     for (const user of users) {
-      if (String(user.email || "").toLowerCase() !== email) continue;
       await attempt(`Auth delete ${email}`, () =>
         rest(`/auth/v1/admin/users/${user.id}`, { method: "DELETE", prefer: "return=minimal" }),
       );
