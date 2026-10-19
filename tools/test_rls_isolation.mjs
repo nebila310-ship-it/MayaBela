@@ -104,6 +104,10 @@ function accountDocId(schoolId, username) {
   return `${schoolId}__${username}`;
 }
 
+function fixtureId(base) {
+  return `${base}-${RUN_ID}`;
+}
+
 function doc(collection, docId, schoolId, data) {
   return {
     collection,
@@ -185,18 +189,18 @@ async function login(username, roleKey, schoolId) {
 }
 
 const TEST_DOC_IDS = [
-  SCHOOL_A, SCHOOL_B, "iso-unclassified-a",
+  SCHOOL_A, SCHOOL_B, fixtureId("iso-unclassified-a"),
   accountDocId(SCHOOL_A, PARENT_A), accountDocId(SCHOOL_B, PARENT_B),
   accountDocId(SCHOOL_A, TEACHER_A), accountDocId(SCHOOL_B, TEACHER_B),
   accountDocId(SCHOOL_A, TEACHER_LEAD),
   STU_A_OWN, STU_A_OTHER, STU_B_OWN,
-  "iso-grade-a-own", "iso-grade-a-other", "iso-grade-b-own",
-  "iso-fee-a-other", "iso-med-a-other", "iso-ann-a",
-  "iso-conv-a-own", "iso-conv-a-other", "iso-conv-teacher-a-own",
-  "iso-n-a-own", "iso-n-a-other", "iso-n-ta-own",
-  PARENT_A, "iso-px", TEACHER_A,
-  "iso-xfer-fresh", "iso-xfer-stale", "iso-fee-hack", "iso-link-hack",
-  "iso-grade-hack-other", "iso-grade-hack-own", "iso-fee-hack-other",
+  fixtureId("iso-grade-a-own"), fixtureId("iso-grade-a-other"), fixtureId("iso-grade-b-own"),
+  fixtureId("iso-fee-a-other"), fixtureId("iso-med-a-other"), fixtureId("iso-ann-a"),
+  fixtureId("iso-conv-a-own"), fixtureId("iso-conv-a-other"), fixtureId("iso-conv-teacher-a-own"),
+  fixtureId("iso-n-a-own"), fixtureId("iso-n-a-other"), fixtureId("iso-n-ta-own"),
+  PARENT_A, fixtureId("iso-px"), TEACHER_A,
+  fixtureId("iso-xfer-fresh"), fixtureId("iso-xfer-stale"), fixtureId("iso-fee-hack"), fixtureId("iso-link-hack"),
+  fixtureId("iso-grade-hack-other"), fixtureId("iso-grade-hack-own"), fixtureId("iso-fee-hack-other"),
   `ISOA-HACK-${RUN_ID}`,
   accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME),
 ];
@@ -318,7 +322,7 @@ async function seed() {
       status: "active",
     }),
     // Unclassified collections must be denied to ordinary teachers by default.
-    doc("security_probe_unclassified", "iso-unclassified-a", SCHOOL_A, {
+    doc("security_probe_unclassified", fixtureId("iso-unclassified-a"), SCHOOL_A, {
       privateValue: "must-not-be-readable-by-teacher",
     }),
     doc("app_auth_accounts", accountDocId(SCHOOL_A, PARENT_A), SCHOOL_A, {
@@ -380,59 +384,59 @@ async function seed() {
       fullName: "Own Child B",
       className: "Iso 2A",
     }),
-    doc("grade_reports", "iso-grade-a-own", SCHOOL_A, {
+    doc("grade_reports", fixtureId("iso-grade-a-own"), SCHOOL_A, {
       studentId: STU_A_OWN,
       subject: "Math",
       score: 91,
     }),
-    doc("grade_reports", "iso-grade-a-other", SCHOOL_A, {
+    doc("grade_reports", fixtureId("iso-grade-a-other"), SCHOOL_A, {
       studentId: STU_A_OTHER,
       subject: "Math",
       score: 44,
     }),
-    doc("grade_reports", "iso-grade-b-own", SCHOOL_B, {
+    doc("grade_reports", fixtureId("iso-grade-b-own"), SCHOOL_B, {
       studentId: STU_B_OWN,
       subject: "Math",
       score: 77,
     }),
-    doc("fees", "iso-fee-a-other", SCHOOL_A, {
+    doc("fees", fixtureId("iso-fee-a-other"), SCHOOL_A, {
       studentId: STU_A_OTHER,
       amount: 250,
       status: "unpaid",
     }),
-    doc("student_medical", "iso-med-a-other", SCHOOL_A, {
+    doc("student_medical", fixtureId("iso-med-a-other"), SCHOOL_A, {
       studentId: STU_A_OTHER,
       note: "secret-allergy",
     }),
-    doc("app_announcements", "iso-ann-a", SCHOOL_A, {
+    doc("app_announcements", fixtureId("iso-ann-a"), SCHOOL_A, {
       title: "School A notice",
       body: "ok-for-parents",
     }),
-    doc("conversations", "iso-conv-a-own", SCHOOL_A, {
+    doc("conversations", fixtureId("iso-conv-a-own"), SCHOOL_A, {
       parentParticipantUsernames: [PARENT_A],
       linkedStudentIds: [STU_A_OWN],
       messages: [],
     }),
-    doc("conversations", "iso-conv-a-other", SCHOOL_A, {
-      parentParticipantUsernames: ["iso-px"],
+    doc("conversations", fixtureId("iso-conv-a-other"), SCHOOL_A, {
+      parentParticipantUsernames: [fixtureId("iso-px")],
       linkedStudentIds: [STU_A_OTHER],
       messages: [],
     }),
-    doc("conversations", "iso-conv-teacher-a-own", SCHOOL_A, {
+    doc("conversations", fixtureId("iso-conv-teacher-a-own"), SCHOOL_A, {
       staffParticipantId: "teacher:ISO-TCH-A",
       parentParticipantUsernames: [PARENT_A],
       linkedStudentIds: [STU_A_OWN],
       messages: [],
     }),
-    doc("app_notifications", "iso-n-a-own", SCHOOL_A, {
+    doc("app_notifications", fixtureId("iso-n-a-own"), SCHOOL_A, {
       recipientUsername: PARENT_A,
       title: "yours",
     }),
-    doc("app_notifications", "iso-n-a-other", SCHOOL_A, {
-      recipientUsername: "iso-px",
+    doc("app_notifications", fixtureId("iso-n-a-other"), SCHOOL_A, {
+      recipientUsername: fixtureId("iso-px"),
       title: "secret",
     }),
-    doc("app_notifications", "iso-n-ta-own", SCHOOL_A, {
+    doc("app_notifications", fixtureId("iso-n-ta-own"), SCHOOL_A, {
       recipientUsername: TEACHER_A,
       recipientRole: "teacher",
       title: "teacher own",
@@ -441,8 +445,8 @@ async function seed() {
       username: PARENT_A,
       token: "own-token",
     }),
-    doc("fcm_tokens", "iso-px", SCHOOL_A, {
-      username: "iso-px",
+    doc("fcm_tokens", fixtureId("iso-px"), SCHOOL_A, {
+      username: fixtureId("iso-px"),
       token: "other-token",
     }),
     doc("fcm_tokens", TEACHER_A, SCHOOL_A, {
@@ -487,15 +491,15 @@ async function runTests() {
     parentA.token,
   );
   const paGradeIds = ids(paGrades.body);
-  check("parent A can read own child's grade", paGradeIds.includes("iso-grade-a-own"), paGradeIds.join(","));
+  check("parent A can read own child's grade", paGradeIds.includes(fixtureId("iso-grade-a-own")), paGradeIds.join(","));
   check(
     "parent A cannot read other child's grade",
-    !paGradeIds.includes("iso-grade-a-other"),
+    !paGradeIds.includes(fixtureId("iso-grade-a-other")),
     paGradeIds.join(","),
   );
   check(
     "parent A cannot read other school's grade",
-    !paGradeIds.includes("iso-grade-b-own"),
+    !paGradeIds.includes(fixtureId("iso-grade-b-own")),
     paGradeIds.join(","),
   );
 
@@ -506,7 +510,7 @@ async function runTests() {
   );
   check(
     "parent A cannot read other child's fee",
-    !ids(paFees.body).includes("iso-fee-a-other"),
+    !ids(paFees.body).includes(fixtureId("iso-fee-a-other")),
     ids(paFees.body).join(","),
   );
 
@@ -517,7 +521,7 @@ async function runTests() {
   );
   check(
     "parent A cannot read other child's medical",
-    !ids(paMed.body).includes("iso-med-a-other"),
+    !ids(paMed.body).includes(fixtureId("iso-med-a-other")),
     ids(paMed.body).join(","),
   );
 
@@ -538,7 +542,7 @@ async function runTests() {
   );
   check(
     "parent A can read own-school announcement",
-    ids(paAnn.body).includes("iso-ann-a"),
+    ids(paAnn.body).includes(fixtureId("iso-ann-a")),
     ids(paAnn.body).join(","),
   );
 
@@ -548,7 +552,7 @@ async function runTests() {
       method: "POST",
       prefer: "return=representation",
       body: JSON.stringify(
-        doc("fees", "iso-fee-hack", SCHOOL_A, {
+        doc("fees", fixtureId("iso-fee-hack"), SCHOOL_A, {
           studentId: STU_A_OWN,
           amount: 1,
           status: "paid",
@@ -558,7 +562,7 @@ async function runTests() {
     parentA.token,
   );
   const feeAfter = await rest(
-    `/rest/v1/app_documents?collection=eq.fees&doc_id=eq.iso-fee-hack&school_id=eq.${SCHOOL_A}&select=doc_id`,
+    `/rest/v1/app_documents?collection=eq.fees&doc_id=eq.${encodeURIComponent(fixtureId("iso-fee-hack"))}&school_id=eq.${SCHOOL_A}&select=doc_id`,
   );
   check(
     "parent A cannot persist a fee write",
@@ -572,10 +576,10 @@ async function runTests() {
     teacherB.token,
   );
   const tbIds = ids(tbGrades.body);
-  check("teacher B can read own-class grade", tbIds.includes("iso-grade-b-own"), tbIds.join(","));
+  check("teacher B can read own-class grade", tbIds.includes(fixtureId("iso-grade-b-own")), tbIds.join(","));
   check(
     "teacher B cannot read school A grades",
-    !tbIds.includes("iso-grade-a-own") && !tbIds.includes("iso-grade-a-other"),
+    !tbIds.includes(fixtureId("iso-grade-a-own")) && !tbIds.includes(fixtureId("iso-grade-a-other")),
     tbIds.join(","),
   );
 
@@ -605,13 +609,13 @@ async function runTests() {
   const taConversationIds = ids(taConversations.body);
   check(
     "class teacher can read their assigned parent conversation",
-    taConversationIds.includes("iso-conv-teacher-a-own"),
+    taConversationIds.includes(fixtureId("iso-conv-teacher-a-own")),
     taConversationIds.join(","),
   );
   check(
     "class teacher cannot read unrelated family conversations",
-    !taConversationIds.includes("iso-conv-a-other") &&
-      !taConversationIds.includes("iso-conv-a-own"),
+    !taConversationIds.includes(fixtureId("iso-conv-a-other")) &&
+      !taConversationIds.includes(fixtureId("iso-conv-a-own")),
     taConversationIds.join(","),
   );
 
@@ -623,12 +627,12 @@ async function runTests() {
   const taNotificationIds = ids(taNotifications.body);
   check(
     "class teacher can read own notification",
-    taNotificationIds.includes("iso-n-ta-own"),
+    taNotificationIds.includes(fixtureId("iso-n-ta-own")),
     taNotificationIds.join(","),
   );
   check(
     "class teacher cannot read another user's notification",
-    !taNotificationIds.includes("iso-n-a-other"),
+    !taNotificationIds.includes(fixtureId("iso-n-a-other")),
     taNotificationIds.join(","),
   );
 
@@ -645,7 +649,7 @@ async function runTests() {
   );
   check(
     "class teacher cannot read another user's push token",
-    !taFcmIds.includes(PARENT_A) && !taFcmIds.includes("iso-px"),
+    !taFcmIds.includes(PARENT_A) && !taFcmIds.includes(fixtureId("iso-px")),
     taFcmIds.join(","),
   );
 
@@ -656,7 +660,7 @@ async function runTests() {
   );
   check(
     "class teacher cannot read an unclassified collection",
-    !ids(taUnknown.body).includes("iso-unclassified-a"),
+    !ids(taUnknown.body).includes(fixtureId("iso-unclassified-a")),
     JSON.stringify(taUnknown.body),
   );
 
@@ -679,10 +683,10 @@ async function runTests() {
     teacherA.token,
   );
   const taGradeIds = ids(taGrades.body);
-  check("class teacher A can read assigned-class grade", taGradeIds.includes("iso-grade-a-own"), taGradeIds.join(","));
+  check("class teacher A can read assigned-class grade", taGradeIds.includes(fixtureId("iso-grade-a-own")), taGradeIds.join(","));
   check(
     "class teacher A cannot read other-class grade",
-    !taGradeIds.includes("iso-grade-a-other"),
+    !taGradeIds.includes(fixtureId("iso-grade-a-other")),
     taGradeIds.join(","),
   );
 
@@ -695,7 +699,7 @@ async function runTests() {
     const leadIds = ids(leadGrades.body);
     check(
       "lead teacher with view_all_school_data can read other-class grade",
-      leadIds.includes("iso-grade-a-own") && leadIds.includes("iso-grade-a-other"),
+      leadIds.includes(fixtureId("iso-grade-a-own")) && leadIds.includes(fixtureId("iso-grade-a-other")),
       leadIds.join(","),
     );
     const leadStu = await rest(
@@ -710,8 +714,8 @@ async function runTests() {
       leadStuIds.join(","),
     );
 
-    const xferFreshId = "iso-xfer-fresh";
-    const xferStaleId = "iso-xfer-stale";
+    const xferFreshId = fixtureId("iso-xfer-fresh");
+    const xferStaleId = fixtureId("iso-xfer-stale");
     await rest(
       `/rest/v1/app_documents`,
       {
@@ -787,7 +791,7 @@ async function runTests() {
     parentB.token,
   );
   const pbIds = ids(pbGrades.body);
-  check("parent B cannot read school A child grade", !pbIds.includes("iso-grade-a-own"), pbIds.join(","));
+  check("parent B cannot read school A child grade", !pbIds.includes(fixtureId("iso-grade-a-own")), pbIds.join(","));
 
   const taOtherSchool = await rest(
     `/rest/v1/app_documents?collection=eq.student_registry&school_id=eq.${SCHOOL_B}&select=doc_id`,
@@ -808,12 +812,12 @@ async function runTests() {
   const paConvIds = ids(paConv.body);
   check(
     "parent A can read own conversation",
-    paConvIds.includes("iso-conv-a-own"),
+    paConvIds.includes(fixtureId("iso-conv-a-own")),
     paConvIds.join(","),
   );
   check(
     "parent A cannot read another family's conversation",
-    !paConvIds.includes("iso-conv-a-other"),
+    !paConvIds.includes(fixtureId("iso-conv-a-other")),
     paConvIds.join(","),
   );
 
@@ -825,12 +829,12 @@ async function runTests() {
   const paNoteIds = ids(paNotes.body);
   check(
     "parent A can read own notification",
-    paNoteIds.includes("iso-n-a-own"),
+    paNoteIds.includes(fixtureId("iso-n-a-own")),
     paNoteIds.join(","),
   );
   check(
     "parent A cannot read another parent's notification",
-    !paNoteIds.includes("iso-n-a-other"),
+    !paNoteIds.includes(fixtureId("iso-n-a-other")),
     paNoteIds.join(","),
   );
 
@@ -843,7 +847,7 @@ async function runTests() {
   check("parent A can read own FCM token", paFcmIds.includes(PARENT_A), paFcmIds.join(","));
   check(
     "parent A cannot read another FCM token",
-    !paFcmIds.includes("iso-px"),
+    !paFcmIds.includes(fixtureId("iso-px")),
     paFcmIds.join(","),
   );
 
@@ -853,7 +857,7 @@ async function runTests() {
       method: "POST",
       prefer: "return=representation",
       body: JSON.stringify(
-        doc("parent_link_requests", "iso-link-hack", SCHOOL_A, {
+        doc("parent_link_requests", fixtureId("iso-link-hack"), SCHOOL_A, {
           parentUsername: PARENT_A,
           studentId: STU_A_OTHER,
           status: "approved",
@@ -865,7 +869,7 @@ async function runTests() {
   const linkRows = Array.isArray(linkHack.body) ? linkHack.body : [];
   const storedStatus = linkRows[0]?.data?.status;
   const linkAfter = await rest(
-    `/rest/v1/app_documents?collection=eq.parent_link_requests&doc_id=eq.iso-link-hack&school_id=eq.${SCHOOL_A}&select=data`,
+    `/rest/v1/app_documents?collection=eq.parent_link_requests&doc_id=eq.${encodeURIComponent(fixtureId("iso-link-hack"))}&school_id=eq.${SCHOOL_A}&select=data`,
   );
   const persistedStatus = Array.isArray(linkAfter.body)
     ? linkAfter.body[0]?.data?.status
@@ -882,7 +886,7 @@ async function runTests() {
       method: "POST",
       prefer: "return=representation",
       body: JSON.stringify(
-        doc("grade_reports", "iso-grade-hack-other", SCHOOL_A, {
+        doc("grade_reports", fixtureId("iso-grade-hack-other"), SCHOOL_A, {
           studentId: STU_A_OTHER,
           subject: "Hack",
           score: 100,
@@ -892,7 +896,7 @@ async function runTests() {
     teacherA.token,
   );
   const taOtherAfter = await rest(
-    `/rest/v1/app_documents?collection=eq.grade_reports&doc_id=eq.iso-grade-hack-other&school_id=eq.${SCHOOL_A}&select=doc_id`,
+    `/rest/v1/app_documents?collection=eq.grade_reports&doc_id=eq.${encodeURIComponent(fixtureId("iso-grade-hack-other"))}&school_id=eq.${SCHOOL_A}&select=doc_id`,
   );
   check(
     "class teacher A cannot persist other-class grade write",
@@ -906,7 +910,7 @@ async function runTests() {
       method: "POST",
       prefer: "return=representation",
       body: JSON.stringify(
-        doc("grade_reports", "iso-grade-hack-own", SCHOOL_A, {
+        doc("grade_reports", fixtureId("iso-grade-hack-own"), SCHOOL_A, {
           studentId: STU_A_OWN,
           className: "Iso 1A",
           subject: "Own",
@@ -917,7 +921,7 @@ async function runTests() {
     teacherA.token,
   );
   const taOwnAfter = await rest(
-    `/rest/v1/app_documents?collection=eq.grade_reports&doc_id=eq.iso-grade-hack-own&school_id=eq.${SCHOOL_A}&select=doc_id`,
+    `/rest/v1/app_documents?collection=eq.grade_reports&doc_id=eq.${encodeURIComponent(fixtureId("iso-grade-hack-own"))}&school_id=eq.${SCHOOL_A}&select=doc_id`,
   );
   check(
     "class teacher A can persist assigned-class grade write",
@@ -931,7 +935,7 @@ async function runTests() {
       method: "POST",
       prefer: "return=representation",
       body: JSON.stringify(
-        doc("fees", "iso-fee-hack-other", SCHOOL_A, {
+        doc("fees", fixtureId("iso-fee-hack-other"), SCHOOL_A, {
           studentId: STU_A_OTHER,
           amount: 9,
           status: "paid",
@@ -941,7 +945,7 @@ async function runTests() {
     teacherA.token,
   );
   const taFeeAfter = await rest(
-    `/rest/v1/app_documents?collection=eq.fees&doc_id=eq.iso-fee-hack-other&school_id=eq.${SCHOOL_A}&select=doc_id`,
+    `/rest/v1/app_documents?collection=eq.fees&doc_id=eq.${encodeURIComponent(fixtureId("iso-fee-hack-other"))}&school_id=eq.${SCHOOL_A}&select=doc_id`,
   );
   check(
     "class teacher A cannot persist other-class fee write",
