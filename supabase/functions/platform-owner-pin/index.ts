@@ -80,9 +80,14 @@ Deno.serve(async (req) => {
       if (!existing) {
         return errorResponse("Owner PIN is not configured.", 404, "not_configured");
       }
-      const ok = await verifyOwnerPinHash(String(body?.ownerPin || ""), existing);
+      const suppliedPin = String(body?.ownerPin || "");
+      const ok = await verifyOwnerPinHash(suppliedPin, existing);
       if (!ok) {
         return errorResponse("Invalid owner PIN.", 401, "unauthorized");
+      }
+      // Upgrade legacy fast hashes after successful proof of the PIN.
+      if (existing.startsWith("sha256:")) {
+        await saveOwnerPinHash(sb, await hashOwnerPin(suppliedPin));
       }
       return jsonResponse({ ok: true });
     }
