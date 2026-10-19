@@ -88,6 +88,9 @@ jobs:
       - name: Type-check security Edge Functions
         run: deno check supabase/functions/platform-owner-pin/index.ts supabase/functions/school-upsert-account/index.ts
 
+      - name: Test platform PIN hashing
+        run: deno test supabase/functions/_shared/platform_pin_test.ts
+
   # Live PostgREST negatives against dedicated staging (never production).
   # Required repo secrets: STAGING_SUPABASE_URL, STAGING_ANON_KEY, STAGING_SERVICE_ROLE_KEY.
   # Missing credentials or unreachable staging must fail this security gate.
