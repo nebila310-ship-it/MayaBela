@@ -114,7 +114,7 @@ function doc(collection, docId, schoolId, data) {
   };
 }
 
-const ownedDocIds = new Set();
+const ownedDocs = new Map();
 
 async function rest(path, opts = {}, token = SERVICE) {
   const isAppDocumentInsert = opts.method === "POST" && path.split("?")[0] === "/rest/v1/app_documents";
@@ -138,7 +138,18 @@ async function rest(path, opts = {}, token = SERVICE) {
   }
   if (isAppDocumentInsert && res.ok && Array.isArray(body)) {
     for (const row of body) {
-      if (typeof row?.doc_id === "string") ownedDocIds.add(row.doc_id);
+      if (
+        typeof row?.collection === "string" &&
+        typeof row?.school_id === "string" &&
+        typeof row?.doc_id === "string"
+      ) {
+        const key = `${row.collection}\\0${row.school_id}\\0${row.doc_id}`;
+        ownedDocs.set(key, {
+          collection: row.collection,
+          school_id: row.school_id,
+          doc_id: row.doc_id,
+        });
+      }
     }
   }
   return { status: res.status, body };
@@ -248,10 +259,11 @@ async function cleanup() {
     }
   }
 
-  // Delete only rows returned by successful insert-only requests in this run.
-  for (const id of ownedDocIds) {
-    await attempt(`app_documents ${id}`, () =>
-      rest(`/rest/v1/app_documents?doc_id=eq.${encodeURIComponent(id)}`, {
+  // Delete only rows returned by successful insert-only requests, scoped by all key columns.
+  for (const row of ownedDocs.values()) {
+    const query = `collection=eq.${encodeURIComponent(row.collection)}&school_id=eq.${encodeURIComponent(row.school_id)}&doc_id=eq.${encodeURIComponent(row.doc_id)}`;
+    await attempt(`app_documents ${row.collection}/${row.school_id}/${row.doc_id}`, () =>
+      rest(`/rest/v1/app_documents?${query}`, {
         method: "DELETE",
         prefer: "return=minimal",
       }),
@@ -941,7 +953,12 @@ async function runTests() {
       },
     }),
   });
-  if (upsertDenied.status < 300) ownedDocIds.add(`ISOA-HACK-${RUN_ID}`);
+  if (upsertDenied.status < 300) {
+    const docId = `ISOA-HACK-${RUN_ID}`;
+    ownedDocs.set(`student_registry\\0${SCHOOL_A}\\0${docId}`, {
+      collection: "student_registry", school_id: SCHOOL_A, doc_id: docId,
+    });
+  }
   check(
     "class teacher cannot bulk-write student_registry via school-upsert-registry",
     upsertDenied.status === 403,
@@ -964,8 +981,13 @@ async function runTests() {
     }),
   });
   if (bootstrapAttempt.status < 300) {
-    ownedDocIds.add(BOOTSTRAP_SCHOOL);
-    ownedDocIds.add(accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME));
+    ownedDocs.set(`school_registry\\0${BOOTSTRAP_SCHOOL}\\0${BOOTSTRAP_SCHOOL}`, {
+      collection: "school_registry", school_id: BOOTSTRAP_SCHOOL, doc_id: BOOTSTRAP_SCHOOL,
+    });
+    const accountId = accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME);
+    ownedDocs.set(`app_auth_accounts\\0${BOOTSTRAP_SCHOOL}\\0${accountId}`, {
+      collection: "app_auth_accounts", school_id: BOOTSTRAP_SCHOOL, doc_id: accountId,
+    });
   }
   check(
     "anonymous first-admin bootstrap is denied",
