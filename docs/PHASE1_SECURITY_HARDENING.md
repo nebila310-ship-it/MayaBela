@@ -13,7 +13,7 @@ This branch contains security changes only. It has **not** been merged or deploy
    - `RLS_TEST_PROJECT_REF` — exact project ref matching the staging URL hostname.
    - `ALLOW_DESTRUCTIVE_RLS_TESTS=YES` — explicit opt-in acknowledging that the test seeds and deletes fixture data. Leave unset until the target is verified as a dedicated, disposable non-production project.
 4. Configure the Supabase Edge Function secret `PLATFORM_PIN_SETUP_SECRET` with a strong, randomly generated value before any new platform-owner PIN is initialized. Keep it out of source code and never use it as a school password. Rotate or remove it after the first PIN is securely initialized. Existing configured owner PINs do not require this secret for verification or changes.
-5. Apply the new migration to staging first, then run `node tools/test_rls_isolation.mjs` against staging only.
+5. Apply the new migration to the dedicated test project first, then run `node tools/test_rls_isolation.mjs` only after verifying the exact URL/project-ref match and intentionally setting `ALLOW_DESTRUCTIVE_RLS_TESTS=YES`.
 6. Verify school onboarding uses `platform-create-school` for first-school/first-admin creation. `school-upsert-account` now rejects unauthenticated bootstrap attempts by design.
 7. Run the Flutter test suite, static analysis, and release build; the GitHub integration does not execute these commands locally.
 
