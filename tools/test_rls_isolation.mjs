@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 const PROD_REF = "hwkiihonthueadbhcvfi";
 const PASS = "IsoRls12!!";
 // Unique identities isolate concurrent runs and prevent collisions in Auth/rate-limit rows.
-const RUN_ID = randomUUID().replace(/-/g, "").slice(0, 8).toLowerCase();
+const RUN_ID = randomUUID().replace(/-/g, "").toLowerCase();
 const SCHOOL_A = `ISOA-${RUN_ID.toUpperCase()}`;
 const SCHOOL_B = `ISOB-${RUN_ID.toUpperCase()}`;
 const STU_A_OWN = `ISOA-OWN-${RUN_ID.toUpperCase()}`;
