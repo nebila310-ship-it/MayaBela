@@ -1,7 +1,6 @@
 /**
  * Platform-owner PIN helpers.
  * New hashes use PBKDF2-SHA256; legacy salted SHA-256 hashes are upgraded on verification.
- * where digest = SHA-256(utf8(`${salt}::${plain}`)).
  */
 import {
   adminClient,
