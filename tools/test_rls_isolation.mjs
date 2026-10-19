@@ -23,17 +23,17 @@ const PROD_REF = "hwkiihonthueadbhcvfi";
 const PASS = "IsoRls12!!";
 // Unique identities isolate concurrent runs and prevent collisions in Auth/rate-limit rows.
 const RUN_ID = randomUUID().replace(/-/g, "").slice(0, 8).toLowerCase();
-const SCHOOL_A = `ISOA-${RUN_ID}`;
-const SCHOOL_B = `ISOB-${RUN_ID}`;
-const STU_A_OWN = `ISOA-OWN-${RUN_ID}`;
-const STU_A_OTHER = `ISOA-OTH-${RUN_ID}`;
-const STU_B_OWN = `ISOB-OWN-${RUN_ID}`;
+const SCHOOL_A = `ISOA-${RUN_ID.toUpperCase()}`;
+const SCHOOL_B = `ISOB-${RUN_ID.toUpperCase()}`;
+const STU_A_OWN = `ISOA-OWN-${RUN_ID.toUpperCase()}`;
+const STU_A_OTHER = `ISOA-OTH-${RUN_ID.toUpperCase()}`;
+const STU_B_OWN = `ISOB-OWN-${RUN_ID.toUpperCase()}`;
 const PARENT_A = `iso-pa-${RUN_ID}`;
 const PARENT_B = `iso-pb-${RUN_ID}`;
 const TEACHER_A = `iso-ta-${RUN_ID}`;
 const TEACHER_B = `iso-tb-${RUN_ID}`;
 const TEACHER_LEAD = `iso-ld-${RUN_ID}`;
-const BOOTSTRAP_SCHOOL = `ISO-UNCLAIMED-${RUN_ID}`;
+const BOOTSTRAP_SCHOOL = `ISO-UNCLAIMED-${RUN_ID.toUpperCase()}`;
 const BOOTSTRAP_USERNAME = `iso-bootstrap-${RUN_ID}`;
 
 function loadEnvFile(filePath) {
