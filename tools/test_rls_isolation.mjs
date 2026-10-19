@@ -237,38 +237,49 @@ async function preflight() {
 async function cleanup() {
   if (!testDataOwned) return;
   const errors = [];
+  async function attempt(label, action) {
+    try {
+      const result = await action();
+      if (result && result.status >= 300) errors.push(`${label}: HTTP ${result.status}`);
+      return result;
+    } catch (error) {
+      errors.push(`${label}: ${error?.message || String(error)}`);
+      return null;
+    }
+  }
+
   // Delete only rows returned by successful insert-only requests in this run.
   for (const id of ownedDocIds) {
-    const result = await rest(`/rest/v1/app_documents?doc_id=eq.${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      prefer: "return=minimal",
-    });
-    if (result.status >= 300) errors.push(`app_documents ${id}: HTTP ${result.status}`);
+    await attempt(`app_documents ${id}`, () =>
+      rest(`/rest/v1/app_documents?doc_id=eq.${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        prefer: "return=minimal",
+      }),
+    );
   }
   for (const key of TEST_RATE_KEYS) {
-    const result = await rest(`/rest/v1/auth_rate_limits?bucket_key=eq.${encodeURIComponent(key)}`, {
-      method: "DELETE",
-      prefer: "return=minimal",
-    });
-    if (result.status >= 300) errors.push(`auth_rate_limits ${key}: HTTP ${result.status}`);
+    await attempt(`auth_rate_limits ${key}`, () =>
+      rest(`/rest/v1/auth_rate_limits?bucket_key=eq.${encodeURIComponent(key)}`, {
+        method: "DELETE",
+        prefer: "return=minimal",
+      }),
+    );
   }
   for (const email of TEST_AUTH_EMAILS) {
-    const result = await rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`);
-    if (result.status >= 300) {
-      errors.push(`Auth lookup ${email}: HTTP ${result.status}`);
-      continue;
-    }
-    const users = Array.isArray(result.body?.users) ? result.body.users : [];
+    const result = await attempt(`Auth lookup ${email}`, () =>
+      rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`),
+    );
+    const users = Array.isArray(result?.body?.users) ? result.body.users : [];
     for (const user of users) {
       if (String(user.email || "").toLowerCase() !== email) continue;
-      const deleted = await rest(`/auth/v1/admin/users/${user.id}`, { method: "DELETE", prefer: "return=minimal" });
-      if (deleted.status >= 300) errors.push(`Auth delete ${email}: HTTP ${deleted.status}`);
+      await attempt(`Auth delete ${email}`, () =>
+        rest(`/auth/v1/admin/users/${user.id}`, { method: "DELETE", prefer: "return=minimal" }),
+      );
     }
   }
   if (errors.length) throw new Error(`cleanup incomplete: ${errors.join("; ")}`);
   testDataOwned = false;
 }
-
 async function seed() {
   const rows = [
     doc("school_registry", SCHOOL_A, SCHOOL_A, {
@@ -988,14 +999,21 @@ async function main() {
   }
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   if (isStagingUnreachable(e)) {
     const host = e?.cause?.hostname || "";
     console.error(
       `RLS isolation failed because staging is unreachable${host ? ` (${host})` : ""}.`,
     );
-    process.exit(1);
+  } else {
+    console.error(e);
   }
-  console.error(e);
+  // If finally-block cleanup encountered a transient error, make one more
+  // best-effort pass. It still reports failure and only targets run-owned IDs.
+  try {
+    await cleanup();
+  } catch (cleanupError) {
+    console.error(cleanupError);
+  }
   process.exitCode = 1;
 });
