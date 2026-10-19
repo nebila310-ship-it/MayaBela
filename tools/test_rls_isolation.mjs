@@ -964,6 +964,7 @@ async function runTests() {
     }),
   });
   if (bootstrapAttempt.status < 300) {
+    ownedDocIds.add(BOOTSTRAP_SCHOOL);
     ownedDocIds.add(accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME));
   }
   check(
