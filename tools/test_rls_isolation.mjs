@@ -33,6 +33,8 @@ const PARENT_B = `iso-pb-${RUN_ID}`;
 const TEACHER_A = `iso-ta-${RUN_ID}`;
 const TEACHER_B = `iso-tb-${RUN_ID}`;
 const TEACHER_LEAD = `iso-ld-${RUN_ID}`;
+const BOOTSTRAP_SCHOOL = `ISO-UNCLAIMED-${RUN_ID}`;
+const BOOTSTRAP_USERNAME = `iso-bootstrap-${RUN_ID}`;
 
 function loadEnvFile(filePath) {
   if (!existsSync(filePath)) return;
@@ -185,6 +187,7 @@ const TEST_DOC_IDS = [
   "iso-xfer-fresh", "iso-xfer-stale", "iso-fee-hack", "iso-link-hack",
   "iso-grade-hack-other", "iso-grade-hack-own", "iso-fee-hack-other",
   `ISOA-HACK-${RUN_ID}`,
+  accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME),
 ];
 
 const TEST_RATE_KEYS = [
@@ -507,7 +510,7 @@ async function runTests() {
     `/rest/v1/app_documents`,
     {
       method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
+      prefer: "return=representation",
       body: JSON.stringify(
         doc("fees", "iso-fee-hack", SCHOOL_A, {
           studentId: STU_A_OWN,
@@ -677,7 +680,7 @@ async function runTests() {
       `/rest/v1/app_documents`,
       {
         method: "POST",
-        prefer: "resolution=merge-duplicates,return=minimal",
+        prefer: "return=representation",
         body: JSON.stringify(
           doc("transfer_requests", xferFreshId, SCHOOL_A, {
             status: "pending",
@@ -720,7 +723,7 @@ async function runTests() {
       `/rest/v1/app_documents`,
       {
         method: "POST",
-        prefer: "resolution=merge-duplicates,return=minimal",
+        prefer: "return=representation",
         body: JSON.stringify(
           doc("transfer_requests", xferStaleId, SCHOOL_A, {
             status: "pending",
@@ -812,7 +815,7 @@ async function runTests() {
     `/rest/v1/app_documents`,
     {
       method: "POST",
-      prefer: "resolution=merge-duplicates,return=representation",
+      prefer: "return=representation",
       body: JSON.stringify(
         doc("parent_link_requests", "iso-link-hack", SCHOOL_A, {
           parentUsername: PARENT_A,
@@ -841,7 +844,7 @@ async function runTests() {
     `/rest/v1/app_documents`,
     {
       method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
+      prefer: "return=representation",
       body: JSON.stringify(
         doc("grade_reports", "iso-grade-hack-other", SCHOOL_A, {
           studentId: STU_A_OTHER,
@@ -865,7 +868,7 @@ async function runTests() {
     `/rest/v1/app_documents`,
     {
       method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
+      prefer: "return=representation",
       body: JSON.stringify(
         doc("grade_reports", "iso-grade-hack-own", SCHOOL_A, {
           studentId: STU_A_OWN,
@@ -890,7 +893,7 @@ async function runTests() {
     `/rest/v1/app_documents`,
     {
       method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
+      prefer: "return=representation",
       body: JSON.stringify(
         doc("fees", "iso-fee-hack-other", SCHOOL_A, {
           studentId: STU_A_OTHER,
@@ -927,6 +930,7 @@ async function runTests() {
       },
     }),
   });
+  if (upsertDenied.status < 300) ownedDocIds.add(`ISOA-HACK-${RUN_ID}`);
   check(
     "class teacher cannot bulk-write student_registry via school-upsert-registry",
     upsertDenied.status === 403,
@@ -942,12 +946,15 @@ async function runTests() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      username: "iso-bootstrap",
+      username: BOOTSTRAP_USERNAME,
       roleKey: "admin",
-      schoolId: "ISO-UNCLAIMED",
+      schoolId: BOOTSTRAP_SCHOOL,
       password: PASS,
     }),
   });
+  if (bootstrapAttempt.status < 300) {
+    ownedDocIds.add(accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME));
+  }
   check(
     "anonymous first-admin bootstrap is denied",
     bootstrapAttempt.status === 403,
