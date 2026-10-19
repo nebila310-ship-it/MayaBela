@@ -96,7 +96,9 @@ export async function loadOwnerPinHash(
 ): Promise<string | null> {
   const doc = await getDoc(sb, "platform_secrets", "owner_pin");
   const pinHash = typeof doc?.pinHash === "string" ? doc.pinHash : null;
-  return pinHash && pinHash.startsWith("sha256:") ? pinHash : null;
+  return pinHash && (pinHash.startsWith("sha256:") || pinHash.startsWith("pbkdf2:"))
+    ? pinHash
+    : null;
 }
 
 /**
