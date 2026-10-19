@@ -15,21 +15,24 @@
  *   ALLOW_DESTRUCTIVE_RLS_TESTS=YES (explicit acknowledgement of seed/cleanup)
  */
 import { existsSync, readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PROD_REF = "hwkiihonthueadbhcvfi";
 const PASS = "IsoRls12!!";
-const SCHOOL_A = "ISOA";
-const SCHOOL_B = "ISOB";
-const STU_A_OWN = "ISOA-OWN";
-const STU_A_OTHER = "ISOA-OTH";
-const STU_B_OWN = "ISOB-OWN";
-const PARENT_A = "iso-pa";
-const PARENT_B = "iso-pb";
-const TEACHER_A = "iso-ta";
-const TEACHER_B = "iso-tb";
-const TEACHER_LEAD = "iso-ld";
+// Unique identities isolate concurrent runs and prevent collisions in Auth/rate-limit rows.
+const RUN_ID = randomUUID().replace(/-/g, "").slice(0, 8).toLowerCase();
+const SCHOOL_A = `ISOA-${RUN_ID}`;
+const SCHOOL_B = `ISOB-${RUN_ID}`;
+const STU_A_OWN = `ISOA-OWN-${RUN_ID}`;
+const STU_A_OTHER = `ISOA-OTH-${RUN_ID}`;
+const STU_B_OWN = `ISOB-OWN-${RUN_ID}`;
+const PARENT_A = `iso-pa-${RUN_ID}`;
+const PARENT_B = `iso-pb-${RUN_ID}`;
+const TEACHER_A = `iso-ta-${RUN_ID}`;
+const TEACHER_B = `iso-tb-${RUN_ID}`;
+const TEACHER_LEAD = `iso-ld-${RUN_ID}`;
 
 function loadEnvFile(filePath) {
   if (!existsSync(filePath)) return;
@@ -109,14 +112,18 @@ function doc(collection, docId, schoolId, data) {
   };
 }
 
+const ownedDocIds = new Set();
+
 async function rest(path, opts = {}, token = SERVICE) {
+  const isAppDocumentInsert = opts.method === "POST" && path.split("?")[0] === "/rest/v1/app_documents";
   const res = await fetch(`${URL_BASE}${path}`, {
     ...opts,
     headers: {
       apikey: token === SERVICE ? SERVICE : ANON,
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      Prefer: opts.prefer || "return=representation",
+      // Never upsert fixtures: a conflict must fail rather than overwrite another row.
+      Prefer: isAppDocumentInsert ? "return=representation" : opts.prefer || "return=representation",
       ...(opts.headers || {}),
     },
   });
@@ -126,6 +133,11 @@ async function rest(path, opts = {}, token = SERVICE) {
     body = text ? JSON.parse(text) : null;
   } catch {
     body = text;
+  }
+  if (isAppDocumentInsert && res.ok && Array.isArray(body)) {
+    for (const row of body) {
+      if (typeof row?.doc_id === "string") ownedDocIds.add(row.doc_id);
+    }
   }
   return { status: res.status, body };
 }
@@ -160,16 +172,19 @@ async function login(username, roleKey, schoolId) {
 }
 
 const TEST_DOC_IDS = [
-  "ISOA", "ISOB", "iso-unclassified-a",
-  "ISOA__iso-pa", "ISOB__iso-pb", "ISOA__iso-ta", "ISOB__iso-tb", "ISOA__iso-ld",
-  "ISOA-OWN", "ISOA-OTH", "ISOB-OWN",
+  SCHOOL_A, SCHOOL_B, "iso-unclassified-a",
+  accountDocId(SCHOOL_A, PARENT_A), accountDocId(SCHOOL_B, PARENT_B),
+  accountDocId(SCHOOL_A, TEACHER_A), accountDocId(SCHOOL_B, TEACHER_B),
+  accountDocId(SCHOOL_A, TEACHER_LEAD),
+  STU_A_OWN, STU_A_OTHER, STU_B_OWN,
   "iso-grade-a-own", "iso-grade-a-other", "iso-grade-b-own",
   "iso-fee-a-other", "iso-med-a-other", "iso-ann-a",
   "iso-conv-a-own", "iso-conv-a-other", "iso-conv-teacher-a-own",
   "iso-n-a-own", "iso-n-a-other", "iso-n-ta-own",
-  "iso-pa", "iso-px", "iso-ta",
+  PARENT_A, "iso-px", TEACHER_A,
   "iso-xfer-fresh", "iso-xfer-stale", "iso-fee-hack", "iso-link-hack",
   "iso-grade-hack-other", "iso-grade-hack-own", "iso-fee-hack-other",
+  `ISOA-HACK-${RUN_ID}`,
 ];
 
 const TEST_RATE_KEYS = [
@@ -218,27 +233,36 @@ async function preflight() {
 
 async function cleanup() {
   if (!testDataOwned) return;
-  // Delete only known fixture document IDs, never all records for a school.
-  for (const id of TEST_DOC_IDS) {
-    await rest(`/rest/v1/app_documents?doc_id=eq.${encodeURIComponent(id)}`, {
+  const errors = [];
+  // Delete only rows returned by successful insert-only requests in this run.
+  for (const id of ownedDocIds) {
+    const result = await rest(`/rest/v1/app_documents?doc_id=eq.${encodeURIComponent(id)}`, {
       method: "DELETE",
       prefer: "return=minimal",
     });
+    if (result.status >= 300) errors.push(`app_documents ${id}: HTTP ${result.status}`);
   }
   for (const key of TEST_RATE_KEYS) {
-    await rest(`/rest/v1/auth_rate_limits?bucket_key=eq.${encodeURIComponent(key)}`, {
+    const result = await rest(`/rest/v1/auth_rate_limits?bucket_key=eq.${encodeURIComponent(key)}`, {
       method: "DELETE",
       prefer: "return=minimal",
     });
+    if (result.status >= 300) errors.push(`auth_rate_limits ${key}: HTTP ${result.status}`);
   }
   for (const email of TEST_AUTH_EMAILS) {
     const result = await rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`);
+    if (result.status >= 300) {
+      errors.push(`Auth lookup ${email}: HTTP ${result.status}`);
+      continue;
+    }
     const users = Array.isArray(result.body?.users) ? result.body.users : [];
     for (const user of users) {
       if (String(user.email || "").toLowerCase() !== email) continue;
-      await rest(`/auth/v1/admin/users/${user.id}`, { method: "DELETE", prefer: "return=minimal" });
+      const deleted = await rest(`/auth/v1/admin/users/${user.id}`, { method: "DELETE", prefer: "return=minimal" });
+      if (deleted.status >= 300) errors.push(`Auth delete ${email}: HTTP ${deleted.status}`);
     }
   }
+  if (errors.length) throw new Error(`cleanup incomplete: ${errors.join("; ")}`);
   testDataOwned = false;
 }
 
@@ -389,7 +413,6 @@ async function seed() {
   ];
   const { status, body } = await rest(`/rest/v1/app_documents`, {
     method: "POST",
-    prefer: "resolution=merge-duplicates,return=minimal",
     body: JSON.stringify(rows),
   });
   if (status >= 300) {
@@ -397,9 +420,7 @@ async function seed() {
   }
 }
 
-async function main() {
-  console.log("RLS isolation against explicitly confirmed test project", urlProjectRef);
-  await preflight();
+async function runTests() {
   await seed();
 
   const parentA = await login(PARENT_A, "parent", SCHOOL_A);
@@ -418,8 +439,7 @@ async function main() {
   );
 
   if (!parentA.token || !teacherB.token || !parentB.token || !teacherA.token) {
-    await cleanup();
-    process.exit(1);
+    throw new Error("Required fixture logins failed; aborting remaining tests.");
   }
 
   const paGrades = await rest(
@@ -901,7 +921,7 @@ async function main() {
       collection: "student_registry",
       schoolId: SCHOOL_A,
       record: {
-        studentId: "ISOA-HACK",
+        studentId: `ISOA-HACK-${RUN_ID}`,
         fullName: "Should Fail",
         className: "Iso 1B",
       },
@@ -934,9 +954,8 @@ async function main() {
     `status=${bootstrapAttempt.status}`,
   );
 
-  await cleanup();
   console.log(failures === 0 ? "\nRESULT: ALL PASS" : `\nRESULT: ${failures} FAILURE(S)`);
-  process.exit(failures === 0 ? 0 : 1);
+  process.exitCode = failures === 0 ? 0 : 1;
 }
 
 function isStagingUnreachable(err) {
@@ -952,7 +971,17 @@ function isStagingUnreachable(err) {
   );
 }
 
-main().catch(async (e) => {
+async function main() {
+  console.log("RLS isolation against explicitly confirmed test project", urlProjectRef);
+  await preflight();
+  try {
+    await runTests();
+  } finally {
+    await cleanup();
+  }
+}
+
+main().catch((e) => {
   if (isStagingUnreachable(e)) {
     const host = e?.cause?.hostname || "";
     console.error(
@@ -961,8 +990,5 @@ main().catch(async (e) => {
     process.exit(1);
   }
   console.error(e);
-  try {
-    await cleanup();
-  } catch (_) {}
-  process.exit(1);
+  process.exitCode = 1;
 });
