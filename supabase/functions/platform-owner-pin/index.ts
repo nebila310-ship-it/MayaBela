@@ -9,6 +9,7 @@ import {
   LOGIN_RATE_WINDOW_MS,
 } from "../_shared/school_auth.ts";
 import {
+  createOwnerPinHashIfAbsent,
   hashOwnerPin,
   loadOwnerPinHash,
   saveOwnerPinHash,
@@ -128,7 +129,18 @@ Deno.serve(async (req) => {
         }
       }
       const pinHash = await hashOwnerPin(newPin);
-      await saveOwnerPinHash(sb, pinHash);
+      if (existing) {
+        await saveOwnerPinHash(sb, pinHash);
+      } else {
+        const initialized = await createOwnerPinHashIfAbsent(sb, pinHash);
+        if (!initialized) {
+          return errorResponse(
+            "Owner PIN was initialized by another request. Verify the existing PIN.",
+            409,
+            "already_configured",
+          );
+        }
+      }
       return jsonResponse({ ok: true, configured: true });
     }
 
