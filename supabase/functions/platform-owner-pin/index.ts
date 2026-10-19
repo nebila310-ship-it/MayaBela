@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
 
     return errorResponse("Unknown action.", 400, "invalid");
   } catch (e) {
-    const msg = String(e?.message || e);
+    const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {
       return errorResponse("Too many attempts. Try again later.", 429, "rate_limited");
     }
