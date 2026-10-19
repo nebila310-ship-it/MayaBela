@@ -293,15 +293,21 @@ begin
       return false;
     end if;
 
-    if public.jwt_can_read_all_school_data() then
-      return true;
+    if p_collection = 'app_auth_accounts' then
+      account_key := lower(trim(coalesce(p_data ->> 'username', p_doc_id, '')));
+      if account_key <> '' and account_key = lower(trim(coalesce(uname, ''))) then
+        return true;
+      end if;
+      -- Staff-directory permissions may expose staff accounts, never parent or student accounts.
+      if public.jwt_has_permission('manage_staff_accounts')
+         or public.jwt_has_permission('view_staff') then
+        return lower(trim(coalesce(p_data ->> 'roleKey', ''))) in ('admin', 'teacher', 'driver');
+      end if;
+      return false;
     end if;
 
-    if p_collection = 'app_auth_accounts' then
-      -- Ordinary teachers may read only their own account profile.
-      -- Roles with explicit school-wide access were handled above.
-      account_key := lower(trim(coalesce(p_data ->> 'username', p_doc_id, '')));
-      return account_key <> '' and account_key = lower(trim(coalesce(uname, '')));
+    if public.jwt_can_read_all_school_data() then
+      return true;
     end if;
 
     if p_collection in (
