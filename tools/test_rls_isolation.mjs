@@ -205,6 +205,7 @@ async function seed() {
       fullName: "Iso Teacher A",
       password: PASS,
       staffRoles: [],
+      linkedTeacherId: "ISO-TCH-A",
       assignedClass: "Iso 1A",
       assignedClassNames: ["Iso 1A"],
     }),
@@ -214,6 +215,7 @@ async function seed() {
       fullName: "Iso Teacher B",
       password: PASS,
       staffRoles: [],
+      linkedTeacherId: "ISO-TCH-B",
       assignedClass: "Iso 2A",
       assignedClassNames: ["Iso 2A"],
     }),
@@ -223,6 +225,7 @@ async function seed() {
       fullName: "Iso Lead A",
       password: PASS,
       staffRoles: ["principal"],
+      linkedTeacherId: "ISO-TCH-LEAD",
       claimsVersion: 0,
     }),
     doc("student_registry", STU_A_OWN, SCHOOL_A, {
@@ -278,6 +281,12 @@ async function seed() {
       linkedStudentIds: [STU_A_OTHER],
       messages: [],
     }),
+    doc("conversations", "iso-conv-teacher-a-own", SCHOOL_A, {
+      staffParticipantId: "teacher:ISO-TCH-A",
+      parentParticipantUsernames: [PARENT_A],
+      linkedStudentIds: [STU_A_OWN],
+      messages: [],
+    }),
     doc("app_notifications", "iso-n-a-own", SCHOOL_A, {
       recipientUsername: PARENT_A,
       title: "yours",
@@ -286,6 +295,11 @@ async function seed() {
       recipientUsername: "iso-px",
       title: "secret",
     }),
+    doc("app_notifications", "iso-n-ta-own", SCHOOL_A, {
+      recipientUsername: TEACHER_A,
+      recipientRole: "teacher",
+      title: "teacher own",
+    }),
     doc("fcm_tokens", PARENT_A, SCHOOL_A, {
       username: PARENT_A,
       token: "own-token",
@@ -293,6 +307,10 @@ async function seed() {
     doc("fcm_tokens", "iso-px", SCHOOL_A, {
       username: "iso-px",
       token: "other-token",
+    }),
+    doc("fcm_tokens", TEACHER_A, SCHOOL_A, {
+      username: TEACHER_A,
+      token: "teacher-own-token",
     }),
   ];
   const { status, body } = await rest(`/rest/v1/app_documents`, {
@@ -444,6 +462,58 @@ async function main() {
     !taAccountIds.includes(accountDocId(SCHOOL_A, PARENT_A)) &&
       !taAccountIds.includes(accountDocId(SCHOOL_A, TEACHER_LEAD)),
     taAccountIds.join(","),
+  );
+
+  const taConversations = await rest(
+    `/rest/v1/app_documents?collection=eq.conversations&select=doc_id`,
+    {},
+    teacherA.token,
+  );
+  const taConversationIds = ids(taConversations.body);
+  check(
+    "class teacher can read their assigned parent conversation",
+    taConversationIds.includes("iso-conv-teacher-a-own"),
+    taConversationIds.join(","),
+  );
+  check(
+    "class teacher cannot read unrelated family conversations",
+    !taConversationIds.includes("iso-conv-a-other") &&
+      !taConversationIds.includes("iso-conv-a-own"),
+    taConversationIds.join(","),
+  );
+
+  const taNotifications = await rest(
+    `/rest/v1/app_documents?collection=eq.app_notifications&select=doc_id`,
+    {},
+    teacherA.token,
+  );
+  const taNotificationIds = ids(taNotifications.body);
+  check(
+    "class teacher can read own notification",
+    taNotificationIds.includes("iso-n-ta-own"),
+    taNotificationIds.join(","),
+  );
+  check(
+    "class teacher cannot read another user's notification",
+    !taNotificationIds.includes("iso-n-a-other"),
+    taNotificationIds.join(","),
+  );
+
+  const taFcm = await rest(
+    `/rest/v1/app_documents?collection=eq.fcm_tokens&select=doc_id`,
+    {},
+    teacherA.token,
+  );
+  const taFcmIds = ids(taFcm.body);
+  check(
+    "class teacher can read own push token",
+    taFcmIds.includes(TEACHER_A),
+    taFcmIds.join(","),
+  );
+  check(
+    "class teacher cannot read another user's push token",
+    !taFcmIds.includes(PARENT_A) && !taFcmIds.includes("iso-px"),
+    taFcmIds.join(","),
   );
 
   const taUnknown = await rest(
