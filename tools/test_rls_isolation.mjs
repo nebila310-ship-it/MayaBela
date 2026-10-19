@@ -67,7 +67,7 @@ try {
 
 // Accept only the canonical hosted Supabase URL shape. Custom domains, local
 // URLs, malformed URLs, and unexpected paths are rejected rather than guessed.
-const projectMatch = parsedProjectUrl.hostname.match(/^([a-z0-9]{20})\\.supabase\\.co$/i);
+const projectMatch = parsedProjectUrl.hostname.match(/^([a-z0-9]{20})\.supabase\.co$/i);
 const urlProjectRef = projectMatch?.[1] || "";
 const confirmedProjectRef = (process.env.RLS_TEST_PROJECT_REF || "").trim();
 if (
