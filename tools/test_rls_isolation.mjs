@@ -109,7 +109,7 @@ function doc(collection, docId, schoolId, data) {
     collection,
     doc_id: docId,
     school_id: schoolId,
-    data: { schoolId, ...data },
+    data: { schoolId, ...data, testRunId: RUN_ID },
     updated_at: new Date().toISOString(),
   };
 }
@@ -259,7 +259,20 @@ async function cleanup() {
     }
   }
 
-  // Delete only rows returned by successful insert-only requests, scoped by all key columns.
+  // Recover fixtures if a request committed but its response was lost. The marker is unique
+  // to this run and is written only by this test helper.
+  const marked = await attempt("find run-owned fixture rows", () =>
+    rest(`/rest/v1/app_documents?select=collection,school_id,doc_id&data->>testRunId=eq.${RUN_ID}`),
+  );
+  if (Array.isArray(marked?.body)) {
+    for (const row of marked.body) {
+      if (typeof row?.collection !== "string" || typeof row?.school_id !== "string" || typeof row?.doc_id !== "string") continue;
+      const key = `${row.collection}\\0${row.school_id}\\0${row.doc_id}`;
+      ownedDocs.set(key, { collection: row.collection, school_id: row.school_id, doc_id: row.doc_id });
+    }
+  }
+
+  // Delete only rows owned by this run, scoped by all key columns.
   for (const row of ownedDocs.values()) {
     const query = `collection=eq.${encodeURIComponent(row.collection)}&school_id=eq.${encodeURIComponent(row.school_id)}&doc_id=eq.${encodeURIComponent(row.doc_id)}`;
     await attempt(`app_documents ${row.collection}/${row.school_id}/${row.doc_id}`, () =>
