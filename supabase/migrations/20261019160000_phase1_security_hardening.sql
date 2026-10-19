@@ -219,6 +219,13 @@ begin
       return true;
     end if;
 
+    if p_collection = 'app_auth_accounts' then
+      -- Ordinary teachers may read only their own account profile.
+      -- Roles with explicit school-wide access were handled above.
+      account_key := lower(trim(coalesce(p_data ->> 'username', p_doc_id, '')));
+      return account_key <> '' and account_key = lower(trim(coalesce(uname, '')));
+    end if;
+
     if p_collection in (
       'app_announcements',
       'gallery_posts',
@@ -229,7 +236,6 @@ begin
       'app_notifications',
       'conversations',
       'fcm_tokens',
-      'app_auth_accounts',
       'teacher_registry',
       'school_registry',
       'exam_questions',
