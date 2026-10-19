@@ -75,6 +75,7 @@ gradle_build_out2.txt
 .env.local
 .env.staging
 .env.staging.tmp
+.env.rls-test.local
 .env.load
 load/k6/last_summary.json
 tools/firestore_export/
