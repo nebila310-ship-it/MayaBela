@@ -1113,8 +1113,8 @@ async function verifyLegacySha256(plain: string, stored: string): Promise<boolea
   return hex === parts[1];
 }
 
-// bcryptjs is CommonJS: its API lives on the default export when loaded via esm.sh.
-import bcryptModule from "https://esm.sh/bcryptjs@2.4.3";
+// bcryptjs is CommonJS; accept either the ESM default export or module namespace.
+import * as bcryptModule from "https://esm.sh/bcryptjs@2.4.3";
 
 // deno-lint-ignore no-explicit-any
 const bcrypt: any = (bcryptModule as any).default ?? bcryptModule;

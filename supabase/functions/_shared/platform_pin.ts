@@ -1,7 +1,6 @@
 /**
  * Platform-owner PIN helpers.
- * Client PasswordHashService format: sha256:<salt>:<hexDigest>
- * where digest = SHA-256(utf8(`${salt}::${plain}`)).
+ * New hashes use PBKDF2-SHA256; legacy salted SHA-256 hashes are upgraded on verification.
  */
 import {
   adminClient,
@@ -24,7 +23,37 @@ export async function sha256Hex(text: string): Promise<string> {
     .join("");
 }
 
-/** Verify plaintext PIN against stored `sha256:salt:digest` hash. */
+const PIN_PBKDF2_ITERATIONS = 210_000;
+
+async function pbkdf2Hex(pin: string, salt: string, iterations: number): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits({
+    name: "PBKDF2",
+    salt: new TextEncoder().encode(salt),
+    iterations,
+    hash: "SHA-256",
+  }, key, 256);
+  return [...new Uint8Array(bits)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function constantTimeStringEqual(a: string, b: string): boolean {
+  let diff = a.length ^ b.length;
+  const length = Math.max(a.length, b.length);
+  for (let i = 0; i < length; i += 1) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+/** Verify legacy sha256 or current PBKDF2-SHA256 owner PIN hashes. */
 export async function verifyOwnerPinHash(
   plain: string,
   stored: string,
@@ -32,16 +61,21 @@ export async function verifyOwnerPinHash(
   const pin = String(plain || "").trim();
   const hash = String(stored || "").trim();
   if (pin.length < 6 || !hash) return false;
-  if (!hash.startsWith("sha256:")) {
-    // Legacy plaintext (should not exist) — reject in production paths.
-    return false;
+  const parts = hash.split(":");
+  if (parts[0] === "pbkdf2" && parts.length === 4) {
+    const iterations = Number(parts[1]);
+    if (!Number.isInteger(iterations) || iterations < 100_000 || iterations > 1_000_000) {
+      return false;
+    }
+    const digest = await pbkdf2Hex(pin, parts[2], iterations);
+    return constantTimeStringEqual(digest, parts[3]);
   }
-  const body = hash.slice("sha256:".length);
-  const parts = body.split(":");
-  if (parts.length !== 2) return false;
-  const [salt, expected] = parts;
-  const digest = await sha256Hex(`${salt}::${pin}`);
-  return digest === expected;
+  if (parts[0] === "sha256" && parts.length === 3) {
+    const digest = await sha256Hex(`${parts[1]}::${pin}`);
+    return constantTimeStringEqual(digest, parts[2]);
+  }
+  // Legacy plaintext hashes are deliberately rejected.
+  return false;
 }
 
 export async function hashOwnerPin(plain: string): Promise<string> {
@@ -52,8 +86,8 @@ export async function hashOwnerPin(plain: string): Promise<string> {
   let bin = "";
   for (const b of saltBytes) bin += String.fromCharCode(b);
   const salt = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const digest = await sha256Hex(`${salt}::${pin}`);
-  return `sha256:${salt}:${digest}`;
+  const digest = await pbkdf2Hex(pin, salt, PIN_PBKDF2_ITERATIONS);
+  return `pbkdf2:${PIN_PBKDF2_ITERATIONS}:${salt}:${digest}`;
 }
 
 export async function loadOwnerPinHash(
@@ -61,7 +95,9 @@ export async function loadOwnerPinHash(
 ): Promise<string | null> {
   const doc = await getDoc(sb, "platform_secrets", "owner_pin");
   const pinHash = typeof doc?.pinHash === "string" ? doc.pinHash : null;
-  return pinHash && pinHash.startsWith("sha256:") ? pinHash : null;
+  return pinHash && (pinHash.startsWith("sha256:") || pinHash.startsWith("pbkdf2:"))
+    ? pinHash
+    : null;
 }
 
 /**
@@ -105,6 +141,30 @@ export async function authorizePlatformOwner(
     }
     throw e;
   }
+}
+
+/** Atomically create the first owner PIN; never overwrite a concurrent setup. */
+export async function createOwnerPinHashIfAbsent(
+  sb: AdminClient,
+  pinHash: string,
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  const { error } = await sb.from("app_documents").insert({
+    collection: "platform_secrets",
+    doc_id: "owner_pin",
+    school_id: PLATFORM_SCHOOL_ID,
+    data: {
+      pinHash,
+      updatedAt: now,
+    },
+    updated_at: now,
+  });
+  if (error) {
+    // PostgreSQL unique violation: another setup request won the race.
+    if (error.code === "23505") return false;
+    throw error;
+  }
+  return true;
 }
 
 export async function saveOwnerPinHash(

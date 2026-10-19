@@ -9,6 +9,7 @@ import {
   LOGIN_RATE_WINDOW_MS,
 } from "../_shared/school_auth.ts";
 import {
+  createOwnerPinHashIfAbsent,
   hashOwnerPin,
   loadOwnerPinHash,
   saveOwnerPinHash,
@@ -25,6 +26,17 @@ import {
  *   verify  → { ok: true } when ownerPin matches
  *   save    → set/change PIN (first setup or currentOwnerPin + newPin)
  */
+function constantTimeEqual(a: string, b: string): boolean {
+  const left = new TextEncoder().encode(a);
+  const right = new TextEncoder().encode(b);
+  let diff = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i += 1) {
+    diff |= (left[i] || 0) ^ (right[i] || 0);
+  }
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -69,9 +81,14 @@ Deno.serve(async (req) => {
       if (!existing) {
         return errorResponse("Owner PIN is not configured.", 404, "not_configured");
       }
-      const ok = await verifyOwnerPinHash(String(body?.ownerPin || ""), existing);
+      const suppliedPin = String(body?.ownerPin || "");
+      const ok = await verifyOwnerPinHash(suppliedPin, existing);
       if (!ok) {
         return errorResponse("Invalid owner PIN.", 401, "unauthorized");
+      }
+      // Upgrade legacy fast hashes after successful proof of the PIN.
+      if (existing.startsWith("sha256:")) {
+        await saveOwnerPinHash(sb, await hashOwnerPin(suppliedPin));
       }
       return jsonResponse({ ok: true });
     }
@@ -98,15 +115,38 @@ Deno.serve(async (req) => {
             "unauthorized",
           );
         }
+      } else {
+        // First-time setup must be provisioned out-of-band by the deployment
+        // operator. A client-generated OTP is not server-side proof of ownership.
+        const expectedSetupSecret = Deno.env.get("PLATFORM_PIN_SETUP_SECRET") || "";
+        const suppliedSetupSecret = String(body?.setupSecret || "");
+        if (!expectedSetupSecret || !constantTimeEqual(suppliedSetupSecret, expectedSetupSecret)) {
+          return errorResponse(
+            "Initial owner PIN setup is not authorized. Contact the platform administrator.",
+            403,
+            "setup_not_authorized",
+          );
+        }
       }
       const pinHash = await hashOwnerPin(newPin);
-      await saveOwnerPinHash(sb, pinHash);
+      if (existing) {
+        await saveOwnerPinHash(sb, pinHash);
+      } else {
+        const initialized = await createOwnerPinHashIfAbsent(sb, pinHash);
+        if (!initialized) {
+          return errorResponse(
+            "Owner PIN was initialized by another request. Verify the existing PIN.",
+            409,
+            "already_configured",
+          );
+        }
+      }
       return jsonResponse({ ok: true, configured: true });
     }
 
     return errorResponse("Unknown action.", 400, "invalid");
   } catch (e) {
-    const msg = String(e?.message || e);
+    const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {
       return errorResponse("Too many attempts. Try again later.", 429, "rate_limited");
     }

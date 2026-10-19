@@ -63,13 +63,37 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: flutter pub get
 
+      - name: Static analysis
+        if: steps.gate.outputs.run == 'true'
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+
       - name: Unit tests
         if: steps.gate.outputs.run == 'true'
         run: flutter test --reporter expanded
 
+  edge-functions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check security Edge Functions
+        run: deno check supabase/functions/platform-owner-pin/index.ts supabase/functions/school-upsert-account/index.ts
+
+      - name: Test platform PIN hashing
+        run: deno test supabase/functions/_shared/platform_pin_test.ts
+
   # Live PostgREST negatives against dedicated staging (never production).
-  # Add repo secrets: STAGING_SUPABASE_URL, STAGING_ANON_KEY, STAGING_SERVICE_ROLE_KEY.
-  # Skips (exit 0) when those secrets are unset so existing CI stays green.
+  # Required repo secrets: STAGING_SUPABASE_URL, STAGING_ANON_KEY, STAGING_SERVICE_ROLE_KEY.
+  # Missing credentials or unreachable staging must fail this security gate.
   rls-isolation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -89,11 +113,11 @@ jobs:
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_ANON_KEY: ${{ secrets.STAGING_ANON_KEY }}
           STAGING_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SERVICE_ROLE_KEY }}
+          RLS_TEST_PROJECT_REF: ${{ vars.RLS_TEST_PROJECT_REF }}
+          ALLOW_DESTRUCTIVE_RLS_TESTS: ${{ vars.ALLOW_DESTRUCTIVE_RLS_TESTS }}
         run: |
           if [ -z "$STAGING_SUPABASE_URL" ] || [ -z "$STAGING_ANON_KEY" ] || [ -z "$STAGING_SERVICE_ROLE_KEY" ]; then
-            echo "Skipping RLS isolation — staging secrets not configured."
-            exit 0
+            echo "ERROR: RLS isolation requires staging secrets; refusing to pass security gate."
+            exit 1
           fi
           node tools/test_rls_isolation.mjs
-          # Unreachable staging (DNS / network) is a skip inside the script,
-          # same as missing secrets — not a product regression.

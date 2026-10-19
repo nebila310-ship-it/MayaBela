@@ -281,7 +281,7 @@ Future<bool> showPlatformPinDialog(BuildContext context) async {
   await PlatformOwnerService.instance.load();
   if (!context.mounted) return false;
 
-  if (!PlatformOwnerService.instance.hasCustomPin && !kDebugMode) {
+  if (PlatformOwnerService.instance.needsPinSetup) {
     final created = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -310,6 +310,7 @@ class _PlatformPinSetupDialog extends StatefulWidget {
 class _PlatformPinSetupDialogState extends State<_PlatformPinSetupDialog> {
   final _pin = TextEditingController();
   final _confirm = TextEditingController();
+  final _setupSecret = TextEditingController();
   String? _hint;
   bool _busy = false;
 
@@ -317,6 +318,7 @@ class _PlatformPinSetupDialogState extends State<_PlatformPinSetupDialog> {
   void dispose() {
     _pin.dispose();
     _confirm.dispose();
+    _setupSecret.dispose();
     super.dispose();
   }
 
@@ -349,8 +351,18 @@ class _PlatformPinSetupDialogState extends State<_PlatformPinSetupDialog> {
       });
       return;
     }
-    await PlatformOwnerService.instance.setPin(a);
+    final saved = await PlatformOwnerService.instance.setPin(
+      a,
+      setupSecret: _setupSecret.text.trim(),
+    );
     if (!mounted) return;
+    if (!saved) {
+      setState(() {
+        _busy = false;
+        _hint = 'Secure cloud setup failed. Check the one-time setup secret with the platform administrator and try again.';
+      });
+      return;
+    }
     Navigator.of(context).pop(true);
   }
 
@@ -363,9 +375,15 @@ class _PlatformPinSetupDialogState extends State<_PlatformPinSetupDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Set the EduAba platform-owner PIN (not a school login password). '
+            'Set the MaJo platform-owner PIN (not a school login password). '
             'Minimum ${PlatformOwnerService.minPinLength} digits. '
-            'This PIN syncs across phones and browsers — create it only once.',
+            'First setup also requires a one-time secret configured by the platform administrator.',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _setupSecret,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'One-time setup secret'),
           ),
           const SizedBox(height: 12),
           TextField(

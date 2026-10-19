@@ -1,14 +1,18 @@
 /**
  * Live PostgREST RLS isolation (negative cases must FAIL).
  *
- * Staging only. Refuses production project ref hwkiihonthueadbhcvfi.
+ * Dedicated non-production Supabase test project only. This script seeds and
+ * deletes test data, so it requires both an exact project-ref confirmation and
+ * an explicit destructive-test opt-in. Never point it at production/shared data.
  *
  *   node tools/test_rls_isolation.mjs
  *
- * Env (or .env.staging):
+ * Env (or .env.rls-test.local):
  *   STAGING_SUPABASE_URL
  *   STAGING_ANON_KEY
  *   STAGING_SERVICE_ROLE_KEY
+ *   RLS_TEST_PROJECT_REF (must exactly match the URL's Supabase project ref)
+ *   ALLOW_DESTRUCTIVE_RLS_TESTS=YES (explicit acknowledgement of seed/cleanup)
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -41,7 +45,7 @@ function loadEnvFile(filePath) {
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-loadEnvFile(resolve(root, ".env.staging"));
+loadEnvFile(resolve(root, ".env.rls-test.local"));
 
 const URL_BASE = (process.env.STAGING_SUPABASE_URL || "").replace(/\/$/, "");
 const ANON = process.env.STAGING_ANON_KEY || "";
@@ -53,8 +57,41 @@ if (!URL_BASE || !ANON || !SERVICE) {
   );
   process.exit(2);
 }
-if (URL_BASE.includes(PROD_REF)) {
+let parsedProjectUrl;
+try {
+  parsedProjectUrl = new URL(URL_BASE);
+} catch {
+  console.error("Refusing to run: STAGING_SUPABASE_URL is not a valid URL.");
+  process.exit(2);
+}
+
+// Accept only the canonical hosted Supabase URL shape. Custom domains, local
+// URLs, malformed URLs, and unexpected paths are rejected rather than guessed.
+const projectMatch = parsedProjectUrl.hostname.match(/^([a-z0-9]{20})\.supabase\.co$/i);
+const urlProjectRef = projectMatch?.[1] || "";
+const confirmedProjectRef = (process.env.RLS_TEST_PROJECT_REF || "").trim();
+if (
+  parsedProjectUrl.protocol !== "https:" ||
+  parsedProjectUrl.port !== "" ||
+  parsedProjectUrl.pathname !== "/" ||
+  parsedProjectUrl.search !== "" ||
+  parsedProjectUrl.hash !== "" ||
+  !urlProjectRef ||
+  urlProjectRef !== confirmedProjectRef
+) {
+  console.error(
+    "Refusing to run: use a canonical https://<project-ref>.supabase.co URL and set RLS_TEST_PROJECT_REF to the exact matching non-production project ref.",
+  );
+  process.exit(2);
+}
+if (urlProjectRef === PROD_REF || URL_BASE.includes(PROD_REF)) {
   console.error("Refusing to run isolation tests against production.");
+  process.exit(2);
+}
+if (process.env.ALLOW_DESTRUCTIVE_RLS_TESTS !== "YES") {
+  console.error(
+    "Refusing to run: this test seeds and deletes data. Set ALLOW_DESTRUCTIVE_RLS_TESTS=YES only for a dedicated, disposable non-production test project.",
+  );
   process.exit(2);
 }
 
@@ -180,6 +217,10 @@ async function seed() {
       name: "Isolation School B",
       status: "active",
     }),
+    // Unclassified collections must be denied to ordinary teachers by default.
+    doc("security_probe_unclassified", "iso-unclassified-a", SCHOOL_A, {
+      privateValue: "must-not-be-readable-by-teacher",
+    }),
     doc("app_auth_accounts", accountDocId(SCHOOL_A, PARENT_A), SCHOOL_A, {
       username: PARENT_A,
       roleKey: "parent",
@@ -201,6 +242,7 @@ async function seed() {
       fullName: "Iso Teacher A",
       password: PASS,
       staffRoles: [],
+      linkedTeacherId: "ISO-TCH-A",
       assignedClass: "Iso 1A",
       assignedClassNames: ["Iso 1A"],
     }),
@@ -210,6 +252,7 @@ async function seed() {
       fullName: "Iso Teacher B",
       password: PASS,
       staffRoles: [],
+      linkedTeacherId: "ISO-TCH-B",
       assignedClass: "Iso 2A",
       assignedClassNames: ["Iso 2A"],
     }),
@@ -219,6 +262,7 @@ async function seed() {
       fullName: "Iso Lead A",
       password: PASS,
       staffRoles: ["principal"],
+      linkedTeacherId: "ISO-TCH-LEAD",
       claimsVersion: 0,
     }),
     doc("student_registry", STU_A_OWN, SCHOOL_A, {
@@ -274,6 +318,12 @@ async function seed() {
       linkedStudentIds: [STU_A_OTHER],
       messages: [],
     }),
+    doc("conversations", "iso-conv-teacher-a-own", SCHOOL_A, {
+      staffParticipantId: "teacher:ISO-TCH-A",
+      parentParticipantUsernames: [PARENT_A],
+      linkedStudentIds: [STU_A_OWN],
+      messages: [],
+    }),
     doc("app_notifications", "iso-n-a-own", SCHOOL_A, {
       recipientUsername: PARENT_A,
       title: "yours",
@@ -282,6 +332,11 @@ async function seed() {
       recipientUsername: "iso-px",
       title: "secret",
     }),
+    doc("app_notifications", "iso-n-ta-own", SCHOOL_A, {
+      recipientUsername: TEACHER_A,
+      recipientRole: "teacher",
+      title: "teacher own",
+    }),
     doc("fcm_tokens", PARENT_A, SCHOOL_A, {
       username: PARENT_A,
       token: "own-token",
@@ -289,6 +344,10 @@ async function seed() {
     doc("fcm_tokens", "iso-px", SCHOOL_A, {
       username: "iso-px",
       token: "other-token",
+    }),
+    doc("fcm_tokens", TEACHER_A, SCHOOL_A, {
+      username: TEACHER_A,
+      token: "teacher-own-token",
     }),
   ];
   const { status, body } = await rest(`/rest/v1/app_documents`, {
@@ -302,7 +361,7 @@ async function seed() {
 }
 
 async function main() {
-  console.log("RLS isolation against", URL_BASE);
+  console.log("RLS isolation against explicitly confirmed test project", urlProjectRef);
   await cleanup();
   await seed();
 
@@ -422,6 +481,87 @@ async function main() {
     "teacher B cannot read school A grades",
     !tbIds.includes("iso-grade-a-own") && !tbIds.includes("iso-grade-a-other"),
     tbIds.join(","),
+  );
+
+  const taAccounts = await rest(
+    `/rest/v1/app_documents?collection=eq.app_auth_accounts&school_id=eq.${SCHOOL_A}&select=doc_id,data`,
+    {},
+    teacherA.token,
+  );
+  const taAccountIds = ids(taAccounts.body);
+  check(
+    "class teacher can read own account profile",
+    taAccountIds.includes(accountDocId(SCHOOL_A, TEACHER_A)),
+    taAccountIds.join(","),
+  );
+  check(
+    "class teacher cannot read parent or other staff account profiles",
+    !taAccountIds.includes(accountDocId(SCHOOL_A, PARENT_A)) &&
+      !taAccountIds.includes(accountDocId(SCHOOL_A, TEACHER_LEAD)),
+    taAccountIds.join(","),
+  );
+
+  const taConversations = await rest(
+    `/rest/v1/app_documents?collection=eq.conversations&select=doc_id`,
+    {},
+    teacherA.token,
+  );
+  const taConversationIds = ids(taConversations.body);
+  check(
+    "class teacher can read their assigned parent conversation",
+    taConversationIds.includes("iso-conv-teacher-a-own"),
+    taConversationIds.join(","),
+  );
+  check(
+    "class teacher cannot read unrelated family conversations",
+    !taConversationIds.includes("iso-conv-a-other") &&
+      !taConversationIds.includes("iso-conv-a-own"),
+    taConversationIds.join(","),
+  );
+
+  const taNotifications = await rest(
+    `/rest/v1/app_documents?collection=eq.app_notifications&select=doc_id`,
+    {},
+    teacherA.token,
+  );
+  const taNotificationIds = ids(taNotifications.body);
+  check(
+    "class teacher can read own notification",
+    taNotificationIds.includes("iso-n-ta-own"),
+    taNotificationIds.join(","),
+  );
+  check(
+    "class teacher cannot read another user's notification",
+    !taNotificationIds.includes("iso-n-a-other"),
+    taNotificationIds.join(","),
+  );
+
+  const taFcm = await rest(
+    `/rest/v1/app_documents?collection=eq.fcm_tokens&select=doc_id`,
+    {},
+    teacherA.token,
+  );
+  const taFcmIds = ids(taFcm.body);
+  check(
+    "class teacher can read own push token",
+    taFcmIds.includes(TEACHER_A),
+    taFcmIds.join(","),
+  );
+  check(
+    "class teacher cannot read another user's push token",
+    !taFcmIds.includes(PARENT_A) && !taFcmIds.includes("iso-px"),
+    taFcmIds.join(","),
+  );
+
+  const taUnknown = await rest(
+    `/rest/v1/app_documents?collection=eq.security_probe_unclassified&select=doc_id,data`,
+    {},
+    teacherA.token,
+  );
+  check(
+    "class teacher cannot read an unclassified collection",
+    !ids(taUnknown.body).includes("iso-unclassified-a"),
+    JSON.stringify(taUnknown.body),
   );
 
   const taStu = await rest(
@@ -736,6 +876,27 @@ async function main() {
     `status=${upsertDenied.status}`,
   );
 
+  // The general account endpoint must never allow anonymous bootstrap admins.
+  const bootstrapAttempt = await fetch(`${URL_BASE}/functions/v1/school-upsert-account`, {
+    method: "POST",
+    headers: {
+      apikey: ANON,
+      Authorization: `Bearer ${ANON}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username: "iso-bootstrap",
+      roleKey: "admin",
+      schoolId: "ISO-UNCLAIMED",
+      password: PASS,
+    }),
+  });
+  check(
+    "anonymous first-admin bootstrap is denied",
+    bootstrapAttempt.status === 403,
+    `status=${bootstrapAttempt.status}`,
+  );
+
   await cleanup();
   console.log(failures === 0 ? "\nRESULT: ALL PASS" : `\nRESULT: ${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
@@ -757,10 +918,10 @@ function isStagingUnreachable(err) {
 main().catch(async (e) => {
   if (isStagingUnreachable(e)) {
     const host = e?.cause?.hostname || "";
-    console.warn(
-      `Skipping RLS isolation — staging unreachable${host ? ` (${host})` : ""}.`,
+    console.error(
+      `RLS isolation failed because staging is unreachable${host ? ` (${host})` : ""}.`,
     );
-    process.exit(0);
+    process.exit(1);
   }
   console.error(e);
   try {
