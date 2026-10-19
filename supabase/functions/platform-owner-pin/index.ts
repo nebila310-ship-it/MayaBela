@@ -25,6 +25,17 @@ import {
  *   verify  → { ok: true } when ownerPin matches
  *   save    → set/change PIN (first setup or currentOwnerPin + newPin)
  */
+function constantTimeEqual(a: string, b: string): boolean {
+  const left = new TextEncoder().encode(a);
+  const right = new TextEncoder().encode(b);
+  let diff = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i += 1) {
+    diff |= (left[i] || 0) ^ (right[i] || 0);
+  }
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -96,6 +107,18 @@ Deno.serve(async (req) => {
             "Current owner PIN is required to change the PIN.",
             401,
             "unauthorized",
+          );
+        }
+      } else {
+        // First-time setup must be provisioned out-of-band by the deployment
+        // operator. A client-generated OTP is not server-side proof of ownership.
+        const expectedSetupSecret = Deno.env.get("PLATFORM_PIN_SETUP_SECRET") || "";
+        const suppliedSetupSecret = String(body?.setupSecret || "");
+        if (!expectedSetupSecret || !constantTimeEqual(suppliedSetupSecret, expectedSetupSecret)) {
+          return errorResponse(
+            "Initial owner PIN setup is not authorized. Contact the platform administrator.",
+            403,
+            "setup_not_authorized",
           );
         }
       }
