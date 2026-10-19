@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
             "invalid_email",
           );
         }
-        email = incoming;
+        email = incoming ?? null;
       } else if (incoming) {
         if (!isUserFacingEmail(incoming)) {
           return errorResponse(
