@@ -78,6 +78,7 @@ declare
   doc_student text;
   doc_class text;
   account_key text;
+  viewer_teacher_id text;
   unit_status text;
 begin
   if sid is null or sid = '' or r is null or r = '' then
@@ -107,6 +108,83 @@ begin
   doc_class := upper(nullif(trim(coalesce(p_data ->> 'className', '')), ''));
 
   if r = 'teacher' then
+    -- Resolve this account's linked teacher ID for participant-scoped chat checks.
+    select upper(trim(coalesce(d.data ->> 'linkedTeacherId', '')))
+      into viewer_teacher_id
+      from public.app_documents d
+     where d.collection = 'app_auth_accounts'
+       and upper(d.school_id) = upper(sid)
+       and lower(trim(coalesce(d.data ->> 'username', ''))) = lower(trim(coalesce(uname, '')))
+     limit 1;
+
+    if p_collection = 'conversations' then
+      if lower(trim(coalesce(p_data ->> 'isBroadcast', 'false'))) = 'true'
+         and exists (
+           select 1 from jsonb_array_elements_text(
+             coalesce(p_data -> 'broadcastAudienceKeys', '[]'::jsonb)
+           ) as a(x)
+           where lower(trim(x)) in ('teacher', 'teachers', 'all')
+         ) then
+        return true;
+      end if;
+      if exists (
+        select 1 from jsonb_array_elements_text(
+          coalesce(p_data -> 'parentParticipantUsernames', '[]'::jsonb)
+        ) as p(x)
+        where lower(trim(x)) = lower(trim(coalesce(uname, '')))
+      ) then
+        return true;
+      end if;
+      if exists (
+        select 1 from jsonb_array_elements(coalesce(p_data -> 'messages', '[]'::jsonb)) as m(value)
+        where lower(trim(coalesce(m.value ->> 'senderUsername', ''))) = lower(trim(coalesce(uname, '')))
+      ) then
+        return true;
+      end if;
+      if viewer_teacher_id is not null and viewer_teacher_id <> '' then
+        if upper(trim(coalesce(p_data ->> 'staffParticipantId', ''))) in
+             (viewer_teacher_id, 'TEACHER:' || viewer_teacher_id)
+           or upper(trim(coalesce(p_data ->> 'counterpartyStaffId', ''))) in
+             (viewer_teacher_id, 'TEACHER:' || viewer_teacher_id)
+           or exists (
+             select 1 from jsonb_array_elements_text(
+               coalesce(p_data -> 'groupStaffIds', '[]'::jsonb)
+             ) as s(x)
+             where upper(trim(x)) in (viewer_teacher_id, 'TEACHER:' || viewer_teacher_id)
+           ) then
+          return true;
+        end if;
+      end if;
+      return false;
+    end if;
+
+    if p_collection = 'app_notifications' then
+      if length(trim(coalesce(p_data ->> 'recipientUsername', ''))) > 0
+         or (jsonb_typeof(p_data -> 'recipientUsernames') = 'array'
+             and jsonb_array_length(p_data -> 'recipientUsernames') > 0) then
+        return lower(trim(coalesce(p_data ->> 'recipientUsername', ''))) = lower(trim(coalesce(uname, '')))
+          or exists (
+            select 1 from jsonb_array_elements_text(
+              coalesce(p_data -> 'recipientUsernames', '[]'::jsonb)
+            ) as rcp(x)
+            where lower(trim(rcp.x)) = lower(trim(coalesce(uname, '')))
+          );
+      end if;
+      if length(trim(coalesce(p_data ->> 'recipientStaffId', ''))) > 0 then
+        return viewer_teacher_id is not null and viewer_teacher_id <> ''
+          and upper(trim(p_data ->> 'recipientStaffId')) in
+            (viewer_teacher_id, 'TEACHER:' || viewer_teacher_id);
+      end if;
+      if length(trim(coalesce(p_data ->> 'recipientStaffRole', ''))) > 0 then
+        return public.jwt_staff_roles() ? lower(trim(p_data ->> 'recipientStaffRole'));
+      end if;
+      return lower(trim(coalesce(p_data ->> 'recipientRole', ''))) in ('teacher', 'teachers', 'all');
+    end if;
+
+    if p_collection = 'fcm_tokens' then
+      return public.app_doc_self_fcm_token(p_doc_id, p_data);
+    end if;
+
     if p_collection = 'teacher_evaluations' then
       if public.jwt_staff_roles() ? 'vice_president'
          or public.jwt_staff_roles() ? 'section_director'
@@ -233,9 +311,6 @@ begin
       'class_timetables',
       'learning_materials',
       'bus_live_positions',
-      'app_notifications',
-      'conversations',
-      'fcm_tokens',
       'teacher_registry',
       'school_registry',
       'exam_questions',
