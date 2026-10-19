@@ -20,7 +20,7 @@ This branch contains security changes only. It has **not** been merged or deploy
 - Uses PBKDF2-SHA256 with 210,000 iterations for new owner PIN hashes; legacy salted SHA-256 hashes are upgraded after successful verification.
 - Requires a deployment-provisioned one-time secret for initial owner PIN setup, because a client-generated OTP is not server-side authorization.
 - Removes anonymous first-admin bootstrap from the general account upsert endpoint.
-- Changes the teacher read helper's unclassified-collection fallback from allow to deny.
+- Changes the teacher read helper's unclassified-collection fallback from allow to deny; scopes account profiles, conversations, notifications, and push tokens to the signed-in teacher unless an explicit school-wide permission applies.
 - Makes the staging RLS isolation test fail when credentials are missing or staging cannot be reached.
 - Adds integration checks for unknown collection denial and anonymous first-admin bootstrap rejection.
 
