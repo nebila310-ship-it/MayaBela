@@ -16,7 +16,6 @@ import {
   normalizeUsername,
   permissionsForRoles,
   profileFromAccount,
-  queryDocs,
   upsertSecret,
 } from "../_shared/school_auth.ts";
 
@@ -86,32 +85,15 @@ Deno.serve(async (req) => {
 
     const sb = adminClient();
     if (!canManageStaff && !canWriteStudentLogin) {
-      if (roleKey !== "admin") {
-        const jwtHint = !caller
-          ? (String(userErr?.message || "").toLowerCase().includes("sub")
-            ? "cloud JWT invalid/expired (missing sub). Sign out, sign in as Admin, wait for Ready, then try again."
-            : `Admin sign-in required (no cloud session${userErr ? `: ${userErr.message}` : ""}). Sign out, sign in as Admin, wait for Ready, then try again.`)
-          : `Admin authentication required (role=${callerRole || "none"}, school=${callerSchool || "none"}, target=${schoolId}).`;
-        return errorResponse(jwtHint, 403, "denied");
-      }
-      const admins = await queryDocs(sb, "app_auth_accounts", [
-        { column: "schoolId", op: "eq", value: schoolId },
-      ], 500);
-      const hasAdmin = admins.some((a) => a.data.roleKey === "admin");
-      if (hasAdmin) {
-        return errorResponse(
-          "Admin authentication required to create another admin.",
-          403,
-          "denied",
-        );
-      }
-      if (!password) {
-        return errorResponse(
-          "password is required for bootstrap admin.",
-          400,
-          "invalid",
-        );
-      }
+      const jwtHint = !caller
+        ? (String(userErr?.message || "").toLowerCase().includes("sub")
+          ? "cloud JWT invalid/expired (missing sub). Sign out, sign in as Admin, wait for Ready, then try again."
+          : `Admin sign-in required (no cloud session${userErr ? `: ${userErr.message}` : ""}). Sign out, sign in as Admin, wait for Ready, then try again.`)
+        : `Admin authentication required (role=${callerRole || "none"}, school=${callerSchool || "none"}, target=${schoolId}).`;
+      // Initial school/admin creation must use the PIN-authorized
+      // platform-create-school endpoint. This endpoint never grants bootstrap
+      // admin access based only on an unclaimed school ID.
+      return errorResponse(jwtHint, 403, "denied");
     }
 
     const docId = accountDocId(schoolId, username);
