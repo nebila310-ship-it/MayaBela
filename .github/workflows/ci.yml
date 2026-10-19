@@ -113,6 +113,8 @@ jobs:
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_ANON_KEY: ${{ secrets.STAGING_ANON_KEY }}
           STAGING_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SERVICE_ROLE_KEY }}
+          RLS_TEST_PROJECT_REF: ${{ vars.RLS_TEST_PROJECT_REF }}
+          ALLOW_DESTRUCTIVE_RLS_TESTS: ${{ vars.ALLOW_DESTRUCTIVE_RLS_TESTS }}
         run: |
           if [ -z "$STAGING_SUPABASE_URL" ] || [ -z "$STAGING_ANON_KEY" ] || [ -z "$STAGING_SERVICE_ROLE_KEY" ]; then
             echo "ERROR: RLS isolation requires staging secrets; refusing to pass security gate."
