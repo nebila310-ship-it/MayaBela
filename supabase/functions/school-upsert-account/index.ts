@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
 
     const claimsVersion = rolesChanged ? oldClaimsVersion + 1 : oldClaimsVersion;
 
-    let email = existing?.email || null;
+    let email: string | null = existing?.email ? String(existing.email) : null;
     if (roleKey !== "student") {
       const incoming = Object.prototype.hasOwnProperty.call(body, "email")
         ? normalizeEmail(body.email)
