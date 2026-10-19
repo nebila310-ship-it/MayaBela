@@ -428,6 +428,24 @@ async function main() {
     tbIds.join(","),
   );
 
+  const taAccounts = await rest(
+    `/rest/v1/app_documents?collection=eq.app_auth_accounts&school_id=eq.${SCHOOL_A}&select=doc_id,data`,
+    {},
+    teacherA.token,
+  );
+  const taAccountIds = ids(taAccounts.body);
+  check(
+    "class teacher can read own account profile",
+    taAccountIds.includes(accountDocId(SCHOOL_A, TEACHER_A)),
+    taAccountIds.join(","),
+  );
+  check(
+    "class teacher cannot read parent or other staff account profiles",
+    !taAccountIds.includes(accountDocId(SCHOOL_A, PARENT_A)) &&
+      !taAccountIds.includes(accountDocId(SCHOOL_A, TEACHER_LEAD)),
+    taAccountIds.join(","),
+  );
+
   const taUnknown = await rest(
     `/rest/v1/app_documents?collection=eq.security_probe_unclassified&select=doc_id,data`,
     {},
