@@ -218,6 +218,8 @@ const TEST_AUTH_EMAILS = [
   `${TEACHER_LEAD}@${SCHOOL_A.toLowerCase()}.mayabela.local`,
   `${PARENT_B}@${SCHOOL_B.toLowerCase()}.mayabela.local`,
   `${TEACHER_B}@${SCHOOL_B.toLowerCase()}.mayabela.local`,
+  // Include the synthetic Auth identity if the negative bootstrap test unexpectedly succeeds.
+  `${BOOTSTRAP_USERNAME}@${BOOTSTRAP_SCHOOL.toLowerCase()}.mayabela.local`,
 ];
 async function findAuthUsersByEmail(email) {
   const matches = [];
@@ -988,12 +990,11 @@ async function runTests() {
       },
     }),
   });
-  if (upsertDenied.status < 300) {
-    const docId = `ISOA-HACK-${RUN_ID}`;
-    ownedDocs.set(`student_registry\\0${SCHOOL_A}\\0${docId}`, {
-      collection: "student_registry", school_id: SCHOOL_A, doc_id: docId,
-    });
-  }
+  // Pre-register the run-unique candidate after preflight to recover if the response is lost.
+  const deniedRegistryDocId = `ISOA-HACK-${RUN_ID}`;
+  ownedDocs.set(`student_registry\\0${SCHOOL_A}\\0${deniedRegistryDocId}`, {
+    collection: "student_registry", school_id: SCHOOL_A, doc_id: deniedRegistryDocId,
+  });
   check(
     "class teacher cannot bulk-write student_registry via school-upsert-registry",
     upsertDenied.status === 403,
@@ -1001,6 +1002,15 @@ async function runTests() {
   );
 
   // The general account endpoint must never allow anonymous bootstrap admins.
+  // Track possible run-unique side effects before the request so cleanup survives a lost response.
+  const bootstrapAccountId = accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME);
+  for (const candidate of [
+    { collection: "school_registry", school_id: BOOTSTRAP_SCHOOL, doc_id: BOOTSTRAP_SCHOOL },
+    { collection: "app_auth_accounts", school_id: BOOTSTRAP_SCHOOL, doc_id: bootstrapAccountId },
+    { collection: "auth_secrets", school_id: BOOTSTRAP_SCHOOL, doc_id: bootstrapAccountId },
+  ]) {
+    ownedDocs.set(`${candidate.collection}\\0${candidate.school_id}\\0${candidate.doc_id}`, candidate);
+  }
   const bootstrapAttempt = await fetch(`${URL_BASE}/functions/v1/school-upsert-account`, {
     method: "POST",
     headers: {
@@ -1015,15 +1025,6 @@ async function runTests() {
       password: PASS,
     }),
   });
-  if (bootstrapAttempt.status < 300) {
-    ownedDocs.set(`school_registry\\0${BOOTSTRAP_SCHOOL}\\0${BOOTSTRAP_SCHOOL}`, {
-      collection: "school_registry", school_id: BOOTSTRAP_SCHOOL, doc_id: BOOTSTRAP_SCHOOL,
-    });
-    const accountId = accountDocId(BOOTSTRAP_SCHOOL, BOOTSTRAP_USERNAME);
-    ownedDocs.set(`app_auth_accounts\\0${BOOTSTRAP_SCHOOL}\\0${accountId}`, {
-      collection: "app_auth_accounts", school_id: BOOTSTRAP_SCHOOL, doc_id: accountId,
-    });
-  }
   check(
     "anonymous first-admin bootstrap is denied",
     bootstrapAttempt.status === 403,
