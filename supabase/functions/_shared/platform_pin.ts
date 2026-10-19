@@ -143,6 +143,30 @@ export async function authorizePlatformOwner(
   }
 }
 
+/** Atomically create the first owner PIN; never overwrite a concurrent setup. */
+export async function createOwnerPinHashIfAbsent(
+  sb: AdminClient,
+  pinHash: string,
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  const { error } = await sb.from("app_documents").insert({
+    collection: "platform_secrets",
+    doc_id: "owner_pin",
+    school_id: PLATFORM_SCHOOL_ID,
+    data: {
+      pinHash,
+      updatedAt: now,
+    },
+    updated_at: now,
+  });
+  if (error) {
+    // PostgreSQL unique violation: another setup request won the race.
+    if (error.code === "23505") return false;
+    throw error;
+  }
+  return true;
+}
+
 export async function saveOwnerPinHash(
   sb: AdminClient,
   pinHash: string,
