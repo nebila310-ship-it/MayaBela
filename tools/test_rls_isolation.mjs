@@ -198,11 +198,11 @@ const TEST_RATE_KEYS = [
   `login_${TEACHER_LEAD}_teacher_${SCHOOL_A}`,
 ];
 const TEST_AUTH_EMAILS = [
-  `${PARENT_A}@isoa.mayabela.local`,
-  `${TEACHER_A}@isoa.mayabela.local`,
-  `${TEACHER_LEAD}@isoa.mayabela.local`,
-  `${PARENT_B}@isob.mayabela.local`,
-  `${TEACHER_B}@isob.mayabela.local`,
+  `${PARENT_A}@${SCHOOL_A.toLowerCase()}.mayabela.local`,
+  `${TEACHER_A}@${SCHOOL_A.toLowerCase()}.mayabela.local`,
+  `${TEACHER_LEAD}@${SCHOOL_A.toLowerCase()}.mayabela.local`,
+  `${PARENT_B}@${SCHOOL_B.toLowerCase()}.mayabela.local`,
+  `${TEACHER_B}@${SCHOOL_B.toLowerCase()}.mayabela.local`,
 ];
 let testDataOwned = false;
 
