@@ -180,6 +180,10 @@ async function seed() {
       name: "Isolation School B",
       status: "active",
     }),
+    // Unclassified collections must be denied to ordinary teachers by default.
+    doc("security_probe_unclassified", "iso-unclassified-a", SCHOOL_A, {
+      privateValue: "must-not-be-readable-by-teacher",
+    }),
     doc("app_auth_accounts", accountDocId(SCHOOL_A, PARENT_A), SCHOOL_A, {
       username: PARENT_A,
       roleKey: "parent",
@@ -422,6 +426,17 @@ async function main() {
     "teacher B cannot read school A grades",
     !tbIds.includes("iso-grade-a-own") && !tbIds.includes("iso-grade-a-other"),
     tbIds.join(","),
+  );
+
+  const taUnknown = await rest(
+    `/rest/v1/app_documents?collection=eq.security_probe_unclassified&select=doc_id,data`,
+    {},
+    teacherA.token,
+  );
+  check(
+    "class teacher cannot read an unclassified collection",
+    !ids(taUnknown.body).includes("iso-unclassified-a"),
+    JSON.stringify(taUnknown.body),
   );
 
   const taStu = await rest(
@@ -736,6 +751,27 @@ async function main() {
     `status=${upsertDenied.status}`,
   );
 
+  // The general account endpoint must never allow anonymous bootstrap admins.
+  const bootstrapAttempt = await fetch(`${URL_BASE}/functions/v1/school-upsert-account`, {
+    method: "POST",
+    headers: {
+      apikey: ANON,
+      Authorization: `Bearer ${ANON}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username: "iso-bootstrap",
+      roleKey: "admin",
+      schoolId: "ISO-UNCLAIMED",
+      password: PASS,
+    }),
+  });
+  check(
+    "anonymous first-admin bootstrap is denied",
+    bootstrapAttempt.status === 403,
+    `status=${bootstrapAttempt.status}`,
+  );
+
   await cleanup();
   console.log(failures === 0 ? "\nRESULT: ALL PASS" : `\nRESULT: ${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
@@ -757,10 +793,10 @@ function isStagingUnreachable(err) {
 main().catch(async (e) => {
   if (isStagingUnreachable(e)) {
     const host = e?.cause?.hostname || "";
-    console.warn(
-      `Skipping RLS isolation — staging unreachable${host ? ` (${host})` : ""}.`,
+    console.error(
+      `RLS isolation failed because staging is unreachable${host ? ` (${host})` : ""}.`,
     );
-    process.exit(0);
+    process.exit(1);
   }
   console.error(e);
   try {
