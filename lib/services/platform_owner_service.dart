@@ -133,6 +133,7 @@ class PlatformOwnerService {
   Future<bool> _saveCloudPin({
     required String newPin,
     String? currentOwnerPin,
+    String? setupSecret,
   }) async {
     try {
       final res = await SupabaseBootstrap.client.functions.invoke(
@@ -142,6 +143,8 @@ class PlatformOwnerService {
           'newPin': newPin,
           if (currentOwnerPin != null && currentOwnerPin.isNotEmpty)
             'currentOwnerPin': currentOwnerPin,
+          if (setupSecret != null && setupSecret.isNotEmpty)
+            'setupSecret': setupSecret,
         },
       );
       final data = res.data;
@@ -230,25 +233,33 @@ class PlatformOwnerService {
     return false;
   }
 
-  Future<void> setPin(String newPin, {String? currentOwnerPin}) async {
+  Future<bool> setPin(
+    String newPin, {
+    String? currentOwnerPin,
+    String? setupSecret,
+  }) async {
     final trimmed = newPin.trim();
-    if (trimmed.length < minPinLength) return;
+    if (trimmed.length < minPinLength) return false;
     final previousSession = _sessionPin;
+    final saved = await _saveCloudPin(
+      newPin: trimmed,
+      currentOwnerPin: currentOwnerPin ?? previousSession,
+      setupSecret: setupSecret,
+    );
+    if (!saved && !kDebugMode) return false;
+
     _pinHash = PasswordHashService.instance.hashPassword(trimmed);
     _sessionPin = trimmed;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pinHashKey, _pinHash!);
     await prefs.remove(_legacyPinKey);
     await _clearFailures();
-    final saved = await _saveCloudPin(
-      newPin: trimmed,
-      currentOwnerPin: currentOwnerPin ?? previousSession,
-    );
     if (saved) {
       _cloudConfigured = true;
       await prefs.setBool(_cloudConfiguredKey, true);
     }
     _cloudSynced = true;
+    return saved || kDebugMode;
   }
 
   String beginPinChangeOtp({required String newPin}) {
@@ -273,7 +284,8 @@ class PlatformOwnerService {
   Future<bool> completePinChangeWithOtp(String otp) async {
     if (!verifyPinChangeOtp(otp) || _pendingNewPin == null) return false;
     if (_pendingNewPin!.length < minPinLength) return false;
-    await setPin(_pendingNewPin!, currentOwnerPin: _sessionPin);
+    final saved = await setPin(_pendingNewPin!, currentOwnerPin: _sessionPin);
+    if (!saved) return false;
     clearPinChangeSession();
     return true;
   }
