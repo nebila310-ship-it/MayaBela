@@ -9,7 +9,7 @@ This branch contains security changes only. It has **not** been merged or deploy
    - `STAGING_SUPABASE_URL`
    - `STAGING_ANON_KEY`
    - `STAGING_SERVICE_ROLE_KEY`
-3. Configure the Supabase Edge Function secret `PLATFORM_PIN_SETUP_SECRET` with a strong, randomly generated value before any new platform-owner PIN is initialized. Keep it out of source code and never use it as a school password. Existing configured owner PINs do not require this secret for verification or changes.
+3. Configure the Supabase Edge Function secret `PLATFORM_PIN_SETUP_SECRET` with a strong, randomly generated value before any new platform-owner PIN is initialized. Keep it out of source code and never use it as a school password. Rotate or remove it after the first PIN is securely initialized. Existing configured owner PINs do not require this secret for verification or changes.
 4. Apply the new migration to staging first, then run `node tools/test_rls_isolation.mjs` against staging only.
 5. Verify school onboarding uses `platform-create-school` for first-school/first-admin creation. `school-upsert-account` now rejects unauthenticated bootstrap attempts by design.
 6. Run the Flutter test suite, static analysis, and release build; the GitHub integration does not execute these commands locally.
