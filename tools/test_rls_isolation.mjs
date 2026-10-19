@@ -1,14 +1,18 @@
 /**
  * Live PostgREST RLS isolation (negative cases must FAIL).
  *
- * Staging only. Refuses production project ref hwkiihonthueadbhcvfi.
+ * Dedicated non-production Supabase test project only. This script seeds and
+ * deletes test data, so it requires both an exact project-ref confirmation and
+ * an explicit destructive-test opt-in. Never point it at production/shared data.
  *
  *   node tools/test_rls_isolation.mjs
  *
- * Env (or .env.staging):
+ * Env (or .env.rls-test.local):
  *   STAGING_SUPABASE_URL
  *   STAGING_ANON_KEY
  *   STAGING_SERVICE_ROLE_KEY
+ *   RLS_TEST_PROJECT_REF (must exactly match the URL's Supabase project ref)
+ *   ALLOW_DESTRUCTIVE_RLS_TESTS=YES (explicit acknowledgement of seed/cleanup)
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -41,7 +45,7 @@ function loadEnvFile(filePath) {
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-loadEnvFile(resolve(root, ".env.staging"));
+loadEnvFile(resolve(root, ".env.rls-test.local"));
 
 const URL_BASE = (process.env.STAGING_SUPABASE_URL || "").replace(/\/$/, "");
 const ANON = process.env.STAGING_ANON_KEY || "";
@@ -53,8 +57,41 @@ if (!URL_BASE || !ANON || !SERVICE) {
   );
   process.exit(2);
 }
-if (URL_BASE.includes(PROD_REF)) {
+let parsedProjectUrl;
+try {
+  parsedProjectUrl = new URL(URL_BASE);
+} catch {
+  console.error("Refusing to run: STAGING_SUPABASE_URL is not a valid URL.");
+  process.exit(2);
+}
+
+// Accept only the canonical hosted Supabase URL shape. Custom domains, local
+// URLs, malformed URLs, and unexpected paths are rejected rather than guessed.
+const projectMatch = parsedProjectUrl.hostname.match(/^([a-z0-9]{20})\\.supabase\\.co$/i);
+const urlProjectRef = projectMatch?.[1] || "";
+const confirmedProjectRef = (process.env.RLS_TEST_PROJECT_REF || "").trim();
+if (
+  parsedProjectUrl.protocol !== "https:" ||
+  parsedProjectUrl.port !== "" ||
+  parsedProjectUrl.pathname !== "/" ||
+  parsedProjectUrl.search !== "" ||
+  parsedProjectUrl.hash !== "" ||
+  !urlProjectRef ||
+  urlProjectRef !== confirmedProjectRef
+) {
+  console.error(
+    "Refusing to run: use a canonical https://<project-ref>.supabase.co URL and set RLS_TEST_PROJECT_REF to the exact matching non-production project ref.",
+  );
+  process.exit(2);
+}
+if (urlProjectRef === PROD_REF || URL_BASE.includes(PROD_REF)) {
   console.error("Refusing to run isolation tests against production.");
+  process.exit(2);
+}
+if (process.env.ALLOW_DESTRUCTIVE_RLS_TESTS !== "YES") {
+  console.error(
+    "Refusing to run: this test seeds and deletes data. Set ALLOW_DESTRUCTIVE_RLS_TESTS=YES only for a dedicated, disposable non-production test project.",
+  );
   process.exit(2);
 }
 
@@ -324,7 +361,7 @@ async function seed() {
 }
 
 async function main() {
-  console.log("RLS isolation against", URL_BASE);
+  console.log("RLS isolation against explicitly confirmed test project", urlProjectRef);
   await cleanup();
   await seed();
 
