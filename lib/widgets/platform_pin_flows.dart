@@ -281,7 +281,7 @@ Future<bool> showPlatformPinDialog(BuildContext context) async {
   await PlatformOwnerService.instance.load();
   if (!context.mounted) return false;
 
-  if (!PlatformOwnerService.instance.hasCustomPin && !kDebugMode) {
+  if (PlatformOwnerService.instance.needsPinSetup) {
     final created = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
