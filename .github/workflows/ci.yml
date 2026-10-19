@@ -68,8 +68,8 @@ jobs:
         run: flutter test --reporter expanded
 
   # Live PostgREST negatives against dedicated staging (never production).
-  # Add repo secrets: STAGING_SUPABASE_URL, STAGING_ANON_KEY, STAGING_SERVICE_ROLE_KEY.
-  # Skips (exit 0) when those secrets are unset so existing CI stays green.
+  # Required repo secrets: STAGING_SUPABASE_URL, STAGING_ANON_KEY, STAGING_SERVICE_ROLE_KEY.
+  # Missing credentials or unreachable staging must fail this security gate.
   rls-isolation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -91,9 +91,7 @@ jobs:
           STAGING_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SERVICE_ROLE_KEY }}
         run: |
           if [ -z "$STAGING_SUPABASE_URL" ] || [ -z "$STAGING_ANON_KEY" ] || [ -z "$STAGING_SERVICE_ROLE_KEY" ]; then
-            echo "Skipping RLS isolation — staging secrets not configured."
-            exit 0
+            echo "ERROR: RLS isolation requires staging secrets; refusing to pass security gate."
+            exit 1
           fi
           node tools/test_rls_isolation.mjs
-          # Unreachable staging (DNS / network) is a skip inside the script,
-          # same as missing secrets — not a product regression.
