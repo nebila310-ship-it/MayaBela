@@ -159,50 +159,87 @@ async function login(username, roleKey, schoolId) {
   return { status: res.status, token: body.access_token || "", body };
 }
 
-async function cleanup() {
-  for (const school of [SCHOOL_A, SCHOOL_B]) {
-    await rest(`/rest/v1/app_documents?school_id=eq.${school}`, {
-      method: "DELETE",
-      prefer: "return=minimal",
-    });
+const TEST_DOC_IDS = [
+  "ISOA", "ISOB", "iso-unclassified-a",
+  "ISOA__iso-pa", "ISOB__iso-pb", "ISOA__iso-ta", "ISOB__iso-tb", "ISOA__iso-ld",
+  "ISOA-OWN", "ISOA-OTH", "ISOB-OWN",
+  "iso-grade-a-own", "iso-grade-a-other", "iso-grade-b-own",
+  "iso-fee-a-other", "iso-med-a-other", "iso-ann-a",
+  "iso-conv-a-own", "iso-conv-a-other", "iso-conv-teacher-a-own",
+  "iso-n-a-own", "iso-n-a-other", "iso-n-ta-own",
+  "iso-pa", "iso-px", "iso-ta",
+  "iso-xfer-fresh", "iso-xfer-stale", "iso-fee-hack", "iso-link-hack",
+  "iso-grade-hack-other", "iso-grade-hack-own", "iso-fee-hack-other",
+];
+
+const TEST_RATE_KEYS = [
+  `login_${PARENT_A}_parent_${SCHOOL_A}`,
+  `login_${PARENT_B}_parent_${SCHOOL_B}`,
+  `login_${TEACHER_A}_teacher_${SCHOOL_A}`,
+  `login_${TEACHER_B}_teacher_${SCHOOL_B}`,
+  `login_${TEACHER_LEAD}_teacher_${SCHOOL_A}`,
+];
+const TEST_AUTH_EMAILS = [
+  `${PARENT_A}@isoa.mayabela.local`,
+  `${TEACHER_A}@isoa.mayabela.local`,
+  `${TEACHER_LEAD}@isoa.mayabela.local`,
+  `${PARENT_B}@isob.mayabela.local`,
+  `${TEACHER_B}@isob.mayabela.local`,
+];
+let testDataOwned = false;
+
+// Never upsert over existing fixtures. If any identifier is already present,
+// abort before writing or deleting anything.
+async function preflight() {
+  const docs = await rest(
+    `/rest/v1/app_documents?select=doc_id&doc_id=in.(${TEST_DOC_IDS.map(encodeURIComponent).join(",")})`,
+  );
+  if (docs.status >= 300) throw new Error(`preflight document check failed: ${docs.status}`);
+  if (Array.isArray(docs.body) && docs.body.length) {
+    throw new Error(`preflight refused: fixture IDs already exist (${docs.body.map((r) => r.doc_id).join(", ")}); no data changed.`);
   }
-  const rateKeys = [
-    `login_${PARENT_A}_parent_${SCHOOL_A}`,
-    `login_${PARENT_B}_parent_${SCHOOL_B}`,
-    `login_${TEACHER_A}_teacher_${SCHOOL_A}`,
-    `login_${TEACHER_B}_teacher_${SCHOOL_B}`,
-    `login_${TEACHER_LEAD}_teacher_${SCHOOL_A}`,
-  ];
-  for (const key of rateKeys) {
-    await rest(`/rest/v1/auth_rate_limits?bucket_key=eq.${key}`, {
-      method: "DELETE",
-      prefer: "return=minimal",
-    });
-  }
-  const emails = [
-    `${PARENT_A}@isoa.mayabela.local`,
-    `${TEACHER_A}@isoa.mayabela.local`,
-    `${TEACHER_LEAD}@isoa.mayabela.local`,
-    `${PARENT_B}@isob.mayabela.local`,
-    `${TEACHER_B}@isob.mayabela.local`,
-  ];
-  for (const email of emails) {
-    const listed = await rest(
-      `/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`,
-    );
-    const users = Array.isArray(listed.body?.users)
-      ? listed.body.users
-      : Array.isArray(listed.body)
-        ? listed.body
-        : [];
-    for (const u of users) {
-      if (String(u.email || "").toLowerCase() !== email) continue;
-      await rest(`/auth/v1/admin/users/${u.id}`, {
-        method: "DELETE",
-        prefer: "return=minimal",
-      });
+  for (const key of TEST_RATE_KEYS) {
+    const result = await rest(`/rest/v1/auth_rate_limits?select=bucket_key&bucket_key=eq.${encodeURIComponent(key)}`);
+    if (result.status >= 300) throw new Error(`preflight rate-limit check failed: ${result.status}`);
+    if (Array.isArray(result.body) && result.body.length) {
+      throw new Error(`preflight refused: test rate-limit key already exists (${key}); no data changed.`);
     }
   }
+  for (const email of TEST_AUTH_EMAILS) {
+    const result = await rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`);
+    if (result.status >= 300) throw new Error(`preflight auth-user check failed: ${result.status}`);
+    const users = Array.isArray(result.body?.users) ? result.body.users : [];
+    if (users.some((u) => String(u.email || "").toLowerCase() === email)) {
+      throw new Error(`preflight refused: test auth email already exists (${email}); no data changed.`);
+    }
+  }
+  testDataOwned = true;
+}
+
+async function cleanup() {
+  if (!testDataOwned) return;
+  // Delete only known fixture document IDs, never all records for a school.
+  for (const id of TEST_DOC_IDS) {
+    await rest(`/rest/v1/app_documents?doc_id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+  }
+  for (const key of TEST_RATE_KEYS) {
+    await rest(`/rest/v1/auth_rate_limits?bucket_key=eq.${encodeURIComponent(key)}`, {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+  }
+  for (const email of TEST_AUTH_EMAILS) {
+    const result = await rest(`/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=10`);
+    const users = Array.isArray(result.body?.users) ? result.body.users : [];
+    for (const user of users) {
+      if (String(user.email || "").toLowerCase() !== email) continue;
+      await rest(`/auth/v1/admin/users/${user.id}`, { method: "DELETE", prefer: "return=minimal" });
+    }
+  }
+  testDataOwned = false;
 }
 
 async function seed() {
@@ -362,7 +399,7 @@ async function seed() {
 
 async function main() {
   console.log("RLS isolation against explicitly confirmed test project", urlProjectRef);
-  await cleanup();
+  await preflight();
   await seed();
 
   const parentA = await login(PARENT_A, "parent", SCHOOL_A);
