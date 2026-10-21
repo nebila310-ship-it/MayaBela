@@ -269,7 +269,7 @@ abstract final class SessionCloudSync {
     AuthService.alignTeacherSessionWithRegistry();
     AuthService.alignDriverSessionWithRegistry();
     await _applyStaffSessionLocally();
-    await AuthService.persistRegistryLoginAccounts();
+    await AuthService.persistRegistryLoginAccounts(pushCloud: false);
     StaffRegistryNotifier.instance.notifyChanged();
     SchoolContentSyncService.instance.markDataChanged();
   }
@@ -463,7 +463,7 @@ abstract final class SessionCloudSync {
       AuthService.alignDriverSessionWithRegistry();
       await _applyStaffSessionLocally();
       if (!_isLive(generation)) return;
-      await AuthService.persistRegistryLoginAccounts();
+      await AuthService.persistRegistryLoginAccounts(pushCloud: false);
       if (!_isLive(generation)) return;
       StaffRegistryNotifier.instance.notifyChanged();
       SchoolContentSyncService.instance.markDataChanged();

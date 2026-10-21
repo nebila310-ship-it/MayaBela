@@ -121,6 +121,9 @@ class DocumentStore {
     final role = roleKey?.trim().toLowerCase() ?? '';
     if (role.isEmpty) return false;
     if (adminOnlyCollections.contains(collection)) return role == 'admin';
+    // Direct PostgREST upsert of login rows is admin-only. A teacher JWT
+    // is `write_denied` on staff rows and fails RLS on parent/student rows.
+    if (collection == 'app_auth_accounts') return role == 'admin';
     if (role == 'parent') {
       return parentWritableCollections.contains(collection);
     }
@@ -347,7 +350,12 @@ class DocumentStore {
       );
     }
 
-    if (!SchoolAuthCloudService.accessTokenCanPassRls()) {
+    if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) {
+      if (SchoolAuthCloudService.accessTokenJwtKind() == 'anon') {
+        throw StateError(
+          'Cannot save $collection/$docId — sign in required.',
+        );
+      }
       await CloudOutboxService.instance.enqueue(
         collection: collection,
         docId: docId,
@@ -454,7 +462,7 @@ class DocumentStore {
     )) {
       return;
     }
-    if (!SchoolAuthCloudService.accessTokenCanPassRls()) return;
+    if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) return;
     await db.from('app_documents').insert({
       'collection': collection,
       'doc_id': docId,
@@ -664,11 +672,11 @@ class DocumentStore {
       }
       return;
     }
-    if (!SchoolAuthCloudService.accessTokenCanPassRls()) {
+    if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) {
       if (kDebugMode) {
         debugPrint(
           '[DocumentStore] skip writeBatch $collection — '
-          'JWT is missing a school role',
+          'JWT is anonymous or missing a school role',
         );
       }
       return;

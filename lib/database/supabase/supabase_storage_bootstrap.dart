@@ -10,6 +10,7 @@ abstract final class SupabaseStorageBootstrap {
 
   static bool? _ready;
   static String? _lastError;
+  static String? _rlsDeniedUserId;
 
   static bool get isReady => !deferred && _ready == true;
 
@@ -21,6 +22,20 @@ abstract final class SupabaseStorageBootstrap {
       'Create the school-files bucket (see supabase/migrations) and ensure '
       'SUPABASE_URL / SUPABASE_ANON_KEY are configured.';
 
+  /// Storage insert policy is `to authenticated`. An anon upload of
+  /// `_app_setup_probe/` is "new row violates row-level security policy"
+  /// on `storage.objects`.
+  @visibleForTesting
+  static bool shouldUploadStorageProbe({required bool signedIn}) => signedIn;
+
+  @visibleForTesting
+  static bool storageErrorIsRowSecurity(Object error) {
+    final text = error.toString().toLowerCase();
+    return text.contains('row-level security') ||
+        text.contains('42501') ||
+        text.contains('write_denied');
+  }
+
   static Future<bool> ensureReady({bool forceRecheck = false}) async {
     if (deferred) {
       _ready = false;
@@ -28,13 +43,25 @@ abstract final class SupabaseStorageBootstrap {
       return false;
     }
 
-    if (!forceRecheck && _ready != null) return _ready!;
-
     if (!SupabaseBootstrap.isInitialized) {
       _ready = false;
       _lastError = 'Supabase is not initialized';
       return false;
     }
+
+    final userId = SupabaseBootstrap.client.auth.currentUser?.id;
+    if (_rlsDeniedUserId != null && _rlsDeniedUserId == userId) {
+      _ready = false;
+      return false;
+    }
+
+    final signedIn = SupabaseBootstrap.client.auth.currentSession != null;
+    if (!shouldUploadStorageProbe(signedIn: signedIn)) {
+      _lastError = 'Sign in before checking storage';
+      return false;
+    }
+
+    if (!forceRecheck && _ready != null) return _ready!;
 
     try {
       final path =
@@ -55,10 +82,14 @@ abstract final class SupabaseStorageBootstrap {
           .remove([path]).timeout(const Duration(seconds: 5));
       _ready = true;
       _lastError = null;
+      _rlsDeniedUserId = null;
       return true;
     } catch (e) {
       _ready = false;
       _lastError = e.toString();
+      if (storageErrorIsRowSecurity(e)) {
+        _rlsDeniedUserId = userId ?? '';
+      }
       if (kDebugMode) {
         debugPrint('[SupabaseStorage] Not ready: $_lastError');
       }
@@ -69,5 +100,6 @@ abstract final class SupabaseStorageBootstrap {
   static void reset() {
     _ready = null;
     _lastError = null;
+    _rlsDeniedUserId = null;
   }
 }

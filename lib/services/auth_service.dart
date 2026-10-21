@@ -371,11 +371,12 @@ class AuthService {
 
   /// Rebuilds phone logins from staff registries and saves them on this device.
   ///
-  /// [pushCloud] is only for a real staff edit. A cloud pull passes false:
-  /// echoing every saved login through `app_auth_accounts` is what raises
-  /// `write_denied` and "new row violates row-level security policy".
+  /// [pushCloud] is only for a real staff edit. Login, pull, and a full
+  /// registry dump must pass false: echoing every saved login through
+  /// `app_auth_accounts` is the single-row `write_denied` and
+  /// "new row violates row-level security policy" burst.
   static Future<void> persistRegistryLoginAccounts({
-    bool pushCloud = true,
+    bool pushCloud = false,
   }) async {
     ensureRegistryLoginAccounts();
     await AuthPersistenceService.instance.saveAll();

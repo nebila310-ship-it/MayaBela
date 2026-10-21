@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
@@ -242,7 +243,42 @@ void main() {
         errorCode: 'invalid',
         errorMessage: 'network down',
       ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'app_auth_accounts',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'admin',
+        collection: 'app_auth_accounts',
+      ),
       isTrue,
+    );
+    expect(
+      SchoolAuthCloudService.jwtMayWriteAppDocuments({
+        'role': 'anon',
+        'app_metadata': {'role': 'teacher', 'schoolId': 'MAL'},
+      }),
+      isFalse,
+    );
+    expect(
+      SchoolAuthCloudService.jwtMayWriteAppDocuments({
+        'role': 'authenticated',
+        'app_metadata': {'role': 'teacher', 'schoolId': 'MAL'},
+      }),
+      isTrue,
+    );
+    expect(
+      SchoolAuthCloudService.jwtMayWriteAppDocuments({
+        'role': 'authenticated',
+        'app_metadata': {'role': 'authenticated', 'schoolId': 'MAL'},
+      }),
+      isFalse,
     );
   });
 
@@ -365,6 +401,31 @@ void main() {
         'app_metadata': {'role': 'admin'},
       }),
       isNull,
+    );
+  });
+
+  test('storage probe is not uploaded until a user is signed in', () {
+    expect(
+      SupabaseStorageBootstrap.shouldUploadStorageProbe(signedIn: false),
+      isFalse,
+    );
+    expect(
+      SupabaseStorageBootstrap.shouldUploadStorageProbe(signedIn: true),
+      isTrue,
+    );
+    expect(
+      SupabaseStorageBootstrap.storageErrorIsRowSecurity(
+        Exception(
+          'new row violates row-level security policy for table "objects"',
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      SupabaseStorageBootstrap.storageErrorIsRowSecurity(
+        Exception('SocketException'),
+      ),
+      isFalse,
     );
   });
 }
