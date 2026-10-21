@@ -1119,10 +1119,12 @@ class SchoolAuthCloudService {
         );
       }
       final msg = _functionsErrorMessage(e) ?? '';
+      // 403 here is "this role cannot write that account", not an expired
+      // token. Refreshing on it drops school claims and the next insert
+      // fails row-level security.
       if (allowAuthRetry &&
-          (e.status == 401 ||
-              e.status == 403 ||
-              _looksLikeJwtFailure(msg))) {
+          e.status != 403 &&
+          (e.status == 401 || _looksLikeJwtFailure(msg))) {
         if (await ensureValidSchoolJwt()) {
           return _upsertAccountOnce(
             user: user,

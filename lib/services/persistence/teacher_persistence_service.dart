@@ -63,7 +63,7 @@ class TeacherPersistenceService {
     if (notifyStaff) {
       StaffRegistryNotifier.instance.notifyChanged();
     }
-    unawaited(AuthService.persistRegistryLoginAccounts());
+    unawaited(AuthService.persistRegistryLoginAccounts(pushCloud: pushCloud));
   }
 
   /// Removes staff/teacher from registry + cloud and frees their login phone.
