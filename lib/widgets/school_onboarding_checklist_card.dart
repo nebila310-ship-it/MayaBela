@@ -22,6 +22,7 @@ class SchoolOnboardingChecklistCard extends StatelessWidget {
     }
 
     return Container(
+      key: const Key('school-lifecycle-scorecard'),
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -40,16 +41,35 @@ class SchoolOnboardingChecklistCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Onboarding · ${checklist.completedCount}/${checklist.totalCount}',
+                  'School score · ${checklist.scorePercent}%',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              if (checklist.isComplete)
-                Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _bandColor(checklist).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  checklist.scoreBand,
+                  style: TextStyle(
+                    color: _bandColor(checklist),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${checklist.completedCount}/${checklist.totalCount} parameters · '
+            'create school to go-live',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
           const SizedBox(height: 8),
           ClipRRect(
@@ -62,28 +82,79 @@ class SchoolOnboardingChecklistCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          ...checklist.steps.map(
-            (step) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    step.done ? Icons.check_circle : Icons.radio_button_unchecked,
-                    size: 18,
-                    color: step.done ? Colors.greenAccent : Colors.white38,
+          if (checklist.phases.isEmpty)
+            ...checklist.steps.map(_stepRow)
+          else
+            ...checklist.phases.map(_phaseBlock),
+        ],
+      ),
+    );
+  }
+
+  Color _bandColor(SchoolOnboardingChecklist checklist) {
+    return switch (checklist.scoreBand) {
+      'Ready' => Colors.greenAccent,
+      'Operating' => Colors.lightGreenAccent,
+      'Building' => Colors.amber,
+      _ => Colors.orangeAccent,
+    };
+  }
+
+  Widget _phaseBlock(SchoolScorePhase phase) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${phase.title}  ·  ${phase.completedCount}/${phase.totalCount}  ·  ${phase.percent}%',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            phase.summary,
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+          ...phase.steps.map(_stepRow),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepRow(SchoolOnboardingStep step) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            step.done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: step.done ? Colors.greenAccent : Colors.white38,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step.label,
+                  style: TextStyle(
+                    color: step.done ? Colors.white70 : Colors.white54,
+                    fontSize: 13,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      step.label,
-                      style: TextStyle(
-                        color: step.done ? Colors.white70 : Colors.white54,
-                        fontSize: 13,
-                      ),
-                    ),
+                ),
+                if (step.parameter.isNotEmpty)
+                  Text(
+                    step.parameter,
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ],
@@ -92,7 +163,7 @@ class SchoolOnboardingChecklistCard extends StatelessWidget {
   }
 
   Widget _compactChip(SchoolOnboardingChecklist checklist) {
-    final color = checklist.isComplete ? Colors.green : Colors.amber;
+    final color = checklist.scorePercent >= 85 ? Colors.green : Colors.amber;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -100,9 +171,7 @@ class SchoolOnboardingChecklistCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        checklist.isComplete
-            ? 'Onboarded'
-            : 'Setup ${checklist.completedCount}/${checklist.totalCount}',
+        'Score ${checklist.scorePercent}% · ${checklist.completedCount}/${checklist.totalCount}',
         style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
