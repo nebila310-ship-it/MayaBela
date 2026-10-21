@@ -14,7 +14,6 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/cloud/app_data_maps.dart';
 import 'package:mayabela/models/cloud/conversation_document.dart';
 import 'package:mayabela/models/message.dart';
-import 'package:mayabela/models/platform_audit_entry.dart';
 import 'package:mayabela/models/grade_workflow.dart';
 import 'package:mayabela/models/inventory_models.dart';
 import 'package:mayabela/models/procurement_models.dart';
@@ -101,7 +100,6 @@ import 'package:mayabela/services/persistence/learning_materials_persistence_ser
 import 'package:mayabela/services/persistence/material_purchase_persistence_service.dart';
 import 'package:mayabela/services/persistence/daily_activity_persistence_service.dart';
 import 'package:mayabela/services/persistence/message_persistence_service.dart';
-import 'package:mayabela/services/persistence/platform_audit_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_content_persistence_service.dart';
 import 'package:mayabela/services/persistence/school_registry_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
@@ -3255,28 +3253,10 @@ class CloudAppStore {
     await SchoolRegistryPersistenceService.instance.saveFromService(pushCloud: false);
   }
 
+  /// Platform-owner audit (school created/deleted, billing) stays in the
+  /// owner console. School ERP login must not download other schools.
   Future<void> _pullPlatformAudit() async {
-    final rows = await _schoolRead(AppCollections.platformAudit);
-    if (rows.isEmpty) return;
-    final parsed = <PlatformAuditEntry>[];
-    var maxId = PlatformAuditLogService.instance.nextIdSnapshot();
-    for (final map in rows) {
-      try {
-        final entry = AppDataMaps.auditEntryFromMap(map);
-        parsed.add(entry);
-        final n = int.tryParse(entry.id.replaceAll('audit-', ''));
-        if (n != null && n >= maxId) maxId = n + 1;
-      } catch (_) {}
-    }
-    if (parsed.isNotEmpty) {
-      PlatformAuditLogService.instance.applyPersistedEntries(
-        parsed,
-        nextId: maxId,
-      );
-      await PlatformAuditPersistenceService.instance.saveFromService(
-        pushCloud: false,
-      );
-    }
+    return;
   }
 
   Future<void> _pullInventory() async {
