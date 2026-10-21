@@ -771,7 +771,7 @@ class CloudAppStore {
     _trackStep(trackProgress, 'Loading transport…');
     await pullTransportStateIntoServices();
     _trackStep(trackProgress, 'Finalizing…');
-    await AuthService.persistRegistryLoginAccounts();
+    await AuthService.persistRegistryLoginAccounts(pushCloud: false);
     StaffRegistryNotifier.instance.notifyChanged();
     SchoolContentSyncService.instance.markDataChanged();
     });
@@ -826,7 +826,7 @@ class CloudAppStore {
           ));
     }
 
-    await AuthService.persistRegistryLoginAccounts();
+    await AuthService.persistRegistryLoginAccounts(pushCloud: false);
   }
 
   /// Upload all local school data to Firestore (for cross-device sync).
@@ -1512,11 +1512,11 @@ class CloudAppStore {
 
   /// Direct `app_auth_accounts` upsert after the account edge function.
   ///
-  /// A refused call must not be repeated as a user-JWT insert: that insert is
-  /// `write_denied` for staff rows and "new row violates row-level security
-  /// policy" for the parent and student rows the trigger lets through.
-  /// Only an admin, or a teacher who may manage staff, may fall back — and
-  /// only when the failure was not itself a refusal.
+  /// A user-JWT insert is `write_denied` for staff rows and "new row violates
+  /// row-level security policy" for the parent and student rows the trigger
+  /// lets through. Only an admin may fall back, and only when the failure
+  /// was not itself a refusal. [callerMayManageStaff] does not unlock it:
+  /// staff managers use the edge function.
   @visibleForTesting
   static bool shouldDirectUpsertAuthAccount({
     required String? callerRole,
@@ -1525,9 +1525,10 @@ class CloudAppStore {
     String? errorMessage,
   }) {
     final role = callerRole?.trim().toLowerCase() ?? '';
-    final allowedCaller = role == AuthService.roleAdmin ||
-        (role == AuthService.roleTeacher && callerMayManageStaff);
-    if (!allowedCaller) return false;
+    // [callerMayManageStaff] stays in the signature so staff-manager call
+    // sites stay explicit. It does not permit a direct upsert.
+    if (callerMayManageStaff && role != AuthService.roleAdmin) return false;
+    if (role != AuthService.roleAdmin) return false;
     if (errorCode == null && errorMessage == null) return true;
     return !isPermanentAuthDenial(
       errorCode: errorCode,
@@ -1624,11 +1625,17 @@ class CloudAppStore {
 
     if (shouldSetSecret && schoolId.isNotEmpty) {
       if (plain.length < AuthService.minPasswordLength) {
-        if (kDebugMode) {
-          debugPrint(
-            '[CloudAppStore] skip secret upsert: password shorter than '
-            '${AuthService.minPasswordLength}',
-          );
+        if (!shouldDirectUpsertAuthAccount(
+          callerRole: AuthService.currentUser?.roleKey,
+          callerMayManageStaff: false,
+        )) {
+          if (kDebugMode) {
+            debugPrint(
+              '[CloudAppStore] skip secret upsert: password shorter than '
+              '${AuthService.minPasswordLength}',
+            );
+          }
+          return;
         }
         await _pushSafe(() => _crud.createOrUpdate(
               collection: AppCollections.authAccounts,

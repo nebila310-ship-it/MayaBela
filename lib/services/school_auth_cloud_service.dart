@@ -132,6 +132,47 @@ class SchoolAuthCloudService {
     return false;
   }
 
+  /// Top-level JWT `role` (`authenticated` or `anon`), or null when signed out.
+  static String? accessTokenJwtKind() {
+    if (!SupabaseBootstrap.isInitialized) return null;
+    try {
+      final token =
+          SupabaseBootstrap.client.auth.currentSession?.accessToken.trim() ??
+              '';
+      if (token.isEmpty) return null;
+      return jwtKindFromPayload(_jwtPayload(token));
+    } catch (_) {}
+    return null;
+  }
+
+  /// Writes need a user session. The anon API key has `role: anon` and is
+  /// what produces the batch "new row violates row-level security policy".
+  static bool accessTokenMayWriteAppDocuments() {
+    if (!SupabaseBootstrap.isInitialized) return false;
+    try {
+      final token =
+          SupabaseBootstrap.client.auth.currentSession?.accessToken.trim() ??
+              '';
+      if (token.isEmpty) return false;
+      return jwtMayWriteAppDocuments(_jwtPayload(token));
+    } catch (_) {}
+    return false;
+  }
+
+  @visibleForTesting
+  static String? jwtKindFromPayload(Map<String, dynamic> payload) {
+    final kind = '${payload['role'] ?? ''}'.trim().toLowerCase();
+    return kind.isEmpty ? null : kind;
+  }
+
+  @visibleForTesting
+  static bool jwtMayWriteAppDocuments(Map<String, dynamic> payload) {
+    if (jwtKindFromPayload(payload) != 'authenticated') return false;
+    final app = payload['app_metadata'];
+    final meta = app is Map ? Map<String, dynamic>.from(app) : null;
+    return schoolClaimsArePresent(meta);
+  }
+
   @visibleForTesting
   static bool schoolClaimsArePresent(Map<String, dynamic>? meta) {
     if (meta == null || meta.isEmpty) return false;
