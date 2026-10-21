@@ -41,6 +41,7 @@ import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 import 'package:mayabela/services/cloud/school_account_ids.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/services/cloud_sync_progress_service.dart';
@@ -892,7 +893,19 @@ class CloudAppStore {
       await _flushQueuedMutations();
       if (CloudOutboxService.instance.hasFullPush) {
         await CloudOutboxService.instance.clearFullPush();
-        await pushFullLocalStateToCloud();
+        // A full snapshot writes school_registry and every other collection.
+        // Teachers, parents, students, and drivers are rejected by
+        // app_doc_deny() (write_denied / 42501). Only the school admin may
+        // run it. Their own queued rows were already flushed above.
+        if (shouldRunFullLocalPush(AuthService.currentUser?.roleKey)) {
+          await pushFullLocalStateToCloud();
+        } else if (kDebugMode) {
+          debugPrint(
+            '[CloudAppStore] skipped full push for '
+            '${AuthService.currentUser?.roleKey} — that dump is what raises '
+            'write_denied',
+          );
+        }
       }
     } catch (e) {
       if (shouldEscalateToFullPush(e)) {
@@ -1004,6 +1017,21 @@ class CloudAppStore {
           for (final m in entry.value) {
             await CloudOutboxService.instance.ack(m.collection, m.docId);
           }
+        } else if (isPermanentAuthDenial(
+          errorCode: r.errorCode,
+          errorMessage: r.errorMessage,
+        )) {
+          // The edge function will keep returning 403. Ack so the 5-second
+          // sync does not POST the same registry batch again.
+          for (final m in entry.value) {
+            await CloudOutboxService.instance.ack(m.collection, m.docId);
+          }
+          if (kDebugMode) {
+            debugPrint(
+              '[CloudAppStore] outbox registry ${entry.key} dropped: '
+              '${r.errorMessage ?? r.errorCode}',
+            );
+          }
         } else if (kDebugMode) {
           debugPrint(
             '[CloudAppStore] outbox registry ${entry.key}: '
@@ -1021,23 +1049,30 @@ class CloudAppStore {
     final schoolId = AuthService.activeSchoolId?.trim().toUpperCase();
     if (schoolId == null || schoolId.isEmpty || !available) return;
 
+    final canStudents = _mayUploadDirectory(SchoolPermissions.manageStudents);
+    final canStaff = _mayUploadDirectory(SchoolPermissions.manageStaffAccounts);
+    if (!canStudents && !canStaff) return;
+
     final students = StudentRegistryService.instance
         .studentsForSchool(schoolId)
         .map((s) => s.toMap())
         .toList();
-    if (students.isNotEmpty) {
+    if (canStudents && students.isNotEmpty) {
       final r = await SchoolAuthCloudService.instance.upsertRegistryBatch(
         collection: AppCollections.studentRegistry,
         schoolId: schoolId,
         records: students,
       );
       if (!r.ok) {
-        await CloudOutboxService.instance.markFullPushNeeded(
-          reason: 'student batch: ${r.errorMessage ?? r.errorCode}',
+        await _retryDirectoryLater(
+          collection: AppCollections.studentRegistry,
+          schoolId: schoolId,
+          records: students,
+          idKey: 'studentId',
+          errorCode: r.errorCode,
+          errorMessage: r.errorMessage,
         );
-        throw StateError(
-          r.errorMessage ?? 'Student directory upload failed (${r.errorCode})',
-        );
+        return;
       }
       if (kDebugMode) {
         debugPrint(
@@ -1053,19 +1088,22 @@ class CloudAppStore {
             ..remove('initialPassword'),
         )
         .toList();
-    if (teachers.isNotEmpty) {
+    if (canStaff && teachers.isNotEmpty) {
       final r = await SchoolAuthCloudService.instance.upsertRegistryBatch(
         collection: AppCollections.teacherRegistry,
         schoolId: schoolId,
         records: teachers,
       );
       if (!r.ok) {
-        await CloudOutboxService.instance.markFullPushNeeded(
-          reason: 'teacher batch: ${r.errorMessage ?? r.errorCode}',
+        await _retryDirectoryLater(
+          collection: AppCollections.teacherRegistry,
+          schoolId: schoolId,
+          records: teachers,
+          idKey: 'teacherId',
+          errorCode: r.errorCode,
+          errorMessage: r.errorMessage,
         );
-        throw StateError(
-          r.errorMessage ?? 'Teacher directory upload failed (${r.errorCode})',
-        );
+        return;
       }
       if (kDebugMode) {
         debugPrint(
@@ -1466,6 +1504,70 @@ class CloudAppStore {
     return OutboxWriteDecision.post;
   }
 
+  /// School admin is the only role whose JWT may write `school_registry`
+  /// and the rest of a full snapshot. Other roles hit `app_doc_deny()`.
+  @visibleForTesting
+  static bool shouldRunFullLocalPush(String? roleKey) =>
+      roleKey == AuthService.roleAdmin;
+
+  /// A 403, `write_denied`, or RLS refusal will not succeed on retry.
+  @visibleForTesting
+  static bool isPermanentAuthDenial({
+    String? errorCode,
+    String? errorMessage,
+  }) {
+    final code = (errorCode ?? '').trim().toLowerCase();
+    if (code == 'denied' || code == '42501') return true;
+    final text = (errorMessage ?? '').toLowerCase();
+    return text.contains('write_denied') ||
+        text.contains('row-level security') ||
+        text.contains('42501') ||
+        text.contains('not allowed') ||
+        RegExp(r'(^|[^0-9])403([^0-9]|$)').hasMatch(text);
+  }
+
+  bool _mayUploadDirectory(String permission) {
+    final role = AuthService.currentUser?.roleKey;
+    if (role == AuthService.roleAdmin) return true;
+    if (role != AuthService.roleTeacher) return false;
+    return AuthService.hasPermission(permission);
+  }
+
+  /// A refused directory upload must not schedule a full snapshot.
+  /// A network failure is retried as individual registry rows.
+  Future<void> _retryDirectoryLater({
+    required String collection,
+    required String schoolId,
+    required List<Map<String, dynamic>> records,
+    required String idKey,
+    String? errorCode,
+    String? errorMessage,
+  }) async {
+    if (isPermanentAuthDenial(
+      errorCode: errorCode,
+      errorMessage: errorMessage,
+    )) {
+      if (kDebugMode) {
+        debugPrint(
+          '[CloudAppStore] directory upload refused: '
+          '${errorMessage ?? errorCode}',
+        );
+      }
+      return;
+    }
+    for (final record in records) {
+      final id = '${record[idKey] ?? ''}'.trim();
+      if (id.isEmpty) continue;
+      await CloudOutboxService.instance.enqueue(
+        collection: collection,
+        docId: id,
+        schoolId: schoolId,
+        data: record,
+        reason: errorMessage ?? errorCode ?? 'directory upload failed',
+      );
+    }
+  }
+
   /// Full-school dump is for offline catch-up, not version conflicts.
   /// `stale_write` (40001) plus JWT/deny/RLS 403 must not re-queue every
   /// fee/inventory row — that loop is what filled Postgres logs in a minute.
@@ -1473,6 +1575,7 @@ class CloudAppStore {
   static bool shouldEscalateToFullPush(Object error) {
     if (DocumentStore.isStaleWrite(error)) return false;
     if (DocumentStore.isRlsForbidden(error)) return false;
+    if (isPermanentAuthDenial(errorMessage: error.toString())) return false;
     final text = error.toString().toLowerCase();
     return !text.contains('sub claim') &&
         !text.contains('jwt') &&
@@ -2839,6 +2942,15 @@ class CloudAppStore {
       className.trim().replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
 
   Future<void> pushAllSchools({bool ignoreActiveFilter = false}) async {
+    if (!shouldRunFullLocalPush(AuthService.currentUser?.roleKey)) {
+      if (kDebugMode) {
+        debugPrint(
+          '[CloudAppStore] skip school_registry push — '
+          'app_doc_teacher_may_write returns false for it',
+        );
+      }
+      return;
+    }
     var schools = SchoolRegistryService.instance.allSchoolsSnapshot();
     if (!ignoreActiveFilter) {
       final active = AuthService.activeSchoolId?.trim().toUpperCase();

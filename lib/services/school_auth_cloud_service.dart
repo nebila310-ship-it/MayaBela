@@ -98,7 +98,11 @@ class SchoolAuthCloudService {
     return null;
   }
 
-  /// Mirrors `public.jwt_school_id()`: app_metadata, then user_metadata.
+  /// Mirrors `public.jwt_school_id()`: `app_metadata` only.
+  ///
+  /// A school id in `user_metadata` is client-writable. Trusting it made the
+  /// app POST a row the SQL function then rejected with
+  /// "new row violates row-level security policy".
   @visibleForTesting
   static String? schoolIdFromJwtPayload(Map<String, dynamic> payload) {
     String? from(Map<String, dynamic>? map) {
@@ -108,12 +112,24 @@ class SchoolAuthCloudService {
     }
 
     final app = payload['app_metadata'];
-    final fromApp = from(app is Map ? Map<String, dynamic>.from(app) : null);
-    if (fromApp != null) return fromApp;
-    final user = payload['user_metadata'];
-    final fromUser = from(user is Map ? Map<String, dynamic>.from(user) : null);
-    if (fromUser != null) return fromUser;
-    return from(payload);
+    return from(app is Map ? Map<String, dynamic>.from(app) : null);
+  }
+
+  /// True when the access token has both a school id and an app role.
+  ///
+  /// RLS insert requires `jwt_school_id()` and `jwt_role() <> ''`. Posting
+  /// without either of those claims is the other "new row violates row-level
+  /// security policy" failure.
+  static bool accessTokenCanPassRls() {
+    if (!SupabaseBootstrap.isInitialized) return false;
+    try {
+      final token =
+          SupabaseBootstrap.client.auth.currentSession?.accessToken.trim() ??
+              '';
+      if (token.isEmpty) return false;
+      return schoolClaimsArePresent(_claimsFromAccessToken(token));
+    } catch (_) {}
+    return false;
   }
 
   @visibleForTesting
