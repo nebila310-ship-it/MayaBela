@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Software Supply, Installation &amp; Support Agreement — Fenote Raey Academy × MaJo Bridge Technologies and Events PLC</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.45;
+    }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 18mm 16mm 16mm;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(20, 32, 51, 0.92);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar button {
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #fff;
+      color: var(--ink);
+    }
+    .brand {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 18px;
+      align-items: center;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+    .brand img {
+      width: 150px;
+      height: auto;
+      display: block;
+    }
+    .brand-meta h1 {
+      margin: 0 0 4px;
+      font-size: 15.5pt;
+      color: var(--blue);
+      letter-spacing: 0.2px;
+    }
+    .brand-meta .sub {
+      margin: 0;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 10pt;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .brand-meta .tiny {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 9pt;
+    }
+    .doc-title {
+      text-align: center;
+      margin: 18px 0 8px;
+    }
+    .doc-title h2 {
+      margin: 0;
+      font-size: 13.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--ink);
+    }
+    .doc-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 10pt;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0 18px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--blue);
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 11.5pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 10pt;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--wash);
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .num { text-align: right; white-space: nowrap; }
+    .price-box {
+      border: 2px solid var(--green);
+      background: linear-gradient(180deg, #f3fbf6, #fff);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 10px 0 14px;
+    }
+    .price-box .amount {
+      font-size: 16pt;
+      font-weight: 800;
+      color: var(--blue);
+      margin: 4px 0;
+    }
+    .highlight {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 120px;
+    }
+    .sig .who { font-weight: 700; margin-top: 36px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 22px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 8.5pt;
+      text-align: center;
+    }
+    .page-break { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet {
+        margin: 0;
+        box-shadow: none;
+        width: auto;
+        padding: 12mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <article class="sheet">
+    <header class="brand">
+      <img src="/agreements/assets/majo-bridge-logo.png" alt="MaJo Bridge Technologies and Events PLC" />
+      <div class="brand-meta">
+        <h1>MaJo Bridge Technologies and Events PLC</h1>
+        <p class="sub">Smart School Operating System · One-time sale · Installation · Support</p>
+        <p class="tiny">
+          General Manager: Nebil Ahmed · Tel: +251 911 646 444<br />
+          Email: majobridgetech@gmail.com · Web: https://mayabela.pages.dev
+        </p>
+      </div>
+    </header>
+
+    <div class="doc-title">
+      <h2>Software Supply, Installation &amp; Support Agreement</h2>
+      <p>
+        One-time sale of the <strong>MaJo Bridge Smart School Operating System</strong>
+        to <strong>Fenote Raey Academy</strong> (ፍኖተ ራእይ አካዳሚ)
+      </p>
+      <p>Agreement Ref: <strong>MB-FRA-SSOS-2026-001</strong> · Effective Date: _______________ 2026</p>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Service Provider (“Provider”)</strong>
+        MaJo Bridge Technologies and Events PLC<br />
+        Represented by: <strong>Nebil Ahmed</strong>, General Manager<br />
+        Mobile: +251 911 646 444
+      </div>
+      <div class="meta-card">
+        <strong>Client (“School”)</strong>
+        Fenote Raey Academy<br />
+        Represented by: _________________________________<br />
+        Title: _________________________________
+      </div>
+    </div>
+
+    <h3>1. Recitals</h3>
+    <p>
+      WHEREAS Fenote Raey Academy wishes to purchase, on a <strong>one-time</strong> basis,
+      a complete school operating system covering academics, student records, operations,
+      parent engagement, transport, and institutional governance; and
+    </p>
+    <p>
+      WHEREAS MaJo Bridge Technologies and Events PLC is the developer of the
+      <strong>MaJo Bridge Smart School Operating System</strong> (also demonstrated at
+      https://mayabela.pages.dev) and will install, configure, train, and support the School; and
+    </p>
+    <p>
+      WHEREAS the Parties have agreed a lump-sum price of
+      <strong>ETB 2,550,000.00 including VAT</strong>, with a first payment of
+      <strong>ETB 400,000.00 including VAT</strong> on signing, and the remaining
+      balance paid in four equal terms of <strong>ETB 537,500.00 including VAT</strong>,
+      each due every four (4) months after the previous payment;
+    </p>
+    <p>NOW, THEREFORE, the Parties agree as follows.</p>
+
+    <h3>2. Nature of the Sale</h3>
+    <div class="highlight">
+      This is a <strong>one-time sale</strong>, not a monthly or yearly software subscription.
+      The Contract Price covers: (a) a perpetual licence for Fenote Raey Academy to use the
+      System for its own school operations; (b) installation and configuration;
+      (c) training; and (d) support and production hosting for twelve (12) months from Go-Live,
+      as set out in Clause 11. No further licence fee is due for the software itself after
+      the Contract Price is paid in full.
+    </div>
+
+    <h3>3. Contract Price (VAT inclusive)</h3>
+    <div class="price-box">
+      <div>Total Contract Price (lump sum, one-time, fixed for the Scope in this Agreement)</div>
+      <div class="amount">ETB 2,550,000.00</div>
+      <div><strong>Two Million Five Hundred Fifty Thousand Birr, including VAT (15%).</strong></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="num">Amount (ETB, VAT incl.)</th>
+          <th class="num">VAT 15% (included)</th>
+          <th class="num">Net of VAT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Total Contract Price</td>
+          <td class="num"><strong>2,550,000.00</strong></td>
+          <td class="num">333,913.04</td>
+          <td class="num">2,216,086.96</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      VAT is calculated as 15/115 of each VAT-inclusive amount, in accordance with Ethiopian VAT.
+      The School shall pay the VAT-inclusive figures in Clause 10. The Provider shall issue a
+      valid tax invoice for each payment.
+    </p>
+
+    <h3>4. Payment Schedule</h3>
+    <p>
+      The School shall pay the Contract Price as follows. All amounts are in Ethiopian Birr
+      and <strong>include VAT</strong>. After the first payment on signing, each next payment
+      is due <strong>four (4) months after the previous payment</strong> — not every month.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Term</th>
+          <th>When due</th>
+          <th class="num">Amount (VAT incl.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>First payment</strong></td>
+          <td>On the Effective Date (agreement signing)</td>
+          <td class="num"><strong>400,000.00</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Term 1</strong></td>
+          <td>Four (4) months after signing</td>
+          <td class="num"><strong>537,500.00</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Term 2</strong></td>
+          <td>Four (4) months after Term 1 (eight months after signing)</td>
+          <td class="num"><strong>537,500.00</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Term 3</strong></td>
+          <td>Four (4) months after Term 2 (twelve months after signing)</td>
+          <td class="num"><strong>537,500.00</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Term 4</strong></td>
+          <td>Four (4) months after Term 3 (sixteen months after signing)</td>
+          <td class="num"><strong>537,500.00</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <ul>
+      <li>Payments shall be made to the Provider’s nominated Ethiopian bank account, stated on the invoice.</li>
+      <li>Late payment beyond fifteen (15) calendar days of a due date may pause non-critical customization after written notice, without cancelling amounts already due.</li>
+      <li>The perpetual licence for the School instance vests when the Contract Price is paid in full. School Data remains the School’s property at all times.</li>
+    </ul>
+
+    <h3>5. Scope of Supply</h3>
+    <p>The System is delivered as one school operating system with these portals:</p>
+    <table>
+      <thead>
+        <tr><th>Portal</th><th>Primary users</th><th>Core functions</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Administration / Leadership</strong></td>
+          <td>Owner, directors, academic, HR, QA, and other authorized staff</td>
+          <td>School records, academics, attendance, fees visibility, inventory, transport oversight, announcements, roles, audit visibility.</td>
+        </tr>
+        <tr>
+          <td><strong>Teacher Portal</strong></td>
+          <td>Teachers</td>
+          <td>Attendance, timetable, grades, homework, materials, messaging.</td>
+        </tr>
+        <tr>
+          <td><strong>Student Portal</strong></td>
+          <td>Students</td>
+          <td>Homework, published results, profile/QR, school communications.</td>
+        </tr>
+        <tr>
+          <td><strong>Parent Portal</strong></td>
+          <td>Parents / guardians</td>
+          <td>Verified child link, progress, fee visibility, bus updates, announcements.</td>
+        </tr>
+        <tr>
+          <td><strong>Transport Portal</strong></td>
+          <td>Drivers / transport staff</td>
+          <td>Route assignment, pickup/drop-off, live operational status.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Unless excluded by a signed Change Order, the one-time package includes:</p>
+    <table>
+      <thead>
+        <tr><th>Area</th><th>Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Identity &amp; access</strong></td><td>Secure login, school-scoped accounts, roles, first-login password change, authenticator for school Admin.</td></tr>
+        <tr><td><strong>Student lifecycle / SIS</strong></td><td>Registry, enrollment, profiles, photos, parent linking, transfers, QR identity.</td></tr>
+        <tr><td><strong>Academics</strong></td><td>Classes, subjects, teacher assignment, timetable (rooms and cover teachers), attendance, homework, markbook, exams, report cards.</td></tr>
+        <tr><td><strong>Admissions &amp; year start</strong></td><td>Applications, parent email invite on enroll, attendance/grade CSV as deployed.</td></tr>
+        <tr><td><strong>Library</strong></td><td>Circulation, copies, overdue lists/export.</td></tr>
+        <tr><td><strong>Campus</strong></td><td>One campus list with rooms; school and institution desks.</td></tr>
+        <tr><td><strong>Parent engagement</strong></td><td>Secure parent–student linking, progress, announcements, in-app messaging.</td></tr>
+        <tr><td><strong>Fees visibility</strong></td><td>Fee records and reports for authorized roles (live payment gateways, if required later, are a Change Order).</td></tr>
+        <tr><td><strong>Transport</strong></td><td>Buses, drivers, assignment, live location as deployed.</td></tr>
+        <tr><td><strong>HR &amp; stores</strong></td><td>Staff directory, procurement/stock workflows as deployed.</td></tr>
+        <tr><td><strong>QA &amp; Maya</strong></td><td>Findings, observations, CSV export, in-app Maya assistant with live counts.</td></tr>
+        <tr><td><strong>Languages</strong></td><td>English / Amharic / Afaan Oromo interface as deployed.</td></tr>
+        <tr><td><strong>Installation</strong></td><td>School tenant, branding, role map, training, Go-Live on the production environment.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Live CCTV/NVR video integration, if required beyond the camera-site catalogue already in the System,
+      may be added later by written Change Order and is not required for acceptance of this one-time package.
+    </p>
+
+    <div class="page-break"></div>
+
+    <h3>6. Installation, Training &amp; Go-Live</h3>
+    <table>
+      <thead>
+        <tr><th>Phase</th><th>Provider delivers</th><th>Target</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>1. Kickoff</strong></td><td>Workshop, role map, data checklist.</td><td>Within 7 days of first payment</td></tr>
+        <tr><td><strong>2. Installation</strong></td><td>School environment, Admin accounts, baseline configuration.</td><td>Within 14 days of kickoff</td></tr>
+        <tr><td><strong>3. Setup</strong></td><td>Brand, classes, roles, guided import of core registries.</td><td>Per agreed plan</td></tr>
+        <tr><td><strong>4. Training</strong></td><td>Leadership, teachers, and orientation for parent/transport users (onsite and/or online as agreed).</td><td>Before Go-Live</td></tr>
+        <tr><td><strong>5. Go-Live</strong></td><td>Production use; signed User Acceptance Certificate (Annex A).</td><td>Target: _______________</td></tr>
+        <tr><td><strong>6. Hypercare</strong></td><td>Intensive support after Go-Live.</td><td>30 days after Go-Live</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Included with this one-time sale:</strong></p>
+    <ul>
+      <li>Production access for Fenote Raey Academy only</li>
+      <li>Admin credentials and role setup</li>
+      <li>Training for key users and short user guides</li>
+      <li>Signed UAT / Acceptance Certificate (Annex A)</li>
+      <li>Support channel: +251 911 646 444 / majobridgetech@gmail.com</li>
+    </ul>
+
+    <h3>7. Customization included</h3>
+    <p>Within the Contract Price, the Provider includes:</p>
+    <ol>
+      <li>School name, logo, and supported branding on System surfaces.</li>
+      <li>Campus/section structure, academic levels, class naming.</li>
+      <li>Mapping Fenote Raey titles to System roles and approval paths.</li>
+      <li>Fee categories/terms and transport setup support as agreed at kickoff.</li>
+      <li>Up to <strong>eighty (80) professional service hours</strong> for configuration and Fenote-Raey-specific adjustments during implementation.</li>
+    </ol>
+    <p>
+      Work beyond those hours, or new modules not listed in Clause 5, requires a written
+      Change Order (scope, days, fee) signed by both Parties before work starts.
+    </p>
+
+    <h3>8. School responsibilities</h3>
+    <ul>
+      <li>Appoint a Project Owner and champions for Academic, Registry, Transport, and (if used) Fees.</li>
+      <li>Provide accurate master data (students, classes, staff, fees, buses) on time.</li>
+      <li>Ensure lawful processing of personal data and any required parent consents.</li>
+      <li>Complete UAT within ten (10) business days of the Provider’s readiness notice.</li>
+      <li>Control Admin credentials and revoke access when staff leave.</li>
+    </ul>
+
+    <h3>9. Roles and access</h3>
+    <p>
+      No user may exceed granted permissions. Another school cannot open Fenote Raey data.
+      The School Owner / authorized Admin remains accountable for staff role grants.
+    </p>
+
+    <h3>10. Bank details</h3>
+    <p>
+      Account name, bank, and account number will appear on each invoice issued by
+      MaJo Bridge Technologies and Events PLC. The first payment of ETB 400,000.00 (VAT inclusive)
+      is due on the Effective Date.
+    </p>
+
+    <h3>11. Support, hosting &amp; warranty (included in the one-time price)</h3>
+    <ul>
+      <li><strong>Warranty:</strong> ninety (90) days from Go-Live for defect repair on the included Scope (reproducible faults not caused by misuse, unauthorized change, or third-party outage).</li>
+      <li><strong>Support (included):</strong> twelve (12) months from Go-Live, business hours Monday–Saturday 09:00–18:00 EAT, phone/email/in-app; critical outage target within eight (8) business hours.</li>
+      <li><strong>Hosting (included):</strong> production hosting of the Fenote Raey tenant for the same twelve (12) months.</li>
+      <li><strong>After month 12:</strong> the perpetual licence continues. Hosting and support after that year may be renewed by a short written addendum at a fee to be agreed; that is not a new software licence.</li>
+      <li><strong>Security:</strong> school-scoped access, authenticated sessions, least-privilege roles. The Provider shall not use School Data for unrelated commercial purposes.</li>
+    </ul>
+
+    <h3>12. Licence &amp; intellectual property</h3>
+    <ul>
+      <li><strong>Licence:</strong> non-exclusive, non-transferable, perpetual right for Fenote Raey Academy only to use the System for its own educational operations, effective on full payment.</li>
+      <li><strong>IP:</strong> the platform, frameworks, and generic modules remain the exclusive intellectual property of MaJo Bridge Technologies and Events PLC.</li>
+      <li><strong>School Data:</strong> owned exclusively by the School. The Provider processes it only to deliver this Agreement.</li>
+      <li><strong>Export:</strong> on written request at the end of hosting, the Provider shall supply a reasonable export of core registries within fifteen (15) business days.</li>
+    </ul>
+
+    <h3>13. Confidentiality &amp; data protection</h3>
+    <p>
+      Each Party shall keep the other Party’s non-public business and technical information
+      confidential for three (3) years after this Agreement ends. The Provider shall apply
+      appropriate technical and organizational measures to protect personal data and shall
+      notify the School without undue delay of any confirmed personal-data breach affecting
+      School Data.
+    </p>
+
+    <h3>14. Limitation of liability</h3>
+    <p>
+      Except for fraud, willful misconduct, or a confidentiality/data breach caused by the
+      Provider’s proven negligence, the Provider’s aggregate liability under this Agreement
+      shall not exceed the Contract Price actually paid by the School. Neither Party is liable
+      for indirect or consequential loss (including lost profits) to the extent permitted by
+      Ethiopian law.
+    </p>
+
+    <h3>15. Termination</h3>
+    <ul>
+      <li>Either Party may terminate for a material breach not cured within thirty (30) days of written notice.</li>
+      <li>Amounts for payment terms already due remain payable. Completed installation work is not refundable except where the Provider is in uncured material breach.</li>
+      <li>On termination after the data-export window, the Provider may disable School access except as required to preserve a lawful dispute.</li>
+    </ul>
+
+    <h3>16. Governing law</h3>
+    <p>
+      This Agreement is governed by the laws of the Federal Democratic Republic of Ethiopia.
+      The Parties shall first try to settle amicably within fifteen (15) business days; failing
+      that, disputes shall go to the competent courts in Addis Ababa, unless the Parties agree
+      in writing to arbitration.
+    </p>
+
+    <h3>17. Entire agreement</h3>
+    <p>
+      Amendments and Change Orders are valid only if signed by authorized representatives of
+      both Parties. This Agreement (including Annex A) is the entire agreement on this subject
+      and replaces prior oral discussions.
+    </p>
+
+    <h3>18. Notices</h3>
+    <p>
+      Provider — Nebil Ahmed, +251 911 646 444, majobridgetech@gmail.com.<br />
+      School — _________________________________ (name, email, phone).
+    </p>
+
+    <h3>19. Acceptance</h3>
+    <p>
+      IN WITNESS WHEREOF, the Parties have executed this Agreement on the Effective Date.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">Nebil Ahmed</div>
+        <div class="role">General Manager<br />MaJo Bridge Technologies and Events PLC<br />Tel: +251 911 646 444</div>
+        <p style="margin-top:18px">Signature: ______________________</p>
+        <p>Date: __________________________</p>
+        <p>Company stamp:</p>
+      </div>
+      <div class="sig">
+        <div class="who">Authorized Signatory</div>
+        <div class="role">For and on behalf of<br />Fenote Raey Academy</div>
+        <p style="margin-top:18px">Name: ___________________________</p>
+        <p>Title: ___________________________</p>
+        <p>Signature: ______________________</p>
+        <p>Date: __________________________</p>
+        <p>School stamp:</p>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+    <h3>Annex A — User Acceptance Certificate</h3>
+    <p>School: Fenote Raey Academy &nbsp;&nbsp;|&nbsp;&nbsp; System: MaJo Bridge Smart School Operating System</p>
+    <table>
+      <thead>
+        <tr><th>Check</th><th>Item</th><th>Pass (✓)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Admin login and school-scoped access working</td><td></td></tr>
+        <tr><td>2</td><td>Leadership roles created and permissions verified</td><td></td></tr>
+        <tr><td>3</td><td>Student / class / teacher core registries usable</td><td></td></tr>
+        <tr><td>4</td><td>Teacher portal (attendance / grades / homework) verified</td><td></td></tr>
+        <tr><td>5</td><td>Parent secure link / progress visibility verified (sample)</td><td></td></tr>
+        <tr><td>6</td><td>Transport configured for agreed routes/buses</td><td></td></tr>
+        <tr><td>7</td><td>Fee visibility configured as agreed at kickoff</td><td></td></tr>
+        <tr><td>8</td><td>Training completed for key users</td><td></td></tr>
+        <tr><td>9</td><td>Installation and branding items from discovery completed or scheduled</td><td></td></tr>
+        <tr><td>10</td><td>Go-Live approved</td><td></td></tr>
+      </tbody>
+    </table>
+    <p>Comments: _______________________________________________________________________</p>
+    <p>School Representative: _____________________ &nbsp;&nbsp; Provider: Nebil Ahmed _____________________</p>
+    <p>Date: _____________________</p>
+
+    <h3>Annex B — Payment dates</h3>
+    <p>
+      First payment ETB 400,000.00 on signing. Then ETB 537,500.00 every four (4) months:
+      Term 1 at 4 months, Term 2 at 8 months, Term 3 at 12 months, Term 4 at 16 months.
+      Extra modules after signature need a Change Order.
+    </p>
+
+    <div class="footer-note">
+      MaJo Bridge Technologies and Events PLC · Fenote Raey Academy<br />
+      Agreement MB-FRA-SSOS-2026-001 · Confidential — for execution by the Parties<br />
+      +251 911 646 444 · majobridgetech@gmail.com · https://mayabela.pages.dev
+    </div>
+  </article>
+</body>
+</html>
