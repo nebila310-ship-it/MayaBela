@@ -51,9 +51,69 @@ void main() {
     expect(title, contains('Bekele'));
     expect(title, isNot(contains('(')));
     expect(conversation.inboxPeerRoleLabel(), 'Parent');
+    expect(conversation.chatBarSubtitleForViewer(), 'Parent');
     final preview = conversation.lastMessagePreviewForViewer();
     expect(preview, conversation.lastMessage);
     expect(preview, isNot(contains('Bekele')));
+  });
+
+  test('parent header title is the teacher, even when only the parent wrote', () {
+    AuthService.currentUser = AuthService.allUsers['parent'];
+    final conversation = Conversation(
+      id: 'parent-only',
+      name: 'Mr. Bekele',
+      role: 'Parent',
+      parentParticipantName: 'Mr. Bekele',
+      staffParticipantId: StaffMemberOption.teacherKey('TCH-1001'),
+      parentParticipantUsernames: const ['parent'],
+      messages: [
+        ChatMessage(
+          text: 'Hello, is there homework today?',
+          senderRole: AuthService.roleParent,
+          senderDisplayName: 'Mr. Bekele',
+          senderUsername: 'parent',
+          time: DateTime.now(),
+        ),
+      ],
+    );
+    expect(conversation.inboxTitleForViewer(), 'Miss Belen');
+    expect(conversation.inboxTitleForViewer(), isNot(contains('Bekele')));
+    expect(conversation.chatBarSubtitleForViewer(), 'Teacher');
+  });
+
+  test('teacher header title is the parent name', () {
+    AuthService.currentUser = AuthService.allUsers['teacher'];
+    final conversation = SchoolDataService.instance.getConversation('1')!;
+    expect(conversation.inboxTitleForViewer(), 'Mr. Bekele');
+    expect(conversation.chatBarSubtitleForViewer(), 'Parent');
+  });
+
+  test('parent header title is the teacher name on the shared thread', () {
+    AuthService.currentUser = AuthService.allUsers['parent'];
+    final conversation = SchoolDataService.instance.getConversation('1')!;
+    expect(conversation.inboxTitleForViewer(), 'Miss Belen');
+    expect(conversation.chatBarSubtitleForViewer(), 'Teacher');
+  });
+
+  test('group chat bar names the last sender under the group title', () {
+    AuthService.currentUser = AuthService.allUsers['parent'];
+    final conversation = Conversation(
+      id: 'grade-4a-discussion',
+      name: 'Grade 4A class discussion',
+      role: 'Community',
+      isGroup: true,
+      messages: [
+        ChatMessage(
+          text: 'Please bring art supplies tomorrow.',
+          senderRole: AuthService.roleTeacher,
+          senderStaffId: StaffMemberOption.teacherKey('TCH-1001'),
+          senderDisplayName: 'Miss Belen',
+          time: DateTime.now(),
+        ),
+      ],
+    );
+    expect(conversation.inboxTitleForViewer(), 'Grade 4A class discussion');
+    expect(conversation.chatBarSubtitleForViewer(), 'Miss Belen');
   });
 
   test('when Nabil writes Belen, Belen sees Nabil — not School Admin', () {
@@ -186,6 +246,50 @@ void main() {
     expect(find.byType(ConversationCard), findsWidgets);
     expect(find.textContaining('Parent'), findsWidgets);
     expect(find.textContaining('Bekele'), findsWidgets);
+    PresenceService.instance.resetForTests();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('teacher chat top bar states the parent name', (tester) async {
+    AuthService.currentUser = AuthService.allUsers['teacher'];
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ChatScreen(conversationId: '1', contactName: 'Mr. Bekele'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final header = find.byKey(const Key('chat-app-bar-title'));
+    expect(header, findsOneWidget);
+    expect(tester.widget<Text>(header).data, 'Mr. Bekele');
+    expect(
+      find.descendant(
+        of: find.byType(MessagesAppBar),
+        matching: find.text('Parent'),
+      ),
+      findsOneWidget,
+    );
+    PresenceService.instance.resetForTests();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('parent chat top bar states the teacher name', (tester) async {
+    AuthService.currentUser = AuthService.allUsers['parent'];
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ChatScreen(conversationId: '1', contactName: 'Mr. Bekele'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final header = find.byKey(const Key('chat-app-bar-title'));
+    expect(header, findsOneWidget);
+    expect(tester.widget<Text>(header).data, 'Miss Belen');
+    expect(
+      find.descendant(
+        of: find.byType(MessagesAppBar),
+        matching: find.text('Teacher'),
+      ),
+      findsOneWidget,
+    );
     PresenceService.instance.resetForTests();
     await tester.pumpWidget(const SizedBox.shrink());
   });
