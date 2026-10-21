@@ -98,6 +98,22 @@ class SchoolAuthCloudService {
     return null;
   }
 
+  /// Class names `jwt_teacher_class_names()` will see.
+  ///
+  /// The local teacher registry can list extra classes. Using those for a
+  /// write still raises `write_denied`, because SQL only trusts the token.
+  static List<String> accessTokenClassNames() {
+    if (!SupabaseBootstrap.isInitialized) return const [];
+    try {
+      final token =
+          SupabaseBootstrap.client.auth.currentSession?.accessToken.trim() ??
+              '';
+      if (token.isEmpty) return const [];
+      return classNamesFromJwtPayload(_jwtPayload(token));
+    } catch (_) {}
+    return const [];
+  }
+
   /// Mirrors `public.jwt_school_id()`: `app_metadata` only.
   ///
   /// A school id in `user_metadata` is client-writable. Trusting it made the
@@ -113,6 +129,25 @@ class SchoolAuthCloudService {
 
     final app = payload['app_metadata'];
     return from(app is Map ? Map<String, dynamic>.from(app) : null);
+  }
+
+  /// `assignedClassNames` ∪ `linkedClassNames` from `app_metadata` only.
+  @visibleForTesting
+  static List<String> classNamesFromJwtPayload(Map<String, dynamic> payload) {
+    final app = payload['app_metadata'];
+    final meta = app is Map ? Map<String, dynamic>.from(app) : const {};
+    final names = <String>{};
+    void add(Object? raw) {
+      if (raw is! List) return;
+      for (final item in raw) {
+        final name = '$item'.trim();
+        if (name.isNotEmpty) names.add(name);
+      }
+    }
+
+    add(meta['assignedClassNames']);
+    add(meta['linkedClassNames']);
+    return names.toList();
   }
 
   /// True when the access token has both a school id and an app role.
