@@ -9,6 +9,7 @@ import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
+import 'package:mayabela/services/school_auth_cloud_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
 
 /// School-wide online status for messaging.
@@ -27,6 +28,7 @@ class PresenceService extends ChangeNotifier {
   final Map<String, DateTime> _lastSeen = {};
   Timer? _timer;
   var _started = false;
+  String? _deniedUsername;
   final _crud = DocumentStore();
 
   static String _key(String schoolId, String identity) {
@@ -229,14 +231,16 @@ class PresenceService extends ChangeNotifier {
   Future<void> _pushCloud(DateTime now) async {
     final user = AuthService.currentUser;
     if (user == null || !SupabaseBootstrap.isInitialized) return;
-    final schoolId = (AuthService.activeSchoolId ?? user.schoolId ?? '')
-        .trim()
-        .toUpperCase();
-    if (schoolId.isEmpty) return;
+    final username = user.username.trim().toLowerCase();
+    if (username.isEmpty || _deniedUsername == username) return;
+    // Column school_id must be the access-token school. The active-school
+    // field can disagree, and every 45s heartbeat then fails RLS.
+    final schoolId = SchoolAuthCloudService.accessTokenSchoolId();
+    if (schoolId == null || schoolId.isEmpty) return;
     try {
       await _crud.createOrUpdate(
         collection: AppCollections.userPresence,
-        docId: user.username.trim().toLowerCase(),
+        docId: username,
         data: {
           'username': user.username,
           'phone': user.phone,
@@ -248,6 +252,9 @@ class PresenceService extends ChangeNotifier {
         },
       );
     } catch (e) {
+      if (DocumentStore.isRlsForbidden(e) || DocumentStore.isStaleWrite(e)) {
+        _deniedUsername = username;
+      }
       if (kDebugMode) {
         debugPrint('PresenceService push: $e');
       }

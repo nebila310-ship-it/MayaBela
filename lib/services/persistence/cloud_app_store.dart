@@ -314,7 +314,9 @@ class CloudAppStore {
         .map((c) => c.trim())
         .where((c) => c.isNotEmpty)
         .toList();
-    if (classes.isEmpty) return items;
+    // No assigned class means the SQL class check is false. Returning every
+    // local row here is the batch `write_denied` storm.
+    if (classes.isEmpty) return [];
     return items
         .where(
           (item) => classes.any(

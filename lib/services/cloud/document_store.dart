@@ -5,7 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/persistence/cloud_outbox_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
+import 'package:mayabela/services/student_registry_service.dart';
 
 /// Generic document CRUD against Supabase `app_documents`
 /// (Firestore-compatible API for existing stores).
@@ -108,14 +110,40 @@ class DocumentStore {
     'platform_audit_log',
   };
 
+  /// Rows a classroom teacher may write only for an assigned class.
+  /// `app_doc_teacher_may_write` returns `app_doc_teacher_class_readable`,
+  /// which is `write_denied` for every other class.
+  static const teacherClassScopedCollections = {
+    'student_registry',
+    'grade_reports',
+    'fees',
+    'discipline_cases',
+    'leave_requests',
+    'student_medical',
+    'transport_passenger_status',
+    'transport_scans',
+    'attendance_sessions',
+    'homework',
+    'daily_activities',
+    'parent_link_requests',
+  };
+
   /// Whether this signed-in role may POST [collection].
   ///
   /// This does not grant access. It only skips writes the database already
   /// refuses, so login sync does not raise `write_denied` or an RLS violation.
+  ///
+  /// [staffRoles], [permissions], and [mayReadAllSchoolData] mirror the
+  /// teacher branch of `app_doc_teacher_may_write` and the write guard.
+  /// A classroom teacher (no staff role, no extra permission) must not POST
+  /// the collections that function returns false for.
   @visibleForTesting
   static bool clientMayWriteCollection({
     required String? roleKey,
     required String collection,
+    List<String> staffRoles = const [],
+    Set<String> permissions = const {},
+    bool mayReadAllSchoolData = false,
   }) {
     if (serverOnlyCollections.contains(collection)) return false;
     final role = roleKey?.trim().toLowerCase() ?? '';
@@ -133,7 +161,219 @@ class DocumentStore {
     if (role == 'driver') {
       return driverWritableCollections.contains(collection);
     }
+    if (role == 'teacher' &&
+        !teacherCollectionAllowed(
+          collection: collection,
+          staffRoles: staffRoles,
+          permissions: permissions,
+          mayReadAllSchoolData: mayReadAllSchoolData,
+        )) {
+      return false;
+    }
     return true;
+  }
+
+  /// Teacher collections the live `app_doc_teacher_may_write` rejects unless
+  /// the JWT has the matching staff role or permission. Checked in the same
+  /// order as the SQL function, including the early `jwt_can_read_all` return.
+  @visibleForTesting
+  static bool teacherCollectionAllowed({
+    required String collection,
+    List<String> staffRoles = const [],
+    Set<String> permissions = const {},
+    bool mayReadAllSchoolData = false,
+  }) {
+    bool roleAny(List<String> keys) =>
+        keys.any((key) => _staffRoleHas(staffRoles, key));
+    bool perm(String key) => permissions.contains(key);
+    const affairsLeaders = [
+      StaffRoles.studentAffairs,
+      StaffRoles.vicePresident,
+      StaffRoles.principal,
+      StaffRoles.fullAccess,
+    ];
+
+    if (collection == 'ict_devices' || collection == 'ict_weekly_reviews') {
+      return perm(SchoolPermissions.manageDigitalOps) ||
+          roleAny([
+            StaffRoles.staffs,
+            StaffRoles.fullAccess,
+            StaffRoles.principal,
+            StaffRoles.humanResource,
+            StaffRoles.vicePresident,
+          ]);
+    }
+    if (collection == 'safeguarding_cases') return roleAny(affairsLeaders);
+    const affairs = {
+      'health_records',
+      'counseling_records',
+      'iep_plans',
+      'college_guidance',
+      'student_documents',
+      'medication_stock',
+      'sel_observations',
+      'extracurricular_clubs',
+      'club_memberships',
+      'scholarships',
+      'grievances',
+      'internships',
+      'dosa_meetings',
+      'leadership_tasks',
+    };
+    if (affairs.contains(collection)) {
+      return roleAny(affairsLeaders) || perm(SchoolPermissions.manageStudents);
+    }
+    if (collection == 'school_backups') {
+      return roleAny([
+            StaffRoles.principal,
+            StaffRoles.vicePresident,
+            StaffRoles.registrar,
+            StaffRoles.staffs,
+            StaffRoles.fullAccess,
+          ]) ||
+          perm(SchoolPermissions.manageSchoolSettings) ||
+          perm(SchoolPermissions.viewSystemHealth) ||
+          perm(SchoolPermissions.manageDigitalOps);
+    }
+    const qa = {
+      'teaching_observations',
+      'academic_audits',
+      'qa_surveys',
+      'action_research',
+    };
+    if (qa.contains(collection)) {
+      return roleAny([
+            StaffRoles.qualityAssurance,
+            StaffRoles.vicePresident,
+            StaffRoles.principal,
+            StaffRoles.fullAccess,
+          ]) ||
+          perm(SchoolPermissions.manageQaFindings);
+    }
+    // SQL returns true here for school-wide readers, before inventory and
+    // class-scoped checks. ICT / affairs / QA above stay denied.
+    if (mayReadAllSchoolData) return true;
+    const stock = {'inventory_items', 'classroom_inventory', 'suppliers'};
+    if (stock.contains(collection)) {
+      return perm(SchoolPermissions.adjustStock) ||
+          perm(SchoolPermissions.receiveStock) ||
+          perm(SchoolPermissions.issueStock) ||
+          perm(SchoolPermissions.enterPurchasedItems);
+    }
+    // Write-guard gates that run before `app_doc_teacher_may_write`.
+    if (collection == 'purchase_requests') {
+      return perm(SchoolPermissions.createPurchaseRequests) ||
+          perm(SchoolPermissions.approvePurchaseRequests) ||
+          perm(SchoolPermissions.enterPurchasedItems) ||
+          perm(SchoolPermissions.receiveStock);
+    }
+    if (collection == 'issue_requests') {
+      return perm(SchoolPermissions.createIssueRequests) ||
+          perm(SchoolPermissions.approveIssueRequests) ||
+          perm(SchoolPermissions.issueStock);
+    }
+    if (collection == 'transfer_requests') {
+      return perm(SchoolPermissions.createTransfers) ||
+          perm(SchoolPermissions.approveTransfers);
+    }
+    if (collection == 'buses') return perm(SchoolPermissions.manageBuses);
+    return true;
+  }
+
+  static bool _staffRoleHas(List<String> staffRoles, String key) {
+    final want = key.trim().toLowerCase();
+    return staffRoles.any((role) => role.trim().toLowerCase() == want);
+  }
+
+  static bool _sameAccount(Object? value, String? username) {
+    final left = '${value ?? ''}'.trim().toLowerCase();
+    final right = username?.trim().toLowerCase() ?? '';
+    return left.isNotEmpty && left == right;
+  }
+
+  /// Self prefs, own MFA / consent rows, and assigned-class rows.
+  ///
+  /// A full local snapshot used to POST every seed row. The trigger then
+  /// raised `write_denied`, or RLS rejected the row, once per document.
+  @visibleForTesting
+  static bool clientMayWriteRow({
+    required String? roleKey,
+    required String collection,
+    required String docId,
+    required Map<String, dynamic> data,
+    List<String> staffRoles = const [],
+    Set<String> permissions = const {},
+    bool mayReadAllSchoolData = false,
+    List<String> assignedClasses = const [],
+    String? username,
+    String? jwtSchoolId,
+  }) {
+    if (!clientMayWriteCollection(
+      roleKey: roleKey,
+      collection: collection,
+      staffRoles: staffRoles,
+      permissions: permissions,
+      mayReadAllSchoolData: mayReadAllSchoolData,
+    )) {
+      return false;
+    }
+    final role = roleKey?.trim().toLowerCase() ?? '';
+    if (collection == 'user_preferences') {
+      final name = username?.trim().toLowerCase() ?? '';
+      if (name.isEmpty) return false;
+      final id = docId.trim().toLowerCase();
+      final school = jwtSchoolId?.trim().toLowerCase() ?? '';
+      final inData = _sameAccount(data['username'], name);
+      return inData ||
+          id == name ||
+          (school.isNotEmpty && id == '${school}__$name');
+    }
+    if (role != 'teacher') return true;
+    if (collection == 'mfa_enrollments') {
+      return _sameAccount(data['username'], username);
+    }
+    if (collection == 'privacy_consents' ||
+        collection == 'data_rights_requests') {
+      if (teacherCollectionAllowed(
+        collection: 'school_backups',
+        staffRoles: staffRoles,
+        permissions: permissions,
+      )) {
+        return true;
+      }
+      return _sameAccount(data['authorUsername'], username);
+    }
+    if (mayReadAllSchoolData) return true;
+    if (!teacherClassScopedCollections.contains(collection)) return true;
+    final classes = assignedClasses
+        .map((c) => c.trim())
+        .where((c) => c.isNotEmpty)
+        .toList();
+    // SQL `app_doc_teacher_class_readable` is false when the JWT has no
+    // class names. Sending the whole registry in that case is `write_denied`.
+    if (classes.isEmpty) return false;
+    final raw = data['className'] ?? data['class_name'];
+    final className = raw is String ? raw.trim() : '';
+    if (className.isEmpty) return false;
+    return classes.any(
+      (assigned) => StudentRegistryService.classNamesMatch(assigned, className),
+    );
+  }
+
+  bool _rowAllowed(String collection, String docId, Map<String, dynamic> data) {
+    final user = AuthService.currentUser;
+    return clientMayWriteRow(
+      roleKey: user?.roleKey,
+      collection: collection,
+      docId: docId,
+      data: data,
+      staffRoles: user?.staffRoles ?? const [],
+      permissions: AuthService.currentPermissions,
+      mayReadAllSchoolData: AuthService.mayReadAllSchoolData,
+      assignedClasses: SchoolAuthCloudService.accessTokenClassNames(),
+      username: user?.username,
+      jwtSchoolId: SchoolAuthCloudService.accessTokenSchoolId(),
+    );
   }
 
   /// INSERT WITH CHECK requires `upper(school_id) = jwt_school_id()`.
@@ -292,6 +532,11 @@ class DocumentStore {
         existingReadFailed = true;
       }
     }
+    // The trigger also checks the previous row. Overwriting another class's
+    // doc id is `write_denied` even when the new payload is in range.
+    if (existing != null && !_rowAllowed(collection, docId, existing)) {
+      throw StateError('Not allowed to save this $collection record.');
+    }
     if (_isVersioned(collection) && existingReadFailed) {
       await CloudOutboxService.instance.enqueue(
         collection: collection,
@@ -323,10 +568,7 @@ class DocumentStore {
       );
     }
 
-    if (!clientMayWriteCollection(
-      roleKey: AuthService.currentUser?.roleKey,
-      collection: collection,
-    )) {
+    if (!_rowAllowed(collection, docId, payload)) {
       throw StateError('Not allowed to save this $collection record.');
     }
 
@@ -456,12 +698,7 @@ class DocumentStore {
     )) {
       return;
     }
-    if (!clientMayWriteCollection(
-      roleKey: AuthService.currentUser?.roleKey,
-      collection: collection,
-    )) {
-      return;
-    }
+    if (!_rowAllowed(collection, docId, scoped)) return;
     if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) return;
     await db.from('app_documents').insert({
       'collection': collection,
@@ -660,18 +897,20 @@ class DocumentStore {
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
-    if (!clientMayWriteCollection(
-      roleKey: AuthService.currentUser?.roleKey,
-      collection: collection,
-    )) {
+    final allowed = <Map<String, dynamic>>[];
+    for (final item in items) {
+      if (_rowAllowed(collection, docIdFor(item), item)) allowed.add(item);
+    }
+    if (allowed.isEmpty) {
       if (kDebugMode) {
         debugPrint(
           '[DocumentStore] skip writeBatch $collection — '
-          'this role cannot write it',
+          'this role cannot write these rows',
         );
       }
       return;
     }
+    items = allowed;
     if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) {
       if (kDebugMode) {
         debugPrint(
@@ -713,6 +952,9 @@ class DocumentStore {
         final scoped = _withSchoolScope(Map<String, dynamic>.from(item));
         scoped.remove('_docId');
         final existing = existingById[id];
+        if (existing != null && !_rowAllowed(collection, id, existing)) {
+          continue;
+        }
         if (existing != null && sameDocumentPayload(existing, scoped)) {
           continue;
         }

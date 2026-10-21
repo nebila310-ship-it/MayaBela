@@ -495,4 +495,21 @@ void main() {
     );
     expect(kept.map((session) => session.className), ['Grade 5B']);
   });
+
+  test('teacher push with no assigned class sends nothing', () {
+    final kept = CloudAppStore.teacherWritableByClass(
+      items: [
+        AttendanceSession(
+          className: 'Grade 5B',
+          date: DateTime.utc(2026, 10, 9),
+          conductedBy: 'Abebe',
+          entries: const [],
+        ),
+      ],
+      classNameOf: (session) => session.className,
+      roleKey: AuthService.roleTeacher,
+      assignedClasses: const [],
+    );
+    expect(kept, isEmpty);
+  });
 }

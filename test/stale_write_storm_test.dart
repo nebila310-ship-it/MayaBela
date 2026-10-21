@@ -190,6 +190,117 @@ void main() {
       ),
       isTrue,
     );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'leadership_tasks',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'ict_devices',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'inventory_items',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'purchase_requests',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'buses',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'health_records',
+        staffRoles: const ['student_affairs'],
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'inventory_items',
+        mayReadAllSchoolData: true,
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'ict_devices',
+        mayReadAllSchoolData: true,
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteRow(
+        roleKey: 'teacher',
+        collection: 'fees',
+        docId: 'fee-other',
+        data: const {'className': 'Grade 4A'},
+        assignedClasses: const ['Grade 5B'],
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteRow(
+        roleKey: 'teacher',
+        collection: 'fees',
+        docId: 'fee-own',
+        data: const {'className': 'Grade 5B'},
+        assignedClasses: const ['Grade 5B'],
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteRow(
+        roleKey: 'teacher',
+        collection: 'student_registry',
+        docId: 'STU-1',
+        data: const {'className': 'Grade 5B'},
+        assignedClasses: const [],
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteRow(
+        roleKey: 'teacher',
+        collection: 'user_preferences',
+        docId: 'other-teacher',
+        data: const {'username': 'other-teacher'},
+        username: 'ada',
+        jwtSchoolId: 'MAL',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteRow(
+        roleKey: 'teacher',
+        collection: 'user_preferences',
+        docId: 'ada',
+        data: const {'username': 'ada'},
+        username: 'ada',
+        jwtSchoolId: 'MAL',
+      ),
+      isTrue,
+    );
   });
 
   test('sign-in must not repeat a refused account save as a direct upsert', () {
@@ -378,6 +489,29 @@ void main() {
         mutationSchoolId: null,
       ),
       OutboxWriteDecision.post,
+    );
+  });
+
+  test('class names for writes come from the access token only', () {
+    expect(
+      SchoolAuthCloudService.classNamesFromJwtPayload({
+        'app_metadata': {
+          'assignedClassNames': ['Grade 5B', ' 4A '],
+          'linkedClassNames': ['Grade 5B'],
+        },
+        'user_metadata': {
+          'assignedClassNames': ['Grade 9Z'],
+        },
+      }),
+      ['Grade 5B', '4A'],
+    );
+    expect(
+      SchoolAuthCloudService.classNamesFromJwtPayload({
+        'user_metadata': {
+          'assignedClassNames': ['Grade 9Z'],
+        },
+      }),
+      isEmpty,
     );
   });
 
