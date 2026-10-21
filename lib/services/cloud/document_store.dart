@@ -60,6 +60,35 @@ class DocumentStore {
     return null;
   }
 
+  static const serverOnlyCollections = {
+    'auth_secrets',
+    'auth_rate_limits',
+    'platform_secrets',
+  };
+
+  /// Collections the write trigger always rejects for a non-admin JWT.
+  /// Sending them produces `write_denied` / SQLSTATE 42501.
+  static const adminOnlyCollections = {
+    'school_registry',
+    'platform_audit_log',
+  };
+
+  /// Whether this signed-in role may POST [collection].
+  ///
+  /// This does not grant access. It only skips writes the database already
+  /// refuses, so login sync does not raise `write_denied` or an RLS violation.
+  @visibleForTesting
+  static bool clientMayWriteCollection({
+    required String? roleKey,
+    required String collection,
+  }) {
+    if (serverOnlyCollections.contains(collection)) return false;
+    final role = roleKey?.trim().toLowerCase() ?? '';
+    if (role.isEmpty) return false;
+    if (adminOnlyCollections.contains(collection)) return role == 'admin';
+    return true;
+  }
+
   /// INSERT WITH CHECK requires `upper(school_id) = jwt_school_id()`.
   @visibleForTesting
   static bool canWriteSchoolRow({
@@ -247,6 +276,13 @@ class DocumentStore {
       );
     }
 
+    if (!clientMayWriteCollection(
+      roleKey: AuthService.currentUser?.roleKey,
+      collection: collection,
+    )) {
+      throw StateError('Not allowed to save this $collection record.');
+    }
+
     final jwtSchool = SchoolAuthCloudService.accessTokenSchoolId();
     if (!canWriteSchoolRow(jwtSchoolId: jwtSchool, rowSchoolId: schoolId)) {
       if ((jwtSchool ?? '').trim().isEmpty) {
@@ -264,6 +300,20 @@ class DocumentStore {
       }
       throw StateError(
         'Cannot save $collection/$docId — school does not match signed-in school.',
+      );
+    }
+
+    if (!SchoolAuthCloudService.accessTokenCanPassRls()) {
+      await CloudOutboxService.instance.enqueue(
+        collection: collection,
+        docId: docId,
+        op: 'upsert',
+        schoolId: schoolId,
+        data: payload,
+        reason: 'JWT has no app role',
+      );
+      throw StateError(
+        'Cannot save $collection/$docId — JWT has no app role.',
       );
     }
 
@@ -354,6 +404,13 @@ class DocumentStore {
     )) {
       return;
     }
+    if (!clientMayWriteCollection(
+      roleKey: AuthService.currentUser?.roleKey,
+      collection: collection,
+    )) {
+      return;
+    }
+    if (!SchoolAuthCloudService.accessTokenCanPassRls()) return;
     await db.from('app_documents').insert({
       'collection': collection,
       'doc_id': docId,
@@ -551,6 +608,27 @@ class DocumentStore {
     required String Function(Map<String, dynamic> item) docIdFor,
   }) async {
     if (!available || items.isEmpty) return;
+    if (!clientMayWriteCollection(
+      roleKey: AuthService.currentUser?.roleKey,
+      collection: collection,
+    )) {
+      if (kDebugMode) {
+        debugPrint(
+          '[DocumentStore] skip writeBatch $collection — '
+          'this role cannot write it',
+        );
+      }
+      return;
+    }
+    if (!SchoolAuthCloudService.accessTokenCanPassRls()) {
+      if (kDebugMode) {
+        debugPrint(
+          '[DocumentStore] skip writeBatch $collection — '
+          'JWT is missing a school role',
+        );
+      }
+      return;
+    }
     final jwtSchool = SchoolAuthCloudService.accessTokenSchoolId();
     if ((jwtSchool ?? '').trim().isEmpty) {
       if (kDebugMode) {

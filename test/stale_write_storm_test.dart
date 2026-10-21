@@ -70,6 +70,78 @@ void main() {
     );
   });
 
+  test('teacher login must not schedule a full snapshot after a 403', () {
+    expect(CloudAppStore.shouldRunFullLocalPush('teacher'), isFalse);
+    expect(CloudAppStore.shouldRunFullLocalPush('parent'), isFalse);
+    expect(CloudAppStore.shouldRunFullLocalPush('student'), isFalse);
+    expect(CloudAppStore.shouldRunFullLocalPush('driver'), isFalse);
+    expect(CloudAppStore.shouldRunFullLocalPush('admin'), isTrue);
+    expect(
+      CloudAppStore.isPermanentAuthDenial(
+        errorCode: 'denied',
+        errorMessage: 'Not allowed to write student registry.',
+      ),
+      isTrue,
+    );
+    expect(
+      CloudAppStore.isPermanentAuthDenial(
+        errorMessage: 'write_denied',
+      ),
+      isTrue,
+    );
+    expect(
+      CloudAppStore.isPermanentAuthDenial(
+        errorMessage:
+            'new row violates row-level security policy for table "app_documents"',
+      ),
+      isTrue,
+    );
+    expect(
+      CloudAppStore.shouldEscalateToFullPush(
+        StateError('Not allowed to write student registry.'),
+      ),
+      isFalse,
+    );
+  });
+
+  test('client does not post collections the trigger always rejects', () {
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'school_registry',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'platform_audit_log',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'homework',
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'admin',
+        collection: 'school_registry',
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'auth_secrets',
+      ),
+      isFalse,
+    );
+  });
+
   test('a real transport error may still request a later snapshot', () {
     expect(
       CloudAppStore.shouldEscalateToFullPush(Exception('SocketException')),
@@ -182,7 +254,7 @@ void main() {
         'app_metadata': <String, dynamic>{},
         'user_metadata': {'school_id': 'fr-001'},
       }),
-      'FR-001',
+      isNull,
     );
     expect(
       SchoolAuthCloudService.schoolIdFromJwtPayload({
