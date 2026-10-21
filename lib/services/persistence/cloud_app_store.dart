@@ -1510,6 +1510,31 @@ class CloudAppStore {
   static bool shouldRunFullLocalPush(String? roleKey) =>
       roleKey == AuthService.roleAdmin;
 
+  /// Direct `app_auth_accounts` upsert after the account edge function.
+  ///
+  /// A refused call must not be repeated as a user-JWT insert: that insert is
+  /// `write_denied` for staff rows and "new row violates row-level security
+  /// policy" for the parent and student rows the trigger lets through.
+  /// Only an admin, or a teacher who may manage staff, may fall back — and
+  /// only when the failure was not itself a refusal.
+  @visibleForTesting
+  static bool shouldDirectUpsertAuthAccount({
+    required String? callerRole,
+    required bool callerMayManageStaff,
+    String? errorCode,
+    String? errorMessage,
+  }) {
+    final role = callerRole?.trim().toLowerCase() ?? '';
+    final allowedCaller = role == AuthService.roleAdmin ||
+        (role == AuthService.roleTeacher && callerMayManageStaff);
+    if (!allowedCaller) return false;
+    if (errorCode == null && errorMessage == null) return true;
+    return !isPermanentAuthDenial(
+      errorCode: errorCode,
+      errorMessage: errorMessage,
+    );
+  }
+
   /// A 403, `write_denied`, or RLS refusal will not succeed on retry.
   @visibleForTesting
   static bool isPermanentAuthDenial({
@@ -1660,6 +1685,27 @@ class CloudAppStore {
         user: toUpsert,
       );
       if (cloud.ok) return;
+      // The edge function already refused. Posting app_auth_accounts with the
+      // user JWT is the sign-in burst of write_denied / RLS 42501.
+      if (!shouldDirectUpsertAuthAccount(
+        callerRole: AuthService.currentUser?.roleKey,
+        callerMayManageStaff: _mayUploadDirectory(
+          SchoolPermissions.manageStaffAccounts,
+        ),
+        errorCode: cloud.errorCode,
+        errorMessage: cloud.errorMessage,
+      )) {
+        return;
+      }
+    }
+
+    if (!shouldDirectUpsertAuthAccount(
+      callerRole: AuthService.currentUser?.roleKey,
+      callerMayManageStaff: _mayUploadDirectory(
+        SchoolPermissions.manageStaffAccounts,
+      ),
+    )) {
+      return;
     }
 
     await _pushSafe(() => _crud.createOrUpdate(

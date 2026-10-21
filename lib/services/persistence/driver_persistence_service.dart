@@ -54,6 +54,6 @@ class DriverPersistenceService {
     if (notifyStaff) {
       StaffRegistryNotifier.instance.notifyChanged();
     }
-    unawaited(AuthService.persistRegistryLoginAccounts());
+    unawaited(AuthService.persistRegistryLoginAccounts(pushCloud: pushCloud));
   }
 }

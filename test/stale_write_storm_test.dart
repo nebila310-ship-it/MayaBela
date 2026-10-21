@@ -140,6 +140,110 @@ void main() {
       ),
       isFalse,
     );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'teacher',
+        collection: 'password_reset_codes',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'parent',
+        collection: 'app_auth_accounts',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'parent',
+        collection: 'conversations',
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'student',
+        collection: 'homework',
+      ),
+      isTrue,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'student',
+        collection: 'grade_reports',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'driver',
+        collection: 'buses',
+      ),
+      isFalse,
+    );
+    expect(
+      DocumentStore.clientMayWriteCollection(
+        roleKey: 'driver',
+        collection: 'bus_live_positions',
+      ),
+      isTrue,
+    );
+  });
+
+  test('sign-in must not repeat a refused account save as a direct upsert', () {
+    expect(
+      CloudAppStore.shouldDirectUpsertAuthAccount(
+        callerRole: 'teacher',
+        callerMayManageStaff: false,
+        errorCode: 'denied',
+        errorMessage: 'Admin authentication required',
+      ),
+      isFalse,
+    );
+    expect(
+      CloudAppStore.shouldDirectUpsertAuthAccount(
+        callerRole: 'parent',
+        callerMayManageStaff: false,
+        errorCode: 'denied',
+        errorMessage: 'Admin authentication required',
+      ),
+      isFalse,
+    );
+    expect(
+      CloudAppStore.shouldDirectUpsertAuthAccount(
+        callerRole: 'student',
+        callerMayManageStaff: false,
+      ),
+      isFalse,
+    );
+    expect(
+      CloudAppStore.shouldDirectUpsertAuthAccount(
+        callerRole: 'admin',
+        callerMayManageStaff: true,
+        errorCode: 'denied',
+        errorMessage: 'Not allowed',
+      ),
+      isFalse,
+    );
+    expect(
+      CloudAppStore.shouldDirectUpsertAuthAccount(
+        callerRole: 'admin',
+        callerMayManageStaff: true,
+        errorCode: 'invalid',
+        errorMessage: 'network down',
+      ),
+      isTrue,
+    );
+    expect(
+      CloudAppStore.shouldDirectUpsertAuthAccount(
+        callerRole: 'teacher',
+        callerMayManageStaff: true,
+        errorCode: 'invalid',
+        errorMessage: 'network down',
+      ),
+      isTrue,
+    );
   });
 
   test('a real transport error may still request a later snapshot', () {

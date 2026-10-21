@@ -64,6 +64,41 @@ class DocumentStore {
     'auth_secrets',
     'auth_rate_limits',
     'platform_secrets',
+    'client_crash_reports',
+    'password_reset_codes',
+  };
+
+  /// Parent / student / driver writes the trigger allows. Anything else
+  /// raises `write_denied` before the row is saved.
+  static const parentWritableCollections = {
+    'user_preferences',
+    'parent_link_requests',
+    'conversations',
+    'fcm_tokens',
+    'app_notifications',
+    'parents',
+    'material_purchase_requests',
+  };
+
+  static const studentWritableCollections = {
+    'user_preferences',
+    'conversations',
+    'homework',
+    'fcm_tokens',
+    'app_notifications',
+    'material_purchase_requests',
+  };
+
+  static const driverWritableCollections = {
+    'user_preferences',
+    'conversations',
+    'fcm_tokens',
+    'app_notifications',
+    'transport_scans',
+    'transport_passenger_status',
+    'bus_live_positions',
+    'qr_scans',
+    'drivers',
   };
 
   /// Collections the write trigger always rejects for a non-admin JWT.
@@ -86,6 +121,15 @@ class DocumentStore {
     final role = roleKey?.trim().toLowerCase() ?? '';
     if (role.isEmpty) return false;
     if (adminOnlyCollections.contains(collection)) return role == 'admin';
+    if (role == 'parent') {
+      return parentWritableCollections.contains(collection);
+    }
+    if (role == 'student') {
+      return studentWritableCollections.contains(collection);
+    }
+    if (role == 'driver') {
+      return driverWritableCollections.contains(collection);
+    }
     return true;
   }
 

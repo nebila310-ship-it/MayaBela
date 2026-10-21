@@ -369,11 +369,17 @@ class AuthService {
     demoDriverPhone,
   };
 
-  /// Rebuilds phone logins from staff registries, saves locally, and pushes to Firestore.
-  static Future<void> persistRegistryLoginAccounts() async {
+  /// Rebuilds phone logins from staff registries and saves them on this device.
+  ///
+  /// [pushCloud] is only for a real staff edit. A cloud pull passes false:
+  /// echoing every saved login through `app_auth_accounts` is what raises
+  /// `write_denied` and "new row violates row-level security policy".
+  static Future<void> persistRegistryLoginAccounts({
+    bool pushCloud = true,
+  }) async {
     ensureRegistryLoginAccounts();
     await AuthPersistenceService.instance.saveAll();
-    if (!SupabaseBootstrap.isInitialized) return;
+    if (!pushCloud || !SupabaseBootstrap.isInitialized) return;
     for (final user in _users.values) {
       final key = user.username.toLowerCase();
       if (_demoOnlyUsernames.contains(key)) continue;
