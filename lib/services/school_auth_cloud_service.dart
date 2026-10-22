@@ -1320,12 +1320,36 @@ class SchoolAuthCloudService {
     }
   }
 
+  /// A still-valid school token must not be replaced. `school-refresh-claims`
+  /// signs in again and rotates the session. Doing that on every teacher
+  /// pull minted a second and third token during login, and the presence
+  /// heartbeat then posted against a session the row policy rejected.
+  @visibleForTesting
+  static bool shouldSkipClaimRefresh({
+    required bool force,
+    required bool refreshingSelf,
+    required bool tokenMayWrite,
+  }) {
+    return !force && refreshingSelf && tokenMayWrite;
+  }
+
   Future<SchoolAuthCloudResult> refreshAccessClaims({
     String? username,
     String? schoolId,
+    bool force = false,
   }) async {
     if (!isAvailable) {
       return const SchoolAuthCloudResult(ok: false, errorCode: 'cloud_required');
+    }
+    final target = username?.trim().toLowerCase() ?? '';
+    final self = AuthService.currentUser?.username.trim().toLowerCase() ?? '';
+    final refreshingSelf = target.isEmpty || (self.isNotEmpty && target == self);
+    if (shouldSkipClaimRefresh(
+      force: force,
+      refreshingSelf: refreshingSelf,
+      tokenMayWrite: accessTokenMayWriteAppDocuments(),
+    )) {
+      return const SchoolAuthCloudResult(ok: true);
     }
     try {
       final sid = (schoolId ?? resolvedSchoolId() ?? '').trim().toUpperCase();
