@@ -28,3 +28,10 @@ Companion to the inception report (Section 11 and Annex C; deliverable D6). One 
 - Rebuild the PDF: `python3 docs/proposals/build_lia_training_modules_pdf.py`
 
 Document MBT-LIA-TRN-2026-01, version 1.0 for LIA review.
+
+## Lebawi International Academy — agreement (Word)
+
+Software Licence and Implementation Agreement MBT-LIA-AGR-2026-01 between Lebawi International Academy and Majo Bridge Technologies and Events PLC, in Ethiopian company-contract style (parties with TIN and licence blanks, preamble, 24 articles, witnesses, Ethiopian and Gregorian dates). Contract price from the 49-module financial proposal MBT-LIA-FIN-2026-02: 3,875,000 ETB plus VAT 581,250 ETB = 4,456,250 ETB; payment 40% on signing, 40% on delivery for UAT, 20% on go-live. Incorporates the inception report, training modules, financial proposal, and notice of intent to award as annexes; includes the module list with prices, deliverables and milestones, client infrastructure, a publicity and recognition clause, and a certificate-of-recognition form.
+
+- Word: [MaJo_Bridge_LIA_Agreement.docx](MaJo_Bridge_LIA_Agreement.docx)
+- Rebuild: `python3 docs/proposals/build_lia_agreement_docx.py` (needs `pip install python-docx`)
