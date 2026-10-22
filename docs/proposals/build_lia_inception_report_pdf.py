@@ -103,7 +103,7 @@ def stamp(pdf_path: Path, footer: str) -> None:
 def main() -> None:
     if not HTML.exists():
         raise SystemExit(f"Missing {HTML}")
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         raw = Path(tmp) / "raw.pdf"
         print_html(HTML, raw)
         shutil.copy2(raw, PDF)

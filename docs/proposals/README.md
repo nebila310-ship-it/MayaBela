@@ -18,3 +18,13 @@ Responds to the LIA Procurement Notice of Intent to Award for the Student Manage
 - Rebuild the PDF: `python3 docs/proposals/build_lia_inception_report_pdf.py` (needs Chrome and `pip install pymupdf`)
 
 Document MBT-LIA-INC-2026-01, version 1.0 for LIA review. Dates and the module ticks in Annex A are confirmed at the kick-off meeting; blanks for officer names, the contract reference, and the school sub-domain are filled before signature.
+
+## Lebawi International Academy — training modules
+
+Companion to the inception report (Section 11 and Annex C; deliverable D6). One module per training session: audience, prerequisites, minute-by-minute trainer plan, the exercise each attendee performs on real LIA data, check of learning, and materials. Covers IT and administration (three parts, including the restore drill), leadership and directors (two parts), student affairs and support, quality assurance, three teacher cohorts, train-the-trainer, parent briefings, and student orientation, plus attendance sheet, evaluation form, competency checklists, and room and practice-data requirements.
+
+- PDF: [MaJo_Bridge_LIA_Training_Modules.pdf](MaJo_Bridge_LIA_Training_Modules.pdf)
+- Printable HTML: [lia-training-modules.html](lia-training-modules.html)
+- Rebuild the PDF: `python3 docs/proposals/build_lia_training_modules_pdf.py`
+
+Document MBT-LIA-TRN-2026-01, version 1.0 for LIA review.
