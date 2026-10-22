@@ -235,24 +235,36 @@ class PresenceService extends ChangeNotifier {
     if (username.isEmpty || _deniedUsername == username) return;
     // Column school_id must be the access-token school. The active-school
     // field can disagree, and every 45s heartbeat then fails RLS.
+    if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) return;
     final schoolId = SchoolAuthCloudService.accessTokenSchoolId();
     if (schoolId == null || schoolId.isEmpty) return;
     try {
-      await _crud.createOrUpdate(
-        collection: AppCollections.userPresence,
-        docId: username,
-        data: {
-          'username': user.username,
-          'phone': user.phone,
-          'roleKey': user.roleKey,
-          'staffId': StaffMemberOption.viewerCompositeStaffId(user.roleKey),
-          'fullName': user.fullName,
-          'schoolId': schoolId,
-          'lastSeen': now.toIso8601String(),
+      // Direct upsert of user_presence is what returns 42501 on teacher
+      // login: the row already exists, this role cannot SELECT it, and the
+      // table policy then rejects the write. The definer function binds the
+      // row to the JWT and stays quiet when the token has no school role.
+      await SupabaseBootstrap.client.rpc(
+        'touch_user_presence',
+        params: {
+          'p_data': {
+            'phone': user.phone,
+            'staffId': StaffMemberOption.viewerCompositeStaffId(user.roleKey),
+            'fullName': user.fullName,
+            'lastSeen': now.toIso8601String(),
+          },
         },
       );
     } catch (e) {
-      if (DocumentStore.isRlsForbidden(e) || DocumentStore.isStaleWrite(e)) {
+      final text = '$e'.toLowerCase();
+      final missingFunction =
+          text.contains('pgrst202') ||
+          text.contains('touch_user_presence') ||
+          text.contains('could not find the function');
+      // One refusal per session. Retrying a 42501 or a missing function
+      // every 45 seconds is what turns the API log red.
+      if (missingFunction ||
+          DocumentStore.isRlsForbidden(e) ||
+          DocumentStore.isStaleWrite(e)) {
         _deniedUsername = username;
       }
       if (kDebugMode) {

@@ -562,4 +562,39 @@ void main() {
       isFalse,
     );
   });
+
+  test('a usable school token is not refreshed again on login pull', () {
+    expect(
+      SchoolAuthCloudService.shouldSkipClaimRefresh(
+        force: false,
+        refreshingSelf: true,
+        tokenMayWrite: true,
+      ),
+      isTrue,
+    );
+    expect(
+      SchoolAuthCloudService.shouldSkipClaimRefresh(
+        force: true,
+        refreshingSelf: true,
+        tokenMayWrite: true,
+      ),
+      isFalse,
+    );
+    expect(
+      SchoolAuthCloudService.shouldSkipClaimRefresh(
+        force: false,
+        refreshingSelf: false,
+        tokenMayWrite: true,
+      ),
+      isFalse,
+    );
+    expect(
+      SchoolAuthCloudService.shouldSkipClaimRefresh(
+        force: false,
+        refreshingSelf: true,
+        tokenMayWrite: false,
+      ),
+      isFalse,
+    );
+  });
 }
