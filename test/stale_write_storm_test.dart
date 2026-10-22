@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mayabela/database/supabase/supabase_storage_bootstrap.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
+import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/services/school_auth_cloud_service.dart';
 
 void main() {
@@ -21,6 +22,15 @@ void main() {
       isTrue,
     );
     expect(DocumentStore.isStaleWrite(Exception('network timeout')), isFalse);
+  });
+
+  test('only a school admin may upload the registry seed', () {
+    expect(SchoolDatabaseService.mayUploadRegistrySeed('admin'), isTrue);
+    expect(SchoolDatabaseService.mayUploadRegistrySeed('teacher'), isFalse);
+    expect(SchoolDatabaseService.mayUploadRegistrySeed('parent'), isFalse);
+    expect(SchoolDatabaseService.mayUploadRegistrySeed('student'), isFalse);
+    expect(SchoolDatabaseService.mayUploadRegistrySeed('driver'), isFalse);
+    expect(SchoolDatabaseService.mayUploadRegistrySeed(null), isFalse);
   });
 
   test('stale_write must not queue another full-school dump', () {

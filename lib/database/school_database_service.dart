@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/database/id_utils.dart';
 import 'package:mayabela/database/models/database_models.dart';
@@ -32,6 +34,18 @@ class SchoolDatabaseService {
   SchoolRepository get repository => _repository;
   RelationshipResolver get resolver => _resolver;
 
+  /// Only a school admin may upload the local registry seed.
+  ///
+  /// Teachers cannot read the legacy `users` rows, so an empty read looks
+  /// like a blank school. Uploading the seed then upserts every local
+  /// record, and each existing row the teacher cannot see is rejected.
+  @visibleForTesting
+  static bool mayUploadRegistrySeed(String? roleKey) =>
+      roleKey == AuthService.roleAdmin;
+
+  bool get _mayUploadRegistrySeed =>
+      mayUploadRegistrySeed(AuthService.currentUser?.roleKey);
+
   /// Initialize from registries. Uses Firestore when Firebase is configured.
   Future<void> initialize({bool? useFirestore}) async {
     final firebaseReady = SupabaseBootstrap.isInitialized;
@@ -63,8 +77,12 @@ class SchoolDatabaseService {
   }
 
   /// Re-sync when registries or enrollment links change.
+  ///
+  /// Cloud upload is admin-only. Other roles keep the in-memory repository
+  /// and must not POST the seed.
   Future<void> syncFromRegistries() async {
     if (_useFirestore && _repository is SupabaseSchoolRepository) {
+      if (!_mayUploadRegistrySeed) return;
       await _repository.loadSnapshot(RegistrySeedBuilder.buildFromRegistries());
     } else {
       await _repository.loadSnapshot(RegistrySeedBuilder.buildFromRegistries());
@@ -74,7 +92,7 @@ class SchoolDatabaseService {
 
   /// Incremental sync for one enrolled student — avoids rewriting the whole database.
   Future<void> syncStudentFromRegistry(String studentId) async {
-    if (!_initialized) return;
+    if (!_initialized || !_mayUploadRegistrySeed) return;
     final bundle = RegistrySeedBuilder.sliceForStudent(studentId);
     if (bundle.student == null) return;
 
@@ -94,7 +112,7 @@ class SchoolDatabaseService {
 
   /// Sync one parent's user record, profile, and approved child links.
   Future<void> syncParentEnrollmentForUser(String username) async {
-    if (!_initialized) return;
+    if (!_initialized || !_mayUploadRegistrySeed) return;
     final bundle = RegistrySeedBuilder.sliceForParentUsername(username);
     if (bundle.user != null) {
       await _repository.upsertUser(bundle.user!);
@@ -111,7 +129,7 @@ class SchoolDatabaseService {
 
   /// Incremental sync for one teacher's assignments.
   Future<void> syncTeacherFromRegistry(String teacherId) async {
-    if (!_initialized) return;
+    if (!_initialized || !_mayUploadRegistrySeed) return;
     final bundle = RegistrySeedBuilder.sliceForTeacher(teacherId);
     if (bundle.user != null) {
       await _repository.upsertUser(bundle.user!);

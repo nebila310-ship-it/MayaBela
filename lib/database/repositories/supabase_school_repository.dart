@@ -1,4 +1,5 @@
 import 'package:mayabela/database/collection_names.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/database/models/database_models.dart';
 import 'package:mayabela/database/repositories/school_repository.dart';
 import 'package:mayabela/database/seed/school_seed_snapshot.dart';
@@ -72,6 +73,13 @@ class SupabaseSchoolRepository implements SchoolRepository {
   }
 
   Future<void> seedIfEmpty(SchoolSeedSnapshot snapshot) async {
+    // A teacher read of `users` is empty because of row security, not
+    // because the school has no accounts. Seeding from that empty read
+    // uploads the whole local school and turns the API log red.
+    if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
+      await refreshCache();
+      return;
+    }
     final users = await _crud.readAll(DbCollections.users);
     if (users.isEmpty) {
       await loadSnapshot(snapshot);
