@@ -11,10 +11,10 @@ The document lists the live 55+ modules and maps the LIA Terms of Reference to t
 
 ## Lebawi International Academy — inception report
 
-First deliverable after the award. Confirms scope, the twelve-week work plan, deliverables and acceptance, team and LIA counterparts, governance, data migration, training, hosting, UAT, risks, and the inputs LIA must provide.
+Responds to the LIA Procurement Notice of Intent to Award for the Student Management System (SMS) Project. Tabled at the kick-off meeting of Tuesday 27 October 2026. Confirms the revised scope (about 49 modules with customization), the software requirements analysis, the hybrid implementation approach (student and sensitive data on the LIA physical server; authentication and other services on the Majo Bridge self-hosted cloud server), the twelve-week work plan, key deliverables and acceptance, governance, data migration, training, security and backups, UAT, risks, and the inputs LIA must provide. Commercial terms and team names are deliberately left out.
 
 - PDF: [MaJo_Bridge_LIA_Inception_Report.pdf](MaJo_Bridge_LIA_Inception_Report.pdf)
 - Printable HTML: [lia-inception-report.html](lia-inception-report.html)
 - Rebuild the PDF: `python3 docs/proposals/build_lia_inception_report_pdf.py` (needs Chrome and `pip install pymupdf`)
 
-Document MBT-LIA-INC-2026-01, version 1.0 for LIA review. Dates and the module selection are confirmed at the inception meeting; blanks for names and the contract reference are filled before signature.
+Document MBT-LIA-INC-2026-01, version 1.0 for LIA review. Dates and the module ticks in Annex A are confirmed at the kick-off meeting; blanks for officer names, the contract reference, and the school sub-domain are filled before signature.
