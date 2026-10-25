@@ -109,17 +109,21 @@ class _SplashWatermark extends StatelessWidget {
     } else {
       image = fallback;
     }
-    return IgnorePointer(
-      child: ColorFiltered(
-        // 0–255 color space. Near-white becomes clear. Remaining ink is a little darker.
-        colorFilter: const ColorFilter.matrix(<double>[
-          0.78, 0, 0, 0, 0,
-          0, 0.78, 0, 0, 0,
-          0, 0, 0.78, 0, 0,
-          -1.15, -1.15, -1.15, 0, 800,
-        ]),
-        child: image,
-      ),
-    );
+    final schoolLogo = url != null &&
+        (url.startsWith('http://') || url.startsWith('https://'));
+    // School photos often sit on white. Knock that field out and darken the mark.
+    // The platform steps mark is already transparent, so it is left as drawn.
+    final shown = schoolLogo
+        ? ColorFiltered(
+            colorFilter: const ColorFilter.matrix(<double>[
+              0.78, 0, 0, 0, 0,
+              0, 0.78, 0, 0, 0,
+              0, 0, 0.78, 0, 0,
+              -1.15, -1.15, -1.15, 0, 800,
+            ]),
+            child: image,
+          )
+        : image;
+    return IgnorePointer(child: shown);
   }
 }
