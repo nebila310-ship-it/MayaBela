@@ -9,6 +9,7 @@ import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/login_prefs_service.dart';
 import 'package:mayabela/services/school_public_brand_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
+import 'package:mayabela/widgets/education_splash_loader.dart';
 import 'package:mayabela/widgets/fancy_loading_ring.dart';
 import 'package:mayabela/widgets/launch_school_splash.dart';
 import 'package:mayabela/widgets/login_brand_header.dart';
@@ -95,9 +96,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Sunrise Academy'), findsOneWidget);
-    expect(find.byType(FancyLoadingRing), findsWidgets);
+    expect(find.byType(EducationSplashLoader), findsWidgets);
     expect(find.byKey(const ValueKey('splash-loading-ring')), findsOneWidget);
-    expect(find.text('LOADING'), findsOneWidget);
+    expect(find.text('OPENING CLASS'), findsOneWidget);
   });
 
   testWidgets('empty school id shows MaJo Bridge OS, not a remembered school', (
@@ -146,9 +147,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('MaJo Bridge OS'), findsOneWidget);
-    expect(find.byType(FancyLoadingRing), findsWidgets);
+    expect(find.byType(EducationSplashLoader), findsWidgets);
     expect(find.byKey(const ValueKey('splash-loading-ring')), findsOneWidget);
-    expect(find.text('LOADING'), findsOneWidget);
+    expect(find.text('OPENING CLASS'), findsOneWidget);
   });
 
   test('chrome title is MaJo Bridge OS until a school id is entered', () async {
@@ -270,9 +271,10 @@ void main() {
     final html = File('web/index.html').readAsStringSync();
     expect(html, contains('id="splash-halo"'));
     expect(html, contains('id="splash-loading-label"'));
-    expect(html, contains('splash-orbit'));
-    expect(html, contains('hue-rotate'));
-    expect(html, contains('Loading'));
+    expect(html, contains('edu-cap'));
+    expect(html, contains('edu-pencil'));
+    expect(html, contains('edu-book'));
+    expect(html, contains('Opening class'));
     expect(html, contains("flutter-first-frame"));
     expect(html, contains('flt-glass-pane'));
     expect(html, contains('mayabela_school_brands'));
