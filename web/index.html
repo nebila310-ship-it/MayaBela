@@ -531,6 +531,16 @@
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
         var p = image.data;
+        var clear = 0;
+        var samples = 0;
+        for (var s = 3; s < p.length; s += 16) {
+          samples += 1;
+          if (p[s] < 250) clear += 1;
+        }
+        if (samples && clear / samples > 0.08) {
+          img.dataset.toned = '1';
+          return;
+        }
         for (var i = 0; i < p.length; i += 4) {
           var r = p[i], g = p[i + 1], b = p[i + 2];
           var hi = r > g ? (r > b ? r : b) : (g > b ? g : b);
