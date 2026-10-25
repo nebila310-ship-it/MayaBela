@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:mayabela/models/remembered_school_brand.dart';
@@ -5,10 +7,9 @@ import 'package:mayabela/platform/login_chrome_brand.dart';
 import 'package:mayabela/services/school_logo_service.dart';
 import 'package:mayabela/widgets/education_splash_loader.dart';
 import 'package:mayabela/widgets/maya_brand_logo.dart';
-import 'package:mayabela/widgets/school_logo_display.dart';
 
 /// First Flutter frame while critical bootstrap runs.
-/// Uses the remembered school when one exists; otherwise Maya.
+/// The school mark, or the platform mark, sits behind as a wide watermark.
 class LaunchSchoolSplash extends StatelessWidget {
   const LaunchSchoolSplash({super.key, this.brand});
 
@@ -32,61 +33,92 @@ class LaunchSchoolSplash extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 240,
-                    height: 240,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const EducationSplashLoader(
-                          key: ValueKey('splash-loading-ring'),
-                          size: 240,
-                          showLabel: false,
-                        ),
-                        if (remembered == null)
-                          const MayaBrandLogo(height: 112)
-                        else
-                          SchoolLogoDisplay(
-                            schoolId: remembered.schoolId,
-                            imagePath: remembered.logoPath,
-                            networkUrl: SchoolLogoService.displayUrlFor(
-                              remembered.schoolId,
-                              storedUrl: remembered.logoUrl,
-                              style: remembered.logoStyle,
-                            ),
-                            style: remembered.logoStyle,
-                            height: 112,
-                          ),
-                      ],
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              _SplashWatermark(brand: remembered),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const EducationSplashLoader(
+                      key: ValueKey('splash-loading-ring'),
+                      size: 300,
+                      showLabel: false,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.indigo.shade900,
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.indigo.shade900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  const EducationSplashLoader(
-                    key: ValueKey('splash-loading-caption'),
-                    size: 0,
-                    showLabel: true,
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    const EducationSplashLoader(
+                      key: ValueKey('splash-loading-caption'),
+                      size: 0,
+                      showLabel: true,
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SplashWatermark extends StatelessWidget {
+  const _SplashWatermark({required this.brand});
+
+  final RememberedSchoolBrand? brand;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = math.min(MediaQuery.sizeOf(context).width * 0.96, 1000.0);
+    final remembered = brand;
+    final url = remembered == null
+        ? null
+        : SchoolLogoService.displayUrlFor(
+            remembered.schoolId,
+            storedUrl: remembered.logoUrl,
+            style: remembered.logoStyle,
+          );
+    final fallback = Image.asset(
+      MayaBrandLogo.assetPath,
+      width: width,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+    );
+    final Widget image;
+    if (url != null &&
+        (url.startsWith('http://') || url.startsWith('https://'))) {
+      image = Image.network(
+        url,
+        width: width,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    } else {
+      image = fallback;
+    }
+    return IgnorePointer(
+      child: ColorFiltered(
+        // 0–255 color space. Near-white becomes clear. Remaining ink is a little darker.
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.78, 0, 0, 0, 0,
+          0, 0.78, 0, 0, 0,
+          0, 0, 0.78, 0, 0,
+          -1.15, -1.15, -1.15, 0, 800,
+        ]),
+        child: image,
       ),
     );
   }

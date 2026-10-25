@@ -272,8 +272,8 @@ void main() {
     expect(html, contains('id="splash-halo"'));
     expect(html, contains('id="splash-loading-label"'));
     expect(html, contains('edu-cap'));
-    expect(html, contains('edu-pencil'));
-    expect(html, contains('edu-book'));
+    expect(html, contains('mile-glyph'));
+    expect(html, contains('ABCDEFGH'));
     expect(html, contains('Opening class'));
     expect(html, contains("flutter-first-frame"));
     expect(html, contains('flt-glass-pane'));
