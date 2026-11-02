@@ -617,6 +617,13 @@ class TeacherRegistryService {
         .toList();
   }
 
+  /// Staff holding an administration role, as listed on the staff directory.
+  List<AdminTeacherRecord> visibleAdministrationStaff({String? schoolId}) {
+    return visibleTeachers(schoolId: schoolId)
+        .where((t) => t.staffRoles.isNotEmpty)
+        .toList();
+  }
+
   void assignHomeroomClass(String teacherId, String className) {
     final teacher = lookupById(teacherId);
     if (teacher == null) return;

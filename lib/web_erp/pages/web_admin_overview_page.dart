@@ -192,6 +192,13 @@ class WebAdminOverviewPage extends StatelessWidget {
             onTap: _go('hr'),
           ),
           WebStatCard(
+            label: 'Administration Staff',
+            value: '${stats.totalAdministrationStaff}',
+            icon: Icons.badge_outlined,
+            color: Colors.deepPurple,
+            onTap: _go('teachers'),
+          ),
+          WebStatCard(
             label: 'Buses Active',
             value: '${stats.busesActive}',
             icon: Icons.directions_bus_outlined,

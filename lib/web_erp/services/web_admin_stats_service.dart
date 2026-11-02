@@ -29,6 +29,7 @@ class WebAdminStats {
     required this.birthdaysToday,
     required this.recentAdmissions,
     required this.totalTeachers,
+    required this.totalAdministrationStaff,
     required this.totalDrivers,
     required this.gradeBreakdown,
     required this.attendanceTrend,
@@ -53,6 +54,7 @@ class WebAdminStats {
   final int birthdaysToday;
   final int recentAdmissions;
   final int totalTeachers;
+  final int totalAdministrationStaff;
   final int totalDrivers;
   final Map<String, int> gradeBreakdown;
   final List<double> attendanceTrend;
@@ -97,6 +99,10 @@ class WebAdminStatsService {
     final homework = DashboardBadgeService.instance.countFor('homework');
 
     final teachers = TeacherRegistryService.instance.visibleClassroomTeachers(
+      schoolId: schoolId,
+    );
+    final adminStaff =
+        TeacherRegistryService.instance.visibleAdministrationStaff(
       schoolId: schoolId,
     );
     final drivers = schoolId == null
@@ -216,6 +222,7 @@ class WebAdminStatsService {
       birthdaysToday: birthdaysToday,
       recentAdmissions: recentAdmissions,
       totalTeachers: teachers.length,
+      totalAdministrationStaff: adminStaff.length,
       totalDrivers: drivers.length,
       gradeBreakdown: gradeBreakdown,
       attendanceTrend: attendanceTrend,

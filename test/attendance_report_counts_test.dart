@@ -216,6 +216,7 @@ void main() {
     ]);
 
     expect(WebAdminStatsService.instance.load().totalTeachers, 0);
+    expect(WebAdminStatsService.instance.load().totalAdministrationStaff, 1);
 
     TeacherRegistryService.instance.applyPersistedTeachers([
       AdminTeacherRecord(
