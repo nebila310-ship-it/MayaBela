@@ -96,7 +96,7 @@ class WebAdminStatsService {
     final announcements = DashboardBadgeService.instance.countFor('announcements');
     final homework = DashboardBadgeService.instance.countFor('homework');
 
-    final teachers = TeacherRegistryService.instance.visibleTeachers(
+    final teachers = TeacherRegistryService.instance.visibleClassroomTeachers(
       schoolId: schoolId,
     );
     final drivers = schoolId == null

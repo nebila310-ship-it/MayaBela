@@ -609,6 +609,14 @@ class TeacherRegistryService {
     return teachersForSchool(sid, includeInactive: includeInactive);
   }
 
+  /// Classroom teachers only. Administration staff with a role are listed on
+  /// the staff directory, so the Teachers count must leave them out.
+  List<AdminTeacherRecord> visibleClassroomTeachers({String? schoolId}) {
+    return visibleTeachers(schoolId: schoolId)
+        .where((t) => t.staffRoles.isEmpty)
+        .toList();
+  }
+
   void assignHomeroomClass(String teacherId, String className) {
     final teacher = lookupById(teacherId);
     if (teacher == null) return;
