@@ -28,7 +28,6 @@ class DemoContent {
     'mrs. selam',
     'mr. getachew',
     'alemayehu t.',
-    'school admin',
   };
 
   static const sampleLogins = {
