@@ -195,6 +195,42 @@ void main() {
     expect(titles, isNot(contains('Homework posted')));
   });
 
+  test('administration staff do not count on the Teachers tile', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.fs0598',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'FS0598',
+      fullName: 'Owner',
+    );
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'REG-0001',
+        fullName: 'Office Registrar',
+        assignedClass: '',
+        schoolId: 'FS0598',
+        phone: '0912000077',
+        loginUsername: '0912000077',
+        staffRoles: const ['registrar'],
+      ),
+    ]);
+
+    expect(WebAdminStatsService.instance.load().totalTeachers, 0);
+
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-0001',
+        fullName: 'Grade One Teacher',
+        assignedClass: 'Grade 1A',
+        schoolId: 'FS0598',
+        phone: '0912000078',
+        loginUsername: '0912000078',
+      ),
+    ]);
+
+    expect(WebAdminStatsService.instance.load().totalTeachers, 1);
+  });
+
   test('leftover demo 1-present-2-absent sessions do not hide the live class', () {
     final data = SchoolDataService.instance;
     const className = 'KG 1B-REP';

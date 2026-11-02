@@ -435,7 +435,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
 
     if (ModuleAccess.canView('hr')) {
       final teachers = TeacherRegistryService.instance
-          .visibleTeachers(schoolId: sid)
+          .visibleClassroomTeachers(schoolId: sid)
           .length;
       final staff =
           SchoolDataService.instance.getStaffForActiveSchool().length;
