@@ -3,6 +3,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_registry_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
+import 'package:mayabela/services/finance_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_enrollment_metrics_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
@@ -120,35 +121,47 @@ class WebAdminStatsService {
       );
     }
 
-    // Real last-7-days collections from paid fee dates (not synthetic).
+    // Collections recorded for this school: legacy fee rows plus finance payments.
     final allFees = SchoolDataService.instance.getAllFees();
     final revenueTrend = <double>[];
     for (var i = 6; i >= 0; i--) {
       final day = DateTime(today.year, today.month, today.day)
           .subtract(Duration(days: i));
-      final dayTotal = allFees
+      final next = day.add(const Duration(days: 1));
+      final fromFees = allFees
           .where(
             (f) =>
                 f.isPaid &&
                 f.paidDate != null &&
-                f.paidDate!.year == day.year &&
-                f.paidDate!.month == day.month &&
-                f.paidDate!.day == day.day,
+                !f.paidDate!.isBefore(day) &&
+                f.paidDate!.isBefore(next),
           )
           .fold<double>(0, (sum, f) => sum + f.amount);
-      revenueTrend.add(dayTotal);
+      final fromPayments = FinanceService.instance.collectedBetween(
+        day,
+        next,
+        schoolId,
+      );
+      revenueTrend.add(fromFees + fromPayments);
     }
 
     final revenueToday = revenueTrend.isEmpty ? 0.0 : revenueTrend.last;
     final monthStart = DateTime(today.year, today.month, 1);
+    final nextMonth = DateTime(today.year, today.month + 1, 1);
     final revenueThisMonth = allFees
-        .where(
-          (f) =>
-              f.isPaid &&
-              f.paidDate != null &&
-              !f.paidDate!.isBefore(monthStart),
-        )
-        .fold<double>(0, (sum, f) => sum + f.amount);
+            .where(
+              (f) =>
+                  f.isPaid &&
+                  f.paidDate != null &&
+                  !f.paidDate!.isBefore(monthStart) &&
+                  f.paidDate!.isBefore(nextMonth),
+            )
+            .fold<double>(0, (sum, f) => sum + f.amount) +
+        FinanceService.instance.collectedBetween(
+          monthStart,
+          nextMonth,
+          schoolId,
+        );
 
     // Real last-6-months admissions from portal account creation dates.
     final admissionsTrend = <double>[];
@@ -188,14 +201,14 @@ class WebAdminStatsService {
       totalStudents: activeStudents.length,
       studentsPresentToday: attendance.presentCount,
       studentsAbsent: attendance.absentCount,
-      teachersPresent: (teachers.length * 0.92).round(),
-      parentsRegistered: parentApprovals + activeStudents.length ~/ 2,
-      busesActive: buses.isNotEmpty ? buses.length : drivers.length,
+      teachersPresent: 0,
+      parentsRegistered: parentApprovals,
+      busesActive: buses.length,
       assignmentsPending: homework,
       revenueToday: revenueToday,
-      revenueThisMonth:
-          revenueThisMonth > 0 ? revenueThisMonth : paymentSummary.totalPaid,
-      outstandingFees: paymentSummary.totalDue,
+      revenueThisMonth: revenueThisMonth,
+      outstandingFees: paymentSummary.totalDue +
+          FinanceService.instance.controlTotals(schoolId).outstanding,
       unreadAnnouncements: announcements,
       supportTickets: messages,
       pendingApprovals: pendingGrades + parentApprovals,
