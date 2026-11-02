@@ -46,11 +46,15 @@ void main() {
     await tester.tap(find.text('Total Students'));
     await tester.tap(find.text('Present Today'));
     await tester.tap(find.text('Teachers'));
+    await tester.tap(find.text('Administration Staff'));
     await tester.tap(find.text('Buses Active'));
     await tester.tap(find.text('Outstanding Fees'));
     await tester.pump();
 
-    expect(opened, containsAll(['students', 'attendance', 'hr', 'transport', 'finance']));
+    expect(
+      opened,
+      containsAll(['students', 'attendance', 'hr', 'teachers', 'transport', 'finance']),
+    );
     expect(find.byType(WebStatCard), findsWidgets);
     expect(find.text('SCHOOL BUS'), findsNothing);
   });
