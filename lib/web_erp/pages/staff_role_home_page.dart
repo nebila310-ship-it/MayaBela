@@ -14,6 +14,7 @@ import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/services/lesson_plan_service.dart';
 import 'package:mayabela/services/discipline_service.dart';
 import 'package:mayabela/services/enrollment_service.dart';
+import 'package:mayabela/services/finance_service.dart';
 import 'package:mayabela/services/institution_service.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
@@ -421,13 +422,14 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
       final pay = SchoolDataService.instance.getPaymentSummary(
         parentOnly: false,
       );
+      final books = FinanceService.instance.controlTotals(sid);
       out.add(_StatCard(
         moduleId: 'finance',
         icon: Icons.payments_outlined,
         color: Colors.teal,
-        value: 'ETB ${_money(pay.totalPaid)}',
+        value: 'ETB ${_money(pay.totalPaid + books.collected)}',
         label: 'Fees collected',
-        sub: 'ETB ${_money(pay.totalDue)} outstanding',
+        sub: 'ETB ${_money(pay.totalDue + books.outstanding)} outstanding',
       ));
     }
 

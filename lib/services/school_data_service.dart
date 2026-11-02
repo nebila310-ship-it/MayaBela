@@ -4631,8 +4631,10 @@ class SchoolDataService {
   bool _attendanceSessionInDailyReport(AttendanceSession session) {
     final schoolId = AuthService.activeSchoolId?.trim();
     if (schoolId == null || schoolId.isEmpty) return true;
+    // A school with nobody on the register has no attendance. The sample
+    // Grade 4A / 5B sessions must not fill that empty register.
     if (StudentRegistryService.instance.studentsForSchool(schoolId).isEmpty) {
-      return true;
+      return false;
     }
     return getAllClassNames().any(
       (className) => _classNamesMatch(className, session.className),
@@ -8055,7 +8057,38 @@ class SchoolDataService {
     ),
   ];
 
-  List<FeeRecord> getAllFees() => List.unmodifiable(_fees);
+  /// Sample invoices shipped with the app. They belong to school TB-001 only.
+  static bool isBuiltInDemoFee(FeeRecord fee) {
+    return RegExp(r'^fee-[1-5]$', caseSensitive: false).hasMatch(fee.id.trim());
+  }
+
+  /// Fees for the signed-in school. Sample invoices stay on TB-001.
+  List<FeeRecord> feesForSchool(String? schoolId) {
+    final sid = (schoolId ?? '').trim().toUpperCase();
+    if (sid.isEmpty) return List.unmodifiable(_fees);
+    final students = StudentRegistryService.instance.studentsForSchool(sid);
+    final ids = <String>{
+      for (final student in students)
+        if (student.studentId.trim().isNotEmpty)
+          student.studentId.trim().toUpperCase(),
+    };
+    final names = <String>{
+      for (final student in students) student.fullName.trim().toLowerCase(),
+    };
+    return _fees.where((fee) {
+      if (isBuiltInDemoFee(fee)) return sid == 'TB-001';
+      final feeStudent = fee.studentId?.trim().toUpperCase() ?? '';
+      if (feeStudent.isNotEmpty) return ids.contains(feeStudent);
+      final name = fee.studentName.trim().toLowerCase();
+      return name.isNotEmpty && names.contains(name);
+    }).toList(growable: false);
+  }
+
+  List<FeeRecord> getAllFees() {
+    final sid = AuthService.activeSchoolId?.trim();
+    if (sid == null || sid.isEmpty) return List.unmodifiable(_fees);
+    return List.unmodifiable(feesForSchool(sid));
+  }
 
   List<FeeRecord> getFeesForParent() {
     final children = getChildren();

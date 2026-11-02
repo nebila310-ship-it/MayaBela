@@ -31,7 +31,9 @@ void main() {
     );
     final data = SchoolDataService.instance;
     const className = 'Grade 4A';
-    final day = DateTime.utc(2026, 11, 2);
+    // Keep this off DateTime.now(). The demo register seeds Grade 4A for
+    // today and recent days, and a same-day save merges those rows.
+    final day = DateTime.utc(2024, 4, 8);
 
     expect(
       data.saveAttendanceSession(
@@ -86,7 +88,7 @@ void main() {
 
   test('parent cannot write the register; assigned teacher cannot mark another class', () {
     final data = SchoolDataService.instance;
-    final day = DateTime.utc(2026, 11, 4);
+    final day = DateTime.utc(2024, 4, 10);
 
     AuthService.currentUser = RegisteredUser(
       username: 'parent.p2',
@@ -143,7 +145,7 @@ void main() {
   test('locked register blocks the teacher; admin can unlock', () {
     final data = SchoolDataService.instance;
     const className = 'Grade 4A';
-    final day = DateTime.utc(2026, 11, 5);
+    final day = DateTime.utc(2024, 4, 12);
 
     AuthService.currentUser = RegisteredUser(
       username: 'teacher',

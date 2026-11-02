@@ -167,6 +167,13 @@ class FinanceService extends ChangeNotifier {
     return _payments.where((p) => p.schoolId == sid).toList();
   }
 
+  /// Payments recorded from [start] inclusive to [end] exclusive.
+  double collectedBetween(DateTime start, DateTime end, [String? schoolId]) {
+    return paymentsForSchool(schoolId)
+        .where((p) => !p.paidAt.isBefore(start) && p.paidAt.isBefore(end))
+        .fold<double>(0, (sum, p) => sum + p.amount);
+  }
+
   List<FinanceCashbox> cashboxesForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
     return _cashboxes.where((c) => c.schoolId == sid).toList();

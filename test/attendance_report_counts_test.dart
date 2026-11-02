@@ -90,6 +90,30 @@ void main() {
     expect(stats.studentsAbsent, 1);
   });
 
+  test('a new empty school does not inherit sample attendance or sample fees', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.fn0597',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'FN0597',
+      fullName: 'Fenote Admin',
+    );
+    final day = DateTime.now();
+    final report = SchoolDataService.instance.buildDailyAttendanceReport(day);
+    expect(report.presentCount, 0);
+    expect(report.absentCount, 0);
+    expect(report.lateCount, 0);
+
+    final stats = WebAdminStatsService.instance.load();
+    expect(stats.totalStudents, 0);
+    expect(stats.studentsPresentToday, 0);
+    expect(stats.studentsAbsent, 0);
+    expect(stats.outstandingFees, 0);
+    expect(stats.revenueThisMonth, 0);
+    expect(stats.revenueToday, 0);
+    expect(stats.busesActive, 0);
+  });
+
   test('leftover demo 1-present-2-absent sessions do not hide the live class', () {
     final data = SchoolDataService.instance;
     const className = 'KG 1B-REP';

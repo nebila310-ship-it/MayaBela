@@ -160,7 +160,7 @@ void main() {
         personName: 'Night Guard',
         kind: HrPersonKind.employee,
         hiredOn: DateTime(2026, 8, 1),
-        probationEnds: DateTime(2026, 11, 1),
+        probationEnds: DateTime.now().add(const Duration(days: 40)),
       ),
     );
 

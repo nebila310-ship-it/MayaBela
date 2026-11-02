@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/finance_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/web_erp/theme/web_erp_theme.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
@@ -11,32 +13,41 @@ class WebFinanceDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final schoolId = AuthService.activeSchoolId;
     final summary =
         SchoolDataService.instance.getPaymentSummary(parentOnly: false);
+    final books = FinanceService.instance.controlTotals(schoolId);
     final fees = SchoolDataService.instance.getAllFees();
+    final collected = summary.totalPaid + books.collected;
+    final outstanding = summary.totalDue + books.outstanding;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final paidToday = fees
-        .where((f) =>
-            f.isPaid &&
-            f.paidDate != null &&
-            f.paidDate!.year == today.year &&
-            f.paidDate!.month == today.month &&
-            f.paidDate!.day == today.day)
-        .fold<double>(0, (s, f) => s + f.amount);
+            .where((f) =>
+                f.isPaid &&
+                f.paidDate != null &&
+                !f.paidDate!.isBefore(today) &&
+                f.paidDate!.isBefore(today.add(const Duration(days: 1))))
+            .fold<double>(0, (s, f) => s + f.amount) +
+        FinanceService.instance.collectedBetween(
+          today,
+          today.add(const Duration(days: 1)),
+          schoolId,
+        );
 
-    // Last 7 days of actual paid amounts (real series, not synthetic).
     final dailyIncome = List<double>.generate(7, (i) {
       final day = today.subtract(Duration(days: 6 - i));
-      return fees
+      final next = day.add(const Duration(days: 1));
+      final fromFees = fees
           .where((f) =>
               f.isPaid &&
               f.paidDate != null &&
-              f.paidDate!.year == day.year &&
-              f.paidDate!.month == day.month &&
-              f.paidDate!.day == day.day)
+              !f.paidDate!.isBefore(day) &&
+              f.paidDate!.isBefore(next))
           .fold<double>(0, (s, f) => s + f.amount);
+      return fromFees +
+          FinanceService.instance.collectedBetween(day, next, schoolId);
     });
 
     return SingleChildScrollView(
@@ -50,10 +61,14 @@ class WebFinanceDashboardPage extends StatelessWidget {
             spacing: 16,
             runSpacing: 16,
             children: [
-              _moneyCard(context, 'Collected', summary.totalPaid, Colors.green),
-              _moneyCard(context, 'Outstanding', summary.totalDue, Colors.orange),
+              _moneyCard(context, 'Collected', collected, Colors.green),
+              _moneyCard(context, 'Outstanding', outstanding, Colors.orange),
               _moneyCard(context, 'Today', paidToday, WebErpTheme.primary),
-              _countCard(context, 'Overdue invoices', summary.overdueCount),
+              _countCard(
+                context,
+                'Overdue invoices',
+                summary.overdueCount + books.overdueCount,
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -78,7 +93,7 @@ class WebFinanceDashboardPage extends StatelessWidget {
                       data: {
                         'Paid': fees.where((f) => f.isPaid).length,
                         'Due': fees.where((f) => !f.isPaid).length,
-                        'Overdue': summary.overdueCount,
+                        'Overdue': summary.overdueCount + books.overdueCount,
                       },
                       color: Colors.teal,
                     ),
