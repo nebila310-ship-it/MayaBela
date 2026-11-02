@@ -8,6 +8,7 @@ import 'package:mayabela/models/message.dart';
 import 'package:mayabela/models/notification_preference.dart';
 import 'package:mayabela/platform/web_browser_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/cloud/user_prefs_sync_hook.dart';
 import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/push_notification_service.dart';
@@ -149,6 +150,15 @@ class NotificationService extends ChangeNotifier {
       return false;
     }
     if (!notificationSchoolMatchesViewer(item.schoolId)) return false;
+    if (DemoContent.isRealSchool(AuthService.activeSchoolId) &&
+        DemoContent.isSampleNotification(
+          id: item.id,
+          fromName: item.fromName,
+          title: item.title,
+          body: item.body,
+        )) {
+      return false;
+    }
     if (!_matchesPersonTarget(
       recipientStaffId: item.recipientStaffId,
       recipientUsername: item.recipientUsername,
@@ -361,6 +371,15 @@ class NotificationService extends ChangeNotifier {
     if (!prefs.isEnabled(recipientRole, preferenceKeyForType(type))) {
       return;
     }
+    if (DemoContent.isRealSchool(_activeSchoolId()) &&
+        DemoContent.isSampleNotification(
+          id: '',
+          fromName: fromName,
+          title: title,
+          body: body,
+        )) {
+      return;
+    }
 
     _items.insert(
       0,
@@ -502,6 +521,22 @@ class NotificationService extends ChangeNotifier {
     AppNotification? newest;
     final role = _currentRole;
     for (final cloud in cloudItems) {
+      if (DemoContent.isRealSchool(_activeSchoolId()) &&
+          DemoContent.isSampleNotification(
+            id: cloud.id,
+            fromName: cloud.fromName,
+            title: cloud.title,
+            body: cloud.body,
+          )) {
+        if (CloudAppStore.instance.available) {
+          unawaited(
+            CloudAppStore.instance.deleteAppNotification(cloud.id),
+          );
+        }
+        _items.removeWhere((n) => n.id == cloud.id);
+        changed = true;
+        continue;
+      }
       if (!_matchesCurrentUser(cloud, role)) continue;
       if (_wasRead(cloud)) {
         cloud.isRead = true;

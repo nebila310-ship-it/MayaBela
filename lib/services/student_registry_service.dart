@@ -6,6 +6,7 @@ import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/student_portal.dart';
 import 'package:mayabela/models/transfer_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/staff_registry_notifier.dart';
@@ -893,7 +894,12 @@ class StudentRegistryService {
   List<AdminStudentRecord> studentsForSchool(String schoolId) {
     final id = schoolId.trim().toUpperCase();
     return _students
-        .where((s) => s.isActive && s.schoolId.toUpperCase() == id)
+        .where(
+          (s) =>
+              s.isActive &&
+              s.schoolId.toUpperCase() == id &&
+              !(id != DemoContent.schoolId && isBuiltInDemoStudent(s)),
+        )
         .toList();
   }
 
