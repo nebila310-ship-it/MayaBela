@@ -36,6 +36,7 @@ import 'package:mayabela/models/school_audit_entry.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/models/transport_passenger.dart';
 import 'package:mayabela/services/bus_live_location_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
@@ -2660,15 +2661,33 @@ class CloudAppStore {
       } catch (_) {}
     }
 
-    if (teachers.isNotEmpty) {
+    final realSchool = DemoContent.isRealSchool(AuthService.activeSchoolId);
+    final keptTeachers = <AdminTeacherRecord>[];
+    for (final teacher in teachers) {
+      if (realSchool &&
+          TeacherRegistryService.isBuiltInDemoTeacher(teacher)) {
+        TeacherRegistryService.instance.removeTeacher(
+          teacher.teacherId,
+          schoolId: teacher.schoolId,
+        );
+        await deleteTeacherRegistryRecord(teacher.teacherId);
+        continue;
+      }
+      keptTeachers.add(teacher);
+    }
+
+    if (keptTeachers.isNotEmpty) {
       TeacherRegistryService.instance.applyPersistedTeachers(
-        teachers,
+        keptTeachers,
         nextId: maxId,
       );
       await TeacherPersistenceService.instance.saveRegistryFromService(
         pushCloud: false,
         notifyStaff: false,
       );
+    }
+    if (keptTeachers.length != teachers.length) {
+      StaffRegistryNotifier.instance.notifyChanged();
     }
   }
 
@@ -2902,7 +2921,10 @@ class CloudAppStore {
   }
 
   Future<void> pushAllFees() async {
-    final fees = SchoolDataService.instance.feesSnapshot();
+    final fees = SchoolDataService.instance.feesSnapshot().where((fee) {
+      if (!DemoContent.isRealSchool(AuthService.activeSchoolId)) return true;
+      return !SchoolDataService.isBuiltInDemoFee(fee);
+    }).toList();
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.fees,
           items: fees.map(AppDataMaps.feeToMap).toList(),
@@ -2951,7 +2973,15 @@ class CloudAppStore {
   }
 
   Future<void> pushAllAnnouncements() async {
-    final items = SchoolDataService.instance.announcementsSnapshot();
+    final real = DemoContent.isRealSchool(AuthService.activeSchoolId);
+    final items = SchoolDataService.instance.announcementsSnapshot().where((item) {
+      if (!real) return true;
+      return !DemoContent.isSampleAnnouncement(
+        id: item.id,
+        title: item.title,
+        author: item.author,
+      );
+    }).toList();
     await _pushSafe(() => _crud.writeBatch(
           collection: AppCollections.announcements,
           items: items.map(AppDataMaps.announcementToMap).toList(),
@@ -2960,6 +2990,14 @@ class CloudAppStore {
   }
 
   Future<void> pushAttendanceSession(AttendanceSession session) async {
+    if (DemoContent.isRealSchool(AuthService.activeSchoolId) &&
+        DemoContent.isSampleAttendance(
+          className: session.className,
+          conductedBy: session.conductedBy,
+          studentNames: session.entries.map((entry) => entry.studentName),
+        )) {
+      return;
+    }
     await _pushSafe(() => _crud.createOrUpdate(
           collection: AppCollections.attendanceSessions,
           docId: AppDataMaps.attendanceDocId(session),
@@ -2968,8 +3006,16 @@ class CloudAppStore {
   }
 
   Future<void> pushAllAttendanceSessions() async {
+    final real = DemoContent.isRealSchool(AuthService.activeSchoolId);
     final sessions = _teacherWritableByClass(
-      SchoolDataService.instance.attendanceSnapshot(),
+      SchoolDataService.instance.attendanceSnapshot().where((session) {
+        if (!real) return true;
+        return !DemoContent.isSampleAttendance(
+          className: session.className,
+          conductedBy: session.conductedBy,
+          studentNames: session.entries.map((entry) => entry.studentName),
+        );
+      }).toList(),
       (session) => session.className,
     );
     if (sessions.isEmpty) return;
@@ -3129,10 +3175,26 @@ class CloudAppStore {
   }
 
   Future<void> pushAppNotification(AppNotification notification) async {
+    if (DemoContent.isRealSchool(AuthService.activeSchoolId) &&
+        DemoContent.isSampleNotification(
+          id: notification.id,
+          fromName: notification.fromName,
+          title: notification.title,
+          body: notification.body,
+        )) {
+      return;
+    }
     await _pushSafe(() => _crud.createOrUpdate(
           collection: AppCollections.appNotifications,
           docId: notification.id,
           data: AppDataMaps.appNotificationToMap(notification),
+        ));
+  }
+
+  Future<void> deleteAppNotification(String id) async {
+    await _pushSafe(() => _crud.deleteDoc(
+          collection: AppCollections.appNotifications,
+          docId: id,
         ));
   }
 

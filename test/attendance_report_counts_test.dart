@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/services/web_admin_stats_service.dart';
 
 void main() {
@@ -112,6 +115,84 @@ void main() {
     expect(stats.revenueThisMonth, 0);
     expect(stats.revenueToday, 0);
     expect(stats.busesActive, 0);
+    expect(stats.totalTeachers, 0);
+    expect(
+      SchoolDataService.instance.getAnnouncements().map((a) => a.title),
+      isNot(contains('Parent-Teacher Meeting')),
+    );
+    expect(
+      SchoolDataService.instance.getConversations().map((c) => c.name),
+      isNot(contains('Miss Belen')),
+    );
+  });
+
+  test('a real school drops sample staff and sample absence alerts', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.fn0597',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'FN0597',
+      fullName: 'Fenote Admin',
+    );
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-1001',
+        fullName: 'Miss Belen',
+        assignedClass: 'Grade 4A',
+        schoolId: 'FN0597',
+        email: 'belen@mayaschool.et',
+        phone: '0911223344',
+        loginUsername: 'teacher',
+      ),
+      AdminTeacherRecord(
+        teacherId: 'TCH-8801',
+        fullName: 'Hirut Abebe',
+        assignedClass: 'Grade 1A',
+        schoolId: 'FN0597',
+        phone: '0912000099',
+        loginUsername: '0912000099',
+      ),
+    ]);
+    NotificationService.instance.applyCloudNotifications([
+      AppNotification(
+        id: 'n-demo-absence',
+        title: 'Absence pattern detected',
+        body: 'Daniel Tesfaye in Grade 4A has 3 consecutive absences.',
+        type: NotificationType.attendance,
+        fromRole: AuthService.roleTeacher,
+        fromName: 'Miss Belen',
+        recipientRole: AuthService.roleAdmin,
+        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        targetClassName: 'Grade 4A',
+        schoolId: 'FN0597',
+      ),
+      AppNotification(
+        id: 'n-fn-real',
+        title: 'Library closes at 4',
+        body: 'Please collect the keys.',
+        type: NotificationType.general,
+        fromRole: AuthService.roleAdmin,
+        fromName: 'Fenote Admin',
+        recipientRole: AuthService.roleAdmin,
+        createdAt: DateTime.now(),
+        schoolId: 'FN0597',
+      ),
+    ]);
+
+    final stats = WebAdminStatsService.instance.load();
+    expect(stats.totalTeachers, 1);
+    expect(
+      TeacherRegistryService.instance
+          .visibleTeachers(schoolId: 'FN0597')
+          .map((t) => t.fullName),
+      ['Hirut Abebe'],
+    );
+    final titles = NotificationService.instance
+        .notificationsForCurrentUser()
+        .map((n) => n.title);
+    expect(titles, contains('Library closes at 4'));
+    expect(titles, isNot(contains('Absence pattern detected')));
+    expect(titles, isNot(contains('Homework posted')));
   });
 
   test('leftover demo 1-present-2-absent sessions do not hide the live class', () {

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/persistence/teacher_persistence_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -349,20 +350,16 @@ class TeacherRegistryService {
     ),
   ] : [];
 
-  /// Built-in sample staff. Release builds do not keep them.
+  /// Built-in sample staff, including a copy that was saved onto a real school.
   static bool isBuiltInDemoTeacher(AdminTeacherRecord teacher) {
-    final id = teacher.teacherId.trim().toUpperCase();
-    const names = {
-      'TCH-1001': 'miss belen',
-      'TCH-1002': 'mr. samuel',
-      'TCH-1003': 'miss hana',
-      'TCH-1004': 'mr. tadesse',
-    };
-    final expected = names[id];
-    if (expected == null) return false;
-    final school = teacher.schoolId.trim().toUpperCase();
-    if (school.isEmpty || school == 'TB-001') return true;
-    return teacher.fullName.trim().toLowerCase() == expected;
+    return DemoContent.isSampleTeacher(
+      teacherId: teacher.teacherId,
+      fullName: teacher.fullName,
+      schoolId: teacher.schoolId,
+      email: teacher.email,
+      phone: teacher.phone,
+      loginUsername: teacher.loginUsername,
+    );
   }
 
   AdminTeacherRecord? lookupByPhone(String phone, {String? schoolId}) {
@@ -466,7 +463,8 @@ class TeacherRegistryService {
         .where(
           (t) =>
               t.schoolId.toUpperCase() == id &&
-              (includeInactive || t.isActive),
+              (includeInactive || t.isActive) &&
+              !(id != DemoContent.schoolId && isBuiltInDemoTeacher(t)),
         )
         .toList();
   }
@@ -711,9 +709,11 @@ class TeacherRegistryService {
     List<AdminTeacherRecord> teachers, {
     int? nextId,
   }) {
-    final incoming = kDebugMode
-        ? teachers
-        : teachers.where((t) => !isBuiltInDemoTeacher(t)).toList();
+    final incoming = teachers.where((t) {
+      if (!isBuiltInDemoTeacher(t)) return true;
+      final school = t.schoolId.trim().toUpperCase();
+      return school.isEmpty || school == DemoContent.schoolId;
+    }).toList();
     for (final teacher in incoming) {
       final index = _indexOfPersistedTeacher(teacher);
       if (index >= 0) {

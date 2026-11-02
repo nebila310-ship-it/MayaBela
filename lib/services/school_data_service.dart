@@ -20,6 +20,7 @@ import 'package:mayabela/models/attendance_intelligence_models.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/admin_registry_service.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/ethiopian_holiday_catalog.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -443,6 +444,7 @@ class SchoolDataService {
 
   /// Inserts missing sample books (safe to call after local/cloud load).
   void ensureSampleLearningMaterials({bool persist = true}) {
+    if (DemoContent.isRealSchool(AuthService.activeSchoolId)) return;
     final existing = _learningMaterials.map((e) => e.id).toSet();
     final seeds = <LearningMaterialItem>[
       LearningMaterialItem(
@@ -881,7 +883,9 @@ class SchoolDataService {
     } catch (_) {}
   }
 
-  List<Conversation> getConversations() => List.unmodifiable(_conversations);
+  List<Conversation> getConversations() => List.unmodifiable(
+        _conversations.where((conversation) => !_hideSampleConversation(conversation)),
+      );
 
   void applyPersistedConversations(List<Conversation> persisted) {
     for (final cloud in persisted) {
@@ -1065,8 +1069,17 @@ class SchoolDataService {
     } catch (_) {}
   }
 
+  bool _hideSampleConversation(Conversation conversation) {
+    if (!DemoContent.isRealSchool(AuthService.activeSchoolId)) return false;
+    return DemoContent.isSampleConversation(
+      id: conversation.id,
+      name: conversation.name,
+    );
+  }
+
   List<Conversation> getConversationsForRole(String? roleKey) {
     final list = _conversations
+        .where((c) => !_hideSampleConversation(c))
         .where((c) => MessagingAccessService.canView(c, roleKey))
         .where((c) => !_isWeakerDuplicateParentTeacherThread(c))
         .toList();
@@ -4628,7 +4641,17 @@ class SchoolDataService {
       ..sort((a, b) => a.className.compareTo(b.className));
   }
 
+  bool _hideSampleAttendance(AttendanceSession session) {
+    if (!DemoContent.isRealSchool(AuthService.activeSchoolId)) return false;
+    return DemoContent.isSampleAttendance(
+      className: session.className,
+      conductedBy: session.conductedBy,
+      studentNames: session.entries.map((entry) => entry.studentName),
+    );
+  }
+
   bool _attendanceSessionInDailyReport(AttendanceSession session) {
+    if (_hideSampleAttendance(session)) return false;
     final schoolId = AuthService.activeSchoolId?.trim();
     if (schoolId == null || schoolId.isEmpty) return true;
     // A school with nobody on the register has no attendance. The sample
@@ -4843,6 +4866,7 @@ class SchoolDataService {
     return _attendanceSessions
         .where(
           (session) =>
+              !_hideSampleAttendance(session) &&
               _classNamesMatch(session.className, className) &&
               (!dailyOnly || session.isDaily),
         )
@@ -7480,7 +7504,14 @@ class SchoolDataService {
   }
 
   List<Announcement> getAnnouncements() {
-    final sorted = List<Announcement>.from(_announcements);
+    final sorted = _announcements.where((item) {
+      if (!DemoContent.isRealSchool(AuthService.activeSchoolId)) return true;
+      return !DemoContent.isSampleAnnouncement(
+        id: item.id,
+        title: item.title,
+        author: item.author,
+      );
+    }).toList();
     sorted.sort((a, b) {
       // Newest posts always on top; pinned stays above unpinned of same age.
       final byDate = b.date.compareTo(a.date);
@@ -9017,6 +9048,7 @@ class SchoolDataService {
 
   void applyPersistedAttendance(List<AttendanceSession> sessions) {
     for (final incoming in sessions) {
+      if (_hideSampleAttendance(incoming)) continue;
       final existing = getAttendanceSession(
         incoming.className,
         incoming.date,
