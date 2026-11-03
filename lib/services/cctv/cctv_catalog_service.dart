@@ -16,6 +16,7 @@ class CctvCameraSite {
     required this.location,
     this.campusName,
     this.streamUrl,
+    this.removed = false,
   });
 
   final String id;
@@ -26,6 +27,10 @@ class CctvCameraSite {
   /// HLS/HTTPS or RTSP URL from the school NVR.
   final String? streamUrl;
 
+  /// Kept as a tombstone so the starter cameras do not come back on another
+  /// device after the school removes them.
+  final bool removed;
+
   bool get isWired => streamUrl != null && streamUrl!.trim().isNotEmpty;
 
   CctvCameraSite copyWith({
@@ -34,6 +39,7 @@ class CctvCameraSite {
     String? campusName,
     String? streamUrl,
     bool clearStreamUrl = false,
+    bool? removed,
   }) {
     return CctvCameraSite(
       id: id,
@@ -41,6 +47,7 @@ class CctvCameraSite {
       location: location ?? this.location,
       campusName: campusName ?? this.campusName,
       streamUrl: clearStreamUrl ? null : (streamUrl ?? this.streamUrl),
+      removed: removed ?? this.removed,
     );
   }
 
@@ -50,6 +57,7 @@ class CctvCameraSite {
         'location': location,
         if (campusName != null) 'campusName': campusName,
         if (streamUrl != null) 'streamUrl': streamUrl,
+        if (removed) 'removed': true,
         if (AuthService.activeSchoolId != null)
           'schoolId': AuthService.activeSchoolId,
       };
@@ -62,6 +70,7 @@ class CctvCameraSite {
         location: map['location'] as String? ?? '',
         campusName: map['campusName'] as String?,
         streamUrl: map['streamUrl'] as String?,
+        removed: map['removed'] == true,
       );
     } catch (_) {
       return null;
@@ -143,11 +152,21 @@ class CctvCatalogService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Default campus camera map used for demos and as the wiring template.
+  /// Cameras the school manages. Until it adds, edits, or removes one, the
+  /// starter map below stands in as the wiring template.
   List<CctvCameraSite> sitesForSchool(String? schoolId) {
+    final rows = _customSites.isEmpty ? _starterSites(schoolId) : _customSites;
+    return [
+      for (final site in rows)
+        if (!site.removed)
+          site.copyWith(streamUrl: site.streamUrl ?? localStreamUrl(site.id)),
+    ];
+  }
+
+  List<CctvCameraSite> _starterSites(String? schoolId) {
     final sid = (schoolId ?? 'school').trim().toUpperCase();
     final campus = SchoolRegistryService.instance.campusesForSchool(schoolId).first;
-    final defaults = [
+    return [
       CctvCameraSite(
         id: '$sid-gate',
         name: 'Main gate',
@@ -177,12 +196,19 @@ class CctvCatalogService extends ChangeNotifier {
         streamUrl: localStreamUrl('$sid-parking'),
       ),
     ];
-    if (_customSites.isEmpty) return defaults;
-    return [
-      for (final site in _customSites)
-        site.copyWith(streamUrl: site.streamUrl ?? localStreamUrl(site.id)),
-    ];
   }
+
+  /// Copies the starter map into the school's own list so later edits stick.
+  Future<void> _adoptStarterSites() async {
+    if (_customSites.isNotEmpty) return;
+    _customSites.addAll(_starterSites(AuthService.activeSchoolId));
+    for (final site in List.of(_customSites)) {
+      await _persistSite(site);
+    }
+  }
+
+  int _indexOf(String siteId) =>
+      _customSites.indexWhere((s) => s.id == siteId.trim());
 
   List<CctvCameraSite> sitesForCampus(String campusName, {String? schoolId}) {
     return sitesForSchool(schoolId)
@@ -206,25 +232,75 @@ class CctvCatalogService extends ChangeNotifier {
     String? streamUrl,
   }) async {
     await ensureLoaded();
+    await _adoptStarterSites();
+    var id = 'cam-${DateTime.now().microsecondsSinceEpoch}';
+    while (_indexOf(id) >= 0) {
+      id = '$id-${_customSites.length}';
+    }
+    final url = streamUrl?.trim() ?? '';
     final site = CctvCameraSite(
-      id: 'cam-${DateTime.now().millisecondsSinceEpoch}',
+      id: id,
       name: name.trim(),
       location: location.trim().isEmpty ? campusName.trim() : location.trim(),
       campusName: campusName.trim(),
-      streamUrl: streamUrl?.trim().isEmpty == true ? null : streamUrl?.trim(),
+      streamUrl: url.isEmpty ? null : url,
     );
-    if (_customSites.isEmpty) {
-      _customSites.addAll(
-        sitesForSchool(AuthService.activeSchoolId).map(
-          (s) => s.copyWith(streamUrl: localStreamUrl(s.id)),
-        ),
-      );
-    }
     _customSites.add(site);
-    if (site.isWired) _localUrls[site.id] = site.streamUrl!;
+    if (site.isWired) {
+      _localUrls[site.id] = url;
+      await _writeLocalUrls();
+    }
     notifyListeners();
     await _persistSite(site);
     return site;
+  }
+
+  /// Edit a camera's name, campus, location, or NVR link.
+  Future<CctvCameraSite?> updateSite({
+    required String siteId,
+    required String name,
+    required String campusName,
+    String location = '',
+    String? streamUrl,
+  }) async {
+    await ensureLoaded();
+    await _adoptStarterSites();
+    final idx = _indexOf(siteId);
+    if (idx < 0 || name.trim().isEmpty) return null;
+    final url = streamUrl?.trim() ?? '';
+    final site = _customSites[idx].copyWith(
+      name: name.trim(),
+      campusName: campusName.trim(),
+      location: location.trim().isEmpty ? campusName.trim() : location.trim(),
+      streamUrl: url.isEmpty ? null : url,
+      clearStreamUrl: url.isEmpty,
+    );
+    _customSites[idx] = site;
+    if (url.isEmpty) {
+      _localUrls.remove(site.id);
+    } else {
+      _localUrls[site.id] = url;
+    }
+    await _writeLocalUrls();
+    notifyListeners();
+    await _persistSite(site);
+    return site;
+  }
+
+  Future<void> removeSite(String siteId) async {
+    await ensureLoaded();
+    await _adoptStarterSites();
+    final idx = _indexOf(siteId);
+    if (idx < 0) return;
+    final site = _customSites[idx].copyWith(
+      removed: true,
+      clearStreamUrl: true,
+    );
+    _customSites[idx] = site;
+    _localUrls.remove(site.id);
+    await _writeLocalUrls();
+    notifyListeners();
+    await _persistSite(site);
   }
 
   /// Save or clear an NVR URL. Syncs to staff desks; never stores footage.
@@ -241,41 +317,26 @@ class CctvCatalogService extends ChangeNotifier {
     } else {
       _localUrls[id] = url;
     }
-    final idx = _customSites.indexWhere((s) => s.id == id);
+    await _writeLocalUrls();
+    if (_indexOf(id) < 0 &&
+        _starterSites(AuthService.activeSchoolId).any((s) => s.id == id)) {
+      await _adoptStarterSites();
+    }
+    final idx = _indexOf(id);
     if (idx >= 0) {
       _customSites[idx] = _customSites[idx].copyWith(
         streamUrl: url.isEmpty ? null : url,
         clearStreamUrl: url.isEmpty,
       );
-    } else if (url.isNotEmpty) {
-      final match = sitesForSchool(AuthService.activeSchoolId)
-          .where((s) => s.id == id)
-          .firstOrNull;
-      if (match != null) {
-        if (_customSites.isEmpty) {
-          _customSites.addAll(
-            sitesForSchool(AuthService.activeSchoolId).map(
-              (s) => s.id == id
-                  ? s.copyWith(streamUrl: url)
-                  : s.copyWith(streamUrl: localStreamUrl(s.id)),
-            ),
-          );
-        } else {
-          _customSites.add(match.copyWith(streamUrl: url));
-        }
-      }
+      await _persistSite(_customSites[idx]);
     }
-    await LocalJsonStore.writeMap(
-      persistKey,
-      Map<String, dynamic>.from(_localUrls),
-    );
-    CctvCameraSite? site;
-    for (final row in _customSites) {
-      if (row.id == id) site = row;
-    }
-    if (site != null) await _persistSite(site);
     notifyListeners();
   }
+
+  Future<void> _writeLocalUrls() => LocalJsonStore.writeMap(
+        persistKey,
+        Map<String, dynamic>.from(_localUrls),
+      );
 
   Future<void> renameCampus({
     required String from,

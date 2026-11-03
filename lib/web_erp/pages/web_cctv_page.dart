@@ -49,36 +49,47 @@ class _WebCctvPageState extends State<WebCctvPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _header(
-                context,
-                s,
-                siteCount: sites.length,
-                wiredCount: wired,
-              ),
-              if (_canManage) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: _addSite,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add camera'),
-                  ),
-                ),
-              ],
+              _header(context, s, siteCount: sites.length, wiredCount: wired),
               const SizedBox(height: 12),
               _localOnlyBanner(context, s),
               const SizedBox(height: 20),
-              Text(s.cctvCameraSites, style: WebErpTheme.sectionTitle(context)),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '${s.cctvCameraSites} (${sites.length})',
+                    style: WebErpTheme.sectionTitle(context),
+                  ),
+                  if (_canManage)
+                    FilledButton.icon(
+                      key: const Key('cctv-add-camera'),
+                      onPressed: () => _editSite(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: ClassroomPalette.navy,
+                      ),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add camera'),
+                    ),
+                ],
+              ),
               const SizedBox(height: 12),
+              if (sites.isEmpty && !_canManage)
+                Text(
+                  'No cameras added yet.',
+                  style: TextStyle(
+                    color: WebErpTheme.paperInk.withValues(alpha: 0.65),
+                  ),
+                ),
               LayoutBuilder(
                 builder: (context, c) {
                   final width = c.maxWidth;
                   final columns = width >= 1100
                       ? 4
                       : width >= 720
-                          ? 2
-                          : 1;
+                      ? 2
+                      : 1;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -92,10 +103,13 @@ class _WebCctvPageState extends State<WebCctvPage> {
                           site: site,
                           canManage: _canManage,
                           onLink: () => _linkSite(site),
+                          onEdit: () => _editSite(site: site),
+                          onRemove: () => _removeSite(site),
                           onOpen: site.isWired
                               ? () => _openNvrLink(site.streamUrl!)
                               : null,
                         ),
+                      if (_canManage) _AddCameraTile(onTap: () => _editSite()),
                     ],
                   );
                 },
@@ -189,7 +203,11 @@ class _WebCctvPageState extends State<WebCctvPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.videocam_off_outlined, size: 18, color: Colors.amber.shade900),
+          Icon(
+            Icons.videocam_off_outlined,
+            size: 18,
+            color: Colors.amber.shade900,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -220,9 +238,9 @@ class _WebCctvPageState extends State<WebCctvPage> {
           Text(
             s.cctvHowConnectBody,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: WebErpTheme.paperInk.withValues(alpha: 0.75),
-                  height: 1.4,
-                ),
+              color: WebErpTheme.paperInk.withValues(alpha: 0.75),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -240,26 +258,37 @@ class _WebCctvPageState extends State<WebCctvPage> {
     );
   }
 
-  Future<void> _addSite() async {
-    final campuses = SchoolRegistryService.instance.campusesForSchool(
-      AuthService.activeSchoolId,
-    );
-    if (campuses.isEmpty) return;
-    final nameCtrl = TextEditingController();
-    final locCtrl = TextEditingController();
-    var campus = campuses.first;
+  Future<void> _editSite({CctvCameraSite? site}) async {
+    final s = AppLocale.instance.strings;
+    final campuses = [
+      ...SchoolRegistryService.instance.campusesForSchool(
+        AuthService.activeSchoolId,
+      ),
+    ];
+    final current = site?.campusName?.trim() ?? '';
+    if (current.isNotEmpty && !campuses.contains(current)) {
+      campuses.add(current);
+    }
+    final nameCtrl = TextEditingController(text: site?.name ?? '');
+    final locCtrl = TextEditingController(text: site?.location ?? '');
+    final urlCtrl = TextEditingController(text: site?.streamUrl ?? '');
+    var campus = current.isNotEmpty ? current : campuses.first;
     final saved = await showAdminFormDialog(
       context: context,
-      title: 'Add camera',
+      title: site == null ? 'Add camera' : 'Edit camera',
+      subtitle: site?.name,
       accent: ClassroomPalette.navy,
       icon: Icons.videocam_outlined,
-      saveLabel: 'Add',
+      saveLabel: site == null ? 'Add' : s.save,
+      canSave: (_) => nameCtrl.text.trim().isNotEmpty,
       builder: (context, setDialogState) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           adminDialogField(
             TextField(
+              key: const Key('cctv-camera-name'),
               controller: nameCtrl,
+              onChanged: (_) => setDialogState(() {}),
               decoration: adminFieldDecoration(
                 label: 'Camera name',
                 icon: Icons.videocam_outlined,
@@ -292,20 +321,59 @@ class _WebCctvPageState extends State<WebCctvPage> {
               ),
             ),
           ),
+          adminDialogField(
+            TextField(
+              key: const Key('cctv-camera-url'),
+              controller: urlCtrl,
+              decoration: adminFieldDecoration(
+                label: '${s.cctvStreamUrlLabel} (optional)',
+                icon: Icons.link_outlined,
+                accent: ClassroomPalette.navy,
+              ),
+            ),
+          ),
         ],
       ),
     );
     final name = nameCtrl.text.trim();
     final location = locCtrl.text.trim();
+    final url = urlCtrl.text.trim();
     nameCtrl.dispose();
     locCtrl.dispose();
+    urlCtrl.dispose();
     if (saved != true || name.isEmpty) return;
-    await CctvCatalogService.instance.addSite(
-      name: name,
-      campusName: campus,
-      location: location,
-    );
+    if (site == null) {
+      await CctvCatalogService.instance.addSite(
+        name: name,
+        campusName: campus,
+        location: location,
+        streamUrl: url,
+      );
+    } else {
+      await CctvCatalogService.instance.updateSite(
+        siteId: site.id,
+        name: name,
+        campusName: campus,
+        location: location,
+        streamUrl: url,
+      );
+    }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _removeSite(CctvCameraSite site) async {
+    final ok = await showAdminConfirmDialog(
+      context: context,
+      title: 'Remove camera',
+      message:
+          'Remove "${site.name}" from the camera list? '
+          'Recordings on the school NVR are not affected.',
+      icon: Icons.videocam_off_outlined,
+      confirmLabel: 'Remove',
+      destructive: true,
+    );
+    if (!ok) return;
+    await CctvCatalogService.instance.removeSite(site.id);
   }
 
   Future<void> _linkSite(CctvCameraSite site) async {
@@ -372,12 +440,16 @@ class _CameraTile extends StatelessWidget {
     required this.site,
     required this.canManage,
     required this.onLink,
+    required this.onEdit,
+    required this.onRemove,
     this.onOpen,
   });
 
   final CctvCameraSite site;
   final bool canManage;
   final VoidCallback onLink;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
   final VoidCallback? onOpen;
 
   @override
@@ -400,26 +472,68 @@ class _CameraTile extends StatelessWidget {
                   color: ClassroomPalette.navy,
                 ),
               ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: wired
-                      ? const Color(0xFFE6F4EA)
-                      : const Color(0xFFFFF3E0),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  wired ? s.cctvWiredOnThisDevice : s.cctvReadyToConnect,
-                  style: TextStyle(
-                    color: wired
-                        ? ClassroomPalette.green
-                        : const Color(0xFFE65100),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: wired
+                          ? const Color(0xFFE6F4EA)
+                          : const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      wired ? s.cctvWiredOnThisDevice : s.cctvReadyToConnect,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: wired
+                            ? ClassroomPalette.green
+                            : const Color(0xFFE65100),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                 ),
               ),
+              if (canManage)
+                PopupMenuButton<String>(
+                  key: Key('cctv-menu-${site.id}'),
+                  tooltip: 'Camera options',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 180),
+                  iconSize: 20,
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(32, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (v) => v == 'edit' ? onEdit() : onRemove(),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Edit camera'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline, color: Colors.red),
+                        title: Text('Remove camera'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
           const Spacer(),
@@ -435,7 +549,8 @@ class _CameraTile extends StatelessWidget {
           Text(
             [
               if ((site.campusName ?? '').isNotEmpty) site.campusName!,
-              site.location,
+              if (site.location.isNotEmpty && site.location != site.campusName)
+                site.location,
             ].join(' · '),
             style: TextStyle(
               color: WebErpTheme.paperInk.withValues(alpha: 0.65),
@@ -448,19 +563,65 @@ class _CameraTile extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                TextButton(
-                  onPressed: onLink,
-                  child: Text(s.cctvLinkNvrAction),
-                ),
+                TextButton(onPressed: onLink, child: Text(s.cctvLinkNvrAction)),
                 if (onOpen != null)
-                  TextButton(
-                    onPressed: onOpen,
-                    child: Text(s.cctvOpenNvrLink),
-                  ),
+                  TextButton(onPressed: onOpen, child: Text(s.cctvOpenNvrLink)),
               ],
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _AddCameraTile extends StatelessWidget {
+  const _AddCameraTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: ClassroomPalette.navy.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        key: const Key('cctv-add-camera-tile'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: ClassroomPalette.navy.withValues(alpha: 0.35),
+              width: 1.5,
+            ),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.add_circle_outline,
+                size: 40,
+                color: ClassroomPalette.navy,
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Add camera',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: ClassroomPalette.navy,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Gate, classroom, hall, lab…',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
