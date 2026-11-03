@@ -150,6 +150,14 @@ void main() {
     expect(find.byType(EducationSplashLoader), findsWidgets);
     expect(find.byKey(const ValueKey('splash-loading-ring')), findsOneWidget);
     expect(find.text('OPENING CLASS'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('splash-loading-ring')),
+        matching: find.byType(Image),
+      ),
+      findsOneWidget,
+      reason: 'the mark sits in the ring medallion, not behind the orbit',
+    );
   });
 
   test('chrome title is MaJo Bridge OS until a school id is entered', () async {
@@ -278,6 +286,10 @@ void main() {
     expect(html, contains("flutter-first-frame"));
     expect(html, contains('flt-glass-pane'));
     expect(html, contains('mayabela_school_brands'));
+    expect(html, contains('class="medallion"'));
+    expect(html, isNot(contains('img.watermark')));
+    final medallion = html.indexOf('class="medallion"');
+    expect(html.indexOf('id="splash-mark"'), greaterThan(medallion));
     final splashDiv = html.indexOf('<div id="splash">');
     final halo = html.indexOf('id="splash-halo"');
     final splashEnd = html.indexOf(

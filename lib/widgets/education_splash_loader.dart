@@ -2,32 +2,35 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'package:mayabela/theme/classroom_palette.dart';
-
-/// One lap of letters, one lap of numbers, then a graduation cap.
-/// The cap is the finish line. The lap starts again.
+/// Gold rider laps the ring and lights each letter it passes, then each
+/// number, then a graduation cap marks the finish. [center] sits in its own
+/// medallion inside the ring so the orbit never crosses the school mark.
 class EducationSplashLoader extends StatefulWidget {
   const EducationSplashLoader({
     super.key,
     this.size = 300,
     this.showLabel = true,
+    this.center,
   });
 
   final double size;
   final bool showLabel;
+  final Widget? center;
 
   static const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   static const numbers = ['1', '2', '3', '4', '5', '6', '7', '8'];
   static const glyphColors = <Color>[
-    ClassroomPalette.pink,
-    ClassroomPalette.orange,
-    ClassroomPalette.amber,
-    ClassroomPalette.green,
-    ClassroomPalette.teal,
-    ClassroomPalette.cyan,
-    ClassroomPalette.blue,
-    ClassroomPalette.purple,
+    Color(0xFFFFD54F),
+    Color(0xFFFFB74D),
+    Color(0xFFF48FB1),
+    Color(0xFFCE93D8),
+    Color(0xFF90CAF9),
+    Color(0xFF4DD0E1),
+    Color(0xFF80CBC4),
+    Color(0xFFC5E1A5),
   ];
+
+  static const gold = Color(0xFFFFD54F);
 
   @override
   State<EducationSplashLoader> createState() => _EducationSplashLoaderState();
@@ -42,7 +45,7 @@ class _EducationSplashLoaderState extends State<EducationSplashLoader>
     super.initState();
     _cycle = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 6400),
+      duration: const Duration(milliseconds: 6600),
     )..repeat();
   }
 
@@ -54,6 +57,7 @@ class _EducationSplashLoaderState extends State<EducationSplashLoader>
 
   @override
   Widget build(BuildContext context) {
+    final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final scene = widget.size <= 0
         ? const SizedBox.shrink()
         : SizedBox(
@@ -61,14 +65,12 @@ class _EducationSplashLoaderState extends State<EducationSplashLoader>
             height: widget.size,
             child: AnimatedBuilder(
               animation: _cycle,
-              builder: (context, _) {
-                final reduce =
-                    MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-                return _MilestoneRing(
-                  t: reduce ? 0.9 : _cycle.value,
-                  size: widget.size,
-                );
-              },
+              builder: (context, child) => _MilestoneOrbit(
+                t: reduce ? 0.9 : _cycle.value,
+                size: widget.size,
+                center: child,
+              ),
+              child: widget.center,
             ),
           );
     if (!widget.showLabel) return scene;
@@ -76,119 +78,318 @@ class _EducationSplashLoaderState extends State<EducationSplashLoader>
       mainAxisSize: MainAxisSize.min,
       children: [
         scene,
-        const SizedBox(height: 12),
-        const Text(
-          'OPENING CLASS',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 2.2,
-            color: ClassroomPalette.purple,
+        if (widget.size > 0) const SizedBox(height: 12),
+        ShaderMask(
+          shaderCallback: (rect) => const LinearGradient(
+            colors: [Color(0xFFFFE082), Colors.white, Color(0xFFFFB300)],
+          ).createShader(rect),
+          child: const Text(
+            'OPENING CLASS',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 4,
+              color: Colors.white,
+            ),
           ),
         ),
+        const SizedBox(height: 10),
+        _ShimmerBar(controller: _cycle, still: reduce),
       ],
     );
   }
 }
 
-class _MilestoneRing extends StatelessWidget {
-  const _MilestoneRing({required this.t, required this.size});
+class _ShimmerBar extends StatelessWidget {
+  const _ShimmerBar({required this.controller, required this.still});
 
-  /// 0–0.4 letters, 0.4–0.8 numbers, 0.8–1 graduation cap.
+  final Animation<double> controller;
+  final bool still;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: SizedBox(
+        width: 150,
+        height: 3,
+        child: AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) {
+            final x = still ? 0.3 : (controller.value * 4.4) % 1.0;
+            return CustomPaint(painter: _BarPainter(x));
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _BarPainter extends CustomPainter {
+  const _BarPainter(this.x);
+
+  final double x;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = Colors.white.withValues(alpha: 0.14),
+    );
+    final w = size.width * 0.4;
+    final left = -w + (size.width + w) * x;
+    final rect = Rect.fromLTWH(left, 0, w, size.height);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0x00FFD54F), Color(0xFFFFD54F), Color(0xFF26C6DA)],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BarPainter old) => old.x != x;
+}
+
+class _MilestoneOrbit extends StatelessWidget {
+  const _MilestoneOrbit({required this.t, required this.size, this.center});
+
+  /// 0–0.4 letters lap, 0.4–0.8 numbers lap, 0.8–1 graduation cap.
   final double t;
   final double size;
+  final Widget? center;
 
   @override
   Widget build(BuildContext context) {
     final capPhase = t >= 0.8;
-    final glyphs = capPhase
-        ? const <String>[]
-        : (t < 0.4 ? EducationSplashLoader.letters : EducationSplashLoader.numbers);
-    final lap = capPhase ? 1.0 : ((t < 0.4 ? t / 0.4 : (t - 0.4) / 0.4));
-    final turn = lap * math.pi * 2;
+    final glyphs = t < 0.4
+        ? EducationSplashLoader.letters
+        : EducationSplashLoader.numbers;
+    final lap = capPhase ? 1.0 : (t < 0.4 ? t / 0.4 : (t - 0.4) / 0.4);
     final capT = capPhase ? ((t - 0.8) / 0.2).clamp(0.0, 1.0) : 0.0;
-    final radius = size * 0.40;
+    final ringRadius = size * 0.41;
+    final glyphRadius = size * 0.475;
+    final medal = size * 0.58;
+    final c = size / 2;
 
     return Stack(
-      alignment: Alignment.center,
+      clipBehavior: Clip.none,
       children: [
-        CustomPaint(
-          size: Size.square(size),
-          painter: _TrackPainter(radius: radius),
-        ),
-        if (!capPhase)
-          for (var i = 0; i < glyphs.length; i++)
-            Transform.rotate(
-              angle: turn + (i * math.pi * 2 / glyphs.length),
-              child: Transform.translate(
-                offset: Offset(0, -radius),
-                child: Transform.rotate(
-                  angle: -(turn + (i * math.pi * 2 / glyphs.length)),
-                  child: Text(
-                    glyphs[i],
-                    style: TextStyle(
-                      fontSize: size * 0.105,
-                      fontWeight: FontWeight.w900,
-                      color: EducationSplashLoader.glyphColors[i],
-                      shadows: const [
-                        Shadow(color: Color(0xCCFFFFFF), blurRadius: 6),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _OrbitPainter(
+              radius: ringRadius,
+              lap: lap,
+              showRider: !capPhase,
             ),
+          ),
+        ),
+        for (var i = 0; i < glyphs.length; i++)
+          _glyph(i, glyphs[i], lap, c, glyphRadius),
+        Positioned(
+          left: c - medal / 2,
+          top: c - medal / 2,
+          width: medal,
+          height: medal,
+          child: _Medallion(
+            glow: capPhase ? math.sin(capT * math.pi) : 0,
+            child: center,
+          ),
+        ),
         if (capPhase)
-          Opacity(
-            opacity: Curves.easeOut.transform(capT.clamp(0.0, 1.0)),
-            child: Transform.scale(
-              scale: 0.35 + 0.65 * Curves.elasticOut.transform(capT),
-              child: CustomPaint(
-                size: Size.square(size * 0.42),
-                painter: const _GraduationCapPainter(),
+          Positioned(
+            left: c - size * 0.1,
+            top: c - ringRadius - size * 0.13,
+            width: size * 0.2,
+            height: size * 0.2,
+            child: Opacity(
+              opacity: Curves.easeOut.transform((capT * 3).clamp(0.0, 1.0)),
+              child: Transform.scale(
+                scale: 0.4 + 0.6 * Curves.elasticOut.transform(capT),
+                child: const CustomPaint(painter: _GraduationCapPainter()),
               ),
             ),
           ),
       ],
     );
   }
+
+  Widget _glyph(int i, String ch, double lap, double c, double r) {
+    final at = (i + 0.5) / 8;
+    final angle = -math.pi / 2 + at * math.pi * 2;
+    final since = lap - at;
+    final lit = since >= 0;
+    final pop = lit && since < 0.08 ? math.sin(since / 0.08 * math.pi) : 0.0;
+    final box = size * 0.1;
+    final color = lit
+        ? Color.lerp(
+            EducationSplashLoader.glyphColors[i],
+            EducationSplashLoader.gold,
+            pop,
+          )!
+        : Colors.white.withValues(alpha: 0.28);
+    return Positioned(
+      left: c + r * math.cos(angle) - box / 2,
+      top: c + r * math.sin(angle) - box / 2,
+      width: box,
+      height: box,
+      child: Transform.scale(
+        scale: 1 + 0.45 * pop,
+        child: Center(
+          child: Text(
+            ch,
+            style: TextStyle(
+              fontSize: size * 0.056,
+              fontWeight: FontWeight.w800,
+              color: color,
+              shadows: lit
+                  ? [
+                      Shadow(
+                        color: color.withValues(alpha: 0.8),
+                        blurRadius: 10,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _TrackPainter extends CustomPainter {
-  const _TrackPainter({required this.radius});
+class _Medallion extends StatelessWidget {
+  const _Medallion({required this.glow, this.child});
+
+  final double glow;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFFE082),
+            Color(0xFFFFB300),
+            Color(0xFF8D6E63),
+            Color(0xFFFFE082),
+          ],
+          stops: [0, 0.4, 0.7, 1],
+        ),
+        boxShadow: [
+          const BoxShadow(
+            color: Color(0x4D000000),
+            blurRadius: 28,
+            offset: Offset(0, 10),
+          ),
+          BoxShadow(
+            color: const Color(0xFFFFE082).withValues(alpha: 0.45 * glow),
+            blurRadius: 44,
+            spreadRadius: 2 * glow,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: ClipOval(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(-0.3, -0.4),
+                colors: [Colors.white, Color(0xFFF6F7FB), Color(0xFFE8EAF6)],
+                stops: [0, 0.7, 1],
+              ),
+            ),
+            child: Center(
+              child: FractionallySizedBox(
+                widthFactor: 0.8,
+                heightFactor: 0.8,
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrbitPainter extends CustomPainter {
+  const _OrbitPainter({
+    required this.radius,
+    required this.lap,
+    required this.showRider,
+  });
 
   final double radius;
+  final double lap;
+  final bool showRider;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    final center = size.center(Offset.zero);
     final rect = Rect.fromCircle(center: center, radius: radius);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
-      ..shader = const SweepGradient(
-        colors: [
-          Color(0xFFC2185B),
-          Color(0xFFE37400),
-          Color(0xFFF9AB00),
-          Color(0xFF1E8E3E),
-          Color(0xFF00897B),
-          Color(0xFF1A73E8),
-          Color(0xFF6A1B9A),
-          Color(0xFFC2185B),
-        ],
-      ).createShader(rect);
-    canvas.drawCircle(center, radius, paint);
     canvas.drawCircle(
-      center + Offset(0, -radius),
-      6,
-      Paint()..color = const Color(0xFFF9AB00),
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..color = Colors.white.withValues(alpha: 0.14),
     );
+    if (lap > 0) {
+      final sweep = lap * math.pi * 2;
+      final fill = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round
+        ..shader = SweepGradient(
+          startAngle: 0,
+          endAngle: math.max(sweep, 0.01),
+          colors: const [
+            Color(0xFFFFE082),
+            Color(0xFFFFB300),
+            Color(0xFF26C6DA),
+            Color(0xFFCE93D8),
+          ],
+          transform: const GradientRotation(-math.pi / 2),
+        ).createShader(rect);
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        sweep,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 10
+          ..color = const Color(0x55FFC107)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+      canvas.drawArc(rect, -math.pi / 2, sweep, false, fill);
+    }
+    if (showRider) {
+      final a = -math.pi / 2 + lap * math.pi * 2;
+      final p = center + Offset(math.cos(a), math.sin(a)) * radius;
+      canvas.drawCircle(
+        p,
+        14,
+        Paint()
+          ..color = const Color(0xAAFFC107)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
+      );
+      canvas.drawCircle(p, 11, Paint()..color = const Color(0x73FFD54F));
+      canvas.drawCircle(p, 7, Paint()..color = const Color(0xFFFFF8E1));
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _TrackPainter oldDelegate) =>
-      oldDelegate.radius != radius;
+  bool shouldRepaint(covariant _OrbitPainter old) =>
+      old.lap != lap || old.radius != radius || old.showRider != showRider;
 }
 
 class _GraduationCapPainter extends CustomPainter {
@@ -196,40 +397,59 @@ class _GraduationCapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    canvas.translate(w / 2, h / 2);
+    canvas.scale(size.width / 64, size.height / 64);
+    final edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeJoin = StrokeJoin.round
+      ..color = const Color(0xFFFFF8E1);
+    final crown = Path()
+      ..moveTo(16, 30)
+      ..lineTo(16, 42)
+      ..cubicTo(16, 48, 48, 48, 48, 42)
+      ..lineTo(48, 30)
+      ..lineTo(32, 38)
+      ..close();
     final board = Path()
-      ..moveTo(0, -h * 0.32)
-      ..lineTo(w * 0.48, -h * 0.02)
-      ..lineTo(0, h * 0.28)
-      ..lineTo(-w * 0.48, -h * 0.02)
+      ..moveTo(32, 10)
+      ..lineTo(60, 24)
+      ..lineTo(32, 38)
+      ..lineTo(4, 24)
       ..close();
-    canvas.drawPath(board, Paint()..color = const Color(0xFF6A1B9A));
-    final shine = Path()
-      ..moveTo(0, -h * 0.24)
-      ..lineTo(w * 0.32, -h * 0.04)
-      ..lineTo(0, h * 0.08)
-      ..lineTo(-w * 0.2, -h * 0.08)
-      ..close();
-    canvas.drawPath(shine, Paint()..color = const Color(0xFFAB47BC));
-    canvas.drawCircle(
-      Offset(0, -h * 0.02),
-      w * 0.05,
-      Paint()..color = const Color(0xFFFFD54F),
+    canvas.drawShadow(board, Colors.black, 4, false);
+    canvas.drawPath(crown, Paint()..color = const Color(0xFFFF8F00));
+    canvas.drawPath(crown, edge);
+    canvas.drawPath(board, Paint()..color = EducationSplashLoader.gold);
+    canvas.drawPath(board, edge);
+    canvas.drawPath(
+      Path()
+        ..moveTo(32, 14)
+        ..lineTo(50, 23)
+        ..lineTo(32, 30)
+        ..lineTo(18, 22)
+        ..close(),
+      Paint()..color = const Color(0xFFFFE082),
     );
-    canvas.drawLine(
-      Offset.zero,
-      Offset(w * 0.18, h * 0.32),
+    canvas.drawCircle(
+      const Offset(32, 24),
+      2.6,
+      Paint()..color = const Color(0xFF1A237E),
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(32, 24)
+        ..lineTo(52, 32)
+        ..lineTo(52, 46),
       Paint()
-        ..color = const Color(0xFFF9AB00)
-        ..strokeWidth = w * 0.035
-        ..strokeCap = StrokeCap.round,
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFFFFF8E1),
     );
     canvas.drawCircle(
-      Offset(w * 0.18, h * 0.36),
-      w * 0.06,
-      Paint()..color = const Color(0xFFE37400),
+      const Offset(52, 49),
+      3.4,
+      Paint()..color = const Color(0xFFFFF8E1),
     );
   }
 

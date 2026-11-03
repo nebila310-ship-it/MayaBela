@@ -102,13 +102,36 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
       background:
-        radial-gradient(circle at 12% 18%, #ffe082 0, transparent 26%),
-        radial-gradient(circle at 88% 16%, #ce93d8 0, transparent 24%),
-        radial-gradient(circle at 84% 84%, #80deea 0, transparent 26%),
-        radial-gradient(circle at 14% 82%, #a5d6a7 0, transparent 22%),
-        linear-gradient(135deg, #fff8e1 0%, #e3f2fd 52%, #f3e5f5 100%);
+        radial-gradient(1100px 760px at 50% 42%, #26337f 0%, #141c55 52%, #0a0f33 100%);
       pointer-events: none;
+    }
+
+    .splash-aurora {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.45;
+      animation: splash-drift 14s ease-in-out infinite alternate;
+    }
+    .splash-aurora.a1 { width: 46vmax; height: 46vmax; left: -14vmax; top: -16vmax; background: #7B1FA2; }
+    .splash-aurora.a2 { width: 40vmax; height: 40vmax; right: -14vmax; bottom: -16vmax; background: #00838F; animation-delay: -5s; }
+    .splash-aurora.a3 { width: 26vmax; height: 26vmax; right: 8vmax; top: -10vmax; background: #FF8F00; opacity: 0.22; animation-delay: -9s; }
+
+    .splash-dust {
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(1.5px 1.5px at 12% 22%, rgba(255,255,255,.55) 50%, transparent 51%),
+        radial-gradient(1px 1px at 28% 74%, rgba(255,255,255,.45) 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 72% 18%, rgba(255,255,255,.5) 50%, transparent 51%),
+        radial-gradient(1px 1px at 86% 62%, rgba(255,255,255,.4) 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 60% 86%, rgba(255,213,79,.55) 50%, transparent 51%),
+        radial-gradient(1px 1px at 40% 10%, rgba(255,213,79,.5) 50%, transparent 51%),
+        radial-gradient(1px 1px at 8% 56%, rgba(255,255,255,.4) 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 92% 36%, rgba(255,255,255,.45) 50%, transparent 51%);
+      animation: splash-twinkle 4s ease-in-out infinite alternate;
     }
 
     .contain {
@@ -148,80 +171,122 @@
       right: 0;
     }
 
-    #splash img.watermark {
-      width: min(96vw, 1000px);
-      height: auto;
-      max-height: 78vh;
-      object-fit: contain;
-      z-index: 1;
-      opacity: 0.96;
-    }
-
-    /* Cross-origin marks cannot be cut out on a canvas. Multiply drops the white field. */
-    #splash img.watermark.needs-multiply {
-      filter: contrast(1.45) brightness(0.74);
-      mix-blend-mode: multiply;
-      opacity: 1;
-    }
-
     .splash-stage {
       position: relative;
       z-index: 3;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      width: min(92vw, 420px);
+      gap: 10px;
+      width: min(92vw, 480px);
+    }
+
+    /* One lap: a gold rider fills the ring and lights each letter it passes.
+       The school mark sits in its own medallion, clear of the orbit. */
+    @property --lap {
+      syntax: '<percentage>';
+      inherits: true;
+      initial-value: 0%;
     }
 
     #splash-halo {
+      --lap-ms: 2600ms;
       position: relative;
-      width: min(86vw, 360px);
-      height: min(86vw, 360px);
+      width: min(80vw, 54vh, 420px);
+      height: min(80vw, 54vh, 420px);
       container-type: size;
       pointer-events: none;
     }
 
-    .mile-track {
+    .orbit-track,
+    .orbit-fill {
       position: absolute;
-      inset: 8%;
+      inset: 9%;
       border-radius: 50%;
-      background: conic-gradient(
-        from -90deg,
-        #C2185B,
-        #E37400,
-        #F9AB00,
-        #1E8E3E,
-        #00897B,
-        #1A73E8,
-        #6A1B9A,
-        #C2185B
-      );
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 6px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 6px));
-      filter: drop-shadow(0 0 8px rgba(106, 27, 154, 0.25));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
     }
 
-    .mile-finish {
+    .orbit-track { background: rgba(255, 255, 255, 0.14); }
+
+    .orbit-fill {
+      background: conic-gradient(
+        from 0deg,
+        #FFE082 0%,
+        #FFB300 calc(var(--lap) * 0.45),
+        #26C6DA calc(var(--lap) * 0.8),
+        #CE93D8 var(--lap),
+        transparent var(--lap)
+      );
+      filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.55));
+    }
+
+    .orbit-rider {
       position: absolute;
-      top: 5%;
+      inset: 9%;
+    }
+
+    .orbit-rider::after {
+      content: '';
+      position: absolute;
+      top: -5px;
       left: 50%;
-      width: 12px;
-      height: 12px;
-      margin-left: -6px;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
       border-radius: 50%;
-      background: #F9AB00;
-      box-shadow: 0 0 0 5px rgba(249, 171, 0, 0.35);
+      background: #FFF8E1;
+      box-shadow: 0 0 0 4px rgba(255, 213, 79, 0.45), 0 0 18px 6px rgba(255, 193, 7, 0.75);
+    }
+
+    #splash-halo.is-lapping .orbit-fill { animation: splash-lap var(--lap-ms) linear forwards; }
+    #splash-halo.is-lapping .orbit-rider { animation: splash-spin var(--lap-ms) linear forwards; }
+    #splash-halo.is-done .orbit-fill { --lap: 100%; }
+    #splash-halo.is-done .orbit-rider { opacity: 0; }
+    #splash-halo.is-done .mile-glyph { color: var(--glyph); }
+
+    .medallion {
+      position: absolute;
+      inset: 21%;
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(145deg, #FFE082, #FFB300 40%, #8D6E63 70%, #FFE082);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), 0 0 0 8px rgba(255, 255, 255, 0.06);
       z-index: 2;
+    }
+
+    .medallion-face {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f6f7fb 70%, #e8eaf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #splash-halo.is-done .medallion {
+      animation: splash-medal 900ms ease-out 1;
+    }
+
+    #splash #splash-mark {
+      position: static;
+      transform: none;
+      width: 80%;
+      height: 80%;
+      object-fit: contain;
+    }
+
+    /* The platform mark carries wide transparent margins. */
+    #splash #splash-mark[src^="splash/img/"] {
+      width: 118%;
+      height: 118%;
     }
 
     #mile-spin {
       position: absolute;
       inset: 0;
-    }
-
-    #mile-spin.is-running {
-      animation: splash-spin 2.5s linear 1 forwards;
     }
 
     .mile-arm {
@@ -234,76 +299,98 @@
 
     .mile-glyph {
       position: absolute;
-      width: 1.4em;
-      margin-left: -0.7em;
-      top: -42cqi;
+      width: 1.6em;
+      margin-left: -0.8em;
+      top: -48cqi;
       text-align: center;
-      font: 900 9cqi/1 system-ui, Segoe UI, sans-serif;
-      text-shadow: 0 2px 0 #fff, 0 0 10px rgba(255, 255, 255, 0.95);
+      font: 800 5.6cqi/1 system-ui, Segoe UI, sans-serif;
+      color: rgba(255, 255, 255, 0.28);
     }
 
-    #mile-spin.is-running .mile-glyph {
-      animation: splash-spin-rev 2.5s linear 1 forwards;
+    #splash-halo.is-lapping .mile-glyph {
+      animation: splash-glyph 600ms ease-out forwards;
     }
 
     #mile-cap {
       position: absolute;
-      top: 50%;
+      top: 9%;
       left: 50%;
-      width: 168px;
-      height: 168px;
-      margin-left: -84px;
-      margin-top: -84px;
-      width: 48cqi;
-      height: 48cqi;
-      margin-left: -24cqi;
-      margin-top: -24cqi;
+      width: 18cqi;
+      height: 18cqi;
+      margin-left: -9cqi;
+      margin-top: -11cqi;
       opacity: 0;
-      transform: scale(0.35) rotate(-16deg);
+      transform: translateY(8px) scale(0.4);
       z-index: 5;
-      filter: drop-shadow(0 10px 16px rgba(106, 27, 154, 0.45));
-    }
-
-    #splash-halo:has(#mile-cap.is-on) #mile-spin {
-      opacity: 0;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
     }
 
     #mile-cap.is-on {
       opacity: 1;
-      transform: scale(1) rotate(0deg);
-      transition: transform 0.55s cubic-bezier(0.2, 1.5, 0.36, 1), opacity 0.2s linear;
+      transform: translateY(0) scale(1);
+      transition: transform 0.6s cubic-bezier(0.2, 1.6, 0.36, 1), opacity 0.2s linear;
     }
 
-    #splash-school-name,
-    #splash-loader-wrap {
-      background: rgba(255, 255, 255, 0.82);
-      border-radius: 999px;
-      padding: 6px 16px;
+    .mile-spark {
+      position: absolute;
+      top: 9%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      margin: -3px 0 0 -3px;
+      border-radius: 50%;
+      background: #FFD54F;
+      opacity: 0;
+      z-index: 4;
+    }
+
+    #mile-cap.is-on ~ .mile-spark { animation: splash-spark 900ms ease-out forwards; }
+
+    #splash-school-name {
+      margin-top: 6px;
+      max-width: 92vw;
+      text-align: center;
+      font: 800 clamp(20px, 5.4vw, 28px)/1.25 system-ui, Segoe UI, sans-serif;
+      letter-spacing: 0.02em;
+      color: #ffffff;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    .splash-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .splash-divider::before,
+    .splash-divider::after {
+      content: '';
+      width: 42px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #FFD54F);
+    }
+    .splash-divider::after { transform: scaleX(-1); }
+    .splash-divider span {
+      width: 7px;
+      height: 7px;
+      background: #FFD54F;
+      transform: rotate(45deg);
     }
 
     #splash-loader-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 10px;
       z-index: 4;
       pointer-events: none;
-      width: auto;
     }
 
     #splash-loading-label {
       margin: 0;
-      font: 700 13px/1.2 system-ui, Segoe UI, sans-serif;
-      letter-spacing: 0.22em;
+      font: 700 12px/1.2 system-ui, Segoe UI, sans-serif;
+      letter-spacing: 0.34em;
       text-transform: uppercase;
-      background: linear-gradient(
-        90deg,
-        #6A1B9A,
-        #1A73E8,
-        #00897B,
-        #E37400,
-        #C2185B,
-        #6A1B9A
-      );
+      background: linear-gradient(90deg, #FFE082 0%, #ffffff 45%, #FFE082 55%, #FFB300 100%);
       background-size: 240% 100%;
       -webkit-background-clip: text;
       background-clip: text;
@@ -311,26 +398,72 @@
       animation: splash-label 2.8s linear infinite;
     }
 
-    @keyframes splash-spin {
-      to { transform: rotate(360deg); }
+    .splash-bar {
+      position: relative;
+      width: 150px;
+      height: 3px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.14);
+      overflow: hidden;
+    }
+    .splash-bar span {
+      position: absolute;
+      top: 0;
+      left: -40%;
+      width: 40%;
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, transparent, #FFD54F, #26C6DA);
+      animation: splash-bar 1.5s ease-in-out infinite;
     }
 
-    @keyframes splash-spin-rev {
-      to { transform: rotate(-360deg); }
+    .splash-foot {
+      position: absolute;
+      bottom: max(22px, env(safe-area-inset-bottom, 0px));
+      left: 0;
+      right: 0;
+      text-align: center;
+      font: 600 11px/1 system-ui, Segoe UI, sans-serif;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 3;
     }
 
-    @keyframes splash-label {
-      to { background-position: 240% 0; }
+    @keyframes splash-spin { to { transform: rotate(360deg); } }
+    @keyframes splash-lap { from { --lap: 0%; } to { --lap: 100%; } }
+    @keyframes splash-glyph {
+      0% { color: rgba(255, 255, 255, 0.28); scale: 1; }
+      40% { color: #FFE082; scale: 1.45; text-shadow: 0 0 12px rgba(255, 213, 79, 0.9); }
+      100% { color: var(--glyph); scale: 1; text-shadow: 0 0 8px rgba(255, 255, 255, 0.35); }
     }
+    @keyframes splash-medal {
+      0% { box-shadow: 0 18px 40px rgba(0,0,0,.45), 0 0 0 0 rgba(255, 213, 79, 0.6); }
+      100% { box-shadow: 0 18px 40px rgba(0,0,0,.45), 0 0 0 28px rgba(255, 213, 79, 0); }
+    }
+    @keyframes splash-spark {
+      0% { opacity: 1; transform: rotate(var(--a)) translateY(0); }
+      100% { opacity: 0; transform: rotate(var(--a)) translateY(-16cqi); }
+    }
+    @keyframes splash-label { to { background-position: 240% 0; } }
+    @keyframes splash-bar { 0% { left: -40%; } 100% { left: 100%; } }
+    @keyframes splash-drift { to { transform: translate(4vmax, 3vmax) scale(1.08); } }
+    @keyframes splash-twinkle { from { opacity: 0.45; } to { opacity: 1; } }
 
     @media (prefers-reduced-motion: reduce) {
-      #mile-spin,
-      #mile-spin .mile-glyph,
-      #mile-cap,
+      .splash-aurora,
+      .splash-dust,
+      .orbit-fill,
+      .orbit-rider,
+      .mile-glyph,
+      .splash-bar span,
       #splash-loading-label {
-        animation: none;
+        animation: none !important;
       }
-      #mile-cap { opacity: 1; }
+      .orbit-fill { --lap: 100%; }
+      .orbit-rider { opacity: 0; }
+      .mile-glyph { color: var(--glyph); }
+      #mile-cap { opacity: 1; transform: none; }
     }
   </style>
   <script id="splash-screen-script">
@@ -363,53 +496,73 @@
 </head>
 <body>
   <div id="splash">
-    <img id="splash-mark" class="center watermark" alt=""
-      src="splash/img/light-3x.png"
-      srcset="splash/img/light-2x.png 512w, splash/img/light-3x.png 768w, splash/img/light-4x.png 1024w"
-      sizes="(max-width: 1000px) 96vw, 1000px">
+    <div class="splash-aurora a1"></div>
+    <div class="splash-aurora a2"></div>
+    <div class="splash-aurora a3"></div>
+    <div class="splash-dust"></div>
     <div class="splash-stage">
       <div id="splash-halo" aria-hidden="true">
-        <div class="mile-track"></div>
-        <div class="mile-finish"></div>
+        <div class="orbit-track"></div>
+        <div class="orbit-fill"></div>
         <div id="mile-spin"></div>
+        <div class="orbit-rider"></div>
+        <div class="medallion">
+          <div class="medallion-face">
+            <img id="splash-mark" alt=""
+              src="splash/img/light-3x.png"
+              srcset="splash/img/light-2x.png 512w, splash/img/light-3x.png 768w, splash/img/light-4x.png 1024w"
+              sizes="220px">
+          </div>
+        </div>
         <svg id="mile-cap" class="edu-cap" viewBox="0 0 64 64" aria-hidden="true">
-          <circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.94)"/>
-          <polygon points="32,12 56,26 32,40 8,26" fill="#6A1B9A"/>
-          <polygon points="32,16 48,26 32,33 20,24" fill="#AB47BC"/>
-          <circle cx="32" cy="26" r="3.2" fill="#FFD54F"/>
-          <path d="M32 26 L46 40" stroke="#F9AB00" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-          <circle cx="47" cy="42" r="4.2" fill="#E37400"/>
+          <path d="M16 30 V42 C16 48 48 48 48 42 V30 L32 38 Z" fill="#FF8F00" stroke="#FFF8E1" stroke-width="1.4" stroke-linejoin="round"/>
+          <polygon points="32,10 60,24 32,38 4,24" fill="#FFD54F" stroke="#FFF8E1" stroke-width="1.4" stroke-linejoin="round"/>
+          <polygon points="32,14 50,23 32,30 18,22" fill="#FFE082"/>
+          <circle cx="32" cy="24" r="2.6" fill="#1A237E"/>
+          <path d="M32 24 L52 32 V46" stroke="#FFF8E1" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <circle cx="52" cy="49" r="3.4" fill="#FFF8E1"/>
         </svg>
+        <i class="mile-spark" style="--a:-70deg"></i>
+        <i class="mile-spark" style="--a:-35deg"></i>
+        <i class="mile-spark" style="--a:0deg"></i>
+        <i class="mile-spark" style="--a:35deg"></i>
+        <i class="mile-spark" style="--a:70deg"></i>
       </div>
-      <div id="splash-school-name" style="text-align:center;font:800 22px/1.3 system-ui,Segoe UI,sans-serif;color:#1a237e;">MaJo Bridge OS</div>
+      <div id="splash-school-name">MaJo Bridge OS</div>
+      <div class="splash-divider"><span></span></div>
       <div id="splash-loader-wrap">
         <p id="splash-loading-label">Opening class</p>
+        <div class="splash-bar"><span></span></div>
       </div>
     </div>
+    <div class="splash-foot">MaJo Bridge &middot; School OS</div>
   </div>
   <script>
     (function milestoneSpinner() {
+      var halo = document.getElementById('splash-halo');
       var ring = document.getElementById('mile-spin');
       var cap = document.getElementById('mile-cap');
-      if (!ring || !cap) return;
-      var colors = ['#C2185B','#E37400','#F9AB00','#1E8E3E','#00897B','#12B5CB','#1A73E8','#6A1B9A'];
+      if (!halo || !ring || !cap) return;
+      var lapMs = 2600;
+      var colors = ['#FFD54F','#FFB74D','#F48FB1','#CE93D8','#90CAF9','#4DD0E1','#80CBC4','#C5E1A5'];
       var sets = ['ABCDEFGH'.split(''), '12345678'.split('')];
       var step = 0;
       function showSet(chars) {
         cap.classList.remove('is-on');
+        halo.classList.remove('is-lapping', 'is-done');
         ring.innerHTML = chars.map(function (ch, i) {
-          var turn = (360 / chars.length) * i;
-          return '<span class="mile-arm" style="transform:rotate(' + turn + 'deg)">' +
-            '<span class="mile-glyph" style="color:' + colors[i] + '">' + ch + '</span></span>';
+          var at = (i + 0.5) / chars.length;
+          return '<span class="mile-arm" style="transform:rotate(' + (at * 360) + 'deg)">' +
+            '<span class="mile-glyph" style="--glyph:' + colors[i] +
+            ';rotate:' + (-at * 360) + 'deg;animation-delay:' + Math.round(at * lapMs - 120) + 'ms">' +
+            ch + '</span></span>';
         }).join('');
-        ring.classList.remove('is-running');
-        void ring.offsetWidth;
-        ring.classList.add('is-running');
+        void halo.offsetWidth;
+        halo.classList.add('is-lapping');
       }
       function showCap() {
-        ring.classList.remove('is-running');
-        ring.innerHTML = '';
-        cap.classList.remove('is-on');
+        halo.classList.remove('is-lapping');
+        halo.classList.add('is-done');
         void cap.offsetWidth;
         cap.classList.add('is-on');
       }
@@ -418,16 +571,16 @@
         if (step < sets.length) {
           showSet(sets[step]);
           step += 1;
-          setTimeout(loop, 2500);
+          setTimeout(loop, lapMs + 150);
         } else {
           showCap();
           step = 0;
-          setTimeout(loop, 1300);
+          setTimeout(loop, 1400);
         }
       }
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         showSet(sets[0]);
-        cap.classList.add('is-on');
+        showCap();
         return;
       }
       loop();
@@ -465,28 +618,18 @@
           var brandId = (brand.schoolId || '').toString().trim().toUpperCase();
           if (brandId && brandId !== lastId) return;
         }
-        var picture = document.getElementById('splash');
-        var img = picture && picture.querySelector('img');
+        var img = document.getElementById('splash-mark');
         var src = brand.dataUrl || brand.logoUrl;
         if (img && src) {
-          var sources = picture.querySelectorAll('source');
-          for (var i = 0; i < sources.length; i++) sources[i].remove();
           img.removeAttribute('srcset');
-          img.dataset.toned = '';
-          img.classList.remove('needs-multiply');
           img.src = src;
           img.onerror = function () {
             img.onerror = null;
-            img.dataset.toned = '';
-            img.classList.remove('needs-multiply');
             img.src = 'splash/img/light-3x.png';
             img.style.borderRadius = '';
-            img.addEventListener('load', function () { toneSplashMark(img); }, { once: true });
           };
-          img.style.objectFit = 'contain';
-          img.classList.add('watermark');
           if (brand.logoStyle === 'circular') {
-            img.style.borderRadius = '24%';
+            img.style.borderRadius = '50%';
           }
         }
         var nameEl = document.getElementById('splash-school-name');
@@ -510,59 +653,7 @@
           }
         }
       } catch (e) {}
-      finally {
-        toneSplashMark(document.getElementById('splash-mark'));
-      }
     })();
-
-    function toneSplashMark(img) {
-      if (!img || img.dataset.toned === '1') return;
-      if (!img.complete || !img.naturalWidth) {
-        img.addEventListener('load', function () { toneSplashMark(img); }, { once: true });
-        return;
-      }
-      try {
-        var max = 1024;
-        var scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-        var canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
-        var ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var p = image.data;
-        var clear = 0;
-        var samples = 0;
-        for (var s = 3; s < p.length; s += 16) {
-          samples += 1;
-          if (p[s] < 250) clear += 1;
-        }
-        if (samples && clear / samples > 0.08) {
-          img.dataset.toned = '1';
-          return;
-        }
-        for (var i = 0; i < p.length; i += 4) {
-          var r = p[i], g = p[i + 1], b = p[i + 2];
-          var hi = r > g ? (r > b ? r : b) : (g > b ? g : b);
-          var lo = r < g ? (r < b ? r : b) : (g < b ? g : b);
-          if ((hi - lo) < 58 && lo > 196) {
-            p[i + 3] = 0;
-            continue;
-          }
-          p[i] = (r * 0.78) | 0;
-          p[i + 1] = (g * 0.78) | 0;
-          p[i + 2] = (b * 0.78) | 0;
-        }
-        ctx.putImageData(image, 0, 0);
-        img.dataset.toned = '1';
-        img.classList.remove('needs-multiply');
-        img.removeAttribute('srcset');
-        img.src = canvas.toDataURL('image/png');
-      } catch (e) {
-        img.dataset.toned = '1';
-        img.classList.add('needs-multiply');
-      }
-    }
   </script>
   
   
