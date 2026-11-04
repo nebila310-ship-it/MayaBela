@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Build the Buna International Bank technical and financial proposals as editable Word files.
+"""Build the Buna International Bank technical and financial proposals.
 
-Usage: python3 docs/proposals/build_buna_proposals_docx.py
-Needs `pip install python-docx`.
+Usage: python3 docs/proposals/build_buna_proposals.py
+Needs `pip install python-docx` and Google Chrome or Chromium (prints the designed PDFs).
 
-Outputs, next to this script:
-  MaJo_Bridge_Buna_Technical_Proposal.docx  (MBT-BUNA-TEC-2026-01)
-  MaJo_Bridge_Buna_Financial_Proposal.docx  (MBT-BUNA-FIN-2026-01)
+Outputs, next to this script, an editable Word file and a designed PDF of each:
+  MaJo_Bridge_Buna_Technical_Proposal.docx / .pdf  (MBT-BUNA-TEC-2026-01)
+  MaJo_Bridge_Buna_Financial_Proposal.docx / .pdf  (MBT-BUNA-FIN-2026-01)
 """
 
 from __future__ import annotations
 
+import base64
+import html
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
 from docx import Document
@@ -26,8 +31,11 @@ LOGO = ROOT.parent.parent / "assets" / "branding" / "maya_brand.png"
 TECH_OUT = ROOT / "MaJo_Bridge_Buna_Technical_Proposal.docx"
 FIN_OUT = ROOT / "MaJo_Bridge_Buna_Financial_Proposal.docx"
 
-BLUE = RGBColor(0x1A, 0x4F, 0x9C)
+NAVY = RGBColor(0x0F, 0x25, 0x42)
+BLUE = RGBColor(0x1A, 0x73, 0xE8)
+GREEN = RGBColor(0x1E, 0x8E, 0x3E)
 GREY = RGBColor(0x4A, 0x55, 0x68)
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 
 ISSUE_DATE = "4 November 2026"
 VALID_UNTIL = "2 February 2027"
@@ -208,7 +216,7 @@ class Builder:
         normal.font.size = Pt(10.5)
         normal.paragraph_format.space_after = Pt(6)
         normal.paragraph_format.line_spacing = 1.15
-        for name, size, color in (("Heading 1", 15, BLUE), ("Heading 2", 12, BLUE), ("Heading 3", 11, GREY)):
+        for name, size, color in (("Heading 1", 15, NAVY), ("Heading 2", 12, GREEN), ("Heading 3", 11, BLUE)):
             h = st[name]
             h.font.name = "Calibri"
             h.font.size = Pt(size)
@@ -325,7 +333,7 @@ class Builder:
             else:
                 par.add_run(item)
 
-    def callout(self, title: str, lines: list[str], fill: str = "EEF3FA"):
+    def callout(self, title: str, lines: list[str], fill: str = "EAF6EE"):
         t = self.doc.add_table(rows=1, cols=1)
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
         cell = t.rows[0].cells[0]
@@ -334,7 +342,7 @@ class Builder:
         head = cell.paragraphs[0]
         r = head.add_run(title)
         r.bold = True
-        r.font.color.rgb = BLUE
+        r.font.color.rgb = GREEN
         r.font.size = Pt(11)
         for line in lines:
             par = cell.add_paragraph()
@@ -363,8 +371,8 @@ class Builder:
             r = c.paragraphs[0].add_run(h)
             r.bold = True
             r.font.size = Pt(size)
-            r.font.color.rgb = BLUE
-            set_cell_shading(c, "F4F7FB")
+            r.font.color.rgb = WHITE
+            set_cell_shading(c, "0F2542")
         for ri, row in enumerate(rows):
             cells = t.add_row().cells
             for i, v in enumerate(row):
@@ -383,6 +391,42 @@ class Builder:
         self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
         return t
 
+    def cover(self, title: str, subtitle: str, ref: str, rows: list[list[str]]) -> None:
+        b = self
+        if LOGO.exists():
+            b.doc.add_picture(str(LOGO), width=Cm(3.2))
+            b.doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        b.p(title, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=22, color=NAVY, after=2)
+        b.p(subtitle, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12.5, after=14)
+        b.p("Submitted to", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, after=2)
+        b.p("THE BOARD OF DIRECTORS AND EXECUTIVE MANAGEMENT", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12, after=0)
+        b.p("BUNA INTERNATIONAL BANK S.C.", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13, after=12)
+        b.p("Submitted by", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, after=2)
+        b.p("MAJO BRIDGE TECHNOLOGIES AND EVENTS PLC", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13, after=0)
+        b.p(CONTACT, align=WD_ALIGN_PARAGRAPH.CENTER, color=GREY, size=9, after=16)
+        b.table(["Document control", ""], [["Reference", ref], *rows, ["Date of issue", ISSUE_DATE], ["Valid until", VALID_UNTIL], ["Classification", "Confidential — for the Bank's Board, executive management and evaluation committee only"]], widths=[4.4, 12.2], size=10, bold_first_col=True)
+        b.page_break()
+
+    def stats(self, items: list[tuple[str, str]]):
+        t = self.doc.add_table(rows=2, cols=len(items))
+        t.alignment = WD_TABLE_ALIGNMENT.CENTER
+        for i, (value, label) in enumerate(items):
+            top, bottom = t.rows[0].cells[i], t.rows[1].cells[i]
+            for c in (top, bottom):
+                set_cell_shading(c, "EEF4FD")
+                c.text = ""
+            r = top.paragraphs[0].add_run(value)
+            r.bold = True
+            r.font.size = Pt(18)
+            r.font.color.rgb = BLUE if i % 2 == 0 else GREEN
+            top.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            r = bottom.paragraphs[0].add_run(label)
+            r.font.size = Pt(8.5)
+            r.font.color.rgb = GREY
+            bottom.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        apply_widths(t, [16.6 / len(items)] * len(items))
+        self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
     def page_break(self):
         self.doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
@@ -390,24 +434,298 @@ class Builder:
         self.doc.save(self.out)
 
 
-def cover(b: Builder, title: str, subtitle: str, ref: str, rows: list[list[str]]) -> None:
-    if LOGO.exists():
-        b.doc.add_picture(str(LOGO), width=Cm(3.2))
-        b.doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    b.p(title, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=20, color=BLUE, after=2)
-    b.p(subtitle, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12.5, after=14)
-    b.p("Submitted to", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, after=2)
-    b.p("THE BOARD OF DIRECTORS AND EXECUTIVE MANAGEMENT", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=12, after=0)
-    b.p("BUNA INTERNATIONAL BANK S.C.", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13, after=12)
-    b.p("Submitted by", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, after=2)
-    b.p("MAJO BRIDGE TECHNOLOGIES AND EVENTS PLC", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13, after=0)
-    b.p(CONTACT, align=WD_ALIGN_PARAGRAPH.CENTER, color=GREY, size=9, after=16)
-    b.table(["Document control", ""], [["Reference", ref], *rows, ["Date of issue", ISSUE_DATE], ["Valid until", VALID_UNTIL], ["Classification", "Confidential — for the Bank's Board, executive management and evaluation committee only"]], widths=[4.4, 12.2], size=10, bold_first_col=True)
-    b.page_break()
+# ----- designed PDF (HTML printed by headless Chrome) -----
+
+BRAND_CSS = """
+:root { --navy:#0F2542; --navy2:#16335C; --blue:#1A73E8; --green:#1E8E3E; --gold:#F5B70F;
+        --ink:#1C2433; --muted:#5B6474; --line:#DCE3EE; --tint:#F3F7FD; --gtint:#EAF6EE; --btint:#E8F0FE; }
+* { box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+@page { size:A4; margin:24mm 17mm 20mm 17mm;
+  @top-left { font:600 7.5pt Inter, sans-serif; color:#0F2542; letter-spacing:.06em; text-transform:uppercase; vertical-align:bottom; padding-bottom:4mm; border-bottom:.6mm solid #1E8E3E; }
+  @top-right { font:500 7.5pt Inter, sans-serif; color:#1A73E8; vertical-align:bottom; padding-bottom:4mm; border-bottom:.6mm solid #1A73E8; }
+  @bottom-left { content:"Confidential · Board of Directors, Buna International Bank"; font:400 7pt Inter, sans-serif; color:#8A93A3; vertical-align:top; padding-top:3mm; }
+  @bottom-right { content:"Page " counter(page) " of " counter(pages); font:600 7.5pt Inter, sans-serif; color:#0F2542; vertical-align:top; padding-top:3mm; }
+}
+@page cover { margin:0; @top-left{content:none; border:none} @top-right{content:none; border:none} @bottom-left{content:none} @bottom-right{content:none} }
+html, body { margin:0; padding:0; }
+body { font:400 9.6pt/1.5 Inter, "Noto Sans Ethiopic", "Noto Sans", sans-serif; color:var(--ink); }
+b, strong { font-weight:600; color:var(--navy); }
+
+/* cover */
+.cover { page:cover; position:relative; width:210mm; height:297mm; overflow:hidden; color:#fff;
+  background: radial-gradient(120mm 120mm at 105% -5%, rgba(26,115,232,.55), transparent 70%),
+              radial-gradient(110mm 110mm at -15% 105%, rgba(30,142,62,.45), transparent 70%),
+              linear-gradient(160deg, #0F2542 0%, #122E55 55%, #0B1C33 100%); break-after:page; }
+.cover .steps { position:absolute; right:-4mm; bottom:96mm; width:130mm; height:78mm; transform:scale(.74); transform-origin:right bottom; }
+.cover .steps i { position:absolute; display:block; height:22mm; width:80mm; border-radius:6mm; }
+.cover .steps .s1 { left:0; bottom:0; background:rgba(255,255,255,.07); border:.4mm solid rgba(255,255,255,.14); }
+.cover .steps .s2 { left:24mm; bottom:16mm; background:linear-gradient(90deg,#1E8E3E,#27A34B); opacity:.85; }
+.cover .steps .s3 { left:48mm; bottom:32mm; background:linear-gradient(90deg,#1A73E8,#3B8BF0); opacity:.9; }
+.cover .steps .star { position:absolute; left:94mm; bottom:58mm; width:18mm; height:18mm; }
+.cover .top { position:absolute; top:20mm; left:20mm; right:20mm; display:flex; align-items:center; gap:5mm; }
+.cover .tile { width:23mm; height:23mm; border-radius:5mm; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 2mm 6mm rgba(0,0,0,.25); }
+.cover .tile img { width:23mm; height:23mm; }
+.cover .co { font-weight:700; font-size:13pt; letter-spacing:.14em; line-height:1.2; }
+.cover .co small { display:block; font-weight:400; font-size:8.5pt; letter-spacing:.08em; color:rgba(255,255,255,.7); margin-top:1mm; }
+.cover .main { position:absolute; top:78mm; left:20mm; right:20mm; }
+.cover .eyebrow { display:inline-block; font:600 8pt Inter; letter-spacing:.22em; text-transform:uppercase; color:#BFE7CB; background:rgba(30,142,62,.28); border:.3mm solid rgba(126,214,152,.5); padding:1.6mm 3.6mm; border-radius:10mm; }
+.cover h1 { margin:7mm 0 0; font-weight:800; font-size:40pt; line-height:1.02; letter-spacing:-.01em; color:#fff; }
+.cover h1 span { color:#7FB5FF; }
+.cover .rule { width:34mm; height:1.4mm; border-radius:1mm; margin:7mm 0 6mm; background:linear-gradient(90deg,#F5B70F,#1E8E3E 55%,#1A73E8); }
+.cover .sub { font-size:12.5pt; font-weight:500; color:#fff; max-width:140mm; line-height:1.45; }
+.cover .sub2 { font-size:10pt; color:rgba(255,255,255,.72); max-width:130mm; margin-top:2mm; }
+.cover .parties { position:absolute; left:20mm; right:20mm; bottom:62mm; display:flex; gap:10mm; }
+.cover .party { flex:1; }
+.cover .party .lbl { font:600 7pt Inter; letter-spacing:.2em; text-transform:uppercase; color:#8FB9F5; }
+.cover .party .nm { font-size:11.5pt; font-weight:700; margin-top:1.5mm; line-height:1.3; }
+.cover .party .ds { font-size:8.5pt; color:rgba(255,255,255,.7); margin-top:1mm; }
+.cover .ctl { position:absolute; left:20mm; right:20mm; bottom:18mm; display:grid; grid-template-columns:1.45fr 1fr 1fr 1fr; gap:0;
+  background:rgba(255,255,255,.07); border:.3mm solid rgba(255,255,255,.16); border-radius:4mm; overflow:hidden; }
+.cover .ctl > div { padding:3.2mm 4mm; border-right:.3mm solid rgba(255,255,255,.12); }
+.cover .ctl > div:last-child { border-right:none; }
+.cover .ctl .k { font:600 6.5pt Inter; letter-spacing:.16em; text-transform:uppercase; color:#8FB9F5; }
+.cover .ctl .v { font-size:8.6pt; font-weight:600; margin-top:1mm; color:#fff; white-space:nowrap; }
+.cover .contact { position:absolute; left:20mm; right:20mm; bottom:9mm; font-size:7.5pt; color:rgba(255,255,255,.6); }
+
+/* headings */
+h1.sec { break-after:avoid; margin:9mm 0 4mm; font-size:17pt; font-weight:800; color:var(--navy); display:flex; align-items:center; gap:3.5mm; letter-spacing:-.005em; }
+h1.sec .num { flex:none; width:10mm; height:10mm; border-radius:2.6mm; background:linear-gradient(135deg,#1A73E8,#1E8E3E); color:#fff; font-size:11pt; font-weight:700; display:flex; align-items:center; justify-content:center; }
+h1.sec::after { content:""; flex:1; height:.5mm; background:linear-gradient(90deg,#1E8E3E,rgba(30,142,62,0)); margin-left:2mm; }
+h1.plain { break-after:avoid; margin:0 0 4mm; font-size:22pt; font-weight:800; color:var(--navy); }
+h1.plain::before { content:attr(data-eyebrow); display:block; font:600 7.5pt Inter; letter-spacing:.22em; text-transform:uppercase; color:var(--green); margin-bottom:1.5mm; }
+h1.plain::after { content:""; display:block; width:22mm; height:1.2mm; border-radius:1mm; margin-top:3mm; background:linear-gradient(90deg,#1E8E3E,#1A73E8); }
+h2 { break-after:avoid; margin:6mm 0 2.5mm; font-size:11.5pt; font-weight:700; color:var(--blue); }
+h2 .n { color:var(--green); margin-right:2mm; }
+p { margin:0 0 2.8mm; text-align:justify; hyphens:auto; }
+p.center { text-align:center; }
+p.muted { color:var(--muted); }
+p.small { font-size:8.4pt; }
+p.italic { font-style:italic; }
+p.lead { font-size:10.6pt; line-height:1.6; color:#2A3446; }
+
+/* lists */
+ul.dots { list-style:none; margin:0 0 3.5mm; padding:0; }
+ul.dots li { position:relative; padding-left:6mm; margin-bottom:1.8mm; }
+ul.dots li::before { content:""; position:absolute; left:.6mm; top:1.75mm; width:2.2mm; height:2.2mm; border-radius:50%; background:var(--green); box-shadow:0 0 0 .8mm var(--gtint); }
+ol.steps { list-style:none; counter-reset:s; margin:0 0 3.5mm; padding:0; }
+ol.steps li { counter-increment:s; position:relative; padding-left:9mm; margin-bottom:2.2mm; min-height:6mm; break-inside:avoid; }
+ol.steps li::before { content:counter(s); position:absolute; left:0; top:-.2mm; width:6mm; height:6mm; border-radius:50%; background:var(--blue); color:#fff; font-size:7.8pt; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+/* callout */
+.callout { break-inside:avoid; margin:3mm 0 5mm; border-radius:3.5mm; background:linear-gradient(135deg,#EAF6EE 0%,#E8F0FE 100%); border:.3mm solid #CFE6D7; border-left:1.6mm solid var(--green); padding:4.5mm 5.5mm 3mm; }
+.callout .t { font-weight:700; font-size:10.5pt; color:var(--navy); margin-bottom:2.5mm; }
+.callout ul { list-style:none; margin:0; padding:0; }
+.callout li { position:relative; padding-left:7mm; margin-bottom:2.2mm; }
+.callout li::before { content:"✓"; position:absolute; left:0; top:.1mm; width:4.6mm; height:4.6mm; border-radius:50%; background:var(--green); color:#fff; font-size:7pt; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+/* stat tiles */
+.stats { display:grid; gap:3mm; margin:3mm 0 5mm; break-inside:avoid; }
+.stat { border-radius:3mm; padding:4mm 3.5mm 3.5mm; background:var(--tint); border:.3mm solid var(--line); border-top:1.3mm solid var(--blue); text-align:center; }
+.stat:nth-child(2n) { border-top-color:var(--green); }
+.stat:nth-child(3n) { border-top-color:var(--navy); }
+.stat .v { font-size:19pt; font-weight:800; color:var(--navy); line-height:1.1; }
+.stat:nth-child(2n) .v { color:var(--green); }
+.stat:nth-child(2n+1) .v { color:var(--blue); }
+.stat .l { font-size:7.8pt; color:var(--muted); margin-top:1.4mm; line-height:1.35; }
+
+/* tables */
+.tw.keep { break-inside:avoid; }
+h1.plain { margin-top:8mm; }
+h1.plain:first-child, .pb + h1.plain, section + h1.plain { margin-top:0; }
+.keepblock { break-inside:avoid; }
+.tw { margin:2mm 0 5mm; border:.3mm solid var(--line); border-radius:2.6mm; overflow:hidden; }
+table { width:100%; border-collapse:collapse; table-layout:fixed; }
+thead { display:table-header-group; }
+th { background:var(--navy); color:#fff; font-weight:600; text-align:left; padding:2.3mm 2.6mm; font-size:inherit; vertical-align:bottom; }
+th:first-child { box-shadow: inset 1.2mm 0 0 var(--green); }
+td { padding:2mm 2.6mm; border-top:.25mm solid var(--line); vertical-align:top; }
+tbody tr:nth-child(even) td { background:#F6F9FE; }
+tr { break-inside:avoid; }
+tbody tr:nth-child(-n+2) { break-after:avoid; }
+tbody tr:nth-last-child(-n+2) { break-before:avoid; }
+td.fc { font-weight:600; color:var(--navy); }
+tr.total td { font-weight:700; background:var(--gtint) !important; color:var(--navy); }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+.pb { break-after:page; height:0; }
+
+/* sign-off */
+.sign { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-top:4mm; break-inside:avoid; }
+.sign .card { border:.3mm solid var(--line); border-radius:3mm; overflow:hidden; }
+.sign .card .h { background:var(--navy); color:#fff; font-weight:600; padding:2.6mm 4mm; box-shadow: inset 1.2mm 0 0 var(--green); }
+.sign .card .row { padding:3.4mm 4mm 1mm; border-top:.25mm solid var(--line); color:var(--muted); font-size:8.6pt; }
+.sign .card .row:first-of-type { border-top:none; }
+.sign .card .line { border-bottom:.3mm dotted #9AA5B5; height:6mm; }
+.sign .card .seal { height:22mm; margin:3mm 4mm 4mm; border:.4mm dashed #B9C3D2; border-radius:50%; width:22mm; display:flex; align-items:center; justify-content:center; color:#9AA5B5; font-size:7pt; text-align:center; }
+"""
+
+STAR_SVG = '<svg class="star" viewBox="0 0 24 24"><path fill="#F5B70F" d="M12 1.8l2.9 7.1 7.6.4-5.9 4.8 2 7.4L12 17.3l-6.6 4.2 2-7.4L1.5 9.3l7.6-.4z"/></svg>'
 
 
-def signoff(b: Builder, what: str) -> None:
-    b.p(f"Submitted on behalf of {PROVIDER} for the consideration of the Board of Directors of {BANK}. This {what} is valid until {VALID_UNTIL}.")
+def _esc(text: object) -> str:
+    return html.escape(str(text), quote=True)
+
+
+def _lead_html(item: str) -> str:
+    if "::" in item:
+        head, body = item.split("::", 1)
+        return f"<b>{_esc(head.strip())}.</b> {_esc(_cap(body))}"
+    return _esc(item)
+
+
+def _numeric(v: str) -> bool:
+    t = str(v).replace(",", "").replace(" ", "").replace("%", "").replace("ETB", "")
+    return bool(t) and t.replace(".", "", 1).isdigit()
+
+
+class HtmlBuilder:
+    def __init__(self, doc_title: str, ref: str, out: Path) -> None:
+        self.out = out
+        self.doc_title = doc_title
+        self.ref = ref
+        self.parts: list[str] = []
+        self.section_no = 0
+        self.sub_no = 0
+        self.after_cover = False
+
+    def p(self, text: str = "", bold: bool = False, italic: bool = False, align=None, size: float | None = None, color=None, after: float | None = None):
+        cls = []
+        if align == WD_ALIGN_PARAGRAPH.CENTER:
+            cls.append("center")
+        if color is not None:
+            cls.append("muted")
+        if size and size < 10:
+            cls.append("small")
+        if italic:
+            cls.append("italic")
+        if self.after_cover:
+            cls.append("lead")
+            self.after_cover = False
+        body = _esc(text)
+        if bold:
+            body = f"<b>{body}</b>"
+        self.parts.append(f'<p class="{" ".join(cls)}">{body}</p>')
+
+    def rich(self, parts: list[tuple[str, bool]]):
+        self.parts.append("<p>" + "".join(f"<b>{_esc(t)}</b>" if b else _esc(t) for t, b in parts) + "</p>")
+
+    def h1(self, title: str):
+        self.section_no += 1
+        self.sub_no = 0
+        self.parts.append(f'<h1 class="sec"><span class="num">{self.section_no:02d}</span>{_esc(title)}</h1>')
+
+    def h2(self, title: str):
+        self.sub_no += 1
+        self.parts.append(f'<h2><span class="n">{self.section_no}.{self.sub_no}</span>{_esc(title)}</h2>')
+
+    def h_plain(self, title: str, level: int = 1):
+        eyebrow = {"Board summary": "For the Board of Directors", "Sign-off": "Submission"}.get(title, "Annex" if title.startswith("Annex") else "")
+        if title == "Sign-off":
+            self.parts.append('<div class="keepblock">')
+        self.parts.append(f'<h1 class="plain" data-eyebrow="{_esc(eyebrow)}">{_esc(title)}</h1>')
+        if title == "Board summary":
+            self.after_cover = True
+
+    def bullets(self, items: list[str]):
+        self.parts.append('<ul class="dots">' + "".join(f"<li>{_lead_html(i)}</li>" for i in items) + "</ul>")
+
+    def numbered(self, items: list[str]):
+        self.parts.append('<ol class="steps">' + "".join(f"<li>{_lead_html(i)}</li>" for i in items) + "</ol>")
+
+    def callout(self, title: str, lines: list[str], fill: str = ""):
+        self.parts.append(f'<div class="callout"><div class="t">{_esc(title)}</div><ul>' + "".join(f"<li>{_lead_html(l)}</li>" for l in lines) + "</ul></div>")
+
+    def stats(self, items: list[tuple[str, str]]):
+        tiles = "".join(f'<div class="stat"><div class="v">{_esc(v)}</div><div class="l">{_esc(l)}</div></div>' for v, l in items)
+        self.parts.append(f'<div class="stats" style="grid-template-columns:repeat({len(items)},1fr)">{tiles}</div>')
+
+    def table(self, header: list[str], rows: list[list[str]], widths: list[float] | None = None, size: float = 9.5, bold_last: bool = False, bold_first_col: bool = False):
+        font = f"{max(7.6, size - 1.3):.1f}pt"
+        cols = ""
+        if widths:
+            total = sum(widths)
+            cols = "<colgroup>" + "".join(f'<col style="width:{w / total * 100:.2f}%">' for w in widths) + "</colgroup>"
+        numeric_cols = [
+            i for i in range(len(header))
+            if rows and all(_numeric(r[i]) or r[i] == "" for r in rows) and any(_numeric(r[i]) for r in rows)
+        ]
+        head = "".join(f'<th class="{"num" if i in numeric_cols else ""}">{_esc(h)}</th>' for i, h in enumerate(header))
+        body = []
+        for ri, row in enumerate(rows):
+            cells = []
+            for i, v in enumerate(row):
+                cls = []
+                if i in numeric_cols:
+                    cls.append("num")
+                if bold_first_col and i == 0:
+                    cls.append("fc")
+                cells.append(f'<td class="{" ".join(cls)}">{_esc(v)}</td>')
+            trc = ' class="total"' if bold_last and ri == len(rows) - 1 else ""
+            body.append(f"<tr{trc}>{''.join(cells)}</tr>")
+        keep = " keep" if len(rows) <= 6 else ""
+        self.parts.append(f'<div class="tw{keep}"><table style="font-size:{font}">{cols}<thead><tr>{head}</tr></thead><tbody>{"".join(body)}</tbody></table></div>')
+
+    def page_break(self):
+        self.parts.append('<div class="pb"></div>')
+
+    def cover(self, title: str, subtitle: str, ref: str, rows: list[list[str]]) -> None:
+        word, rest = title.split(" ", 1)
+        sub1, _, sub2 = subtitle.partition("\n")
+        logo = base64.b64encode(LOGO.read_bytes()).decode() if LOGO.exists() else ""
+        ctl = [("Reference", ref), ("Date of issue", ISSUE_DATE), ("Valid until", VALID_UNTIL), ("Classification", "Confidential")]
+        self.parts.append(f"""
+<section class="cover">
+  <div class="steps"><i class="s1"></i><i class="s2"></i><i class="s3"></i>{STAR_SVG}</div>
+  <div class="top"><div class="tile"><img src="data:image/png;base64,{logo}" alt="Majo Bridge logo"></div>
+    <div class="co">MAJO BRIDGE<small>Technologies and Events PLC</small></div></div>
+  <div class="main">
+    <div class="eyebrow">Proposal to the Board of Directors</div>
+    <h1>{_esc(word.title())}<br><span>{_esc(rest.title())}</span></h1>
+    <div class="rule"></div>
+    <div class="sub">{_esc(sub1)}</div>
+    <div class="sub2">{_esc(sub2)}</div>
+  </div>
+  <div class="parties">
+    <div class="party"><div class="lbl">Submitted to</div><div class="nm">Buna International Bank S.C.</div><div class="ds">Board of Directors and Executive Management</div></div>
+    <div class="party"><div class="lbl">Submitted by</div><div class="nm">Majo Bridge Technologies and Events PLC</div><div class="ds">Makers of {_esc(PRODUCT)}</div></div>
+  </div>
+  <div class="ctl">{''.join(f'<div><div class="k">{_esc(k)}</div><div class="v">{_esc(v)}</div></div>' for k, v in ctl)}</div>
+  <div class="contact">{_esc(CONTACT)}</div>
+</section>""")
+
+    def signoff_cards(self, what: str) -> None:
+        def card(head: str, title: str, seal: str) -> str:
+            rows = "".join(f'<div class="row">{k}<div class="line">{v}</div></div>' for k, v in (("Name", ""), ("Title", title), ("Signature", ""), ("Date", "")))
+            return f'<div class="card"><div class="h">{head}</div>{rows}<div class="seal">{seal}</div></div>'
+        self.p(f"Submitted on behalf of {PROVIDER} for the consideration of the Board of Directors of Buna International Bank. This {what} is valid until {VALID_UNTIL}.")
+        self.parts.append('<div class="sign">' + card("For Majo Bridge Technologies and Events PLC", "General Manager", "Company seal") + card("Received for Buna International Bank S.C.", "", "Bank seal") + "</div></div>")
+
+    def save(self) -> None:
+        doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{_esc(self.doc_title)}</title>
+<style>{BRAND_CSS}
+@page {{ @top-left {{ content:"{self.doc_title}"; }} @top-right {{ content:"{self.ref}"; }} }}
+@page cover {{ @top-left {{ content:none; }} @top-right {{ content:none; }} }}
+</style></head><body>{''.join(self.parts)}</body></html>"""
+        html_path = Path(tempfile.mkdtemp()) / (self.out.stem + ".html")
+        html_path.write_text(doc, encoding="utf-8")
+        chrome = next((c for c in ("google-chrome-stable", "google-chrome", "chromium", "chromium-browser") if shutil.which(c)), None)
+        if not chrome:
+            raise SystemExit("Google Chrome or Chromium is needed to print the PDF")
+        subprocess.run(
+            [shutil.which(chrome), "--headless=new", f"--user-data-dir={html_path.parent / 'profile'}", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
+             f"--print-to-pdf={self.out}", html_path.as_uri()],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120,
+        )
+
+
+def cover(b, title: str, subtitle: str, ref: str, rows: list[list[str]]) -> None:
+    b.cover(title, subtitle, ref, rows)
+
+
+def signoff(b, what: str) -> None:
+    if isinstance(b, HtmlBuilder):
+        b.signoff_cards(what)
+        return
+    b.p(f"Submitted on behalf of {PROVIDER} for the consideration of the Board of Directors of Buna International Bank. This {what} is valid until {VALID_UNTIL}.")
     b.table(
         ["For Majo Bridge Technologies and Events PLC", "Received for Buna International Bank S.C."],
         [
@@ -424,8 +742,7 @@ def signoff(b: Builder, what: str) -> None:
 
 # ====================== TECHNICAL PROPOSAL ======================
 
-def technical() -> None:
-    b = Builder(f"Technical Proposal · {PRODUCT} for Buna International Bank · {TECH_REF}", TECH_OUT)
+def technical(b) -> None:
     cover(
         b,
         "TECHNICAL PROPOSAL",
@@ -440,6 +757,7 @@ def technical() -> None:
         f"In return, the schools and their parents route fee payments and school finances through Buna. {PRODUCT} is that platform: "
         f"it is already built, in production, and runs every office of a school on web and mobile in English, Amharic and Afaan Oromo."
     )
+    b.stats([(str(MODULE_COUNT), "modules live today"), ("6", "portals: admin, teacher, parent, student, driver, console"), ("3", "languages: English, Amharic, Afaan Oromo"), ("6", "platforms: web, Android, iOS, Windows, macOS, Linux")])
     b.callout("What the Board is asked to note", [
         f"A ready product, not a project:: {MODULE_COUNT} modules covering academics, students, finance, HR, payroll, transport, communication and compliance are live today.",
         "Every parent becomes a Buna touchpoint:: the parent app is used daily for attendance, results, messages and the school bus, so the 'Pay with Buna' button sits where parents already are.",
@@ -811,7 +1129,6 @@ def technical() -> None:
     )
     b.h_plain("Sign-off")
     signoff(b, "Technical Proposal")
-    b.save()
 
 
 # ====================== FINANCIAL PROPOSAL ======================
@@ -834,8 +1151,7 @@ PORTFOLIOS = [
 ]
 
 
-def financial() -> None:
-    b = Builder(f"Financial Proposal · {PRODUCT} for Buna International Bank · {FIN_REF}", FIN_OUT)
+def financial(b) -> None:
     cover(
         b,
         "FINANCIAL PROPOSAL",
@@ -850,6 +1166,7 @@ def financial() -> None:
         "The Bank pays Majo Bridge one monthly fee per enrolled student, at a rate set by the size of each school. In return the Bank gains the schools' fee, "
         "payroll and supplier flows, and a daily digital relationship with every parent and staff member."
     )
+    b.stats([(f"{rate} ETB", f"per student per month · {size.lower()}") for _, size, _, _, rate in TIERS] + [("0 ETB", "cost to schools and parents")])
     b.callout("Key commercial terms", [
         "Who pays:: Buna International Bank. Schools and parents pay nothing to Majo Bridge.",
         "Price basis:: per billable student per month, excluding VAT.",
@@ -1027,10 +1344,18 @@ def financial() -> None:
     b.p(f"This Financial Proposal is valid until {VALID_UNTIL}. Final terms will be set out in a partnership agreement between {BANK} and {PROVIDER}.")
     b.h_plain("Sign-off")
     signoff(b, "Financial Proposal")
-    b.save()
+
+
+TECH_TITLE = "Technical Proposal · MaJo e-School Bridge"
+FIN_TITLE = "Financial Proposal · MaJo e-School Bridge"
 
 
 if __name__ == "__main__":
-    technical()
-    financial()
-    print(f"Wrote {TECH_OUT.name} and {FIN_OUT.name}")
+    for content, title, ref, out in ((technical, TECH_TITLE, TECH_REF, TECH_OUT), (financial, FIN_TITLE, FIN_REF, FIN_OUT)):
+        word = Builder(f"{title} for Buna International Bank · {ref}", out)
+        content(word)
+        word.save()
+        pdf = HtmlBuilder(title, ref, out.with_suffix(".pdf"))
+        content(pdf)
+        pdf.save()
+        print(f"Wrote {out.name} and {out.with_suffix('.pdf').name}")

@@ -6,7 +6,7 @@ Prepared by **Majo Bridge Technologies and Events** for the Board of Directors o
 
 - Technical proposal (MBT-BUNA-TEC-2026-01): [Word](MaJo_Bridge_Buna_Technical_Proposal.docx) · [PDF](MaJo_Bridge_Buna_Technical_Proposal.pdf)
 - Financial proposal (MBT-BUNA-FIN-2026-01): [Word](MaJo_Bridge_Buna_Financial_Proposal.docx) · [PDF](MaJo_Bridge_Buna_Financial_Proposal.pdf)
-- Rebuild both Word files with `python3 docs/proposals/build_buna_proposals_docx.py` (needs `pip install python-docx`). The pricing tiers, worked examples and scenarios are defined at the top of the script.
+- Rebuild the Word files and the designed PDFs with `python3 docs/proposals/build_buna_proposals.py`. This needs `pip install python-docx`, plus Google Chrome or Chromium to print the PDFs. The pricing tiers, worked examples and scenarios are defined at the top of the script.
 
 ## Lebawi International Academy — technical proposal
 
