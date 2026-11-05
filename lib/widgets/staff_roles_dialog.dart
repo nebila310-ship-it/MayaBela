@@ -23,31 +23,35 @@ Future<void> showStaffRolesDialog({
 
   if (!AuthService.canAssignStaffRoles) return;
   if ((teacher.loginUsername ?? '').trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.staffRolesNoAccount)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.staffRolesNoAccount)));
     return;
   }
 
   await SchoolRoleCatalogService.instance.ensureLoaded(teacher.schoolId);
-  var templates =
-      SchoolRoleCatalogService.instance.rolesForAssign(schoolId: teacher.schoolId);
+  var templates = SchoolRoleCatalogService.instance.rolesForAssign(
+    schoolId: teacher.schoolId,
+  );
 
   final selected = <String>{
     for (final key in teacher.staffRoles)
-      if (SchoolRoleCatalogService.instance
-              .lookup(key, schoolId: teacher.schoolId) !=
+      if (SchoolRoleCatalogService.instance.lookup(
+            key,
+            schoolId: teacher.schoolId,
+          ) !=
           null)
         StaffRoles.canonicalize(key),
   };
   final canGrantOwnerOnly = AuthService.canAssignFullAccess;
-  final isOwnAccount = AuthService.currentUser?.username.toLowerCase() ==
+  final isOwnAccount =
+      AuthService.currentUser?.username.toLowerCase() ==
       teacher.loginUsername?.trim().toLowerCase();
 
   if (isOwnAccount) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.staffRolesOwnAccount)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.staffRolesOwnAccount)));
     return;
   }
 
@@ -60,7 +64,10 @@ Future<void> showStaffRolesDialog({
             Icon(Icons.admin_panel_settings_outlined, color: accent),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(s.staffRolesTitle, style: const TextStyle(fontSize: 18)),
+              child: Text(
+                s.staffRolesTitle,
+                style: const TextStyle(fontSize: 18),
+              ),
             ),
           ],
         ),
@@ -72,7 +79,10 @@ Future<void> showStaffRolesDialog({
             children: [
               Text(
                 teacher.fullName,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -169,17 +179,14 @@ Future<bool> showRenameStaffRoleTitleDialog({
 
   final roles = [
     for (final key in teacher.staffRoles)
-      SchoolRoleCatalogService.instance.lookup(
-        key,
-        schoolId: teacher.schoolId,
-      ),
+      SchoolRoleCatalogService.instance.lookup(key, schoolId: teacher.schoolId),
   ].whereType<StaffRole>().toList();
 
   if (roles.isEmpty) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.assignRoleFirst)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.assignRoleFirst)));
     }
     return false;
   }
@@ -215,11 +222,22 @@ Future<bool> showRenameStaffRoleTitleDialog({
     label: next,
   );
   if (!context.mounted) return err == null;
-  final localOk = err == null || err == 'cloud_failed';
+  final cloudOk = err == null;
+  final localOk = cloudOk || err == 'cloud_failed' || err == 'cloud_session';
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(localOk ? s.roleTitleSaved : s.staffRolesSaveFailed),
-      backgroundColor: localOk ? Colors.green : Colors.red.shade700,
+      content: Text(
+        cloudOk
+            ? s.roleTitleSaved
+            : localOk
+            ? 'Title saved on this device, but cloud sync failed. Stay signed in as Admin (Ready), then rename again.'
+            : s.staffRolesSaveFailed,
+      ),
+      backgroundColor: cloudOk
+          ? Colors.green
+          : localOk
+          ? Colors.orange.shade800
+          : Colors.red.shade700,
     ),
   );
   if (localOk) onSaved?.call();
@@ -227,10 +245,7 @@ Future<bool> showRenameStaffRoleTitleDialog({
 }
 
 class _RenameRoleTitleDialog extends StatefulWidget {
-  const _RenameRoleTitleDialog({
-    required this.role,
-    required this.strings,
-  });
+  const _RenameRoleTitleDialog({required this.role, required this.strings});
 
   final StaffRole role;
   final AppStrings strings;

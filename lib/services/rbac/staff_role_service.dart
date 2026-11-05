@@ -32,8 +32,10 @@ class StaffRoleService {
     final normalized = <String>[];
     for (final raw in roles) {
       final key = StaffRoles.canonicalize(raw);
-      final template = SchoolRoleCatalogService.instance
-          .lookup(key, schoolId: teacher.schoolId);
+      final template = SchoolRoleCatalogService.instance.lookup(
+        key,
+        schoolId: teacher.schoolId,
+      );
       if (template == null) continue;
       if (template.ownerOnly && !AuthService.canAssignFullAccess) {
         return 'owner_only_role';
@@ -49,10 +51,11 @@ class StaffRoleService {
     if (me != null && me == username) return 'own_account';
 
     final beforeRoles = List<String>.from(teacher.staffRoles);
-    final effectivePermissions = SchoolRoleCatalogService.instance
-        .permissionsForRoles(normalized, schoolId: teacher.schoolId)
-        .toList()
-      ..sort();
+    final effectivePermissions =
+        SchoolRoleCatalogService.instance
+            .permissionsForRoles(normalized, schoolId: teacher.schoolId)
+            .toList()
+          ..sort();
 
     // 1. Registry mirror.
     final updated = teacher.copyWith(staffRoles: normalized);
@@ -170,19 +173,12 @@ class StaffRoleService {
       schoolId: teacher.schoolId,
     );
 
+    // Always create/reuse a titled instance and restamp the login row.
+    // In-place catalog label edits never reached school-upsert-account, so
+    // the cloud kept the old title after a refresh.
     String nextKey;
     if (reuse != null) {
       nextKey = reuse.key;
-    } else if (!current.builtIn && holders <= 1) {
-      final err = await SchoolRoleCatalogService.instance.renameRole(
-        roleKey: current.key,
-        label: cleanLabel,
-        schoolId: teacher.schoolId,
-      );
-      if (err != null && err != 'cloud_failed' && err != 'cloud_session') {
-        return err;
-      }
-      return null;
     } else {
       final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
         sourceRoleKey: current.key,
@@ -200,6 +196,15 @@ class StaffRoleService {
             : StaffRoles.canonicalize(key),
     ];
     final err = await assignRoles(teacher: teacher, roles: nextRoles);
+    if (!current.builtIn &&
+        StaffRoles.canonicalize(current.key) !=
+            StaffRoles.canonicalize(nextKey) &&
+        holders <= 1) {
+      await SchoolRoleCatalogService.instance.dropUnusedTitledRole(
+        current.key,
+        schoolId: teacher.schoolId,
+      );
+    }
     // Local registry already holds the titled copy. Cloud is required in
     // production, but tests and offline saves should keep the new title.
     if (err == 'cloud_failed') return null;

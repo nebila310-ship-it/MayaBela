@@ -143,11 +143,7 @@ abstract final class ModuleAccess {
     ),
     // Child-protection files. Allocation (not view_all_school_data) decides
     // who sees this desk — QA and classroom teachers stay out.
-    'safeguarding': ModuleRule(
-      view: [],
-      manage: [],
-      departmental: false,
-    ),
+    'safeguarding': ModuleRule(view: [], manage: [], departmental: false),
     // Owner ERP accounts (VP, Student Affairs, HR itself, …).
     'teachers': ModuleRule(
       view: [
@@ -184,10 +180,7 @@ abstract final class ModuleAccess {
     // Operations
     'finance': ModuleRule(
       view: [SchoolPermissions.viewFinanceReports],
-      manage: [
-        SchoolPermissions.manageFees,
-        SchoolPermissions.recordPayments,
-      ],
+      manage: [SchoolPermissions.manageFees, SchoolPermissions.recordPayments],
     ),
     'transport': ModuleRule(
       view: [SchoolPermissions.viewTransport],
@@ -202,10 +195,7 @@ abstract final class ModuleAccess {
       manage: [SchoolPermissions.manageStudents],
     ),
     'homework': ModuleRule(
-      view: [
-        SchoolPermissions.viewAllGrades,
-        SchoolPermissions.viewStudents,
-      ],
+      view: [SchoolPermissions.viewAllGrades, SchoolPermissions.viewStudents],
       manage: [SchoolPermissions.viewAllGrades],
     ),
 
@@ -632,9 +622,7 @@ abstract final class ModuleAccess {
       },
       manageBy: <String>{},
     ),
-    'system_health': ModuleRoleAllocation(
-      visibleTo: {StaffRoles.staffs},
-    ),
+    'system_health': ModuleRoleAllocation(visibleTo: {StaffRoles.staffs}),
     'go_live': ModuleRoleAllocation(
       visibleTo: {
         StaffRoles.staffs,
@@ -657,10 +645,7 @@ abstract final class ModuleAccess {
         StaffRoles.vicePresident,
         ..._executiveOversight,
       },
-      manageBy: {
-        StaffRoles.staffs,
-        StaffRoles.principal,
-      },
+      manageBy: {StaffRoles.staffs, StaffRoles.principal},
     ),
   };
 
@@ -692,13 +677,14 @@ abstract final class ModuleAccess {
       if (!myRoles.contains(StaffRoles.fullAccess)) {
         final configured = _combinedConfiguredRight(raw, id, myRoles);
         if (configured != null) return configured.canView;
-        if (defaultStaffChrome.contains(id) || defaultStaffChrome.contains(raw)) {
+        if (defaultStaffChrome.contains(id) ||
+            defaultStaffChrome.contains(raw)) {
           return true;
         }
         // EDUABA dashboard matrix: allocated modules show only for their roles.
         final allocation = roleAllocations[id];
         if (allocation != null) {
-          return myRoles.intersection(allocation.visibleTo).isNotEmpty;
+          return _heldRolesMatch(myRoles, allocation.visibleTo);
         }
       }
       if (rule.open) return false;
@@ -750,10 +736,10 @@ abstract final class ModuleAccess {
         if (configured != null) return configured.canManage;
         final allocation = roleAllocations[id];
         if (allocation != null) {
-          if (myRoles.intersection(allocation.visibleTo).isEmpty) return false;
+          if (!_heldRolesMatch(myRoles, allocation.visibleTo)) return false;
           final managers = allocation.manageBy;
           if (managers != null) {
-            if (myRoles.intersection(managers).isEmpty) return false;
+            if (!_heldRolesMatch(myRoles, managers)) return false;
             // Allocation-only desks (empty manage list) stay role-gated.
             // Otherwise JWT must hold a matching write permission so RLS
             // and the sidebar agree.
@@ -775,7 +761,10 @@ abstract final class ModuleAccess {
     Set<String>? permissions,
   }) {
     final role = StaffRoles.canonicalize(roleKey);
-    if (role == StaffRoles.fullAccess) return ModuleRight.edit;
+    final source = StaffRoles.sourceKeyOf(role) ?? role;
+    if (role == StaffRoles.fullAccess || source == StaffRoles.fullAccess) {
+      return ModuleRight.edit;
+    }
 
     final raw = moduleId.trim();
     final id = normalize(raw);
@@ -786,16 +775,23 @@ abstract final class ModuleAccess {
     final rule = ruleFor(raw);
     if (rule == null || rule.adminOnly) return ModuleRight.none;
 
-    final perms = permissions ??
+    final perms =
+        permissions ??
         StaffRoles.lookup(role)?.permissions ??
+        StaffRoles.lookup(source)?.permissions ??
         const <String>{};
 
     final allocation = roleAllocations[id];
     if (allocation != null) {
-      if (!allocation.visibleTo.contains(role)) return ModuleRight.none;
+      if (!allocation.visibleTo.contains(role) &&
+          !allocation.visibleTo.contains(source)) {
+        return ModuleRight.none;
+      }
       final managers = allocation.manageBy;
       if (managers != null) {
-        if (!managers.contains(role)) return ModuleRight.read;
+        if (!managers.contains(role) && !managers.contains(source)) {
+          return ModuleRight.read;
+        }
         if (rule.manage.isEmpty) return ModuleRight.edit;
         if (rule.manage.any(perms.contains)) return ModuleRight.edit;
         return ModuleRight.read;
@@ -826,7 +822,8 @@ abstract final class ModuleAccess {
     for (final role in roles) {
       if (!SchoolRoleCatalogService.instance.hasModuleRights(role)) continue;
       anyExplicit = true;
-      final stored = SchoolRoleCatalogService.instance.moduleRightFor(role, raw) ??
+      final stored =
+          SchoolRoleCatalogService.instance.moduleRightFor(role, raw) ??
           SchoolRoleCatalogService.instance.moduleRightFor(role, normalized) ??
           ModuleRight.none;
       if (stored.index > best.index) best = stored;
@@ -863,6 +860,16 @@ abstract final class ModuleAccess {
   static Set<String> _currentStaffRoleKeys() {
     final roles = AuthService.currentUser?.staffRoles ?? const <String>[];
     return roles.map(StaffRoles.canonicalize).toSet();
+  }
+
+  /// Titled copies (`custom_principal_kg`) count as their built-in template
+  /// for the EDUABA dashboard matrix, without mixing that template's saved
+  /// module map into `_combinedConfiguredRight`.
+  static bool _heldRolesMatch(Set<String> held, Set<String> wanted) {
+    for (final want in wanted) {
+      if (StaffRoles.holds(held, want)) return true;
+    }
+    return false;
   }
 
   /// True when the user can see the module but not change anything in it

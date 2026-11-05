@@ -104,100 +104,81 @@ class SchoolRoleCatalogService {
     final catalog = _bySchool[sid];
     if (catalog == null) return;
     var changed = false;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.vicePresident,
-          const {
-            SchoolPermissions.sendAnnouncements,
-            SchoolPermissions.manageLearningMaterials,
-            SchoolPermissions.manageMaterialAccess,
-            SchoolPermissions.accessSupport,
-            SchoolPermissions.messageParents,
-            SchoolPermissions.manageStudents,
-            SchoolPermissions.manageParentLinks,
-            SchoolPermissions.manageFees,
-            SchoolPermissions.recordPayments,
-            SchoolPermissions.manageStaffAccounts,
-            SchoolPermissions.manageBuses,
-            SchoolPermissions.manageDrivers,
-            SchoolPermissions.assignStudentTransport,
-            SchoolPermissions.manageQaFindings,
-            SchoolPermissions.manageDigitalOps,
-          },
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.vicePresident, const {
+          SchoolPermissions.sendAnnouncements,
+          SchoolPermissions.manageLearningMaterials,
+          SchoolPermissions.manageMaterialAccess,
+          SchoolPermissions.accessSupport,
+          SchoolPermissions.messageParents,
+          SchoolPermissions.manageStudents,
+          SchoolPermissions.manageParentLinks,
+          SchoolPermissions.manageFees,
+          SchoolPermissions.recordPayments,
+          SchoolPermissions.manageStaffAccounts,
+          SchoolPermissions.manageBuses,
+          SchoolPermissions.manageDrivers,
+          SchoolPermissions.assignStudentTransport,
+          SchoolPermissions.manageQaFindings,
+          SchoolPermissions.manageDigitalOps,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.humanResource,
-          const {
-            SchoolPermissions.accessSupport,
-            SchoolPermissions.messageParents,
-            SchoolPermissions.viewTransport,
-            SchoolPermissions.manageBuses,
-            SchoolPermissions.manageDrivers,
-            SchoolPermissions.assignStudentTransport,
-            SchoolPermissions.viewStudents,
-            SchoolPermissions.viewAllSchoolData,
-          },
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.humanResource, const {
+          SchoolPermissions.accessSupport,
+          SchoolPermissions.messageParents,
+          SchoolPermissions.viewTransport,
+          SchoolPermissions.manageBuses,
+          SchoolPermissions.manageDrivers,
+          SchoolPermissions.assignStudentTransport,
+          SchoolPermissions.viewStudents,
+          SchoolPermissions.viewAllSchoolData,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.sectionDirector,
-          const {
-            SchoolPermissions.accessSupport,
-            SchoolPermissions.messageParents,
-            SchoolPermissions.viewTransport,
-            SchoolPermissions.assignStudentTransport,
-            SchoolPermissions.manageParentLinks,
-            SchoolPermissions.viewAllGrades,
-            SchoolPermissions.viewAllSchoolData,
-            SchoolPermissions.approveGrades,
-            SchoolPermissions.sendAnnouncements,
-          },
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.sectionDirector, const {
+          SchoolPermissions.accessSupport,
+          SchoolPermissions.messageParents,
+          SchoolPermissions.viewTransport,
+          SchoolPermissions.assignStudentTransport,
+          SchoolPermissions.manageParentLinks,
+          SchoolPermissions.viewAllGrades,
+          SchoolPermissions.viewAllSchoolData,
+          SchoolPermissions.approveGrades,
+          SchoolPermissions.sendAnnouncements,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.principal,
-          const {
-            SchoolPermissions.viewAllSchoolData,
-            SchoolPermissions.manageDigitalOps,
-          },
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.principal, const {
+          SchoolPermissions.viewAllSchoolData,
+          SchoolPermissions.manageDigitalOps,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.generalManager,
-          const {SchoolPermissions.manageDigitalOps},
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.generalManager, const {
+          SchoolPermissions.manageDigitalOps,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.studentAffairs,
-          const {SchoolPermissions.viewAllSchoolData},
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.studentAffairs, const {
+          SchoolPermissions.viewAllSchoolData,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.registrar,
-          const {
-            SchoolPermissions.viewAllSchoolData,
-            SchoolPermissions.manageDigitalOps,
-          },
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.registrar, const {
+          SchoolPermissions.viewAllSchoolData,
+          SchoolPermissions.manageDigitalOps,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.accountant,
-          const {SchoolPermissions.viewAllSchoolData},
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.accountant, const {
+          SchoolPermissions.viewAllSchoolData,
+        }) ||
         changed;
-    changed = _mergeOverrideExtras(
-          catalog,
-          StaffRoles.transportAdmin,
-          const {SchoolPermissions.viewAllSchoolData},
-        ) ||
+    changed =
+        _mergeOverrideExtras(catalog, StaffRoles.transportAdmin, const {
+          SchoolPermissions.viewAllSchoolData,
+        }) ||
         changed;
     if (changed) unawaited(_persist(sid, catalog));
   }
@@ -275,16 +256,21 @@ class SchoolRoleCatalogService {
     return stored;
   }
 
-  Map<String, ModuleRight>? moduleRightsFor(String roleKey, {String? schoolId}) {
+  Map<String, ModuleRight>? moduleRightsFor(
+    String roleKey, {
+    String? schoolId,
+  }) {
     final sid = (schoolId ?? _activeSchoolId ?? '').trim();
     final catalog = _bySchool[sid];
     if (catalog == null) return null;
     final key = StaffRoles.canonicalize(roleKey);
-    final raw = catalog.moduleRights[key] ??
+    final raw =
+        catalog.moduleRights[key] ??
         catalog.moduleRights[roleKey.trim().toLowerCase()];
     if (raw == null) return null;
     return {
-      for (final entry in raw.entries) entry.key: ModuleRight.parse(entry.value),
+      for (final entry in raw.entries)
+        entry.key: ModuleRight.parse(entry.value),
     };
   }
 
@@ -313,8 +299,9 @@ class SchoolRoleCatalogService {
     } else {
       final existing = catalog.customRoles.indexWhere((r) => r.key == key);
       if (existing < 0) return 'unknown_role';
-      catalog.customRoles[existing] =
-          catalog.customRoles[existing].copyWith(permissions: next);
+      catalog.customRoles[existing] = catalog.customRoles[existing].copyWith(
+        permissions: next,
+      );
     }
     if (moduleRights != null) {
       catalog.moduleRights[key] = {
@@ -333,7 +320,8 @@ class SchoolRoleCatalogService {
         'permissions': next.toList()..sort(),
         if (moduleRights != null)
           'moduleRights': {
-            for (final entry in moduleRights.entries) entry.key: entry.value.name,
+            for (final entry in moduleRights.entries)
+              entry.key: entry.value.name,
           },
       },
     );
@@ -411,7 +399,9 @@ class SchoolRoleCatalogService {
     if (sid.isEmpty) return 0;
     final want = StaffRoles.canonicalize(roleKey);
     var n = 0;
-    for (final teacher in TeacherRegistryService.instance.teachersForSchool(sid)) {
+    for (final teacher in TeacherRegistryService.instance.teachersForSchool(
+      sid,
+    )) {
       if (teacher.staffRoles.map(StaffRoles.canonicalize).contains(want)) {
         n++;
       }
@@ -454,7 +444,8 @@ class SchoolRoleCatalogService {
 
     final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
     final key = _nextInstanceKey(catalog, basedOn, cleanLabel);
-    final seedRights = moduleRightsFor(source, schoolId: sid) ??
+    final seedRights =
+        moduleRightsFor(source, schoolId: sid) ??
         RoleModuleCatalog.defaultsForRole(
           StaffRoles.lookup(basedOn) ?? sourceRole,
         );
@@ -485,7 +476,7 @@ class SchoolRoleCatalogService {
         cloudErr != 'cloud_session') {
       return TitledRoleResult.error(cloudErr);
     }
-    return TitledRoleResult.ok(key);
+    return TitledRoleResult.ok(key, error: cloudErr);
   }
 
   String _nextInstanceKey(
@@ -510,6 +501,29 @@ class SchoolRoleCatalogService {
       i++;
     }
     return '${base}_$i';
+  }
+
+  /// Remove a titled copy nobody holds so a person-specific rename does not
+  /// leave the old title in Role Permissions.
+  Future<String?> dropUnusedTitledRole(
+    String roleKey, {
+    String? schoolId,
+  }) async {
+    final denied = _requireRoleCatalogEditor();
+    if (denied != null) return denied;
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    if (sid.isEmpty) return 'no_school';
+    final key = StaffRoles.canonicalize(roleKey);
+    if (!key.startsWith('custom_')) return 'not_custom';
+    if (holderCount(key, schoolId: sid) > 0) return 'in_use';
+    await ensureLoaded(sid);
+    final catalog = _bySchool[sid];
+    if (catalog == null) return 'unknown_role';
+    final before = catalog.customRoles.length;
+    catalog.customRoles.removeWhere((r) => r.key == key);
+    if (catalog.customRoles.length == before) return 'unknown_role';
+    catalog.moduleRights.remove(key);
+    return _persist(sid, catalog);
   }
 
   Future<String?> deleteCustomRole(String roleKey, {String? schoolId}) async {
@@ -565,14 +579,16 @@ class SchoolRoleCatalogService {
 
   /// Rename a built-in or custom role. The key stays the same so permissions
   /// and logins keep working; staff see the new title after next sign-in.
+  ///
+  /// Same editor gate as creating a titled copy: the school owner, or Full
+  /// Access / General Manager after the owner delegates Role Permissions.
   Future<String?> renameRole({
     required String roleKey,
     required String label,
     String? schoolId,
   }) async {
-    if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
-      return 'not_allowed';
-    }
+    final denied = _requireRoleCatalogEditor();
+    if (denied != null) return denied;
     final sid = (schoolId ?? _activeSchoolId ?? '').trim();
     if (sid.isEmpty) return 'no_school';
     final cleanLabel = label.trim();
@@ -635,7 +651,8 @@ class SchoolRoleCatalogService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('$_prefsPrefix$sid') ??
+      final raw =
+          prefs.getString('$_prefsPrefix$sid') ??
           prefs.getString('$_prefsPrefix${sid.toUpperCase()}') ??
           prefs.getString('$_prefsPrefix${sid.toLowerCase()}');
       if (raw != null && raw.isNotEmpty) {
@@ -652,10 +669,15 @@ class SchoolRoleCatalogService {
   }
 
   Future<Map<String, dynamic>?> _readCloudCatalog(String sid) async {
-    final jwtSchool = (SupabaseBootstrap.isInitialized
-            ? (SupabaseBootstrap.client.auth.currentUser
-                    ?.appMetadata['schoolId'] as String?)
-                ?.trim()
+    final jwtSchool =
+        (SupabaseBootstrap.isInitialized
+            ? (SupabaseBootstrap
+                          .client
+                          .auth
+                          .currentUser
+                          ?.appMetadata['schoolId']
+                      as String?)
+                  ?.trim()
             : null) ??
         '';
     final ids = <String>{
@@ -673,8 +695,9 @@ class SchoolRoleCatalogService {
 
   Future<void> _restampHolders(String sid, String roleKey) async {
     final canonical = StaffRoles.canonicalize(roleKey);
-    for (final teacher
-        in TeacherRegistryService.instance.teachersForSchool(sid)) {
+    for (final teacher in TeacherRegistryService.instance.teachersForSchool(
+      sid,
+    )) {
       final roles = [
         for (final raw in teacher.staffRoles) StaffRoles.canonicalize(raw),
       ];
@@ -705,34 +728,49 @@ class SchoolRoleCatalogService {
   Future<String?> _persist(String sid, _SchoolRoleCatalog catalog) async {
     await _savePrefs(sid, catalog);
     if (!_crud.available) return null;
-    try {
-      await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+    Future<String?> write({required bool forceRefresh}) async {
       try {
-        await SupabaseBootstrap.client.auth.refreshSession();
-      } catch (_) {}
-      if (!await SupabaseBootstrap.ensureAnonymousAuthReady()) {
-        return 'cloud_session';
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+        // Do not refreshSession() on every save: that can drop school claims
+        // and make the follow-up title / tile edit fail RLS. Reuse the same
+        // JWT helper staff create already uses for school-upsert-account.
+        if (!await SchoolAuthCloudService.instance.ensureValidSchoolJwt(
+          forceRefresh: forceRefresh,
+        )) {
+          return 'cloud_session';
+        }
+        final jwtSchool =
+            (SchoolAuthCloudService.accessTokenSchoolId() ??
+                    (SupabaseBootstrap
+                                .client
+                                .auth
+                                .currentUser
+                                ?.appMetadata['schoolId']
+                            as String?)
+                        ?.trim() ??
+                    sid)
+                .trim();
+        if (jwtSchool.isEmpty) return 'cloud_session';
+        // Use the JWT school id exactly — RLS compares case-sensitively.
+        final docId = jwtSchool.toUpperCase() == sid.toUpperCase()
+            ? jwtSchool
+            : sid;
+        await _crud.createOrUpdate(
+          collection: _collection,
+          docId: docId,
+          merge: false,
+          data: {...catalog.toJson(), 'schoolId': jwtSchool},
+        );
+        return null;
+      } catch (e) {
+        if (kDebugMode) debugPrint('SchoolRoleCatalogService cloud save: $e');
+        return 'cloud_failed';
       }
-      // Use the JWT school id exactly — RLS compares case-sensitively.
-      final jwtSchool = (SupabaseBootstrap.client.auth.currentUser
-                  ?.appMetadata['schoolId'] as String?)
-              ?.trim() ??
-          sid;
-      final docId =
-          jwtSchool.toUpperCase() == sid.toUpperCase() ? jwtSchool : sid;
-      await _crud.createOrUpdate(
-        collection: _collection,
-        docId: docId,
-        data: {
-          ...catalog.toJson(),
-          'schoolId': jwtSchool,
-        },
-      );
-      return null;
-    } catch (e) {
-      if (kDebugMode) debugPrint('SchoolRoleCatalogService cloud save: $e');
-      return 'cloud_failed';
     }
+
+    final first = await write(forceRefresh: false);
+    if (first == null) return null;
+    return write(forceRefresh: true);
   }
 
   Future<void> _savePrefs(String sid, _SchoolRoleCatalog catalog) async {
@@ -765,9 +803,11 @@ class SchoolRoleCatalogService {
     final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
     catalog.rolePermissionDelegates
       ..clear()
-      ..addAll({
-        for (final raw in roleKeys) StaffRoles.canonicalize(raw),
-      }.where(delegatableRoleKeys.contains));
+      ..addAll(
+        {
+          for (final raw in roleKeys) StaffRoles.canonicalize(raw),
+        }.where(delegatableRoleKeys.contains),
+      );
   }
 
   @visibleForTesting
@@ -797,11 +837,11 @@ class _SchoolRoleCatalog {
     List<StaffRole>? customRoles,
     Map<String, Map<String, String>>? moduleRights,
     List<String>? rolePermissionDelegates,
-  })  : overrides = overrides ?? {},
-        labelOverrides = labelOverrides ?? {},
-        customRoles = customRoles ?? [],
-        moduleRights = moduleRights ?? {},
-        rolePermissionDelegates = rolePermissionDelegates ?? [];
+  }) : overrides = overrides ?? {},
+       labelOverrides = labelOverrides ?? {},
+       customRoles = customRoles ?? [],
+       moduleRights = moduleRights ?? {},
+       rolePermissionDelegates = rolePermissionDelegates ?? [];
 
   final Map<String, Set<String>> overrides;
   final Map<String, String> labelOverrides;
@@ -815,30 +855,28 @@ class _SchoolRoleCatalog {
   final List<String> rolePermissionDelegates;
 
   Map<String, dynamic> toJson() => {
-        'overrides': {
-          for (final e in overrides.entries)
-            e.key: e.value.toList()..sort(),
+    'overrides': {
+      for (final e in overrides.entries) e.key: e.value.toList()..sort(),
+    },
+    'moduleRights': {
+      for (final e in moduleRights.entries)
+        e.key: Map<String, String>.from(e.value),
+    },
+    'labelOverrides': Map<String, String>.from(labelOverrides),
+    'rolePermissionDelegates': List<String>.from(rolePermissionDelegates)
+      ..sort(),
+    'customRoles': [
+      for (final r in customRoles)
+        {
+          'key': r.key,
+          'labelEn': r.labelEn,
+          'labelAm': r.labelAm,
+          'labelOm': r.labelOm,
+          'permissions': r.permissions.toList()..sort(),
+          if (r.basedOn != null && r.basedOn!.isNotEmpty) 'basedOn': r.basedOn,
         },
-        'moduleRights': {
-          for (final e in moduleRights.entries)
-            e.key: Map<String, String>.from(e.value),
-        },
-        'labelOverrides': Map<String, String>.from(labelOverrides),
-        'rolePermissionDelegates':
-            List<String>.from(rolePermissionDelegates)..sort(),
-        'customRoles': [
-          for (final r in customRoles)
-            {
-              'key': r.key,
-              'labelEn': r.labelEn,
-              'labelAm': r.labelAm,
-              'labelOm': r.labelOm,
-              'permissions': r.permissions.toList()..sort(),
-              if (r.basedOn != null && r.basedOn!.isNotEmpty)
-                'basedOn': r.basedOn,
-            },
-        ],
-      };
+    ],
+  };
 
   factory _SchoolRoleCatalog.fromJson(Map<String, dynamic> json) {
     final overridesRaw = json['overrides'];
@@ -847,7 +885,8 @@ class _SchoolRoleCatalog {
       for (final e in overridesRaw.entries) {
         final perms = e.value;
         overrides[e.key.toString()] = {
-          if (perms is List) for (final p in perms) p.toString(),
+          if (perms is List)
+            for (final p in perms) p.toString(),
         };
       }
     }
@@ -925,8 +964,8 @@ class _SchoolRoleCatalog {
 class TitledRoleResult {
   const TitledRoleResult._({this.error, this.roleKey});
 
-  factory TitledRoleResult.ok(String roleKey) =>
-      TitledRoleResult._(roleKey: roleKey);
+  factory TitledRoleResult.ok(String roleKey, {String? error}) =>
+      TitledRoleResult._(roleKey: roleKey, error: error);
   factory TitledRoleResult.error(String error) =>
       TitledRoleResult._(error: error);
 

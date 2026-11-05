@@ -46,10 +46,8 @@ Future<void> showWebStudentProfileDialog(
   await showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
-    builder: (dialogContext) => _WebStudentProfileDialog(
-      studentId: studentId,
-      onUpdated: onUpdated,
-    ),
+    builder: (dialogContext) =>
+        _WebStudentProfileDialog(studentId: studentId, onUpdated: onUpdated),
   );
 }
 
@@ -71,10 +69,7 @@ Future<void> showWebTeacherProfileDialog(
 }
 
 class _WebStudentProfileDialog extends StatefulWidget {
-  const _WebStudentProfileDialog({
-    required this.studentId,
-    this.onUpdated,
-  });
+  const _WebStudentProfileDialog({required this.studentId, this.onUpdated});
 
   final String studentId;
   final VoidCallback? onUpdated;
@@ -157,9 +152,9 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
     if (!mounted) return;
     widget.onUpdated?.call();
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.studentRemoved)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.studentRemoved)));
   }
 
   @override
@@ -279,7 +274,8 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                         StaffInfoTile(
                           icon: Icons.workspace_premium_outlined,
                           label: s.studentFundingType,
-                          value: student.fundingType ==
+                          value:
+                              student.fundingType ==
                                   StudentFundingType.scholarship
                               ? s.scholarshipStudent
                               : s.regularStudent,
@@ -290,8 +286,10 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                         StaffInfoTile(
                           icon: Icons.home_outlined,
                           label: 'House / grouping',
-                          value: StudentSisProfile.load(student.studentId)
-                                  ?.groupingSummary ??
+                          value:
+                              StudentSisProfile.load(
+                                student.studentId,
+                              )?.groupingSummary ??
                               student.className,
                           color: StaffPalette.students.secondary,
                         ),
@@ -334,8 +332,10 @@ class _WebStudentProfileDialogState extends State<_WebStudentProfileDialog> {
                         runSpacing: 8,
                         children: [
                           FilledButton.icon(
-                            onPressed: () =>
-                                showAdminStudentQrSheet(context, student: student),
+                            onPressed: () => showAdminStudentQrSheet(
+                              context,
+                              student: student,
+                            ),
                             icon: const Icon(Icons.qr_code_2),
                             label: Text(s.generateStudentQr),
                           ),
@@ -549,10 +549,11 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
     AuthService.syncTeacherAuthProfile(updated);
     await TeacherPersistenceService.instance.saveRegistryFromService();
 
+    String? titleErr;
     if (nextRole.isNotEmpty &&
         nextRole != roleTitle &&
         teacher.staffRoles.isNotEmpty) {
-      await StaffRoleService.instance.retitleAssignedRole(
+      titleErr = await StaffRoleService.instance.retitleAssignedRole(
         teacher: updated,
         currentRoleKey: teacher.staffRoles.first,
         label: nextRole,
@@ -562,10 +563,22 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
     if (!mounted) return;
     setState(() {});
     widget.onUpdated?.call();
+    final titleCloudFailed =
+        titleErr == 'cloud_failed' || titleErr == 'cloud_session';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(s.staffUpdated),
-        backgroundColor: Colors.green,
+        content: Text(
+          titleErr == null
+              ? s.staffUpdated
+              : titleCloudFailed
+              ? 'Staff updated on this device, but the role title did not save to the cloud. Stay signed in as Admin (Ready), then rename again.'
+              : '${s.staffUpdated} Role title was not saved ($titleErr).',
+        ),
+        backgroundColor: titleErr == null
+            ? Colors.green
+            : titleCloudFailed
+            ? Colors.orange.shade800
+            : Colors.red.shade700,
       ),
     );
   }
@@ -590,9 +603,9 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
     if (!mounted) return;
     widget.onUpdated?.call();
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.teacherDeactivated)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.teacherDeactivated)));
   }
 
   @override
@@ -603,11 +616,7 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
     final accent = _accent(staff);
     final roleTitle = teacher == null
         ? ''
-        : staffRolesSummary(
-            teacher.staffRoles,
-            s,
-            schoolId: teacher.schoolId,
-          );
+        : staffRolesSummary(teacher.staffRoles, s, schoolId: teacher.schoolId);
 
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
