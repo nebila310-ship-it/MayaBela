@@ -4174,7 +4174,7 @@ class CloudAppStore {
           ));
     }
     final policies = svc.policyMaps();
-    if (policies.isNotEmpty) {
+    if (policies.isNotEmpty && svc.canManageDesk) {
       await _pushSafe(() => _crud.writeBatch(
             collection: AppCollections.mfaPolicies,
             items: policies,
