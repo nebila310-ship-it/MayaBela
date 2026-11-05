@@ -34,6 +34,7 @@ abstract final class SchoolPermissions {
   static const assignTeachers = 'assign_teachers';
   static const manageTimetables = 'manage_timetables';
   static const viewAllGrades = 'view_all_grades';
+
   /// School-wide student PII (registry, grades, fees, medical). Classroom
   /// teachers without this (or view_all_departments / full_access) are
   /// limited to assigned-class rows by RLS.
@@ -215,7 +216,8 @@ abstract final class StaffRoles {
   static const librarian = 'librarian';
   static const procurement = 'procurement';
   static const storekeeper = 'storekeeper';
-  static const transportAdmin = 'transport_admin'; // Transport Head (legacy key)
+  static const transportAdmin =
+      'transport_admin'; // Transport Head (legacy key)
   static const staffs = 'staffs';
 
   // Legacy keys kept so existing grants keep working.
@@ -226,7 +228,8 @@ abstract final class StaffRoles {
   static const financeManager = 'finance_manager';
   static const transportHead = 'transport_head';
 
-  static Set<String> get _baseline => StaffDashboardModules.alwaysOnPermissions();
+  static Set<String> get _baseline =>
+      StaffDashboardModules.alwaysOnPermissions();
 
   static Set<String> _withBaseline(Set<String> perms) =>
       StaffDashboardModules.withBaseline(perms);
@@ -611,6 +614,38 @@ abstract final class StaffRoles {
     transportAdmin: 'TH', // Transport Head
     staffs: 'STF',
   };
+
+  /// Built-in role encoded in a staff id (`GM-10001` → `general_manager`).
+  /// Classroom `TCH-` ids return null.
+  static String? roleKeyFromTeacherId(String teacherId) {
+    final prefix = teacherId
+        .trim()
+        .toUpperCase()
+        .split(RegExp(r'[-_]'))
+        .firstWhere((part) => part.isNotEmpty, orElse: () => '');
+    if (prefix.isEmpty || prefix == 'TCH') return null;
+    for (final entry in _idPrefixes.entries) {
+      if (entry.value == prefix) return entry.key;
+    }
+    return null;
+  }
+
+  /// Accepts a JSON list, a single key, or a comma-separated string.
+  static List<String> staffRolesFrom(dynamic raw) {
+    if (raw is List) {
+      return [
+        for (final item in raw)
+          if (item.toString().trim().isNotEmpty) canonicalize(item.toString()),
+      ];
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      return [
+        for (final part in raw.split(','))
+          if (part.trim().isNotEmpty) canonicalize(part),
+      ];
+    }
+    return const [];
+  }
 
   static String idPrefixFor(String roleKey) {
     final k = canonicalize(roleKey);

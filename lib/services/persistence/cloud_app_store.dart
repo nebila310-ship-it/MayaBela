@@ -150,21 +150,24 @@ class CloudAppStore {
 
   Future<T> _serializedPull<T>(Future<T> Function() action) {
     final generation = AuthService.sessionGeneration;
-    final previous = (_pullChain ?? Future<void>.value())
-        .catchError((_) => null);
+    final previous = (_pullChain ?? Future<void>.value()).catchError(
+      (_) => null,
+    );
     late final Future<T> run;
-    run = previous.then((_) {
-      if (!AuthService.isLiveGeneration(generation)) {
-        return Future<T>.error(
-          StateError('Skipped cloud pull for ended session'),
-        );
-      }
-      return action();
-    }).whenComplete(() {
-      if (identical(_pullChain, run)) {
-        _pullChain = null;
-      }
-    });
+    run = previous
+        .then((_) {
+          if (!AuthService.isLiveGeneration(generation)) {
+            return Future<T>.error(
+              StateError('Skipped cloud pull for ended session'),
+            );
+          }
+          return action();
+        })
+        .whenComplete(() {
+          if (identical(_pullChain, run)) {
+            _pullChain = null;
+          }
+        });
     _pullChain = run.then((_) {}, onError: (_) {});
     return run;
   }
@@ -172,9 +175,7 @@ class CloudAppStore {
   Future<void> _prepareCloudRead() async {
     if (!available) return;
     if (AuthService.currentUser == null) {
-      throw StateError(
-        'School cloud sign-in required. Sign in again to sync.',
-      );
+      throw StateError('School cloud sign-in required. Sign in again to sync.');
     }
     final generation = AuthService.sessionGeneration;
     final authed = await SupabaseBootstrap.ensureReadyForFirestore();
@@ -719,64 +720,61 @@ class CloudAppStore {
   /// Pull all cloud data into local services (cloud wins on conflict).
   Future<void> pullIntoLocalServices({bool trackProgress = false}) {
     return _serializedPull(() async {
-    if (!available) return;
-    _trackStep(trackProgress, 'Connecting to cloud…');
-    await _prepareCloudRead();
-    if (AuthService.usesScopedCloudReads) {
-      try {
-        await SchoolAuthCloudService.instance.refreshAccessClaims();
-      } catch (_) {}
-    }
+      if (!available) return;
+      _trackStep(trackProgress, 'Connecting to cloud…');
+      await _prepareCloudRead();
+      if (AuthService.usesScopedCloudReads) {
+        try {
+          await SchoolAuthCloudService.instance.refreshAccessClaims();
+        } catch (_) {}
+      }
 
-    _trackStep(trackProgress, 'Loading accounts…');
-    await Future.wait([
-      _pullAuthAccounts(),
-      _pullParentLinks(),
-    ]);
-    // Students before class-scoped content so parent class names resolve.
-    _trackStep(trackProgress, 'Loading students & staff…');
-    await _pullTeacherRegistry();
-    await Future.wait([
-      _pullStudentRegistry(),
-      _pullDriverRegistry(),
-      _pullEmployeeRegistry(),
-      _pullSchoolRegistry(),
-    ]);
-    await _pullStudentMedical();
-    _trackStep(trackProgress, 'Loading grades & homework…');
-    await Future.wait([
-      _pullGradeReports(),
-      _pullHomework(),
-      _pullLearningMaterials(),
-      _pullLessonPlans(),
-      _pullCurriculumOffice(),
-      _pullStudentSupport(),
-      _pullDosa(),
-      _pullQaMonitor(),
-      _pullGoLive(),
-      _pullDigitalOps(),
-      _pullGradeAuditLog(),
-      _pullDailyActivities(),
-      _pullConversations(),
-    ]);
-    _trackStep(trackProgress, 'Loading announcements & fees…');
-    await Future.wait([
-      _pullAnnouncements(),
-      _pullAttendanceSessions(),
-      _pullFees(),
-      _pullCalendarEvents(),
-      _pullClassTimetables(),
-      _pullGalleryPosts(),
-      _pullQrScans(),
-      _pullInventory(),
-      _pullPlatformAudit(),
-    ]);
-    _trackStep(trackProgress, 'Loading transport…');
-    await pullTransportStateIntoServices();
-    _trackStep(trackProgress, 'Finalizing…');
-    await AuthService.persistRegistryLoginAccounts(pushCloud: false);
-    StaffRegistryNotifier.instance.notifyChanged();
-    SchoolContentSyncService.instance.markDataChanged();
+      _trackStep(trackProgress, 'Loading accounts…');
+      await Future.wait([_pullAuthAccounts(), _pullParentLinks()]);
+      // Students before class-scoped content so parent class names resolve.
+      _trackStep(trackProgress, 'Loading students & staff…');
+      await _pullTeacherRegistry();
+      await Future.wait([
+        _pullStudentRegistry(),
+        _pullDriverRegistry(),
+        _pullEmployeeRegistry(),
+        _pullSchoolRegistry(),
+      ]);
+      await _pullStudentMedical();
+      _trackStep(trackProgress, 'Loading grades & homework…');
+      await Future.wait([
+        _pullGradeReports(),
+        _pullHomework(),
+        _pullLearningMaterials(),
+        _pullLessonPlans(),
+        _pullCurriculumOffice(),
+        _pullStudentSupport(),
+        _pullDosa(),
+        _pullQaMonitor(),
+        _pullGoLive(),
+        _pullDigitalOps(),
+        _pullGradeAuditLog(),
+        _pullDailyActivities(),
+        _pullConversations(),
+      ]);
+      _trackStep(trackProgress, 'Loading announcements & fees…');
+      await Future.wait([
+        _pullAnnouncements(),
+        _pullAttendanceSessions(),
+        _pullFees(),
+        _pullCalendarEvents(),
+        _pullClassTimetables(),
+        _pullGalleryPosts(),
+        _pullQrScans(),
+        _pullInventory(),
+        _pullPlatformAudit(),
+      ]);
+      _trackStep(trackProgress, 'Loading transport…');
+      await pullTransportStateIntoServices();
+      _trackStep(trackProgress, 'Finalizing…');
+      await AuthService.persistRegistryLoginAccounts(pushCloud: false);
+      StaffRegistryNotifier.instance.notifyChanged();
+      SchoolContentSyncService.instance.markDataChanged();
     });
   }
 
@@ -795,38 +793,46 @@ class CloudAppStore {
 
     final students = StudentRegistryService.instance.registrySnapshot();
     if (students.isNotEmpty) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.studentRegistry,
-            items: students.map((s) => s.toMap()).toList(),
-            docIdFor: (item) => item['studentId'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.studentRegistry,
+          items: students.map((s) => s.toMap()).toList(),
+          docIdFor: (item) => item['studentId'] as String,
+        ),
+      );
     }
 
     final teachers = TeacherRegistryService.instance.registrySnapshot();
     if (teachers.isNotEmpty) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.teacherRegistry,
-            items: teachers.map((t) => t.toMap()).toList(),
-            docIdFor: (item) => item['teacherId'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.teacherRegistry,
+          items: teachers.map((t) => t.toMap()).toList(),
+          docIdFor: (item) => item['teacherId'] as String,
+        ),
+      );
     }
 
     final drivers = DriverRegistryService.instance.registrySnapshot();
     if (drivers.isNotEmpty) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.driverRegistry,
-            items: drivers.map((d) => d.toMap()).toList(),
-            docIdFor: (item) => item['driverId'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.driverRegistry,
+          items: drivers.map((d) => d.toMap()).toList(),
+          docIdFor: (item) => item['driverId'] as String,
+        ),
+      );
     }
 
     final employees = EmployeeRegistryService.instance.registrySnapshot();
     if (employees.isNotEmpty) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.employeeRegistry,
-            items: employees.map((e) => e.toMap()).toList(),
-            docIdFor: (item) => item['employeeId'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.employeeRegistry,
+          items: employees.map((e) => e.toMap()).toList(),
+          docIdFor: (item) => item['employeeId'] as String,
+        ),
+      );
     }
 
     await AuthService.persistRegistryLoginAccounts(pushCloud: false);
@@ -841,11 +847,13 @@ class CloudAppStore {
 
     final links = EnrollmentService.instance.allLinksSnapshot();
     if (links.isNotEmpty) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.parentLinkRequests,
-            items: links.map((l) => l.toMap()).toList(),
-            docIdFor: (item) => item['id'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.parentLinkRequests,
+          items: links.map((l) => l.toMap()).toList(),
+          docIdFor: (item) => item['id'] as String,
+        ),
+      );
     }
 
     await pushAllGradeReports();
@@ -1087,8 +1095,8 @@ class CloudAppStore {
     final teachers = TeacherRegistryService.instance
         .teachersForSchool(schoolId)
         .map(
-          (t) => Map<String, dynamic>.from(t.toMap())
-            ..remove('initialPassword'),
+          (t) =>
+              Map<String, dynamic>.from(t.toMap())..remove('initialPassword'),
         )
         .toList();
     if (canStaff && teachers.isNotEmpty) {
@@ -1123,22 +1131,28 @@ class CloudAppStore {
 
     final cloudStudents = await _schoolRead(AppCollections.studentRegistry);
     final cloudStudentIds = cloudStudents
-        .map((m) => '${m['studentId'] ?? m['_docId'] ?? ''}'.trim().toUpperCase())
+        .map(
+          (m) => '${m['studentId'] ?? m['_docId'] ?? ''}'.trim().toUpperCase(),
+        )
         .where((id) => id.isNotEmpty)
         .toSet();
-    for (final student
-        in StudentRegistryService.instance.studentsForSchool(schoolId)) {
+    for (final student in StudentRegistryService.instance.studentsForSchool(
+      schoolId,
+    )) {
       if (cloudStudentIds.contains(student.studentId.toUpperCase())) continue;
       await pushStudentRegistryRecord(student);
     }
 
     final cloudTeachers = await _schoolRead(AppCollections.teacherRegistry);
     final cloudTeacherIds = cloudTeachers
-        .map((m) => '${m['teacherId'] ?? m['_docId'] ?? ''}'.trim().toUpperCase())
+        .map(
+          (m) => '${m['teacherId'] ?? m['_docId'] ?? ''}'.trim().toUpperCase(),
+        )
         .where((id) => id.isNotEmpty)
         .toSet();
-    for (final teacher
-        in TeacherRegistryService.instance.teachersForSchool(schoolId)) {
+    for (final teacher in TeacherRegistryService.instance.teachersForSchool(
+      schoolId,
+    )) {
       if (cloudTeacherIds.contains(teacher.teacherId.toUpperCase())) continue;
       await pushTeacherRegistryRecord(teacher);
     }
@@ -1155,14 +1169,20 @@ class CloudAppStore {
     try {
       await StartupProfiler.track(
         'firestore.pullIntoLocalServices',
-        () => pullIntoLocalServices(trackProgress: trackProgress).timeout(timeout),
+        () => pullIntoLocalServices(
+          trackProgress: trackProgress,
+        ).timeout(timeout),
       );
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[CloudAppStore] pullIntoLocalServices timed out/failed: $e');
+        debugPrint(
+          '[CloudAppStore] pullIntoLocalServices timed out/failed: $e',
+        );
       }
       if (trackProgress) {
-        CloudSyncProgressService.instance.fail('Could not load all school data');
+        CloudSyncProgressService.instance.fail(
+          'Could not load all school data',
+        );
       }
     }
   }
@@ -1453,8 +1473,8 @@ class CloudAppStore {
     var deviceLooksOffline = false;
     try {
       final links = await Connectivity().checkConnectivity();
-      deviceLooksOffline = links.isEmpty ||
-          links.every((r) => r == ConnectivityResult.none);
+      deviceLooksOffline =
+          links.isEmpty || links.every((r) => r == ConnectivityResult.none);
     } catch (_) {
       // Connectivity plugin failures should not block an attempted push.
     }
@@ -1541,10 +1561,7 @@ class CloudAppStore {
 
   /// A 403, `write_denied`, or RLS refusal will not succeed on retry.
   @visibleForTesting
-  static bool isPermanentAuthDenial({
-    String? errorCode,
-    String? errorMessage,
-  }) {
+  static bool isPermanentAuthDenial({String? errorCode, String? errorMessage}) {
     final code = (errorCode ?? '').trim().toLowerCase();
     if (code == 'denied' || code == '42501') return true;
     final text = (errorMessage ?? '').toLowerCase();
@@ -1618,7 +1635,8 @@ class CloudAppStore {
   Future<void> pushAuthUser(RegisteredUser user) async {
     // Never write password fields from the client. Secrets go through Cloud Functions.
     final plain = user.password.trim();
-    final shouldSetSecret = plain.isNotEmpty &&
+    final shouldSetSecret =
+        plain.isNotEmpty &&
         !plain.startsWith('sha256:') &&
         plain != AuthService.passwordRedactedMarker;
     final schoolId = (user.schoolId ?? AuthService.activeSchoolId ?? '')
@@ -1640,27 +1658,30 @@ class CloudAppStore {
           }
           return;
         }
-        await _pushSafe(() => _crud.createOrUpdate(
-              collection: AppCollections.authAccounts,
-              docId: docId,
-              data: {
-                'username': user.username,
-                'roleKey': user.roleKey,
-                if (user.email != null) 'email': user.email,
-                if (user.phone != null) 'phone': user.phone,
-                'schoolId': schoolId,
-                if (user.fullName != null) 'fullName': user.fullName,
-                'linkedStudentIds': user.linkedStudentIds,
-                if (user.linkedTeacherId != null)
-                  'linkedTeacherId': user.linkedTeacherId,
-                if (user.linkedAdminId != null) 'linkedAdminId': user.linkedAdminId,
-                if (user.linkedDriverId != null)
-                  'linkedDriverId': user.linkedDriverId,
-                if (user.linkedStudentId != null)
-                  'linkedStudentId': user.linkedStudentId,
-                'mustChangePassword': user.mustChangePassword,
-              },
-            ));
+        await _pushSafe(
+          () => _crud.createOrUpdate(
+            collection: AppCollections.authAccounts,
+            docId: docId,
+            data: {
+              'username': user.username,
+              'roleKey': user.roleKey,
+              if (user.email != null) 'email': user.email,
+              if (user.phone != null) 'phone': user.phone,
+              'schoolId': schoolId,
+              if (user.fullName != null) 'fullName': user.fullName,
+              'linkedStudentIds': user.linkedStudentIds,
+              if (user.linkedTeacherId != null)
+                'linkedTeacherId': user.linkedTeacherId,
+              if (user.linkedAdminId != null)
+                'linkedAdminId': user.linkedAdminId,
+              if (user.linkedDriverId != null)
+                'linkedDriverId': user.linkedDriverId,
+              if (user.linkedStudentId != null)
+                'linkedStudentId': user.linkedStudentId,
+              'mustChangePassword': user.mustChangePassword,
+            },
+          ),
+        );
         return;
       }
       await SchoolAuthCloudService.instance.upsertAccount(
@@ -1718,30 +1739,32 @@ class CloudAppStore {
       return;
     }
 
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.authAccounts,
-          docId: docId,
-          data: {
-            'username': user.username,
-            'roleKey': user.roleKey,
-            if (user.email != null) 'email': user.email,
-            if (user.phone != null) 'phone': user.phone,
-            if (schoolId.isNotEmpty) 'schoolId': schoolId,
-            if (user.fullName != null) 'fullName': user.fullName,
-            'linkedStudentIds': user.linkedStudentIds,
-            if (user.linkedTeacherId != null)
-              'linkedTeacherId': user.linkedTeacherId,
-            if (user.linkedAdminId != null) 'linkedAdminId': user.linkedAdminId,
-            if (user.linkedDriverId != null)
-              'linkedDriverId': user.linkedDriverId,
-            if (user.linkedStudentId != null)
-              'linkedStudentId': user.linkedStudentId,
-            'mustChangePassword': user.mustChangePassword,
-            // staffRoles is intentionally omitted: the write-guard treats a
-            // missing key as "no change", so ordinary profile syncs can never
-            // wipe role grants. Grants flow through StaffRoleService only.
-          },
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.authAccounts,
+        docId: docId,
+        data: {
+          'username': user.username,
+          'roleKey': user.roleKey,
+          if (user.email != null) 'email': user.email,
+          if (user.phone != null) 'phone': user.phone,
+          if (schoolId.isNotEmpty) 'schoolId': schoolId,
+          if (user.fullName != null) 'fullName': user.fullName,
+          'linkedStudentIds': user.linkedStudentIds,
+          if (user.linkedTeacherId != null)
+            'linkedTeacherId': user.linkedTeacherId,
+          if (user.linkedAdminId != null) 'linkedAdminId': user.linkedAdminId,
+          if (user.linkedDriverId != null)
+            'linkedDriverId': user.linkedDriverId,
+          if (user.linkedStudentId != null)
+            'linkedStudentId': user.linkedStudentId,
+          'mustChangePassword': user.mustChangePassword,
+          // staffRoles is intentionally omitted: the write-guard treats a
+          // missing key as "no change", so ordinary profile syncs can never
+          // wipe role grants. Grants flow through StaffRoleService only.
+        },
+      ),
+    );
   }
 
   Future<void> deleteAuthUser(String username, {String? schoolId}) async {
@@ -1751,28 +1774,32 @@ class CloudAppStore {
       if (sid.isNotEmpty) schoolAccountDocId(sid, username),
     };
     for (final id in ids) {
-      await _pushSafe(() => _crud.deleteDoc(
-            collection: AppCollections.authAccounts,
-            docId: id,
-          ));
+      await _pushSafe(
+        () =>
+            _crud.deleteDoc(collection: AppCollections.authAccounts, docId: id),
+      );
     }
   }
 
   // —— CRUD: Parent links ——
 
   Future<void> pushParentLink(ParentLinkRequest link) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.parentLinkRequests,
-          docId: link.id,
-          data: link.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.parentLinkRequests,
+        docId: link.id,
+        data: link.toMap(),
+      ),
+    );
   }
 
   Future<void> deleteParentLink(String linkId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.parentLinkRequests,
-          docId: linkId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.parentLinkRequests,
+        docId: linkId,
+      ),
+    );
   }
 
   // —— CRUD: Student registry & medical ——
@@ -1796,11 +1823,12 @@ class CloudAppStore {
         } else {
           await _prepareCloudRead();
         }
-        final schoolId = (student.schoolId.trim().isNotEmpty
-                ? student.schoolId
-                : AuthService.activeSchoolId ?? '')
-            .trim()
-            .toUpperCase();
+        final schoolId =
+            (student.schoolId.trim().isNotEmpty
+                    ? student.schoolId
+                    : AuthService.activeSchoolId ?? '')
+                .trim()
+                .toUpperCase();
         final record = ProfilePhotoCodec.withoutDeviceLocalPhoto(
           student.toMap(),
         );
@@ -1833,8 +1861,9 @@ class CloudAppStore {
   Future<void> _pushLocalStudentRegistryBestEffort() async {
     final schoolId = AuthService.activeSchoolId?.trim().toUpperCase();
     if (schoolId == null || schoolId.isEmpty) return;
-    final students =
-        StudentRegistryService.instance.studentsForSchool(schoolId);
+    final students = StudentRegistryService.instance.studentsForSchool(
+      schoolId,
+    );
     for (final student in students) {
       await pushStudentRegistryRecord(student);
     }
@@ -1844,35 +1873,40 @@ class CloudAppStore {
   Future<void> _pushLocalTeacherRegistryBestEffort() async {
     final schoolId = AuthService.activeSchoolId?.trim().toUpperCase();
     if (schoolId == null || schoolId.isEmpty) return;
-    final teachers =
-        TeacherRegistryService.instance.teachersForSchool(schoolId);
+    final teachers = TeacherRegistryService.instance.teachersForSchool(
+      schoolId,
+    );
     for (final teacher in teachers) {
       await pushTeacherRegistryRecord(teacher);
     }
   }
 
   Future<void> deleteStudentRegistryRecord(String studentId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.studentRegistry,
-          docId: studentId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.studentRegistry,
+        docId: studentId,
+      ),
+    );
   }
 
   Future<void> pushStudentMedical(AdminStudentRecord student) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.studentMedical,
-          docId: student.studentId,
-          data: {
-            'studentId': student.studentId,
-            'schoolId': student.schoolId,
-            'className': student.className,
-            'hasMedicalCondition': student.hasMedicalCondition,
-            if (student.medicalConditionDetails != null)
-              'medicalConditionDetails': student.medicalConditionDetails,
-            if (student.otherMedicalInfo != null)
-              'otherMedicalInfo': student.otherMedicalInfo,
-          },
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.studentMedical,
+        docId: student.studentId,
+        data: {
+          'studentId': student.studentId,
+          'schoolId': student.schoolId,
+          'className': student.className,
+          'hasMedicalCondition': student.hasMedicalCondition,
+          if (student.medicalConditionDetails != null)
+            'medicalConditionDetails': student.medicalConditionDetails,
+          if (student.otherMedicalInfo != null)
+            'otherMedicalInfo': student.otherMedicalInfo,
+        },
+      ),
+    );
   }
 
   // —— CRUD: Teacher & driver registry ——
@@ -1881,77 +1915,84 @@ class CloudAppStore {
     AdminTeacherRecord teacher, {
     bool requireSuccess = false,
   }) async {
-    await _pushSafe(
-      () async {
-        await _prepareCloudRead();
-        final data = ProfilePhotoCodec.withoutDeviceLocalPhoto(
-          Map<String, dynamic>.from(teacher.toMap())
-            ..remove('initialPassword'),
-        );
-        final schoolId = (teacher.schoolId.trim().isNotEmpty
-                ? teacher.schoolId
-                : AuthService.activeSchoolId ?? '')
-            .trim()
-            .toUpperCase();
-        final edge = await SchoolAuthCloudService.instance.upsertRegistryRecord(
+    await _pushSafe(() async {
+      await _prepareCloudRead();
+      final data = ProfilePhotoCodec.withoutDeviceLocalPhoto(
+        Map<String, dynamic>.from(teacher.toMap())..remove('initialPassword'),
+      );
+      final schoolId =
+          (teacher.schoolId.trim().isNotEmpty
+                  ? teacher.schoolId
+                  : AuthService.activeSchoolId ?? '')
+              .trim()
+              .toUpperCase();
+      final edge = await SchoolAuthCloudService.instance.upsertRegistryRecord(
+        collection: AppCollections.teacherRegistry,
+        schoolId: schoolId,
+        docId: teacher.teacherId,
+        record: data,
+      );
+      if (edge.ok) return;
+      if (edge.errorCode == 'cloud_required') {
+        await _crud.createOrUpdate(
           collection: AppCollections.teacherRegistry,
-          schoolId: schoolId,
           docId: teacher.teacherId,
-          record: data,
+          data: data,
         );
-        if (edge.ok) return;
-        if (edge.errorCode == 'cloud_required') {
-          await _crud.createOrUpdate(
-            collection: AppCollections.teacherRegistry,
-            docId: teacher.teacherId,
-            data: data,
-          );
-          return;
-        }
-        throw StateError(
-          edge.errorMessage ??
-              'Staff directory could not sync to the cloud (${edge.errorCode}).',
-        );
-      },
-      rethrowOnError: requireSuccess,
-    );
+        return;
+      }
+      throw StateError(
+        edge.errorMessage ??
+            'Staff directory could not sync to the cloud (${edge.errorCode}).',
+      );
+    }, rethrowOnError: requireSuccess);
   }
 
   Future<void> deleteTeacherRegistryRecord(String teacherId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.teacherRegistry,
-          docId: teacherId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.teacherRegistry,
+        docId: teacherId,
+      ),
+    );
   }
 
   Future<void> pushDriverRegistryRecord(AdminDriverRecord driver) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.driverRegistry,
-          docId: driver.driverId,
-          data: ProfilePhotoCodec.withoutDeviceLocalPhoto(driver.toMap()),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.driverRegistry,
+        docId: driver.driverId,
+        data: ProfilePhotoCodec.withoutDeviceLocalPhoto(driver.toMap()),
+      ),
+    );
   }
 
   Future<void> deleteDriverRegistryRecord(String driverId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.driverRegistry,
-          docId: driverId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.driverRegistry,
+        docId: driverId,
+      ),
+    );
   }
 
   Future<void> pushEmployeeRegistryRecord(EmployeeRecord employee) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.employeeRegistry,
-          docId: employee.employeeId,
-          data: employee.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.employeeRegistry,
+        docId: employee.employeeId,
+        data: employee.toMap(),
+      ),
+    );
   }
 
   Future<void> deleteEmployeeRegistryRecord(String employeeId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.employeeRegistry,
-          docId: employeeId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.employeeRegistry,
+        docId: employeeId,
+      ),
+    );
   }
 
   // —— CRUD: Grades, homework, daily activities ——
@@ -1970,7 +2011,9 @@ class CloudAppStore {
           break;
         }
       }
-      roster ??= StudentRegistryService.instance.lookupByName(report.studentName);
+      roster ??= StudentRegistryService.instance.lookupByName(
+        report.studentName,
+      );
       studentId = roster?.studentId.trim() ?? '';
     }
     if (studentId.isNotEmpty) {
@@ -1982,11 +2025,13 @@ class CloudAppStore {
 
   Future<void> pushGradeReport(StudentGradeReport report) async {
     final data = _gradeCloudMap(report);
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.gradeReports,
-          docId: _gradeDocIdFromMap(data),
-          data: data,
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.gradeReports,
+        docId: _gradeDocIdFromMap(data),
+        data: data,
+      ),
+    );
   }
 
   Future<void> pushAllGradeReports() async {
@@ -1995,18 +2040,22 @@ class CloudAppStore {
       (report) => report.className,
     );
     if (reports.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.gradeReports,
-          items: reports.map(_gradeCloudMap).toList(),
-          docIdFor: (item) => _gradeDocIdFromMap(item),
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.gradeReports,
+        items: reports.map(_gradeCloudMap).toList(),
+        docIdFor: (item) => _gradeDocIdFromMap(item),
+      ),
+    );
   }
 
   Future<void> deleteGradeReport(StudentGradeReport report) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.gradeReports,
-          docId: _gradeDocId(report),
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.gradeReports,
+        docId: _gradeDocId(report),
+      ),
+    );
   }
 
   Map<String, dynamic> _homeworkCloudMap(HomeworkItem item) {
@@ -2015,10 +2064,7 @@ class CloudAppStore {
         .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
         .toList();
     map['studentIds'] = StudentRegistryService.instance
-        .studentsForClass(
-          item.className,
-          schoolId: item.schoolId,
-        )
+        .studentsForClass(item.className, schoolId: item.schoolId)
         .map((s) => s.studentId.trim())
         .where((id) => id.isNotEmpty)
         .toList();
@@ -2026,11 +2072,13 @@ class CloudAppStore {
   }
 
   Future<void> pushHomeworkItem(HomeworkItem item) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.homework,
-          docId: item.id,
-          data: _homeworkCloudMap(item),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.homework,
+        docId: item.id,
+        data: _homeworkCloudMap(item),
+      ),
+    );
   }
 
   Future<void> pushAllHomework() async {
@@ -2039,76 +2087,95 @@ class CloudAppStore {
       (item) => item.className,
     );
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.homework,
-          items: items.map(_homeworkCloudMap).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.homework,
+        items: items.map(_homeworkCloudMap).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> deleteHomeworkItem(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.homework,
-          docId: id,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(collection: AppCollections.homework, docId: id),
+    );
   }
 
   Future<void> pushLearningMaterialItem(LearningMaterialItem item) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.learningMaterials,
-          docId: item.id,
-          data: item.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.learningMaterials,
+        docId: item.id,
+        data: item.toMap(),
+      ),
+    );
   }
 
   Future<void> pushAllLearningMaterials() async {
     final items = SchoolDataService.instance.learningMaterialsSnapshot();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.learningMaterials,
-          items: items.map((i) => i.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.learningMaterials,
+        items: items.map((i) => i.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   // —— CRUD: Inventory ——
 
   Future<void> pushAllInventory() async {
     final svc = InventoryService.instance;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.inventoryItems,
-          items: svc.itemsSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.stockTransactions,
-          items: svc.transactionsSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.studentIssuedItems,
-          items: svc.studentIssuedSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.classroomInventory,
-          items: svc.classroomSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.assets,
-          items: svc.assetsSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.suppliers,
-          items: svc.suppliersSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.maintenanceReports,
-          items: svc.maintenanceSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.inventoryItems,
+        items: svc.itemsSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.stockTransactions,
+        items: svc.transactionsSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.studentIssuedItems,
+        items: svc.studentIssuedSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.classroomInventory,
+        items: svc.classroomSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.assets,
+        items: svc.assetsSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.suppliers,
+        items: svc.suppliersSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.maintenanceReports,
+        items: svc.maintenanceSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   /// Purchase / issue requests. The server-side write-guard permission-gates
@@ -2116,25 +2183,31 @@ class CloudAppStore {
   /// are skipped silently instead of failing the sync.
   Future<void> pushAllProcurement() async {
     final svc = ProcurementService.instance;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.purchaseRequests,
-          items: svc.purchasesSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.issueRequests,
-          items: svc.issuesSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.purchaseRequests,
+        items: svc.purchasesSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.issueRequests,
+        items: svc.issuesSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushAllTransferRequests() async {
     final svc = TransferWorkflowService.instance;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.transferRequests,
-          items: svc.requestsSnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.transferRequests,
+        items: svc.requestsSnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   /// Student Affairs cases — via the service-role registry edge so a
@@ -2181,32 +2254,38 @@ class CloudAppStore {
   Future<void> pushAllAdmissionApplications() async {
     final items = AdmissionService.instance.snapshotMaps();
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.admissionApplications,
-          items: items,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.admissionApplications,
+        items: items,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   /// QA findings — QA staff (teacher JWT) writers pass the write guard.
   Future<void> pushAllQaFindings() async {
     final items = QaFindingsService.instance.snapshotMaps();
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.qaFindings,
-          items: items,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.qaFindings,
+        items: items,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushAllInstitutionRecords() async {
     final items = InstitutionService.instance.snapshotMaps();
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.institutionRecords,
-          items: items,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.institutionRecords,
+        items: items,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   /// Leave requests — via the service-role registry edge because parents
@@ -2220,9 +2299,7 @@ class CloudAppStore {
         records: items,
       );
       if (!result.ok) {
-        throw StateError(
-          result.errorMessage ?? 'Leave request sync failed.',
-        );
+        throw StateError(result.errorMessage ?? 'Leave request sync failed.');
       }
     });
   }
@@ -2235,19 +2312,23 @@ class CloudAppStore {
     if (!isStudent) {
       final questions = ExamService.instance.questionMaps();
       if (questions.isNotEmpty) {
-        await _pushSafe(() => _crud.writeBatch(
-              collection: AppCollections.examQuestions,
-              items: questions,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: AppCollections.examQuestions,
+            items: questions,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
       final papers = ExamService.instance.paperMaps();
       if (papers.isNotEmpty) {
-        await _pushSafe(() => _crud.writeBatch(
-              collection: AppCollections.examPapers,
-              items: papers,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: AppCollections.examPapers,
+            items: papers,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
     }
     final attempts = ExamService.instance.attemptMaps();
@@ -2266,11 +2347,13 @@ class CloudAppStore {
   Future<void> pushAllLessonPlans() async {
     final items = LessonPlanService.instance.snapshotMaps();
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.lessonPlans,
-          items: items,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.lessonPlans,
+        items: items,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   /// Staff write units / reviews / evals / meetings. Feedback uses
@@ -2278,40 +2361,48 @@ class CloudAppStore {
   Future<void> pushAllCurriculumOffice() async {
     final svc = CurriculumService.instance;
     final role = AuthService.currentUser?.roleKey;
-    final publicReader = role == AuthService.roleStudent ||
-        role == AuthService.roleParent;
+    final publicReader =
+        role == AuthService.roleStudent || role == AuthService.roleParent;
     if (!publicReader) {
       final units = svc.unitMaps();
       if (units.isNotEmpty) {
-        await _pushSafe(() => _crud.writeBatch(
-              collection: AppCollections.curriculumUnits,
-              items: units,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: AppCollections.curriculumUnits,
+            items: units,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
       final reviews = svc.reviewMaps();
       if (reviews.isNotEmpty) {
-        await _pushSafe(() => _crud.writeBatch(
-              collection: AppCollections.lessonPlanReviews,
-              items: reviews,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: AppCollections.lessonPlanReviews,
+            items: reviews,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
       final evals = svc.evaluationMaps();
       if (evals.isNotEmpty) {
-        await _pushSafe(() => _crud.writeBatch(
-              collection: AppCollections.teacherEvaluations,
-              items: evals,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: AppCollections.teacherEvaluations,
+            items: evals,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
       final meetings = svc.meetingMaps();
       if (meetings.isNotEmpty) {
-        await _pushSafe(() => _crud.writeBatch(
-              collection: AppCollections.academicMeetings,
-              items: meetings,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: AppCollections.academicMeetings,
+            items: meetings,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
     }
     final feedback = svc.feedbackMaps();
@@ -2322,18 +2413,22 @@ class CloudAppStore {
         records: feedback,
       );
       if (!result.ok) {
-        throw StateError(result.errorMessage ?? 'Curriculum feedback sync failed.');
+        throw StateError(
+          result.errorMessage ?? 'Curriculum feedback sync failed.',
+        );
       }
     });
   }
 
   Future<void> pushAllBuses() async {
     final svc = BusRegistryService.instance;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.buses,
-          items: svc.registrySnapshot().map((e) => e.toMap()).toList(),
-          docIdFor: (item) => item['busId'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.buses,
+        items: svc.registrySnapshot().map((e) => e.toMap()).toList(),
+        docIdFor: (item) => item['busId'] as String,
+      ),
+    );
   }
 
   Future<void> pushAllSchoolAudit() async {
@@ -2341,11 +2436,13 @@ class CloudAppStore {
     if (entries.isEmpty) return;
     // Append-only collection: never upsert (updates are blocked by SQL).
     for (final entry in entries) {
-      await _pushSafe(() => _crud.insertIfAbsent(
-            collection: AppCollections.schoolAuditLog,
-            docId: entry.id,
-            data: entry.toMap(),
-          ));
+      await _pushSafe(
+        () => _crud.insertIfAbsent(
+          collection: AppCollections.schoolAuditLog,
+          docId: entry.id,
+          data: entry.toMap(),
+        ),
+      );
     }
   }
 
@@ -2355,68 +2452,84 @@ class CloudAppStore {
         .map((e) => e.toMap())
         .toList();
     if (items.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.materialPurchaseRequests,
-          items: items,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.materialPurchaseRequests,
+        items: items,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushSchoolAuditEntry(SchoolAuditEntry entry) async {
-    await _pushSafe(() => _crud.insertIfAbsent(
-          collection: AppCollections.schoolAuditLog,
-          docId: entry.id,
-          data: entry.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.insertIfAbsent(
+        collection: AppCollections.schoolAuditLog,
+        docId: entry.id,
+        data: entry.toMap(),
+      ),
+    );
   }
 
   Future<void> deleteLearningMaterialItem(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.learningMaterials,
-          docId: id,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.learningMaterials,
+        docId: id,
+      ),
+    );
   }
 
   Future<void> pushGradeAuditEntry(GradeAuditEntry entry) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.gradeAuditLog,
-          docId: entry.id,
-          data: entry.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.gradeAuditLog,
+        docId: entry.id,
+        data: entry.toMap(),
+      ),
+    );
   }
 
   Future<void> pushAllGradeAuditEntries() async {
     final entries = GradeAuditService.instance.snapshotMaps();
     if (entries.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.gradeAuditLog,
-          items: entries,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.gradeAuditLog,
+        items: entries,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushDailyActivity(DailyActivityReport report) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.dailyActivities,
-          docId: report.id,
-          data: report.toMap(),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.dailyActivities,
+        docId: report.id,
+        data: report.toMap(),
+      ),
+    );
   }
 
   Future<void> pushAllDailyActivities() async {
     final reports = SchoolDataService.instance.dailyActivitiesSnapshot();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.dailyActivities,
-          items: reports.map((r) => r.toMap()).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.dailyActivities,
+        items: reports.map((r) => r.toMap()).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> deleteDailyActivity(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.dailyActivities,
-          docId: id,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.dailyActivities,
+        docId: id,
+      ),
+    );
   }
 
   // —— CRUD: Conversations ——
@@ -2426,13 +2539,14 @@ class CloudAppStore {
     String? schoolId,
     bool requireCloud = false,
   }) async {
-    final sid = (SchoolAuthCloudService.jwtSchoolId() ??
-            schoolId ??
-            SchoolAuthCloudService.resolvedSchoolId() ??
-            AuthService.activeSchoolId ??
-            '')
-        .trim()
-        .toUpperCase();
+    final sid =
+        (SchoolAuthCloudService.jwtSchoolId() ??
+                schoolId ??
+                SchoolAuthCloudService.resolvedSchoolId() ??
+                AuthService.activeSchoolId ??
+                '')
+            .trim()
+            .toUpperCase();
     var merged = conversation;
     try {
       final existing = await _crud.readDoc(
@@ -2445,7 +2559,7 @@ class CloudAppStore {
         SchoolDataService.instance.mergeConversationFromCloud(cloud);
         merged =
             SchoolDataService.instance.getConversation(conversation.id) ??
-                conversation;
+            conversation;
       }
     } catch (_) {}
 
@@ -2466,22 +2580,24 @@ class CloudAppStore {
 
   Future<void> pushAllConversations() async {
     final conversations = SchoolDataService.instance.getConversations();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.conversations,
-          items: conversations
-              .map(
-                (c) => ConversationDocument.fromConversation(c).toMap(),
-              )
-              .toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.conversations,
+        items: conversations
+            .map((c) => ConversationDocument.fromConversation(c).toMap())
+            .toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> deleteConversation(String conversationId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.conversations,
-          docId: conversationId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.conversations,
+        docId: conversationId,
+      ),
+    );
   }
 
   // —— Pull helpers ——
@@ -2494,10 +2610,7 @@ class CloudAppStore {
       if (username == null || username.isEmpty) return;
       final own = await _crud.readDoc(
         collection: AppCollections.authAccounts,
-        docId: schoolAccountDocId(
-          AuthService.activeSchoolId ?? '',
-          username,
-        ),
+        docId: schoolAccountDocId(AuthService.activeSchoolId ?? '', username),
       );
       final legacy = own == null
           ? await _crud.readDoc(
@@ -2530,7 +2643,8 @@ class CloudAppStore {
           phone: map['phone'] as String?,
           schoolId: map['schoolId'] as String?,
           fullName: map['fullName'] as String?,
-          linkedStudentIds: (map['linkedStudentIds'] as List<dynamic>?)
+          linkedStudentIds:
+              (map['linkedStudentIds'] as List<dynamic>?)
                   ?.map((e) => e.toString())
                   .toList() ??
               const [],
@@ -2539,6 +2653,13 @@ class CloudAppStore {
           linkedDriverId: map['linkedDriverId'] as String?,
           linkedStudentId: map['linkedStudentId'] as String?,
           mustChangePassword: map['mustChangePassword'] as bool? ?? false,
+          staffRoles: StaffRoles.staffRolesFrom(map['staffRoles']),
+          staffPermissions:
+              (map['staffPermissions'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .where((e) => e.trim().isNotEmpty)
+                  .toList() ??
+              const [],
         );
         AuthService.mergePersistedUser(user);
       } catch (_) {}
@@ -2664,8 +2785,7 @@ class CloudAppStore {
     final realSchool = DemoContent.isRealSchool(AuthService.activeSchoolId);
     final keptTeachers = <AdminTeacherRecord>[];
     for (final teacher in teachers) {
-      if (realSchool &&
-          TeacherRegistryService.isBuiltInDemoTeacher(teacher)) {
+      if (realSchool && TeacherRegistryService.isBuiltInDemoTeacher(teacher)) {
         TeacherRegistryService.instance.removeTeacher(
           teacher.teacherId,
           schoolId: teacher.schoolId,
@@ -2681,8 +2801,13 @@ class CloudAppStore {
         keptTeachers,
         nextId: maxId,
       );
+      final restored = TeacherRegistryService.instance
+          .restoreMissingStaffRoles();
+      final mayRepair =
+          AuthService.currentUser?.roleKey == AuthService.roleAdmin ||
+          AuthService.canAssignStaffRoles;
       await TeacherPersistenceService.instance.saveRegistryFromService(
-        pushCloud: false,
+        pushCloud: restored && mayRepair,
         notifyStaff: false,
       );
     }
@@ -2807,7 +2932,9 @@ class CloudAppStore {
     }
     if (parsed.isNotEmpty) {
       SchoolDataService.instance.applyPersistedHomework(parsed);
-      await HomeworkPersistenceService.instance.saveFromService(pushCloud: false);
+      await HomeworkPersistenceService.instance.saveFromService(
+        pushCloud: false,
+      );
     }
   }
 
@@ -2891,7 +3018,9 @@ class CloudAppStore {
     }
     if (parsed.isNotEmpty) {
       SchoolDataService.instance.applyPersistedConversations(parsed);
-      await MessagePersistenceService.instance.saveFromService(pushCloud: false);
+      await MessagePersistenceService.instance.saveFromService(
+        pushCloud: false,
+      );
     }
   }
 
@@ -2904,8 +3033,10 @@ class CloudAppStore {
     final className = map['className'] as String? ?? '';
     final term = map['term'] as String? ?? '';
     final who = studentId.isNotEmpty ? studentId : studentName;
-    return '${who}_${className}_$term'
-        .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return '${who}_${className}_$term'.replaceAll(
+      RegExp(r'[^a-zA-Z0-9_-]'),
+      '_',
+    );
   }
 
   // —— Push: school content ——
@@ -2925,20 +3056,24 @@ class CloudAppStore {
       if (!DemoContent.isRealSchool(AuthService.activeSchoolId)) return true;
       return !SchoolDataService.isBuiltInDemoFee(fee);
     }).toList();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.fees,
-          items: fees.map(AppDataMaps.feeToMap).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.fees,
+        items: fees.map(AppDataMaps.feeToMap).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushAllCalendarEvents() async {
     final events = SchoolDataService.instance.calendarSnapshot();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.calendarEvents,
-          items: events.map(AppDataMaps.calendarEventToMap).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.calendarEvents,
+        items: events.map(AppDataMaps.calendarEventToMap).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushAllGalleryPosts() async {
@@ -2947,34 +3082,42 @@ class CloudAppStore {
       (post) => post.className,
     );
     if (posts.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.galleryPosts,
-          items: posts.map(AppDataMaps.galleryPostToMap).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.galleryPosts,
+        items: posts.map(AppDataMaps.galleryPostToMap).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushGalleryPost(GalleryPost post) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.galleryPosts,
-          docId: post.id,
-          data: AppDataMaps.galleryPostToMap(post),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.galleryPosts,
+        docId: post.id,
+        data: AppDataMaps.galleryPostToMap(post),
+      ),
+    );
   }
 
   Future<void> pushAllQrScans() async {
     final scans = SchoolDataService.instance.qrScanSnapshot();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.qrScans,
-          items: scans.map(AppDataMaps.qrScanToMap).toList(),
-          docIdFor: (item) =>
-              AppDataMaps.qrScanDocId(AppDataMaps.qrScanFromMap(item)),
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.qrScans,
+        items: scans.map(AppDataMaps.qrScanToMap).toList(),
+        docIdFor: (item) =>
+            AppDataMaps.qrScanDocId(AppDataMaps.qrScanFromMap(item)),
+      ),
+    );
   }
 
   Future<void> pushAllAnnouncements() async {
     final real = DemoContent.isRealSchool(AuthService.activeSchoolId);
-    final items = SchoolDataService.instance.announcementsSnapshot().where((item) {
+    final items = SchoolDataService.instance.announcementsSnapshot().where((
+      item,
+    ) {
       if (!real) return true;
       return !DemoContent.isSampleAnnouncement(
         id: item.id,
@@ -2982,11 +3125,13 @@ class CloudAppStore {
         author: item.author,
       );
     }).toList();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.announcements,
-          items: items.map(AppDataMaps.announcementToMap).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.announcements,
+        items: items.map(AppDataMaps.announcementToMap).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> pushAttendanceSession(AttendanceSession session) async {
@@ -2998,11 +3143,13 @@ class CloudAppStore {
         )) {
       return;
     }
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.attendanceSessions,
-          docId: AppDataMaps.attendanceDocId(session),
-          data: AppDataMaps.attendanceSessionToMap(session),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.attendanceSessions,
+        docId: AppDataMaps.attendanceDocId(session),
+        data: AppDataMaps.attendanceSessionToMap(session),
+      ),
+    );
   }
 
   Future<void> pushAllAttendanceSessions() async {
@@ -3019,24 +3166,27 @@ class CloudAppStore {
       (session) => session.className,
     );
     if (sessions.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.attendanceSessions,
-          items: sessions.map(AppDataMaps.attendanceSessionToMap).toList(),
-          docIdFor: (item) => AppDataMaps.attendanceDocId(
-            AppDataMaps.attendanceSessionFromMap(item),
-          ),
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.attendanceSessions,
+        items: sessions.map(AppDataMaps.attendanceSessionToMap).toList(),
+        docIdFor: (item) => AppDataMaps.attendanceDocId(
+          AppDataMaps.attendanceSessionFromMap(item),
+        ),
+      ),
+    );
   }
 
   Future<void> pushAllClassTimetables() async {
     final timetables = TimetableService.instance.allPersistedTimetables();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.classTimetables,
-          items: timetables.map(AppDataMaps.classTimetableToMap).toList(),
-          docIdFor: (item) => _classTimetableDocId(
-            item['className'] as String? ?? '',
-          ),
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.classTimetables,
+        items: timetables.map(AppDataMaps.classTimetableToMap).toList(),
+        docIdFor: (item) =>
+            _classTimetableDocId(item['className'] as String? ?? ''),
+      ),
+    );
   }
 
   static String _classTimetableDocId(String className) =>
@@ -3062,86 +3212,87 @@ class CloudAppStore {
       }
     }
     if (schools.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.schoolRegistry,
-          items: schools
-              .map((s) => {
-                    ...AppDataMaps.schoolToMap(s),
-                    'schoolId': s.id,
-                  })
-              .toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.schoolRegistry,
+        items: schools
+            .map((s) => {...AppDataMaps.schoolToMap(s), 'schoolId': s.id})
+            .toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   /// Push one school registry doc with correct school_id (platform create).
   Future<void> pushSchool(SchoolRecord school) async {
     final id = school.id.trim().toUpperCase();
     if (id.isEmpty) return;
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.schoolRegistry,
-          docId: id,
-          data: {
-            ...AppDataMaps.schoolToMap(school),
-            'id': id,
-            'schoolId': id,
-          },
-          merge: true,
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.schoolRegistry,
+        docId: id,
+        data: {...AppDataMaps.schoolToMap(school), 'id': id, 'schoolId': id},
+        merge: true,
+      ),
+    );
   }
 
   Future<void> pushAllAuditEntries() async {
     final entries = PlatformAuditLogService.instance.allEntriesSnapshot();
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.platformAudit,
-          items: entries.map(AppDataMaps.auditEntryToMap).toList(),
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.platformAudit,
+        items: entries.map(AppDataMaps.auditEntryToMap).toList(),
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> deleteFee(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.fees,
-          docId: id,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(collection: AppCollections.fees, docId: id),
+    );
   }
 
   Future<void> deleteCalendarEvent(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.calendarEvents,
-          docId: id,
-        ));
+    await _pushSafe(
+      () =>
+          _crud.deleteDoc(collection: AppCollections.calendarEvents, docId: id),
+    );
   }
 
   Future<void> deleteGalleryPost(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.galleryPosts,
-          docId: id,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(collection: AppCollections.galleryPosts, docId: id),
+    );
   }
 
   Future<void> deleteAnnouncement(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.announcements,
-          docId: id,
-        ));
+    await _pushSafe(
+      () =>
+          _crud.deleteDoc(collection: AppCollections.announcements, docId: id),
+    );
   }
 
   Future<void> deleteSchool(String schoolId) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.schoolRegistry,
-          docId: schoolId,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.schoolRegistry,
+        docId: schoolId,
+      ),
+    );
   }
 
   // —— Transport: scans, onboard state, bus GPS ——
 
   Future<void> pushTransportScan(TransportScanRecord scan) async {
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.transportScans,
-          docId: AppDataMaps.transportScanDocId(scan),
-          data: AppDataMaps.transportScanToMap(scan),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.transportScans,
+        docId: AppDataMaps.transportScanDocId(scan),
+        data: AppDataMaps.transportScanToMap(scan),
+      ),
+    );
   }
 
   Future<void> pushTransportPassengerStatus({
@@ -3152,26 +3303,30 @@ class CloudAppStore {
     String? updatedBy,
   }) async {
     final id = studentId.trim().toUpperCase();
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.transportPassengerStatus,
-          docId: id,
-          data: AppDataMaps.transportPassengerStatusToMap(
-            studentId: id,
-            driverId: driverId.trim().toUpperCase(),
-            status: status,
-            updatedAt: updatedAt,
-            updatedBy: updatedBy,
-          ),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.transportPassengerStatus,
+        docId: id,
+        data: AppDataMaps.transportPassengerStatusToMap(
+          studentId: id,
+          driverId: driverId.trim().toUpperCase(),
+          status: status,
+          updatedAt: updatedAt,
+          updatedBy: updatedBy,
+        ),
+      ),
+    );
   }
 
   Future<void> pushBusPosition(BusLivePosition position) async {
     final id = position.driverId.trim().toUpperCase();
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.busLivePositions,
-          docId: id,
-          data: AppDataMaps.busPositionToMap(position),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.busLivePositions,
+        docId: id,
+        data: AppDataMaps.busPositionToMap(position),
+      ),
+    );
   }
 
   Future<void> pushAppNotification(AppNotification notification) async {
@@ -3184,18 +3339,22 @@ class CloudAppStore {
         )) {
       return;
     }
-    await _pushSafe(() => _crud.createOrUpdate(
-          collection: AppCollections.appNotifications,
-          docId: notification.id,
-          data: AppDataMaps.appNotificationToMap(notification),
-        ));
+    await _pushSafe(
+      () => _crud.createOrUpdate(
+        collection: AppCollections.appNotifications,
+        docId: notification.id,
+        data: AppDataMaps.appNotificationToMap(notification),
+      ),
+    );
   }
 
   Future<void> deleteAppNotification(String id) async {
-    await _pushSafe(() => _crud.deleteDoc(
-          collection: AppCollections.appNotifications,
-          docId: id,
-        ));
+    await _pushSafe(
+      () => _crud.deleteDoc(
+        collection: AppCollections.appNotifications,
+        docId: id,
+      ),
+    );
   }
 
   Future<void> pullTransportStateIntoServices() async {
@@ -3219,8 +3378,9 @@ class CloudAppStore {
   }
 
   Future<void> _pullTransportPassengerStatus() async {
-    final rows =
-        await _scopedStudentIdRead(AppCollections.transportPassengerStatus);
+    final rows = await _scopedStudentIdRead(
+      AppCollections.transportPassengerStatus,
+    );
     for (final map in rows) {
       try {
         final studentId = (map['studentId'] as String? ?? '').toUpperCase();
@@ -3272,8 +3432,13 @@ class CloudAppStore {
       final n = int.tryParse(a.id);
       if (n != null && n >= maxId) maxId = n + 1;
     }
-    SchoolDataService.instance.applyPersistedAnnouncements(parsed, nextId: maxId);
-    await SchoolContentPersistenceService.instance.saveFromService(pushCloud: false);
+    SchoolDataService.instance.applyPersistedAnnouncements(
+      parsed,
+      nextId: maxId,
+    );
+    await SchoolContentPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullAttendanceSessions() async {
@@ -3310,7 +3475,9 @@ class CloudAppStore {
     if (rows.isEmpty) return;
     final parsed = rows.map(AppDataMaps.feeFromMap).toList();
     SchoolDataService.instance.applyPersistedFees(parsed);
-    await SchoolContentPersistenceService.instance.saveFromService(pushCloud: false);
+    await SchoolContentPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullCalendarEvents() async {
@@ -3323,7 +3490,9 @@ class CloudAppStore {
       if (n != null && n >= maxId) maxId = n + 1;
     }
     SchoolDataService.instance.applyPersistedCalendar(parsed, nextId: maxId);
-    await SchoolContentPersistenceService.instance.saveFromService(pushCloud: false);
+    await SchoolContentPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullClassTimetables() async {
@@ -3337,7 +3506,9 @@ class CloudAppStore {
     }
     if (parsed.isEmpty) return;
     TimetableService.instance.applyPersistedTimetables(parsed);
-    await TimetablePersistenceService.instance.saveFromService(pushCloud: false);
+    await TimetablePersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullGalleryPosts() async {
@@ -3355,7 +3526,9 @@ class CloudAppStore {
     if (rows.isEmpty) return;
     final parsed = rows.map(AppDataMaps.qrScanFromMap).toList();
     SchoolDataService.instance.applyPersistedQrScans(parsed);
-    await SchoolContentPersistenceService.instance.saveFromService(pushCloud: false);
+    await SchoolContentPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullSchoolRegistry() async {
@@ -3366,10 +3539,16 @@ class CloudAppStore {
       docId: sid,
     );
     if (map == null) return;
-    final parsed = AppDataMaps.schoolFromMap({...map, 'id': sid, '_docId': sid});
+    final parsed = AppDataMaps.schoolFromMap({
+      ...map,
+      'id': sid,
+      '_docId': sid,
+    });
     // Merge — never wipe the full multi-school registry used by platform console.
     SchoolRegistryService.instance.upsertSchool(parsed);
-    await SchoolRegistryPersistenceService.instance.saveFromService(pushCloud: false);
+    await SchoolRegistryPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullPlatformAudit() async {
@@ -3401,19 +3580,15 @@ class CloudAppStore {
     if (role == AuthService.roleParent || role == AuthService.roleStudent) {
       return;
     }
-    final itemRows =
-        await _schoolRead(AppCollections.inventoryItems);
-    final txnRows =
-        await _schoolRead(AppCollections.stockTransactions);
-    final issuedRows =
-        await _schoolRead(AppCollections.studentIssuedItems);
-    final classroomRows =
-        await _schoolRead(AppCollections.classroomInventory);
+    final itemRows = await _schoolRead(AppCollections.inventoryItems);
+    final txnRows = await _schoolRead(AppCollections.stockTransactions);
+    final issuedRows = await _schoolRead(AppCollections.studentIssuedItems);
+    final classroomRows = await _schoolRead(AppCollections.classroomInventory);
     final assetRows = await _schoolRead(AppCollections.assets);
-    final supplierRows =
-        await _schoolRead(AppCollections.suppliers);
-    final maintenanceRows =
-        await _schoolRead(AppCollections.maintenanceReports);
+    final supplierRows = await _schoolRead(AppCollections.suppliers);
+    final maintenanceRows = await _schoolRead(
+      AppCollections.maintenanceReports,
+    );
 
     if (itemRows.isEmpty &&
         txnRows.isEmpty &&
@@ -3477,7 +3652,9 @@ class CloudAppStore {
       suppliers: suppliers,
       maintenance: maintenance,
     );
-    await InventoryPersistenceService.instance.saveFromService(pushCloud: false);
+    await InventoryPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   Future<void> _pullProcurement() async {
@@ -3643,8 +3820,8 @@ class CloudAppStore {
     if (role == AuthService.roleDriver) return;
     final unitRows = await _schoolRead(AppCollections.curriculumUnits);
     final feedbackRows = await _schoolRead(AppCollections.curriculumFeedback);
-    final publicReader = role == AuthService.roleStudent ||
-        role == AuthService.roleParent;
+    final publicReader =
+        role == AuthService.roleStudent || role == AuthService.roleParent;
     final reviewRows = publicReader
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.lessonPlanReviews);
@@ -3717,16 +3894,21 @@ class CloudAppStore {
   Future<void> pushAllStudentSupport() async {
     final svc = StudentSupportService.instance;
     final role = AuthService.currentUser?.roleKey;
-    final publicReader = role == AuthService.roleStudent ||
-        role == AuthService.roleParent;
+    final publicReader =
+        role == AuthService.roleStudent || role == AuthService.roleParent;
     if (!publicReader) {
-      Future<void> pushStaff(String collection, List<Map<String, dynamic>> items) async {
+      Future<void> pushStaff(
+        String collection,
+        List<Map<String, dynamic>> items,
+      ) async {
         if (items.isEmpty) return;
-        await _pushSafe(() => _crud.writeBatch(
-              collection: collection,
-              items: items,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
 
       await pushStaff(AppCollections.healthRecords, svc.healthMaps());
@@ -3736,8 +3918,7 @@ class CloudAppStore {
       await pushStaff(AppCollections.studentDocuments, svc.documentMaps());
       await pushStaff(AppCollections.medicationStock, svc.medicationMaps());
       await pushStaff(AppCollections.selObservations, svc.selMaps());
-      if (role == AuthService.roleAdmin ||
-          role == AuthService.roleTeacher) {
+      if (role == AuthService.roleAdmin || role == AuthService.roleTeacher) {
         await pushStaff(
           AppCollections.safeguardingCases,
           svc.safeguardingMaps(),
@@ -3876,8 +4057,9 @@ class CloudAppStore {
       iep: iep.isEmpty ? null : iep,
       college: college.isEmpty ? null : college,
       requests: requests.isEmpty ? null : requests,
-      safeguarding:
-          publicReader ? const [] : (safeguarding.isEmpty ? null : safeguarding),
+      safeguarding: publicReader
+          ? const []
+          : (safeguarding.isEmpty ? null : safeguarding),
       documents: documents.isEmpty ? null : documents,
       medication: publicReader ? const [] : (meds.isEmpty ? null : meds),
       sel: student ? const [] : (sel.isEmpty ? null : sel),
@@ -3893,19 +4075,21 @@ class CloudAppStore {
   Future<void> pushAllDosa() async {
     final svc = DosaService.instance;
     final role = AuthService.currentUser?.roleKey;
-    final publicReader = role == AuthService.roleStudent ||
-        role == AuthService.roleParent;
+    final publicReader =
+        role == AuthService.roleStudent || role == AuthService.roleParent;
     if (!publicReader) {
       Future<void> pushStaff(
         String collection,
         List<Map<String, dynamic>> items,
       ) async {
         if (items.isEmpty) return;
-        await _pushSafe(() => _crud.writeBatch(
-              collection: collection,
-              items: items,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
 
       await pushStaff(AppCollections.extracurricularClubs, svc.clubMaps());
@@ -3920,10 +4104,8 @@ class CloudAppStore {
     ) async {
       if (items.isEmpty) return;
       await _pushSafe(() async {
-        final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
-          collection: collection,
-          records: items,
-        );
+        final result = await SchoolAuthCloudService.instance
+            .upsertRegistryBatch(collection: collection, records: items);
         if (!result.ok) {
           throw StateError(
             result.errorMessage ?? 'Student-program sync failed.',
@@ -3947,8 +4129,8 @@ class CloudAppStore {
     final grievanceRows = await _schoolRead(AppCollections.grievances);
     final internshipRows = await _schoolRead(AppCollections.internships);
     final meetingRows = await _schoolRead(AppCollections.dosaMeetings);
-    final taskRows = role == AuthService.roleStudent ||
-            role == AuthService.roleParent
+    final taskRows =
+        role == AuthService.roleStudent || role == AuthService.roleParent
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.leadershipTasks);
 
@@ -4033,19 +4215,21 @@ class CloudAppStore {
   Future<void> pushAllQaMonitor() async {
     final svc = QaMonitorService.instance;
     final role = AuthService.currentUser?.roleKey;
-    final publicReader = role == AuthService.roleStudent ||
-        role == AuthService.roleParent;
+    final publicReader =
+        role == AuthService.roleStudent || role == AuthService.roleParent;
     if (!publicReader) {
       Future<void> pushStaff(
         String collection,
         List<Map<String, dynamic>> items,
       ) async {
         if (items.isEmpty) return;
-        await _pushSafe(() => _crud.writeBatch(
-              collection: collection,
-              items: items,
-              docIdFor: (item) => item['id'] as String,
-            ));
+        await _pushSafe(
+          () => _crud.writeBatch(
+            collection: collection,
+            items: items,
+            docIdFor: (item) => item['id'] as String,
+          ),
+        );
       }
 
       await pushStaff(
@@ -4073,8 +4257,9 @@ class CloudAppStore {
     final role = AuthService.currentUser?.roleKey;
     if (role == AuthService.roleDriver) return;
 
-    final observationRows =
-        await _schoolRead(AppCollections.teachingObservations);
+    final observationRows = await _schoolRead(
+      AppCollections.teachingObservations,
+    );
     final auditRows = await _schoolRead(AppCollections.academicAudits);
     final surveyRows = await _schoolRead(AppCollections.qaSurveys);
     final responseRows = await _schoolRead(AppCollections.qaSurveyResponses);
@@ -4135,7 +4320,9 @@ class CloudAppStore {
       research: research.isEmpty ? null : research,
       merge: true,
     );
-    await QaMonitorPersistenceService.instance.saveFromService(pushCloud: false);
+    await QaMonitorPersistenceService.instance.saveFromService(
+      pushCloud: false,
+    );
   }
 
   /// MFA, consents, data-rights, school backup meta.
@@ -4144,16 +4331,17 @@ class CloudAppStore {
   Future<void> pushAllGoLive() async {
     final svc = GoliveService.instance;
     final role = AuthService.currentUser?.roleKey;
-    final publicReader = role == AuthService.roleStudent ||
-        role == AuthService.roleParent;
+    final publicReader =
+        role == AuthService.roleStudent || role == AuthService.roleParent;
 
-    Future<void> upsert(String collection, List<Map<String, dynamic>> items) async {
+    Future<void> upsert(
+      String collection,
+      List<Map<String, dynamic>> items,
+    ) async {
       if (items.isEmpty) return;
       await _pushSafe(() async {
-        final result = await SchoolAuthCloudService.instance.upsertRegistryBatch(
-          collection: collection,
-          records: items,
-        );
+        final result = await SchoolAuthCloudService.instance
+            .upsertRegistryBatch(collection: collection, records: items);
         if (!result.ok) {
           throw StateError(result.errorMessage ?? 'Go-live sync failed.');
         }
@@ -4167,27 +4355,33 @@ class CloudAppStore {
     if (publicReader) return;
     final backups = svc.backupMaps();
     if (backups.isNotEmpty) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.schoolBackups,
-            items: backups,
-            docIdFor: (item) => item['id'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.schoolBackups,
+          items: backups,
+          docIdFor: (item) => item['id'] as String,
+        ),
+      );
     }
     final policies = svc.policyMaps();
     if (policies.isNotEmpty && svc.canManageDesk) {
-      await _pushSafe(() => _crud.writeBatch(
-            collection: AppCollections.mfaPolicies,
-            items: policies,
-            docIdFor: (item) => item['id'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: AppCollections.mfaPolicies,
+          items: policies,
+          docIdFor: (item) => item['id'] as String,
+        ),
+      );
     }
     final signOffs = svc.signOffMaps();
     if (signOffs.isEmpty) return;
-    await _pushSafe(() => _crud.writeBatch(
-          collection: AppCollections.goliveSignoffs,
-          items: signOffs,
-          docIdFor: (item) => item['id'] as String,
-        ));
+    await _pushSafe(
+      () => _crud.writeBatch(
+        collection: AppCollections.goliveSignoffs,
+        items: signOffs,
+        docIdFor: (item) => item['id'] as String,
+      ),
+    );
   }
 
   Future<void> _pullGoLive() async {
@@ -4197,16 +4391,16 @@ class CloudAppStore {
     final mfaRows = await _schoolRead(AppCollections.mfaEnrollments);
     final consentRows = await _schoolRead(AppCollections.privacyConsents);
     final rightsRows = await _schoolRead(AppCollections.dataRightsRequests);
-    final backupRows = role == AuthService.roleParent ||
-            role == AuthService.roleStudent
+    final backupRows =
+        role == AuthService.roleParent || role == AuthService.roleStudent
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.schoolBackups);
-    final policyRows = role == AuthService.roleParent ||
-            role == AuthService.roleStudent
+    final policyRows =
+        role == AuthService.roleParent || role == AuthService.roleStudent
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.mfaPolicies);
-    final signOffRows = role == AuthService.roleParent ||
-            role == AuthService.roleStudent
+    final signOffRows =
+        role == AuthService.roleParent || role == AuthService.roleStudent
         ? const <Map<String, dynamic>>[]
         : await _schoolRead(AppCollections.goliveSignoffs);
 
@@ -4285,13 +4479,18 @@ class CloudAppStore {
       return;
     }
     final svc = DigitalOpsService.instance;
-    Future<void> push(String collection, List<Map<String, dynamic>> items) async {
+    Future<void> push(
+      String collection,
+      List<Map<String, dynamic>> items,
+    ) async {
       if (items.isEmpty) return;
-      await _pushSafe(() => _crud.writeBatch(
-            collection: collection,
-            items: items,
-            docIdFor: (item) => item['id'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: collection,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ),
+      );
     }
 
     await push(AppCollections.ictDevices, svc.deviceMaps());
@@ -4339,13 +4538,18 @@ class CloudAppStore {
       return;
     }
     final svc = PayrollService.instance;
-    Future<void> push(String collection, List<Map<String, dynamic>> items) async {
+    Future<void> push(
+      String collection,
+      List<Map<String, dynamic>> items,
+    ) async {
       if (items.isEmpty) return;
-      await _pushSafe(() => _crud.writeBatch(
-            collection: collection,
-            items: items,
-            docIdFor: (item) => item['id'] as String,
-          ));
+      await _pushSafe(
+        () => _crud.writeBatch(
+          collection: collection,
+          items: items,
+          docIdFor: (item) => item['id'] as String,
+        ),
+      );
     }
 
     await push(AppCollections.payrollProfiles, svc.profileMaps());

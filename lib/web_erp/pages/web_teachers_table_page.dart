@@ -76,9 +76,8 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
       ? 'Staff with an assigned role. They sign in as Administration Staff and only see that role’s modules.'
       : 'Classroom teachers (no admin role). They sign in as Teacher. Section Director assigns classes later.';
 
-  EnrolmentImportScope get _importScope => _isStaffDir
-      ? EnrolmentImportScope.staff
-      : EnrolmentImportScope.teachers;
+  EnrolmentImportScope get _importScope =>
+      _isStaffDir ? EnrolmentImportScope.staff : EnrolmentImportScope.teachers;
 
   void _openAdd() {
     final go = widget.onNavigate;
@@ -155,8 +154,8 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
     );
 
     teachers = teachers.where((t) {
-      final hasStaffRole = t.staffRoles.isNotEmpty;
-      return _isStaffDir ? hasStaffRole : !hasStaffRole;
+      final isStaff = isAdministrationStaffRecord(t);
+      return _isStaffDir ? isStaff : !isStaff;
     }).toList();
 
     if (_query.isNotEmpty) {
@@ -222,7 +221,11 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
                   children: [
                     for (var i = 0; i < slice.length; i++) ...[
                       if (i > 0) const Divider(height: 1),
-                      _staffTile(slice[i], multiCampus: multiCampus, strings: s),
+                      _staffTile(
+                        slice[i],
+                        multiCampus: multiCampus,
+                        strings: s,
+                      ),
                     ],
                   ],
                 ),
@@ -393,9 +396,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
         crossAxisAlignment: WrapCrossAlignment.center,
         alignment: WrapAlignment.spaceBetween,
         children: [
-          Text(
-            count == 0 ? '0 registered' : '$count registered · 10 per page',
-          ),
+          Text(count == 0 ? '0 registered' : '$count registered · 10 per page'),
           if (count > 0)
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -460,7 +461,9 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
     final roleText = _roleOrAssignmentText(teacher, strings);
     return ListTile(
       leading: StaffRegistryAvatar(
-        key: ValueKey('tch-tile-${teacher.teacherId}-${teacher.photoPath ?? ''}'),
+        key: ValueKey(
+          'tch-tile-${teacher.teacherId}-${teacher.photoPath ?? ''}',
+        ),
         staffId: teacher.teacherId,
         name: teacher.fullName,
         photoPath: teacher.photoPath,
@@ -538,9 +541,7 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
           const DataColumn(
             label: SizedBox(width: statusWidth, child: Text('Status')),
           ),
-          const DataColumn(
-            label: SizedBox(width: 168, child: Text('Actions')),
-          ),
+          const DataColumn(label: SizedBox(width: 168, child: Text('Actions'))),
         ],
         rows: [
           for (final t in slice)
@@ -548,7 +549,9 @@ class _WebTeachersTablePageState extends State<WebTeachersTablePage> {
               cells: [
                 DataCell(
                   StaffRegistryAvatar(
-                    key: ValueKey('tch-photo-${t.teacherId}-${t.photoPath ?? ''}'),
+                    key: ValueKey(
+                      'tch-photo-${t.teacherId}-${t.photoPath ?? ''}',
+                    ),
                     staffId: t.teacherId,
                     name: t.fullName,
                     photoPath: t.photoPath,

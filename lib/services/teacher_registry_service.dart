@@ -36,10 +36,10 @@ class AdminTeacherRecord {
     this.classAssignments = const [],
     this.staffRoles = const [],
   }) : subjects = subjects != null
-            ? List<String>.from(subjects)
-            : (subject != null && subject.trim().isNotEmpty
-                ? [subject.trim()]
-                : const []);
+           ? List<String>.from(subjects)
+           : (subject != null && subject.trim().isNotEmpty
+                 ? [subject.trim()]
+                 : const []);
 
   final String teacherId;
   final String fullName;
@@ -78,40 +78,41 @@ class AdminTeacherRecord {
   }
 
   Map<String, dynamic> toMap() => {
-        'teacherId': teacherId,
-        'fullName': fullName,
-        'subjects': subjects,
-        'assignedClass': assignedClass,
-        'assignedClassNames': assignedClassNames,
-        'schoolId': schoolId,
-        'campus': campus,
-        if (email != null) 'email': email,
-        if (phone != null) 'phone': phone,
-        if (employeeId != null) 'employeeId': employeeId,
-        'roles': roles.map((role) => role.name).toList(),
-        if (loginUsername != null) 'loginUsername': loginUsername,
-        'mustChangePassword': mustChangePassword,
-        'isActive': isActive,
-        if (photoPath != null) 'photoPath': photoPath,
-        if (initialPassword != null) 'initialPassword': initialPassword,
-        'classAssignments':
-            classAssignments.map((assignment) => assignment.toMap()).toList(),
-        if (staffRoles.isNotEmpty) 'staffRoles': staffRoles,
-      };
+    'teacherId': teacherId,
+    'fullName': fullName,
+    'subjects': subjects,
+    'assignedClass': assignedClass,
+    'assignedClassNames': assignedClassNames,
+    'schoolId': schoolId,
+    'campus': campus,
+    if (email != null) 'email': email,
+    if (phone != null) 'phone': phone,
+    if (employeeId != null) 'employeeId': employeeId,
+    'roles': roles.map((role) => role.name).toList(),
+    if (loginUsername != null) 'loginUsername': loginUsername,
+    'mustChangePassword': mustChangePassword,
+    'isActive': isActive,
+    if (photoPath != null) 'photoPath': photoPath,
+    if (initialPassword != null) 'initialPassword': initialPassword,
+    'classAssignments': classAssignments
+        .map((assignment) => assignment.toMap())
+        .toList(),
+    if (staffRoles.isNotEmpty) 'staffRoles': staffRoles,
+  };
 
   factory AdminTeacherRecord.fromMap(Map<String, dynamic> map) {
     final rawRoles = map['roles'] as List?;
     final roles = rawRoles == null
         ? const [TeacherStaffRole.subjectTeacher]
         : rawRoles
-            .map((role) => role.toString())
-            .map(
-              (name) => TeacherStaffRole.values.firstWhere(
-                (role) => role.name == name,
-                orElse: () => TeacherStaffRole.subjectTeacher,
-              ),
-            )
-            .toList();
+              .map((role) => role.toString())
+              .map(
+                (name) => TeacherStaffRole.values.firstWhere(
+                  (role) => role.name == name,
+                  orElse: () => TeacherStaffRole.subjectTeacher,
+                ),
+              )
+              .toList();
     final rawSubjects = map['subjects'] as List?;
     final subjects = rawSubjects == null
         ? const <String>[]
@@ -120,13 +121,13 @@ class AdminTeacherRecord {
     final classAssignments = rawAssignments == null
         ? const <TeacherClassAssignment>[]
         : rawAssignments
-            .whereType<Map>()
-            .map(
-              (item) => TeacherClassAssignment.fromMap(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .toList();
+              .whereType<Map>()
+              .map(
+                (item) => TeacherClassAssignment.fromMap(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList();
 
     return AdminTeacherRecord(
       teacherId: (map['teacherId'] as String? ?? '').trim().toUpperCase(),
@@ -145,10 +146,7 @@ class AdminTeacherRecord {
       photoPath: map['photoPath'] as String?,
       initialPassword: map['initialPassword'] as String?,
       classAssignments: classAssignments,
-      staffRoles: (map['staffRoles'] as List?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
+      staffRoles: StaffRoles.staffRolesFrom(map['staffRoles']),
     );
   }
 
@@ -172,8 +170,11 @@ class AdminTeacherRecord {
     return AdminTeacherRecord(
       teacherId: teacherId,
       fullName: fullName ?? this.fullName,
-      subjects: subjects ??
-          (subject != null ? [subject.trim()] : List<String>.from(this.subjects)),
+      subjects:
+          subjects ??
+          (subject != null
+              ? [subject.trim()]
+              : List<String>.from(this.subjects)),
       assignedClass: assignedClass ?? this.assignedClass,
       schoolId: schoolId,
       campus: campus ?? this.campus,
@@ -254,101 +255,106 @@ class TeacherRegistryService {
     return names.toList()..sort();
   }
 
-  final List<AdminTeacherRecord> _teachers = kDebugMode ? [
-    AdminTeacherRecord(
-      teacherId: 'TCH-1001',
-      fullName: 'Miss Belen',
-      subject: 'Mathematics',
-      assignedClass: 'Grade 4A, Grade 5B',
-      schoolId: 'TB-001',
-      email: 'belen@mayaschool.et',
-      phone: '0911223344',
-      employeeId: 'EMP-001',
-      roles: [TeacherStaffRole.homeroomTeacher, TeacherStaffRole.subjectTeacher],
-      loginUsername: 'teacher',
-      classAssignments: const [
-        TeacherClassAssignment(
-          className: 'Grade 4A',
-          role: TeacherStaffRole.homeroomTeacher,
-        ),
-        TeacherClassAssignment(
-          className: 'Grade 5B',
-          role: TeacherStaffRole.subjectTeacher,
-          teachingSlots: [
-            SubjectTeachingSlot(
-              slotId: 'STA-1001',
-              subjectId: 'SUB-MATH',
-              subjectName: 'Mathematics',
-            ),
-          ],
-        ),
-      ],
-    ),
-    AdminTeacherRecord(
-      teacherId: 'TCH-1002',
-      fullName: 'Mr. Samuel',
-      subject: 'English',
-      assignedClass: 'Grade 2C',
-      schoolId: 'TB-001',
-      email: 'samuel@mayaschool.et',
-      phone: '0911334455',
-      employeeId: 'EMP-002',
-      roles: [TeacherStaffRole.homeroomTeacher],
-      loginUsername: 'samuel',
-      classAssignments: const [
-        TeacherClassAssignment(
-          className: 'Grade 2C',
-          role: TeacherStaffRole.homeroomTeacher,
-        ),
-      ],
-    ),
-    AdminTeacherRecord(
-      teacherId: 'TCH-1003',
-      fullName: 'Miss Hana',
-      subject: 'Science',
-      assignedClass: 'Grade 4A',
-      schoolId: 'TB-001',
-      email: 'hana@mayaschool.et',
-      phone: '0911445566',
-      employeeId: 'EMP-003',
-      roles: [TeacherStaffRole.subjectTeacher],
-      classAssignments: const [
-        TeacherClassAssignment(
-          className: 'Grade 4A',
-          role: TeacherStaffRole.subjectTeacher,
-          teachingSlots: [
-            SubjectTeachingSlot(
-              slotId: 'STA-1002',
-              subjectId: 'SUB-SCI',
-              subjectName: 'Science',
-            ),
-          ],
-        ),
-      ],
-    ),
-    AdminTeacherRecord(
-      teacherId: 'TCH-1004',
-      fullName: 'Mr. Tadesse',
-      subject: 'Amharic',
-      assignedClass: 'Grade 5B',
-      schoolId: 'TB-001',
-      employeeId: 'EMP-004',
-      roles: [TeacherStaffRole.subjectTeacher],
-      classAssignments: const [
-        TeacherClassAssignment(
-          className: 'Grade 5B',
-          role: TeacherStaffRole.subjectTeacher,
-          teachingSlots: [
-            SubjectTeachingSlot(
-              slotId: 'STA-1003',
-              subjectId: 'SUB-AMH',
-              subjectName: 'Amharic',
-            ),
-          ],
-        ),
-      ],
-    ),
-  ] : [];
+  final List<AdminTeacherRecord> _teachers = kDebugMode
+      ? [
+          AdminTeacherRecord(
+            teacherId: 'TCH-1001',
+            fullName: 'Miss Belen',
+            subject: 'Mathematics',
+            assignedClass: 'Grade 4A, Grade 5B',
+            schoolId: 'TB-001',
+            email: 'belen@mayaschool.et',
+            phone: '0911223344',
+            employeeId: 'EMP-001',
+            roles: [
+              TeacherStaffRole.homeroomTeacher,
+              TeacherStaffRole.subjectTeacher,
+            ],
+            loginUsername: 'teacher',
+            classAssignments: const [
+              TeacherClassAssignment(
+                className: 'Grade 4A',
+                role: TeacherStaffRole.homeroomTeacher,
+              ),
+              TeacherClassAssignment(
+                className: 'Grade 5B',
+                role: TeacherStaffRole.subjectTeacher,
+                teachingSlots: [
+                  SubjectTeachingSlot(
+                    slotId: 'STA-1001',
+                    subjectId: 'SUB-MATH',
+                    subjectName: 'Mathematics',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          AdminTeacherRecord(
+            teacherId: 'TCH-1002',
+            fullName: 'Mr. Samuel',
+            subject: 'English',
+            assignedClass: 'Grade 2C',
+            schoolId: 'TB-001',
+            email: 'samuel@mayaschool.et',
+            phone: '0911334455',
+            employeeId: 'EMP-002',
+            roles: [TeacherStaffRole.homeroomTeacher],
+            loginUsername: 'samuel',
+            classAssignments: const [
+              TeacherClassAssignment(
+                className: 'Grade 2C',
+                role: TeacherStaffRole.homeroomTeacher,
+              ),
+            ],
+          ),
+          AdminTeacherRecord(
+            teacherId: 'TCH-1003',
+            fullName: 'Miss Hana',
+            subject: 'Science',
+            assignedClass: 'Grade 4A',
+            schoolId: 'TB-001',
+            email: 'hana@mayaschool.et',
+            phone: '0911445566',
+            employeeId: 'EMP-003',
+            roles: [TeacherStaffRole.subjectTeacher],
+            classAssignments: const [
+              TeacherClassAssignment(
+                className: 'Grade 4A',
+                role: TeacherStaffRole.subjectTeacher,
+                teachingSlots: [
+                  SubjectTeachingSlot(
+                    slotId: 'STA-1002',
+                    subjectId: 'SUB-SCI',
+                    subjectName: 'Science',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          AdminTeacherRecord(
+            teacherId: 'TCH-1004',
+            fullName: 'Mr. Tadesse',
+            subject: 'Amharic',
+            assignedClass: 'Grade 5B',
+            schoolId: 'TB-001',
+            employeeId: 'EMP-004',
+            roles: [TeacherStaffRole.subjectTeacher],
+            classAssignments: const [
+              TeacherClassAssignment(
+                className: 'Grade 5B',
+                role: TeacherStaffRole.subjectTeacher,
+                teachingSlots: [
+                  SubjectTeachingSlot(
+                    slotId: 'STA-1003',
+                    subjectId: 'SUB-AMH',
+                    subjectName: 'Amharic',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ]
+      : [];
 
   /// Built-in sample staff, including a copy that was saved onto a real school.
   static bool isBuiltInDemoTeacher(AdminTeacherRecord teacher) {
@@ -498,7 +504,8 @@ class TeacherRegistryService {
     final existing = lookupById(teacherId);
     if (existing == null) return;
     final pass = initialPassword.trim();
-    final safePass = (pass.length >= AuthService.minPasswordLength &&
+    final safePass =
+        (pass.length >= AuthService.minPasswordLength &&
             pass != AuthService.demoPassword)
         ? pass
         : AuthService.tempPassword;
@@ -587,9 +594,7 @@ class TeacherRegistryService {
         }
       }
     }
-    classes.addAll(
-      SchoolDataService.instance.homeroomClassNamesForTeacher(id),
-    );
+    classes.addAll(SchoolDataService.instance.homeroomClassNamesForTeacher(id));
     final list = classes.toList()..sort();
     return list;
   }
@@ -612,16 +617,56 @@ class TeacherRegistryService {
   /// Classroom teachers only. Administration staff with a role are listed on
   /// the staff directory, so the Teachers count must leave them out.
   List<AdminTeacherRecord> visibleClassroomTeachers({String? schoolId}) {
-    return visibleTeachers(schoolId: schoolId)
-        .where((t) => t.staffRoles.isEmpty)
-        .toList();
+    return visibleTeachers(
+      schoolId: schoolId,
+    ).where((t) => recoveredStaffRolesFor(t).isEmpty).toList();
   }
 
   /// Staff holding an administration role, as listed on the staff directory.
   List<AdminTeacherRecord> visibleAdministrationStaff({String? schoolId}) {
-    return visibleTeachers(schoolId: schoolId)
-        .where((t) => t.staffRoles.isNotEmpty)
-        .toList();
+    return visibleTeachers(
+      schoolId: schoolId,
+    ).where((t) => recoveredStaffRolesFor(t).isNotEmpty).toList();
+  }
+
+  /// Put staffRoles back when a cloud pull arrived without them.
+  ///
+  /// Login used to overwrite the directory with rows that omitted roles, so
+  /// every Principal / GM showed up as a classroom teacher. Recover from the
+  /// login account or from the role prefix on the staff id (`GM-10001`).
+  bool restoreMissingStaffRoles({String? schoolId}) {
+    final sid = (schoolId ?? AuthService.scopedSchoolId(schoolId) ?? '')
+        .trim()
+        .toUpperCase();
+    var changed = false;
+    for (var i = 0; i < _teachers.length; i++) {
+      final teacher = _teachers[i];
+      if (sid.isNotEmpty && teacher.schoolId.toUpperCase() != sid) continue;
+      if (teacher.staffRoles.isNotEmpty) continue;
+      final recovered = recoveredStaffRolesFor(teacher);
+      if (recovered.isEmpty) continue;
+      _teachers[i] = teacher.copyWith(staffRoles: recovered);
+      final account = AuthService.findUserForTeacher(teacher);
+      if (account != null && account.staffRoles.isEmpty) {
+        account.staffRoles = List<String>.from(recovered);
+        AuthService.mergePersistedUser(account);
+      }
+      changed = true;
+    }
+    return changed;
+  }
+
+  static List<String> recoveredStaffRolesFor(AdminTeacherRecord teacher) {
+    if (teacher.staffRoles.isNotEmpty) {
+      return List<String>.from(teacher.staffRoles);
+    }
+    final account = AuthService.findUserForTeacher(teacher);
+    if (account != null && account.staffRoles.isNotEmpty) {
+      return List<String>.from(account.staffRoles);
+    }
+    final inferred = StaffRoles.roleKeyFromTeacherId(teacher.teacherId);
+    if (inferred == null) return const [];
+    return [inferred];
   }
 
   void assignHomeroomClass(String teacherId, String className) {
@@ -684,7 +729,9 @@ class TeacherRegistryService {
       schoolId: schoolId.trim().toUpperCase(),
       email: email.trim().isEmpty ? null : email.trim(),
       phone: phone.trim(),
-      employeeId: employeeId?.trim().isEmpty ?? true ? null : employeeId!.trim(),
+      employeeId: employeeId?.trim().isEmpty ?? true
+          ? null
+          : employeeId!.trim(),
       roles: roles,
       loginUsername: loginUsername.trim().toLowerCase(),
       mustChangePassword: true,
@@ -700,8 +747,7 @@ class TeacherRegistryService {
     return record;
   }
 
-  List<AdminTeacherRecord> registrySnapshot() =>
-      List.unmodifiable(_teachers);
+  List<AdminTeacherRecord> registrySnapshot() => List.unmodifiable(_teachers);
 
   int get nextTeacherIdCounter => _nextId;
 
@@ -732,7 +778,11 @@ class TeacherRegistryService {
     for (final teacher in incoming) {
       final index = _indexOfPersistedTeacher(teacher);
       if (index >= 0) {
-        _teachers[index] = teacher;
+        final previous = _teachers[index];
+        _teachers[index] =
+            teacher.staffRoles.isEmpty && previous.staffRoles.isNotEmpty
+            ? teacher.copyWith(staffRoles: previous.staffRoles)
+            : teacher;
       } else {
         _teachers.add(teacher);
       }
