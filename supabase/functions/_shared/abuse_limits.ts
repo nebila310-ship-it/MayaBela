@@ -93,6 +93,28 @@ export async function hmacHex(secret: string, message: string): Promise<string> 
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * School login failure buckets on top of the per-username limit.
+ * - Same password failing across many accounts of one school (spraying a
+ *   shared default password): 40 per 15 minutes.
+ * - Failures from one IP: 200 per 15 minutes, high enough for a school lab
+ *   behind one NAT address.
+ * Successful logins are never counted.
+ */
+export async function loginFailureBuckets(
+  schoolId: string,
+  ip: string,
+  password: string,
+  secret: string,
+): Promise<LimitBucket[]> {
+  const sid = String(schoolId || "").trim().toUpperCase() || "NONE";
+  const pw = (await hmacHex(secret, `${sid}:${password}`)).slice(0, 32);
+  return [
+    { key: `login_spray_${sid}_${pw}`, limit: 40, windowMs: 15 * 60 * 1000 },
+    { key: `login_fail_ip_${ip}`, limit: 200, windowMs: 15 * 60 * 1000 },
+  ];
+}
+
 /** In-memory store for unit tests. */
 export function memoryLimitStore(clock: () => number = Date.now): LimitStore & {
   rows: Map<string, LimitRow>;
