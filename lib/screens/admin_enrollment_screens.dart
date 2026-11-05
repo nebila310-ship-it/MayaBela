@@ -578,6 +578,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
   Uint8List? _pickedPhotoBytes;
   bool _saving = false;
   final Set<String> _selectedRoles = {};
+  final Map<String, TextEditingController> _roleTitles = {};
 
   AppStrings get s => AppLocale.instance.strings;
   bool get _isStaff => widget.kind == AdminPersonKind.administrationStaff;
@@ -597,7 +598,51 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
     _email.dispose();
     _phone.dispose();
     _employeeId.dispose();
+    for (final controller in _roleTitles.values) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _syncRoleTitleFields(Set<String> roles) {
+    for (final key in roles) {
+      if (_roleTitles.containsKey(key)) continue;
+      final role = SchoolRoleCatalogService.instance.lookup(key);
+      _roleTitles[key] = TextEditingController(
+        text: role == null ? '' : staffRoleLabel(role, s),
+      );
+    }
+    final stale = _roleTitles.keys.where((key) => !roles.contains(key)).toList();
+    for (final key in stale) {
+      _roleTitles.remove(key)?.dispose();
+    }
+  }
+
+  Future<List<String>> _resolveSelectedRoleKeys(String schoolId) async {
+    final resolved = <String>[];
+    for (final key in _selectedRoles) {
+      final role = SchoolRoleCatalogService.instance.lookup(
+        key,
+        schoolId: schoolId,
+      );
+      final typed = _roleTitles[key]?.text.trim() ?? '';
+      final defaultLabel = role == null ? '' : staffRoleLabel(role, s).trim();
+      if (role == null ||
+          role.ownerOnly ||
+          !role.customizable ||
+          typed.isEmpty ||
+          typed.toLowerCase() == defaultLabel.toLowerCase()) {
+        resolved.add(key);
+        continue;
+      }
+      final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: key,
+        label: typed,
+        schoolId: schoolId,
+      );
+      resolved.add(created.roleKey ?? key);
+    }
+    return resolved;
   }
 
   Future<void> _pickPhoto() async {
@@ -673,6 +718,10 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       return;
     }
 
+    final roleKeys = _isStaff
+        ? await _resolveSelectedRoleKeys(schoolId)
+        : <String>[];
+
     // Heal cloud JWT before creating local rows so first-try create succeeds.
     final cloudReady = await ensureCloudSessionForStaffWrite(context);
     if (!cloudReady) {
@@ -708,7 +757,7 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       classAssignments: const [],
       campus: _selectedCampus,
       // Role initials drive the short 4-digit id (QA-0001, HR-0001, …).
-      staffRoles: _isStaff ? _selectedRoles.toList() : const [],
+      staffRoles: roleKeys,
     );
     final createdTeacherId = teacher.teacherId;
     var loginCreated = false;
@@ -770,7 +819,6 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
       // later by Section Director (assignTeachers), not here.
       AuthService.syncTeacherAuthProfile(teacher);
 
-      final roleKeys = _isStaff ? _selectedRoles.toList() : <String>[];
       final rolePermissions = roleKeys.isEmpty
           ? <String>[]
           : (SchoolRoleCatalogService.instance
@@ -1073,8 +1121,33 @@ class _AdminAddTeacherScreenState extends State<AdminAddTeacherScreen> {
                       _selectedRoles
                         ..clear()
                         ..addAll(next);
+                      _syncRoleTitleFields(_selectedRoles);
                     }),
                   ),
+                  if (_selectedRoles.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Rename a title for this person only. Other staff on the same position keep their own modules.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                    ),
+                    for (final key in _selectedRoles)
+                      if (_roleTitles[key] != null &&
+                          SchoolRoleCatalogService.instance
+                                  .lookup(key)
+                                  ?.customizable ==
+                              true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: TextField(
+                            controller: _roleTitles[key],
+                            textCapitalization: TextCapitalization.words,
+                            decoration: InputDecoration(
+                              labelText: s.roleTitleForPerson,
+                              hintText: s.renameRoleTitleExample,
+                            ),
+                          ),
+                        ),
+                  ],
                 ],
               ),
             adminPrimaryButton(

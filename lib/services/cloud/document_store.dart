@@ -184,7 +184,7 @@ class DocumentStore {
     bool mayReadAllSchoolData = false,
   }) {
     bool roleAny(List<String> keys) =>
-        keys.any((key) => _staffRoleHas(staffRoles, key));
+        keys.any((key) => StaffRoles.holds(staffRoles, key));
     bool perm(String key) => permissions.contains(key);
     const affairsLeaders = [
       StaffRoles.studentAffairs,
@@ -278,11 +278,6 @@ class DocumentStore {
     }
     if (collection == 'buses') return perm(SchoolPermissions.manageBuses);
     return true;
-  }
-
-  static bool _staffRoleHas(List<String> staffRoles, String key) {
-    final want = key.trim().toLowerCase();
-    return staffRoles.any((role) => role.trim().toLowerCase() == want);
   }
 
   static bool _sameAccount(Object? value, String? username) {

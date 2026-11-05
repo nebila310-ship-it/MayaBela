@@ -130,4 +130,75 @@ class StaffRoleService {
     );
     return null;
   }
+
+  /// Give [teacher] their own titled copy of [currentRoleKey] (or reuse the
+  /// same title if it already exists). Other people on the original position
+  /// keep that position's modules.
+  Future<String?> retitleAssignedRole({
+    required AdminTeacherRecord teacher,
+    required String currentRoleKey,
+    required String label,
+  }) async {
+    if (!AuthService.canAssignStaffRoles) return 'not_allowed';
+    final cleanLabel = label.trim();
+    if (cleanLabel.isEmpty) return 'empty_label';
+
+    await SchoolRoleCatalogService.instance.ensureLoaded(teacher.schoolId);
+    final current = SchoolRoleCatalogService.instance.lookup(
+      currentRoleKey,
+      schoolId: teacher.schoolId,
+    );
+    if (current == null) return 'unknown_role';
+    if (current.ownerOnly || !current.customizable) return 'not_customizable';
+
+    if (current.labelEn.trim().toLowerCase() == cleanLabel.toLowerCase()) {
+      return null;
+    }
+
+    final holders = SchoolRoleCatalogService.instance.holderCount(
+      current.key,
+      schoolId: teacher.schoolId,
+    );
+    final reuse = SchoolRoleCatalogService.instance.findTitledRole(
+      sourceRoleKey:
+          SchoolRoleCatalogService.instance.sourceKeyFor(
+            current.key,
+            schoolId: teacher.schoolId,
+          ) ??
+          current.key,
+      label: cleanLabel,
+      schoolId: teacher.schoolId,
+    );
+
+    String nextKey;
+    if (reuse != null) {
+      nextKey = reuse.key;
+    } else if (!current.builtIn && holders <= 1) {
+      final err = await SchoolRoleCatalogService.instance.renameRole(
+        roleKey: current.key,
+        label: cleanLabel,
+        schoolId: teacher.schoolId,
+      );
+      if (err != null && err != 'cloud_failed' && err != 'cloud_session') {
+        return err;
+      }
+      return null;
+    } else {
+      final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: current.key,
+        label: cleanLabel,
+        schoolId: teacher.schoolId,
+      );
+      if (created.roleKey == null) return created.error ?? 'not_allowed';
+      nextKey = created.roleKey!;
+    }
+
+    final nextRoles = [
+      for (final key in teacher.staffRoles)
+        StaffRoles.canonicalize(key) == StaffRoles.canonicalize(currentRoleKey)
+            ? nextKey
+            : StaffRoles.canonicalize(key),
+    ];
+    return assignRoles(teacher: teacher, roles: nextRoles);
+  }
 }

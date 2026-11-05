@@ -156,8 +156,8 @@ Future<void> showStaffRolesDialog({
   onSaved?.call();
 }
 
-/// Rename the school-facing title of a staff member's assigned role
-/// (General Manager → CEO). The role key and permissions stay the same.
+/// Rename this person's position title (Principal → Principal 1-8).
+/// Creates or reuses a titled copy so other Principals keep their own modules.
 Future<bool> showRenameStaffRoleTitleDialog({
   required BuildContext context,
   required AdminTeacherRecord teacher,
@@ -209,10 +209,10 @@ Future<bool> showRenameStaffRoleTitleDialog({
   );
   if (next == null || next.trim().isEmpty) return false;
 
-  final err = await SchoolRoleCatalogService.instance.renameRole(
-    roleKey: role.key,
+  final err = await StaffRoleService.instance.retitleAssignedRole(
+    teacher: teacher,
+    currentRoleKey: role.key,
     label: next,
-    schoolId: teacher.schoolId,
   );
   if (!context.mounted) return err == null;
   ScaffoldMessenger.of(context).showSnackBar(
