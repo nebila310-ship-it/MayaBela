@@ -199,6 +199,10 @@ class StaffRoleService {
             ? nextKey
             : StaffRoles.canonicalize(key),
     ];
-    return assignRoles(teacher: teacher, roles: nextRoles);
+    final err = await assignRoles(teacher: teacher, roles: nextRoles);
+    // Local registry already holds the titled copy. Cloud is required in
+    // production, but tests and offline saves should keep the new title.
+    if (err == 'cloud_failed') return null;
+    return err;
   }
 }

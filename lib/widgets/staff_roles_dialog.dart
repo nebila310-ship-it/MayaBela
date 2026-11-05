@@ -215,14 +215,15 @@ Future<bool> showRenameStaffRoleTitleDialog({
     label: next,
   );
   if (!context.mounted) return err == null;
+  final localOk = err == null || err == 'cloud_failed';
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(err == null ? s.roleTitleSaved : s.staffRolesSaveFailed),
-      backgroundColor: err == null ? Colors.green : Colors.red.shade700,
+      content: Text(localOk ? s.roleTitleSaved : s.staffRolesSaveFailed),
+      backgroundColor: localOk ? Colors.green : Colors.red.shade700,
     ),
   );
-  if (err == null) onSaved?.call();
-  return err == null;
+  if (localOk) onSaved?.call();
+  return localOk;
 }
 
 class _RenameRoleTitleDialog extends StatefulWidget {

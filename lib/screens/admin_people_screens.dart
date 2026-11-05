@@ -11,7 +11,7 @@ import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/parent_invite_service.dart';
 import 'package:mayabela/services/phone_launch_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
-import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
+import 'package:mayabela/services/rbac/staff_role_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
@@ -766,10 +766,10 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
         nextRole.isNotEmpty &&
         nextRole != roleTitle &&
         teacher.staffRoles.isNotEmpty) {
-      await SchoolRoleCatalogService.instance.renameRole(
-        roleKey: teacher.staffRoles.first,
+      await StaffRoleService.instance.retitleAssignedRole(
+        teacher: updated,
+        currentRoleKey: teacher.staffRoles.first,
         label: nextRole,
-        schoolId: teacher.schoolId,
       );
     }
     if (!mounted) return;
