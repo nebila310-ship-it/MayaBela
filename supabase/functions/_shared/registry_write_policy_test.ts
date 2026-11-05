@@ -149,6 +149,21 @@ Deno.test("discipline: teachers file cases, only the desk sets the outcome", () 
   expect(notEscalated.status === "hearingScheduled", "other desks cannot");
 });
 
+Deno.test("titled principal copies still hold the principal desk", () => {
+  const titled = callerFromMeta({
+    role: "teacher",
+    username: "pri.kg",
+    staffRoles: ["custom_principal_kg"],
+    permissions: [],
+  });
+  const result = guardRegistryRecord(
+    "privacy_consents",
+    { id: "pc-1", authorUsername: "other" },
+    titled,
+  );
+  expect(result != null, "Principal KG may write privacy consents");
+});
+
 Deno.test("staff role aliases are canonical", () => {
   const legacyVp = callerFromMeta({
     role: "teacher",

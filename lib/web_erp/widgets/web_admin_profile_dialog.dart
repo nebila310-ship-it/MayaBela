@@ -14,6 +14,7 @@ import 'package:mayabela/widgets/invite_parent_actions.dart';
 import 'package:mayabela/services/persistence/transfer_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
+import 'package:mayabela/services/rbac/staff_role_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_photo_service.dart';
 import 'package:mayabela/services/teacher_photo_service.dart';
@@ -551,10 +552,10 @@ class _WebTeacherProfileDialogState extends State<_WebTeacherProfileDialog> {
     if (nextRole.isNotEmpty &&
         nextRole != roleTitle &&
         teacher.staffRoles.isNotEmpty) {
-      await SchoolRoleCatalogService.instance.renameRole(
-        roleKey: teacher.staffRoles.first,
+      await StaffRoleService.instance.retitleAssignedRole(
+        teacher: updated,
+        currentRoleKey: teacher.staffRoles.first,
         label: nextRole,
-        schoolId: teacher.schoolId,
       );
     }
 

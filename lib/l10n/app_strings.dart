@@ -3504,13 +3504,18 @@ class AppStrings implements AppStringsLike {
   String get staffJobTitle => t('Role title', 'የሚና ስም');
   String get renameRoleTitle => t('Rename role title', 'የሚና ስም ቀይር');
   String get renameRoleTitleHint => t(
-        'What this school calls the role',
-        'ትምህርት ቤቱ ይህን ሚና የሚጠራበት ስም',
+        'Title for this person only, e.g. Principal 1-8 or Principal KG',
+        'ለዚህ ሰው ብቻ የሚሆን ስም፣ ለምሳሌ Principal 1-8 ወይም Principal KG',
       );
-  String get renameRoleTitleExample => t('e.g. CEO', 'ለምሳሌ CEO');
+  String get renameRoleTitleExample =>
+      t('e.g. Principal 1-8', 'ለምሳሌ Principal 1-8');
   String get assignRoleFirst => t(
         'Assign a staff role first, then you can rename its title.',
         'መጀመሪያ ሚና ይመድቡ፣ ከዚያ ስሙን መቀየር ይችላሉ።',
+      );
+  String get roleTitleForPerson => t(
+        'Position title for this person',
+        'ለዚህ ሰው የሚና ስም',
       );
   String get pickRoleToRename =>
       t('Which role title do you want to rename?', 'የትኛውን የሚና ስም መቀየር ይፈልጋሉ?');

@@ -155,6 +155,7 @@ class StaffRole {
     this.ownerOnly = false,
     this.builtIn = true,
     this.customizable = true,
+    this.basedOn,
   });
 
   final String key;
@@ -172,11 +173,16 @@ class StaffRole {
   /// Owner may edit module checkboxes for this role at the school.
   final bool customizable;
 
+  /// Built-in role this titled position was copied from (e.g. principal).
+  /// Independent module rights live on [key]; [basedOn] is only the template.
+  final String? basedOn;
+
   StaffRole copyWith({
     String? labelEn,
     String? labelAm,
     String? labelOm,
     Set<String>? permissions,
+    String? basedOn,
   }) {
     return StaffRole(
       key: key,
@@ -187,6 +193,7 @@ class StaffRole {
       ownerOnly: ownerOnly,
       builtIn: builtIn,
       customizable: customizable,
+      basedOn: basedOn ?? this.basedOn,
     );
   }
 }
@@ -555,12 +562,30 @@ abstract final class StaffRoles {
     return aliases[k] ?? k;
   }
 
-  /// True when [roles] includes [key] after alias canonicalization.
+  /// Built-in template a titled instance was copied from, or the key itself.
+  /// `custom_principal_1_8` → `principal`. Generic `custom_abc` → null.
+  static String? sourceKeyOf(String roleKey) {
+    final k = canonicalize(roleKey);
+    if (k.isEmpty) return null;
+    final builtIn = byKey[k];
+    if (builtIn != null) return builtIn.key;
+    if (!k.startsWith('custom_')) return null;
+    final rest = k.substring('custom_'.length);
+    final sources = templates.map((role) => role.key).toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final source in sources) {
+      if (rest == source || rest.startsWith('${source}_')) return source;
+    }
+    return null;
+  }
+
+  /// True when [roles] includes [key], a legacy alias, or a titled copy of it.
   static bool holds(Iterable<String> roles, String key) {
     final want = canonicalize(key);
     if (want.isEmpty) return false;
     for (final role in roles) {
       if (canonicalize(role) == want) return true;
+      if (sourceKeyOf(role) == want) return true;
     }
     return false;
   }
@@ -589,7 +614,7 @@ abstract final class StaffRoles {
 
   static String idPrefixFor(String roleKey) {
     final k = canonicalize(roleKey);
-    final mapped = _idPrefixes[k];
+    final mapped = _idPrefixes[k] ?? _idPrefixes[sourceKeyOf(k) ?? ''];
     if (mapped != null) return mapped;
     final words = k.split('_').where((w) => w.isNotEmpty).toList();
     if (words.length >= 2) {

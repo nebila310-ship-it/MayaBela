@@ -56,6 +56,12 @@ class StaffRolePickerTable extends StatelessWidget {
 
   String _typeLabel(StaffRole role) {
     if (role.ownerOnly) return 'Owner only';
+    if (role.basedOn != null && role.basedOn!.isNotEmpty) {
+      final source = StaffRoles.lookup(role.basedOn!);
+      return source == null
+          ? 'Titled position'
+          : 'From ${source.labelEn}';
+    }
     if (role.builtIn) return 'Built-in';
     return 'Custom';
   }

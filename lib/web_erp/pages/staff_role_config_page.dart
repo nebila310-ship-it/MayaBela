@@ -199,13 +199,18 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Role title'),
+        title: Text(role.builtIn ? 'Add titled position' : 'Role title'),
         content: TextField(
           controller: label,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'What this school calls the role',
-            hintText: 'e.g. CEO',
+          decoration: InputDecoration(
+            labelText: role.builtIn
+                ? 'New title for this position only'
+                : 'Title for this titled position',
+            hintText: 'e.g. Principal 1-8',
+            helperText: role.builtIn
+                ? 'Leaves the original ${staffRoleLabel(role, s)} for everyone else. Modules stay separate.'
+                : 'People on this titled position keep these modules.',
           ),
         ),
         actions: [
@@ -221,10 +226,25 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
       ),
     );
     if (ok != true) return;
-    final err = await SchoolRoleCatalogService.instance.renameRole(
-      roleKey: role.key,
-      label: label.text,
-    );
+    final nextLabel = label.text.trim();
+    if (nextLabel.isEmpty) return;
+
+    String? err;
+    String? nextKey = role.key;
+    if (role.builtIn) {
+      final created =
+          await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: role.key,
+        label: nextLabel,
+      );
+      err = created.error;
+      nextKey = created.roleKey ?? role.key;
+    } else {
+      err = await SchoolRoleCatalogService.instance.renameRole(
+        roleKey: role.key,
+        label: nextLabel,
+      );
+    }
     if (!mounted) return;
     if (err != null && err != 'cloud_failed' && err != 'cloud_session') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -234,10 +254,8 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
     }
     await SchoolRoleCatalogService.instance.ensureLoaded();
     setState(() {
-      if (_selectedKey == role.key) {
-        final next = SchoolRoleCatalogService.instance.lookup(role.key);
-        if (next != null) _loadDraft(next);
-      }
+      final next = SchoolRoleCatalogService.instance.lookup(nextKey!);
+      if (next != null) _loadDraft(next);
     });
   }
 
@@ -316,7 +334,7 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Rename a role if this school uses different titles (CEO instead of General Manager). Staff see the new name when they sign in. Then set None, Read, or Edit on each module. Messages, dashboard, profile, and settings stay on for every role.',
+              'Add a titled position when more than one person holds the same role (Principal 1-8, Principal KG). Each title has its own None / Read / Edit modules. Messages, dashboard, profile, and settings stay on for every role.',
               style: TextStyle(fontSize: 12, height: 1.35),
             ),
           ),
@@ -364,9 +382,11 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                     subtitle: Text(
                       role.ownerOnly
                           ? 'Owner grant only'
-                          : role.builtIn
-                              ? 'Built-in'
-                              : 'Custom',
+                          : role.basedOn != null && role.basedOn!.isNotEmpty
+                              ? 'Titled ${StaffRoles.lookup(role.basedOn!)?.labelEn ?? role.basedOn} — modules stay separate'
+                              : role.builtIn
+                                  ? 'Built-in template'
+                                  : 'Custom',
                       style: const TextStyle(fontSize: 11),
                     ),
                     trailing: _isSchoolOwner
