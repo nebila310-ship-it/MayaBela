@@ -14,7 +14,7 @@ from pathlib import Path
 import websocket
 
 ROOT = Path(__file__).resolve().parents[1]
-SCREENS = ROOT / "web/fenote-raey-academy/screens"
+SCREENS = ROOT / "docs/fenote-raey/academy-site/screens"
 CDP = "http://127.0.0.1:9333"
 BASE = "http://127.0.0.1:8101"
 
