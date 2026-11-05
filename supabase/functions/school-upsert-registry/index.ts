@@ -1,6 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
 import { adminClient } from "../_shared/school_auth.ts";
+import {
+  callerFromMeta,
+  guardRegistryRecord,
+  isDisciplineDesk,
+  mayWriteAdmissions,
+} from "../_shared/registry_write_policy.ts";
 
 const ALLOWED = new Set([
   "student_registry",
@@ -150,6 +156,15 @@ Deno.serve(async (req) => {
     const canStudents = isAdmin || callerPerms.includes("manage_students");
     const canStaff = isAdmin || callerPerms.includes("manage_staff_accounts");
     const canDrivers = isAdmin || callerPerms.includes("manage_drivers");
+    const writer = callerFromMeta(meta);
+
+    if (collection === "admission_applications" && !mayWriteAdmissions(writer)) {
+      return errorResponse(
+        "Not allowed to write admission applications.",
+        403,
+        "denied",
+      );
+    }
 
     if (
       (collection === "student_registry" || collection === "student_medical") &&
@@ -268,6 +283,40 @@ Deno.serve(async (req) => {
       return errorResponse("Not allowed to write privacy records.", 403, "denied");
     }
 
+    const sb = adminClient();
+
+    const priorDisciplineCases = new Map<string, Record<string, unknown>>();
+    if (collection === "discipline_cases" && !isDisciplineDesk(writer)) {
+      const ids = rawList
+        .map((raw) =>
+          raw && typeof raw === "object"
+            ? String((raw as Record<string, unknown>).id || "").trim()
+            : ""
+        )
+        .filter((id) => id.length > 0);
+      if (ids.length > 0) {
+        const { data: prior, error: priorErr } = await sb
+          .from("app_documents")
+          .select("doc_id, data")
+          .eq("collection", collection)
+          .eq("school_id", schoolId)
+          .in("doc_id", ids);
+        if (priorErr) {
+          return errorResponse(
+            `Registry save failed: ${priorErr.message}`,
+            500,
+            "invalid",
+          );
+        }
+        for (const row of prior ?? []) {
+          priorDisciplineCases.set(
+            String(row.doc_id),
+            (row.data ?? {}) as Record<string, unknown>,
+          );
+        }
+      }
+    }
+
     const rows: Array<{
       collection: string;
       doc_id: string;
@@ -275,6 +324,7 @@ Deno.serve(async (req) => {
       data: Record<string, unknown>;
       updated_at: string;
     }> = [];
+    let skipped = 0;
     for (const raw of rawList) {
       if (!raw || typeof raw !== "object") continue;
       const normalized = normalizeRecord(
@@ -301,6 +351,7 @@ Deno.serve(async (req) => {
           : [];
         const sid = String(normalized.record.studentId || "").trim().toUpperCase();
         if (!sid || !linked.includes(sid)) {
+          skipped++;
           continue;
         }
       }
@@ -325,6 +376,7 @@ Deno.serve(async (req) => {
           [...linked, selfId].filter((id) => id.length > 0),
         );
         if (!sid || !allowed.has(sid)) {
+          skipped++;
           continue;
         }
       }
@@ -341,32 +393,39 @@ Deno.serve(async (req) => {
           .trim()
           .toLowerCase();
         if (!author || !uname || author !== uname) {
+          skipped++;
           continue;
         }
       }
-      // Students may only write their own exam attempts.
-      if (collection === "exam_attempts" && callerRole === "student") {
-        const selfId = String(
-          meta.linkedStudentId || meta.linked_student_id || "",
-        ).trim().toUpperCase();
-        const sid = String(normalized.record.studentId || "").trim().toUpperCase();
-        if (selfId && sid && sid !== selfId) {
-          continue;
-        }
+      const guarded = guardRegistryRecord(
+        collection,
+        normalized.record,
+        writer,
+        priorDisciplineCases.get(normalized.docId),
+      );
+      if (!guarded) {
+        skipped++;
+        continue;
       }
       rows.push({
         collection,
         doc_id: normalized.docId,
         school_id: schoolId,
-        data: normalized.record,
+        data: guarded,
         updated_at: new Date().toISOString(),
       });
     }
     if (rows.length === 0) {
+      if (skipped > 0) {
+        return errorResponse(
+          "Not allowed to write these records.",
+          403,
+          "denied",
+        );
+      }
       return errorResponse("No valid records to save.", 400, "invalid");
     }
 
-    const sb = adminClient();
     // Chunk to keep payload reasonable.
     const chunkSize = 80;
     for (let i = 0; i < rows.length; i += chunkSize) {
@@ -387,6 +446,7 @@ Deno.serve(async (req) => {
       ok: true,
       collection,
       count: rows.length,
+      skipped,
       docId: rows.length === 1 ? rows[0].doc_id : undefined,
     });
   } catch (e) {
