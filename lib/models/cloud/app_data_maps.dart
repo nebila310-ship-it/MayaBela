@@ -300,8 +300,10 @@ abstract final class AppDataMaps {
 
   // —— Schools ——
 
+  /// Cloud copy of a school. The first admin password stays on the platform
+  /// console device; school staff can read `school_registry`.
   static Map<String, dynamic> schoolToMap(SchoolRecord school) =>
-      school.toJson();
+      school.toJson()..remove('adminInitialPassword');
 
   static SchoolRecord schoolFromMap(Map<String, dynamic> map) =>
       SchoolRecord.fromJson(map);

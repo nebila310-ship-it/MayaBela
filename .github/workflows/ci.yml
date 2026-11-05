@@ -87,10 +87,40 @@ jobs:
           deno-version: v2.x
 
       - name: Type-check security Edge Functions
-        run: deno check supabase/functions/platform-owner-pin/index.ts supabase/functions/school-upsert-account/index.ts
+        run: deno check supabase/functions/platform-owner-pin/index.ts supabase/functions/school-upsert-account/index.ts supabase/functions/school-upsert-registry/index.ts
 
-      - name: Test platform PIN hashing
-        run: deno test supabase/functions/_shared/platform_pin_test.ts
+      - name: Test platform PIN hashing and registry write rules
+        run: deno test supabase/functions/_shared/platform_pin_test.ts supabase/functions/_shared/registry_write_policy_test.ts
+
+  # Replays every migration into a throwaway Postgres container and checks
+  # what each school role may read and write. No Supabase project is touched.
+  database-policies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Role-by-role policy tests
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash supabase/tests/local_pg/run.sh
 
   # Live PostgREST negatives against the disposable staging project only.
   # Skips when staging secrets or the destructive-test opt-in are absent.
