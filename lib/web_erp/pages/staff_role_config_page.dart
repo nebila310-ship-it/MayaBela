@@ -124,14 +124,14 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
           err == null
               ? 'Role modules saved. Staff see changes after next login.'
               : (err == 'cloud_failed' || err == 'cloud_session')
-                  ? 'Saved on this device, but cloud sync failed. Stay signed in as Admin (Ready), then save again.'
-                  : 'Could not save role ($err).',
+              ? 'Saved on this device, but cloud sync failed. Stay signed in as Admin (Ready), then save again.'
+              : 'Could not save role ($err).',
         ),
         backgroundColor: err == null
             ? Colors.green
             : (err == 'cloud_failed' || err == 'cloud_session')
-                ? Colors.orange.shade800
-                : Colors.red.shade700,
+            ? Colors.orange.shade800
+            : Colors.red.shade700,
       ),
     );
     if (err == null) setState(() {});
@@ -145,10 +145,8 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
     } else {
       next.remove(roleKey);
     }
-    final err =
-        await SchoolRoleCatalogService.instance.setRolePermissionDelegates(
-      next,
-    );
+    final err = await SchoolRoleCatalogService.instance
+        .setRolePermissionDelegates(next);
     if (!mounted) return;
     if (err != null && err != 'cloud_failed' && err != 'cloud_session') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -232,8 +230,7 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
     String? err;
     String? nextKey = role.key;
     if (role.builtIn) {
-      final created =
-          await SchoolRoleCatalogService.instance.ensureTitledRole(
+      final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
         sourceRoleKey: role.key,
         label: nextLabel,
       );
@@ -248,10 +245,23 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
     if (!mounted) return;
     if (err != null && err != 'cloud_failed' && err != 'cloud_session') {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not rename role ($err).')),
+        SnackBar(
+          content: Text('Could not rename role ($err).'),
+          backgroundColor: Colors.red.shade700,
+        ),
       );
       return;
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          err == null
+              ? 'Role title saved.'
+              : 'Title saved on this device, but cloud sync failed. Stay signed in as Admin (Ready), then rename again.',
+        ),
+        backgroundColor: err == null ? Colors.green : Colors.orange.shade800,
+      ),
+    );
     await SchoolRoleCatalogService.instance.ensureLoaded();
     setState(() {
       final next = SchoolRoleCatalogService.instance.lookup(nextKey!);
@@ -267,7 +277,10 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
         title: const Text('Delete custom role?'),
         content: Text('Remove "${role.labelEn}" from this school?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.cancel),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(s.delete),
@@ -383,14 +396,15 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                       role.ownerOnly
                           ? 'Owner grant only'
                           : role.basedOn != null && role.basedOn!.isNotEmpty
-                              ? 'Titled ${StaffRoles.lookup(role.basedOn!)?.labelEn ?? role.basedOn} — modules stay separate'
-                              : role.builtIn
-                                  ? 'Built-in template'
-                                  : 'Custom',
+                          ? 'Titled ${StaffRoles.lookup(role.basedOn!)?.labelEn ?? role.basedOn} — modules stay separate'
+                          : role.builtIn
+                          ? 'Built-in template'
+                          : 'Custom',
                       style: const TextStyle(fontSize: 11),
                     ),
-                    trailing: _isSchoolOwner
-                        ? Row(
+                    trailing: role.ownerOnly
+                        ? null
+                        : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
@@ -398,15 +412,17 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                                 icon: const Icon(Icons.edit_outlined, size: 18),
                                 onPressed: () => _renameRole(role),
                               ),
-                              if (!role.builtIn)
+                              if (_isSchoolOwner && !role.builtIn)
                                 IconButton(
                                   tooltip: 'Delete',
-                                  icon: const Icon(Icons.delete_outline, size: 18),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                  ),
                                   onPressed: () => _deleteCustom(role),
                                 ),
                             ],
-                          )
-                        : null,
+                          ),
                     onTap: () => _selectRole(role),
                   ),
               ],
@@ -449,7 +465,12 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: EdgeInsets.fromLTRB(narrow ? 12 : 20, 16, narrow ? 12 : 20, 8),
+                  padding: EdgeInsets.fromLTRB(
+                    narrow ? 12 : 20,
+                    16,
+                    narrow ? 12 : 20,
+                    8,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -462,10 +483,7 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                         ),
                       ),
                       if (!selected.ownerOnly)
-                        FilledButton(
-                          onPressed: _save,
-                          child: Text(s.save),
-                        ),
+                        FilledButton(onPressed: _save, child: Text(s.save)),
                     ],
                   ),
                 ),
@@ -478,14 +496,24 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                   )
                 else ...[
                   Padding(
-                    padding: EdgeInsets.fromLTRB(narrow ? 12 : 20, 0, narrow ? 12 : 20, 8),
+                    padding: EdgeInsets.fromLTRB(
+                      narrow ? 12 : 20,
+                      0,
+                      narrow ? 12 : 20,
+                      8,
+                    ),
                     child: const Text(
                       'None hides the desk. Read lets the role open it without changing records. Edit allows changes. A section shows Partial when its sub-modules mix those rights.',
                       style: TextStyle(fontSize: 12, height: 1.35),
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(narrow ? 12 : 20, 0, narrow ? 12 : 20, 8),
+                    padding: EdgeInsets.fromLTRB(
+                      narrow ? 12 : 20,
+                      0,
+                      narrow ? 12 : 20,
+                      8,
+                    ),
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -508,28 +536,31 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                         ),
                         TextButton(
                           onPressed: () => setState(() {
-                            _draftRights = RoleModuleCatalog.applyAllConfigurable(
-                              _draftRights,
-                              ModuleRight.none,
-                            );
+                            _draftRights =
+                                RoleModuleCatalog.applyAllConfigurable(
+                                  _draftRights,
+                                  ModuleRight.none,
+                                );
                           }),
                           child: const Text('Clear all'),
                         ),
                         TextButton(
                           onPressed: () => setState(() {
-                            _draftRights = RoleModuleCatalog.applyAllConfigurable(
-                              _draftRights,
-                              ModuleRight.read,
-                            );
+                            _draftRights =
+                                RoleModuleCatalog.applyAllConfigurable(
+                                  _draftRights,
+                                  ModuleRight.read,
+                                );
                           }),
                           child: const Text('All read'),
                         ),
                         TextButton(
                           onPressed: () => setState(() {
-                            _draftRights = RoleModuleCatalog.applyAllConfigurable(
-                              _draftRights,
-                              ModuleRight.edit,
-                            );
+                            _draftRights =
+                                RoleModuleCatalog.applyAllConfigurable(
+                                  _draftRights,
+                                  ModuleRight.edit,
+                                );
                           }),
                           child: const Text('All edit'),
                         ),
@@ -537,7 +568,12 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.fromLTRB(narrow ? 12 : 20, 0, narrow ? 12 : 20, 8),
+                    padding: EdgeInsets.fromLTRB(
+                      narrow ? 12 : 20,
+                      0,
+                      narrow ? 12 : 20,
+                      8,
+                    ),
                     child: TextField(
                       controller: _filter,
                       decoration: const InputDecoration(
@@ -612,7 +648,11 @@ class _CountChip extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       label: Text(
         '$count $label',
-        style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
       ),
       side: BorderSide(color: color.withValues(alpha: 0.4)),
       backgroundColor: color.withValues(alpha: 0.08),
@@ -705,12 +745,13 @@ class _ModuleRightRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(spec.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  spec.label,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 if (spec.ownerOnly || spec.alwaysOn)
                   Text(
-                    spec.ownerOnly
-                        ? 'Owner only'
-                        : 'Included for every role',
+                    spec.ownerOnly ? 'Owner only' : 'Included for every role',
                     style: const TextStyle(fontSize: 11),
                   ),
               ],
@@ -763,7 +804,10 @@ class _RightSelector extends StatelessWidget {
   Widget _chip(String label, ModuleRight right, Color color) {
     final selected = value == right;
     return FilterChip(
-      label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+      ),
       selected: selected,
       showCheckmark: false,
       visualDensity: VisualDensity.compact,

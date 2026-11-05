@@ -7,6 +7,7 @@ import 'package:mayabela/services/rbac/module_right.dart';
 import 'package:mayabela/services/rbac/role_module_catalog.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
+import 'package:mayabela/services/rbac/staff_role_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 
 void main() {
@@ -37,10 +38,15 @@ void main() {
   });
 
   test('sourceKeyOf reads titled copies and StaffRoles.holds them', () {
-    expect(StaffRoles.sourceKeyOf('custom_principal_1_8'), StaffRoles.principal);
+    expect(
+      StaffRoles.sourceKeyOf('custom_principal_1_8'),
+      StaffRoles.principal,
+    );
     expect(StaffRoles.sourceKeyOf('custom_principal_kg'), StaffRoles.principal);
-    expect(StaffRoles.holds(const ['custom_principal_kg'], StaffRoles.principal),
-        isTrue);
+    expect(
+      StaffRoles.holds(const ['custom_principal_kg'], StaffRoles.principal),
+      isTrue,
+    );
     expect(
       StaffRoles.holds(const ['custom_librarian_kg'], StaffRoles.principal),
       isFalse,
@@ -125,71 +131,75 @@ void main() {
     );
   });
 
-  test('signed-in Principal KG does not receive Principal 1-8 module edits',
-      () async {
-    final grades = await SchoolRoleCatalogService.instance.ensureTitledRole(
-      sourceRoleKey: StaffRoles.principal,
-      label: 'Principal 1-8',
-      schoolId: schoolId,
-    );
-    final kg = await SchoolRoleCatalogService.instance.ensureTitledRole(
-      sourceRoleKey: StaffRoles.principal,
-      label: 'Principal KG',
-      schoolId: schoolId,
-    );
-    final principal = StaffRoles.lookup(StaffRoles.principal)!;
-    final gradesRights = RoleModuleCatalog.defaultsForRole(principal)
-      ..['finance'] = ModuleRight.edit;
-    final kgRights = RoleModuleCatalog.defaultsForRole(principal)
-      ..['finance'] = ModuleRight.none;
-    await SchoolRoleCatalogService.instance.saveRoleModules(
-      roleKey: grades.roleKey!,
-      permissions: RoleModuleCatalog.permissionsFor(gradesRights),
-      moduleRights: gradesRights,
-      schoolId: schoolId,
-    );
-    await SchoolRoleCatalogService.instance.saveRoleModules(
-      roleKey: kg.roleKey!,
-      permissions: RoleModuleCatalog.permissionsFor(kgRights),
-      moduleRights: kgRights,
-      schoolId: schoolId,
-    );
+  test(
+    'signed-in Principal KG does not receive Principal 1-8 module edits',
+    () async {
+      final grades = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal 1-8',
+        schoolId: schoolId,
+      );
+      final kg = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal KG',
+        schoolId: schoolId,
+      );
+      final principal = StaffRoles.lookup(StaffRoles.principal)!;
+      final gradesRights = RoleModuleCatalog.defaultsForRole(principal)
+        ..['finance'] = ModuleRight.edit;
+      final kgRights = RoleModuleCatalog.defaultsForRole(principal)
+        ..['finance'] = ModuleRight.none;
+      await SchoolRoleCatalogService.instance.saveRoleModules(
+        roleKey: grades.roleKey!,
+        permissions: RoleModuleCatalog.permissionsFor(gradesRights),
+        moduleRights: gradesRights,
+        schoolId: schoolId,
+      );
+      await SchoolRoleCatalogService.instance.saveRoleModules(
+        roleKey: kg.roleKey!,
+        permissions: RoleModuleCatalog.permissionsFor(kgRights),
+        moduleRights: kgRights,
+        schoolId: schoolId,
+      );
 
-    AuthService.currentUser = RegisteredUser(
-      username: 'pri.kg',
-      password: 'x',
-      roleKey: AuthService.roleTeacher,
-      schoolId: schoolId,
-      staffRoles: [kg.roleKey!],
-    );
-    expect(ModuleAccess.canView('finance'), isFalse);
-    expect(ModuleAccess.canManage('finance'), isFalse);
+      AuthService.currentUser = RegisteredUser(
+        username: 'pri.kg',
+        password: 'x',
+        roleKey: AuthService.roleTeacher,
+        schoolId: schoolId,
+        staffRoles: [kg.roleKey!],
+      );
+      expect(ModuleAccess.canView('finance'), isFalse);
+      expect(ModuleAccess.canManage('finance'), isFalse);
 
-    AuthService.currentUser = RegisteredUser(
-      username: 'pri.g18',
-      password: 'x',
-      roleKey: AuthService.roleTeacher,
-      schoolId: schoolId,
-      staffRoles: [grades.roleKey!],
-    );
-    expect(ModuleAccess.canView('finance'), isTrue);
-    expect(ModuleAccess.canManage('finance'), isTrue);
-  });
+      AuthService.currentUser = RegisteredUser(
+        username: 'pri.g18',
+        password: 'x',
+        roleKey: AuthService.roleTeacher,
+        schoolId: schoolId,
+        staffRoles: [grades.roleKey!],
+      );
+      expect(ModuleAccess.canView('finance'), isTrue);
+      expect(ModuleAccess.canManage('finance'), isTrue);
+    },
+  );
 
-  test('same title reuses the instance so two KG principals share that map',
-      () async {
-    final first = await SchoolRoleCatalogService.instance.ensureTitledRole(
-      sourceRoleKey: StaffRoles.principal,
-      label: 'Principal KG',
-      schoolId: schoolId,
-    );
-    final second = await SchoolRoleCatalogService.instance.ensureTitledRole(
-      sourceRoleKey: StaffRoles.principal,
-      label: 'Principal KG',
-      schoolId: schoolId,
-    );
-    expect(second.roleKey, first.roleKey);
-  });
+  test(
+    'same title reuses the instance so two KG principals share that map',
+    () async {
+      final first = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal KG',
+        schoolId: schoolId,
+      );
+      final second = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal KG',
+        schoolId: schoolId,
+      );
+      expect(second.roleKey, first.roleKey);
+    },
+  );
 
   test('cannot title Full Access into a separate permission set', () async {
     final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
@@ -223,6 +233,139 @@ void main() {
         schoolId: schoolId,
       ),
       'in_use',
+    );
+  });
+
+  test('delegated Full Access can rename a titled role', () async {
+    final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+      sourceRoleKey: StaffRoles.principal,
+      label: 'Principal KG',
+      schoolId: schoolId,
+    );
+    expect(created.roleKey, isNotNull);
+
+    SchoolRoleCatalogService.instance.seedRolePermissionDelegatesForTests(
+      schoolId: schoolId,
+      roleKeys: const [StaffRoles.fullAccess],
+    );
+    AuthService.currentUser = RegisteredUser(
+      username: 'owner.fa',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: schoolId,
+      staffRoles: const [StaffRoles.fullAccess],
+    );
+
+    expect(
+      await SchoolRoleCatalogService.instance.renameRole(
+        roleKey: created.roleKey!,
+        label: 'Principal KG A',
+        schoolId: schoolId,
+      ),
+      isNull,
+    );
+    expect(
+      SchoolRoleCatalogService.instance
+          .lookup(created.roleKey!, schoolId: schoolId)
+          ?.labelEn,
+      'Principal KG A',
+    );
+  });
+
+  test(
+    'retitling a unique titled role restamps the staff onto the new title',
+    () async {
+      final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal KG',
+        schoolId: schoolId,
+      );
+      final teacher = TeacherRegistryService.instance.addTeacher(
+        schoolId: schoolId,
+        fullName: 'Amina Principal',
+        email: 'amina@school.test',
+        phone: '0911222444',
+        assignedClass: '',
+        roles: const [],
+        loginUsername: 'amina.kg',
+        staffRoles: [created.roleKey!],
+      );
+
+      expect(
+        await StaffRoleService.instance.retitleAssignedRole(
+          teacher: teacher,
+          currentRoleKey: created.roleKey!,
+          label: 'Principal KG A',
+        ),
+        isNull,
+      );
+
+      final titled = SchoolRoleCatalogService.instance.findTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal KG A',
+        schoolId: schoolId,
+      );
+      expect(titled, isNotNull);
+      expect(titled!.labelEn, 'Principal KG A');
+      expect(
+        TeacherRegistryService.instance
+            .lookupById(teacher.teacherId)
+            ?.staffRoles,
+        contains(titled.key),
+      );
+      expect(
+        SchoolRoleCatalogService.instance.findTitledRole(
+          sourceRoleKey: StaffRoles.principal,
+          label: 'Principal KG',
+          schoolId: schoolId,
+        ),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'saving titled-role tiles does not change the built-in Principal map',
+    () async {
+      final kg = await SchoolRoleCatalogService.instance.ensureTitledRole(
+        sourceRoleKey: StaffRoles.principal,
+        label: 'Principal KG',
+        schoolId: schoolId,
+      );
+      final rights = RoleModuleCatalog.defaultsForRole(
+        StaffRoles.lookup(StaffRoles.principal)!,
+      )..['finance'] = ModuleRight.none;
+      expect(
+        await SchoolRoleCatalogService.instance.saveRoleModules(
+          roleKey: kg.roleKey!,
+          permissions: RoleModuleCatalog.permissionsFor(rights),
+          moduleRights: rights,
+          schoolId: schoolId,
+        ),
+        isNull,
+      );
+      expect(
+        SchoolRoleCatalogService.instance.moduleRightFor(
+          kg.roleKey!,
+          'finance',
+          schoolId: schoolId,
+        ),
+        ModuleRight.none,
+      );
+      expect(
+        SchoolRoleCatalogService.instance.hasModuleRights(
+          StaffRoles.principal,
+          schoolId: schoolId,
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test('titled Principal copies use the Principal dashboard matrix', () {
+    expect(
+      ModuleAccess.matrixRightForRole('custom_principal_kg', 'digital_ops'),
+      ModuleAccess.matrixRightForRole(StaffRoles.principal, 'digital_ops'),
     );
   });
 }

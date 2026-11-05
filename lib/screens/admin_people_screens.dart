@@ -45,8 +45,7 @@ void openAdminChat(
   required String role,
   String? staffParticipantId,
 }) {
-  final adminId =
-      StaffMemberOption.viewerAdminStaffId(AuthService.roleAdmin);
+  final adminId = StaffMemberOption.viewerAdminStaffId(AuthService.roleAdmin);
   final id = SchoolDataService.instance.openOrCreateConversation(
     contactName: name,
     role: role,
@@ -67,9 +66,9 @@ Future<void> showAdminCallPicker(
 }) async {
   final s = AppLocale.instance.strings;
   if (options.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.noPhoneOnFile)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.noPhoneOnFile)));
     return;
   }
   if (options.length == 1) {
@@ -172,12 +171,18 @@ Future<AdminTeacherRecord?> showReplacementTeacherPicker(
                     const SizedBox(height: 4),
                     Text(
                       s.replaceHomeroomPrompt(className),
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       s.selectReplacementFromStaff,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -188,7 +193,8 @@ Future<AdminTeacherRecord?> showReplacementTeacherPicker(
                   shrinkWrap: true,
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
                   itemCount: teachers.length,
-                  separatorBuilder: (_, _) => const Divider(color: Colors.white12),
+                  separatorBuilder: (_, _) =>
+                      const Divider(color: Colors.white12),
                   itemBuilder: (context, index) {
                     final t = teachers[index];
                     return ListTile(
@@ -208,9 +214,15 @@ Future<AdminTeacherRecord?> showReplacementTeacherPicker(
                       ),
                       subtitle: Text(
                         '${t.teacherId} · ${t.subject} · ${t.assignedClass}',
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
                       ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white54,
+                      ),
                       onTap: () => Navigator.pop(ctx, t),
                     );
                   },
@@ -259,7 +271,9 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
     setState(() {});
   }
 
-  List<({String label, String phone})> _phoneOptions(AdminStudentRecord student) {
+  List<({String label, String phone})> _phoneOptions(
+    AdminStudentRecord student,
+  ) {
     final options = <({String label, String phone})>[];
     void add(String label, String? phone) {
       if (phone == null || phone.trim().isEmpty) return;
@@ -278,9 +292,9 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
     final saved = await showAdminStudentEditDialog(context, student: student);
     if (saved != true || !mounted) return;
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.studentUpdated)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.studentUpdated)));
   }
 
   void _showStudentQr(AdminStudentRecord student) {
@@ -302,9 +316,9 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
     StudentRegistryService.instance.deactivateStudent(student.studentId);
     SchoolDataService.instance.removeStudentFromSchool(student.studentId);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.studentRemoved)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.studentRemoved)));
       Navigator.pop(context);
     }
   }
@@ -328,7 +342,9 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
       listenable: AppLocale.instance,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: StaffPalette.students.primary.withValues(alpha: 0.04),
+          backgroundColor: StaffPalette.students.primary.withValues(
+            alpha: 0.04,
+          ),
           appBar: AppBar(
             backgroundColor: StaffPalette.students.primary,
             foregroundColor: Colors.white,
@@ -417,13 +433,15 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
               StaffInfoTile(
                 icon: Icons.family_restroom,
                 label: s.fatherName,
-                value: '${student.fatherName ?? '—'} (${student.fatherPhone ?? '—'})',
+                value:
+                    '${student.fatherName ?? '—'} (${student.fatherPhone ?? '—'})',
                 color: const Color(0xFF1565C0),
               ),
               StaffInfoTile(
                 icon: Icons.family_restroom,
                 label: s.motherName,
-                value: '${student.motherName ?? '—'} (${student.motherPhone ?? '—'})',
+                value:
+                    '${student.motherName ?? '—'} (${student.motherPhone ?? '—'})',
                 color: const Color(0xFFAD1457),
               ),
               if (student.guardianName?.trim().isNotEmpty == true ||
@@ -458,8 +476,8 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
                 label: s.transportEnabled,
                 value: student.transportEnabled
                     ? (student.transportId?.isNotEmpty == true
-                        ? '${student.transportId} · ${s.transportWired}'
-                        : s.transportNotWired)
+                          ? '${student.transportId} · ${s.transportWired}'
+                          : s.transportNotWired)
                     : s.transportNotEnabled,
                 color: StaffPalette.transport.primary,
               ),
@@ -692,9 +710,7 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                       accent: theme.primary,
                     ),
                     items: campusOptions
-                        .map(
-                          (c) => DropdownMenuItem(value: c, child: Text(c)),
-                        )
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (value) {
                       if (value != null) selectedCampus = value;
@@ -762,11 +778,12 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
     TeacherRegistryService.instance.updateTeacher(updated);
     AuthService.syncTeacherAuthProfile(updated);
     await TeacherPersistenceService.instance.saveRegistryFromService();
+    String? titleErr;
     if (staff &&
         nextRole.isNotEmpty &&
         nextRole != roleTitle &&
         teacher.staffRoles.isNotEmpty) {
-      await StaffRoleService.instance.retitleAssignedRole(
+      titleErr = await StaffRoleService.instance.retitleAssignedRole(
         teacher: updated,
         currentRoleKey: teacher.staffRoles.first,
         label: nextRole,
@@ -774,10 +791,22 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
     }
     if (!mounted) return;
     setState(() {});
+    final titleCloudFailed =
+        titleErr == 'cloud_failed' || titleErr == 'cloud_session';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(staff ? s.staffUpdated : s.teacherUpdated),
-        backgroundColor: Colors.green,
+        content: Text(
+          titleErr == null
+              ? (staff ? s.staffUpdated : s.teacherUpdated)
+              : titleCloudFailed
+              ? 'Staff updated on this device, but the role title did not save to the cloud. Stay signed in as Admin (Ready), then rename again.'
+              : '${s.staffUpdated} Role title was not saved ($titleErr).',
+        ),
+        backgroundColor: titleErr == null
+            ? Colors.green
+            : titleCloudFailed
+            ? Colors.orange.shade800
+            : Colors.red.shade700,
       ),
     );
   }
@@ -830,18 +859,21 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
     );
     if (assignments.isEmpty) {
       disposeTeacherAssignmentEntries(assignmentEntries);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.atLeastOneClass)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.atLeastOneClass)));
       return;
     }
 
     await ensureTeacherAssignmentSections(assignmentEntries);
-    final assignedClass =
-        assignments.map((a) => a.className).toSet().join(', ');
+    final assignedClass = assignments
+        .map((a) => a.className)
+        .toSet()
+        .join(', ');
     final roles = assignments.map((a) => a.role).toSet().toList();
-    final derivedSubjects =
-        TeacherRegistryService.subjectsFromAssignments(assignments);
+    final derivedSubjects = TeacherRegistryService.subjectsFromAssignments(
+      assignments,
+    );
 
     final updated = teacher.copyWith(
       subjects: derivedSubjects.isNotEmpty ? derivedSubjects : teacher.subjects,
@@ -857,17 +889,15 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(s.teacherUpdated),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text(s.teacherUpdated), backgroundColor: Colors.green),
     );
   }
 
   Future<void> _deactivateTeacher(AdminTeacherRecord teacher) async {
     if (!ModuleAccess.canHireStaff) return;
-    final homeroomClasses =
-        TeacherRegistryService.instance.homeroomClassesFor(teacher.teacherId);
+    final homeroomClasses = TeacherRegistryService.instance.homeroomClassesFor(
+      teacher.teacherId,
+    );
     final replacements = <String, String>{};
 
     for (final className in homeroomClasses) {
@@ -897,8 +927,12 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
 
     final ok = homeroomClasses.isEmpty
         ? () {
-            SchoolDataService.instance.removeTeacherAssignments(teacher.teacherId);
-            return TeacherRegistryService.instance.deactivateTeacher(teacher.teacherId);
+            SchoolDataService.instance.removeTeacherAssignments(
+              teacher.teacherId,
+            );
+            return TeacherRegistryService.instance.deactivateTeacher(
+              teacher.teacherId,
+            );
           }()
         : SchoolDataService.instance.deactivateTeacherWithReplacement(
             teacherId: teacher.teacherId,
@@ -909,9 +943,9 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
     if (ok) {
       await TeacherPersistenceService.instance.deleteStaffAndFreePhone(teacher);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.teacherDeactivated)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.teacherDeactivated)));
       Navigator.pop(context);
     }
   }
@@ -984,7 +1018,10 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                   trailing: AuthService.canAssignStaffRoles
                       ? IconButton(
                           tooltip: s.renameRoleTitle,
-                          icon: Icon(Icons.edit_outlined, color: palette.secondary),
+                          icon: Icon(
+                            Icons.edit_outlined,
+                            color: palette.secondary,
+                          ),
                           onPressed: () async {
                             await showRenameStaffRoleTitleDialog(
                               context: context,
@@ -1003,28 +1040,25 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                   label: s.assignedClasses,
                   value: teacher.classAssignments.isNotEmpty
                       ? teacher.classAssignments
-                          .map((a) {
-                            final role = s.teacherRoleLabel(a.role);
-                            if (a.teachingSlots.isEmpty) {
-                              return '${a.className} · $role';
-                            }
-                            final slots = a.teachingSlots
-                                .map(
-                                  (slot) =>
-                                      '${slot.subjectName} (${slot.subjectId}, ${slot.slotId})',
-                                )
-                                .join('; ');
-                            return '${a.className} · $role · $slots';
-                          })
-                          .join('\n')
+                            .map((a) {
+                              final role = s.teacherRoleLabel(a.role);
+                              if (a.teachingSlots.isEmpty) {
+                                return '${a.className} · $role';
+                              }
+                              final slots = a.teachingSlots
+                                  .map(
+                                    (slot) =>
+                                        '${slot.subjectName} (${slot.subjectId}, ${slot.slotId})',
+                                  )
+                                  .join('; ');
+                              return '${a.className} · $role · $slots';
+                            })
+                            .join('\n')
                       : teacher.assignedClass,
                   color: StaffPalette.teachers.secondary,
                 ),
               const SizedBox(height: 16),
-              StaffLoginResendBar(
-                teacher: teacher,
-                administrationStaff: staff,
-              ),
+              StaffLoginResendBar(teacher: teacher, administrationStaff: staff),
               const SizedBox(height: 8),
               StaffActionGrid(
                 actions: [
@@ -1037,11 +1071,12 @@ class _AdminTeacherProfileScreenState extends State<AdminTeacherProfileScreen> {
                       name: teacher.fullName,
                       role: staff
                           ? (roleTitle.isEmpty
-                              ? 'Administration Staff'
-                              : roleTitle)
+                                ? 'Administration Staff'
+                                : roleTitle)
                           : s.teacherLabelShort,
-                      staffParticipantId:
-                          StaffMemberOption.teacherKey(teacher.teacherId),
+                      staffParticipantId: StaffMemberOption.teacherKey(
+                        teacher.teacherId,
+                      ),
                     ),
                   ),
                   StaffActionItem(
@@ -1310,21 +1345,21 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
     if (routeFromCtrl.text.trim().isEmpty ||
         routeThroughCtrl.text.trim().isEmpty ||
         routeToCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.transportRouteRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.transportRouteRequired)));
       return;
     }
     if (plateCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.transportPlateRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.transportPlateRequired)));
       return;
     }
     if (busCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.busNumberRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.busNumberRequired)));
       return;
     }
 
@@ -1342,9 +1377,9 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
     );
     DriverRegistryService.instance.updateDriver(updated);
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.driverUpdated)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(s.driverUpdated)));
   }
 
   Future<void> _deactivateDriver(AdminDriverRecord driver) async {
@@ -1360,9 +1395,9 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
     if (confirmed != true || !mounted) return;
 
     if (DriverRegistryService.instance.deactivateDriver(driver.driverId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.driverDeactivated)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(s.driverDeactivated)));
       Navigator.pop(context);
     }
   }
@@ -1381,7 +1416,9 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
       listenable: AppLocale.instance,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: StaffPalette.transport.primary.withValues(alpha: 0.04),
+          backgroundColor: StaffPalette.transport.primary.withValues(
+            alpha: 0.04,
+          ),
           appBar: AppBar(
             backgroundColor: StaffPalette.transport.primary,
             foregroundColor: Colors.white,
@@ -1394,7 +1431,11 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
                 palette: StaffPalette.transport,
                 name: driver.fullName,
                 staffId: driver.driverId,
-                subtitleLines: [driver.busId, driver.busNumber, driver.routeName],
+                subtitleLines: [
+                  driver.busId,
+                  driver.busNumber,
+                  driver.routeName,
+                ],
                 onChangePhoto: () => _changePhoto(driver),
                 avatar: StaffRegistryAvatar(
                   staffId: driver.driverId,
@@ -1426,7 +1467,9 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: StaffPalette.transport.primary.withValues(alpha: 0.85),
+                    color: StaffPalette.transport.primary.withValues(
+                      alpha: 0.85,
+                    ),
                   ),
                 ),
               ),
@@ -1494,8 +1537,9 @@ class _AdminDriverProfileScreenState extends State<AdminDriverProfileScreen> {
                       context,
                       name: driver.fullName,
                       role: 'Driver',
-                      staffParticipantId:
-                          StaffMemberOption.driverKey(driver.driverId),
+                      staffParticipantId: StaffMemberOption.driverKey(
+                        driver.driverId,
+                      ),
                     ),
                   ),
                   StaffActionItem(

@@ -17,10 +17,7 @@ void main() {
 
   const schoolId = 'TB-001';
 
-  void signIn({
-    required String roleKey,
-    List<String> staffRoles = const [],
-  }) {
+  void signIn({required String roleKey, List<String> staffRoles = const []}) {
     AuthService.currentUser = RegisteredUser(
       username: 'delegate.test',
       password: 'x',
@@ -55,20 +52,22 @@ void main() {
   });
 
   group('Role permission delegates', () {
-    test('Full Access cannot open Role Permissions until the owner allows it',
-        () {
-      signIn(
-        roleKey: AuthService.roleTeacher,
-        staffRoles: const [StaffRoles.fullAccess],
-      );
-      expect(AuthService.canConfigureRolePermissions, isFalse);
-      expect(ModuleAccess.canView('staff_roles'), isFalse);
-      expect(ModuleAccess.canManage('staff_roles'), isFalse);
-      expect(
-        webErpNavItemsForCurrentUser().map((e) => e.id),
-        isNot(contains('staff_roles')),
-      );
-    });
+    test(
+      'Full Access cannot open Role Permissions until the owner allows it',
+      () {
+        signIn(
+          roleKey: AuthService.roleTeacher,
+          staffRoles: const [StaffRoles.fullAccess],
+        );
+        expect(AuthService.canConfigureRolePermissions, isFalse);
+        expect(ModuleAccess.canView('staff_roles'), isFalse);
+        expect(ModuleAccess.canManage('staff_roles'), isFalse);
+        expect(
+          webErpNavItemsForCurrentUser().map((e) => e.id),
+          isNot(contains('staff_roles')),
+        );
+      },
+    );
 
     test('owner can grant Full Access the Role Permissions page', () {
       SchoolRoleCatalogService.instance.seedRolePermissionDelegatesForTests(
@@ -114,42 +113,65 @@ void main() {
       expect(ModuleAccess.canView('staff_roles'), isFalse);
     });
 
-    test('delegated Full Access can save other roles but not Full Access',
-        () async {
-      SchoolRoleCatalogService.instance.seedRolePermissionDelegatesForTests(
-        schoolId: schoolId,
-        roleKeys: const [StaffRoles.fullAccess],
-      );
-      signIn(
-        roleKey: AuthService.roleTeacher,
-        staffRoles: const [StaffRoles.fullAccess],
-      );
+    test(
+      'delegated Full Access can save other roles but not Full Access',
+      () async {
+        SchoolRoleCatalogService.instance.seedRolePermissionDelegatesForTests(
+          schoolId: schoolId,
+          roleKeys: const [StaffRoles.fullAccess],
+        );
+        signIn(
+          roleKey: AuthService.roleTeacher,
+          staffRoles: const [StaffRoles.fullAccess],
+        );
 
-      expect(await saveLibrarianEdit(), isNull);
-      expect(
-        await SchoolRoleCatalogService.instance.saveRoleModules(
-          roleKey: StaffRoles.fullAccess,
-          permissions: SchoolPermissions.all,
-          schoolId: schoolId,
-        ),
-        'not_customizable',
-      );
-      expect(
-        await SchoolRoleCatalogService.instance.setRolePermissionDelegates(
-          const [StaffRoles.generalManager],
-          schoolId: schoolId,
-        ),
-        'not_allowed',
-      );
-      expect(
-        await SchoolRoleCatalogService.instance.addCustomRole(
-          label: 'Discipline Officer',
-          permissions: const {},
-          schoolId: schoolId,
-        ),
-        'not_allowed',
-      );
-    });
+        expect(await saveLibrarianEdit(), isNull);
+        expect(
+          await SchoolRoleCatalogService.instance.saveRoleModules(
+            roleKey: StaffRoles.fullAccess,
+            permissions: SchoolPermissions.all,
+            schoolId: schoolId,
+          ),
+          'not_customizable',
+        );
+        expect(
+          await SchoolRoleCatalogService.instance.setRolePermissionDelegates(
+            const [StaffRoles.generalManager],
+            schoolId: schoolId,
+          ),
+          'not_allowed',
+        );
+        expect(
+          await SchoolRoleCatalogService.instance.addCustomRole(
+            label: 'Discipline Officer',
+            permissions: const {},
+            schoolId: schoolId,
+          ),
+          'not_allowed',
+        );
+
+        signIn(roleKey: AuthService.roleAdmin);
+        final created = await SchoolRoleCatalogService.instance
+            .ensureTitledRole(
+              sourceRoleKey: StaffRoles.librarian,
+              label: 'Librarian KG',
+              schoolId: schoolId,
+            );
+        expect(created.roleKey, isNotNull);
+        signIn(
+          roleKey: AuthService.roleTeacher,
+          staffRoles: const [StaffRoles.fullAccess],
+        );
+        expect(
+          await SchoolRoleCatalogService.instance.renameRole(
+            roleKey: created.roleKey!,
+            label: 'Librarian KG A',
+            schoolId: schoolId,
+          ),
+          isNull,
+        );
+      },
+    );
 
     test('undecided Full Access cannot save role modules', () async {
       signIn(
@@ -226,8 +248,9 @@ void main() {
   });
 
   group('Role permission editor for delegates', () {
-    testWidgets('owner sees checkboxes to grant Full Access and GM',
-        (tester) async {
+    testWidgets('owner sees checkboxes to grant Full Access and GM', (
+      tester,
+    ) async {
       await AppLocale.instance.load();
       signIn(roleKey: AuthService.roleAdmin);
       tester.view.physicalSize = const Size(1400, 1200);
@@ -236,9 +259,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: StaffRoleConfigPage()),
-        ),
+        const MaterialApp(home: Scaffold(body: StaffRoleConfigPage())),
       );
       await tester.pumpAndSettle();
 
@@ -247,8 +268,9 @@ void main() {
       expect(find.text('Add custom role'), findsOneWidget);
     });
 
-    testWidgets('delegated Full Access can edit modules but not add roles',
-        (tester) async {
+    testWidgets('delegated Full Access can edit modules but not add roles', (
+      tester,
+    ) async {
       await AppLocale.instance.load();
       SchoolRoleCatalogService.instance.seedRolePermissionDelegatesForTests(
         schoolId: schoolId,
@@ -264,9 +286,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: StaffRoleConfigPage()),
-        ),
+        const MaterialApp(home: Scaffold(body: StaffRoleConfigPage())),
       );
       await tester.pumpAndSettle();
 
@@ -284,9 +304,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: StaffRoleConfigPage()),
-        ),
+        const MaterialApp(home: Scaffold(body: StaffRoleConfigPage())),
       );
       await tester.pumpAndSettle();
 
