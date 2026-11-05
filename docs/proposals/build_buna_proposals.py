@@ -836,7 +836,7 @@ def technical(b) -> None:
             ["Tenancy", "Multi-tenant: one platform, many schools, strict data separation per school (Section 7)"],
             ["Branding", "Each school's own logo, name and colours on its login and apps; co-branding 'Powered by Buna' available"],
             ["Offline tolerance", "Changes are kept on the device and synchronised automatically when the connection returns"],
-            ["Quality", "About 990 automated tests in 162 test files run on every change before release"],
+            ["Quality", "About 990 app tests and role-by-role database permission tests run automatically on every change"],
         ],
         widths=[3.6, 13.0],
     )
@@ -905,7 +905,7 @@ def technical(b) -> None:
     )
     b.h2("Development and release process")
     b.bullets([
-        "Source control and continuous integration:: every change runs static analysis, about 990 automated tests and a database isolation test against a staging environment before it can be released.",
+        "Source control and continuous integration:: every change runs static analysis, about 990 automated app tests and database permission tests that check each user role and cross-school access. A further isolation test against a live staging environment is part of the go-live plan for the bank.",
         "Load testing:: k6 load-test scripts exercise login, reads and synchronisation at school scale before major releases.",
         "Environments:: separate development, staging and production; database changes are versioned migrations.",
         "Change control:: changes that affect the Bank integration are released only after joint testing and the Bank's approval.",
@@ -918,7 +918,7 @@ def technical(b) -> None:
         "Every school has a unique School ID (for example FN0597). Every record in the database carries the School ID of the school that owns it.",
         "When a user signs in, the server issues a signed token that contains the user's School ID and role. The device cannot change it.",
         "PostgreSQL row-level security compares the School ID on each record with the School ID in the token on every read and every write. A user of one school cannot read or change another school's data, even through a modified app — the database itself refuses.",
-        "An automated isolation test signs in as users of different schools and confirms that cross-school access is refused. It runs on every release.",
+        "Automated database tests act as each user role and as a user of another school, and confirm that cross-school access and actions outside the user's role are refused. They run on every change. The same check against a live staging environment is part of the go-live plan.",
         "Files are stored under the school's own folder and served only through signed, time-limited links.",
     ])
     b.h2("Tenant management")
@@ -995,7 +995,7 @@ def technical(b) -> None:
             ["Audit", "School audit log and platform audit log of sensitive actions with user, time and detail"],
             ["Sensitive records", "Safeguarding, clinic and discipline records limited to named roles"],
             ["CCTV", "Video stays on the school network; the platform stores only camera details, never footage"],
-            ["Secure development", "Code review, automated tests and a cross-school isolation test on every release; internal security audit maintained"],
+            ["Secure development", "Code review, automated tests and database permission tests on every change; internal security audit maintained"],
         ],
         widths=[3.8, 12.8],
     )
@@ -1098,7 +1098,7 @@ def technical(b) -> None:
         "A complete, working product already in use by schools — the Bank is not funding a development project.",
         "One local team that owns the code, so integration and changes are fast.",
         "A finance module built on accounting principles, ready to receive bank payment confirmations.",
-        "Multi-tenant architecture with database-level isolation, proven by automated tests on every release.",
+        "Multi-tenant architecture with database-level isolation, checked by automated database tests on every change.",
         "Commitment to the Bank's security, compliance and service standards set out in this proposal.",
     ])
 
