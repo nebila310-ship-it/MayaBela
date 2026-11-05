@@ -1,6 +1,7 @@
 @echo off
 REM Deploy the INSA Stage 1 edge functions to the STAGING Supabase project.
 REM Reads STAGING_SUPABASE_URL from .env.staging. Refuses production.
+REM Extra arguments are passed to every deploy (e.g. --use-api without Docker).
 setlocal EnableExtensions
 cd /d "%~dp0.."
 
@@ -40,7 +41,7 @@ for %%F in (
 ) do (
   echo.
   echo === Deploying %%F to staging %REF% ===
-  call npx --yes supabase functions deploy %%F --project-ref %REF% --no-verify-jwt
+  call npx --yes supabase functions deploy %%F --project-ref %REF% --no-verify-jwt %*
   if errorlevel 1 (
     echo Deploy of %%F failed. Stopping.
     exit /b 1
