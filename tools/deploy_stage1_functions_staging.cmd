@@ -51,6 +51,7 @@ for %%F in (
   school-register-parent
   school-upsert-account
   school-upsert-registry
+  school-change-password
 ) do (
   echo.
   echo === Deploying %%F to staging %REF% ===

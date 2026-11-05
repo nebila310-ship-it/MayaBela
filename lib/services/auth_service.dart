@@ -1946,9 +1946,19 @@ class AuthService {
     return true;
   }
 
-  static void changePassword(String newPassword, {String? currentPassword}) {
+  static Future<bool> changePassword(
+    String newPassword, {
+    String? currentPassword,
+  }) async {
     final user = currentUser;
-    if (user == null || newPassword.length < minPasswordLength) return;
+    if (user == null || newPassword.length < minPasswordLength) return false;
+    if (SchoolAuthCloudService.instance.isAvailable) {
+      final cloud = await SchoolAuthCloudService.instance.changePassword(
+        newPassword: newPassword,
+        currentPassword: currentPassword,
+      );
+      if (!cloud.ok) return false;
+    }
     user.password = PasswordHashService.instance.hashPassword(newPassword);
     user.mustChangePassword = false;
     final stored = _users[user.username] ?? _users[user.username.toLowerCase()];
@@ -1957,12 +1967,6 @@ class AuthService {
       stored.mustChangePassword = false;
       unawaited(_persistUser(stored));
     }
-    unawaited(
-      SchoolAuthCloudService.instance.changePassword(
-        newPassword: newPassword,
-        currentPassword: currentPassword,
-      ),
-    );
 
     if (user.roleKey == roleStudent) {
       final studentId = user.linkedStudentId;
@@ -1978,6 +1982,7 @@ class AuthService {
         ),
       );
     }
+    return true;
   }
 
   static bool requiresPasswordChange() {

@@ -73,6 +73,7 @@ void main() {
     );
 
     expect(item.submittedStudentCount, 2);
+    expect(item.worksheetsForStudent('stu-1'), ['ws/1.pdf']);
     final restored = HomeworkItemPersistence.fromMap(item.toMap());
     expect(restored.dueDate, DateTime.utc(2026, 9, 14));
     expect(restored.submittedStudentCount, 2);

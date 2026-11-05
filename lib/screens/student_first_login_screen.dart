@@ -32,19 +32,29 @@ class _StudentFirstLoginScreenState extends State<StudentFirstLoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final next = _newPassword.text.trim();
     final confirm = _confirmPassword.text.trim();
-    if (next.length < 6) {
-      setState(() => _error = 'Password must be at least 6 characters.');
+    if (next.length < AuthService.minPasswordLength) {
+      setState(
+        () => _error =
+            'Password must be at least ${AuthService.minPasswordLength} characters.',
+      );
       return;
     }
     if (next != confirm) {
       setState(() => _error = 'Passwords do not match.');
       return;
     }
-    AuthService.changePassword(next);
+    final saved = await AuthService.changePassword(next);
     if (!mounted) return;
+    if (!saved) {
+      setState(
+        () => _error =
+            'Could not save the new password. Check internet and try again.',
+      );
+      return;
+    }
     if (widget.skippable) {
       Navigator.pop(context);
       return;
