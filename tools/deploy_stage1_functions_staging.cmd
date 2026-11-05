@@ -1,6 +1,7 @@
 @echo off
 REM Deploy the INSA Stage 1 edge functions to the STAGING Supabase project.
-REM Reads STAGING_SUPABASE_URL from .env.staging. Refuses production.
+REM Takes the project ref from STAGING_SUPABASE_URL in .env.staging,
+REM asks you to retype it, and refuses production.
 REM Extra arguments are passed to every deploy (e.g. --use-api without Docker).
 setlocal EnableExtensions
 cd /d "%~dp0.."
@@ -14,15 +15,24 @@ for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env.staging") do (
   if /I "%%A"=="STAGING_SUPABASE_URL" set "STAGING_URL=%%B"
 )
 
-set "REF=bfpcpgxekzdqxuxvajuy"
-echo %STAGING_URL% | findstr /I "%REF%" >nul
-if errorlevel 1 (
-  echo STAGING_SUPABASE_URL in .env.staging is not the staging project %REF%. Stopping.
+if not defined STAGING_URL (
+  echo STAGING_SUPABASE_URL is missing from .env.staging. Stopping.
   exit /b 2
 )
-echo %STAGING_URL% | findstr /I "hwkiihonthueadbhcvfi" >nul
-if not errorlevel 1 (
-  echo Refusing: production project.
+set "HOST=%STAGING_URL:https://=%"
+for /f "tokens=1 delims=." %%R in ("%HOST%") do set "REF=%%R"
+if not defined REF (
+  echo Could not read the project ref from STAGING_SUPABASE_URL. Stopping.
+  exit /b 2
+)
+if /I "%REF%"=="hwkiihonthueadbhcvfi" (
+  echo Refusing: STAGING_SUPABASE_URL points at the production project.
+  exit /b 2
+)
+echo Target staging project: %REF%
+set /p "CONFIRM=Type the project ref again to continue: "
+if /I not "%CONFIRM%"=="%REF%" (
+  echo Ref did not match. Nothing deployed.
   exit /b 2
 )
 
