@@ -4,6 +4,15 @@ Branch `cursor/insa-stage1-ff2b`. Nothing in this branch has been applied to
 production. Apply it in this order, during a quiet period, after approval.
 Try the whole sequence on staging first.
 
+**Do not merge before the production migrations are applied.** A merge to
+`master` triggers `.github/workflows/deploy-edge-functions.yml`, which deploys
+some of these functions to production automatically.
+
+Staging helpers (both refuse the production project):
+
+- Functions: `tools\deploy_stage1_functions_staging.cmd`
+- Web: `tools\deploy_staging_web.cmd` (Cloudflare project `mayabela-staging`)
+
 ## 1. Database migrations (SQL editor or the migration pipeline)
 
 Apply in file order:
