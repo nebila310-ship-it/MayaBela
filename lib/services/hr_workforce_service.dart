@@ -55,7 +55,9 @@ class HrWorkforceService extends ChangeNotifier {
   }
 
   List<HrPersonRef> peopleForSchool(String? schoolId) {
-    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
     final out = <HrPersonRef>[];
     for (final t in TeacherRegistryService.instance.visibleTeachers(
       schoolId: sid,
@@ -66,7 +68,9 @@ class HrWorkforceService extends ChangeNotifier {
           personId: t.teacherId,
           schoolId: t.schoolId,
           name: t.fullName,
-          kind: t.staffRoles.isNotEmpty ? HrPersonKind.admin : HrPersonKind.teacher,
+          kind: t.staffRoles.isNotEmpty
+              ? HrPersonKind.admin
+              : HrPersonKind.teacher,
           title: t.staffRoles.isNotEmpty
               ? t.staffRoles.join(', ')
               : (t.assignedClass.isEmpty ? 'Teacher' : t.assignedClass),
@@ -92,7 +96,9 @@ class HrWorkforceService extends ChangeNotifier {
   }
 
   StaffEmploymentFile? fileFor(String personId, {String? schoolId}) {
-    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
     for (final file in _files) {
       if (file.personId == personId && file.schoolId == sid) return file;
     }
@@ -100,18 +106,24 @@ class HrWorkforceService extends ChangeNotifier {
   }
 
   List<StaffLeaveRecord> leavesForSchool(String? schoolId) {
-    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
     return _leaves.where((l) => l.schoolId == sid).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   List<StaffEmploymentFile> filesForSchool(String? schoolId) {
-    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
     return _files.where((f) => f.schoolId == sid).toList();
   }
 
   HrWorkforceSnapshot snapshot(String? schoolId, {DateTime? asOf}) {
-    final sid = (schoolId ?? AuthService.activeSchoolId ?? '').trim().toUpperCase();
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
     final now = asOf ?? DateTime.now();
     var admin = 0;
     var teachers = 0;
@@ -119,7 +131,7 @@ class HrWorkforceService extends ChangeNotifier {
       schoolId: sid,
       includeInactive: false,
     )) {
-      if (t.staffRoles.isNotEmpty) {
+      if (TeacherRegistryService.recoveredStaffRolesFor(t).isNotEmpty) {
         admin++;
       } else {
         teachers++;
@@ -137,14 +149,12 @@ class HrWorkforceService extends ChangeNotifier {
     final pending = schoolLeaves
         .where((l) => l.status == StaffLeaveStatus.pending)
         .length;
-    final watch = filesForSchool(sid)
-        .where((f) {
-          final stage = f.stageOn(now);
-          return stage == StaffEmploymentStage.endingSoon ||
-              stage == StaffEmploymentStage.expired ||
-              stage == StaffEmploymentStage.probation;
-        })
-        .length;
+    final watch = filesForSchool(sid).where((f) {
+      final stage = f.stageOn(now);
+      return stage == StaffEmploymentStage.endingSoon ||
+          stage == StaffEmploymentStage.expired ||
+          stage == StaffEmploymentStage.probation;
+    }).length;
     return HrWorkforceSnapshot(
       adminStaff: admin,
       teachers: teachers,

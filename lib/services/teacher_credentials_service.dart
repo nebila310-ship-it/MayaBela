@@ -5,6 +5,7 @@ import 'package:mayabela/services/otp_delivery_service.dart';
 import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/utils/phone_utils.dart';
+import 'package:mayabela/widgets/staff_role_labels.dart';
 
 class TeacherCredentialsService {
   TeacherCredentialsService._();
@@ -45,19 +46,21 @@ class TeacherCredentialsService {
   }
 
   bool isAdministrationStaff(AdminTeacherRecord teacher) =>
-      teacher.staffRoles.isNotEmpty;
+      isAdministrationStaffRecord(teacher);
 
   String buildMessage(AdminTeacherRecord teacher) {
-    final schoolName =
-        SchoolRegistryService.instance.displayName(teacher.schoolId);
+    final schoolName = SchoolRegistryService.instance.displayName(
+      teacher.schoolId,
+    );
     final login = loginFor(teacher);
     final password = passwordFor(teacher);
     final staff = isAdministrationStaff(teacher);
     final accountLine = staff
         ? 'Your administration staff account is ready:'
         : 'Your teacher account is ready:';
-    final signInLine =
-        staff ? 'Sign in as Administration Staff.' : 'Sign in as Teacher.';
+    final signInLine = staff
+        ? 'Sign in as Administration Staff.'
+        : 'Sign in as Teacher.';
 
     return '''Welcome to $appName!
 

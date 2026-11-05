@@ -18,8 +18,7 @@ String staffRolesSummary(
 }) {
   final labels = [
     for (final key in roleKeys)
-      if (SchoolRoleCatalogService.instance
-              .lookup(key, schoolId: schoolId) !=
+      if (SchoolRoleCatalogService.instance.lookup(key, schoolId: schoolId) !=
           null)
         staffRoleLabel(
           SchoolRoleCatalogService.instance.lookup(key, schoolId: schoolId)!,
@@ -34,7 +33,7 @@ String staffRolesSummary(
 }
 
 bool isAdministrationStaffRecord(AdminTeacherRecord teacher) =>
-    teacher.staffRoles.isNotEmpty;
+    TeacherRegistryService.recoveredStaffRolesFor(teacher).isNotEmpty;
 
 /// Classroom placement summary, e.g. "Grade 2C HR (Homeroom Teacher) · Math".
 String classroomAssignmentSummary(AdminTeacherRecord teacher, AppStrings s) {
@@ -44,24 +43,32 @@ String classroomAssignmentSummary(AdminTeacherRecord teacher, AppStrings s) {
     if (classes.isEmpty) return '';
     final roleBits = <String>[];
     if (teacher.roles.contains(TeacherStaffRole.homeroomTeacher)) {
-      roleBits.add('HR (${s.teacherRoleLabel(TeacherStaffRole.homeroomTeacher)})');
+      roleBits.add(
+        'HR (${s.teacherRoleLabel(TeacherStaffRole.homeroomTeacher)})',
+      );
     }
     if (teacher.roles.contains(TeacherStaffRole.subjectTeacher)) {
-      roleBits.add('ST (${s.teacherRoleLabel(TeacherStaffRole.subjectTeacher)})');
+      roleBits.add(
+        'ST (${s.teacherRoleLabel(TeacherStaffRole.subjectTeacher)})',
+      );
     }
-    final subjects = teacher.subjects.where((x) => x.trim().isNotEmpty).join(', ');
+    final subjects = teacher.subjects
+        .where((x) => x.trim().isNotEmpty)
+        .join(', ');
     final roleText = roleBits.isEmpty ? '' : ' ${roleBits.join(' · ')}';
     final subjectText = subjects.isEmpty ? '' : ' · $subjects';
     return '$classes$roleText$subjectText'.trim();
   }
 
-  return assignments.map((a) {
-    final abbr = a.role == TeacherStaffRole.homeroomTeacher ? 'HR' : 'ST';
-    final role = s.teacherRoleLabel(a.role);
-    final subjects = a.subjectNames.join(', ');
-    if (subjects.isEmpty) {
-      return '${a.className} $abbr ($role)';
-    }
-    return '${a.className} $abbr ($role) · $subjects';
-  }).join('; ');
+  return assignments
+      .map((a) {
+        final abbr = a.role == TeacherStaffRole.homeroomTeacher ? 'HR' : 'ST';
+        final role = s.teacherRoleLabel(a.role);
+        final subjects = a.subjectNames.join(', ');
+        if (subjects.isEmpty) {
+          return '${a.className} $abbr ($role)';
+        }
+        return '${a.className} $abbr ($role) · $subjects';
+      })
+      .join('; ');
 }

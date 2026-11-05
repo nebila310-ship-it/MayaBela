@@ -340,6 +340,23 @@ Deno.serve(async (req) => {
           isAdmin || callerPerms.includes("assign_roles");
         if (!canAssign) {
           delete normalized.record.staffRoles;
+        } else if (
+          !Object.prototype.hasOwnProperty.call(normalized.record, "staffRoles")
+        ) {
+          // A directory save that omits roles must not wipe Principal / GM
+          // grants already stored on the row.
+          const prior = await sb
+            .from("app_documents")
+            .select("data")
+            .eq("collection", collection)
+            .eq("school_id", schoolId)
+            .eq("doc_id", normalized.docId)
+            .maybeSingle();
+          const priorRoles = (prior.data as { data?: { staffRoles?: unknown } } | null)
+            ?.data?.staffRoles;
+          if (Array.isArray(priorRoles) && priorRoles.length > 0) {
+            normalized.record.staffRoles = priorRoles;
+          }
         }
       }
       // Parents may only write leave requests for linked students.

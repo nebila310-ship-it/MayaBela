@@ -77,12 +77,15 @@ class AuthService {
   /// Debug-only demo password. Never used in release builds.
   /// Below [minPasswordLength] so cloud school-login rejects it if leaked.
   static const demoPassword = '1234';
+
   /// Legacy shared temp — prefer [generateTempPassword] for new accounts.
   static const tempPassword = 'Welcome12!';
+
   /// Public sandbox student login (local seed only, never pushed to cloud).
   static const demoStudentUsername = 'demo.student';
   static const demoStudentSchoolId = 'TB-001';
   static const demoStudentPassword = tempPassword;
+
   /// Public sandbox transport-driver login (local seed only).
   static const demoDriverUsername = 'demo.driver';
   static const demoDriverPhone = '0911667788';
@@ -94,7 +97,8 @@ class AuthService {
     return EmailUtils.isRealMailbox(email) ? null : 'invalid_email';
   }
 
-  static String? _normalizedEmail(String? email) => EmailUtils.userFacing(email);
+  static String? _normalizedEmail(String? email) =>
+      EmailUtils.userFacing(email);
   static const passwordRedactedMarker = '__REDACTED__';
 
   /// Release-safe fallback when a registry record has no password.
@@ -114,6 +118,7 @@ class AuthService {
       (_) => _tempAlphabet[random.nextInt(_tempAlphabet.length)],
     ).join();
   }
+
   static const supportPhone = '+251911646444';
   static const supportEmail = 'nebila310@gmail.com';
 
@@ -304,15 +309,18 @@ class AuthService {
       final pass = (teacher.initialPassword?.trim().isNotEmpty ?? false)
           ? teacher.initialPassword!.trim()
           : (kDebugMode ? demoPassword : passwordRedactedMarker);
-      _users[key] = RegisteredUser(
-        username: key,
-        password: pass,
-        roleKey: roleTeacher,
-        email: teacher.email,
-        phone: PhoneUtils.normalizeLocal(phone),
-        schoolId: teacher.schoolId,
-        fullName: teacher.fullName,
-        linkedTeacherId: teacher.teacherId,
+      mergePersistedUser(
+        RegisteredUser(
+          username: key,
+          password: pass,
+          roleKey: roleTeacher,
+          email: teacher.email,
+          phone: PhoneUtils.normalizeLocal(phone),
+          schoolId: teacher.schoolId,
+          fullName: teacher.fullName,
+          linkedTeacherId: teacher.teacherId,
+          staffRoles: teacher.staffRoles,
+        ),
       );
     }
 
@@ -447,7 +455,8 @@ class AuthService {
     if (user.roleKey == roleParent) {
       final fromKids = <String>{};
       for (final id in activeLinkedStudentIds()) {
-        final student = StudentRegistryService.instance.lookupById(id) ??
+        final student =
+            StudentRegistryService.instance.lookupById(id) ??
             StudentRegistryService.instance.lookupAnyById(id);
         final className = student?.className.trim();
         if (className != null && className.isNotEmpty) {
@@ -462,7 +471,8 @@ class AuthService {
       return const [];
     }
     if (user.roleKey == roleStudent) {
-      final student = StudentRegistryService.instance.lookupAnyById(
+      final student =
+          StudentRegistryService.instance.lookupAnyById(
             (user.linkedStudentId ?? '').trim(),
           ) ??
           StudentRegistryService.instance.lookupByLoginUsername(user.username);
@@ -516,7 +526,8 @@ class AuthService {
     var linkedDriverId = incoming.linkedDriverId;
     if (incoming.roleKey == roleDriver &&
         (linkedDriverId == null || linkedDriverId.trim().isEmpty)) {
-      linkedDriverId = existing?.linkedDriverId ??
+      linkedDriverId =
+          existing?.linkedDriverId ??
           DriverRegistryService.instance
               .resolveForAuthUser(
                 username: incoming.username,
@@ -529,7 +540,8 @@ class AuthService {
     var linkedTeacherId = incoming.linkedTeacherId;
     if (incoming.roleKey == roleTeacher &&
         (linkedTeacherId == null || linkedTeacherId.trim().isEmpty)) {
-      linkedTeacherId = existing?.linkedTeacherId ??
+      linkedTeacherId =
+          existing?.linkedTeacherId ??
           TeacherRegistryService.instance
               .resolveForAuthUser(
                 username: incoming.username,
@@ -542,15 +554,16 @@ class AuthService {
     var linkedStudentId = incoming.linkedStudentId;
     if (incoming.roleKey == roleStudent &&
         (linkedStudentId == null || linkedStudentId.trim().isEmpty)) {
-      linkedStudentId = existing?.linkedStudentId ??
+      linkedStudentId =
+          existing?.linkedStudentId ??
           StudentRegistryService.instance
               .lookupByLoginUsername(incoming.username)
               ?.studentId;
     }
 
     final incomingPassword = incoming.password;
-    final keepExistingPassword = incomingPassword == passwordRedactedMarker ||
-        incomingPassword.isEmpty;
+    final keepExistingPassword =
+        incomingPassword == passwordRedactedMarker || incomingPassword.isEmpty;
     final merged = RegisteredUser(
       username: incoming.username,
       password: keepExistingPassword
@@ -569,7 +582,8 @@ class AuthService {
       linkedDriverId: linkedDriverId,
       linkedStudentId: linkedStudentId,
       mustChangePassword:
-          incoming.mustChangePassword || (existing?.mustChangePassword ?? false),
+          incoming.mustChangePassword ||
+          (existing?.mustChangePassword ?? false),
       staffRoles: incoming.staffRoles.isNotEmpty
           ? incoming.staffRoles
           : (existing?.staffRoles ?? const []),
@@ -640,8 +654,9 @@ class AuthService {
     if (user.staffRoles.contains(StaffRoles.fullAccess)) return true;
     // Prefer live role catalog over stamped staffPermissions (stamped lists
     // often still include removed "always-on" ERP extras from older creates).
-    final fromRoles = SchoolRoleCatalogService.instance
-        .permissionsForRoles(user.staffRoles);
+    final fromRoles = SchoolRoleCatalogService.instance.permissionsForRoles(
+      user.staffRoles,
+    );
     if (fromRoles.isNotEmpty) return fromRoles.contains(permission);
     return user.staffPermissions.contains(permission);
   }
@@ -658,8 +673,9 @@ class AuthService {
         user.staffRoles.contains(StaffRoles.fullAccess)) {
       return SchoolPermissions.all;
     }
-    final fromRoles =
-        SchoolRoleCatalogService.instance.permissionsForRoles(user.staffRoles);
+    final fromRoles = SchoolRoleCatalogService.instance.permissionsForRoles(
+      user.staffRoles,
+    );
     if (fromRoles.isNotEmpty) return fromRoles;
     return user.staffPermissions.toSet();
   }
@@ -748,7 +764,8 @@ class AuthService {
       return false;
     }
     final raw = username.trim().toLowerCase();
-    final phone = PhoneUtils.normalizeLocal(username) ?? PhoneUtils.loginKey(username);
+    final phone =
+        PhoneUtils.normalizeLocal(username) ?? PhoneUtils.loginKey(username);
     return raw == demoDriverUsername ||
         raw == 'transport' ||
         phone == demoDriverPhone;
@@ -773,15 +790,15 @@ class AuthService {
 
   static void _ensurePublicDemoDriverUsers() {
     RegisteredUser make(String username) => RegisteredUser(
-          username: username,
-          password: demoDriverPassword,
-          roleKey: roleDriver,
-          email: 'demo.driver@mayaschool.et',
-          phone: demoDriverPhone,
-          fullName: 'Alemayehu T.',
-          schoolId: demoDriverSchoolId,
-          linkedDriverId: 'DRV-1001',
-        );
+      username: username,
+      password: demoDriverPassword,
+      roleKey: roleDriver,
+      email: 'demo.driver@mayaschool.et',
+      phone: demoDriverPhone,
+      fullName: 'Alemayehu T.',
+      schoolId: demoDriverSchoolId,
+      linkedDriverId: 'DRV-1001',
+    );
     _users[demoDriverPhone] = make(demoDriverPhone);
     _users[demoDriverUsername] = make(demoDriverUsername);
     _users['transport'] = make('transport');
@@ -825,8 +842,7 @@ class AuthService {
     final logoutGeneration = _bumpSessionGeneration();
     RoleCloudLiveSync.stop();
     try {
-      await SessionResourceCleanup.onLogout()
-          .timeout(_sessionCleanupTimeout);
+      await SessionResourceCleanup.onLogout().timeout(_sessionCleanupTimeout);
     } catch (_) {}
     currentUser = null;
     sessionSchoolId = null;
@@ -837,22 +853,23 @@ class AuthService {
     sessionListenable.value++;
 
     try {
-      await RealtimeMessagingBootstrap.onSessionEnded()
-          .timeout(_sessionCleanupTimeout);
+      await RealtimeMessagingBootstrap.onSessionEnded().timeout(
+        _sessionCleanupTimeout,
+      );
     } catch (_) {}
     if (!isCurrentGeneration(logoutGeneration)) return;
 
     try {
-      await SchoolAuthCloudService.instance
-          .signOutCloud()
-          .timeout(_sessionCleanupTimeout);
+      await SchoolAuthCloudService.instance.signOutCloud().timeout(
+        _sessionCleanupTimeout,
+      );
     } catch (_) {}
     if (!isCurrentGeneration(logoutGeneration)) return;
 
     try {
-      await SessionPrefsService.instance
-          .clearActiveSession()
-          .timeout(_sessionCleanupTimeout);
+      await SessionPrefsService.instance.clearActiveSession().timeout(
+        _sessionCleanupTimeout,
+      );
     } catch (_) {}
   }
 
@@ -866,8 +883,9 @@ class AuthService {
     }
     if (user.roleKey == roleParent) {
       EnrollmentService.instance.ensureSeeded();
-      final approved = EnrollmentService.instance
-          .approvedStudentIdsForParent(user.username);
+      final approved = EnrollmentService.instance.approvedStudentIdsForParent(
+        user.username,
+      );
       final merged = <String>[];
       void add(String? raw) {
         final id = raw?.trim().toUpperCase() ?? '';
@@ -905,9 +923,9 @@ class AuthService {
     if (user == null || user.roleKey != roleParent) return false;
     EnrollmentService.instance.ensureSeeded();
     return EnrollmentService.instance.hasPendingOnly(user.username) ||
-        EnrollmentService.instance.linksForParent(user.username).any(
-              (l) => l.status == ParentLinkStatus.pending,
-            );
+        EnrollmentService.instance
+            .linksForParent(user.username)
+            .any((l) => l.status == ParentLinkStatus.pending);
   }
 
   static void updateParentLinks(String username, List<String> studentIds) {
@@ -1020,7 +1038,8 @@ class AuthService {
     for (final user in _users.values) {
       if (user.roleKey != roleTeacher) continue;
       final matchesId =
-          user.linkedTeacherId?.toUpperCase() == teacher.teacherId.toUpperCase();
+          user.linkedTeacherId?.toUpperCase() ==
+          teacher.teacherId.toUpperCase();
       final matchesPhone = PhoneUtils.matches(user.phone, teacher.phone ?? '');
       if (!matchesId && !matchesPhone) continue;
       user.linkedTeacherId = teacher.teacherId;
@@ -1063,8 +1082,7 @@ class AuthService {
     final existing = _users[key];
     final pass = (driver.initialPassword?.trim().isNotEmpty ?? false)
         ? driver.initialPassword!.trim()
-        : (existing?.password ??
-            driverPasswordFallback(debugMode: kDebugMode));
+        : (existing?.password ?? driverPasswordFallback(debugMode: kDebugMode));
     _users[key] = RegisteredUser(
       username: key,
       password: pass,
@@ -1161,12 +1179,14 @@ class AuthService {
 
     final cloudUsername = normalizeLoginIdentifier(username);
 
-    var cloudReady = SupabaseBootstrap.isInitialized ||
+    var cloudReady =
+        SupabaseBootstrap.isInitialized ||
         await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
     if (!cloudReady && !kIsWeb) {
       await Future<void>.delayed(const Duration(milliseconds: 400));
-      cloudReady =
-          await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+      cloudReady = await SupabaseBootstrap.tryInitialize(
+        deferAnonymousAuth: true,
+      );
     }
     if (cloudReady) {
       final cloud = await SchoolAuthCloudService.instance.login(
@@ -1244,12 +1264,9 @@ class AuthService {
 
     final identifier = normalizeLoginIdentifier(username);
 
-    final user = _findUser(
-      identifier,
-      roleKey: roleKey,
-      schoolId: schoolId,
-    );
-    final passwordOk = user != null &&
+    final user = _findUser(identifier, roleKey: roleKey, schoolId: schoolId);
+    final passwordOk =
+        user != null &&
         (_passwordMatches(user, password) ||
             _studentTemplatePasswordMatches(
               user: user,
@@ -1279,7 +1296,8 @@ class AuthService {
 
     if (roleKey == roleStudent) {
       final student = _studentRecordForUser(user);
-      if (student == null || !StudentAccountService.instance.canLogin(student)) {
+      if (student == null ||
+          !StudentAccountService.instance.canLogin(student)) {
         return 'account_inactive';
       }
       if (!StudentAccountService.instance.isPortalEnabled(student.schoolId)) {
@@ -1372,6 +1390,31 @@ class AuthService {
 
   static RegisteredUser? findUser(String identifier) => _findUser(identifier);
 
+  /// Login row for a directory staff member (phone, username, or linked id).
+  static RegisteredUser? findUserForTeacher(AdminTeacherRecord teacher) {
+    final login = teacher.loginUsername?.trim() ?? '';
+    if (login.isNotEmpty) {
+      final byLogin = findUser(login);
+      if (byLogin != null) return byLogin;
+    }
+    final phone = teacher.phone?.trim() ?? '';
+    if (phone.isNotEmpty) {
+      final byPhone = findUser(phone);
+      if (byPhone != null) return byPhone;
+    }
+    final id = teacher.teacherId.trim().toUpperCase();
+    if (id.isEmpty) return null;
+    final sid = teacher.schoolId.trim().toUpperCase();
+    for (final user in _users.values) {
+      if ((user.linkedTeacherId ?? '').trim().toUpperCase() != id) continue;
+      if (sid.isNotEmpty && (user.schoolId ?? '').trim().toUpperCase() != sid) {
+        continue;
+      }
+      return user;
+    }
+    return null;
+  }
+
   static RegisteredUser? _findUser(
     String identifier, {
     String? roleKey,
@@ -1406,10 +1449,9 @@ class AuthService {
     for (final user in _users.values) {
       if (!schoolOk(user)) continue;
       final email = user.email;
-      final matches = user.username.toLowerCase() == lower ||
-          (email != null &&
-              email.isNotEmpty &&
-              email.toLowerCase() == lower) ||
+      final matches =
+          user.username.toLowerCase() == lower ||
+          (email != null && email.isNotEmpty && email.toLowerCase() == lower) ||
           PhoneUtils.matches(user.phone, trimmed);
       if (!matches) continue;
       if (roleKey != null && user.roleKey == roleKey) {
@@ -1421,7 +1463,8 @@ class AuthService {
     return roleMatch ?? anyMatch;
   }
 
-  static bool _accountExists(String identifier) => _findUser(identifier) != null;
+  static bool _accountExists(String identifier) =>
+      _findUser(identifier) != null;
 
   static bool accountExists(String phoneOrUsername) {
     final key = PhoneUtils.loginKey(phoneOrUsername);
@@ -1433,14 +1476,18 @@ class AuthService {
     if (schoolId == null || schoolId.trim().isEmpty) return null;
     final id = schoolId.trim().toUpperCase();
     for (final user in _users.values) {
-      if (user.roleKey == roleAdmin && (user.schoolId?.toUpperCase() ?? '') == id) {
+      if (user.roleKey == roleAdmin &&
+          (user.schoolId?.toUpperCase() ?? '') == id) {
         return user;
       }
     }
     return null;
   }
 
-  static void updateAdminPasswordForSchool(String schoolId, String newPassword) {
+  static void updateAdminPasswordForSchool(
+    String schoolId,
+    String newPassword,
+  ) {
     final admin = adminUserForSchool(schoolId);
     if (admin != null) admin.password = newPassword;
   }
@@ -1488,9 +1535,13 @@ class AuthService {
     String? schoolId,
   }) async {
     final key = PhoneUtils.loginKey(phoneOrUsername).trim().toLowerCase();
-    final sid = (schoolId ?? _findUser(phoneOrUsername)?.schoolId ?? activeSchoolId ?? '')
-        .trim()
-        .toUpperCase();
+    final sid =
+        (schoolId ??
+                _findUser(phoneOrUsername)?.schoolId ??
+                activeSchoolId ??
+                '')
+            .trim()
+            .toUpperCase();
 
     // Remove every local profile that matches this phone/username.
     final toRemove = <RegisteredUser>[];
@@ -1813,8 +1864,9 @@ class AuthService {
     List<ParentChildRegistration> children,
   ) {
     for (final child in children) {
-      final record =
-          StudentRegistryService.instance.lookupById(child.studentId);
+      final record = StudentRegistryService.instance.lookupById(
+        child.studentId,
+      );
       if (record == null) continue;
       final relationshipPhone = record.phoneForRelationship(child.relationship);
       if (relationshipPhone != null &&
@@ -1828,8 +1880,9 @@ class AuthService {
 
   static void _removeUserAccount(RegisteredUser user) {
     _users.remove(user.username.toLowerCase());
-    final phoneKey =
-        user.phone != null ? PhoneUtils.loginKey(user.phone!) : null;
+    final phoneKey = user.phone != null
+        ? PhoneUtils.loginKey(user.phone!)
+        : null;
     if (phoneKey != null && _users[phoneKey]?.username == user.username) {
       _users.remove(phoneKey);
     }
@@ -1974,7 +2027,9 @@ class AuthService {
     if (user.roleKey == roleStudent) {
       final studentId = user.linkedStudentId;
       if (studentId != null) {
-        unawaited(StudentAccountService.instance.markFirstLoginComplete(studentId));
+        unawaited(
+          StudentAccountService.instance.markFirstLoginComplete(studentId),
+        );
       }
       unawaited(
         StudentPortalAuditService.instance.log(
