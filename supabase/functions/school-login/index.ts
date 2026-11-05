@@ -153,17 +153,11 @@ Deno.serve(async (req) => {
       roleKey === "student" &&
       firstLoginPasswords.includes(String(password))
     ) {
-      const roster = await findStudentRegistryForLogin(
-        sb,
-        usernameInput,
-        schoolIdInput,
-      );
-      const allowTemplate = roster
-        ? roster.data.firstLoginCompleted !== true
-        : studentMayUsePortalTempPassword(found.data, hasStoredSecret);
-      if (allowTemplate) {
+      if (studentMayUsePortalTempPassword(found.data, hasStoredSecret)) {
         ok = true;
-        await upsertSecret(sb, username, password, profileSchoolId);
+        if (!hasStoredSecret) {
+          await upsertSecret(sb, username, password, profileSchoolId);
+        }
       }
     }
     if (!ok) {

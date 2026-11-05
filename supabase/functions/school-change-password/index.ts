@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
 
     await upsertSecret(sb, targetUsername, newPassword, accountSchool);
     account.mustChangePassword = false;
+    account.firstLoginCompleted = true;
     account.updatedAt = new Date().toISOString();
     delete account.password;
     delete account.passwordHash;

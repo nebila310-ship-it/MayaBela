@@ -830,14 +830,15 @@ export function resolvedStudentPortalTempPassword(
 /**
  * Students may sign in with the school template only before they choose their
  * own password, or when the cloud account has no stored secret yet.
+ * After a successful change, mustChangePassword is false — the template must
+ * not work and must not overwrite the new secret.
  */
 export function studentMayUsePortalTempPassword(
   account: Record<string, unknown> | null | undefined,
   hasStoredSecret: boolean,
 ): boolean {
   if (!hasStoredSecret) return true;
-  if (account?.mustChangePassword) return true;
-  return account?.firstLoginCompleted === false;
+  return account?.mustChangePassword === true;
 }
 
 /** Passwords a first-login student may use (school template + current default). */
