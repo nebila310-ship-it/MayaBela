@@ -1,6 +1,8 @@
 # MaJo Bridge / MayaBela security audit
 
-Status: source review completed. A client fix for the teacher `write_denied` and RLS 403 storm is in the working tree on `cursor/stop-denied-writes-0f33`. Row-level security was not weakened. The proposed SQL file was not applied. Production was not contacted. The app is not declared secure.
+Remediation update (5 November 2026): SEC-001, 002, 004, 006, 007, 008 (homework only) and 009 are fixed in source by `supabase/migrations/20261105120000_insa_permission_hardening.sql`, the `school-upsert-registry` edge function, and two client changes. The migration is not applied to production and the edge function is not deployed. Apply both on staging first. The fixes are covered by `supabase/tests/local_pg` (72 role-by-role checks against a local Postgres replay of every migration, run in CI) and `supabase/functions/_shared/registry_write_policy_test.ts`. SEC-005 and SEC-010 are still open.
+
+Original status: source review completed. A client fix for the teacher `write_denied` and RLS 403 storm is in the working tree on `cursor/stop-denied-writes-0f33`. Row-level security was not weakened. The proposed SQL file was not applied. Production was not contacted. The app is not declared secure.
 
 Audit date: 21 October 2026.
 
@@ -96,7 +98,7 @@ Do not grant the teacher permission to write `school_registry`. The database den
 ### SEC-001 — Ordinary teachers can write sensitive collections
 
 - Severity: High. Confidence: high in source, unverified in the live database.
-- Status: confirmed in `origin/master`, not fixed, not exploited here.
+- Status: fixed in source by `supabase/migrations/20261105120000_insa_permission_hardening.sql`, not applied to production. The gate uses the same permissions that the app's `ModuleAccess.canManage` requires for each module, so staff who can manage a module in the app keep write access. Staff with view-only access lose it.
 - Location: `app_doc_teacher_may_write` in `supabase/migrations/20260907140000_lia_tor_gaps_reads.sql`. The function ends with `return true`.
 - Evidence: payroll, password resets, MFA policy, cameras, employee registry, institution records, grade audit, assets, and stock transactions are not named. After the explicit denies, a teacher who does not have see-all still reaches `return true`. Phase 1 reads (`20261019160000`) return false for unclassified teacher collections, so these rows are writeable and not readable by the same teacher.
 - Also: `jwt_can_read_all_school_data()` returns true before the class-scope and inventory checks. A teacher who only has `view_all_school_data` (board, and several leadership templates) is allowed to write those sensitive collections too. School `admin` does not use this function; the write guard returns early for `admin`.
@@ -107,7 +109,7 @@ Do not grant the teacher permission to write `school_registry`. The database den
 ### SEC-002 — Service-role registry upsert skips the SQL write guard
 
 - Severity: High. Confidence: high in source, unverified that this file is the deployed function.
-- Status: confirmed in source, not fixed.
+- Status: fixed in source (`supabase/functions/_shared/registry_write_policy.ts`), not deployed. Students without an id on an exam attempt are bound to their own id. Teachers outside the discipline desk can file cases but cannot set the outcome fields.
 - Location: `supabase/functions/school-upsert-registry/index.ts`. Upsert uses `adminClient()`. The write guard returns `new` when the JWT role is not `authenticated`, which is the case for the service role.
 - The edge function does check the caller school against `app_metadata`. These collections are on the allowlist and have no role check, so any signed-in member of the school can upsert them:
   - `admission_applications`
@@ -129,7 +131,7 @@ Do not grant the teacher permission to write `school_registry`. The database den
 ### SEC-004 — School admin password can be written back into a teacher-readable document
 
 - Severity: High if any current row still contains the field. Confidence: high that the client can send it; unverified whether production rows currently contain it.
-- Status: suspected in production, confirmed in source.
+- Status: fixed in source. `schoolToMap` drops the field, a trigger strips it from every `school_registry` write, and the migration removes it from existing rows. Not applied to production.
 - Evidence: `20260818120000` deleted `adminInitialPassword` once. There is no trigger that keeps stripping it. `SchoolRecord.toJson` still includes `adminInitialPassword`. `schoolToMap` returns `toJson()`. `pushAllSchools` writes that map with the admin JWT, which passes the write guard. Phase 1 `app_doc_readable` returns true for every teacher on `school_registry`.
 - Platform edge functions `platform-create-school`, `platform-update-school`, and `platform-list-schools` already delete the field before they store or return it. The leak path is the client batch write, not those functions.
 - Fix: the strip trigger in the proposed SQL. Not applied. A read-only count of `school_registry` rows where `data ? 'adminInitialPassword'` is listed in the manual checks. Do not select the password value.
@@ -146,7 +148,7 @@ Do not grant the teacher permission to write `school_registry`. The database den
 ### SEC-006 — Classroom teachers can mark fees paid for their class
 
 - Severity: High for financial integrity. Confidence: high in source.
-- Status: confirmed design gap, not fixed. Left out of the proposed SQL on purpose.
+- Status: fixed in source. Writers without `record_payments` or `manage_fees` can still save fee rows, but the trigger keeps the stored `status`, `paidVia` and `paidDate`. Not applied to production.
 - Evidence: `fees` is in the class-scoped list inside `app_doc_teacher_may_write`. The check is `app_doc_teacher_class_readable`, which looks at class and student, not `record_payments` or `manage_fees`. `FeeStatus` includes `paid`, `paidVia`, and `paidDate`. A matching class returns true, so the teacher can set those fields. `view_all` teachers skip the class check entirely and can write every fee in the school.
 - Attack: a homeroom teacher sets a fee row to paid without a payment. RLS still confines this to their school.
 - Next action: product decision. A safe SQL change is to ignore client `status` / `paidDate` unless the JWT has `record_payments` or `manage_fees`, and to keep class teachers able to write non-payment fields if the product needs that. Not written as an applied migration because it can break a real homeroom workflow.
@@ -154,14 +156,14 @@ Do not grant the teacher permission to write `school_registry`. The database den
 ### SEC-007 — Grade audit rows are not append-only
 
 - Severity: Medium. Confidence: high in source.
-- Status: confirmed gap, not fixed.
+- Status: fixed in source. Grade audit is insert-only and excluded from delete. Updates are skipped without an error so routine re-syncs do not fail. Not applied to production.
 - Evidence: `grade_audit_log` is not named in `app_doc_teacher_may_write`, so the final `return true` allows insert and update. `GradeAuditService.log` is called from grade workflows in `school_data_service.dart`, so a blanket deny would break grade saves. `school_audit_log` is insert-only for admin and teacher; grade audit is not.
 - Next action: make grade audit insert-only, the same shape as `school_audit_log`, instead of denying it. Not in the proposed file.
 
 ### SEC-008 — Students can write homework rows for the whole school
 
 - Severity: Medium. Confidence: high in the latest write guard source.
-- Status: confirmed in source, not fixed.
+- Status: homework fixed in source. A student can only change their own worksheet entry on an existing homework row. Conversations and notifications are not changed yet. Not applied to production.
 - Evidence: `app_documents_write_guard` in `20261007120000` allows `app_role = 'student'` to write `homework` with no student-id check. RLS only checks the school. The same branch allows `conversations` and `app_notifications` with no participant check (FCM tokens are checked).
 - Attack: a student updates another student's homework document in the same school, if they know or guess the document id.
 - Fix: not applied. Require the homework row's student id to match `jwt_linked_student_id()` before returning.
@@ -169,7 +171,7 @@ Do not grant the teacher permission to write `school_registry`. The database den
 ### SEC-009 — Any teacher can insert a school audit row
 
 - Severity: Low. Confidence: high in source.
-- Status: confirmed, not fixed.
+- Status: fixed in source. The trigger stamps `actorId`, `recordedBy`, `recordedRole` and `recordedAt` from the JWT. Not applied to production.
 - Evidence: write guard allows INSERT on `school_audit_log` for `admin` and `teacher`, then returns. Updates are denied. Deletes are excluded by the delete policy. A teacher cannot edit history, but can append a misleading row.
 - Fix: not applied. Restrict inserts to actions the server records, or stamp the actor from `jwt_username()` and ignore the client actor field.
 
