@@ -78,11 +78,20 @@ void main() {
     expect(message, contains('09392885399'));
   });
 
-  test('staff role summary uses the school rename', () async {
-    await SchoolRoleCatalogService.instance.renameRole(
-      roleKey: StaffRoles.generalManager,
+  test('staff role summary uses the titled position', () async {
+    final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+      sourceRoleKey: StaffRoles.generalManager,
       label: 'CEO',
       schoolId: schoolId,
+    );
+    expect(created.roleKey, isNotNull);
+    expect(
+      staffRolesSummary(
+        [created.roleKey!],
+        AppLocale.instance.strings,
+        schoolId: schoolId,
+      ),
+      'CEO',
     );
     expect(
       staffRolesSummary(
@@ -90,7 +99,7 @@ void main() {
         AppLocale.instance.strings,
         schoolId: schoolId,
       ),
-      'CEO',
+      'General Manager',
     );
     expect(isAdministrationStaffRecord(staffRecord()), isTrue);
     expect(isAdministrationStaffRecord(teacherRecord()), isFalse);
@@ -159,7 +168,18 @@ void main() {
         SchoolRoleCatalogService.instance
             .lookup(StaffRoles.generalManager, schoolId: schoolId)
             ?.labelEn,
-        'CEO',
+        'General Manager',
+      );
+      final titled = SchoolRoleCatalogService.instance.findTitledRole(
+        sourceRoleKey: StaffRoles.generalManager,
+        label: 'CEO',
+        schoolId: schoolId,
+      );
+      expect(titled, isNotNull);
+      expect(titled!.labelEn, 'CEO');
+      expect(
+        TeacherRegistryService.instance.lookupById('GM-10001')?.staffRoles,
+        contains(titled.key),
       );
       expect(find.text('CEO'), findsWidgets);
     },

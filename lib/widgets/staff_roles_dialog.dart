@@ -156,8 +156,8 @@ Future<void> showStaffRolesDialog({
   onSaved?.call();
 }
 
-/// Rename the school-facing title of a staff member's assigned role
-/// (General Manager → CEO). The role key and permissions stay the same.
+/// Rename this person's position title (Principal → Principal 1-8).
+/// Creates or reuses a titled copy so other Principals keep their own modules.
 Future<bool> showRenameStaffRoleTitleDialog({
   required BuildContext context,
   required AdminTeacherRecord teacher,
@@ -209,20 +209,21 @@ Future<bool> showRenameStaffRoleTitleDialog({
   );
   if (next == null || next.trim().isEmpty) return false;
 
-  final err = await SchoolRoleCatalogService.instance.renameRole(
-    roleKey: role.key,
+  final err = await StaffRoleService.instance.retitleAssignedRole(
+    teacher: teacher,
+    currentRoleKey: role.key,
     label: next,
-    schoolId: teacher.schoolId,
   );
   if (!context.mounted) return err == null;
+  final localOk = err == null || err == 'cloud_failed';
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(err == null ? s.roleTitleSaved : s.staffRolesSaveFailed),
-      backgroundColor: err == null ? Colors.green : Colors.red.shade700,
+      content: Text(localOk ? s.roleTitleSaved : s.staffRolesSaveFailed),
+      backgroundColor: localOk ? Colors.green : Colors.red.shade700,
     ),
   );
-  if (err == null) onSaved?.call();
-  return err == null;
+  if (localOk) onSaved?.call();
+  return localOk;
 }
 
 class _RenameRoleTitleDialog extends StatefulWidget {

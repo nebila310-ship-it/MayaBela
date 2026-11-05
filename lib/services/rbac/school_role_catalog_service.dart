@@ -8,6 +8,7 @@ import 'package:mayabela/database/supabase/supabase_bootstrap.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/rbac/module_right.dart';
+import 'package:mayabela/services/rbac/role_module_catalog.dart';
 import 'package:mayabela/services/rbac/staff_dashboard_modules.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_audit_log_service.dart';
@@ -43,7 +44,12 @@ class SchoolRoleCatalogService {
     if (roles.isEmpty) return false;
     final allowed = rolePermissionDelegates().toSet();
     if (allowed.isEmpty) return false;
-    return roles.map(StaffRoles.canonicalize).any(allowed.contains);
+    return roles.any((role) {
+      final key = StaffRoles.canonicalize(role);
+      if (allowed.contains(key)) return true;
+      final source = sourceKeyFor(role);
+      return source != null && allowed.contains(source);
+    });
   }
 
   List<String> rolePermissionDelegates({String? schoolId}) {
@@ -373,6 +379,139 @@ class SchoolRoleCatalogService {
     return cloudErr;
   }
 
+  String? sourceKeyFor(String roleKey, {String? schoolId}) {
+    final role = lookup(roleKey, schoolId: schoolId);
+    final stored = role?.basedOn?.trim();
+    if (stored != null && stored.isNotEmpty) {
+      return StaffRoles.canonicalize(stored);
+    }
+    return StaffRoles.sourceKeyOf(roleKey);
+  }
+
+  StaffRole? findTitledRole({
+    required String sourceRoleKey,
+    required String label,
+    String? schoolId,
+  }) {
+    final source = StaffRoles.canonicalize(sourceRoleKey);
+    final want = label.trim().toLowerCase();
+    if (source.isEmpty || want.isEmpty) return null;
+    for (final role in rolesForAssign(schoolId: schoolId)) {
+      if (role.builtIn) continue;
+      if ((sourceKeyFor(role.key, schoolId: schoolId) ?? '') != source) {
+        continue;
+      }
+      if (role.labelEn.trim().toLowerCase() == want) return role;
+    }
+    return null;
+  }
+
+  int holderCount(String roleKey, {String? schoolId}) {
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    if (sid.isEmpty) return 0;
+    final want = StaffRoles.canonicalize(roleKey);
+    var n = 0;
+    for (final teacher in TeacherRegistryService.instance.teachersForSchool(sid)) {
+      if (teacher.staffRoles.map(StaffRoles.canonicalize).contains(want)) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /// Copy a built-in (or titled) position into its own title and module map.
+  /// Two Principals — "Principal 1-8" and "Principal KG" — stay independent.
+  Future<TitledRoleResult> ensureTitledRole({
+    required String sourceRoleKey,
+    required String label,
+    String? schoolId,
+  }) async {
+    final denied = _requireRoleCatalogEditor();
+    if (denied != null) return TitledRoleResult.error(denied);
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    if (sid.isEmpty) return TitledRoleResult.error('no_school');
+    final cleanLabel = label.trim();
+    if (cleanLabel.isEmpty) return TitledRoleResult.error('empty_label');
+
+    final source = StaffRoles.canonicalize(sourceRoleKey);
+    final sourceRole = lookup(source, schoolId: sid);
+    if (sourceRole == null) return TitledRoleResult.error('unknown_role');
+    if (sourceRole.ownerOnly || !sourceRole.customizable) {
+      return TitledRoleResult.error('not_customizable');
+    }
+    final basedOn = sourceKeyFor(source, schoolId: sid) ?? source;
+    if (StaffRoles.lookup(basedOn)?.ownerOnly == true) {
+      return TitledRoleResult.error('not_customizable');
+    }
+
+    await ensureLoaded(sid);
+    final existing = findTitledRole(
+      sourceRoleKey: basedOn,
+      label: cleanLabel,
+      schoolId: sid,
+    );
+    if (existing != null) return TitledRoleResult.ok(existing.key);
+
+    final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
+    final key = _nextInstanceKey(catalog, basedOn, cleanLabel);
+    final seedRights = moduleRightsFor(source, schoolId: sid) ??
+        RoleModuleCatalog.defaultsForRole(
+          StaffRoles.lookup(basedOn) ?? sourceRole,
+        );
+    catalog.customRoles.add(
+      StaffRole(
+        key: key,
+        labelEn: cleanLabel,
+        labelAm: cleanLabel,
+        labelOm: cleanLabel,
+        permissions: Set<String>.from(sourceRole.permissions),
+        builtIn: false,
+        basedOn: basedOn,
+      ),
+    );
+    catalog.moduleRights[key] = {
+      for (final entry in seedRights.entries) entry.key: entry.value.name,
+    };
+    final cloudErr = await _persist(sid, catalog);
+    await SchoolAuditLogService.instance.log(
+      action: 'staff_role_titled_instance_created',
+      schoolId: sid,
+      entityType: 'staff_role',
+      entityId: key,
+      detail: 'Titled $basedOn as "$cleanLabel"',
+    );
+    if (cloudErr != null &&
+        cloudErr != 'cloud_failed' &&
+        cloudErr != 'cloud_session') {
+      return TitledRoleResult.error(cloudErr);
+    }
+    return TitledRoleResult.ok(key);
+  }
+
+  String _nextInstanceKey(
+    _SchoolRoleCatalog catalog,
+    String source,
+    String label,
+  ) {
+    final slug = label
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    final base = 'custom_${source}_${slug.isEmpty ? 'role' : slug}';
+    if (!catalog.customRoles.any((role) => role.key == base) &&
+        !catalog.moduleRights.containsKey(base)) {
+      return base;
+    }
+    var i = 2;
+    while (catalog.customRoles.any((role) => role.key == '${base}_$i') ||
+        catalog.moduleRights.containsKey('${base}_$i')) {
+      i++;
+    }
+    return '${base}_$i';
+  }
+
   Future<String?> deleteCustomRole(String roleKey, {String? schoolId}) async {
     if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
       return 'not_allowed';
@@ -381,6 +520,7 @@ class SchoolRoleCatalogService {
     if (sid.isEmpty) return 'no_school';
     final key = roleKey.trim().toLowerCase();
     if (!key.startsWith('custom_')) return 'not_custom';
+    if (holderCount(key, schoolId: sid) > 0) return 'in_use';
 
     await ensureLoaded(sid);
     final catalog = _bySchool[sid];
@@ -694,6 +834,8 @@ class _SchoolRoleCatalog {
               'labelAm': r.labelAm,
               'labelOm': r.labelOm,
               'permissions': r.permissions.toList()..sort(),
+              if (r.basedOn != null && r.basedOn!.isNotEmpty)
+                'basedOn': r.basedOn,
             },
         ],
       };
@@ -734,6 +876,7 @@ class _SchoolRoleCatalog {
           if (map['permissions'] is List)
             for (final p in map['permissions'] as List) p.toString(),
         };
+        final basedOnRaw = (map['basedOn'] as String?)?.trim();
         custom.add(
           StaffRole(
             key: key,
@@ -742,6 +885,9 @@ class _SchoolRoleCatalog {
             labelOm: (map['labelOm'] as String?)?.trim() ?? label,
             permissions: StaffDashboardModules.withBaseline(perms),
             builtIn: false,
+            basedOn: basedOnRaw == null || basedOnRaw.isEmpty
+                ? StaffRoles.sourceKeyOf(key)
+                : StaffRoles.canonicalize(basedOnRaw),
           ),
         );
       }
@@ -774,4 +920,16 @@ class _SchoolRoleCatalog {
       rolePermissionDelegates: delegates,
     );
   }
+}
+
+class TitledRoleResult {
+  const TitledRoleResult._({this.error, this.roleKey});
+
+  factory TitledRoleResult.ok(String roleKey) =>
+      TitledRoleResult._(roleKey: roleKey);
+  factory TitledRoleResult.error(String error) =>
+      TitledRoleResult._(error: error);
+
+  final String? error;
+  final String? roleKey;
 }

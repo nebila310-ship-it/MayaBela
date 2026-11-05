@@ -36,21 +36,29 @@ void main() {
     InstitutionService.instance.resetForTests();
   });
 
-  test('school can rename General Manager to CEO and staff see that title', () async {
-    final err = await SchoolRoleCatalogService.instance.renameRole(
-      roleKey: StaffRoles.generalManager,
+  test('titled copy of General Manager does not rename the shared template',
+      () async {
+    final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+      sourceRoleKey: StaffRoles.generalManager,
       label: 'CEO',
       schoolId: schoolId,
     );
-    expect(err, isNull);
+    expect(created.error, isNull);
+    expect(created.roleKey, isNot(StaffRoles.generalManager));
 
-    final role = SchoolRoleCatalogService.instance.lookup(
+    final titled = SchoolRoleCatalogService.instance.lookup(
+      created.roleKey!,
+      schoolId: schoolId,
+    );
+    final template = SchoolRoleCatalogService.instance.lookup(
       StaffRoles.generalManager,
       schoolId: schoolId,
     );
-    expect(role, isNotNull);
-    expect(role!.labelEn, 'CEO');
-    expect(staffRoleLabel(role, AppLocale.instance.strings), 'CEO');
+    expect(titled, isNotNull);
+    expect(titled!.labelEn, 'CEO');
+    expect(titled.basedOn, StaffRoles.generalManager);
+    expect(staffRoleLabel(titled, AppLocale.instance.strings), 'CEO');
+    expect(template!.labelEn, 'General Manager');
     expect(
       StaffRoles.lookup(StaffRoles.generalManager)!.labelEn,
       'General Manager',
@@ -89,27 +97,38 @@ void main() {
     expect(InstitutionStaffMember.kindLabel(sara.kind), 'Teacher');
   });
 
-  test('renamed role appears on the administration staff directory line', () async {
-    await SchoolRoleCatalogService.instance.renameRole(
-      roleKey: StaffRoles.generalManager,
+  test('titled role appears only for the staff member who holds it', () async {
+    final created = await SchoolRoleCatalogService.instance.ensureTitledRole(
+      sourceRoleKey: StaffRoles.generalManager,
       label: 'CEO',
       schoolId: schoolId,
     );
     TeacherRegistryService.instance.addTeacher(
       schoolId: schoolId,
-      fullName: 'Belen Mulugeta',
-      email: 'belen@school.test',
-      phone: '0911000000',
+      fullName: 'Belen CEO',
+      email: 'belen.ceo@school.test',
+      phone: '0911000003',
       assignedClass: '',
       roles: const [],
-      loginUsername: 'belen.gm',
+      loginUsername: 'belen.ceo',
+      staffRoles: [created.roleKey!],
+    );
+    TeacherRegistryService.instance.addTeacher(
+      schoolId: schoolId,
+      fullName: 'Other Manager',
+      email: 'other@school.test',
+      phone: '0911000002',
+      assignedClass: '',
+      roles: const [],
+      loginUsername: 'other.gm',
       staffRoles: const [StaffRoles.generalManager],
     );
 
-    final belen = InstitutionService.instance
-        .staffDirectory(schoolId)
-        .firstWhere((m) => m.name == 'Belen Mulugeta');
+    final staff = InstitutionService.instance.staffDirectory(schoolId);
+    final belen = staff.firstWhere((m) => m.name == 'Belen CEO');
+    final other = staff.firstWhere((m) => m.name == 'Other Manager');
     expect(belen.kind, InstitutionStaffKind.admin);
     expect(belen.title, 'CEO');
+    expect(other.title, 'General Manager');
   });
 }

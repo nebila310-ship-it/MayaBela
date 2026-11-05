@@ -47,6 +47,16 @@ export function canonicalStaffRole(role: unknown): string {
   return STAFF_ROLE_ALIASES[key] ?? key;
 }
 
+/** True for the built-in key or a titled copy (`custom_principal_kg`). */
+export function holdsStaffRole(roles: string[], want: string): boolean {
+  const target = canonicalStaffRole(want);
+  if (!target) return false;
+  return roles.some((raw) => {
+    const key = canonicalStaffRole(raw);
+    return key === target || key.startsWith(`custom_${target}_`);
+  });
+}
+
 function lowerTrim(value: unknown): string {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -79,7 +89,7 @@ export function callerFromMeta(meta: Record<string, unknown>): RegistryCaller {
 }
 
 function isOwner(c: RegistryCaller): boolean {
-  return c.role === "admin" || c.staffRoles.includes("full_access");
+  return c.role === "admin" || holdsStaffRole(c.staffRoles, "full_access");
 }
 
 function hasAny(c: RegistryCaller, ...perms: string[]): boolean {
@@ -87,7 +97,8 @@ function hasAny(c: RegistryCaller, ...perms: string[]): boolean {
 }
 
 export function isDisciplineDesk(c: RegistryCaller): boolean {
-  return hasAny(c, "manage_students") || c.staffRoles.includes("student_affairs");
+  return hasAny(c, "manage_students") ||
+    holdsStaffRole(c.staffRoles, "student_affairs");
 }
 
 /** Admissions are a registrar desk ('admissions' manage = manage_students). */
@@ -145,9 +156,9 @@ export function guardRegistryRecord(
     case "privacy_consents":
     case "data_rights_requests": {
       const desk = hasAny(caller, "manage_students", "manage_school_settings") ||
-        caller.staffRoles.includes("principal") ||
-        caller.staffRoles.includes("vice_president") ||
-        caller.staffRoles.includes("registrar");
+        holdsStaffRole(caller.staffRoles, "principal") ||
+        holdsStaffRole(caller.staffRoles, "vice_president") ||
+        holdsStaffRole(caller.staffRoles, "registrar");
       if (desk) return record;
       return lowerTrim(record.authorUsername) === caller.username
         ? record
@@ -156,7 +167,7 @@ export function guardRegistryRecord(
     case "discipline_cases": {
       if (isDisciplineDesk(caller)) return record;
       const escalatedTo = canonicalStaffRole(prior?.escalatedTo);
-      if (prior && escalatedTo && caller.staffRoles.includes(escalatedTo)) {
+      if (prior && escalatedTo && holdsStaffRole(caller.staffRoles, escalatedTo)) {
         return record;
       }
       const out = { ...record };

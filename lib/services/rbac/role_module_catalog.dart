@@ -128,7 +128,7 @@ abstract final class RoleModuleCatalog {
           : ModuleRight.none;
     }
     return ModuleAccess.matrixRightForRole(
-      role.key,
+      role.basedOn ?? role.key,
       spec.id,
       permissions: role.permissions,
     );
