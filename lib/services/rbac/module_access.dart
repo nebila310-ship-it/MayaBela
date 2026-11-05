@@ -677,6 +677,9 @@ abstract final class ModuleAccess {
     if (_isAdmin) return true;
     final raw = moduleId.trim();
     final id = normalize(raw);
+    if (id == 'staff_roles' || raw == 'staff_roles') {
+      return AuthService.canConfigureRolePermissions;
+    }
     final rule = ruleFor(moduleId);
     if (rule == null || rule.adminOnly) return false;
 
@@ -722,6 +725,9 @@ abstract final class ModuleAccess {
     if (_isAdmin) return true;
     final raw = moduleId.trim();
     final id = normalize(raw);
+    if (id == 'staff_roles' || raw == 'staff_roles') {
+      return AuthService.canConfigureRolePermissions;
+    }
     final rule = ruleFor(moduleId);
     if (rule == null || rule.adminOnly) return false;
     if (AuthService.isAdministrationStaff &&

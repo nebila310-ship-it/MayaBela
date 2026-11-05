@@ -667,6 +667,13 @@ class AuthService {
   /// Only the school owner may grant/revoke owner-only roles (Full Access).
   static bool get canAssignFullAccess => currentUser?.roleKey == roleAdmin;
 
+  /// Whether the signed-in user may open the Role Permissions page and save
+  /// module rights for other roles. Full Access / General Manager only after
+  /// the school owner turns that on.
+  static bool get canConfigureRolePermissions =>
+      currentUser?.roleKey == roleAdmin ||
+      SchoolRoleCatalogService.instance.currentUserIsRolePermissionDelegate;
+
   /// Whether the signed-in user may open the role-assignment UI at all.
   static bool get canAssignStaffRoles =>
       currentUser?.roleKey == roleAdmin ||
