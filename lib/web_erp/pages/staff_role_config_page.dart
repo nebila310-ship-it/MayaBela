@@ -10,8 +10,10 @@ import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/web_erp/utils/web_viewport.dart';
 import 'package:mayabela/widgets/staff_roles_dialog.dart';
 
-/// School-owner screen: grant none / read / edit on every ERP module and
-/// sub-module per staff role. Full Access stays owner-only.
+/// Role-permissions screen: grant none / read / edit on every ERP module and
+/// sub-module per staff role. The school owner can let Full Access and
+/// General Manager (Managing Director) edit other roles. Full Access itself
+/// stays owner-only.
 class StaffRoleConfigPage extends StatefulWidget {
   const StaffRoleConfigPage({super.key});
 
@@ -23,6 +25,7 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
   bool _loading = true;
   String? _selectedKey;
   Map<String, ModuleRight> _draftRights = {};
+  Set<String> _delegates = {};
   final _customLabel = TextEditingController();
   final _filter = TextEditingController();
 
@@ -52,9 +55,15 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
     );
     setState(() {
       _loading = false;
+      _delegates = SchoolRoleCatalogService.instance
+          .rolePermissionDelegates()
+          .toSet();
       _loadDraft(first);
     });
   }
+
+  bool get _isSchoolOwner =>
+      AuthService.currentUser?.roleKey == AuthService.roleAdmin;
 
   List<StaffRole> get _roles =>
       SchoolRoleCatalogService.instance.rolesForAssign();
@@ -126,6 +135,28 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
       ),
     );
     if (err == null) setState(() {});
+  }
+
+  Future<void> _setDelegate(String roleKey, bool enabled) async {
+    if (!_isSchoolOwner) return;
+    final next = {..._delegates};
+    if (enabled) {
+      next.add(roleKey);
+    } else {
+      next.remove(roleKey);
+    }
+    final err =
+        await SchoolRoleCatalogService.instance.setRolePermissionDelegates(
+      next,
+    );
+    if (!mounted) return;
+    if (err != null && err != 'cloud_failed' && err != 'cloud_session') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update who may edit roles ($err).')),
+      );
+      return;
+    }
+    setState(() => _delegates = next);
   }
 
   Future<void> _addCustom() async {
@@ -233,8 +264,12 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
-      return const Center(child: Text('Only the school owner can configure roles.'));
+    if (!AuthService.canConfigureRolePermissions) {
+      return const Center(
+        child: Text(
+          'Only the school owner can open Role Permissions, unless they have given this right to School Owner / Full Access or General Manager.',
+        ),
+      );
     }
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -285,6 +320,39 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
               style: TextStyle(fontSize: 12, height: 1.35),
             ),
           ),
+          if (_isSchoolOwner) ...[
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: Text(
+                'Who else may edit role permissions',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                children: [
+                  for (final key
+                      in SchoolRoleCatalogService.delegatableRoleKeys)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      value: _delegates.contains(key),
+                      onChanged: (v) => _setDelegate(key, v ?? false),
+                      title: Text(
+                        staffRoleLabel(StaffRoles.lookup(key)!, s),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      subtitle: const Text(
+                        "May edit other roles' permissions",
+                        style: TextStyle(fontSize: 11),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Expanded(
             child: ListView(
@@ -301,50 +369,53 @@ class _StaffRoleConfigPageState extends State<StaffRoleConfigPage> {
                               : 'Custom',
                       style: const TextStyle(fontSize: 11),
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: 'Rename role',
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          onPressed: () => _renameRole(role),
-                        ),
-                        if (!role.builtIn)
-                          IconButton(
-                            tooltip: 'Delete',
-                            icon: const Icon(Icons.delete_outline, size: 18),
-                            onPressed: () => _deleteCustom(role),
-                          ),
-                      ],
-                    ),
+                    trailing: _isSchoolOwner
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Rename role',
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                onPressed: () => _renameRole(role),
+                              ),
+                              if (!role.builtIn)
+                                IconButton(
+                                  tooltip: 'Delete',
+                                  icon: const Icon(Icons.delete_outline, size: 18),
+                                  onPressed: () => _deleteCustom(role),
+                                ),
+                            ],
+                          )
+                        : null,
                     onTap: () => _selectRole(role),
                   ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _customLabel,
-                  decoration: const InputDecoration(
-                    labelText: 'Add custom role',
-                    hintText: 'e.g. Discipline Officer',
-                    isDense: true,
+          if (_isSchoolOwner)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _customLabel,
+                    decoration: const InputDecoration(
+                      labelText: 'Add custom role',
+                      hintText: 'e.g. Discipline Officer',
+                      isDense: true,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.tonal(
-                    onPressed: _addCustom,
-                    child: const Text('Add role'),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.tonal(
+                      onPressed: _addCustom,
+                      child: const Text('Add role'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

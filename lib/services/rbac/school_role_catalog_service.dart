@@ -30,6 +30,36 @@ class SchoolRoleCatalogService {
   String? get _activeSchoolId =>
       AuthService.activeSchoolId ?? AuthService.sessionSchoolId;
 
+  /// Roles the school owner may allow to edit other roles' permissions.
+  static const List<String> delegatableRoleKeys = [
+    StaffRoles.fullAccess,
+    StaffRoles.generalManager,
+  ];
+
+  /// True when the signed-in staff member holds a role on the owner's list.
+  bool get currentUserIsRolePermissionDelegate {
+    if (AuthService.currentUser?.roleKey == AuthService.roleAdmin) return false;
+    final roles = AuthService.currentUser?.staffRoles ?? const <String>[];
+    if (roles.isEmpty) return false;
+    final allowed = rolePermissionDelegates().toSet();
+    if (allowed.isEmpty) return false;
+    return roles.map(StaffRoles.canonicalize).any(allowed.contains);
+  }
+
+  List<String> rolePermissionDelegates({String? schoolId}) {
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    final catalog = _bySchool[sid];
+    if (catalog == null) return const [];
+    return List<String>.from(catalog.rolePermissionDelegates);
+  }
+
+  String? _requireRoleCatalogEditor({bool delegatesList = false}) {
+    if (AuthService.currentUser?.roleKey == AuthService.roleAdmin) return null;
+    if (delegatesList) return 'not_allowed';
+    if (currentUserIsRolePermissionDelegate) return null;
+    return 'not_allowed';
+  }
+
   Future<void> ensureLoaded([String? schoolId]) =>
       _ensureLoaded(schoolId, forceRefresh: false);
 
@@ -258,9 +288,8 @@ class SchoolRoleCatalogService {
     Map<String, ModuleRight>? moduleRights,
     String? schoolId,
   }) async {
-    if (AuthService.currentUser?.roleKey != AuthService.roleAdmin) {
-      return 'not_allowed';
-    }
+    final denied = _requireRoleCatalogEditor();
+    if (denied != null) return denied;
     final sid = (schoolId ?? _activeSchoolId ?? '').trim();
     if (sid.isEmpty) return 'no_school';
 
@@ -361,6 +390,37 @@ class SchoolRoleCatalogService {
     if (catalog.customRoles.length == before) return 'unknown_role';
     catalog.moduleRights.remove(key);
     return _persist(sid, catalog);
+  }
+
+  Future<String?> setRolePermissionDelegates(
+    Iterable<String> roleKeys, {
+    String? schoolId,
+  }) async {
+    final denied = _requireRoleCatalogEditor(delegatesList: true);
+    if (denied != null) return denied;
+    final sid = (schoolId ?? _activeSchoolId ?? '').trim();
+    if (sid.isEmpty) return 'no_school';
+    await ensureLoaded(sid);
+    final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
+    final allowed = <String>{};
+    for (final raw in roleKeys) {
+      final key = StaffRoles.canonicalize(raw);
+      if (delegatableRoleKeys.contains(key)) allowed.add(key);
+    }
+    catalog.rolePermissionDelegates
+      ..clear()
+      ..addAll(allowed);
+    final cloudErr = await _persist(sid, catalog);
+    await SchoolAuditLogService.instance.log(
+      action: 'staff_role_permission_delegates_updated',
+      schoolId: sid,
+      entityType: 'staff_role',
+      entityId: sid,
+      detail:
+          'Role-permission delegates: ${allowed.isEmpty ? 'none' : allowed.join(', ')}',
+      after: {'rolePermissionDelegates': allowed.toList()..sort()},
+    );
+    return cloudErr;
   }
 
   /// Rename a built-in or custom role. The key stays the same so permissions
@@ -556,6 +616,21 @@ class SchoolRoleCatalogService {
   }
 
   @visibleForTesting
+  void seedRolePermissionDelegatesForTests({
+    required String schoolId,
+    required Iterable<String> roleKeys,
+  }) {
+    final sid = schoolId.trim();
+    if (sid.isEmpty) return;
+    final catalog = _bySchool.putIfAbsent(sid, _SchoolRoleCatalog.new);
+    catalog.rolePermissionDelegates
+      ..clear()
+      ..addAll({
+        for (final raw in roleKeys) StaffRoles.canonicalize(raw),
+      }.where(delegatableRoleKeys.contains));
+  }
+
+  @visibleForTesting
   void seedModuleRightsForTests({
     required String schoolId,
     required String roleKey,
@@ -581,10 +656,12 @@ class _SchoolRoleCatalog {
     Map<String, String>? labelOverrides,
     List<StaffRole>? customRoles,
     Map<String, Map<String, String>>? moduleRights,
+    List<String>? rolePermissionDelegates,
   })  : overrides = overrides ?? {},
         labelOverrides = labelOverrides ?? {},
         customRoles = customRoles ?? [],
-        moduleRights = moduleRights ?? {};
+        moduleRights = moduleRights ?? {},
+        rolePermissionDelegates = rolePermissionDelegates ?? [];
 
   final Map<String, Set<String>> overrides;
   final Map<String, String> labelOverrides;
@@ -593,6 +670,9 @@ class _SchoolRoleCatalog {
   /// roleKey → moduleId → none|read|edit. Presence of the role key means the
   /// owner saved an explicit map (missing module ids count as none).
   final Map<String, Map<String, String>> moduleRights;
+
+  /// Built-in role keys allowed to open Role Permissions (besides admin).
+  final List<String> rolePermissionDelegates;
 
   Map<String, dynamic> toJson() => {
         'overrides': {
@@ -604,6 +684,8 @@ class _SchoolRoleCatalog {
             e.key: Map<String, String>.from(e.value),
         },
         'labelOverrides': Map<String, String>.from(labelOverrides),
+        'rolePermissionDelegates':
+            List<String>.from(rolePermissionDelegates)..sort(),
         'customRoles': [
           for (final r in customRoles)
             {
@@ -673,11 +755,23 @@ class _SchoolRoleCatalog {
         labels[e.key.toString()] = value;
       }
     }
+    final delegates = <String>[];
+    final delegatesRaw = json['rolePermissionDelegates'];
+    if (delegatesRaw is List) {
+      for (final raw in delegatesRaw) {
+        final key = StaffRoles.canonicalize(raw.toString());
+        if (SchoolRoleCatalogService.delegatableRoleKeys.contains(key) &&
+            !delegates.contains(key)) {
+          delegates.add(key);
+        }
+      }
+    }
     return _SchoolRoleCatalog(
       overrides: overrides,
       labelOverrides: labels,
       customRoles: custom,
       moduleRights: moduleRights,
+      rolePermissionDelegates: delegates,
     );
   }
 }

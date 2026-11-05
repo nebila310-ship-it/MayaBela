@@ -10,6 +10,8 @@
 ///   Level 1  EduAba platform owner  — PIN-protected owner console, not RBAC.
 ///   Level 2  School owner / head admin — account roleKey 'admin', implicitly
 ///            holds every permission and is the only grantor of Full Access.
+///            The admin may also let Full Access and General Manager edit
+///            other roles' permissions (Role Permissions page).
 ///   Level 3  School staff — accounts with roleKey 'teacher' that carry one or
 ///            more [StaffRole] grants. Permissions are the union of all roles.
 library;
