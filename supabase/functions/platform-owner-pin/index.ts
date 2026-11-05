@@ -12,9 +12,23 @@ import {
   createOwnerPinHashIfAbsent,
   hashOwnerPin,
   loadOwnerPinHash,
+  ownerPinFailureBuckets,
   saveOwnerPinHash,
-  verifyOwnerPinHash,
+  verifyOwnerPinWithLockout,
 } from "../_shared/platform_pin.ts";
+import {
+  mintOwnerSession,
+  ownerTotpSecret,
+  TOTP_STEP_MS,
+  verifyOwnerSession,
+  verifyTotp,
+} from "../_shared/owner_factor.ts";
+import {
+  assertNotLocked,
+  recordFailure,
+  supabaseLimitStore,
+} from "../_shared/abuse_limits.ts";
+import { logSecurityEvent } from "../_shared/security_events.ts";
 
 /**
  * Platform-owner PIN management.
@@ -22,8 +36,8 @@ import {
  * plaintext PIN; the server verifies against the stored hash.
  *
  * Actions:
- *   status  → { configured: boolean }
- *   verify  → { ok: true } when ownerPin matches
+ *   status  → { configured: boolean, totpRequired: boolean }
+ *   verify  → { ok: true, ownerSession? } when ownerPin (+ totpCode) matches
  *   save    → set/change PIN (first setup or currentOwnerPin + newPin)
  */
 function constantTimeEqual(a: string, b: string): boolean {
@@ -37,6 +51,33 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+type AdminClient = ReturnType<typeof adminClient>;
+
+/** Accepts each authenticator code once; failures share the PIN buckets. */
+async function verifyOwnerTotp(
+  sb: AdminClient,
+  req: Request,
+  totpSecret: string,
+  code: unknown,
+): Promise<boolean> {
+  const store = supabaseLimitStore(sb);
+  const ip = clientIp(req);
+  const step = await verifyTotp(totpSecret, code);
+  if (step != null) {
+    const used = { key: `owner_totp_used_${step}`, limit: 1, windowMs: 3 * TOTP_STEP_MS };
+    try {
+      await assertNotLocked(store, [used]);
+      await recordFailure(store, [used]);
+      return true;
+    } catch {
+      // Replayed code: fall through and count as a failure.
+    }
+  }
+  await recordFailure(store, ownerPinFailureBuckets(ip));
+  await logSecurityEvent(sb, { type: "owner_totp", outcome: "failure", ip });
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -46,6 +87,7 @@ Deno.serve(async (req) => {
     const action = String(body?.action || "status").trim().toLowerCase();
     const sb = adminClient();
     const ip = clientIp(req);
+    const totpSecret = ownerTotpSecret();
 
     if (action === "load") {
       // Backward-compatible alias — never returns the hash.
@@ -67,30 +109,44 @@ Deno.serve(async (req) => {
         PLATFORM_AUTHED_RATE_WINDOW_MS,
       );
       const existing = await loadOwnerPinHash(sb);
-      return jsonResponse({ configured: !!existing });
+      return jsonResponse({ configured: !!existing, totpRequired: !!totpSecret });
     }
 
     if (action === "verify") {
-      await assertNotRateLimited(
-        sb,
-        `platform_pin_verify_${ip}`,
-        LOGIN_RATE_LIMIT,
-        LOGIN_RATE_WINDOW_MS,
-      );
       const existing = await loadOwnerPinHash(sb);
       if (!existing) {
         return errorResponse("Owner PIN is not configured.", 404, "not_configured");
       }
       const suppliedPin = String(body?.ownerPin || "");
-      const ok = await verifyOwnerPinHash(suppliedPin, existing);
-      if (!ok) {
-        return errorResponse("Invalid owner PIN.", 401, "unauthorized");
+      try {
+        await verifyOwnerPinWithLockout(sb, req, suppliedPin);
+      } catch (e) {
+        const msg = String((e as Error)?.message || e);
+        if (msg.includes("owner_pin_invalid")) {
+          return errorResponse("Invalid owner PIN.", 401, "unauthorized");
+        }
+        throw e;
+      }
+      if (totpSecret) {
+        if (!String(body?.totpCode || "").trim()) {
+          return errorResponse("Authenticator code required.", 401, "totp_required");
+        }
+        if (!(await verifyOwnerTotp(sb, req, totpSecret, body?.totpCode))) {
+          return errorResponse("Invalid authenticator code.", 401, "totp_invalid");
+        }
       }
       // Upgrade legacy fast hashes after successful proof of the PIN.
       if (existing.startsWith("sha256:")) {
         await saveOwnerPinHash(sb, await hashOwnerPin(suppliedPin));
       }
-      return jsonResponse({ ok: true });
+      await logSecurityEvent(sb, { type: "owner_unlock", outcome: "success", ip });
+      if (!totpSecret) return jsonResponse({ ok: true });
+      const session = await mintOwnerSession(totpSecret);
+      return jsonResponse({
+        ok: true,
+        ownerSession: session.token,
+        ownerSessionExpiresAt: session.expiresAt,
+      });
     }
 
     if (action === "save") {
@@ -107,12 +163,24 @@ Deno.serve(async (req) => {
       const existing = await loadOwnerPinHash(sb);
       if (existing) {
         const current = String(body?.currentOwnerPin || "").trim();
-        const ok = await verifyOwnerPinHash(current, existing);
-        if (!ok) {
+        try {
+          await verifyOwnerPinWithLockout(sb, req, current);
+        } catch (e) {
+          const msg = String((e as Error)?.message || e);
+          if (msg.includes("owner_pin_invalid")) {
+            return errorResponse(
+              "Current owner PIN is required to change the PIN.",
+              401,
+              "unauthorized",
+            );
+          }
+          throw e;
+        }
+        if (totpSecret && !(await verifyOwnerSession(totpSecret, body?.ownerSession))) {
           return errorResponse(
-            "Current owner PIN is required to change the PIN.",
+            "Unlock with your authenticator code before changing the PIN.",
             401,
-            "unauthorized",
+            "totp_required",
           );
         }
       } else {
@@ -141,6 +209,7 @@ Deno.serve(async (req) => {
           );
         }
       }
+      await logSecurityEvent(sb, { type: "owner_pin_changed", outcome: "success", ip });
       return jsonResponse({ ok: true, configured: true });
     }
 
@@ -151,6 +220,6 @@ Deno.serve(async (req) => {
       return errorResponse("Too many attempts. Try again later.", 429, "rate_limited");
     }
     console.error(e);
-    return errorResponse(msg, 500, "invalid");
+    return errorResponse("Request failed.", 500, "invalid");
   }
 });

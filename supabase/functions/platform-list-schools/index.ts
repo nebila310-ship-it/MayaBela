@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sb = adminClient();
-    await authorizePlatformOwner(sb, req, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin, body?.ownerSession);
 
     const { data, error } = await sb
       .from("app_documents")

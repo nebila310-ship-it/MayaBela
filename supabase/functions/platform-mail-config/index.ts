@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    await authorizePlatformOwner(sb, req, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin, body?.ownerSession);
 
     const existing = await loadMailSecrets(sb);
 

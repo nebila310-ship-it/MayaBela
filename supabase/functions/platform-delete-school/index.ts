@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sb = adminClient();
-    await authorizePlatformOwner(sb, req, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin, body?.ownerSession);
 
     const schoolId = String(body?.schoolId || "").trim().toUpperCase();
     if (!schoolId || schoolId.length < 3) {

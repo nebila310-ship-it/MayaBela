@@ -378,6 +378,7 @@ class SchoolLogoService {
           'schoolId': schoolId,
           'bytesBase64': base64Encode(bytes),
           'ownerPin': ownerPin,
+          ...PlatformOwnerService.instance.ownerSessionFields,
           'kind': style == SchoolLogoStyle.circular ? 'identity' : 'banner',
           'style': style.name,
         },

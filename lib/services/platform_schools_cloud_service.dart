@@ -119,6 +119,7 @@ class PlatformSchoolsCloudService {
         'platform-create-school',
         body: {
           'ownerPin': ownerPin,
+          ...PlatformOwnerService.instance.ownerSessionFields,
           'school': school.toJson(),
           'schoolId': school.id.trim().toUpperCase(),
           'adminUsername': adminUsername.trim(),
@@ -228,6 +229,7 @@ class PlatformSchoolsCloudService {
         'platform-update-school',
         body: {
           'ownerPin': ownerPin,
+          ...PlatformOwnerService.instance.ownerSessionFields,
           'school': payload,
           'schoolId': school.id.trim().toUpperCase(),
           if (adminPassword != null && adminPassword.isNotEmpty)
@@ -317,7 +319,11 @@ class PlatformSchoolsCloudService {
 
       final res = await SupabaseBootstrap.client.functions.invoke(
         'platform-delete-school',
-        body: {'schoolId': id, 'ownerPin': ownerPin},
+        body: {
+          'schoolId': id,
+          'ownerPin': ownerPin,
+          ...PlatformOwnerService.instance.ownerSessionFields,
+        },
       );
       final data = res.data;
       if (data is! Map) {
@@ -363,7 +369,11 @@ class PlatformSchoolsCloudService {
 
       final res = await SupabaseBootstrap.client.functions.invoke(
         'platform-list-schools',
-        body: {'action': 'list', 'ownerPin': ownerPin},
+        body: {
+          'action': 'list',
+          'ownerPin': ownerPin,
+          ...PlatformOwnerService.instance.ownerSessionFields,
+        },
       );
       final data = res.data;
       if (data is! Map) return 0;
