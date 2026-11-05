@@ -1563,7 +1563,8 @@ class _PlatformSchoolDetailPageState extends State<_PlatformSchoolDetailPage> {
         title: const Text('Delete school?'),
         content: Text(
           'Are you sure you want to delete "${school.name}" (${school.id})?\n\n'
-          'All users will lose access. This cannot be undone.',
+          'All users will lose access. The school data is archived and can be '
+          'restored by platform support for 30 days.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),

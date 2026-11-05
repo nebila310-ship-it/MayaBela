@@ -289,7 +289,8 @@ class PlatformSchoolsCloudService {
     }
   }
 
-  /// Permanently delete a school tenant in Supabase (owner PIN, no school JWT).
+  /// Delete a school tenant in Supabase (owner PIN, no school JWT). The server
+  /// archives the data so it can be restored.
   Future<PlatformSchoolCloudResult> deleteSchoolInCloud(String schoolId) async {
     try {
       final ownerPin = await _ownerPinOrNull();
