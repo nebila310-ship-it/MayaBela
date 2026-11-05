@@ -2,9 +2,12 @@ import { corsHeaders, errorResponse, jsonResponse } from "../_shared/cors.ts";
 import {
   adminClient,
   assertNotRateLimited,
+  clientIp,
   getDoc,
 } from "../_shared/school_auth.ts";
 import { isMailReady, loadMailSecrets, sendPlainEmail } from "../_shared/mailer.ts";
+import { isSchoolStaffOf, resolveCaller } from "../_shared/caller.ts";
+import { logSecurityEvent } from "../_shared/security_events.ts";
 
 function clip(value: unknown, max: number): string {
   return String(value ?? "").trim().slice(0, max);
@@ -21,6 +24,14 @@ function ensureInviteLink(message: string, inviteUrl: string): string {
     return message;
   }
   return `${message}\n\nRegister here:\n${inviteUrl}`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function inviteHtml(opts: {
@@ -58,7 +69,6 @@ Deno.serve(async (req) => {
     const requestedSchoolName = clip(body?.schoolName, 120);
     const dateOfBirth = clip(body?.dateOfBirth, 32);
     const message = clip(body?.message, 4000);
-    const html = clip(body?.html, 12000);
 
     if (!schoolId || !email || !email.includes("@") || !studentId) {
       return errorResponse(
@@ -68,8 +78,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Only signed-in staff of this school may send invites. Caller-supplied
+    // HTML is ignored; the email body is always built and escaped here.
+    const caller = await resolveCaller(req);
     const sb = adminClient();
+    if (!isSchoolStaffOf(caller, schoolId)) {
+      await logSecurityEvent(sb, {
+        type: "parent_invite",
+        outcome: "blocked",
+        schoolId,
+        actor: caller?.username || null,
+        ip: clientIp(req),
+      });
+      return errorResponse("School staff sign-in required.", 403, "denied");
+    }
     await assertNotRateLimited(sb, `parent_invite_${schoolId}_${email}`);
+    await assertNotRateLimited(sb, `parent_invite_user_${caller!.userId}`, 60, 60 * 60 * 1000);
+    await assertNotRateLimited(sb, `parent_invite_school_${schoolId}`, 500, 24 * 60 * 60 * 1000);
     const school = await getDoc(sb, "school_registry", schoolId);
     if (!school) return errorResponse("School not found.", 404, "not_found");
 
@@ -99,9 +124,7 @@ Deno.serve(async (req) => {
       (dateOfBirth ? `Date of birth: ${dateOfBirth}\n` : "") +
       `\nWith warm regards,\n${schoolName}`;
     const text = ensureInviteLink(message, inviteUrl) || defaultText;
-    const htmlBody = html.includes(inviteUrl)
-      ? html
-      : inviteHtml({ schoolName, inviteUrl, text });
+    const htmlBody = inviteHtml({ schoolName: escapeHtml(schoolName), inviteUrl, text });
 
     const mail = await loadMailSecrets(sb);
     if (!isMailReady(mail)) {
@@ -115,11 +138,11 @@ Deno.serve(async (req) => {
     }, mail);
     return jsonResponse({ ok: true, via: "email" });
   } catch (e) {
-    const msg = String(e?.message || e);
+    const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {
       return errorResponse("Too many invites. Try later.", 429, "rate_limited");
     }
     console.error(e);
-    return errorResponse(msg, 500, "invalid");
+    return errorResponse("Could not send the invite.", 500, "invalid");
   }
 });
