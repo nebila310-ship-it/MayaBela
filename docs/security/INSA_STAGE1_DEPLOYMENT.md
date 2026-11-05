@@ -47,7 +47,8 @@ without it, delete fails and removes nothing):
 `platform-owner-pin`, `platform-create-school`, `platform-update-school`,
 `platform-delete-school`, `platform-list-schools`, `platform-mail-config`,
 `platform-upload-logo`, `platform-upload-mark`, `school-login`,
-`school-invite-parent`, `school-verify-student`.
+`school-invite-parent`, `school-verify-student`, `school-register-parent`,
+`school-upsert-account`, `school-upsert-registry`.
 
 ## 3. Web app
 

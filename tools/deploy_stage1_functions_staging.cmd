@@ -48,6 +48,9 @@ for %%F in (
   school-login
   school-invite-parent
   school-verify-student
+  school-register-parent
+  school-upsert-account
+  school-upsert-registry
 ) do (
   echo.
   echo === Deploying %%F to staging %REF% ===
@@ -60,4 +63,5 @@ for %%F in (
 
 echo.
 echo All Stage 1 functions deployed to staging %REF%.
+echo Also deployed school-register-parent, school-upsert-account and school-upsert-registry.
 exit /b 0
