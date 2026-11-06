@@ -152,6 +152,7 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.photoPath,
     this.onTitleTap,
     this.bottom,
+    this.titleKey,
   });
 
   final String title;
@@ -162,6 +163,7 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? photoPath;
   final VoidCallback? onTitleTap;
   final PreferredSizeWidget? bottom;
+  final Key? titleKey;
 
   @override
   Size get preferredSize {
@@ -172,20 +174,39 @@ class MessagesAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtitleStyle = TextStyle(
+      fontSize: 13,
+      color: Colors.white.withValues(alpha: 0.86),
+    );
     Widget? subtitleChild;
-    if (peerOnline != null) {
+    if (subtitle != null && subtitle!.trim().isNotEmpty && peerOnline != null) {
+      subtitleChild = Row(
+        children: [
+          Flexible(
+            child: Text(
+              subtitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: subtitleStyle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          PresenceLabel(online: peerOnline!, light: true),
+        ],
+      );
+    } else if (peerOnline != null) {
       subtitleChild = PresenceLabel(online: peerOnline!, light: true);
-    } else if (subtitle != null) {
+    } else if (subtitle != null && subtitle!.trim().isNotEmpty) {
       subtitleChild = Text(
         subtitle!,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.white.withValues(alpha: 0.86),
-        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: subtitleStyle,
       );
     }
     final titleText = Text(
       title,
+      key: titleKey,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
