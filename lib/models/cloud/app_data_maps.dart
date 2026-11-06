@@ -90,8 +90,8 @@ abstract final class AppDataMaps {
     final media = post.mediaPath;
     final cloudMedia =
         media != null && !ProfilePhotoCodec.isDeviceLocalPath(media)
-            ? media
-            : null;
+        ? media
+        : null;
     final attachments = post.attachmentPaths
         .where((path) => !ProfilePhotoCodec.isDeviceLocalPath(path))
         .toList();
@@ -208,7 +208,8 @@ abstract final class AppDataMaps {
             if (e.taken) 'taken': true,
             if (e.studentId != null && e.studentId!.trim().isNotEmpty)
               'studentId': e.studentId,
-            if (e.updatedAt != null) 'updatedAt': e.updatedAt!.toIso8601String(),
+            if (e.updatedAt != null)
+              'updatedAt': e.updatedAt!.toIso8601String(),
           },
         )
         .toList(),
@@ -266,6 +267,7 @@ abstract final class AppDataMaps {
         .toList(),
     if (a.createdByRole != null) 'createdByRole': a.createdByRole,
     if (a.createdByAuthor != null) 'createdByAuthor': a.createdByAuthor,
+    if ((a.schoolId ?? '').trim().isNotEmpty) 'schoolId': a.schoolId!.trim(),
   };
 
   static Announcement announcementFromMap(Map<String, dynamic> map) =>
@@ -296,6 +298,7 @@ abstract final class AppDataMaps {
             .toList(),
         createdByRole: map['createdByRole'] as String?,
         createdByAuthor: map['createdByAuthor'] as String?,
+        schoolId: (map['schoolId'] as String?)?.trim(),
       );
 
   // —— Schools ——

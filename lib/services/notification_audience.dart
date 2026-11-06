@@ -1,5 +1,6 @@
 import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/utils/student_id_utils.dart';
 
@@ -27,10 +28,13 @@ bool notificationIsSchoolWideForFamily(NotificationType type) {
 }
 
 bool notificationSchoolMatchesViewer(String? noticeSchoolId) {
-  final notice = noticeSchoolId?.trim().toUpperCase() ?? '';
-  if (notice.isEmpty) return true;
   final viewer = (AuthService.activeSchoolId ?? '').trim().toUpperCase();
-  if (viewer.isEmpty) return true;
+  if (viewer.isEmpty) return false;
+  final notice = noticeSchoolId?.trim().toUpperCase() ?? '';
+  if (notice.isEmpty) {
+    // Older rows without a school id must not leak onto a live school.
+    return !DemoContent.isRealSchool(viewer);
+  }
   return notice == viewer;
 }
 

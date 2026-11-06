@@ -37,6 +37,7 @@ import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/models/transport_passenger.dart';
 import 'package:mayabela/services/bus_live_location_service.dart';
 import 'package:mayabela/services/demo_content.dart';
+import 'package:mayabela/services/notification_audience.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
@@ -3413,7 +3414,9 @@ class CloudAppStore {
     final parsed = <AppNotification>[];
     for (final map in rows) {
       try {
-        parsed.add(AppDataMaps.appNotificationFromMap(map));
+        final item = AppDataMaps.appNotificationFromMap(map);
+        if (!notificationSchoolMatchesViewer(item.schoolId)) continue;
+        parsed.add(item);
       } catch (_) {}
     }
     if (parsed.isNotEmpty) {

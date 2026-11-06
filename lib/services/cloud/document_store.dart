@@ -13,15 +13,13 @@ import 'package:mayabela/services/student_registry_service.dart';
 /// (Firestore-compatible API for existing stores).
 class DocumentStore {
   DocumentStore({SupabaseClient? client})
-      : _db = client ??
-            (SupabaseBootstrap.isInitialized
-                ? SupabaseBootstrap.client
-                : null);
+    : _db =
+          client ??
+          (SupabaseBootstrap.isInitialized ? SupabaseBootstrap.client : null);
 
   final SupabaseClient? _db;
 
-  bool get available =>
-      SupabaseBootstrap.isInitialized && _db != null;
+  bool get available => SupabaseBootstrap.isInitialized && _db != null;
 
   SupabaseClient get db {
     final c = _db;
@@ -105,10 +103,7 @@ class DocumentStore {
 
   /// Collections the write trigger always rejects for a non-admin JWT.
   /// Sending them produces `write_denied` / SQLSTATE 42501.
-  static const adminOnlyCollections = {
-    'school_registry',
-    'platform_audit_log',
-  };
+  static const adminOnlyCollections = {'school_registry', 'platform_audit_log'};
 
   /// Rows a classroom teacher may write only for an assigned class.
   /// `app_doc_teacher_may_write` returns `app_doc_teacher_class_readable`,
@@ -408,6 +403,11 @@ class DocumentStore {
       (row['data'] as Map?)?.cast<String, dynamic>() ?? const {},
     );
     data['_docId'] = row['doc_id'];
+    final columnSchool = '${row['school_id'] ?? ''}'.trim();
+    final existing = '${data['schoolId'] ?? data['school_id'] ?? ''}'.trim();
+    if (existing.isEmpty && columnSchool.isNotEmpty) {
+      data['schoolId'] = columnSchool.toUpperCase();
+    }
     return data;
   }
 
@@ -578,9 +578,7 @@ class DocumentStore {
           data: payload,
           reason: 'JWT has no school',
         );
-        throw StateError(
-          'Cannot save $collection/$docId — JWT has no school.',
-        );
+        throw StateError('Cannot save $collection/$docId — JWT has no school.');
       }
       throw StateError(
         'Cannot save $collection/$docId — school does not match signed-in school.',
@@ -589,9 +587,7 @@ class DocumentStore {
 
     if (!SchoolAuthCloudService.accessTokenMayWriteAppDocuments()) {
       if (SchoolAuthCloudService.accessTokenJwtKind() == 'anon') {
-        throw StateError(
-          'Cannot save $collection/$docId — sign in required.',
-        );
+        throw StateError('Cannot save $collection/$docId — sign in required.');
       }
       await CloudOutboxService.instance.enqueue(
         collection: collection,
@@ -601,9 +597,7 @@ class DocumentStore {
         data: payload,
         reason: 'JWT has no app role',
       );
-      throw StateError(
-        'Cannot save $collection/$docId — JWT has no app role.',
-      );
+      throw StateError('Cannot save $collection/$docId — JWT has no app role.');
     }
 
     if (!available) {
@@ -622,16 +616,14 @@ class DocumentStore {
       try {
         await db.rpc(
           'upsert_school_conversation',
-          params: {
-            'p_doc_id': docId,
-            'p_data': payload,
-          },
+          params: {'p_doc_id': docId, 'p_data': payload},
         );
         await CloudOutboxService.instance.ack(collection, docId);
         return;
       } catch (e) {
         final s = '$e'.toLowerCase();
-        final rpcMissing = s.contains('upsert_school_conversation') ||
+        final rpcMissing =
+            s.contains('upsert_school_conversation') ||
             s.contains('pgrst202') ||
             s.contains('does not exist') ||
             s.contains('42883') ||
@@ -646,16 +638,13 @@ class DocumentStore {
     }
 
     try {
-      await db.from('app_documents').upsert(
-        {
-          'collection': collection,
-          'doc_id': docId,
-          'school_id': schoolId,
-          'data': payload,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        },
-        onConflict: 'collection,school_id,doc_id',
-      );
+      await db.from('app_documents').upsert({
+        'collection': collection,
+        'doc_id': docId,
+        'school_id': schoolId,
+        'data': payload,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'collection,school_id,doc_id');
       await CloudOutboxService.instance.ack(collection, docId);
     } catch (e) {
       if (_isGuardError(e)) {
@@ -842,7 +831,10 @@ class DocumentStore {
     var pageIndex = 0;
     while (rows.length < readMaxRows) {
       final (from, to) = pageRange(pageIndex);
-      var query = db.from('app_documents').select().eq('collection', collection);
+      var query = db
+          .from('app_documents')
+          .select()
+          .eq('collection', collection);
       if (schoolId != null && schoolId.isNotEmpty) {
         query = query.eq('school_id', schoolId.trim().toUpperCase());
       }
@@ -869,16 +861,14 @@ class DocumentStore {
   }
 
   Future<({Map<String, Map<String, dynamic>> byId, bool loadFailed})>
-      _existingDocsById(String collection) async {
+  _existingDocsById(String collection) async {
     try {
       final existing = await readBySchool(
         collection,
         schoolId: _resolvedSchoolId(),
       );
       return (
-        byId: {
-          for (final doc in existing) '${doc['_docId']}': doc,
-        },
+        byId: {for (final doc in existing) '${doc['_docId']}': doc},
         loadFailed: false,
       );
     } catch (_) {
@@ -978,10 +968,9 @@ class DocumentStore {
       }
       if (rows.isEmpty) continue;
       try {
-        await db.from('app_documents').upsert(
-          rows,
-          onConflict: 'collection,school_id,doc_id',
-        );
+        await db
+            .from('app_documents')
+            .upsert(rows, onConflict: 'collection,school_id,doc_id');
       } catch (e) {
         // One RLS-denied seed row used to abort the whole teacher upsert,
         // so their own homework / grades / attendance never reached cloud.
@@ -994,17 +983,14 @@ class DocumentStore {
         var anyOk = false;
         for (final row in rows) {
           try {
-            await db.from('app_documents').upsert(
-              [row],
-              onConflict: 'collection,school_id,doc_id',
-            );
+            await db.from('app_documents').upsert([
+              row,
+            ], onConflict: 'collection,school_id,doc_id');
             anyOk = true;
           } catch (rowError) {
             if (_isGuardError(rowError)) {
               if (kDebugMode) {
-                debugPrint(
-                  '[DocumentStore] skip ${row['doc_id']}: $rowError',
-                );
+                debugPrint('[DocumentStore] skip ${row['doc_id']}: $rowError');
               }
               continue;
             }
@@ -1018,18 +1004,30 @@ class DocumentStore {
     }
   }
 
-  Stream<List<Map<String, dynamic>>> watchAll(String collection) {
+  Stream<List<Map<String, dynamic>>> watchAll(
+    String collection, {
+    String? schoolId,
+  }) {
     if (!available) {
       return const Stream<List<Map<String, dynamic>>>.empty();
     }
+    final sid = (schoolId ?? _resolvedSchoolId())?.trim().toUpperCase();
     return db
         .from('app_documents')
         .stream(primaryKey: ['collection', 'school_id', 'doc_id'])
         .eq('collection', collection)
-        .map(
-          (rows) => rows
-              .map((r) => _rowToDoc(Map<String, dynamic>.from(r)))
-              .toList(),
-        );
+        .map((rows) {
+          final docs = <Map<String, dynamic>>[];
+          for (final raw in rows) {
+            final row = Map<String, dynamic>.from(raw);
+            if (sid != null && sid.isNotEmpty) {
+              final rowSchool =
+                  '${row['school_id'] ?? ''}'.trim().toUpperCase();
+              if (rowSchool != sid) continue;
+            }
+            docs.add(_rowToDoc(row));
+          }
+          return docs;
+        });
   }
 }

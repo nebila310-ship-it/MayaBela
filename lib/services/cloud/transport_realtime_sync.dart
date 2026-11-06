@@ -10,6 +10,7 @@ import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/bus_live_location_service.dart';
 import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
+import 'package:mayabela/services/notification_audience.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/transport_service.dart';
 
@@ -34,7 +35,10 @@ abstract final class TransportRealtimeSync {
         .listen(_onBusPositions, onError: _logError);
 
     _notificationSub = _crud
-        .watchAll(AppCollections.appNotifications)
+        .watchAll(
+          AppCollections.appNotifications,
+          schoolId: AuthService.activeSchoolId,
+        )
         .listen(_onNotifications, onError: _logError);
 
     _scanSub = _crud
@@ -56,8 +60,8 @@ abstract final class TransportRealtimeSync {
   static void _onPassengerStatus(List<Map<String, dynamic>> docs) {
     for (final map in docs) {
       try {
-        final studentId =
-            (map['studentId'] as String? ?? '${map['_docId']}').toUpperCase();
+        final studentId = (map['studentId'] as String? ?? '${map['_docId']}')
+            .toUpperCase();
         final status = AppDataMaps.transportPassengerStatusFromName(
           map['status'] as String?,
         );
@@ -82,7 +86,9 @@ abstract final class TransportRealtimeSync {
     final parsed = <AppNotification>[];
     for (final map in docs) {
       try {
-        parsed.add(AppDataMaps.appNotificationFromMap(map));
+        final item = AppDataMaps.appNotificationFromMap(map);
+        if (!notificationSchoolMatchesViewer(item.schoolId)) continue;
+        parsed.add(item);
       } catch (_) {}
     }
     if (parsed.isNotEmpty) {

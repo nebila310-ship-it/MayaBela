@@ -18,7 +18,12 @@ import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/notification_audience.dart';
 
 class NotificationService extends ChangeNotifier {
-  NotificationService._();
+  NotificationService._() {
+    AuthService.sessionListenable.addListener(() {
+      dropItemsNotForActiveSchool();
+      notifyListeners();
+    });
+  }
   static final instance = NotificationService._();
 
   int _nextId = 1;
@@ -515,9 +520,18 @@ class NotificationService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Drop leftover notices when the signed-in school changes.
+  void dropItemsNotForActiveSchool() {
+    _items.removeWhere(
+      (item) => !notificationSchoolMatchesViewer(item.schoolId),
+    );
+  }
+
   /// Merge notifications pulled from Firestore (cloud wins on same id).
   void applyCloudNotifications(List<AppNotification> cloudItems) {
-    var changed = false;
+    final before = _items.length;
+    dropItemsNotForActiveSchool();
+    var changed = _items.length != before;
     AppNotification? newest;
     final role = _currentRole;
     for (final cloud in cloudItems) {
@@ -529,9 +543,7 @@ class NotificationService extends ChangeNotifier {
             body: cloud.body,
           )) {
         if (CloudAppStore.instance.available) {
-          unawaited(
-            CloudAppStore.instance.deleteAppNotification(cloud.id),
-          );
+          unawaited(CloudAppStore.instance.deleteAppNotification(cloud.id));
         }
         _items.removeWhere((n) => n.id == cloud.id);
         changed = true;
