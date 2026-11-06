@@ -90,6 +90,24 @@ void main() {
   test('newer pending grade report replaces stale local approved copy', () {
     const studentName = 'Live Sync Grade Student';
     const className = 'Grade 9LS';
+    const schoolId = 'LIVE-001';
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-LS-9',
+        fullName: studentName,
+        grade: '9',
+        className: className,
+        schoolId: schoolId,
+        dateOfBirth: DateTime(2012, 1, 1),
+      ),
+    ]);
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.livesync',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: schoolId,
+      fullName: 'Live Sync Admin',
+    );
     SchoolDataService.instance.applyPersistedGradeReports([
       StudentGradeReport(
         studentName: studentName,

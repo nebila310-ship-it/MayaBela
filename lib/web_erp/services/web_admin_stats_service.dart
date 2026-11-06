@@ -217,7 +217,7 @@ class WebAdminStatsService {
           FinanceService.instance.controlTotals(schoolId).outstanding,
       unreadAnnouncements: announcements,
       supportTickets: messages,
-      pendingApprovals: pendingGrades + parentApprovals,
+      pendingApprovals: pendingGrades,
       upcomingExams: examCount,
       birthdaysToday: birthdaysToday,
       recentAdmissions: recentAdmissions,

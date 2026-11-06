@@ -112,7 +112,7 @@ class LmsClassroomService {
     for (final item in SchoolDataService.instance.homeworkForSchool(schoolId)) {
       remember(item.className, item.subject);
     }
-    for (final item in SchoolDataService.instance.learningMaterialsSnapshot()) {
+    for (final item in SchoolDataService.instance.learningMaterialsForSchool(schoolId)) {
       remember(item.className, item.subject);
     }
     for (final paper in ExamService.instance.papersForSchool(schoolId)) {
@@ -136,7 +136,7 @@ class LmsClassroomService {
           )
           .toList();
       final materials = SchoolDataService.instance
-          .learningMaterialsSnapshot()
+          .learningMaterialsForSchool(schoolId)
           .where(
             (m) =>
                 StudentRegistryService.classNamesMatch(m.className, pair.className) &&

@@ -493,7 +493,7 @@ class _LessonPlanEditorDialogState extends State<LessonPlanEditorDialog> {
 
   List<LearningMaterialItem> get _materialOptions {
     return SchoolDataService.instance
-        .learningMaterialsSnapshot()
+        .learningMaterialsForSchool()
         .where((m) => m.className == _className && m.subject == _subject)
         .toList();
   }

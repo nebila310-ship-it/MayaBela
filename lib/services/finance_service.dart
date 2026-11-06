@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/finance_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/finance_ledger.dart';
 import 'package:mayabela/services/persistence/finance_persistence_service.dart';
+import 'package:mayabela/services/school_scope.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 
 /// School finance desk: fees, cash, expenses, payables, and auto-posted ledger.
@@ -152,19 +154,26 @@ class FinanceService extends ChangeNotifier {
     return '$prefix-${_seq.toString().padLeft(4, '0')}';
   }
 
+  bool _rowInSchool(String recordSchoolId, [String? schoolId]) {
+    return schoolRecordMatchesViewer(
+      recordSchoolId,
+      viewerSchoolId: schoolId ?? _schoolId,
+    );
+  }
+
   List<FinanceFeeStructure> structuresForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _structures.where((s) => s.schoolId == sid).toList();
+    return _structures.where((s) => _rowInSchool(s.schoolId, sid)).toList();
   }
 
   List<FinanceInvoice> invoicesForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _invoices.where((i) => i.schoolId == sid).toList();
+    return _invoices.where((i) => _rowInSchool(i.schoolId, sid)).toList();
   }
 
   List<FinancePayment> paymentsForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _payments.where((p) => p.schoolId == sid).toList();
+    return _payments.where((p) => _rowInSchool(p.schoolId, sid)).toList();
   }
 
   /// Payments recorded from [start] inclusive to [end] exclusive.
@@ -176,27 +185,27 @@ class FinanceService extends ChangeNotifier {
 
   List<FinanceCashbox> cashboxesForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _cashboxes.where((c) => c.schoolId == sid).toList();
+    return _cashboxes.where((c) => _rowInSchool(c.schoolId, sid)).toList();
   }
 
   List<FinanceExpense> expensesForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _expenses.where((e) => e.schoolId == sid).toList();
+    return _expenses.where((e) => _rowInSchool(e.schoolId, sid)).toList();
   }
 
   List<FinanceBudget> budgetsForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _budgets.where((b) => b.schoolId == sid).toList();
+    return _budgets.where((b) => _rowInSchool(b.schoolId, sid)).toList();
   }
 
   List<FinancePayable> payablesForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _payables.where((p) => p.schoolId == sid).toList();
+    return _payables.where((p) => _rowInSchool(p.schoolId, sid)).toList();
   }
 
   List<FinanceCashMovement> cashMovesForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _cashMoves.where((m) => m.schoolId == sid).toList();
+    return _cashMoves.where((m) => _rowInSchool(m.schoolId, sid)).toList();
   }
 
   FinanceLedger ledger([String? schoolId]) {
@@ -215,12 +224,16 @@ class FinanceService extends ChangeNotifier {
 
   List<FinanceBudgetDisbursement> disbursementsForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _disbursements.where((d) => d.schoolId == sid).toList();
+    return _disbursements.where((d) => _rowInSchool(d.schoolId, sid)).toList();
   }
 
   List<FinanceAuditEvent> auditForSchool([String? schoolId]) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
-    return _audit.where((a) => a.schoolId == sid).toList().reversed.toList();
+    return _audit
+        .where((a) => _rowInSchool(a.schoolId, sid))
+        .toList()
+        .reversed
+        .toList();
   }
 
   FinanceStudentStatement? statementForStudent(String studentId) {
@@ -740,7 +753,7 @@ class FinanceService extends ChangeNotifier {
       if (structureId != null && match.grade != student.grade) continue;
       final already = _invoices.any(
         (i) =>
-            i.schoolId == sid &&
+            _rowInSchool(i.schoolId, sid) &&
             i.studentId == student.studentId &&
             i.structureId == match.id,
       );
@@ -998,7 +1011,10 @@ class FinanceService extends ChangeNotifier {
         );
     if (box == null) return 0;
     var total = box.openingBalance;
-    for (final move in _cashMoves.where((m) => m.cashboxId == cashboxId)) {
+    for (final move in _cashMoves.where(
+      (m) =>
+          m.cashboxId == cashboxId && _rowInSchool(m.schoolId, box.schoolId),
+    )) {
       total += move.kind.increasesBalance ? move.amount : -move.amount;
     }
     return total;
@@ -1142,14 +1158,42 @@ class FinanceService extends ChangeNotifier {
   void ensureDefaults({String? schoolId}) {
     final sid = (schoolId ?? _schoolId).trim().toUpperCase();
     if (sid.isEmpty) return;
+    if (DemoContent.isRealSchool(sid)) {
+      _zeroSeededOpeningBalance(sid);
+    }
     if (cashboxesForSchool(sid).isEmpty) {
       addCashbox(
         name: 'Main office',
-        openingBalance: 5000,
+        openingBalance: 0,
         cashierName: 'Cashier',
         schoolId: sid,
       );
     }
+  }
+
+  /// Demo seed used to open a live school with 5000 ETB on hand.
+  void _zeroSeededOpeningBalance(String sid) {
+    var changed = false;
+    for (var i = 0; i < _cashboxes.length; i++) {
+      final box = _cashboxes[i];
+      if (!_rowInSchool(box.schoolId, sid)) continue;
+      if (box.name != 'Main office') continue;
+      if (box.cashierName != 'Cashier') continue;
+      if (box.openingBalance != 5000) continue;
+      _cashboxes[i] = FinanceCashbox(
+        id: box.id,
+        schoolId: box.schoolId,
+        name: box.name,
+        openingBalance: 0,
+        cashierName: box.cashierName,
+        purpose: box.purpose,
+        department: box.department,
+        budgetId: box.budgetId,
+        location: box.location,
+      );
+      changed = true;
+    }
+    if (changed) _persist();
   }
 
   void _auditAdd(String schoolId, String action, String detail) {

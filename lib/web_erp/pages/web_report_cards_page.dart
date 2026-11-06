@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/grade_analytics_service.dart';
+import 'package:mayabela/services/grade_workflow_service.dart';
 import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -42,11 +43,22 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
     return fallback.where((n) => n.trim().isNotEmpty).toList()..sort();
   }
 
+  List<SubjectGradePendingItem> get _pending {
+    return _data.pendingGradeApprovals(schoolId: _schoolId).where((item) {
+      return GradeWorkflowService.canUserApprove(
+        grade: item.subjectGrade,
+        className: item.report.className,
+        schoolId: _schoolId,
+        roleKey: AuthService.currentUser?.roleKey,
+      );
+    }).toList();
+  }
+
   List<StudentGradeReport> get _reports {
     final className = _className;
     var items = className == null || className.isEmpty
         ? _data.getAllGradeReports().where((r) => r.subjects.isNotEmpty).toList()
-        : _data.getGradeReportsForClass(className);
+        : _data.getGradeReportsForClass(className).where((r) => r.subjects.isNotEmpty).toList();
     final q = _query.trim().toLowerCase();
     if (q.isNotEmpty) {
       items = items
@@ -57,13 +69,6 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
     }
     items.sort((a, b) => a.studentName.compareTo(b.studentName));
     return items;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    final classes = _classes;
-    if (classes.isNotEmpty) _className = classes.first;
   }
 
   @override
@@ -109,6 +114,7 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
   Widget build(BuildContext context) {
     final narrow = WebViewport.isNarrow(context);
     final reports = _reports;
+    final pending = _pending;
     final unpublished = reports.where((r) => !r.reportCardPublished).length;
     return ListView(
       padding: EdgeInsets.all(narrow ? 12 : 20),
@@ -132,17 +138,22 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
               width: 220,
               child: DropdownButtonFormField<String>(
                 key: ValueKey('rc-class-$_className'),
-                initialValue: _classes.contains(_className) ? _className : null,
+                initialValue: _className == null || _className!.isEmpty
+                    ? ''
+                    : (_classes.contains(_className) ? _className : ''),
                 decoration: const InputDecoration(
                   labelText: 'Class',
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
                 items: [
+                  const DropdownMenuItem(value: '', child: Text('All classes')),
                   for (final name in _classes)
                     DropdownMenuItem(value: name, child: Text(name)),
                 ],
-                onChanged: (v) => setState(() => _className = v),
+                onChanged: (v) => setState(
+                  () => _className = (v == null || v.isEmpty) ? null : v,
+                ),
               ),
             ),
             SizedBox(
@@ -159,15 +170,54 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
               ),
             ),
             Chip(label: Text('$unpublished unpublished')),
+            Chip(label: Text('${pending.length} pending approval')),
             TextButton(
               onPressed: () => widget.onNavigate?.call('markbook'),
               child: const Text('Open markbook'),
             ),
+            TextButton(
+              onPressed: () => widget.onNavigate?.call('grade_approvals'),
+              child: const Text('Open approval queue'),
+            ),
           ],
         ),
+        if (pending.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            'Waiting for approval',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          for (final item in pending)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: WebErpTheme.cardDecoration(context),
+              child: ListTile(
+                leading: const Icon(Icons.pending_actions_outlined),
+                title: Text(
+                  item.report.studentName,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  '${item.report.className} · ${item.subjectGrade.subject} · '
+                  '${GradeWorkflowService.statusLabel(item.subjectGrade.status)}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => widget.onNavigate?.call('grade_approvals'),
+              ),
+            ),
+        ],
         const SizedBox(height: 14),
         if (reports.isEmpty)
-          const Text('No grade reports for this class yet.')
+          Text(
+            pending.isEmpty
+                ? 'No grade reports for this school yet.'
+                : 'No published term cards yet — ${pending.length} '
+                    '${pending.length == 1 ? 'subject is' : 'subjects are'} '
+                    'waiting for approval.',
+          )
         else
           ...reports.map((report) {
             final snap = _data.attendanceSnapshotForStudent(

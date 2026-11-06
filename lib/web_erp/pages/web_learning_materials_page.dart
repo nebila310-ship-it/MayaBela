@@ -59,7 +59,7 @@ class _WebLearningMaterialsPageState extends State<WebLearningMaterialsPage> {
   }
 
   List<LearningMaterialItem> get _items {
-    var items = _data.learningMaterialsSnapshot().where(
+    var items = _data.learningMaterialsForSchool().where(
       (m) => m.className.toLowerCase() != 'library',
     );
     if (_classFilter != null) {

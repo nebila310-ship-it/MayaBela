@@ -2114,7 +2114,7 @@ class CloudAppStore {
   }
 
   Future<void> pushAllLearningMaterials() async {
-    final items = SchoolDataService.instance.learningMaterialsSnapshot();
+    final items = SchoolDataService.instance.learningMaterialsForSchool();
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.learningMaterials,
@@ -2131,49 +2131,49 @@ class CloudAppStore {
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.inventoryItems,
-        items: svc.itemsSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.itemsForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.stockTransactions,
-        items: svc.transactionsSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.transactionsForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.studentIssuedItems,
-        items: svc.studentIssuedSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.studentIssuedForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.classroomInventory,
-        items: svc.classroomSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.classroomForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.assets,
-        items: svc.assetsSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.assetsForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.suppliers,
-        items: svc.suppliersSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.suppliersForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.maintenanceReports,
-        items: svc.maintenanceSnapshot().map((e) => e.toMap()).toList(),
+        items: svc.maintenanceForActiveSchool().map((e) => e.toMap()).toList(),
         docIdFor: (item) => item['id'] as String,
       ),
     );

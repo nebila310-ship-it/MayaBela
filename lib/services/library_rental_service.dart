@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/persistence/local_json_store.dart';
+import 'package:mayabela/services/school_scope.dart';
 
 enum LibraryCopyStatus { available, checkedOut, lost }
 
@@ -15,6 +16,7 @@ class LibraryCopy {
     required this.bookTitle,
     required this.copyCode,
     required this.status,
+    this.schoolId,
   });
 
   final String id;
@@ -22,6 +24,7 @@ class LibraryCopy {
   final String bookTitle;
   final String copyCode;
   LibraryCopyStatus status;
+  final String? schoolId;
 
   bool get isAvailable => status == LibraryCopyStatus.available;
 
@@ -31,8 +34,10 @@ class LibraryCopy {
         'bookTitle': bookTitle,
         'copyCode': copyCode,
         'status': status.name,
-        if (AuthService.activeSchoolId != null)
-          'schoolId': AuthService.activeSchoolId,
+        if ((schoolId ?? AuthService.activeSchoolId) != null)
+          'schoolId': (schoolId ?? AuthService.activeSchoolId)!
+              .trim()
+              .toUpperCase(),
       };
 
   static LibraryCopy? fromMap(Map<String, dynamic> map) {
@@ -48,6 +53,7 @@ class LibraryCopy {
         bookTitle: map['bookTitle'] as String? ?? '',
         copyCode: map['copyCode'] as String? ?? map['id'] as String,
         status: status,
+        schoolId: (map['schoolId'] as String?)?.trim(),
       );
     } catch (_) {
       return null;
@@ -70,6 +76,7 @@ class LibraryRental {
     this.copyId,
     this.copyCode,
     this.dueDate,
+    this.schoolId,
   });
 
   final String id;
@@ -85,6 +92,7 @@ class LibraryRental {
   final String? copyId;
   final String? copyCode;
   final DateTime? dueDate;
+  final String? schoolId;
 
   bool get isActive => returnedAt == null;
 
@@ -120,8 +128,10 @@ class LibraryRental {
         if (copyId != null) 'copyId': copyId,
         if (copyCode != null) 'copyCode': copyCode,
         if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
-        if (AuthService.activeSchoolId != null)
-          'schoolId': AuthService.activeSchoolId,
+        if ((schoolId ?? AuthService.activeSchoolId) != null)
+          'schoolId': (schoolId ?? AuthService.activeSchoolId)!
+              .trim()
+              .toUpperCase(),
       };
 
   static LibraryRental? fromMap(Map<String, dynamic> map) {
@@ -144,6 +154,7 @@ class LibraryRental {
         dueDate: map['dueDate'] == null
             ? null
             : DateTime.tryParse(map['dueDate'] as String),
+        schoolId: (map['schoolId'] as String?)?.trim(),
       );
     } catch (_) {
       return null;
@@ -178,12 +189,16 @@ class LibraryRentalService extends ChangeNotifier {
   final List<LibraryCopy> _copies = [];
   bool _loaded = false;
 
-  List<LibraryRental> get all => List.unmodifiable(_rentals);
+  List<LibraryRental> get all => List.unmodifiable(
+        _rentals.where((r) => schoolRecordMatchesViewer(r.schoolId)),
+      );
 
-  List<LibraryCopy> get copies => List.unmodifiable(_copies);
+  List<LibraryCopy> get copies => List.unmodifiable(
+        _copies.where((c) => schoolRecordMatchesViewer(c.schoolId)),
+      );
 
   List<LibraryRental> get active =>
-      _rentals.where((r) => r.isActive).toList(growable: false);
+      all.where((r) => r.isActive).toList(growable: false);
 
   @visibleForTesting
   void resetForTests() {
@@ -280,7 +295,7 @@ class LibraryRentalService extends ChangeNotifier {
   }
 
   List<LibraryCopy> copiesFor(String materialId) {
-    return _copies
+    return copies
         .where((c) => c.materialId == materialId)
         .toList(growable: false);
   }
@@ -300,14 +315,14 @@ class LibraryRentalService extends ChangeNotifier {
 
   List<LibraryRental> loansForStudent(String studentId) {
     final id = studentId.trim().toUpperCase();
-    return _rentals
+    return all
         .where((r) => r.studentId == id)
         .toList(growable: false);
   }
 
   List<LibraryRental> overdue({DateTime? asOf}) {
     final now = asOf ?? DateTime.now();
-    return _rentals.where((r) => r.isOverdue(now)).toList(growable: false)
+    return all.where((r) => r.isOverdue(now)).toList(growable: false)
       ..sort((a, b) => (a.dueDate ?? a.rentedAt).compareTo(b.dueDate ?? b.rentedAt));
   }
 
@@ -346,6 +361,7 @@ class LibraryRentalService extends ChangeNotifier {
         bookTitle: bookTitle,
         copyCode: _copyCode(bookTitle, n),
         status: LibraryCopyStatus.available,
+        schoolId: AuthService.activeSchoolId,
       );
       _copies.add(copy);
       created.add(copy);
@@ -389,6 +405,7 @@ class LibraryRentalService extends ChangeNotifier {
       copyId: copy.id,
       copyCode: copy.copyCode,
       dueDate: dueDate ?? DateTime.now().add(const Duration(days: defaultLoanDays)),
+      schoolId: AuthService.activeSchoolId,
     );
     _rentals.insert(0, loan);
     notifyListeners();
@@ -416,6 +433,7 @@ class LibraryRentalService extends ChangeNotifier {
       price: isPaid ? price : null,
       rentedAt: DateTime.now(),
       notes: notes,
+      schoolId: AuthService.activeSchoolId,
     );
     _rentals.insert(0, rental);
     notifyListeners();

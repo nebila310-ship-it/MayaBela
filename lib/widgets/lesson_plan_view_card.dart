@@ -58,7 +58,7 @@ class _LessonPlanViewCardState extends State<LessonPlanViewCard> {
           ExamService.instance.paperById(id)!,
     ];
     final materials = SchoolDataService.instance
-        .learningMaterialsSnapshot()
+        .learningMaterialsForSchool()
         .where((m) => plan.learningMaterialIds.contains(m.id))
         .toList();
     final unit = plan.curriculumUnitId == null

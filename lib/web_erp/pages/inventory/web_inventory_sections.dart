@@ -476,7 +476,7 @@ class WebInventoryStockSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final txns = InventoryService.instance
-        .transactionsSnapshot()
+        .transactionsForActiveSchool()
         .where((t) => t.direction == direction)
         .toList();
 
@@ -589,7 +589,7 @@ class _WebInventoryStudentIssuedSectionState
 
   @override
   Widget build(BuildContext context) {
-    var items = InventoryService.instance.studentIssuedSnapshot();
+    var items = InventoryService.instance.studentIssuedForActiveSchool();
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
       items = items
@@ -697,7 +697,7 @@ class _WebInventoryStudentIssuedSectionState
   }
 
   Future<void> _addStudentIssue(BuildContext context) async {
-    final items = InventoryService.instance.itemsSnapshot();
+    final items = InventoryService.instance.itemsForActiveSchool();
     if (items.isEmpty) return;
 
     var itemId = items.first.id;
@@ -828,7 +828,7 @@ class _WebInventoryClassroomSectionState
       );
     }
 
-    var entries = InventoryService.instance.classroomSnapshot();
+    var entries = InventoryService.instance.classroomForActiveSchool();
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
       entries = entries
@@ -903,7 +903,7 @@ class _WebInventoryClassroomSectionState
   }
 
   Future<void> _addEntry(BuildContext context) async {
-    final items = InventoryService.instance.itemsSnapshot();
+    final items = InventoryService.instance.itemsForActiveSchool();
     if (items.isEmpty) return;
 
     var itemId = items.first.id;
@@ -1007,7 +1007,7 @@ class _WebInventoryAssetsSectionState extends State<WebInventoryAssetsSection> {
 
   @override
   Widget build(BuildContext context) {
-    var assets = InventoryService.instance.assetsSnapshot();
+    var assets = InventoryService.instance.assetsForActiveSchool();
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
       assets = assets
@@ -1116,9 +1116,9 @@ class WebInventorySuppliersSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final suppliers = InventoryService.instance.suppliersSnapshot();
+    final suppliers = InventoryService.instance.suppliersForActiveSchool();
     final stockIns = InventoryService.instance
-        .transactionsSnapshot()
+        .transactionsForActiveSchool()
         .where((t) => t.direction == InventoryStockDirection.stockIn)
         .toList();
 
@@ -1198,7 +1198,7 @@ class WebInventoryMaintenanceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reports = InventoryService.instance.maintenanceSnapshot();
+    final reports = InventoryService.instance.maintenanceForActiveSchool();
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -1318,9 +1318,9 @@ class WebInventoryReportsSection extends StatelessWidget {
     final svc = InventoryService.instance;
     final items = svc.filteredItems();
     final lowStock = svc.filteredItems(stockFilter: 'low');
-    final txns = svc.transactionsSnapshot();
-    final issued = svc.studentIssuedSnapshot();
-    final assets = svc.assetsSnapshot();
+    final txns = svc.transactionsForActiveSchool();
+    final issued = svc.studentIssuedForActiveSchool();
+    final assets = svc.assetsForActiveSchool();
     final damaged = issued
         .where(
           (e) =>

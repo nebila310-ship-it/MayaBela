@@ -188,4 +188,47 @@ class DemoContent {
     if (names.isEmpty) return false;
     return names.every(sampleStudentNames.contains);
   }
+
+  static bool isSampleLearningMaterial({
+    required String id,
+    required String bookName,
+    required String teacherId,
+  }) {
+    if (id.trim().toLowerCase().startsWith('lm-sample-')) return true;
+    if (sampleTeacherIds.contains(teacherId.trim().toUpperCase()) &&
+        bookName.trim().toLowerCase().startsWith('sample ')) {
+      return true;
+    }
+    return false;
+  }
+
+  static bool isSampleInventoryItem({
+    required String name,
+    String? supplier,
+  }) {
+    const seeds = {
+      'mathematics textbook grade 5': 'ethio books plc',
+      'student desk': 'addis furniture',
+      'a4 exercise book': 'paper world',
+    };
+    return seeds[name.trim().toLowerCase()] ==
+        (supplier ?? '').trim().toLowerCase();
+  }
+
+  static bool isSampleSchoolAsset({
+    required String name,
+    required String serialNumber,
+  }) {
+    return name.trim().toLowerCase() == 'epson projector' &&
+        serialNumber.trim().toUpperCase() == 'EP-2024-001';
+  }
+
+  static bool isSampleGradeReport({
+    required String studentName,
+    String? studentId,
+  }) {
+    final id = (studentId ?? '').trim().toUpperCase();
+    if (sampleStudentIds.contains(id)) return true;
+    return sampleStudentNames.contains(studentName.trim().toLowerCase());
+  }
 }
