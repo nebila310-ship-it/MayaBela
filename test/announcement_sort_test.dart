@@ -1,10 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mayabela/models/announcement.dart';
+import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 
 void main() {
   test('getAnnouncements puts newest posts first', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.demo',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+    );
+    addTearDown(() => AuthService.currentUser = null);
     final service = SchoolDataService.instance;
     // Relative dates: demo seed announcements use DateTime.now(), so the
     // "newest" fixture must always be ahead of them regardless of today.

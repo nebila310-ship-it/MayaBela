@@ -73,9 +73,10 @@ class Announcement {
     this.attachments = const [],
     this.createdByRole,
     this.createdByAuthor,
+    this.schoolId,
   }) : audienceKeys = audienceKeys != null && audienceKeys.isNotEmpty
-            ? _normalizeKeys(audienceKeys)
-            : [AnnouncementAudiences.normalizeLegacy(audience ?? 'All')];
+           ? _normalizeKeys(audienceKeys)
+           : [AnnouncementAudiences.normalizeLegacy(audience ?? 'All')];
 
   final String id;
   final String title;
@@ -88,6 +89,9 @@ class Announcement {
   final List<AnnouncementAttachment> attachments;
   final String? createdByRole;
   final String? createdByAuthor;
+
+  /// School that posted this. Empty on demo seeds and older rows.
+  final String? schoolId;
 
   /// Legacy single-audience label for older call sites.
   String get audience {
@@ -113,12 +117,15 @@ class Announcement {
     }
     if (audienceKeys.contains(AnnouncementAudiences.all)) return true;
     return switch (roleKey) {
-      AuthService.roleParent =>
-        audienceKeys.contains(AnnouncementAudiences.parents),
-      AuthService.roleTeacher =>
-        audienceKeys.contains(AnnouncementAudiences.teachers),
-      AuthService.roleDriver =>
-        audienceKeys.contains(AnnouncementAudiences.transport),
+      AuthService.roleParent => audienceKeys.contains(
+        AnnouncementAudiences.parents,
+      ),
+      AuthService.roleTeacher => audienceKeys.contains(
+        AnnouncementAudiences.teachers,
+      ),
+      AuthService.roleDriver => audienceKeys.contains(
+        AnnouncementAudiences.transport,
+      ),
       AuthService.roleStudent => _visibleToStudentAudience(audienceKeys),
       _ => false,
     };
@@ -180,13 +187,14 @@ class SubjectGrade {
     List<String>? markPhotoPaths,
     List<String>? attachmentPaths,
     List<AssessmentMark>? assessments,
-  })  : status = status ??
-            (publishedToParents
-                ? SubjectGradeStatus.approved
-                : SubjectGradeStatus.draft),
-        markPhotoPaths = markPhotoPaths ?? [],
-        attachmentPaths = attachmentPaths ?? [],
-        assessments = assessments ?? [];
+  }) : status =
+           status ??
+           (publishedToParents
+               ? SubjectGradeStatus.approved
+               : SubjectGradeStatus.draft),
+       markPhotoPaths = markPhotoPaths ?? [],
+       attachmentPaths = attachmentPaths ?? [],
+       assessments = assessments ?? [];
 
   final String subject;
   double score;
@@ -259,29 +267,29 @@ class SubjectGrade {
   }
 
   Map<String, dynamic> toMap() => {
-        'subject': subject,
-        'score': score,
-        'maxScore': maxScore,
-        if (comment != null) 'comment': comment,
-        if (enteredByTeacherId != null) 'enteredByTeacherId': enteredByTeacherId,
-        if (subjectId != null) 'subjectId': subjectId,
-        if (teachingSlotId != null) 'teachingSlotId': teachingSlotId,
-        'publishedToParents': publishedToParents,
-        if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
-        'status': status.name,
-        'approvalLevelIndex': approvalLevelIndex,
-        if (submittedAt != null) 'submittedAt': submittedAt!.toIso8601String(),
-        if (submittedByTeacherId != null)
-          'submittedByTeacherId': submittedByTeacherId,
-        if (reviewComment != null) 'reviewComment': reviewComment,
-        if (lastReviewedBy != null) 'lastReviewedBy': lastReviewedBy,
-        if (lastReviewedAt != null)
-          'lastReviewedAt': lastReviewedAt!.toIso8601String(),
-        'markPhotoPaths': markPhotoPaths,
-        'attachmentPaths': attachmentPaths,
-        if (assessments.isNotEmpty)
-          'assessments': assessments.map((m) => m.toMap()).toList(),
-      };
+    'subject': subject,
+    'score': score,
+    'maxScore': maxScore,
+    if (comment != null) 'comment': comment,
+    if (enteredByTeacherId != null) 'enteredByTeacherId': enteredByTeacherId,
+    if (subjectId != null) 'subjectId': subjectId,
+    if (teachingSlotId != null) 'teachingSlotId': teachingSlotId,
+    'publishedToParents': publishedToParents,
+    if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
+    'status': status.name,
+    'approvalLevelIndex': approvalLevelIndex,
+    if (submittedAt != null) 'submittedAt': submittedAt!.toIso8601String(),
+    if (submittedByTeacherId != null)
+      'submittedByTeacherId': submittedByTeacherId,
+    if (reviewComment != null) 'reviewComment': reviewComment,
+    if (lastReviewedBy != null) 'lastReviewedBy': lastReviewedBy,
+    if (lastReviewedAt != null)
+      'lastReviewedAt': lastReviewedAt!.toIso8601String(),
+    'markPhotoPaths': markPhotoPaths,
+    'attachmentPaths': attachmentPaths,
+    if (assessments.isNotEmpty)
+      'assessments': assessments.map((m) => m.toMap()).toList(),
+  };
 
   factory SubjectGrade.fromMap(Map<String, dynamic> map) {
     final published = map['publishedToParents'] as bool? ?? false;
@@ -311,15 +319,16 @@ class SubjectGrade {
       lastReviewedAt: map['lastReviewedAt'] != null
           ? DateTime.tryParse(map['lastReviewedAt'] as String)
           : null,
-      markPhotoPaths: (map['markPhotoPaths'] as List?)
+      markPhotoPaths:
+          (map['markPhotoPaths'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      attachmentPaths:
+          (map['attachmentPaths'] as List?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      attachmentPaths: (map['attachmentPaths'] as List?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
-      assessments: (map['assessments'] as List?)
+      assessments:
+          (map['assessments'] as List?)
               ?.whereType<Map>()
               .map((e) => AssessmentMark.fromMap(Map<String, dynamic>.from(e)))
               .toList() ??
@@ -379,23 +388,23 @@ class StudentGradeReport {
       );
 
   Map<String, dynamic> toMap() => {
-        'studentName': studentName,
-        'className': className,
-        'term': term,
-        if (studentId != null) 'studentId': studentId,
-        if (studentId != null && studentId!.trim().isNotEmpty)
-          'studentIds': [studentId],
-        if (academicYear != null) 'academicYear': academicYear,
-        if (homeroomComment != null) 'homeroomComment': homeroomComment,
-        if (principalComment != null) 'principalComment': principalComment,
-        'reportCardPublished': reportCardPublished,
-        if (reportCardPublishedAt != null)
-          'reportCardPublishedAt': reportCardPublishedAt!.toIso8601String(),
-        if (attendancePresent != null) 'attendancePresent': attendancePresent,
-        if (attendanceLate != null) 'attendanceLate': attendanceLate,
-        if (attendanceAbsent != null) 'attendanceAbsent': attendanceAbsent,
-        'subjects': subjects.map((s) => s.toMap()).toList(),
-      };
+    'studentName': studentName,
+    'className': className,
+    'term': term,
+    if (studentId != null) 'studentId': studentId,
+    if (studentId != null && studentId!.trim().isNotEmpty)
+      'studentIds': [studentId],
+    if (academicYear != null) 'academicYear': academicYear,
+    if (homeroomComment != null) 'homeroomComment': homeroomComment,
+    if (principalComment != null) 'principalComment': principalComment,
+    'reportCardPublished': reportCardPublished,
+    if (reportCardPublishedAt != null)
+      'reportCardPublishedAt': reportCardPublishedAt!.toIso8601String(),
+    if (attendancePresent != null) 'attendancePresent': attendancePresent,
+    if (attendanceLate != null) 'attendanceLate': attendanceLate,
+    if (attendanceAbsent != null) 'attendanceAbsent': attendanceAbsent,
+    'subjects': subjects.map((s) => s.toMap()).toList(),
+  };
 
   factory StudentGradeReport.fromMap(Map<String, dynamic> map) {
     return StudentGradeReport(
@@ -413,7 +422,8 @@ class StudentGradeReport {
       attendancePresent: map['attendancePresent'] as int?,
       attendanceLate: map['attendanceLate'] as int?,
       attendanceAbsent: map['attendanceAbsent'] as int?,
-      subjects: (map['subjects'] as List?)
+      subjects:
+          (map['subjects'] as List?)
               ?.whereType<Map>()
               .map((e) => SubjectGrade.fromMap(Map<String, dynamic>.from(e)))
               .toList() ??
@@ -445,8 +455,9 @@ class StudentGradeReport {
       subjects: subjects ?? this.subjects,
       studentId: studentId ?? this.studentId,
       academicYear: academicYear ?? this.academicYear,
-      homeroomComment:
-          clearHomeroomComment ? null : (homeroomComment ?? this.homeroomComment),
+      homeroomComment: clearHomeroomComment
+          ? null
+          : (homeroomComment ?? this.homeroomComment),
       principalComment: clearPrincipalComment
           ? null
           : (principalComment ?? this.principalComment),
