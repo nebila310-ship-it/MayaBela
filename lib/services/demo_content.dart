@@ -193,12 +193,13 @@ class DemoContent {
     required String id,
     required String bookName,
     required String teacherId,
+    String? teacherName,
   }) {
     if (id.trim().toLowerCase().startsWith('lm-sample-')) return true;
-    if (sampleTeacherIds.contains(teacherId.trim().toUpperCase()) &&
-        bookName.trim().toLowerCase().startsWith('sample ')) {
-      return true;
-    }
+    if (sampleTeacherIds.contains(teacherId.trim().toUpperCase())) return true;
+    if (bookName.trim().toLowerCase().startsWith('sample ')) return true;
+    final name = (teacherName ?? '').trim().toLowerCase();
+    if (name.isNotEmpty && sampleStaffNames.contains(name)) return true;
     return false;
   }
 

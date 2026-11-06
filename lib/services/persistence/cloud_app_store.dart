@@ -3115,17 +3115,7 @@ class CloudAppStore {
   }
 
   Future<void> pushAllAnnouncements() async {
-    final real = DemoContent.isRealSchool(AuthService.activeSchoolId);
-    final items = SchoolDataService.instance.announcementsSnapshot().where((
-      item,
-    ) {
-      if (!real) return true;
-      return !DemoContent.isSampleAnnouncement(
-        id: item.id,
-        title: item.title,
-        author: item.author,
-      );
-    }).toList();
+    final items = SchoolDataService.instance.getAnnouncements();
     await _pushSafe(
       () => _crud.writeBatch(
         collection: AppCollections.announcements,

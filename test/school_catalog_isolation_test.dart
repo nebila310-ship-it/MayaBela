@@ -9,7 +9,9 @@ import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/finance_service.dart';
 import 'package:mayabela/services/inventory_service.dart';
+import 'package:mayabela/services/markbook_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/school_registry_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/web_erp/services/web_admin_stats_service.dart';
 
@@ -333,5 +335,132 @@ void main() {
       InventoryService.instance.assetsForActiveSchool().map((a) => a.name),
       ['Fnote Laptop'],
     );
+  });
+
+  test('unpublished report-card count ignores other schools and empty cards', () {
+    StudentRegistryService.instance.applyPersistedStudents([
+      AdminStudentRecord(
+        studentId: 'STU-FN-EMPTY',
+        fullName: 'New Fnote Child',
+        grade: '1',
+        className: 'Grade 1A',
+        schoolId: 'FN0597',
+        dateOfBirth: DateTime(2018, 3, 2),
+      ),
+    ], replace: true);
+    SchoolDataService.instance.applyPersistedGradeReports([
+      StudentGradeReport(
+        studentName: 'Other School Child',
+        studentId: 'STU-OTHER-18',
+        className: 'Grade 4A',
+        term: 'Term 1',
+        subjects: [
+          SubjectGrade(
+            subject: 'Mathematics',
+            score: 88,
+            maxScore: 100,
+            status: SubjectGradeStatus.approved,
+            publishedToParents: true,
+          ),
+        ],
+      ),
+    ]);
+
+    signIn('FN0597');
+    expect(MarkbookService.instance.unpublishedCount(), 0);
+    expect(
+      SchoolDataService.instance.getAllGradeReports().where(
+            (r) => r.subjects.isNotEmpty,
+          ),
+      isEmpty,
+    );
+  });
+
+  test('restamped older announcements and e-books stay off a new live school', () {
+    SchoolRegistryService.instance.applyPersistedSchools([
+      SchoolRecord(
+        id: 'FN0597',
+        name: 'Fnote Raey Academy',
+        registeredAt: DateTime(2026, 11, 1),
+      ),
+    ]);
+    SchoolDataService.instance.applyPersistedAnnouncements([
+      Announcement(
+        id: 'ann-helo',
+        title: 'helo',
+        body: 'from the other campus',
+        author: 'Office',
+        date: DateTime(2026, 10, 20),
+        schoolId: 'FN0597',
+      ),
+      Announcement(
+        id: 'ann-friday',
+        title: 'no school on firday',
+        body: 'closed',
+        author: 'Office',
+        date: DateTime(2026, 10, 10),
+        schoolId: 'FN0597',
+      ),
+      Announcement(
+        id: 'ann-holiday',
+        title: 'Holiday Today: Ethiopian New Year (Enkutatash)',
+        body: 'National holiday',
+        author: 'School Calendar',
+        date: DateTime(2026, 9, 11),
+        schoolId: 'FN0597',
+      ),
+      Announcement(
+        id: 'ann-own',
+        title: 'Welcome to Fnote',
+        body: 'Our first notice',
+        author: 'Admin FN0597',
+        date: DateTime(2026, 11, 5),
+        schoolId: 'FN0597',
+      ),
+    ]);
+    SchoolDataService.instance.applyPersistedLearningMaterials([
+      LearningMaterialItem(
+        id: 'lm-other-restamp',
+        className: 'Library',
+        subject: 'General',
+        bookName: 'Other Campus Atlas',
+        materialName: 'Not ours',
+        filePath: 'asset:assets/branding/maya_brand.png',
+        teacherId: 'admin.other',
+        teacherName: 'Other Librarian',
+        postedAt: DateTime(2026, 8, 1),
+        schoolId: 'FN0597',
+      ),
+      LearningMaterialItem(
+        id: 'lm-fn-own',
+        className: 'Library',
+        subject: 'General',
+        bookName: 'Fnote Handbook',
+        materialName: 'Ours',
+        filePath: 'asset:assets/branding/maya_brand.png',
+        teacherId: 'admin.FN0597',
+        teacherName: 'Admin FN0597',
+        postedAt: DateTime(2026, 11, 4),
+        schoolId: 'FN0597',
+      ),
+    ]);
+
+    signIn('FN0597');
+    final titles = SchoolDataService.instance
+        .getAnnouncements()
+        .map((a) => a.title)
+        .toList();
+    expect(titles, contains('Welcome to Fnote'));
+    expect(titles, isNot(contains('helo')));
+    expect(titles, isNot(contains('no school on firday')));
+    expect(
+      titles.any((t) => t.startsWith('Holiday Today:')),
+      isFalse,
+    );
+    final books = SchoolDataService.instance
+        .learningMaterialsForSchool()
+        .map((b) => b.bookName);
+    expect(books, contains('Fnote Handbook'));
+    expect(books, isNot(contains('Other Campus Atlas')));
   });
 }
