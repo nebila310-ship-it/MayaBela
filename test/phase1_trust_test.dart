@@ -144,6 +144,14 @@ void main() {
   });
 
   test('library and material grants apply from a cloud pull payload', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'admin.phase1',
+      password: 'x',
+      roleKey: AuthService.roleAdmin,
+      schoolId: 'TB-001',
+      fullName: 'Phase 1 Admin',
+    );
+    LibraryRentalService.instance.resetForTests();
     LibraryRentalService.instance.applyPersisted(
       [
         LibraryRental(
@@ -154,6 +162,7 @@ void main() {
           studentName: 'Kidus',
           isPaid: true,
           rentedAt: DateTime(2026, 10, 1),
+          schoolId: 'TB-001',
         ),
       ],
       merge: false,
