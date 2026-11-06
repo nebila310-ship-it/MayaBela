@@ -223,7 +223,7 @@ class WebAdminOverviewPage extends StatelessWidget {
             value: '${stats.pendingApprovals}',
             icon: Icons.pending_actions_outlined,
             color: Colors.deepPurple,
-            onTap: _go('examinations') ?? _go('parents'),
+            onTap: _go('report_cards') ?? _go('examinations'),
           ),
           WebStatCard(
             label: 'Unread Announcements',
@@ -420,7 +420,7 @@ class WebAdminOverviewPage extends StatelessWidget {
               context,
               'Approvals',
               '${stats.pendingApprovals} pending',
-              routeId: 'examinations',
+              routeId: 'report_cards',
             ),
             _summaryRow(
               context,

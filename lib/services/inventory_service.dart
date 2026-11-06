@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 
 import 'package:mayabela/models/inventory_models.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/persistence/inventory_persistence_service.dart';
 import 'package:mayabela/services/platform_audit_log_service.dart';
+import 'package:mayabela/services/school_scope.dart';
 
 class InventoryDashboardStats {
   const InventoryDashboardStats({
@@ -43,7 +45,59 @@ class InventoryService extends ChangeNotifier {
   int _nextSupplierId = 1;
   int _nextReportId = 1;
 
-  String? get _schoolId => AuthService.activeSchoolId;
+  String? get _schoolId {
+    final raw = AuthService.activeSchoolId?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    return raw.toUpperCase();
+  }
+
+  bool _schoolVisible(String? recordSchoolId) =>
+      schoolRecordMatchesViewer(recordSchoolId, viewerSchoolId: _schoolId);
+
+  bool _itemVisible(InventoryItem item) {
+    if (!_schoolVisible(item.schoolId)) return false;
+    if (DemoContent.isRealSchool(_schoolId) &&
+        DemoContent.isSampleInventoryItem(
+          name: item.name,
+          supplier: item.supplier,
+        )) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _assetVisible(SchoolAsset asset) {
+    if (!_schoolVisible(asset.schoolId)) return false;
+    if (DemoContent.isRealSchool(_schoolId) &&
+        DemoContent.isSampleSchoolAsset(
+          name: asset.name,
+          serialNumber: asset.serialNumber,
+        )) {
+      return false;
+    }
+    return true;
+  }
+
+  List<InventoryItem> itemsForActiveSchool() =>
+      _items.where(_itemVisible).toList();
+
+  List<StockTransaction> transactionsForActiveSchool() =>
+      _transactions.where((t) => _schoolVisible(t.schoolId)).toList();
+
+  List<StudentIssuedItem> studentIssuedForActiveSchool() =>
+      _studentIssued.where((e) => _schoolVisible(e.schoolId)).toList();
+
+  List<ClassroomInventoryEntry> classroomForActiveSchool() =>
+      _classroom.where((e) => _schoolVisible(e.schoolId)).toList();
+
+  List<SchoolAsset> assetsForActiveSchool() =>
+      _assets.where(_assetVisible).toList();
+
+  List<InventorySupplier> suppliersForActiveSchool() =>
+      _suppliers.where((s) => _schoolVisible(s.schoolId)).toList();
+
+  List<InventoryMaintenanceReport> maintenanceForActiveSchool() =>
+      _maintenance.where((r) => _schoolVisible(r.schoolId)).toList();
 
   List<InventoryItem> itemsSnapshot() => List.unmodifiable(_items);
   List<StockTransaction> transactionsSnapshot() =>
@@ -154,11 +208,7 @@ class InventoryService extends ChangeNotifier {
     InventoryItemCategory? category,
     String? stockFilter,
   }) {
-    var list = _items.where((i) {
-      final sid = _schoolId;
-      if (sid != null && i.schoolId != null && i.schoolId != sid) return false;
-      return true;
-    });
+    var list = _items.where(_itemVisible);
     if (query != null && query.trim().isNotEmpty) {
       final q = query.toLowerCase();
       list = list.where(
@@ -186,7 +236,7 @@ class InventoryService extends ChangeNotifier {
       totalValue: active.fold(0.0, (s, i) => s + i.inventoryValue),
       lowStockCount: active.where((i) => i.isLowStock).length,
       outOfStockCount: active.where((i) => i.isOutOfStock).length,
-      recentTransactions: _transactions.take(8).toList(),
+      recentTransactions: transactionsForActiveSchool().take(8).toList(),
     );
   }
 
@@ -542,7 +592,8 @@ class InventoryService extends ChangeNotifier {
   }
 
   void seedDemoDataIfEmpty() {
-    if (_items.isNotEmpty) return;
+    if (DemoContent.isRealSchool(_schoolId)) return;
+    if (_items.any(_itemVisible) || _assets.any(_assetVisible)) return;
     final sid = _schoolId;
     _items.addAll([
       InventoryItem(

@@ -479,7 +479,7 @@ class _StaffRoleHomePageState extends State<StaffRoleHomePage> {
 
     if (ModuleAccess.canView('learning_materials')) {
       final materials =
-          SchoolDataService.instance.learningMaterialsSnapshot().length;
+          SchoolDataService.instance.learningMaterialsForSchool().length;
       out.add(_StatCard(
         moduleId: 'learning_materials',
         icon: Icons.auto_stories_outlined,

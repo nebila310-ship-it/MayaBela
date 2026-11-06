@@ -56,7 +56,7 @@ class _WebLibraryPageState extends State<WebLibraryPage>
   }
 
   List<LearningMaterialItem> get _books {
-    var items = _data.learningMaterialsSnapshot().where(
+    var items = _data.learningMaterialsForSchool().where(
       (m) =>
           m.className.toLowerCase() == WebLibraryPage.libraryClass.toLowerCase(),
     );
@@ -230,7 +230,7 @@ class _WebLibraryPageState extends State<WebLibraryPage>
   Future<void> _rentBook({LearningMaterialItem? preset}) async {
     if (!_canManage) return;
     final books = _data
-        .learningMaterialsSnapshot()
+        .learningMaterialsForSchool()
         .where(
           (m) =>
               m.className.toLowerCase() ==
@@ -424,7 +424,7 @@ class _WebLibraryPageState extends State<WebLibraryPage>
   Future<void> _addCopies({LearningMaterialItem? preset}) async {
     if (!_canManage) return;
     final books = _data
-        .learningMaterialsSnapshot()
+        .learningMaterialsForSchool()
         .where(
           (m) =>
               m.className.toLowerCase() ==

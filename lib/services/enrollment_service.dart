@@ -6,6 +6,7 @@ import 'package:mayabela/database/school_database_service.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/message.dart';
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/services/demo_content.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/persistence/enrollment_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
@@ -59,7 +60,8 @@ class EnrollmentService extends ChangeNotifier {
   void ensureSeeded() {
     if (_seeded) return;
     _seeded = true;
-    if (_parentLinks.isEmpty) {
+    if (_parentLinks.isEmpty &&
+        !DemoContent.isRealSchool(AuthService.activeSchoolId)) {
       _seedDemoApprovals();
     }
   }

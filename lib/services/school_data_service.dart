@@ -21,6 +21,7 @@ import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/admin_registry_service.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/demo_content.dart';
+import 'package:mayabela/services/school_scope.dart';
 import 'package:mayabela/services/enrollment_service.dart';
 import 'package:mayabela/services/ethiopian_holiday_catalog.dart';
 import 'package:mayabela/services/driver_registry_service.dart';
@@ -4219,7 +4220,7 @@ class SchoolDataService {
   }
 
   List<LearningMaterialItem> getLearningMaterialsForClass(String className) {
-    return _learningMaterials
+    return learningMaterialsForSchool()
         .where((item) => _classNamesMatch(item.className, className))
         .toList()
       ..sort((a, b) => b.postedAt.compareTo(a.postedAt));
@@ -4227,7 +4228,7 @@ class SchoolDataService {
 
   List<LearningMaterialItem> getLearningMaterialsForParent() {
     final classNames = getChildren().map((child) => child.className).toSet();
-    return _learningMaterials
+    return learningMaterialsForSchool()
         .where(
           (item) => classNames.any((c) => _classNamesMatch(c, item.className)),
         )
@@ -4237,6 +4238,34 @@ class SchoolDataService {
 
   List<LearningMaterialItem> learningMaterialsSnapshot() =>
       List.unmodifiable(_learningMaterials);
+
+  /// Books this school may show. Sample catalog and other campuses stay hidden.
+  List<LearningMaterialItem> learningMaterialsForSchool([String? schoolId]) {
+    final sid = (schoolId ?? AuthService.activeSchoolId ?? '')
+        .trim()
+        .toUpperCase();
+    return List.unmodifiable(
+      _learningMaterials.where(
+        (item) => _learningMaterialBelongsToSchool(item, sid),
+      ),
+    );
+  }
+
+  bool _learningMaterialBelongsToSchool(
+    LearningMaterialItem item,
+    String schoolId,
+  ) {
+    if (schoolId.isEmpty) return false;
+    if (DemoContent.isRealSchool(schoolId) &&
+        DemoContent.isSampleLearningMaterial(
+          id: item.id,
+          bookName: item.bookName,
+          teacherId: item.teacherId,
+        )) {
+      return false;
+    }
+    return schoolRecordMatchesViewer(item.schoolId, viewerSchoolId: schoolId);
+  }
 
   void applyPersistedLearningMaterials(List<LearningMaterialItem> items) {
     for (final persisted in items) {
@@ -4254,6 +4283,7 @@ class SchoolDataService {
         teachingSlotId: persisted.teachingSlotId,
         isFree: persisted.isFree,
         price: persisted.price,
+        schoolId: persisted.schoolId,
       );
 
       final index = _learningMaterials.indexWhere(
@@ -4304,6 +4334,7 @@ class SchoolDataService {
         teachingSlotId: teachingSlotId,
         isFree: isFree,
         price: isFree ? null : price,
+        schoolId: AuthService.activeSchoolId,
       ),
     );
     _persistLearningMaterials();
@@ -4397,9 +4428,26 @@ class SchoolDataService {
   }
 
   bool _gradeReportOnActiveSchool(StudentGradeReport report) {
-    final schoolId = AuthService.activeSchoolId?.trim();
-    if (schoolId == null || schoolId.isEmpty) return true;
-    return _studentForAdminGradeQueue(report, schoolId: schoolId) != null;
+    return _gradeReportVisibleOnSchool(
+      report,
+      AuthService.activeSchoolId,
+    );
+  }
+
+  bool _gradeReportVisibleOnSchool(
+    StudentGradeReport report,
+    String? schoolId,
+  ) {
+    final sid = (schoolId ?? '').trim().toUpperCase();
+    if (sid.isEmpty) return false;
+    if (DemoContent.isRealSchool(sid) &&
+        DemoContent.isSampleGradeReport(
+          studentName: report.studentName,
+          studentId: report.studentId,
+        )) {
+      return false;
+    }
+    return _studentForAdminGradeQueue(report, schoolId: sid) != null;
   }
 
   StudentGradeReport? _findGradeReport({
@@ -6032,13 +6080,9 @@ class SchoolDataService {
     final items = <SubjectGradePendingItem>[];
     for (final report in _gradeReports) {
       // A grade is visible only when the student is on this school's roster.
-      // A missing match used to keep the row, which showed Magic Smart
-      // students inside Mayu International (and the reverse).
-      if (normalizedSchool != null && normalizedSchool.isNotEmpty) {
-        if (_studentForAdminGradeQueue(report, schoolId: normalizedSchool) ==
-            null) {
-          continue;
-        }
+      // Sample Maya School cards and empty school ids stay off a live campus.
+      if (!_gradeReportVisibleOnSchool(report, normalizedSchool)) {
+        continue;
       }
       for (final subject in report.subjects) {
         final inWorkflow =
@@ -7766,9 +7810,7 @@ class SchoolDataService {
     final classReports = [
       for (final report in _gradeReports)
         if (_classNamesMatch(report.className, className) &&
-            (schoolId == null ||
-                schoolId.isEmpty ||
-                _studentForAdminGradeQueue(report, schoolId: schoolId) != null))
+            _gradeReportVisibleOnSchool(report, schoolId))
           report,
     ];
 

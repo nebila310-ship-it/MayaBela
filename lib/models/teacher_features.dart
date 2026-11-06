@@ -445,6 +445,7 @@ class LearningMaterialItem {
     this.teachingSlotId,
     this.isFree = true,
     this.price,
+    this.schoolId,
   });
 
   final String id;
@@ -458,6 +459,8 @@ class LearningMaterialItem {
   final DateTime postedAt;
   final String? subjectId;
   final String? teachingSlotId;
+  /// School that owns this book. Empty on old rows until inferred.
+  final String? schoolId;
 
   /// Free materials are visible to every student/parent in the class.
   /// Paid materials stay locked until access is granted per student.
@@ -480,6 +483,8 @@ extension LearningMaterialItemPersistence on LearningMaterialItem {
         'postedAt': postedAt.toIso8601String(),
         if (subjectId != null) 'subjectId': subjectId,
         if (teachingSlotId != null) 'teachingSlotId': teachingSlotId,
+        if (schoolId != null && schoolId!.trim().isNotEmpty)
+          'schoolId': schoolId!.trim().toUpperCase(),
         'isFree': isFree,
         if (price != null) 'price': price,
       };
@@ -497,6 +502,7 @@ extension LearningMaterialItemPersistence on LearningMaterialItem {
       postedAt: DateTime.parse(map['postedAt'] as String),
       subjectId: map['subjectId'] as String?,
       teachingSlotId: map['teachingSlotId'] as String?,
+      schoolId: (map['schoolId'] as String?)?.trim(),
       isFree: map['isFree'] as bool? ?? true,
       price: (map['price'] as num?)?.toDouble(),
     );

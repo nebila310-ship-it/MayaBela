@@ -298,7 +298,7 @@ Future<void> showInventoryItemDialog(
 
 Future<void> showStockInDialog(BuildContext context) async {
   final svc = InventoryService.instance;
-  final items = svc.itemsSnapshot();
+  final items = svc.itemsForActiveSchool();
   if (items.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Add inventory items first')),
@@ -454,7 +454,7 @@ Future<void> showStockInDialog(BuildContext context) async {
 
 Future<void> showStockOutDialog(BuildContext context) async {
   final svc = InventoryService.instance;
-  final items = svc.itemsSnapshot().where((i) => i.quantityAvailable > 0);
+  final items = svc.itemsForActiveSchool().where((i) => i.quantityAvailable > 0);
   final list = items.toList();
   if (list.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
