@@ -3712,15 +3712,15 @@ class SchoolDataService {
   }
 
   bool _postedBeforeSchoolOpened(HomeworkItem item, String schoolId) {
+    return _dateBeforeSchoolOpened(item.postedAt, schoolId);
+  }
+
+  bool _dateBeforeSchoolOpened(DateTime at, String schoolId) {
     final opened = SchoolRegistryService.instance
         .lookup(schoolId)
         ?.registeredAt;
     if (opened == null) return false;
-    final posted = DateTime(
-      item.postedAt.year,
-      item.postedAt.month,
-      item.postedAt.day,
-    );
+    final posted = DateTime(at.year, at.month, at.day);
     final start = DateTime(opened.year, opened.month, opened.day);
     return posted.isBefore(start);
   }
@@ -4261,9 +4261,11 @@ class SchoolDataService {
           id: item.id,
           bookName: item.bookName,
           teacherId: item.teacherId,
+          teacherName: item.teacherName,
         )) {
       return false;
     }
+    if (_dateBeforeSchoolOpened(item.postedAt, schoolId)) return false;
     return schoolRecordMatchesViewer(item.schoolId, viewerSchoolId: schoolId);
   }
 
@@ -6690,11 +6692,12 @@ class SchoolDataService {
 
   int unpublishedReportCardCount({String? className}) {
     final reports = className == null || className.isEmpty
-        ? _gradeReports
-        : getGradeReportsForClass(className);
+        ? getAllGradeReports()
+        : getGradeReportsForClass(className).where(_gradeReportOnActiveSchool);
     return reports
         .where(
           (r) =>
+              r.subjects.isNotEmpty &&
               !r.reportCardPublished &&
               r.subjects.any((s) => s.status == SubjectGradeStatus.approved),
         )
@@ -7680,6 +7683,15 @@ class SchoolDataService {
         )) {
       return false;
     }
+    if (DemoContent.isRealSchool(sid) &&
+        DemoContent.sampleStaffNames.contains(item.author.trim().toLowerCase())) {
+      return false;
+    }
+    if (DemoContent.isRealSchool(sid) &&
+        item.author.trim().toLowerCase() == 'school calendar') {
+      return false;
+    }
+    if (_dateBeforeSchoolOpened(item.date, sid)) return false;
     final itemSchool = (item.schoolId ?? '').trim().toUpperCase();
     if (itemSchool.isEmpty) {
       return !DemoContent.isRealSchool(sid);
@@ -9038,6 +9050,10 @@ class SchoolDataService {
 
     for (final event in _calendarEvents) {
       if (!event.autoAnnounce) continue;
+      if (event.isEthiopianHoliday &&
+          DemoContent.isRealSchool(AuthService.activeSchoolId)) {
+        continue;
+      }
 
       final eventDay = DateTime(
         event.date.year,
