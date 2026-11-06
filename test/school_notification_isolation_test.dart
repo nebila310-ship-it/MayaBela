@@ -3,9 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/app_notification.dart';
+import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/notification_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -128,6 +131,87 @@ void main() {
     expect(
       SchoolDataService.instance.getAnnouncements().map((a) => a.title),
       isNot(contains('Stray assembly')),
+    );
+  });
+
+  test('Finance Manager does not get another class’s daily activity toast', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'yohannes.fm',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'FN0597',
+      fullName: 'Yohannes Kifetew Tebabal',
+      staffRoles: const [StaffRoles.accountant],
+    );
+    NotificationService.instance.applyCloudNotifications([
+      AppNotification(
+        id: 'n-daily-other',
+        title: 'Daily activity report',
+        body: 'Bety Hagos posted today\'s activities for Kidest Girma.',
+        type: NotificationType.dailyActivity,
+        fromRole: AuthService.roleTeacher,
+        fromName: 'Bety Hagos',
+        recipientRole: AuthService.roleTeacher,
+        createdAt: DateTime.now(),
+        targetClassName: 'Grade 2A',
+        schoolId: 'FN0597',
+      ),
+    ]);
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title == 'Daily activity report',
+      ),
+      isFalse,
+    );
+  });
+
+  test('the classroom teacher still gets that class’s daily activity', () {
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-DAILY-1',
+        fullName: 'Bety Hagos',
+        assignedClass: 'Grade 2A',
+        schoolId: 'FN0597',
+        loginUsername: 'bety.hagos',
+        classAssignments: const [
+          TeacherClassAssignment(
+            className: 'Grade 2A',
+            role: TeacherStaffRole.homeroomTeacher,
+          ),
+        ],
+      ),
+    ]);
+    AuthService.currentUser = RegisteredUser(
+      username: 'bety.hagos',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'FN0597',
+      fullName: 'Bety Hagos',
+      linkedTeacherId: 'TCH-DAILY-1',
+    );
+    NotificationService.instance.applyCloudNotifications([
+      AppNotification(
+        id: 'n-daily-own',
+        title: 'Daily activity report',
+        body: 'Bety Hagos posted today\'s activities for Kidest Girma.',
+        type: NotificationType.dailyActivity,
+        fromRole: AuthService.roleTeacher,
+        fromName: 'Bety Hagos',
+        recipientRole: AuthService.roleTeacher,
+        createdAt: DateTime.now(),
+        targetClassName: 'Grade 2A',
+        schoolId: 'FN0597',
+      ),
+    ]);
+    expect(
+      NotificationService.instance.notificationsForCurrentUser().any(
+        (n) => n.title == 'Daily activity report',
+      ),
+      isTrue,
+    );
+    TeacherRegistryService.instance.removeTeacher(
+      'TCH-DAILY-1',
+      schoolId: 'FN0597',
     );
   });
 }

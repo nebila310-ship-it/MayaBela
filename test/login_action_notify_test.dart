@@ -7,6 +7,7 @@ import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/calendar_event.dart';
 import 'package:mayabela/models/lesson_plan_models.dart';
 import 'package:mayabela/models/notification_preference.dart';
+import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/dashboard_badge_service.dart';
@@ -15,6 +16,7 @@ import 'package:mayabela/services/notification_preference_service.dart';
 import 'package:mayabela/services/notification_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
 import 'package:mayabela/services/student_registry_service.dart';
+import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/web_erp/config/web_erp_nav_items.dart';
 import 'package:mayabela/widgets/inbox_login_reminder.dart';
 
@@ -153,7 +155,23 @@ void main() {
     );
     expect(DashboardBadgeService.instance.countFor('lesson_plans'), 1);
 
+    TeacherRegistryService.instance.applyPersistedTeachers([
+      AdminTeacherRecord(
+        teacherId: 'TCH-PLANS-1',
+        fullName: 'Plan Teacher',
+        assignedClass: 'Grade 4A',
+        schoolId: 'TB-001',
+        loginUsername: 'teacher.plans',
+        classAssignments: const [
+          TeacherClassAssignment(
+            className: 'Grade 4A',
+            role: TeacherStaffRole.homeroomTeacher,
+          ),
+        ],
+      ),
+    ]);
     signIn(username: 'teacher.plans', roleKey: AuthService.roleTeacher);
+    AuthService.currentUser!.linkedTeacherId = 'TCH-PLANS-1';
     expect(DashboardBadgeService.instance.countFor('lesson_plans'), 1);
 
     signIn(username: 'admin.plans', roleKey: AuthService.roleAdmin);

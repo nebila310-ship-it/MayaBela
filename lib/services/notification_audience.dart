@@ -80,7 +80,8 @@ bool familyNotificationReaches({
 
 /// Class notices stay with teachers of that class. A direct staff or
 /// username target is already that person, so the class list does not
-/// hide it.
+/// hide it. Office staff with no class (Finance Manager, HR, store) must
+/// not inherit every class's daily-activity toast — including other schools'.
 bool teacherClassNotificationReaches({
   required String? targetClassName,
   required List<String> assignedClasses,
@@ -93,7 +94,7 @@ bool teacherClassNotificationReaches({
       .map((name) => name.trim())
       .where((name) => name.isNotEmpty)
       .toList();
-  if (names.isEmpty) return true;
+  if (names.isEmpty) return false;
   return names.any(
     (name) => StudentRegistryService.classNamesMatch(name, className),
   );
