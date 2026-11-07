@@ -9,7 +9,7 @@ import 'package:mayabela/services/rbac/module_right.dart';
 import 'package:mayabela/services/rbac/role_module_catalog.dart';
 import 'package:mayabela/services/rbac/school_role_catalog_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
-import 'package:mayabela/web_erp/config/web_erp_nav_items.dart';
+import 'package:mayabela/web_erp/config/web_erp_nav_config.dart';
 import 'package:mayabela/web_erp/pages/staff_role_config_page.dart';
 
 void main() {
@@ -59,11 +59,25 @@ void main() {
     });
 
     test('owner-only desks cannot be granted to staff roles', () {
-      expect(RoleModuleCatalog.byId['institution']!.ownerOnly, isTrue);
       expect(RoleModuleCatalog.byId['staff_roles']!.ownerOnly, isTrue);
-      expect(RoleModuleCatalog.byId['institution']!.configurable, isFalse);
+      expect(RoleModuleCatalog.byId['staff_roles']!.configurable, isFalse);
+      expect(RoleModuleCatalog.byId['institution']!.ownerOnly, isFalse);
+      expect(RoleModuleCatalog.byId['institution']!.configurable, isTrue);
       expect(RoleModuleCatalog.byId['support']!.alwaysOn, isTrue);
       expect(RoleModuleCatalog.byId['markbook']!.configurable, isTrue);
+    });
+
+    test('All edit includes Institutional Management', () {
+      final start = RoleModuleCatalog.defaultsForRole(
+        StaffRoles.lookup(StaffRoles.librarian)!,
+      );
+      expect(start['institution'], ModuleRight.none);
+      final next = RoleModuleCatalog.applyAllConfigurable(
+        start,
+        ModuleRight.edit,
+      );
+      expect(next['institution'], ModuleRight.edit);
+      expect(next['staff_roles'], ModuleRight.none);
     });
 
     test('librarian defaults keep library edit and hide finance', () {
@@ -236,6 +250,32 @@ void main() {
       expect(ModuleAccess.canManage('students'), isFalse);
       expect(ModuleAccess.canView('inventory'), isTrue);
     });
+
+    test('owner All edit grant shows Institutional Management', () {
+      final librarian = StaffRoles.lookup(StaffRoles.librarian)!;
+      final rights = RoleModuleCatalog.applyAllConfigurable(
+        RoleModuleCatalog.defaultsForRole(librarian),
+        ModuleRight.edit,
+      );
+      SchoolRoleCatalogService.instance.seedModuleRightsForTests(
+        schoolId: schoolId,
+        roleKey: StaffRoles.librarian,
+        rights: rights,
+        permissions: RoleModuleCatalog.permissionsFor(rights),
+      );
+      signIn(
+        roleKey: AuthService.roleTeacher,
+        staffRoles: [StaffRoles.librarian],
+      );
+
+      expect(ModuleAccess.canView('institution'), isTrue);
+      expect(ModuleAccess.canManage('institution'), isTrue);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('institution'),
+      );
+      expect(ModuleAccess.canView('staff_roles'), isFalse);
+    });
   });
 
   group('Role permission editor', () {
@@ -272,6 +312,11 @@ void main() {
       await tester.enterText(find.byType(TextField).last, 'school student');
       await tester.pumpAndSettle();
       expect(find.text('See all school student data'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'institution');
+      await tester.pumpAndSettle();
+      expect(find.text('Institution Management'), findsOneWidget);
+      expect(find.text('Owner only'), findsNothing);
     });
   });
 }
