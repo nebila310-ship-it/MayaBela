@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Technical Proposal — MaJo e-School Bridge for St. Joseph School</title>
+  <style>
+    :root {
+      --navy: #123047;
+      --teal: #0e6b73;
+      --teal-2: #148a94;
+      --gold: #c9a227;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f3f8f9;
+      --org: #0e6b73;
+      --acad: #1a4f9c;
+      --stu: #7a3e9d;
+      --fin: #b45309;
+      --hr: #0f766e;
+      --learn: #0369a1;
+      --comm: #be185d;
+      --qa: #15803d;
+      --sys: #334155;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e4eef0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.8pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(18, 48, 71, 0.94);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(18, 48, 71, 0.12);
+      padding: 15mm 14mm 13mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 4px solid var(--teal);
+      padding-bottom: 12px;
+    }
+    .cover-flag img { width: 92px; height: auto; }
+    .brand-name {
+      margin: 0;
+      color: var(--navy);
+      font-size: 13.5pt;
+      letter-spacing: 0.2px;
+    }
+    .brand-sub {
+      margin: 0 0 4px;
+      color: var(--teal);
+      font-weight: 800;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .doc-kicker {
+      margin: 20px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9pt;
+      font-weight: 800;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 20pt;
+      line-height: 1.18;
+      color: var(--navy);
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12.5pt;
+      color: var(--teal);
+      font-weight: 800;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--teal);
+      font-size: 8.3pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .banner {
+      background: #e7f6f4;
+      border: 1px solid #b7e2dc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 12px 0 6px;
+    }
+    .banner strong { color: var(--teal); }
+    h2 {
+      margin: 20px 0 8px;
+      font-size: 13.2pt;
+      color: var(--navy);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px;
+      font-size: 11.2pt;
+      color: var(--teal);
+      border-left: 5px solid var(--gold);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.2pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 6px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--wash); color: var(--navy); font-weight: 800; }
+    .pill {
+      display: inline-block;
+      background: #e7f6f4;
+      color: var(--teal);
+      font-weight: 800;
+      font-size: 8pt;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+    .toc a { color: var(--teal); text-decoration: none; }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .sec-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 8px;
+      page-break-after: avoid;
+    }
+    .sec-head .chip {
+      color: #fff;
+      font-weight: 800;
+      font-size: 8.5pt;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+    .sec-head h3 {
+      margin: 0;
+      border: 0;
+      padding: 0;
+      color: var(--navy);
+    }
+    .mod-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 6px 0 12px;
+    }
+    .mod {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+    .mod .no {
+      display: inline-block;
+      min-width: 22px;
+      font-weight: 800;
+      font-size: 8.5pt;
+      color: #fff;
+      border-radius: 4px;
+      text-align: center;
+      padding: 1px 5px;
+      margin-right: 6px;
+    }
+    .mod b { color: var(--ink); }
+    .mod span { display: block; color: var(--muted); font-size: 9pt; margin-top: 3px; }
+    .doors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .door {
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: #fff;
+      page-break-inside: avoid;
+    }
+    .door h4 { margin: 0 0 4px; font-size: 11pt; }
+    .door p { margin: 0; font-size: 9.2pt; opacity: 0.95; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+    .sig {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      min-height: 108px;
+    }
+    .sig .who { font-weight: 800; margin-top: 40px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8.3pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 8mm 10mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 11mm 11mm 13mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Technical proposal for St. Joseph School ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">MaJo Bridge Technologies and Events</h1>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:10pt;">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela platform)<br />
+          Live system: https://mayabela.pages.dev
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Technical proposal · School operating system · Confidential</p>
+    <h1 class="doc-title">A complete school system for St. Joseph School — and its Dire Dawa branch</h1>
+    <p class="doc-for">Prepared for St. Joseph School &nbsp;·&nbsp; Besrate Gabriel School (Dire Dawa)</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        St. Joseph School (contracting campus)<br />
+        Besrate Gabriel School — Dire Dawa city branch
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        MaJo Bridge Technologies and Events<br />
+        +251 911 646 444 · nabilmaya6464@gmail.com
+      </div>
+      <div class="meta-card">
+        <strong>Document</strong>
+        MB-SJ-TECH-2026-11 &nbsp;·&nbsp; Version 1.0<br />
+        7 November 2026
+      </div>
+      <div class="meta-card">
+        <strong>Companion document</strong>
+        Financial Proposal MB-SJ-FIN-2026-11<br />
+        Per-student, module-band pricing (separate PDF)
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>What this paper is.</strong>
+      This is the technical offer for school management. It describes the live product St. Joseph would run:
+      <b>61 numbered school modules</b>, five login doors (office, teacher, parent, student, driver),
+      school-by-school data isolation, and a go-live path that also covers the Dire Dawa branch.
+      Price is not in this file. Price is in the financial proposal.
+    </div>
+
+    <h2>1. How to read this proposal</h2>
+    <p>This document is written for directors, the board, finance, and school heads — not for software engineers.</p>
+    <ol class="toc">
+      <li>How to read this proposal</li>
+      <li>Executive summary for management</li>
+      <li>About MaJo Bridge Technologies and Events</li>
+      <li>What St. Joseph School receives</li>
+      <li>Two campuses, one system</li>
+      <li>The 61-module catalogue</li>
+      <li>Who uses which desks</li>
+      <li>A school day on the system</li>
+      <li>Implementation, training, and go-live</li>
+      <li>Data, privacy, and school isolation</li>
+      <li>What is in scope / out of scope</li>
+      <li>Success measures</li>
+      <li>Next step and signatures</li>
+    </ol>
+
+    <h2>2. Executive summary for management</h2>
+    <p>
+      St. Joseph School wants one digital school — not another spreadsheet, not a WhatsApp group, and not a tool
+      that only the registrar can open. <b>MaJo e-School Bridge</b> is a school operating system already in production.
+      It covers the offices that run a school: academics, students, parents, fees, store, staff, buses, quality, and ICT.
+    </p>
+    <p>In management language, the school gets:</p>
+    <ul>
+      <li><b>One student record</b> that teachers, the registrar, student affairs, and parents share — with the right limits.</li>
+      <li><b>Marks that stay inside the school until leadership publishes them.</b> Parents never see an unapproved grade.</li>
+      <li><b>Attendance, homework, timetable, exams, and report cards</b> on the same child.</li>
+      <li><b>Fees, inventory, payroll, and transport</b> as school offices, not as side files.</li>
+      <li><b>61 modules</b> that the school can switch on in bands (starter ≤20, standard 20–40, full 61). The financial proposal prices those bands per student.</li>
+      <li><b>Besrate Gabriel School in Dire Dawa</b> as a second campus on the same product, with <b>free installation</b> as a social contribution (see the financial proposal).</li>
+    </ul>
+    <p>
+      The remaining work after contract is school operation: student lists, staff roles, training, and the go-live checklist —
+      not a second product to invent.
+    </p>
+
+    <h2>3. About MaJo Bridge Technologies and Events</h2>
+    <table>
+      <tr><th>Item</th><th>Detail</th></tr>
+      <tr><td>Company</td><td>MaJo Bridge Technologies and Events</td></tr>
+      <tr><td>System</td><td>MaJo e-School Bridge — school ERP / academic management system (MayaBela)</td></tr>
+      <tr><td>This offer</td><td>St. Joseph School, with Dire Dawa branch Besrate Gabriel School</td></tr>
+      <tr><td>Access</td><td>Web office (no install) + Android app for teachers, parents, students, and drivers</td></tr>
+      <tr><td>Live URL</td><td>https://mayabela.pages.dev</td></tr>
+      <tr><td>Languages</td><td>English, Amharic, Afaan Oromo</td></tr>
+      <tr><td>Support</td><td>+251 911 646 444 · nabilmaya6464@gmail.com · Mon–Sat 09:00–18:00 EAT</td></tr>
+    </table>
+    <p>
+      The company remains the system operator. <b>St. Joseph School remains the owner of its student data.</b>
+      Another school on the same platform cannot open St. Joseph records.
+    </p>
+
+    <h2>4. What St. Joseph School receives</h2>
+    <p>Five doors. One School ID. Nobody sees another school.</p>
+    <div class="doors">
+      <div class="door" style="background:var(--navy);">
+        <h4>Office / ERP</h4>
+        <p>Owner, principal, VP, registrar, student affairs, finance, HR, QA, ICT. Run the school from the 61-module sidebar.</p>
+      </div>
+      <div class="door" style="background:var(--acad);">
+        <h4>Teacher</h4>
+        <p>Homeroom and subject teachers. Attendance, homework, markbook, lesson plans, parent messages — own classes only.</p>
+      </div>
+      <div class="door" style="background:var(--stu);">
+        <h4>Parent</h4>
+        <p>Linked guardians only. Published grades, attendance, homework, fees, bus, messages. Never another family’s child.</p>
+      </div>
+      <div class="door" style="background:var(--teal);">
+        <h4>Student</h4>
+        <p>Own timetable, homework, materials, exams, announcements. The school sets from which grade a student may log in.</p>
+      </div>
+    </div>
+    <div class="door" style="background:var(--fin);margin-top:8px;">
+      <h4>Driver</h4>
+      <p>Assigned bus, passenger list, QR, live map. Parents see the same route from their own door.</p>
+    </div>
+
+    <h2>5. Two campuses, one system</h2>
+    <table>
+      <tr><th>Campus</th><th>Role in this offer</th><th>Technical treatment</th></tr>
+      <tr>
+        <td><b>St. Joseph School</b></td>
+        <td>Contracting campus</td>
+        <td>Own school ID, branding, roles, students, fees, and modules. Professional installation and training as in the financial proposal.</td>
+      </tr>
+      <tr>
+        <td><b>Besrate Gabriel School</b><br />Dire Dawa city branch</td>
+        <td>Sister campus / social contribution</td>
+        <td>Separate school ID so Dire Dawa data never mixes with the main campus. Same product. <b>Installation is free</b> (financial proposal).</td>
+      </tr>
+    </table>
+    <div class="note">
+      <b>Management rule.</b>
+      Two campuses are two schools in the system. A teacher in Dire Dawa does not see Addis / main-campus children.
+      Leadership of St. Joseph can still be granted access to both IDs if the board so decides.
+    </div>
+
+    <h2>6. The 61-module catalogue</h2>
+    <p>
+      These are the licensed desks. <b>Logout</b> and a personal <b>Profile</b> screen are chrome, not billed modules.
+      The school chooses a pack: <b>≤20</b>, <b>20–40</b>, or <b>all 61</b>. Numbers below are the official catalogue for the financial proposal.
+    </p>
+
+    <div class="sec-head"><span class="chip" style="background:var(--org);">Organization · 01–05</span><h3>Campus and school identity</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--org);">01</span><b>Dashboard</b><span>Morning command: attendance, fees, work that needs a director.</span></div>
+      <div class="mod"><span class="no" style="background:var(--org);">02</span><b>Institution Management</b><span>Legal name, licences, governance, campus sites, KPIs.</span></div>
+      <div class="mod"><span class="no" style="background:var(--org);">03</span><b>School Management</b><span>School record, branding, academic year, operating settings.</span></div>
+      <div class="mod"><span class="no" style="background:var(--org);">04</span><b>Campus Management</b><span>Buildings, rooms, and multi-site layout.</span></div>
+      <div class="mod"><span class="no" style="background:var(--org);">05</span><b>CCTV</b><span>Administration camera desk — not a classroom tool.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--acad);">Academics · 06–21</span><h3>Teaching, exams, and the markbook</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--acad);">06</span><b>Academic Management</b><span>Classes, subjects, terms, teacher assignment.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">07</span><b>Examinations &amp; Grade Approvals</b><span>Approve marks before any parent sees them.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">08</span><b>Weighted Markbook</b><span>The live gradebook. Replaces the Excel sheet.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">09</span><b>Report Cards</b><span>Term reports from the same markbook, then publish.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">10</span><b>Exam bank &amp; papers</b><span>Set papers, collect attempts, push scores to the markbook.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">11</span><b>Attendance</b><span>Daily register. Feeds at-risk flags and parent notices.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">12</span><b>Homework</b><span>Assign, collect, see who submitted.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">13</span><b>At-risk &amp; insights</b><span>Low marks together with high absence — a clear school rule.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">14</span><b>Analytics &amp; exports</b><span>Class lists, averages, teacher insight, files.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">15</span><b>Classroom Teachers</b><span>Who teaches which class and subject.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">16</span><b>Add Teacher</b><span>Create a teacher login from HR / academic lead.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">17</span><b>Timetable</b><span>Weekly class timetable for staff and students.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">18</span><b>LMS</b><span>Course hub: plans, homework, materials, exams, discussion.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">19</span><b>Lesson plans</b><span>Weekly plans, submit for review, class link.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">20</span><b>Curriculum office</b><span>Units, department-head review, academic evaluations.</span></div>
+      <div class="mod"><span class="no" style="background:var(--acad);">21</span><b>Grade Workflow</b><span>School rules for enter → approve → publish.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--stu);">Student services · 22–34</span><h3>The child, the parent, and student affairs</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--stu);">22</span><b>Students</b><span>The SIS: identity, class, parents, medical flag.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">23</span><b>Admissions</b><span>Application stages, exam score, waitlist, enrol into SIS.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">24</span><b>Alumni</b><span>Former students after they leave the active register.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">25</span><b>Add Student</b><span>One child or Excel/CSV import.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">26</span><b>Student Portal Settings</b><span>From which grade a student may log in, and what they may open.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">27</span><b>Student Password Resets</b><span>Help desk for student login recovery.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">28</span><b>Student Affairs &amp; Discipline</b><span>Conduct cases and student-affairs desk.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">29</span><b>Student support</b><span>Counseling, IEP, college guidance, documents.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">30</span><b>Clinic reports</b><span>Health room notes for authorised staff.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">31</span><b>Safeguarding</b><span>Child-protection files. Hidden from parents, students, and classroom teachers.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">32</span><b>Student programs</b><span>Clubs, internships, scholarships, leadership meetings.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">33</span><b>Parents &amp; Link Approvals</b><span>Approve a parent only after the child is recognised.</span></div>
+      <div class="mod"><span class="no" style="background:var(--stu);">34</span><b>Transfers &amp; Promotion</b><span>In-school movement and year promotion.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--fin);">Finance · 35–36</span><h3>Fees and the store</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--fin);">35</span><b>Finance</b><span>Fee types, payments, receipts, finance reports. New school cash starts at zero.</span></div>
+      <div class="mod"><span class="no" style="background:var(--fin);">36</span><b>Inventory, Procurement &amp; Store</b><span>Purchase requests, suppliers, receive, issue, stock trail.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--hr);">HR &amp; transport · 37–45</span><h3>People who work at the school, and the buses</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--hr);">37</span><b>Human Resource</b><span>Hire and hold staff records.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">38</span><b>Leave &amp; contracts</b><span>Staff leave and contract files.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">39</span><b>Payroll</b><span>Ethiopian payroll labels, including tax and pension fields.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">40</span><b>Administration Staff Directory</b><span>Non-teaching office staff.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">41</span><b>Add Administration Staff</b><span>Create a staff login with roles.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">42</span><b>Transport</b><span>Assign students to buses.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">43</span><b>Buses</b><span>Fleet register and routes.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">44</span><b>Live GPS</b><span>Office and parent map of the school bus.</span></div>
+      <div class="mod"><span class="no" style="background:var(--hr);">45</span><b>Register Driver</b><span>Driver account for the driver door.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--learn);">Learning resources · 46–47</span><h3>Library and class materials</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--learn);">46</span><b>Library</b><span>Catalogue and lending.</span></div>
+      <div class="mod"><span class="no" style="background:var(--learn);">47</span><b>e-Books &amp; Materials</b><span>Class files with access by class or student — this school only.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--comm);">Communication · 48–52</span><h3>How the school speaks</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--comm);">48</span><b>Announcements</b><span>Official notices to staff, parents, and/or students.</span></div>
+      <div class="mod"><span class="no" style="background:var(--comm);">49</span><b>Events</b><span>School events on the shared calendar.</span></div>
+      <div class="mod"><span class="no" style="background:var(--comm);">50</span><b>Gallery</b><span>Photos of school life.</span></div>
+      <div class="mod"><span class="no" style="background:var(--comm);">51</span><b>Calendar</b><span>Academic, staff, and all-school dates.</span></div>
+      <div class="mod"><span class="no" style="background:var(--comm);">52</span><b>Messages</b><span>Parent–teacher threads and class discussion. Not a public chat.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--qa);">Quality · 53–55</span><h3>How leadership sees the school</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--qa);">53</span><b>QA Findings &amp; Plans</b><span>Observations, surveys, audits, improvement plans.</span></div>
+      <div class="mod"><span class="no" style="background:var(--qa);">54</span><b>Reports &amp; Analytics</b><span>Excel / CSV / PDF of students, attendance, academics, finance.</span></div>
+      <div class="mod"><span class="no" style="background:var(--qa);">55</span><b>Maya Assistant</b><span>In-app help for staff navigation.</span></div>
+    </div>
+
+    <div class="sec-head"><span class="chip" style="background:var(--sys);">System · 56–61</span><h3>How the school controls the system</h3></div>
+    <div class="mod-grid">
+      <div class="mod"><span class="no" style="background:var(--sys);">56</span><b>Role Permissions</b><span>The owner ticks which desks each staff role may open.</span></div>
+      <div class="mod"><span class="no" style="background:var(--sys);">57</span><b>Audit Log</b><span>Who changed what. Open to leadership and QA.</span></div>
+      <div class="mod"><span class="no" style="background:var(--sys);">58</span><b>System Health</b><span>Cloud and storage signals for ICT / administration staff.</span></div>
+      <div class="mod"><span class="no" style="background:var(--sys);">59</span><b>Digital operations</b><span>Devices, access help, Friday checklist.</span></div>
+      <div class="mod"><span class="no" style="background:var(--sys);">60</span><b>Go-live &amp; compliance</b><span>MFA, privacy, school snapshots, Excel import, training.</span></div>
+      <div class="mod"><span class="no" style="background:var(--sys);">61</span><b>Settings</b><span>Language, security, and school preferences.</span></div>
+    </div>
+    <p><span class="pill">Catalogue total = 61</span> &nbsp; Organization 5 · Academics 16 · Student services 13 · Finance 2 · HR &amp; transport 9 · Learning 2 · Communication 5 · Quality 3 · System 6.</p>
+
+    <h2>7. Who uses which desks</h2>
+    <table>
+      <tr><th>School role</th><th>Typical desks</th><th>What they must not see</th></tr>
+      <tr><td>School owner / Full Access</td><td>All 61, including Institution Management and Role Permissions</td><td>—</td></tr>
+      <tr><td>Principal / VP / Board</td><td>Dashboard, academics oversight, reports, QA, announcements</td><td>Another school’s children</td></tr>
+      <tr><td>Registrar</td><td>Students, admissions, alumni, transfers</td><td>Safeguarding case files</td></tr>
+      <tr><td>Student affairs</td><td>Discipline, support, programs, parent links</td><td>Payroll and other-family fees</td></tr>
+      <tr><td>Classroom teacher</td><td>Own class attendance, homework, markbook</td><td>Whole-school finance, safeguarding, other classes</td></tr>
+      <tr><td>Finance / store</td><td>Finance, inventory</td><td>Unpublished grades, counseling notes</td></tr>
+      <tr><td>Parent</td><td>Parent door only</td><td>Other children; unpublished marks</td></tr>
+      <tr><td>Student</td><td>Student door only</td><td>Staff desks</td></tr>
+      <tr><td>Driver</td><td>Assigned bus</td><td>Academic records</td></tr>
+    </table>
+
+    <h2>8. A school day on the system</h2>
+    <ol>
+      <li><b>Morning.</b> Homeroom takes attendance. Parents of absent children can be notified. The dashboard shows the school.</li>
+      <li><b>Lessons.</b> Teachers follow the timetable, post homework, open e-books for that class only.</li>
+      <li><b>Marks.</b> Scores enter the weighted markbook. They stay unpublished until Examinations &amp; Grade Approvals.</li>
+      <li><b>Office.</b> Registrar admits a child. Finance records a fee. Store issues a book. HR records leave.</li>
+      <li><b>Afternoon bus.</b> Driver opens the passenger list. Parent sees live GPS for the linked child.</li>
+      <li><b>Evening.</b> Parent opens published homework and messages the teacher. Leadership reviews QA or at-risk flags.</li>
+    </ol>
+
+    <h2>9. Implementation, training, and go-live</h2>
+    <table>
+      <tr><th>Phase</th><th>What happens</th><th>Who</th></tr>
+      <tr><td>1. Contract and school IDs</td><td>St. Joseph and Besrate Gabriel each receive a school ID. Modules of the chosen pack are switched on.</td><td>MaJo Bridge + school owner</td></tr>
+      <tr><td>2. Data</td><td>Student Excel/CSV import, classes, staff roles, fee types. Historical marks can be entered in the markbook.</td><td>Registrar / academic lead</td></tr>
+      <tr><td>3. Training</td><td>Owner, office, teachers, then a parent briefing. In-app manuals stay on the Go-live desk.</td><td>MaJo Bridge + school trainers</td></tr>
+      <tr><td>4. Dry run</td><td>One class takes attendance and a sample markbook for one week.</td><td>Teachers + VP</td></tr>
+      <tr><td>5. Go-live</td><td>Snapshots, MFA help, Friday checklist. Dire Dawa installation is performed at no charge.</td><td>ICT / administration staff</td></tr>
+    </table>
+    <p>Office staff use the web. Teachers, parents, students, and drivers may use the Android app with the same School ID.</p>
+
+    <h2>10. Data, privacy, and school isolation</h2>
+    <ul>
+      <li>Each campus has its own school ID. Announcements, e-books, fees, and report cards do not leak across schools.</li>
+      <li>HTTPS in transit. Hosted encryption at rest. Optional authenticator (MFA).</li>
+      <li>Safeguarding and counseling notes are excluded from parent/student exports.</li>
+      <li>The school can take a snapshot from Go-live. The school remains the owner of its records.</li>
+    </ul>
+
+    <h2>11. In scope / out of scope</h2>
+    <table>
+      <tr><th>In this technical offer</th><th>Not in this paper</th></tr>
+      <tr>
+        <td>The 61 modules, five login doors, two school IDs, training path, isolation, Amharic / English / Afaan Oromo</td>
+        <td>Price, 30% billable-student rule, module-band rates, and the Dire Dawa installation waiver — those live only in the <b>financial proposal</b></td>
+      </tr>
+      <tr>
+        <td>Configuration of the pack the school buys (≤20, 20–40, or 61)</td>
+        <td>Custom software that is not in the catalogue; third-party accounting packages; government EMIS filing on behalf of the school</td>
+      </tr>
+    </table>
+
+    <h2>12. Success measures</h2>
+    <table>
+      <tr><th>The board will know it worked when…</th><th>How they will see it</th></tr>
+      <tr><td>Excel is no longer the gradebook</td><td>Markbook is the master; Excel is only an export</td></tr>
+      <tr><td>Parents stop chasing rumours about marks</td><td>Only published report cards appear on the parent door</td></tr>
+      <tr><td>Directors see the school in the morning</td><td>Dashboard: attendance, fees, unpublished cards, work queues</td></tr>
+      <tr><td>Dire Dawa is not a second informal system</td><td>Besrate Gabriel runs the same product on its own school ID</td></tr>
+    </table>
+
+    <h2>13. Next step</h2>
+    <p>
+      Management is invited to (1) confirm the module pack, (2) confirm enrolled student counts for both campuses,
+      and (3) read the companion <b>Financial Proposal MB-SJ-FIN-2026-11</b>. A 30–60 day guided trial can be scheduled
+      on a St. Joseph class list before full go-live.
+    </p>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For MaJo Bridge Technologies and Events</div>
+        <div class="role">Name · Title · Date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For St. Joseph School</div>
+        <div class="role">Name · Title · Date</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      MB-SJ-TECH-2026-11 · Technical proposal · 7 November 2026 · Confidential to St. Joseph School and MaJo Bridge Technologies and Events.
+      Companion: MB-SJ-FIN-2026-11. Live product: https://mayabela.pages.dev. This document does not constitute a tax invoice.
+    </p>
+  </article>
+</body>
+</html>

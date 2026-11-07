@@ -1,5 +1,15 @@
 # Proposals
 
+## St. Joseph School — technical and financial proposals
+
+Prepared by **MaJo Bridge Technologies and Events** for **St. Joseph School**, with **Besrate Gabriel School (Dire Dawa)** as a sister campus.
+
+- Technical PDF: [MaJo_Bridge_St_Joseph_Technical_Proposal.pdf](MaJo_Bridge_St_Joseph_Technical_Proposal.pdf) (`MB-SJ-TECH-2026-11`)
+- Financial PDF: [MaJo_Bridge_St_Joseph_Financial_Proposal.pdf](MaJo_Bridge_St_Joseph_Financial_Proposal.pdf) (`MB-SJ-FIN-2026-11`)
+- Printable HTML: [st-joseph-school-technical-proposal.html](st-joseph-school-technical-proposal.html), [st-joseph-school-financial-proposal.html](st-joseph-school-financial-proposal.html)
+
+The technical paper lists the live **61 school modules**. The financial paper prices them per billable student (30% of enrolled students): ETB 150 (≤20 modules), ETB 200 (20–40), ETB 300 (all 61). Dire Dawa installation is ETB 0 as a social contribution.
+
 ## Lebawi International Academy — technical proposal
 
 Prepared by **Majo Bridge Technologies and Events** for **Lebawi International Academy**.

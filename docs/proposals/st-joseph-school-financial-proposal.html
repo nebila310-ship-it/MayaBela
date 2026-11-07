@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financial Proposal — MaJo e-School Bridge for St. Joseph School</title>
+  <style>
+    :root {
+      --navy: #123047;
+      --teal: #0e6b73;
+      --gold: #c9a227;
+      --green: #157a3c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f3f8f9;
+      --full: #0e6b73;
+      --std: #1a4f9c;
+      --start: #7a3e9d;
+      --free: #157a3c;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eee4;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.8pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(18, 48, 71, 0.94);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(18, 48, 71, 0.12);
+      padding: 15mm 14mm 13mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 4px solid var(--gold);
+      padding-bottom: 12px;
+    }
+    .cover-flag img { width: 92px; height: auto; }
+    .brand-name { margin: 0; color: var(--navy); font-size: 13.5pt; }
+    .brand-sub {
+      margin: 0 0 4px;
+      color: var(--teal);
+      font-weight: 800;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .doc-kicker {
+      margin: 20px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9pt;
+      font-weight: 800;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 20pt;
+      line-height: 1.18;
+      color: var(--navy);
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12.5pt;
+      color: var(--teal);
+      font-weight: 800;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--teal);
+      font-size: 8.3pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .formula {
+      background: linear-gradient(135deg, #123047 0%, #0e6b73 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+    .formula .k { color: #f3d98a; font-weight: 800; font-size: 8.5pt; letter-spacing: 0.8px; text-transform: uppercase; }
+    .formula .eq { font-size: 13.5pt; font-weight: 800; margin: 6px 0 4px; }
+    .formula p { margin: 0; opacity: 0.95; font-size: 9.5pt; }
+    h2 {
+      margin: 20px 0 8px;
+      font-size: 13.2pt;
+      color: var(--navy);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px;
+      font-size: 11.2pt;
+      color: var(--teal);
+      border-left: 5px solid var(--gold);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.2pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 6px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--wash); color: var(--navy); font-weight: 800; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .packs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0 14px;
+    }
+    .pack {
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      page-break-inside: avoid;
+    }
+    .pack .who { font-size: 8.5pt; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.9; }
+    .pack h3 { margin: 4px 0 8px; border: 0; padding: 0; color: #fff; font-size: 12.5pt; }
+    .pack .price { font-size: 22pt; font-weight: 800; line-height: 1; }
+    .pack .unit { font-size: 9pt; opacity: 0.95; margin: 4px 0 8px; }
+    .pack ul { margin: 0; padding-left: 16px; font-size: 9pt; }
+    .freebox {
+      background: #e8f7ee;
+      border: 1px solid #b7e2c6;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+    .freebox strong { color: var(--free); }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .fill td { height: 28px; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+    .sig { border-top: 1px solid var(--ink); padding-top: 8px; min-height: 108px; }
+    .sig .who { font-weight: 800; margin-top: 40px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8.3pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    .mod-table td:first-child { width: 36px; font-weight: 800; color: var(--teal); }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 8mm 10mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 11mm 11mm 13mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Financial proposal for St. Joseph School · ETB ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">MaJo Bridge Technologies and Events</h1>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:10pt;">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela platform)<br />
+          Currency: Ethiopian Birr (ETB)
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Financial proposal · Per student · Module bands · Confidential</p>
+    <h1 class="doc-title">Licence price for St. Joseph School — per billable student, by module pack</h1>
+    <p class="doc-for">Prepared for St. Joseph School &nbsp;·&nbsp; Besrate Gabriel School (Dire Dawa)</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        St. Joseph School (contracting campus)<br />
+        Besrate Gabriel School — Dire Dawa city branch
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        MaJo Bridge Technologies and Events<br />
+        +251 911 646 444 · nabilmaya6464@gmail.com
+      </div>
+      <div class="meta-card">
+        <strong>Document</strong>
+        MB-SJ-FIN-2026-11 &nbsp;·&nbsp; Version 1.0<br />
+        7 November 2026 &nbsp;·&nbsp; Valid 90 days
+      </div>
+      <div class="meta-card">
+        <strong>Companion document</strong>
+        Technical Proposal MB-SJ-TECH-2026-11<br />
+        61 numbered school modules (separate PDF)
+      </div>
+    </div>
+
+    <div class="formula">
+      <div class="k">The only formula this offer uses</div>
+      <div class="eq">Annual licence (ETB) = 30% of enrolled students × pack rate</div>
+      <p>
+        Billable students = total enrolled students × 30%, rounded to the nearest whole student.
+        Pack rate is ETB 150, 200, or 300 per billable student per year, according to how many of the 61 modules the school switches on.
+        Worked examples below. Fill the blank census table with St. Joseph’s actual headcount.
+      </p>
+    </div>
+
+    <h2>1. How to read this proposal</h2>
+    <p>
+      This paper is the commercial offer. It does not describe how the software works — that is in
+      <b>Technical Proposal MB-SJ-TECH-2026-11</b>. Management needs three decisions: (1) how many modules,
+      (2) enrolled students per campus, (3) acceptance of the Dire Dawa installation waiver.
+    </p>
+    <ol>
+      <li>Module packs and rates</li>
+      <li>The 30% billable-student rule</li>
+      <li>Worked examples (for planning)</li>
+      <li>Two-campus worksheet (fill in)</li>
+      <li>Installation — including free Dire Dawa installation</li>
+      <li>What the licence includes</li>
+      <li>Payment and validity</li>
+      <li>Numbered module list (for pack choice)</li>
+      <li>Signatures</li>
+    </ol>
+
+    <h2>2. Module packs and rates</h2>
+    <p>Rates are <b>per billable student per year</b>, in Ethiopian Birr. They are not per teacher and not per login.</p>
+    <div class="packs">
+      <div class="pack" style="background:var(--start);">
+        <div class="who">Starter pack</div>
+        <h3>≤ 20 modules</h3>
+        <div class="price">150</div>
+        <div class="unit">ETB / billable student / year</div>
+        <ul>
+          <li>Choose any 1–20 desks from the 61</li>
+          <li>Typical: SIS + attendance + markbook + parents</li>
+        </ul>
+      </div>
+      <div class="pack" style="background:var(--std);">
+        <div class="who">Standard pack</div>
+        <h3>20–40 modules</h3>
+        <div class="price">200</div>
+        <div class="unit">ETB / billable student / year</div>
+        <ul>
+          <li>Choose 20 to 40 desks</li>
+          <li>Typical: academics + students + finance + HR</li>
+        </ul>
+      </div>
+      <div class="pack" style="background:var(--full);">
+        <div class="who">Full school OS</div>
+        <h3>All 61 modules</h3>
+        <div class="price">300</div>
+        <div class="unit">ETB / billable student / year</div>
+        <ul>
+          <li>Complete catalogue in the technical proposal</li>
+          <li>41–60 desks are billed at this full rate</li>
+        </ul>
+      </div>
+    </div>
+    <table>
+      <tr>
+        <th>Pack</th>
+        <th>Modules switched on</th>
+        <th class="num">Rate (ETB)</th>
+        <th>Unit</th>
+      </tr>
+      <tr>
+        <td>Starter</td>
+        <td>1 to 20</td>
+        <td class="num">150</td>
+        <td>Per billable student / year</td>
+      </tr>
+      <tr>
+        <td>Standard</td>
+        <td>20 to 40</td>
+        <td class="num">200</td>
+        <td>Per billable student / year</td>
+      </tr>
+      <tr>
+        <td>Full</td>
+        <td>All 61 (also 41–60)</td>
+        <td class="num">300</td>
+        <td>Per billable student / year</td>
+      </tr>
+    </table>
+    <div class="note">
+      <b>Boundary rule for management.</b>
+      Exactly 20 modules may be taken as Starter (ETB 150) or Standard (ETB 200); the school picks the pack on the order form.
+      Exactly 40 modules is Standard. The full catalogue of 61 is Full (ETB 300).
+      Chrome screens (personal Profile and Logout) are not counted in the 61 and are never billed.
+    </div>
+
+    <h2>3. The 30% billable-student rule</h2>
+    <p>
+      From the school’s <b>total enrolled students</b>, this offer bills <b>30%</b> only. That 30% is the billable student base.
+      The other 70% of the roll is not charged. Every enrolled child may still use the system; the 30% is a commercial base, not a login cap.
+    </p>
+    <table>
+      <tr><th>Step</th><th>What to do</th><th>Example (1,000 enrolled, full pack)</th></tr>
+      <tr><td>1</td><td>Count enrolled students on the census date</td><td>1,000</td></tr>
+      <tr><td>2</td><td>Billable students = 30% of that count</td><td>300</td></tr>
+      <tr><td>3</td><td>Choose pack rate</td><td>ETB 300 (all 61 modules)</td></tr>
+      <tr><td>4</td><td>Annual licence = billable × rate</td><td>300 × 300 = <b>ETB 90,000</b></td></tr>
+    </table>
+    <p>
+      Effective cost on the full roll, if the school takes the full pack: 90,000 ÷ 1,000 = <b>ETB 90 per enrolled student per year</b>.
+      That figure is a check for the board; the invoice still uses the 30% base.
+    </p>
+    <p>Each campus is counted on its own roll, then added:</p>
+    <p style="font-weight:800;color:var(--navy);">
+      Total annual licence = (30% × St. Joseph enrolment × rate) + (30% × Besrate Gabriel enrolment × rate)
+    </p>
+
+    <h2>4. Worked examples (planning only)</h2>
+    <p>These rows help the board budget before the official census is attached. They are not an invoice.</p>
+    <table>
+      <tr>
+        <th class="num">Enrolled students</th>
+        <th class="num">Billable (30%)</th>
+        <th class="num">Starter 150</th>
+        <th class="num">Standard 200</th>
+        <th class="num">Full 300</th>
+      </tr>
+      <tr><td class="num">400</td><td class="num">120</td><td class="num">18,000</td><td class="num">24,000</td><td class="num">36,000</td></tr>
+      <tr><td class="num">500</td><td class="num">150</td><td class="num">22,500</td><td class="num">30,000</td><td class="num">45,000</td></tr>
+      <tr><td class="num">600</td><td class="num">180</td><td class="num">27,000</td><td class="num">36,000</td><td class="num">54,000</td></tr>
+      <tr><td class="num">800</td><td class="num">240</td><td class="num">36,000</td><td class="num">48,000</td><td class="num">72,000</td></tr>
+      <tr><td class="num">1,000</td><td class="num">300</td><td class="num">45,000</td><td class="num">60,000</td><td class="num">90,000</td></tr>
+      <tr><td class="num">1,200</td><td class="num">360</td><td class="num">54,000</td><td class="num">72,000</td><td class="num">108,000</td></tr>
+      <tr><td class="num">1,500</td><td class="num">450</td><td class="num">67,500</td><td class="num">90,000</td><td class="num">135,000</td></tr>
+      <tr><td class="num">2,000</td><td class="num">600</td><td class="num">90,000</td><td class="num">120,000</td><td class="num">180,000</td></tr>
+    </table>
+    <p style="font-size:9pt;color:var(--muted);">Amounts in ETB per campus per year. Two campuses = two rows, then add.</p>
+
+    <h3>Two-campus illustration (not the school’s census)</h3>
+    <p>If St. Joseph had 1,000 students and Besrate Gabriel (Dire Dawa) had 500, both on the full 61-module pack:</p>
+    <table>
+      <tr><th>Campus</th><th class="num">Enrolled</th><th class="num">Billable 30%</th><th>Pack</th><th class="num">Rate</th><th class="num">Annual licence</th></tr>
+      <tr>
+        <td>St. Joseph School</td>
+        <td class="num">1,000</td><td class="num">300</td><td>Full 61</td>
+        <td class="num">300</td><td class="num">90,000</td>
+      </tr>
+      <tr>
+        <td>Besrate Gabriel School, Dire Dawa</td>
+        <td class="num">500</td><td class="num">150</td><td>Full 61</td>
+        <td class="num">300</td><td class="num">45,000</td>
+      </tr>
+      <tr>
+        <td><b>Combined licence</b></td>
+        <td class="num">1,500</td><td class="num">450</td><td></td>
+        <td class="num"></td><td class="num"><b>135,000</b></td>
+      </tr>
+      <tr>
+        <td>Installation — St. Joseph</td>
+        <td></td><td></td><td>Year-1 onboarding</td>
+        <td class="num"></td><td class="num">Included</td>
+      </tr>
+      <tr>
+        <td>Installation — Besrate Gabriel, Dire Dawa</td>
+        <td></td><td></td><td>Social contribution</td>
+        <td class="num"></td><td class="num"><b>0</b></td>
+      </tr>
+      <tr>
+        <td><b>Year-1 cash to budget (this illustration)</b></td>
+        <td></td><td></td><td></td>
+        <td class="num"></td><td class="num"><b>ETB 135,000</b></td>
+      </tr>
+    </table>
+
+    <h2>5. Official worksheet — attach the school census</h2>
+    <p>Leave the grey cells blank until the registrar confirms the roll. Same pack may be chosen for both campuses, or a different pack per campus.</p>
+    <table class="fill">
+      <tr>
+        <th>Campus</th>
+        <th class="num">Enrolled (A)</th>
+        <th class="num">Billable A × 30% (B)</th>
+        <th>Pack (Starter / Standard / Full)</th>
+        <th class="num">Rate (C)</th>
+        <th class="num">Licence B × C</th>
+      </tr>
+      <tr>
+        <td>St. Joseph School</td>
+        <td class="num"></td><td class="num"></td><td></td><td class="num"></td><td class="num"></td>
+      </tr>
+      <tr>
+        <td>Besrate Gabriel School, Dire Dawa</td>
+        <td class="num"></td><td class="num"></td><td></td><td class="num"></td><td class="num"></td>
+      </tr>
+      <tr>
+        <td><b>Total annual licence</b></td>
+        <td class="num"></td><td class="num"></td><td></td><td class="num"></td><td class="num"></td>
+      </tr>
+      <tr>
+        <td>Installation — St. Joseph (Year-1 onboarding)</td>
+        <td colspan="4">Configuration, School ID, training, go-live checklist</td>
+        <td class="num">Included</td>
+      </tr>
+      <tr>
+        <td>Installation — Besrate Gabriel, Dire Dawa</td>
+        <td colspan="4">Social contribution — not billed</td>
+        <td class="num">ETB 0</td>
+      </tr>
+      <tr>
+        <td><b>Year-1 total</b></td>
+        <td colspan="4">Licence total + installation</td>
+        <td class="num"></td>
+      </tr>
+    </table>
+    <p style="font-size:9pt;color:var(--muted);">Census date: _______________ &nbsp; Prepared by (registrar): _______________ &nbsp; Checked by (finance): _______________</p>
+
+    <h2>6. Installation, including the Dire Dawa social contribution</h2>
+    <div class="freebox">
+      <strong>Besrate Gabriel School — Dire Dawa city branch — installation is free.</strong>
+      MaJo Bridge Technologies and Events will configure the Dire Dawa school ID, switch on the chosen modules,
+      train the local office, and complete the go-live checklist at <b>ETB 0.00</b>.
+      This is a social contribution. It is not a discount on the annual licence.
+      The 30% billable-student licence still applies to the Dire Dawa roll unless the board later records a separate written waiver.
+    </div>
+    <table>
+      <tr><th>Item</th><th>St. Joseph School</th><th>Besrate Gabriel (Dire Dawa)</th></tr>
+      <tr><td>School ID and branding</td><td>Included in Year-1 onboarding</td><td>Included — not billed</td></tr>
+      <tr><td>Module pack switched on</td><td>Included</td><td>Included — not billed</td></tr>
+      <tr><td>Staff role setup and owner training</td><td>Included</td><td>Included — not billed</td></tr>
+      <tr><td>Student import coaching (Excel/CSV)</td><td>Included</td><td>Included — not billed</td></tr>
+      <tr><td>Teacher / parent briefing session</td><td>Included</td><td>Included — not billed</td></tr>
+      <tr><td>Travel to Dire Dawa if required</td><td>—</td><td>Absorbed as social contribution</td></tr>
+      <tr><td>Annual licence</td><td>Per Section 3</td><td>Per Section 3 (not waived)</td></tr>
+    </table>
+
+    <h2>7. What the annual licence includes — and what it does not</h2>
+    <table>
+      <tr><th>Included in the yearly licence</th><th>Not included</th></tr>
+      <tr>
+        <td>
+          Use of the chosen modules on web and Android;<br />
+          school data isolation;<br />
+          product updates to those modules;<br />
+          support Mon–Sat 09:00–18:00 EAT;<br />
+          English, Amharic, Afaan Oromo.
+        </td>
+        <td>
+          Devices, campus internet, and CCTV cameras;<br />
+          custom software outside the 61-module list;<br />
+          government EMIS filing on behalf of the school;<br />
+          VAT or withholding if legally due (stated on the tax invoice);<br />
+          a second accounting package.
+        </td>
+      </tr>
+    </table>
+    <p>
+      Renewal is annual. The school may move to a larger pack at renewal (Starter → Standard → Full) at the new rate
+      on the then-current roll. Reducing a pack is allowed at renewal; unused months are not refunded.
+    </p>
+
+    <h2>8. Payment and validity</h2>
+    <table>
+      <tr><th>Term</th><th>Offer</th></tr>
+      <tr><td>Currency</td><td>Ethiopian Birr (ETB)</td></tr>
+      <tr><td>Validity</td><td>90 days from 7 November 2026</td></tr>
+      <tr><td>Year-1 licence</td><td>100% on contract signing, against a tax invoice, using the signed census worksheet</td></tr>
+      <tr><td>Subsequent years</td><td>100% annually in advance, on the roll at renewal date, same 30% rule</td></tr>
+      <tr><td>Installation (St. Joseph)</td><td>Included in Year-1 onboarding — no separate installation invoice</td></tr>
+      <tr><td>Installation (Dire Dawa)</td><td>ETB 0.00 social contribution — no installation invoice</td></tr>
+      <tr><td>Taxes</td><td>This proposal is exclusive of VAT or other taxes. Any tax due appears on the invoice as required by Ethiopian law</td></tr>
+    </table>
+
+    <h2>9. Numbered module list — for pack choice</h2>
+    <p>
+      Tick the desks the school wants. Count the ticks. 1–20 = Starter (150). 20–40 = Standard (200). 61 (or 41–60) = Full (300).
+      Full descriptions are in the technical proposal.
+    </p>
+    <table class="mod-table">
+      <tr><th>#</th><th>Module</th><th>Family</th><th>#</th><th>Module</th><th>Family</th></tr>
+      <tr><td>01</td><td>Dashboard</td><td>Organization</td><td>32</td><td>Student programs</td><td>Student services</td></tr>
+      <tr><td>02</td><td>Institution Management</td><td>Organization</td><td>33</td><td>Parents &amp; Link Approvals</td><td>Student services</td></tr>
+      <tr><td>03</td><td>School Management</td><td>Organization</td><td>34</td><td>Transfers &amp; Promotion</td><td>Student services</td></tr>
+      <tr><td>04</td><td>Campus Management</td><td>Organization</td><td>35</td><td>Finance</td><td>Finance</td></tr>
+      <tr><td>05</td><td>CCTV</td><td>Organization</td><td>36</td><td>Inventory, Procurement &amp; Store</td><td>Finance</td></tr>
+      <tr><td>06</td><td>Academic Management</td><td>Academics</td><td>37</td><td>Human Resource</td><td>HR &amp; transport</td></tr>
+      <tr><td>07</td><td>Examinations &amp; Grade Approvals</td><td>Academics</td><td>38</td><td>Leave &amp; contracts</td><td>HR &amp; transport</td></tr>
+      <tr><td>08</td><td>Weighted Markbook</td><td>Academics</td><td>39</td><td>Payroll</td><td>HR &amp; transport</td></tr>
+      <tr><td>09</td><td>Report Cards</td><td>Academics</td><td>40</td><td>Administration Staff Directory</td><td>HR &amp; transport</td></tr>
+      <tr><td>10</td><td>Exam bank &amp; papers</td><td>Academics</td><td>41</td><td>Add Administration Staff</td><td>HR &amp; transport</td></tr>
+      <tr><td>11</td><td>Attendance</td><td>Academics</td><td>42</td><td>Transport</td><td>HR &amp; transport</td></tr>
+      <tr><td>12</td><td>Homework</td><td>Academics</td><td>43</td><td>Buses</td><td>HR &amp; transport</td></tr>
+      <tr><td>13</td><td>At-risk &amp; insights</td><td>Academics</td><td>44</td><td>Live GPS</td><td>HR &amp; transport</td></tr>
+      <tr><td>14</td><td>Analytics &amp; exports</td><td>Academics</td><td>45</td><td>Register Driver</td><td>HR &amp; transport</td></tr>
+      <tr><td>15</td><td>Classroom Teachers</td><td>Academics</td><td>46</td><td>Library</td><td>Learning</td></tr>
+      <tr><td>16</td><td>Add Teacher</td><td>Academics</td><td>47</td><td>e-Books &amp; Materials</td><td>Learning</td></tr>
+      <tr><td>17</td><td>Timetable</td><td>Academics</td><td>48</td><td>Announcements</td><td>Communication</td></tr>
+      <tr><td>18</td><td>LMS</td><td>Academics</td><td>49</td><td>Events</td><td>Communication</td></tr>
+      <tr><td>19</td><td>Lesson plans</td><td>Academics</td><td>50</td><td>Gallery</td><td>Communication</td></tr>
+      <tr><td>20</td><td>Curriculum office</td><td>Academics</td><td>51</td><td>Calendar</td><td>Communication</td></tr>
+      <tr><td>21</td><td>Grade Workflow</td><td>Academics</td><td>52</td><td>Messages</td><td>Communication</td></tr>
+      <tr><td>22</td><td>Students</td><td>Student services</td><td>53</td><td>QA Findings &amp; Plans</td><td>Quality</td></tr>
+      <tr><td>23</td><td>Admissions</td><td>Student services</td><td>54</td><td>Reports &amp; Analytics</td><td>Quality</td></tr>
+      <tr><td>24</td><td>Alumni</td><td>Student services</td><td>55</td><td>Maya Assistant</td><td>Quality</td></tr>
+      <tr><td>25</td><td>Add Student</td><td>Student services</td><td>56</td><td>Role Permissions</td><td>System</td></tr>
+      <tr><td>26</td><td>Student Portal Settings</td><td>Student services</td><td>57</td><td>Audit Log</td><td>System</td></tr>
+      <tr><td>27</td><td>Student Password Resets</td><td>Student services</td><td>58</td><td>System Health</td><td>System</td></tr>
+      <tr><td>28</td><td>Student Affairs &amp; Discipline</td><td>Student services</td><td>59</td><td>Digital operations</td><td>System</td></tr>
+      <tr><td>29</td><td>Student support</td><td>Student services</td><td>60</td><td>Go-live &amp; compliance</td><td>System</td></tr>
+      <tr><td>30</td><td>Clinic reports</td><td>Student services</td><td>61</td><td>Settings</td><td>System</td></tr>
+      <tr><td>31</td><td>Safeguarding</td><td>Student services</td><td></td><td></td><td></td></tr>
+    </table>
+
+    <h2>10. Acceptance</h2>
+    <p>
+      Signing below accepts this financial offer subject to the attached census worksheet and the technical proposal.
+      It is not a tax invoice. A tax invoice follows contract.
+    </p>
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For MaJo Bridge Technologies and Events</div>
+        <div class="role">Name · Title · Date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For St. Joseph School</div>
+        <div class="role">Name · Title · Date</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      MB-SJ-FIN-2026-11 · Financial proposal · 7 November 2026 · Valid 90 days · Confidential to St. Joseph School and MaJo Bridge Technologies and Events.
+      Companion: MB-SJ-TECH-2026-11. Currency ETB. Prices exclusive of VAT. Dire Dawa installation ETB 0.00 as social contribution.
+      This document does not constitute a tax invoice.
+    </p>
+  </article>
+</body>
+</html>
