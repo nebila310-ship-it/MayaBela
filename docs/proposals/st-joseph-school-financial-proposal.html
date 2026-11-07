@@ -218,7 +218,7 @@
 </head>
 <body>
   <div class="toolbar">
-    Financial proposal for St. Joseph School · ETB ·
+    Financial proposal for St. Joseph School · monthly subscription · ETB ·
     <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
   </div>
   <article class="sheet">
@@ -235,15 +235,15 @@
       <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
     </header>
 
-    <p class="doc-kicker">Financial proposal · Per student · Module bands · Confidential</p>
-    <h1 class="doc-title">Licence price for St. Joseph School — per billable student, by module pack</h1>
-    <p class="doc-for">Prepared for St. Joseph School &nbsp;·&nbsp; Besrate Gabriel School (Dire Dawa)</p>
+    <p class="doc-kicker">Financial proposal · Monthly subscription · Recurring · Confidential</p>
+    <h1 class="doc-title">Monthly subscription for St. Joseph School — student count × 30% × pack rate</h1>
+    <p class="doc-for">Prepared for St. Joseph School only</p>
 
     <div class="meta-grid">
       <div class="meta-card">
         <strong>Prepared for</strong>
-        St. Joseph School (contracting campus)<br />
-        Besrate Gabriel School — Dire Dawa city branch
+        St. Joseph School<br />
+        Dire Dawa is not in this calculation
       </div>
       <div class="meta-card">
         <strong>Prepared by</strong>
@@ -252,7 +252,7 @@
       </div>
       <div class="meta-card">
         <strong>Document</strong>
-        MB-SJ-FIN-2026-11 &nbsp;·&nbsp; Version 1.0<br />
+        MB-SJ-FIN-2026-11 &nbsp;·&nbsp; Version 1.1<br />
         7 November 2026 &nbsp;·&nbsp; Valid 90 days
       </div>
       <div class="meta-card">
@@ -263,41 +263,41 @@
     </div>
 
     <div class="formula">
-      <div class="k">The only formula this offer uses</div>
-      <div class="eq">Annual licence (ETB) = 30% of enrolled students × pack rate</div>
+      <div class="k">The only formula this offer uses — monthly, recurring</div>
+      <div class="eq">Monthly subscription (ETB) = (total students × 30%) × chosen rate</div>
       <p>
-        Billable students = total enrolled students × 30%, rounded to the nearest whole student.
-        Pack rate is ETB 150, 200, or 300 per billable student per year, according to how many of the 61 modules the school switches on.
-        Worked examples below. Fill the blank census table with St. Joseph’s actual headcount.
+        1) Take St. Joseph’s total enrolled students.<br />
+        2) Billable students = that total × 30% (round to the nearest whole student).<br />
+        3) Monthly payment = billable students × the pack rate (ETB 150 / 200 / 300 per billable student <b>per month</b>).<br />
+        This is a subscription. It repeats every month. Dire Dawa / Besrate Gabriel is left out of every figure in this paper.
       </p>
     </div>
 
     <h2>1. How to read this proposal</h2>
     <p>
-      This paper is the commercial offer. It does not describe how the software works — that is in
-      <b>Technical Proposal MB-SJ-TECH-2026-11</b>. Management needs three decisions: (1) how many modules,
-      (2) enrolled students per campus, (3) acceptance of the Dire Dawa installation waiver.
+      This paper is the commercial offer for <b>St. Joseph School only</b>. It does not describe how the software works — that is in
+      <b>Technical Proposal MB-SJ-TECH-2026-11</b>. Management needs two decisions: (1) how many modules,
+      (2) St. Joseph’s total enrolled student count. Dire Dawa is not priced here.
     </p>
     <ol>
-      <li>Module packs and rates</li>
-      <li>The 30% billable-student rule</li>
+      <li>Module packs and monthly rates</li>
+      <li>The 30% student-count rule</li>
       <li>Worked examples (for planning)</li>
-      <li>Two-campus worksheet (fill in)</li>
-      <li>Installation — including free Dire Dawa installation</li>
-      <li>What the licence includes</li>
-      <li>Payment and validity</li>
+      <li>Official worksheet (fill in St. Joseph’s roll)</li>
+      <li>What the monthly subscription includes</li>
+      <li>Recurring payment and validity</li>
       <li>Numbered module list (for pack choice)</li>
       <li>Signatures</li>
     </ol>
 
-    <h2>2. Module packs and rates</h2>
-    <p>Rates are <b>per billable student per year</b>, in Ethiopian Birr. They are not per teacher and not per login.</p>
+    <h2>2. Module packs and monthly rates</h2>
+    <p>Rates are <b>per billable student per month</b>, in Ethiopian Birr. This is a subscription. It is not a one-time licence and not a yearly lump sum. Rates are not per teacher and not per login.</p>
     <div class="packs">
       <div class="pack" style="background:var(--start);">
         <div class="who">Starter pack</div>
         <h3>≤ 20 modules</h3>
         <div class="price">150</div>
-        <div class="unit">ETB / billable student / year</div>
+        <div class="unit">ETB / billable student / month</div>
         <ul>
           <li>Choose any 1–20 desks from the 61</li>
           <li>Typical: SIS + attendance + markbook + parents</li>
@@ -307,7 +307,7 @@
         <div class="who">Standard pack</div>
         <h3>20–40 modules</h3>
         <div class="price">200</div>
-        <div class="unit">ETB / billable student / year</div>
+        <div class="unit">ETB / billable student / month</div>
         <ul>
           <li>Choose 20 to 40 desks</li>
           <li>Typical: academics + students + finance + HR</li>
@@ -317,7 +317,7 @@
         <div class="who">Full school OS</div>
         <h3>All 61 modules</h3>
         <div class="price">300</div>
-        <div class="unit">ETB / billable student / year</div>
+        <div class="unit">ETB / billable student / month</div>
         <ul>
           <li>Complete catalogue in the technical proposal</li>
           <li>41–60 desks are billed at this full rate</li>
@@ -335,19 +335,19 @@
         <td>Starter</td>
         <td>1 to 20</td>
         <td class="num">150</td>
-        <td>Per billable student / year</td>
+        <td>Per billable student / month — recurring</td>
       </tr>
       <tr>
         <td>Standard</td>
         <td>20 to 40</td>
         <td class="num">200</td>
-        <td>Per billable student / year</td>
+        <td>Per billable student / month — recurring</td>
       </tr>
       <tr>
         <td>Full</td>
         <td>All 61 (also 41–60)</td>
         <td class="num">300</td>
-        <td>Per billable student / year</td>
+        <td>Per billable student / month — recurring</td>
       </tr>
     </table>
     <div class="note">
@@ -357,29 +357,29 @@
       Chrome screens (personal Profile and Logout) are not counted in the 61 and are never billed.
     </div>
 
-    <h2>3. The 30% billable-student rule</h2>
+    <h2>3. The 30% student-count rule (St. Joseph only)</h2>
     <p>
-      From the school’s <b>total enrolled students</b>, this offer bills <b>30%</b> only. That 30% is the billable student base.
+      From St. Joseph’s <b>total enrolled students</b>, this offer bills <b>30%</b> only. That 30% is the billable student base.
       The other 70% of the roll is not charged. Every enrolled child may still use the system; the 30% is a commercial base, not a login cap.
+      Do not add Dire Dawa students into (A).
     </p>
     <table>
-      <tr><th>Step</th><th>What to do</th><th>Example (1,000 enrolled, full pack)</th></tr>
-      <tr><td>1</td><td>Count enrolled students on the census date</td><td>1,000</td></tr>
-      <tr><td>2</td><td>Billable students = 30% of that count</td><td>300</td></tr>
-      <tr><td>3</td><td>Choose pack rate</td><td>ETB 300 (all 61 modules)</td></tr>
-      <tr><td>4</td><td>Annual licence = billable × rate</td><td>300 × 300 = <b>ETB 90,000</b></td></tr>
+      <tr><th>Step</th><th>What to write</th><th>Example (St. Joseph 1,000 students, full pack)</th></tr>
+      <tr><td>1</td><td>Total students (A)</td><td>1,000</td></tr>
+      <tr><td>2</td><td>A × 30% = …… (B)</td><td>1,000 × 30% = 300</td></tr>
+      <tr><td>3</td><td>Choose monthly rate (C)</td><td>ETB 300 (all 61 modules)</td></tr>
+      <tr><td>4</td><td>B × C = monthly subscription</td><td>300 × 300 = <b>ETB 90,000 per month</b></td></tr>
     </table>
-    <p>
-      Effective cost on the full roll, if the school takes the full pack: 90,000 ÷ 1,000 = <b>ETB 90 per enrolled student per year</b>.
-      That figure is a check for the board; the invoice still uses the 30% base.
-    </p>
-    <p>Each campus is counted on its own roll, then added:</p>
     <p style="font-weight:800;color:var(--navy);">
-      Total annual licence = (30% × St. Joseph enrolment × rate) + (30% × Besrate Gabriel enrolment × rate)
+      Monthly subscription (ETB) = (St. Joseph total students × 30%) × chosen monthly rate
+    </p>
+    <p>
+      Check for the board: on a 1,000-student roll at the full pack, 90,000 ÷ 1,000 = <b>ETB 90 per enrolled student per month</b>.
+      The invoice still uses the 30% base (B × C). This amount is due every month for as long as the school stays subscribed.
     </p>
 
     <h2>4. Worked examples (planning only)</h2>
-    <p>These rows help the board budget before the official census is attached. They are not an invoice.</p>
+    <p>These rows help the board budget before the official St. Joseph census is attached. They are not an invoice. Amounts are <b>ETB per month</b>.</p>
     <table>
       <tr>
         <th class="num">Enrolled students</th>
@@ -397,107 +397,56 @@
       <tr><td class="num">1,500</td><td class="num">450</td><td class="num">67,500</td><td class="num">90,000</td><td class="num">135,000</td></tr>
       <tr><td class="num">2,000</td><td class="num">600</td><td class="num">90,000</td><td class="num">120,000</td><td class="num">180,000</td></tr>
     </table>
-    <p style="font-size:9pt;color:var(--muted);">Amounts in ETB per campus per year. Two campuses = two rows, then add.</p>
+    <p style="font-size:9pt;color:var(--muted);">Amounts in ETB per month for St. Joseph School only. Recurring. Dire Dawa is not added.</p>
 
-    <h3>Two-campus illustration (not the school’s census)</h3>
-    <p>If St. Joseph had 1,000 students and Besrate Gabriel (Dire Dawa) had 500, both on the full 61-module pack:</p>
+    <h3>One-line illustration (not the school’s census)</h3>
+    <p>If St. Joseph had 1,000 students and chose all 61 modules:</p>
     <table>
-      <tr><th>Campus</th><th class="num">Enrolled</th><th class="num">Billable 30%</th><th>Pack</th><th class="num">Rate</th><th class="num">Annual licence</th></tr>
-      <tr>
-        <td>St. Joseph School</td>
-        <td class="num">1,000</td><td class="num">300</td><td>Full 61</td>
-        <td class="num">300</td><td class="num">90,000</td>
-      </tr>
-      <tr>
-        <td>Besrate Gabriel School, Dire Dawa</td>
-        <td class="num">500</td><td class="num">150</td><td>Full 61</td>
-        <td class="num">300</td><td class="num">45,000</td>
-      </tr>
-      <tr>
-        <td><b>Combined licence</b></td>
-        <td class="num">1,500</td><td class="num">450</td><td></td>
-        <td class="num"></td><td class="num"><b>135,000</b></td>
-      </tr>
-      <tr>
-        <td>Installation — St. Joseph</td>
-        <td></td><td></td><td>Year-1 onboarding</td>
-        <td class="num"></td><td class="num">Included</td>
-      </tr>
-      <tr>
-        <td>Installation — Besrate Gabriel, Dire Dawa</td>
-        <td></td><td></td><td>Social contribution</td>
-        <td class="num"></td><td class="num"><b>0</b></td>
-      </tr>
-      <tr>
-        <td><b>Year-1 cash to budget (this illustration)</b></td>
-        <td></td><td></td><td></td>
-        <td class="num"></td><td class="num"><b>ETB 135,000</b></td>
-      </tr>
+      <tr><th>Line</th><th class="num">Figure</th></tr>
+      <tr><td>Total students (A)</td><td class="num">1,000</td></tr>
+      <tr><td>A × 30% = billable students (B)</td><td class="num">300</td></tr>
+      <tr><td>Chosen rate per month (C)</td><td class="num">300</td></tr>
+      <tr><td><b>Monthly subscription B × C</b></td><td class="num"><b>ETB 90,000 / month</b></td></tr>
+      <tr><td>Dire Dawa / Besrate Gabriel</td><td class="num">Not in this calculation</td></tr>
     </table>
 
-    <h2>5. Official worksheet — attach the school census</h2>
-    <p>Leave the grey cells blank until the registrar confirms the roll. Same pack may be chosen for both campuses, or a different pack per campus.</p>
+    <h2>5. Official worksheet — St. Joseph student count only</h2>
+    <p>Leave the empty cells until the registrar confirms the St. Joseph roll. Do not write Dire Dawa numbers here.</p>
     <table class="fill">
       <tr>
-        <th>Campus</th>
-        <th class="num">Enrolled (A)</th>
-        <th class="num">Billable A × 30% (B)</th>
-        <th>Pack (Starter / Standard / Full)</th>
-        <th class="num">Rate (C)</th>
-        <th class="num">Licence B × C</th>
+        <th>Item</th>
+        <th class="num">Write here</th>
       </tr>
       <tr>
+        <td>School</td>
         <td>St. Joseph School</td>
-        <td class="num"></td><td class="num"></td><td></td><td class="num"></td><td class="num"></td>
       </tr>
       <tr>
-        <td>Besrate Gabriel School, Dire Dawa</td>
-        <td class="num"></td><td class="num"></td><td></td><td class="num"></td><td class="num"></td>
+        <td>Total students (A)</td>
+        <td class="num"></td>
       </tr>
       <tr>
-        <td><b>Total annual licence</b></td>
-        <td class="num"></td><td class="num"></td><td></td><td class="num"></td><td class="num"></td>
+        <td>A × 30% = …… (B)</td>
+        <td class="num"></td>
       </tr>
       <tr>
-        <td>Installation — St. Joseph (Year-1 onboarding)</td>
-        <td colspan="4">Configuration, School ID, training, go-live checklist</td>
-        <td class="num">Included</td>
+        <td>Chosen pack (Starter / Standard / Full)</td>
+        <td></td>
       </tr>
       <tr>
-        <td>Installation — Besrate Gabriel, Dire Dawa</td>
-        <td colspan="4">Social contribution — not billed</td>
-        <td class="num">ETB 0</td>
+        <td>Monthly rate (C) — 150 / 200 / 300</td>
+        <td class="num"></td>
       </tr>
       <tr>
-        <td><b>Year-1 total</b></td>
-        <td colspan="4">Licence total + installation</td>
+        <td><b>Monthly subscription = B × C (ETB / month, recurring)</b></td>
         <td class="num"></td>
       </tr>
     </table>
     <p style="font-size:9pt;color:var(--muted);">Census date: _______________ &nbsp; Prepared by (registrar): _______________ &nbsp; Checked by (finance): _______________</p>
 
-    <h2>6. Installation, including the Dire Dawa social contribution</h2>
-    <div class="freebox">
-      <strong>Besrate Gabriel School — Dire Dawa city branch — installation is free.</strong>
-      MaJo Bridge Technologies and Events will configure the Dire Dawa school ID, switch on the chosen modules,
-      train the local office, and complete the go-live checklist at <b>ETB 0.00</b>.
-      This is a social contribution. It is not a discount on the annual licence.
-      The 30% billable-student licence still applies to the Dire Dawa roll unless the board later records a separate written waiver.
-    </div>
+    <h2>6. What the monthly subscription includes — and what it does not</h2>
     <table>
-      <tr><th>Item</th><th>St. Joseph School</th><th>Besrate Gabriel (Dire Dawa)</th></tr>
-      <tr><td>School ID and branding</td><td>Included in Year-1 onboarding</td><td>Included — not billed</td></tr>
-      <tr><td>Module pack switched on</td><td>Included</td><td>Included — not billed</td></tr>
-      <tr><td>Staff role setup and owner training</td><td>Included</td><td>Included — not billed</td></tr>
-      <tr><td>Student import coaching (Excel/CSV)</td><td>Included</td><td>Included — not billed</td></tr>
-      <tr><td>Teacher / parent briefing session</td><td>Included</td><td>Included — not billed</td></tr>
-      <tr><td>Travel to Dire Dawa if required</td><td>—</td><td>Absorbed as social contribution</td></tr>
-      <tr><td>Annual licence</td><td>Per Section 3</td><td>Per Section 3 (not waived)</td></tr>
-    </table>
-
-    <h2>7. What the annual licence includes — and what it does not</h2>
-    <table>
-      <tr><th>Included in the yearly licence</th><th>Not included</th></tr>
+      <tr><th>Included in the monthly subscription</th><th>Not included</th></tr>
       <tr>
         <td>
           Use of the chosen modules on web and Android;<br />
@@ -516,23 +465,25 @@
       </tr>
     </table>
     <p>
-      Renewal is annual. The school may move to a larger pack at renewal (Starter → Standard → Full) at the new rate
-      on the then-current roll. Reducing a pack is allowed at renewal; unused months are not refunded.
+      The school may move pack (Starter → Standard → Full) on a later month at the new monthly rate on the then-current St. Joseph roll.
+      Reducing a pack is allowed from the next billing month. Unused days in a paid month are not refunded.
     </p>
 
-    <h2>8. Payment and validity</h2>
+    <h2>7. Recurring payment and validity</h2>
     <table>
       <tr><th>Term</th><th>Offer</th></tr>
       <tr><td>Currency</td><td>Ethiopian Birr (ETB)</td></tr>
       <tr><td>Validity</td><td>90 days from 7 November 2026</td></tr>
-      <tr><td>Year-1 licence</td><td>100% on contract signing, against a tax invoice, using the signed census worksheet</td></tr>
-      <tr><td>Subsequent years</td><td>100% annually in advance, on the roll at renewal date, same 30% rule</td></tr>
-      <tr><td>Installation (St. Joseph)</td><td>Included in Year-1 onboarding — no separate installation invoice</td></tr>
-      <tr><td>Installation (Dire Dawa)</td><td>ETB 0.00 social contribution — no installation invoice</td></tr>
+      <tr><td>Billing</td><td>Monthly subscription, recurring, against a tax invoice</td></tr>
+      <tr><td>Amount each month</td><td>(St. Joseph total students × 30%) × chosen pack rate</td></tr>
+      <tr><td>First payment</td><td>On contract signing, using the signed St. Joseph census worksheet</td></tr>
+      <tr><td>Following payments</td><td>The same formula, due each month while the school stays subscribed</td></tr>
+      <tr><td>Student count</td><td>St. Joseph roll only. Dire Dawa is not added</td></tr>
+      <tr><td>Go-live / installation (this paper)</td><td>Not a separate line in the monthly subscription</td></tr>
       <tr><td>Taxes</td><td>This proposal is exclusive of VAT or other taxes. Any tax due appears on the invoice as required by Ethiopian law</td></tr>
     </table>
 
-    <h2>9. Numbered module list — for pack choice</h2>
+    <h2>8. Numbered module list — for pack choice</h2>
     <p>
       Tick the desks the school wants. Count the ticks. 1–20 = Starter (150). 20–40 = Standard (200). 61 (or 41–60) = Full (300).
       Full descriptions are in the technical proposal.
@@ -572,7 +523,7 @@
       <tr><td>31</td><td>Safeguarding</td><td>Student services</td><td></td><td></td><td></td></tr>
     </table>
 
-    <h2>10. Acceptance</h2>
+    <h2>9. Acceptance</h2>
     <p>
       Signing below accepts this financial offer subject to the attached census worksheet and the technical proposal.
       It is not a tax invoice. A tax invoice follows contract.
@@ -589,8 +540,8 @@
     </div>
 
     <p class="footer-note">
-      MB-SJ-FIN-2026-11 · Financial proposal · 7 November 2026 · Valid 90 days · Confidential to St. Joseph School and MaJo Bridge Technologies and Events.
-      Companion: MB-SJ-TECH-2026-11. Currency ETB. Prices exclusive of VAT. Dire Dawa installation ETB 0.00 as social contribution.
+      MB-SJ-FIN-2026-11 v1.1 · Financial proposal · 7 November 2026 · Valid 90 days · Confidential to St. Joseph School and MaJo Bridge Technologies and Events.
+      Companion: MB-SJ-TECH-2026-11. Currency ETB. Monthly recurring subscription. St. Joseph student count × 30% × pack rate. Dire Dawa is not in this calculation.
       This document does not constitute a tax invoice.
     </p>
   </article>

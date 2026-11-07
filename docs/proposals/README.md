@@ -8,7 +8,7 @@ Prepared by **MaJo Bridge Technologies and Events** for **St. Joseph School**, w
 - Financial PDF: [MaJo_Bridge_St_Joseph_Financial_Proposal.pdf](MaJo_Bridge_St_Joseph_Financial_Proposal.pdf) (`MB-SJ-FIN-2026-11`)
 - Printable HTML: [st-joseph-school-technical-proposal.html](st-joseph-school-technical-proposal.html), [st-joseph-school-financial-proposal.html](st-joseph-school-financial-proposal.html)
 
-The technical paper lists the live **61 school modules**. The financial paper prices them per billable student (30% of enrolled students): ETB 150 (≤20 modules), ETB 200 (20–40), ETB 300 (all 61). Dire Dawa installation is ETB 0 as a social contribution.
+The technical paper lists the live **61 school modules**. The financial paper is a **monthly recurring subscription** for St. Joseph only: total students × 30% × pack rate (ETB 150 / 200 / 300 per billable student per month). Dire Dawa is not in that calculation.
 
 ## Lebawi International Academy — technical proposal
 
