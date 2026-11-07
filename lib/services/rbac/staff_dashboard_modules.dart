@@ -44,7 +44,6 @@ abstract final class StaffDashboardModules {
       id: 'institution',
       labelEn: 'Institution Management',
       permissions: {},
-      ownerOnly: true,
     ),
     const StaffDashboardModule(
       id: 'school',

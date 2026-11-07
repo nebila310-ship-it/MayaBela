@@ -46,7 +46,6 @@ abstract final class RoleModuleCatalog {
   };
 
   static const _ownerOnlyIds = {
-    'institution',
     'staff_roles',
   };
 

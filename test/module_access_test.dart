@@ -58,6 +58,27 @@ void main() {
         expect(ModuleAccess.canManage(id), isTrue, reason: id);
       }
       expect(ModuleAccess.hasErpAccess, isTrue);
+      expect(ModuleAccess.canView('institution'), isTrue);
+      expect(ModuleAccess.canManage('institution'), isTrue);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('institution'),
+      );
+    });
+  });
+
+  group('Full Access staff', () {
+    setUp(() => signIn(AuthService.roleTeacher, [StaffRoles.fullAccess]));
+
+    test('sees and manages Institutional Management', () {
+      expect(ModuleAccess.canView('institution'), isTrue);
+      expect(ModuleAccess.canManage('institution'), isTrue);
+      expect(ModuleAccess.isReadOnly('institution'), isFalse);
+      expect(
+        webErpNavItemsForCurrentUser().map((e) => e.id),
+        contains('institution'),
+      );
+      expect(ModuleAccess.canView('staff_roles'), isFalse);
     });
   });
 

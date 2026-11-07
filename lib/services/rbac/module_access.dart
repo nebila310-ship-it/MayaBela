@@ -27,7 +27,9 @@ class ModuleRule {
   /// `view_all_departments` (e.g. the Vice President).
   final bool departmental;
 
-  /// Only the school owner sees this module (system/owner console pages).
+  /// Owner-console desks. The school owner always sees them. Full Access and
+  /// an explicit owner grant (role map / All edit) can open them too.
+  /// [staff_roles] stays behind [AuthService.canConfigureRolePermissions].
   final bool adminOnly;
 
   /// Visible to everyone who can enter the shell (dashboard, profile, ...).
@@ -63,8 +65,8 @@ abstract final class ModuleAccess {
     'maya_assistant': ModuleRule(open: true),
     'messages': ModuleRule(open: true),
 
-    // Organization
-    'institution': ModuleRule(adminOnly: true),
+    // Organization — school owner, Full Access, or an owner grant.
+    'institution': ModuleRule(adminOnly: true, departmental: false),
     'school': ModuleRule(
       view: [SchoolPermissions.manageSchoolSettings],
       manage: [SchoolPermissions.manageSchoolSettings],
@@ -666,7 +668,8 @@ abstract final class ModuleAccess {
       return AuthService.canConfigureRolePermissions;
     }
     final rule = ruleFor(moduleId);
-    if (rule == null || rule.adminOnly) return false;
+    if (rule == null) return false;
+    if (rule.adminOnly) return _canOpenOwnerDesk(raw, id, manage: false);
 
     // Administration staff: only modules granted by their staff role(s),
     // plus minimal chrome (home / profile / settings / logout / Maya /
@@ -715,7 +718,8 @@ abstract final class ModuleAccess {
       return AuthService.canConfigureRolePermissions;
     }
     final rule = ruleFor(moduleId);
-    if (rule == null || rule.adminOnly) return false;
+    if (rule == null) return false;
+    if (rule.adminOnly) return _canOpenOwnerDesk(raw, id, manage: true);
     if (AuthService.isAdministrationStaff &&
         (forcedChrome.contains(id) || forcedChrome.contains(raw))) {
       if (id == 'profile' ||
@@ -854,6 +858,28 @@ abstract final class ModuleAccess {
       if (!rule.manage.any(heldPermissions.contains)) return false;
     }
     return true;
+  }
+
+  /// Full Access always includes Institutional Management. An owner grant
+  /// (All edit / the institution checkbox) does too. Role Permissions stays
+  /// on [AuthService.canConfigureRolePermissions].
+  static bool _holdsFullAccess() =>
+      StaffRoles.holds(_currentStaffRoleKeys(), StaffRoles.fullAccess);
+
+  static bool _canOpenOwnerDesk(
+    String raw,
+    String id, {
+    required bool manage,
+  }) {
+    if (_holdsFullAccess()) return true;
+    if (!AuthService.isAdministrationStaff) return false;
+    final configured = _combinedConfiguredRight(
+      raw,
+      id,
+      _currentStaffRoleKeys(),
+    );
+    if (configured == null) return false;
+    return manage ? configured.canManage : configured.canView;
   }
 
   /// Signed-in staff roles, canonicalized (legacy keys → current catalog).
