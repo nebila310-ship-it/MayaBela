@@ -145,7 +145,7 @@ export function smtpHostBlocked(host: string): boolean {
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<T>((_, reject) => {
     timer = setTimeout(() => reject(new Error(label)), ms);
   });

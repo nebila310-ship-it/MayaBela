@@ -107,6 +107,7 @@ class PlatformMailCloudService {
             'platform-mail-config',
             body: {
               'ownerPin': ownerPin,
+              ...PlatformOwnerService.instance.ownerSessionFields,
               ...body,
             },
           )

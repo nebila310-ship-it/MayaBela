@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sb = adminClient();
-    await authorizePlatformOwner(sb, req, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin, body?.ownerSession);
 
     const { data, error } = await sb
       .from("app_documents")
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ schools });
   } catch (e) {
-    const msg = String(e?.message || e);
+    const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {
       return errorResponse(
         "Too many attempts. Try again later.",

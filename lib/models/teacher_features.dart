@@ -339,7 +339,14 @@ class HomeworkItem {
 
   List<String> worksheetsForStudent(String studentId) {
     final key = studentId.trim().toUpperCase();
-    return List<String>.from(studentWorksheetPaths[key] ?? const []);
+    final direct = studentWorksheetPaths[key];
+    if (direct != null) return List<String>.from(direct);
+    for (final entry in studentWorksheetPaths.entries) {
+      if (entry.key.trim().toUpperCase() == key) {
+        return List<String>.from(entry.value);
+      }
+    }
+    return const [];
   }
 }
 
@@ -385,9 +392,10 @@ extension HomeworkItemPersistence on HomeworkItem {
     final worksheets = <String, List<String>>{};
     if (rawWorksheets != null) {
       for (final entry in rawWorksheets.entries) {
-        worksheets[entry.key.toString()] = (entry.value as List? ?? const [])
-            .map((item) => item.toString())
-            .toList();
+        worksheets[entry.key.toString().trim().toUpperCase()] =
+            (entry.value as List? ?? const [])
+                .map((item) => item.toString())
+                .toList();
       }
     }
     return HomeworkItem(

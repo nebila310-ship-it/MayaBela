@@ -530,22 +530,34 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                 final files = item.worksheetsForStudent(studentId);
                 final score = item.studentScores[studentId];
                 final comment = item.teacherComments[studentId];
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  title: Text(student?.fullName ?? studentId),
-                  subtitle: Text(
-                    [
-                      if (score != null) 'Score ${score.toStringAsFixed(0)}',
-                      if ((comment ?? '').isNotEmpty) comment,
-                      if (files.isNotEmpty)
-                        '${files.length} file${files.length == 1 ? '' : 's'}',
-                    ].join(' · '),
-                  ),
-                  trailing: TextButton(
-                    onPressed: () => _gradeStudent(item, studentId),
-                    child: const Text('Score'),
-                  ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(student?.fullName ?? studentId),
+                      subtitle: Text(
+                        [
+                          if (score != null)
+                            'Score ${score.toStringAsFixed(0)}',
+                          if ((comment ?? '').isNotEmpty) comment,
+                          if (files.isNotEmpty)
+                            '${files.length} file${files.length == 1 ? '' : 's'}',
+                        ].join(' · '),
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => _gradeStudent(item, studentId),
+                        child: const Text('Score'),
+                      ),
+                    ),
+                    if (files.isNotEmpty)
+                      HomeworkAttachmentsPanel(
+                        attachmentPaths: files,
+                        compact: true,
+                        sectionTitle: 'Submitted files — tap to open',
+                      ),
+                  ],
                 );
               },
             ),

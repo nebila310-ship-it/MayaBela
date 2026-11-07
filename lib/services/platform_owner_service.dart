@@ -40,8 +40,33 @@ class PlatformOwnerService {
   DateTime? _otpExpiresAt;
   bool _cloudSynced = false;
   bool _cloudConfigured = false;
+  bool _totpRequired = false;
+  String? _ownerSession;
+  DateTime? _ownerSessionExpiresAt;
+  String? _lastVerifyError;
 
   bool get hasCustomPin => _pinHash != null && _pinHash!.isNotEmpty;
+
+  /// True when the server requires an authenticator code at unlock.
+  bool get totpRequired => _totpRequired;
+
+  /// Server error code from the last unlock attempt (e.g. `totp_invalid`).
+  String? get lastVerifyError => _lastVerifyError;
+
+  /// Extra body fields for platform edge calls (owner session when enabled).
+  Map<String, String> get ownerSessionFields => {
+        if (_hasLiveOwnerSession) 'ownerSession': _ownerSession!,
+      };
+
+  /// True when the next unlock must include an authenticator code.
+  bool get needsTotpCode => _totpRequired && !_hasLiveOwnerSession;
+
+  bool get _hasLiveOwnerSession {
+    final expires = _ownerSessionExpiresAt;
+    return _ownerSession != null &&
+        _ownerSession!.isNotEmpty &&
+        (expires == null || DateTime.now().isBefore(expires));
+  }
 
   /// Opaque local hash for unlock UX only (not an edge authorization token).
   String? get pinHash => _pinHash;
@@ -61,6 +86,7 @@ class PlatformOwnerService {
 
   void clearSessionPin() {
     _sessionPin = null;
+    _ownerSession = null;
   }
 
   Future<void> load() async {
@@ -117,17 +143,40 @@ class PlatformOwnerService {
     );
     final data = res.data;
     if (data is! Map) return false;
+    _totpRequired = data['totpRequired'] == true;
     return data['configured'] == true;
   }
 
-  Future<bool> _verifyCloudPin(String pin) async {
-    final res = await SupabaseBootstrap.client.functions.invoke(
-      'platform-owner-pin',
-      body: {'action': 'verify', 'ownerPin': pin},
-    );
-    final data = res.data;
-    if (data is Map && data['ok'] == true) return true;
-    return false;
+  Future<bool> _verifyCloudPin(String pin, {String? totpCode}) async {
+    try {
+      final res = await SupabaseBootstrap.client.functions.invoke(
+        'platform-owner-pin',
+        body: {
+          'action': 'verify',
+          'ownerPin': pin,
+          if (totpCode != null && totpCode.trim().isNotEmpty)
+            'totpCode': totpCode.trim(),
+        },
+      );
+      final data = res.data;
+      if (data is Map && data['ok'] == true) {
+        final session = data['ownerSession']?.toString();
+        _ownerSession = (session == null || session.isEmpty) ? null : session;
+        _ownerSessionExpiresAt = DateTime.tryParse(
+          data['ownerSessionExpiresAt']?.toString() ?? '',
+        );
+        return true;
+      }
+      return false;
+    } on FunctionException catch (e) {
+      final details = e.details;
+      if (details is Map && details['code'] != null) {
+        _lastVerifyError = details['code'].toString();
+      } else if (e.status == 429) {
+        _lastVerifyError = 'rate_limited';
+      }
+      return false;
+    }
   }
 
   Future<bool> _saveCloudPin({
@@ -145,6 +194,7 @@ class PlatformOwnerService {
             'currentOwnerPin': currentOwnerPin,
           if (setupSecret != null && setupSecret.isNotEmpty)
             'setupSecret': setupSecret,
+          ...ownerSessionFields,
         },
       );
       final data = res.data;
@@ -177,8 +227,9 @@ class PlatformOwnerService {
     return left;
   }
 
-  Future<bool> verifyPin(String entered) async {
+  Future<bool> verifyPin(String entered, {String? totpCode}) async {
     await load();
+    _lastVerifyError = null;
     final lock = await lockoutRemaining();
     if (lock != null) return false;
 
@@ -193,12 +244,33 @@ class PlatformOwnerService {
       ok = PasswordHashService.instance.verifyPassword(candidate, _pinHash!);
     }
 
+    // With the authenticator enabled, only the server can mint the owner
+    // session that platform calls require, so always confirm there.
+    if (ok && _totpRequired && !_hasLiveOwnerSession) {
+      ok = false;
+      try {
+        await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
+        if (SupabaseBootstrap.isInitialized) {
+          ok = await _verifyCloudPin(candidate, totpCode: totpCode);
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PlatformOwnerService.verifyPin totp: $e');
+        }
+      }
+      if (!ok) {
+        await _registerFailure();
+        return false;
+      }
+    }
+
     // Prefer / fall back to cloud verify (cross-device or hash not local yet).
     if (!ok && (_cloudConfigured || !hasCustomPin)) {
       try {
         await SupabaseBootstrap.tryInitialize(deferAnonymousAuth: true);
         if (SupabaseBootstrap.isInitialized) {
-          final cloudOk = await _verifyCloudPin(candidate);
+          final cloudOk = await _verifyCloudPin(candidate, totpCode: totpCode);
+          if (_lastVerifyError == 'totp_required') _totpRequired = true;
           if (cloudOk) {
             ok = true;
             _pinHash = PasswordHashService.instance.hashPassword(candidate);
@@ -229,6 +301,7 @@ class PlatformOwnerService {
       return true;
     }
     _sessionPin = null;
+    _ownerSession = null;
     await _registerFailure();
     return false;
   }

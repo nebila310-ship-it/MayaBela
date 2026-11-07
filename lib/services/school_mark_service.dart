@@ -468,6 +468,7 @@ class SchoolMarkService {
           'schoolId': schoolId.trim().toUpperCase(),
           'bytesBase64': base64Encode(png),
           'ownerPin': ownerPin,
+          ...PlatformOwnerService.instance.ownerSessionFields,
           'kind': kind.uploadKind,
         },
       );

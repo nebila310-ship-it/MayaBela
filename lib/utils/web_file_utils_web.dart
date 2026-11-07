@@ -5,14 +5,21 @@ import 'package:web/web.dart' as web;
 
 import 'package:mayabela/platform/web_attachment_cache.dart';
 import 'package:mayabela/services/profile_photo_codec.dart';
+import 'package:mayabela/utils/attachment_mime.dart';
+
+web.Blob _typedBlob(String fileName, List<int> bytes) {
+  final mime = attachmentMimeType(fileName: fileName, bytes: bytes);
+  return web.Blob(
+    [Uint8List.fromList(bytes).toJS].toJS,
+    web.BlobPropertyBag(type: mime),
+  );
+}
 
 Future<void> downloadBytes({
   required String fileName,
   required List<int> bytes,
 }) async {
-  final blob = web.Blob(
-    [Uint8List.fromList(bytes).toJS].toJS,
-  );
+  final blob = _typedBlob(fileName, bytes);
   final url = web.URL.createObjectURL(blob);
   final anchor = web.HTMLAnchorElement()
     ..href = url
@@ -48,9 +55,13 @@ Future<void> _openBytes({
   required String fileName,
   required List<int> bytes,
 }) async {
-  final blob = web.Blob(
-    [Uint8List.fromList(bytes).toJS].toJS,
-  );
+  final mime = attachmentMimeType(fileName: fileName, bytes: bytes);
+  // Word/Excel blobs with no type render as garbled text in a new tab.
+  if (!attachmentOpensInBrowser(mime)) {
+    await downloadBytes(fileName: fileName, bytes: bytes);
+    return;
+  }
+  final blob = _typedBlob(fileName, bytes);
   final url = web.URL.createObjectURL(blob);
   final opened = web.window.open(url, '_blank');
   if (opened == null) {

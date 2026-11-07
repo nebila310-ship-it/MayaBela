@@ -1,19 +1,27 @@
 /**
  * Rotate the push fan-out secret.
  *
- * Writes platform_secrets/push_trigger.pushSecret (server-only) and prints the
- * value to set as the edge function secret PUSH_TRIGGER_SECRET.
+ * Sets the edge function secret PUSH_TRIGGER_SECRET and the matching
+ * platform_secrets/push_trigger.pushSecret (server-only). The secret is never
+ * printed or passed on a command line: the edge secret is set from a
+ * temporary 0600 env file that is deleted afterwards.
  *
  * Usage (from repo root, with service role in env):
- *   node tools/rotate_push_secret.mjs
+ *   node tools/rotate_push_secret.mjs --project-ref <ref> --apply
+ *   node tools/rotate_push_secret.mjs --project-ref <ref> --out <file>
+ *       (stores the DB value and writes the edge value to a 0600 file only)
+ *
+ * The production project additionally needs --confirm-production.
+ * Pushes sent in the seconds between the two updates are rejected and not
+ * retried, so run it in a quiet period.
  *
  * Required env:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  */
-import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -41,10 +49,54 @@ if (!url || !key) {
   process.exit(1);
 }
 
+const PRODUCTION_REF = "hwkiihonthueadbhcvfi";
+function arg(name) {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : null;
+}
+const projectRef = arg("--project-ref");
+const apply = process.argv.includes("--apply");
+const outFile = arg("--out");
+if (!projectRef || (!apply && !outFile)) {
+  console.error("Usage: --project-ref <ref> (--apply | --out <file>)");
+  process.exit(1);
+}
+if (projectRef === PRODUCTION_REF && !process.argv.includes("--confirm-production")) {
+  console.error("Refusing to rotate the production secret without --confirm-production.");
+  process.exit(1);
+}
+if (!url.includes(projectRef)) {
+  console.error("SUPABASE_URL does not belong to --project-ref; refusing.");
+  process.exit(1);
+}
+
+const { createClient } = await import("@supabase/supabase-js");
 const secret = randomBytes(32).toString("hex");
 const sb = createClient(url, key, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+if (apply) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "push-secret-"));
+  const envFile = path.join(dir, "secret.env");
+  fs.writeFileSync(envFile, `PUSH_TRIGGER_SECRET=${secret}\n`, { mode: 0o600 });
+  let r;
+  try {
+    r = spawnSync(
+      "npx",
+      ["supabase", "secrets", "set", "--env-file", envFile, "--project-ref", projectRef],
+      { stdio: "inherit", shell: process.platform === "win32" },
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  if (r.status !== 0) {
+    console.error("Failed to set edge PUSH_TRIGGER_SECRET; database value left unchanged.");
+    process.exit(r.status || 1);
+  }
+} else {
+  fs.writeFileSync(outFile, `PUSH_TRIGGER_SECRET=${secret}\n`, { mode: 0o600, flag: "wx" });
+}
 
 const { error } = await sb.from("app_documents").upsert({
   collection: "platform_secrets",
@@ -62,33 +114,11 @@ if (error) {
   process.exit(1);
 }
 
-const apply = process.argv.includes("--apply");
 if (apply) {
-  const r = spawnSync(
-    "npx",
-    [
-      "supabase",
-      "secrets",
-      "set",
-      `PUSH_TRIGGER_SECRET=${secret}`,
-      "--project-ref",
-      "hwkiihonthueadbhcvfi",
-    ],
-    { stdio: "inherit", shell: true },
-  );
-  if (r.status !== 0) {
-    console.error("Failed to set edge PUSH_TRIGGER_SECRET");
-    process.exit(r.status || 1);
-  }
-  console.log("Rotated push secret in platform_secrets and edge secrets.");
-  process.exit(0);
+  console.log("Rotated push secret in edge secrets and platform_secrets.");
+} else {
+  console.log(`Stored new push secret in platform_secrets/push_trigger.`);
+  console.log(`Edge value written to ${outFile} (mode 0600). Set it with:`);
+  console.log(`  npx supabase secrets set --env-file ${outFile} --project-ref ${projectRef}`);
+  console.log("Then delete the file.");
 }
-
-console.log("Stored new push secret in platform_secrets/push_trigger");
-console.log("");
-console.log("Now set the matching edge secret:");
-console.log("  npx supabase secrets set PUSH_TRIGGER_SECRET=<printed-by-this-script> --project-ref hwkiihonthueadbhcvfi");
-console.log("");
-console.log(`PUSH_TRIGGER_SECRET=${secret}`);
-console.log("");
-console.log("Or re-run with --apply to set the edge secret automatically.");

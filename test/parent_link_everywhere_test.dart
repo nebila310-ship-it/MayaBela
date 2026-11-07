@@ -249,4 +249,22 @@ void main() {
     expect(record?.motherName, isNull);
     expect(ParentStudentVerifyService.recordFromCloud({'ok': false}), isNull);
   });
+
+  test('cloud payload without guardian phones still verifies the child', () {
+    final record = ParentStudentVerifyService.recordFromCloud({
+      'ok': true,
+      'schoolId': 'MAL838',
+      'studentId': 'STU-1013',
+      'fullName': 'SAMI ABDULAZIZ',
+      'className': 'Grade 8A',
+      'grade': 'Grade 8',
+      'dateOfBirth': '2014-10-13',
+      'fatherName': 'Abdulaziz',
+    });
+    expect(record, isNotNull);
+    expect(record?.fatherName, 'Abdulaziz');
+    expect(record?.fatherPhone, isNull);
+    expect(record?.motherPhone, isNull);
+    expect(record?.guardianPhone, isNull);
+  });
 }

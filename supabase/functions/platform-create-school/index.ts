@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const sb = adminClient();
-    await authorizePlatformOwner(sb, req, body?.ownerPin);
+    await authorizePlatformOwner(sb, req, body?.ownerPin, body?.ownerSession);
 
     const schoolRaw = body?.school;
     if (!schoolRaw || typeof schoolRaw !== "object") {

@@ -22,7 +22,15 @@ import {
   provisionStudentAccountFromRegistry,
   studentMayUsePortalTempPassword,
   studentPortalLoginBlock,
+  clientIp,
 } from "../_shared/school_auth.ts";
+import {
+  assertNotLocked,
+  loginFailureBuckets,
+  recordFailure,
+  supabaseLimitStore,
+} from "../_shared/abuse_limits.ts";
+import { logSecurityEvent } from "../_shared/security_events.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -57,6 +65,30 @@ Deno.serve(async (req) => {
       sb,
       `login_${normalizeUsername(usernameInput)}_${roleKey}_${schoolIdInput || "none"}`,
     );
+    const ip = clientIp(req);
+    const limitStore = supabaseLimitStore(sb);
+    const failureBuckets = await loginFailureBuckets(
+      schoolIdInput,
+      ip,
+      String(password),
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+    );
+    try {
+      await assertNotLocked(limitStore, failureBuckets);
+    } catch (e) {
+      await logSecurityEvent(sb, {
+        type: "school_login",
+        outcome: "blocked",
+        schoolId: schoolIdInput,
+        ip,
+        detail: { roleKey },
+      });
+      throw e;
+    }
+    const invalidCredentials = async () => {
+      await recordFailure(limitStore, failureBuckets);
+      return errorResponse("Invalid credentials.", 401, "invalid");
+    };
 
     let found = await findAccountDoc(
       sb,
@@ -90,7 +122,7 @@ Deno.serve(async (req) => {
       }
     }
     if (!found) {
-      return errorResponse("Invalid credentials.", 401, "invalid");
+      return await invalidCredentials();
     }
 
     const storedUsername = String(found.data.username || "").trim();
@@ -121,21 +153,15 @@ Deno.serve(async (req) => {
       roleKey === "student" &&
       firstLoginPasswords.includes(String(password))
     ) {
-      const roster = await findStudentRegistryForLogin(
-        sb,
-        usernameInput,
-        schoolIdInput,
-      );
-      const allowTemplate = roster
-        ? roster.data.firstLoginCompleted !== true
-        : studentMayUsePortalTempPassword(found.data, hasStoredSecret);
-      if (allowTemplate) {
+      if (studentMayUsePortalTempPassword(found.data, hasStoredSecret)) {
         ok = true;
-        await upsertSecret(sb, username, password, profileSchoolId);
+        if (!hasStoredSecret) {
+          await upsertSecret(sb, username, password, profileSchoolId);
+        }
       }
     }
     if (!ok) {
-      return errorResponse("Invalid credentials.", 401, "invalid");
+      return await invalidCredentials();
     }
 
     if (roleKey === "student") {
@@ -263,7 +289,7 @@ Deno.serve(async (req) => {
       school,
     });
   } catch (e) {
-    const msg = String(e?.message || e);
+    const msg = String((e as Error)?.message || e);
     if (msg.includes("rate_limited")) {
       return errorResponse(
         "Too many attempts. Try again later.",

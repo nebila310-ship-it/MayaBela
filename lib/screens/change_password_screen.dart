@@ -91,12 +91,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       }
     }
 
-    AuthService.changePassword(
+    final saved = await AuthService.changePassword(
       password,
       currentPassword: widget.forced ? null : current,
     );
 
     if (!mounted) return;
+    if (!saved) {
+      setState(() {
+        _error = s.changePasswordFailed;
+        _saving = false;
+      });
+      return;
+    }
     setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

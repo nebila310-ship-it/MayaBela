@@ -16,7 +16,8 @@ function clip(value: unknown, max: number): string {
 /**
  * Public parent-link check: school + student id + date of birth.
  * No JWT — parents open the invite on a new phone with an empty roster.
- * Returns display/contact fields only (never passwords or medical notes).
+ * Returns display fields only. Guardian phone numbers are never returned to
+ * anonymous callers (the parent types their own number at signup).
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -42,6 +43,13 @@ Deno.serve(async (req) => {
       `public_verify_student_${ip}`,
       30,
       15 * 60 * 1000,
+    );
+    // Date-of-birth guessing for one student from many IPs.
+    await assertNotRateLimited(
+      sb,
+      `public_verify_student_id_${schoolId}_${studentId}`,
+      10,
+      60 * 60 * 1000,
     );
 
     const school = await getDoc(sb, "school_registry", schoolId, schoolId) ||
@@ -69,11 +77,8 @@ Deno.serve(async (req) => {
       grade: clip(student.grade, 40),
       dateOfBirth: calendarDateIso(student.dateOfBirth),
       fatherName: clip(student.fatherName, 80) || null,
-      fatherPhone: clip(student.fatherPhone, 24) || null,
       motherName: clip(student.motherName, 80) || null,
-      motherPhone: clip(student.motherPhone, 24) || null,
       guardianName: clip(student.guardianName, 80) || null,
-      guardianPhone: clip(student.guardianPhone, 24) || null,
     });
   } catch (e) {
     const msg = String((e as Error)?.message || e);
@@ -85,6 +90,6 @@ Deno.serve(async (req) => {
       );
     }
     console.error(e);
-    return errorResponse(msg, 500, "invalid");
+    return errorResponse("Could not verify the student.", 500, "invalid");
   }
 });

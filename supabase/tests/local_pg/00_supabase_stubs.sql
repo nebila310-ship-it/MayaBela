@@ -70,6 +70,7 @@ create table if not exists storage.objects (
   bucket_id text references storage.buckets (id),
   name text,
   owner uuid,
+  owner_id text,
   metadata jsonb
 );
 alter table storage.objects enable row level security;

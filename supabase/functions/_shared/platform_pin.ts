@@ -4,14 +4,20 @@
  */
 import {
   adminClient,
-  assertNotRateLimited,
   clientIp,
   getDoc,
-  LOGIN_RATE_LIMIT,
-  LOGIN_RATE_WINDOW_MS,
   PLATFORM_SCHOOL_ID,
   upsertDoc,
 } from "./school_auth.ts";
+import {
+  assertNotLocked,
+  type LimitBucket,
+  type LimitStore,
+  recordFailure,
+  supabaseLimitStore,
+} from "./abuse_limits.ts";
+import { ownerTotpSecret, verifyOwnerSession } from "./owner_factor.ts";
+import { logSecurityEvent } from "./security_events.ts";
 
 type AdminClient = ReturnType<typeof adminClient>;
 
@@ -119,27 +125,67 @@ export async function assertOwnerPin(
 }
 
 /**
- * Valid owner PIN authorizes the call. Failed PIN guesses stay rate-limited.
- * Successful saves/list/create must not share the school-login 8/15min cap.
+ * Owner PIN failure buckets. The global buckets cannot be bypassed by
+ * changing the client IP header; they lock only the owner console, never
+ * school logins.
+ */
+export function ownerPinFailureBuckets(ip: string): LimitBucket[] {
+  return [
+    { key: "owner_pin_fail_global", limit: 10, windowMs: 15 * 60 * 1000 },
+    { key: "owner_pin_fail_day", limit: 30, windowMs: 24 * 60 * 60 * 1000 },
+    { key: `owner_pin_fail_ip_${ip}`, limit: 5, windowMs: 15 * 60 * 1000 },
+  ];
+}
+
+/**
+ * Checks the PIN lockout before testing the PIN, and counts only failures,
+ * so a correct guess is refused while the lock is active.
+ */
+export async function verifyOwnerPinWithLockout(
+  sb: AdminClient,
+  req: Request,
+  ownerPin: unknown,
+  store: LimitStore = supabaseLimitStore(sb),
+): Promise<void> {
+  const ip = clientIp(req);
+  const buckets = ownerPinFailureBuckets(ip);
+  try {
+    await assertNotLocked(store, buckets);
+  } catch (e) {
+    await logSecurityEvent(sb, { type: "owner_pin", outcome: "blocked", ip });
+    throw e;
+  }
+  try {
+    await assertOwnerPin(sb, ownerPin);
+  } catch (e) {
+    const msg = String((e as Error)?.message || e);
+    if (msg.includes("owner_pin_invalid")) {
+      await recordFailure(store, buckets);
+      await logSecurityEvent(sb, { type: "owner_pin", outcome: "failure", ip });
+    }
+    throw e;
+  }
+}
+
+/**
+ * Valid owner PIN (and, when the authenticator is enabled, a valid owner
+ * session from `platform-owner-pin` verify) authorizes the call.
  */
 export async function authorizePlatformOwner(
   sb: AdminClient,
   req: Request,
   ownerPin: unknown,
+  ownerSession?: unknown,
 ): Promise<void> {
-  try {
-    await assertOwnerPin(sb, ownerPin);
-  } catch (e) {
-    const msg = String((e as Error)?.message || e);
-    if (msg.includes("owner_pin")) {
-      await assertNotRateLimited(
-        sb,
-        `platform_pin_fail_${clientIp(req)}`,
-        LOGIN_RATE_LIMIT,
-        LOGIN_RATE_WINDOW_MS,
-      );
-    }
-    throw e;
+  await verifyOwnerPinWithLockout(sb, req, ownerPin);
+  const totpSecret = ownerTotpSecret();
+  if (totpSecret && !(await verifyOwnerSession(totpSecret, ownerSession))) {
+    await logSecurityEvent(sb, {
+      type: "owner_session",
+      outcome: "failure",
+      ip: clientIp(req),
+    });
+    throw new Error("owner_pin_session_required");
   }
 }
 

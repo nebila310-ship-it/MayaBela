@@ -430,19 +430,23 @@ class _PlatformPinDialog extends StatefulWidget {
 
 class _PlatformPinDialogState extends State<_PlatformPinDialog> {
   final _pin = TextEditingController();
+  final _totp = TextEditingController();
   String? _hint;
   bool _checking = false;
 
   @override
   void dispose() {
     _pin.dispose();
+    _totp.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    PlatformOwnerService.instance.load();
+    PlatformOwnerService.instance.load().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _tryUnlock() async {
@@ -469,7 +473,10 @@ class _PlatformPinDialogState extends State<_PlatformPinDialog> {
       return;
     }
 
-    final valid = await PlatformOwnerService.instance.verifyPin(entered);
+    final valid = await PlatformOwnerService.instance.verifyPin(
+      entered,
+      totpCode: _totp.text,
+    );
     if (!mounted) return;
 
     if (valid) {
@@ -479,7 +486,7 @@ class _PlatformPinDialogState extends State<_PlatformPinDialog> {
 
     setState(() {
       _checking = false;
-      _hint = 'Wrong PIN. Try again.';
+      _hint = ownerUnlockErrorText(PlatformOwnerService.instance.lastVerifyError);
     });
   }
 
@@ -504,6 +511,20 @@ class _PlatformPinDialogState extends State<_PlatformPinDialog> {
             ),
             onSubmitted: (_) => _tryUnlock(),
           ),
+          if (PlatformOwnerService.instance.needsTotpCode) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _totp,
+              keyboardType: TextInputType.number,
+              enabled: !_checking,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'Authenticator code',
+                counterText: '',
+              ),
+              onSubmitted: (_) => _tryUnlock(),
+            ),
+          ],
           if (_hint != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -530,6 +551,21 @@ class _PlatformPinDialogState extends State<_PlatformPinDialog> {
         ),
       ],
     );
+  }
+}
+
+/// User-facing text for a failed owner unlock.
+@visibleForTesting
+String ownerUnlockErrorText(String? code) {
+  switch (code) {
+    case 'totp_required':
+      return 'Enter the 6-digit code from your authenticator app.';
+    case 'totp_invalid':
+      return 'Wrong authenticator code. Try again.';
+    case 'rate_limited':
+      return 'Too many attempts. Try again in 15 minutes.';
+    default:
+      return 'Wrong PIN. Try again.';
   }
 }
 
@@ -566,18 +602,22 @@ class _OwnerPinConfirmDialog extends StatefulWidget {
 
 class _OwnerPinConfirmDialogState extends State<_OwnerPinConfirmDialog> {
   final _pin = TextEditingController();
+  final _totp = TextEditingController();
   String? _hint;
   bool _checking = false;
 
   @override
   void initState() {
     super.initState();
-    PlatformOwnerService.instance.load();
+    PlatformOwnerService.instance.load().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _pin.dispose();
+    _totp.dispose();
     super.dispose();
   }
 
@@ -599,7 +639,10 @@ class _OwnerPinConfirmDialogState extends State<_OwnerPinConfirmDialog> {
       _hint = null;
     });
 
-    final valid = await PlatformOwnerService.instance.verifyPin(entered);
+    final valid = await PlatformOwnerService.instance.verifyPin(
+      entered,
+      totpCode: _totp.text,
+    );
     if (!mounted) return;
 
     if (valid) {
@@ -609,7 +652,7 @@ class _OwnerPinConfirmDialogState extends State<_OwnerPinConfirmDialog> {
 
     setState(() {
       _checking = false;
-      _hint = 'Wrong PIN. Try again.';
+      _hint = ownerUnlockErrorText(PlatformOwnerService.instance.lastVerifyError);
     });
   }
 
@@ -634,6 +677,20 @@ class _OwnerPinConfirmDialogState extends State<_OwnerPinConfirmDialog> {
             ),
             onSubmitted: (_) => _submit(),
           ),
+          if (PlatformOwnerService.instance.needsTotpCode) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _totp,
+              keyboardType: TextInputType.number,
+              enabled: !_checking,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'Authenticator code',
+                counterText: '',
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
           if (_hint != null) ...[
             const SizedBox(height: 8),
             Text(
