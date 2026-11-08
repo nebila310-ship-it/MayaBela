@@ -263,6 +263,33 @@ class EnrolmentImportService {
         }
       }
       created.add(createdId);
+      final assigned = registry.lookupById(createdId) ?? teacher;
+      if (assigned.classAssignments.isNotEmpty) {
+        final withSlots = assigned.copyWith(
+          classAssignments: [
+            for (final assignment in assigned.classAssignments)
+              assignment.copyWith(
+                teachingSlots: registry.buildTeachingSlots(
+                  assignment.subjectNames,
+                  existing: assignment.teachingSlots,
+                ),
+              ),
+          ],
+        );
+        registry.updateTeacher(withSlots);
+        for (final assignment in withSlots.classAssignments) {
+          final parts = StudentRegistryService.parseClassNameParts(
+            assignment.className,
+          );
+          if (parts != null && parts.section.isNotEmpty) {
+            await ClassStructureService.instance.ensureSectionForGrade(
+              parts.grade,
+              parts.section,
+            );
+          }
+        }
+        SchoolDataService.instance.setTeacherAssignmentsFromRegistry(withSlots);
+      }
     }
     if (created.isNotEmpty) {
       await TeacherPersistenceService.instance.saveRegistryFromService(
