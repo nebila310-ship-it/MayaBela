@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inception Report — Student Management System (SMS) Project, Lebawi International Academy</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+      --warn: #8a5a00;
+      --warn-bg: #fff6e0;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.4pt; line-height: 1.38;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px;
+      justify-content: center; align-items: center; flex-wrap: wrap;
+      padding: 12px 14px; background: rgba(20, 32, 51, 0.94); color: #fff; font-size: 14px;
+    }
+    .toolbar a {
+      color: #fff; font-weight: 800; background: var(--green);
+      padding: 8px 16px; border-radius: 6px; text-decoration: none;
+    }
+    .sheet {
+      width: 210mm; max-width: 100%; margin: 18px auto; background: #fff;
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12); padding: 12mm 12mm 10mm;
+    }
+    .cover-flag {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      border-bottom: 3px solid var(--blue); padding-bottom: 8px;
+    }
+    .cover-flag img { width: 88px; height: auto; }
+    .brand-name { margin: 0; color: var(--blue); font-size: 12.8pt; }
+    .brand-sub {
+      margin: 0 0 4px; color: var(--green); font-weight: 700; font-size: 8.8pt;
+      text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .doc-kicker {
+      margin: 14px 0 5px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 1px; font-size: 8.8pt; font-weight: 700;
+    }
+    .doc-title { margin: 0 0 5px; font-size: 17pt; line-height: 1.16; }
+    .doc-for { margin: 0 0 8px; font-size: 11.5pt; color: var(--blue); font-weight: 700; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+    .meta-card { background: var(--wash); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+    .meta-card strong {
+      display: block; color: var(--blue); font-size: 7.8pt; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 3px;
+    }
+    .banner {
+      background: var(--ok-bg); border: 1px solid #b7e2c6; border-radius: 8px;
+      padding: 8px 10px; margin: 8px 0 6px;
+    }
+    .banner strong { color: var(--ok); }
+    .note {
+      background: var(--warn-bg); border: 1px solid #f0d49a; border-radius: 8px;
+      padding: 8px 10px; margin: 8px 0 6px;
+    }
+    .note strong { color: var(--warn); }
+    .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; background: var(--wash); }
+    .card .lbl {
+      font-size: 7.8pt; text-transform: uppercase; letter-spacing: 0.4px;
+      font-weight: 700; opacity: 0.8; margin-bottom: 3px; color: var(--blue);
+    }
+    .card .amt { font-size: 13pt; font-weight: 800; line-height: 1.1; }
+    .card .sub { margin-top: 3px; font-size: 8.2pt; color: var(--muted); }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+    .room { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+    .room.school { border-color: #1a4f9c; background: #eef3fb; }
+    .room.cloud { border-color: #1f8a4c; background: #eef9f2; }
+    .room h4 { margin: 0 0 4px; font-size: 10.2pt; }
+    .room.school h4 { color: var(--blue); }
+    .room.cloud h4 { color: var(--ok); }
+    .room ul { margin: 0; padding-left: 16px; font-size: 9.2pt; }
+    h2 {
+      margin: 14px 0 5px; font-size: 12pt; color: var(--blue);
+      border-bottom: 2px solid var(--line); padding-bottom: 2px; page-break-after: avoid;
+    }
+    h3 { margin: 10px 0 4px; font-size: 10.6pt; color: var(--ink); page-break-after: avoid; }
+    p { margin: 0 0 6px; }
+    ul, ol { margin: 0 0 7px; padding-left: 18px; }
+    li { margin-bottom: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 5px 0 8px; font-size: 8.4pt; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 1px solid var(--line); padding: 3px 5px; vertical-align: top; text-align: left; }
+    th { background: var(--wash); color: var(--blue); font-weight: 700; }
+    td.c, th.c { text-align: center; white-space: nowrap; }
+    .gantt td.on { background: #cfe0f7; }
+    .gantt td.lia { background: #ffe9b8; }
+    .gantt td.go { background: #1f8a4c; color: #fff; font-weight: 800; }
+    .gantt td.w { text-align: center; padding: 2px 0; width: 5.2%; }
+    .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 10px; }
+    .sig { border-top: 1px solid var(--ink); padding-top: 5px; min-height: 48px; }
+    .sig .who { font-weight: 700; margin-top: 16px; }
+    .sig .role { color: var(--muted); font-size: 8.8pt; }
+    .small { color: var(--muted); font-size: 8.6pt; }
+    .toc { columns: 2; column-gap: 18px; font-size: 9.2pt; }
+    .toc li { break-inside: avoid; }
+    .quote { border-left: 3px solid var(--blue); padding: 4px 10px; margin: 6px 0 8px; color: var(--muted); font-style: italic; }
+    .pb { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 7mm 9mm 9mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 10mm 10mm 15mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Inception Report — SMS Project, Lebawi International Academy — save the PDF
+    <a href="MaJo_Bridge_LIA_Inception_Report.pdf" download="MaJo_Bridge_LIA_Inception_Report.pdf">Download PDF</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">Majo Bridge Technologies and Events PLC</h1>
+        <p style="margin:4px 0 0;color:var(--muted);font-size:9.2pt;">
+          Product: <b>MaJo e-School Bridge</b> · Live system: https://mayabela.pages.dev<br />
+          majobridgetech@gmail.com · nabilmaya6464@gmail.com<br />
+          +251 911 646 444 · +251 911 133 548
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Inception report · Student Management System (SMS) project</p>
+    <h1 class="doc-title">Inception Report — Student Management System (SMS) Project at Lebawi International Academy</h1>
+    <p class="doc-for">Prepared for Lebawi International Academy (LIA), Addis Ababa</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Document</strong>
+        MBT-LIA-INC-2026-01 · 27 October 2026 · Version 1.0<br />
+        Tabled at the kick-off meeting of Tuesday 27 October 2026. The final version, with the agreed software
+        requirements attached, is issued within five working days after the requirements analysis.
+      </div>
+      <div class="meta-card">
+        <strong>Responds to</strong>
+        LIA Procurement — Notice of Intent to Award, Student Management System (SMS) Project, October 2026.
+        Earlier papers: LIA Terms of Reference; Technical Proposal v1.0 FINAL (12 Sep 2026); Addendum A — Hybrid
+        Hosting (15 Sep 2026); the revised 49-module scope.
+      </div>
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Lebawi International Academy — Procurement, Board, General Manager, Principal, Section Directors
+        (DoES / DoMS / DoHS), DoSA, QA, Registrar, IT Admin.
+      </div>
+      <div class="meta-card">
+        <strong>Status of the engagement</strong>
+        Majo Bridge Technologies and Events PLC is the preferred service provider, subject to contract negotiation
+        and agreement on the final scope and terms. Commercial terms are outside this report.
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>What this report is.</strong>
+      An inception report is the first deliverable after a notice of award. It is written before configuration work
+      starts. It confirms, in one paper that both sides agree, what the project covers, which software requirements
+      the system must meet at LIA, how the system will be implemented, who does what on each side, when each
+      milestone falls, how work will be accepted, and which risks are known on day one. Once LIA accepts it, it
+      becomes the agreed plan and the reference for every progress report that follows.
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="lbl">Kick-off meeting</div>
+        <div class="amt">Tue 27 Oct 2026</div>
+        <div class="sub">Software requirements analysis; revised scope of about 49 modules</div>
+      </div>
+      <div class="card">
+        <div class="lbl">Implementation approach</div>
+        <div class="amt">Hybrid</div>
+        <div class="sub">Student records and sensitive data on the LIA physical server; login and services on the Majo Bridge cloud server</div>
+      </div>
+      <div class="card">
+        <div class="lbl">Proposed go-live</div>
+        <div class="amt">Mon 21 Dec 2026</div>
+        <div class="sub">All sections, after a one-section pilot and user-acceptance testing; hypercare to 15 Jan 2027</div>
+      </div>
+    </div>
+
+    <h2>Contents</h2>
+    <ol class="toc">
+      <li>Purpose of this inception report</li>
+      <li>Background and notice of intent to award</li>
+      <li>Our understanding of the assignment</li>
+      <li>Confirmed scope</li>
+      <li>Software requirements analysis</li>
+      <li>Implementation approach — hybrid architecture</li>
+      <li>Work plan and milestones</li>
+      <li>Key deliverables and acceptance</li>
+      <li>Governance and communication</li>
+      <li>Data migration plan</li>
+      <li>Training plan</li>
+      <li>Security, backups, and data protection</li>
+      <li>User-acceptance testing and go-live criteria</li>
+      <li>Risks, assumptions, and dependencies</li>
+      <li>What LIA provides, and when</li>
+      <li>Support after go-live</li>
+      <li>Decisions needed from LIA</li>
+      <li>Acceptance of this report</li>
+      <li>Annexes A–D</li>
+    </ol>
+
+    <h2>1. Purpose of this inception report</h2>
+    <p>
+      LIA's notice of intent to award asked Majo Bridge Technologies and Events PLC to attend a kick-off meeting for
+      software requirements analysis and then to submit an inception report outlining the confirmed scope, software
+      requirements, implementation approach, work plan, and key deliverables. This document is that report. It has
+      five jobs:
+    </p>
+    <ul>
+      <li>Restate what LIA asked for in the Terms of Reference and confirm that our understanding is correct after the notice of award.</li>
+      <li>Confirm the scope: the revised list of about 49 modules, the four login portals, the customization that aligns the system with LIA's existing workflows, and the items outside scope.</li>
+      <li>Set out how software requirements are collected at the kick-off meeting and recorded, so every customization has a written source.</li>
+      <li>Describe the hybrid implementation approach: LIA's student information and sensitive data on a physical server inside the Academy, with login and other services on the Majo Bridge cloud server.</li>
+      <li>Lay out the week-by-week work plan, the key deliverables with their acceptance tests, the governance, the risks, and the inputs LIA must provide.</li>
+    </ul>
+    <p>
+      The software is already built and live. The TOR mapping in the Technical Proposal stands. This project is
+      therefore about <b>fitting the system to LIA</b>: capturing LIA's workflows, configuring and customizing,
+      standing up the two servers, loading data, training people, testing with LIA officers, and going live.
+    </p>
+
+    <h2>2. Background and notice of intent to award</h2>
+    <table>
+      <thead><tr><th style="width:24%">Step</th><th style="width:16%">Date</th><th>What happened</th></tr></thead>
+      <tbody>
+        <tr><td>Terms of Reference</td><td>2026</td><td>LIA issued the TOR for a system covering SIS, admissions, LMS, curriculum, assessment, gradebook, attendance, student support, health, discipline, DoSA, QA, leadership, communication, parent portal, and reporting (5.1–5.21), with roles, integration, privacy, performance, and training requirements (§6–§12).</td></tr>
+        <tr><td>Technical Proposal v1.0 FINAL</td><td>12 Sep 2026</td><td>Majo Bridge mapped every TOR section to a live desk on MaJo e-School Bridge and stated the implementation approach.</td></tr>
+        <tr><td>Addendum A — Hybrid hosting</td><td>15 Sep 2026</td><td>Answered LIA's requirement that sensitive student records sit on a server LIA controls, with other services on the Majo Bridge cloud.</td></tr>
+        <tr><td>Revised scope</td><td>Sep – Oct 2026</td><td>The scope was revised to about 49 modules with four login portals, plus customization for LIA's workflows.</td></tr>
+        <tr><td>Notice of Intent to Award</td><td>October 2026</td><td>LIA Procurement informed Majo Bridge Technologies and Events PLC that, following evaluation of the technical and financial proposals for the Student Management System (SMS) project, it was selected as the preferred service provider, subject to successful contract negotiations and agreement on the final scope and terms.</td></tr>
+        <tr><td>Kick-off meeting</td><td>Tue 27 Oct 2026</td><td>Software requirements analysis: discuss and document the Academy's academic and operational requirements, review existing workflows, establish the functionalities needed, and agree the revised scope.</td></tr>
+      </tbody>
+    </table>
+    <p class="quote">
+      "Following the meeting and the agreed requirements, we expect your team to prepare and submit an Inception Report
+      outlining the confirmed scope, software requirements, implementation approach, work plan, and key deliverables for
+      review and agreement." — LIA Procurement, Notice of Intent to Award
+    </p>
+
+    <h2>3. Our understanding of the assignment</h2>
+    <p>LIA wants one Student Management System that replaces Excel grading, paper summaries, and informal messaging groups, gives every office the same student record, and keeps that record inside the Academy. The TOR success criteria (§12) are the yardstick:</p>
+    <table>
+      <thead><tr><th style="width:34%">TOR success criterion</th><th>How LIA will see it at go-live</th></tr></thead>
+      <tbody>
+        <tr><td>Elimination of Excel-based grading</td><td>Teachers enter marks in the Weighted Markbook. Section Directors approve. Excel exists only as an export.</td></tr>
+        <tr><td>Real-time academic reporting</td><td>Dashboards, analytics, and Reports read today's marks and attendance from the school server.</td></tr>
+        <tr><td>Full parent engagement via portal or mobile app</td><td>Approved parents see published grades, attendance, homework, and messages for their own children on web or the Android app, on campus or at home.</td></tr>
+        <tr><td>Improved academic performance tracking</td><td>At-risk flags (low marks + high absence), SIS history, and report cards are produced by rule from live data.</td></tr>
+        <tr><td>Reduced administrative workload</td><td>One register, one approve-and-publish path, one message thread per family, one export button.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Added by LIA in the notice of award: the system must follow LIA's existing working practices, so customization is
+      part of the scope and is driven by the requirements documented at kick-off, not by the product's defaults.
+    </p>
+
+    <h2>4. Confirmed scope</h2>
+    <h3>4.1 In scope</h3>
+    <ul>
+      <li><b>Modules:</b> the revised scope of about 49 modules (Annex A). The exact list is ticked at the kick-off meeting and attached to the final version of this report.</li>
+      <li><b>Portals:</b> Administration / ERP, Teacher, Parent, and Student.</li>
+      <li><b>Customization:</b> the adjustments recorded in the customization register (Section 5) that align the modules with LIA's workflows — grading schemes and approval chains per section, report-card layout, attendance rules, admission stages, DoSA and QA forms, role names and permissions for LIA's offices, LIA branding, and the wording of parent communication.</li>
+      <li><b>Hybrid implementation:</b> installation of the school node on the LIA physical server, the cloud node on the Majo Bridge self-hosted cloud server, the connection between them, and the routing of each record type to its home server (Section 6).</li>
+      <li><b>Cross-cutting requirements (TOR §6–§8):</b> role-based access control and audit logs; LMS ↔ SIS, Assessment ↔ Gradebook, Attendance ↔ Analytics; privacy desk, MFA, encryption in transit and at rest, backups on the school server.</li>
+      <li><b>Services:</b> configuration, data migration, training, pilot, UAT support, go-live, and hypercare.</li>
+    </ul>
+    <h3>4.2 Out of scope unless agreed in the contract</h3>
+    <ul>
+      <li>Modules outside the revised 49-module list (finance, payroll, human resource, transport, live GPS, buses, driver portal, digital operations, campus management, CCTV). They can be added later; a change note records any such request.</li>
+      <li>Hardware: the LIA physical server, UPS, network equipment, backup disks, tablets, and campus cabling or Wi-Fi works. LIA procures these to the specification in Annex D; Majo Bridge installs the software on them.</li>
+      <li>Third-party recurring charges: SMS gateway, internet lines, domain renewals, payment gateways.</li>
+      <li>Re-typing of historical records on LIA's behalf. Majo Bridge provides templates, import tools, and validation; LIA offices provide and own the data.</li>
+    </ul>
+
+    <h2>5. Software requirements analysis</h2>
+    <p>The kick-off meeting opens the requirements analysis LIA asked for. It is run as short office workshops over the first week, each producing entries in two registers that become Annex E of the final report.</p>
+    <table>
+      <thead><tr><th style="width:20%">Workshop</th><th style="width:26%">LIA participants</th><th>Questions answered</th><th style="width:14%">When</th></tr></thead>
+      <tbody>
+        <tr><td>Kick-off plenary</td><td>Procurement, GM, Principal, Directors, DoSA, QA, Registrar, IT Admin</td><td>Confirm scope, the hybrid approach, the calendar, the officers for each workshop, and the decision rules</td><td>Tue 27 Oct</td></tr>
+        <tr><td>Academic — per section</td><td>Section Directors DoES / DoMS / DoHS, Department Heads, two teachers each</td><td>Grading scheme and weights, approval chain, report-card layout and comments, timetable, lesson-plan review, exam practice, homework and LMS use</td><td>Wed 28 – Thu 29 Oct</td></tr>
+        <tr><td>Registrar and admissions</td><td>Registrar, admissions officer</td><td>Student id format, class naming, admission stages, documents kept, transfers and promotion rules, alumni</td><td>Wed 28 Oct</td></tr>
+        <tr><td>Student affairs and support</td><td>DoSA, counselors, career guidance, nurse, special-needs lead</td><td>Discipline levels and escalation, grievances, clubs and programs, counseling and IEP forms, health record fields, safeguarding access list</td><td>Thu 29 Oct</td></tr>
+        <tr><td>Parents and communication</td><td>DoSA, Principal's office</td><td>Parent linking and approval, what parents see and when, announcement channels, languages</td><td>Thu 29 Oct</td></tr>
+        <tr><td>QA and leadership</td><td>QA officer, VP, Principal</td><td>Observation and survey templates, audit scope, leadership calendar, reports the Board expects</td><td>Fri 30 Oct</td></tr>
+        <tr><td>IT and hosting</td><td>IT Admin, facilities</td><td>Server room, power, LAN, internet line, domain name, backup disks, device inventory, who holds which keys</td><td>Fri 30 Oct</td></tr>
+      </tbody>
+    </table>
+    <h3>5.1 How requirements are recorded</h3>
+    <ul>
+      <li><b>Requirements register:</b> one row per requirement — id, office, current practice at LIA, what the system must do, the module that covers it, priority (must / should / later), and the LIA owner who confirms it.</li>
+      <li><b>Customization register:</b> one row per change to the product's default behaviour — id, requirement it serves, what changes (configuration, form field, rule, layout), effect on the work plan, and the LIA approver.</li>
+      <li>Both registers are signed by the LIA focal person and attached to the final inception report as Annex E. They are the baseline for change control (Section 9).</li>
+    </ul>
+
+    <h2>6. Implementation approach — hybrid architecture</h2>
+    <p>
+      LIA's rule is that student information, large data, and sensitive records live on a physical server inside the
+      Academy, while authentication and the other services run on the Majo Bridge self-hosted cloud server. The
+      implementation uses the same system software on both machines, so LIA IT learns one tool and there is no
+      separate middleware to buy or maintain.
+    </p>
+    <div class="two">
+      <div class="room school">
+        <h4>School node — LIA physical server, on campus</h4>
+        <ul>
+          <li>Student information: identity, class, date of birth, family, admissions, alumni</li>
+          <li>Academic record: markbook, exam papers and attempts, report cards, attendance, at-risk flags</li>
+          <li>Care and conduct: health, counseling, IEP, college guidance, discipline, grievances, safeguarding</li>
+          <li>Large data: student documents, e-books and materials, library files, gallery photos</li>
+          <li>Teacher–parent messages and class discussion</li>
+          <li>Nightly encrypted backups on a disk LIA holds</li>
+        </ul>
+      </div>
+      <div class="room cloud">
+        <h4>Cloud node — Majo Bridge self-hosted cloud server</h4>
+        <ul>
+          <li>Authentication: School ID routing, usernames, passwords, MFA, sessions, password resets</li>
+          <li>Role catalogue and permissions</li>
+          <li>Web app delivery and Android app updates</li>
+          <li>Announcements, calendar, and events the school publishes</li>
+          <li>Push-notification delivery (the alert, not the content)</li>
+          <li>System health, support tools, releases</li>
+        </ul>
+      </div>
+    </div>
+    <h3>6.1 How the two servers work together</h3>
+    <ul>
+      <li><b>One login.</b> A person signs in once at the cloud node with School ID, username or phone, and password (and MFA where required). The cloud node issues a signed session.</li>
+      <li><b>One session, two rooms.</b> The school node is configured to trust the cloud node's signature, so the same session opens the student record on campus without a second password. Row-level security runs on both nodes: a teacher still sees assigned classes only; a parent still sees linked children only.</li>
+      <li><b>Routing by record type.</b> The app knows the home server of every record type. Student, academic, care, document, and message records go to the school node; login, roles, published notices, and updates go to the cloud node. Nobody keeps two systems or two student ids.</li>
+      <li><b>Off campus.</b> Parents and staff at home reach the school node through an encrypted tunnel on a school domain (for example <code>sis.lia.edu.et</code>). No inbound port is opened on the LIA router; the tunnel is outbound from the server.</li>
+      <li><b>On campus.</b> Staff rooms reach the school node directly over the LAN. If the internet line fails, a teacher who signed in that morning keeps taking attendance and entering marks, because those writes land inside the campus. A fresh login during the outage waits until the line returns; parents at home wait too.</li>
+      <li><b>Why this is the simplest hybrid.</b> Same software on both nodes, one administration console each, no custom synchronization code, and the sensitive tables never exist on the cloud node, which LIA IT can verify (UAT scenario 16).</li>
+    </ul>
+    <h3>6.2 Implementation stages</h3>
+    <table>
+      <thead><tr><th style="width:20%">Stage</th><th style="width:12%">Weeks</th><th>What is done</th><th style="width:22%">Output</th></tr></thead>
+      <tbody>
+        <tr><td>A. Kick-off and requirements</td><td>W1–W2</td><td>Kick-off; office workshops; requirements and customization registers; module list ticked; final inception report.</td><td>Final inception report with Annex E</td></tr>
+        <tr><td>B. Servers and configuration</td><td>W2–W3</td><td>Cloud node prepared with LIA school record, roles, and branding. LIA server delivered and placed; school node installed; tunnel and domain set; one-login test passed. Customizations from the register configured.</td><td>Two connected nodes; configured LIA school; admin and IT logins</td></tr>
+        <tr><td>C. Data migration</td><td>W3–W4</td><td>LIA fills the Annex B templates. Majo Bridge validates and imports into the school node, returns exception lists. Registrar signs the roster. Staff and teacher logins issued.</td><td>Signed roster; staff logins; class allocations</td></tr>
+        <tr><td>D. Training and pilot</td><td>W5–W7</td><td>Role-based training (Section 11). Backup restore drill with LIA IT. One section runs attendance, homework, markbook, and parent messages live for two weeks; its parents are linked and approved. Security check of both nodes.</td><td>Trained officers; restore drill record; pilot report</td></tr>
+        <tr><td>E. User-acceptance testing</td><td>W8</td><td>LIA officers run the UAT scripts (Section 13) on real LIA data. Defects logged, fixed, retested. Acceptance certificate signed.</td><td>UAT report and acceptance certificate</td></tr>
+        <tr><td>F. Go-live and hypercare</td><td>W9–W12</td><td>All sections live from Mon 21 Dec 2026. Daily check-ins, on-site floor-walking in the first week, first Friday backup verified. Handover to the support period.</td><td>Go-live certificate; hypercare closure note</td></tr>
+      </tbody>
+    </table>
+    <p class="small">
+      Working method: short sessions in LIA offices; every change recorded in the issue log; no desk opened to users before
+      its officer is trained. The school calendar is respected: the week before semester examinations is a no-change
+      window, and the Genna week (7 January) is kept light.
+    </p>
+
+    <h2>7. Work plan and milestones</h2>
+    <p>Twelve weeks from the week of Monday 26 October 2026, with the kick-off on Tuesday 27 October. Blue rows are Majo Bridge work; amber rows are LIA inputs; shared rows are both. Dates are confirmed at the kick-off meeting.</p>
+    <table class="gantt">
+      <thead>
+        <tr>
+          <th style="width:30%">Activity</th><th style="width:8%">Owner</th>
+          <th class="w">W1<br />26 Oct</th><th class="w">W2<br />2 Nov</th><th class="w">W3<br />9 Nov</th><th class="w">W4<br />16 Nov</th>
+          <th class="w">W5<br />23 Nov</th><th class="w">W6<br />30 Nov</th><th class="w">W7<br />7 Dec</th><th class="w">W8<br />14 Dec</th>
+          <th class="w">W9<br />21 Dec</th><th class="w">W10<br />28 Dec</th><th class="w">W11<br />4 Jan</th><th class="w">W12<br />11 Jan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Kick-off (Tue 27 Oct); requirements workshops</td><td>Both</td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Requirements and customization registers; final inception report</td><td>MBT</td><td class="on"></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>LIA physical server, UPS, room, LAN, internet line, domain</td><td>LIA</td><td class="lia"></td><td class="lia"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Cloud node: LIA school record, roles, branding, customizations</td><td>MBT</td><td></td><td class="on"></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>School node install; tunnel; one-login test</td><td>MBT</td><td></td><td></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Data templates filled by LIA offices</td><td>LIA</td><td></td><td class="lia"></td><td class="lia"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Validation, import to school node, exception lists, roster sign-off</td><td>Both</td><td></td><td></td><td class="on"></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Staff and teacher logins; class allocations</td><td>MBT</td><td></td><td></td><td></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Training: admin and IT, directors, DoSA, QA, counselors</td><td>MBT</td><td></td><td></td><td></td><td></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Training: teachers (three cohorts); backup restore drill</td><td>MBT</td><td></td><td></td><td></td><td></td><td class="on"></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Pilot section live; security check of both nodes</td><td>Both</td><td></td><td></td><td></td><td></td><td></td><td class="on"></td><td class="on"></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Parent briefings and link approvals (pilot, then all)</td><td>Both</td><td></td><td></td><td></td><td></td><td></td><td class="on"></td><td class="on"></td><td class="on"></td><td class="on"></td><td></td><td></td><td></td></tr>
+        <tr><td>User-acceptance testing; acceptance certificate</td><td>LIA</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="lia"></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>Go-live, all sections</td><td>Both</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="go">GO</td><td></td><td></td><td></td></tr>
+        <tr><td>Hypercare: daily check-ins, on-site week 1, first backup verified</td><td>MBT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="on"></td><td class="on"></td><td class="on"></td><td class="on"></td></tr>
+        <tr><td>Hypercare closure; handover to support</td><td>Both</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="on"></td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th style="width:6%">No.</th><th>Milestone</th><th style="width:16%">Target</th><th style="width:32%">Evidence</th></tr></thead>
+      <tbody>
+        <tr><td class="c">M1</td><td>Kick-off held; requirements workshops complete</td><td>Fri 30 Oct 2026</td><td>Workshop notes; draft registers</td></tr>
+        <tr><td class="c">M2</td><td>Requirements and customization registers signed; final inception report accepted</td><td>Fri 6 Nov 2026</td><td>Signed Annex E; signed Section 18</td></tr>
+        <tr><td class="c">M3</td><td>Both nodes live and connected; LIA configured; admin and IT can sign in</td><td>Fri 13 Nov 2026</td><td>One-login test record; configuration checklist signed by IT Admin</td></tr>
+        <tr><td class="c">M4</td><td>Roster and staff list imported to the school node and signed</td><td>Fri 20 Nov 2026</td><td>Registrar sign-off; exception list closed</td></tr>
+        <tr><td class="c">M5</td><td>Training complete; restore drill passed; pilot section live</td><td>Fri 4 Dec 2026</td><td>Attendance sheets; drill record; pilot start note</td></tr>
+        <tr><td class="c">M6</td><td>UAT passed; delivery accepted</td><td>Fri 18 Dec 2026</td><td>UAT report; acceptance certificate</td></tr>
+        <tr><td class="c">M7</td><td>Go-live, all sections</td><td>Mon 21 Dec 2026</td><td>Go-live certificate</td></tr>
+        <tr><td class="c">M8</td><td>Hypercare closed; support period starts</td><td>Fri 15 Jan 2027</td><td>Closure note; open-issue list handed to support</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>Date dependency.</strong> M3 and every later milestone depend on the LIA physical server being in its room,
+      powered, and on the network by Friday 6 November 2026 (Section 15). If the server arrives later, the milestones
+      from M3 onward move by the same number of working days; sensitive data is never placed on the cloud node to save
+      time.
+    </div>
+
+    <h2>8. Key deliverables and acceptance</h2>
+    <table>
+      <thead><tr><th style="width:5%">D</th><th style="width:26%">Deliverable</th><th>Content</th><th style="width:12%">Due</th><th style="width:17%">Accepted by</th></tr></thead>
+      <tbody>
+        <tr><td class="c">D1</td><td>Inception report (this document)</td><td>Scope, approach, plan, governance, risks, LIA inputs</td><td>M2</td><td>LIA Procurement / project sponsor</td></tr>
+        <tr><td class="c">D2</td><td>Software requirements and customization registers</td><td>Annex E: requirements per office, customization per requirement, priorities, LIA owners</td><td>M2</td><td>LIA focal person and office heads</td></tr>
+        <tr><td class="c">D3</td><td>Hybrid environment</td><td>School node installed on the LIA server; cloud node prepared; tunnel and domain; one-login test; backup job; architecture sheet (Annex D) as built</td><td>M3</td><td>IT Admin</td></tr>
+        <tr><td class="c">D4</td><td>Configured and customized LIA school</td><td>School record, campuses, academic year, terms, grading schemes, approval chains, role map for LIA offices, branding, customizations from D2</td><td>M3</td><td>IT Admin and Principal</td></tr>
+        <tr><td class="c">D5</td><td>Migrated data</td><td>Students, parents and links, staff and roles, classes, subjects, allocations, timetable on the school node; import log and exception list</td><td>M4</td><td>Registrar</td></tr>
+        <tr><td class="c">D6</td><td>Training delivered</td><td>Sessions per Annex C, attendance sheets, in-app manuals, train-the-trainer for IT and one teacher per section</td><td>M5</td><td>Principal</td></tr>
+        <tr><td class="c">D7</td><td>Restore drill and security check</td><td>Backup restored to a test copy and verified; checklist of both nodes (TLS, access rules, audit logs, key custody)</td><td>M5 / W7</td><td>IT Admin</td></tr>
+        <tr><td class="c">D8</td><td>Pilot report</td><td>Two weeks of one section live: usage counts, issues found and fixed, parent-link results</td><td>W7</td><td>Section Director of the pilot section</td></tr>
+        <tr><td class="c">D9</td><td>UAT report and acceptance certificate</td><td>Scripted scenarios run by LIA officers, defect log, retest results, exit-criteria check</td><td>M6</td><td>LIA project sponsor</td></tr>
+        <tr><td class="c">D10</td><td>Go-live certificate</td><td>All sections live; first backup verified; support contact card in every office</td><td>M7</td><td>LIA project sponsor</td></tr>
+        <tr><td class="c">D11</td><td>Hypercare closure and support plan</td><td>Open issues with owners, support channels, escalation path, operations handbook for LIA IT (backups, restore, tunnel, updates)</td><td>M8</td><td>IT Admin</td></tr>
+        <tr><td class="c">—</td><td>Fortnightly progress report</td><td>Done / next / issues / risks / decisions needed, one page</td><td>Every second Friday</td><td>Noted at steering meeting</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Acceptance rule: LIA reviews each deliverable within five working days. Comments are answered in writing; silence after five working days is treated as acceptance so the plan does not stall.</p>
+
+    <h2>9. Governance and communication</h2>
+    <table>
+      <thead><tr><th style="width:22%">Forum</th><th style="width:18%">When</th><th style="width:28%">Who</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Kick-off meeting</td><td>Tue 27 Oct 2026</td><td>Procurement, sponsor, Principal, Directors, DoSA, QA, IT Admin, Registrar; Majo Bridge</td><td>Requirements analysis opens; scope and approach confirmed; decisions in Section 17</td></tr>
+        <tr><td>Steering meeting</td><td>Every second week, 45 min</td><td>Sponsor, Principal, focal person, Majo Bridge project lead</td><td>Progress report, risks, decisions, acceptance of deliverables, change notes</td></tr>
+        <tr><td>Working meeting</td><td>Weekly, 30 min</td><td>Focal person, IT Admin, officers of the week, Majo Bridge implementation lead</td><td>Issue log, data status, server status, next week's sessions</td></tr>
+        <tr><td>Daily check-in (hypercare)</td><td>W9–W12, 15 min</td><td>Focal person, IT Admin, Majo Bridge support</td><td>Yesterday's issues, today's priorities</td></tr>
+        <tr><td>Project group (WhatsApp)</td><td>Continuous</td><td>Focal person, IT Admin, Majo Bridge team</td><td>Quick questions and outage alerts; decisions are still minuted</td></tr>
+      </tbody>
+    </table>
+    <p><b>LIA roles to be named at kick-off:</b> project sponsor (Board / GM), project focal person (daily counterpart, about two hours a day), IT Admin (server owner, about one day a week), Registrar, Section Directors DoES / DoMS / DoHS, DoSA officer, QA officer, HR / staff office, and the pilot section lead with two teachers. A deputy is named for each.</p>
+    <ul>
+      <li><b>Issue log:</b> one shared list (id, raised by, desk or node, severity, owner, status, date), reviewed at every working meeting.</li>
+      <li><b>Change control:</b> a request outside Section 4 or outside the signed registers is written on a one-page change note with its effect on scope, dates, and terms. The steering meeting approves or declines. Nothing outside scope is built on a verbal request.</li>
+      <li><b>Decisions register:</b> each decision has a date, the person who took it, and the deliverable it affects.</li>
+    </ul>
+
+    <h2>10. Data migration plan</h2>
+    <p>All student, parent, academic, and staff data is imported into the <b>school node</b>. The cloud node receives only login accounts and role assignments.</p>
+    <table>
+      <thead><tr><th style="width:20%">Data set</th><th style="width:20%">Source at LIA</th><th>Method</th><th style="width:16%">Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Students (active)</td><td>Registrar Excel / paper register</td><td>Annex B template → Import (CSV / Excel) on the school node. Validation: unique student id, DOB format, class exists, campus</td><td>Registrar</td></tr>
+        <tr><td>Parents and guardians</td><td>Admission files, phone lists</td><td>Template with phone and relation; link by student id + date of birth, then school approval</td><td>Registrar + DoSA</td></tr>
+        <tr><td>Staff: teachers and administration</td><td>HR list</td><td>Template with role, section, subjects; login accounts on the cloud node, profiles on the school node; first passwords in sealed envelopes</td><td>HR + IT Admin</td></tr>
+        <tr><td>Classes, subjects, allocations</td><td>Section Directors</td><td>Template per section; drives teacher scope (a teacher sees assigned classes only)</td><td>Section Directors</td></tr>
+        <tr><td>Timetable</td><td>Academic office</td><td>Template per class</td><td>Academic office</td></tr>
+        <tr><td>Grading schemes and approval chains</td><td>Requirements register</td><td>Configured per section from Annex E</td><td>Section Directors</td></tr>
+        <tr><td>Current-term marks and attendance</td><td>Teacher Excel sheets</td><td>Entered by teachers into the markbook and register during training week, so every mark has an author; no bulk import of marks</td><td>Teachers</td></tr>
+        <tr><td>Previous years' results and documents</td><td>Archive</td><td>Scanned PDFs per student into Student documents on the school node (large data stays on campus), or kept on paper. Policy decided at kick-off</td><td>Registrar</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li>Cut-off: templates returned by Fri 13 Nov 2026. Changes after import go through the live desks, not the spreadsheet.</li>
+      <li>Each import produces an exception list (missing DOB, duplicate id, unknown class). LIA corrects at source; Majo Bridge re-runs. The roster is signed when the list is empty.</li>
+      <li>Templates travel through the agreed project channel inside LIA's control, never by public links. Working copies are deleted from Majo Bridge devices after the roster is signed.</li>
+    </ul>
+
+    <h2>11. Training plan</h2>
+    <table>
+      <thead><tr><th style="width:26%">Audience</th><th style="width:10%">Sessions</th><th>Content</th><th style="width:14%">When</th></tr></thead>
+      <tbody>
+        <tr><td>IT Admin and administration staff</td><td class="c">3 × 2 h</td><td>Logins, roles, MFA help, the two nodes, backups and restore, tunnel status, system health, import tool, release procedure</td><td>W3, W5, W6</td></tr>
+        <tr><td>Principal, VP, Section Directors, Department Heads</td><td class="c">2 × 2 h</td><td>Grade approval and publish, report cards, lesson-plan review, curriculum office, analytics and reports, audit log</td><td>W5</td></tr>
+        <tr><td>DoSA, counselors, career guidance, nurse</td><td class="c">1 × 2 h</td><td>Parent links, programs, discipline and grievances, student support, health records, safeguarding access rules</td><td>W5</td></tr>
+        <tr><td>QA officer</td><td class="c">1 × 1.5 h</td><td>Observations, surveys, academic audits, action research, reports</td><td>W5</td></tr>
+        <tr><td>Teachers — three cohorts by section</td><td class="c">3 × 2.5 h</td><td>Attendance, homework, weighted markbook, lesson plans, LMS hub, class discussion, parent messages, exam bank</td><td>W5–W6</td></tr>
+        <tr><td>Train-the-trainer</td><td class="c">1 × 2 h</td><td>IT Admin plus one teacher per section become first-line helpers</td><td>W6</td></tr>
+        <tr><td>Parents</td><td class="c">1 briefing per section + leaflet</td><td>How to link a child, what they see and when, the Android app, who to ask</td><td>W6–W9</td></tr>
+        <tr><td>Students</td><td class="c">Homeroom, 20 min</td><td>Own timetable, homework, materials, exams, announcements</td><td>W7–W9</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Each session ends with the attendee doing the task on real LIA data. In-app manuals (admin, teacher, parent) remain after the sessions. Languages: English, with Amharic support where needed.</p>
+
+    <h2>12. Security, backups, and data protection</h2>
+    <ul>
+      <li><b>Encryption:</b> HTTPS / TLS between the app and both nodes, and through the tunnel; disk encryption on the LIA server; encrypted backup files.</li>
+      <li><b>Access rules:</b> row-level security on both nodes; role-based desks; safeguarding and counseling notes never in parent or student views or exports.</li>
+      <li><b>Authentication:</b> on the cloud node with MFA (authenticator app) available; LIA decides at kick-off who must enrol from day one (recommended: Board, GM, Principal, Directors, IT Admin).</li>
+      <li><b>Audit:</b> school audit log and grade audit log on the school node; login and role changes logged on the cloud node; both readable by leadership and QA.</li>
+      <li><b>Backups:</b> nightly encrypted backup of the school node to a disk LIA holds, plus a weekly copy to a second disk kept off the server room; retention 30 daily and 12 weekly; restore drill before go-live and every term thereafter. The cloud node is backed up nightly by Majo Bridge; it holds no student records.</li>
+      <li><b>Key custody:</b> LIA IT holds the server administrator account and the backup encryption key; Majo Bridge holds named maintenance accounts that appear in the audit log; the session-signing key is held by both parties under the contract.</li>
+      <li><b>Privacy desk:</b> consent register, subject-access export, and erasure that redacts personal fields while keeping the academic record intact.</li>
+      <li><b>Project conduct:</b> Majo Bridge staff access LIA data only for configuration, import, training, and support, through named accounts; no LIA data is used for demonstrations elsewhere; UAT uses LIA's own data under LIA's control.</li>
+    </ul>
+
+    <h2>13. User-acceptance testing and go-live criteria</h2>
+    <table>
+      <thead><tr><th style="width:5%">#</th><th style="width:30%">UAT scenario (run by LIA officers)</th><th>Pass condition</th></tr></thead>
+      <tbody>
+        <tr><td class="c">1</td><td>Registrar creates a student; teacher, director, and DoSA see the same record</td><td>One id; fields consistent on every desk; record is on the school node</td></tr>
+        <tr><td class="c">2</td><td>Homeroom takes attendance; a parent of an absent child is notified</td><td>Register saved on campus; notification received; dashboard trend updates</td></tr>
+        <tr><td class="c">3</td><td>Teacher enters weighted marks per the LIA scheme; exam attempt pushes a score; Section Director approves; report card published in the LIA layout</td><td>Parent sees the mark only after publish; grade audit shows who did what</td></tr>
+        <tr><td class="c">4</td><td>At-risk rule flags a child with low average and high absence</td><td>Flag appears; director can open the child's profile</td></tr>
+        <tr><td class="c">5</td><td>Parent at home links a child by student id + DOB; DoSA approves; portal and Android app show the child</td><td>Unapproved parent sees nothing; approved parent sees only linked children, through the tunnel</td></tr>
+        <tr><td class="c">6</td><td>Teacher opens LMS for class + subject: lesson plan, homework, material, class discussion</td><td>All from the same course space; roster opens the SIS profile</td></tr>
+        <tr><td class="c">7</td><td>Lesson plan submitted; Department Head reviews; academic evaluation recorded</td><td>Status trail visible; evaluation not overwritten by QA scores</td></tr>
+        <tr><td class="c">8</td><td>Safeguarding case opened by an authorised officer</td><td>Classroom teacher, parent, and student cannot see it; audit log records the open</td></tr>
+        <tr><td class="c">9</td><td>Counseling session, IEP, college-guidance entry, health record</td><td>Each on its own desk; visible only to the right roles</td></tr>
+        <tr><td class="c">10</td><td>DoSA: grievance, club, scholarship, internship hours</td><td>Separate from discipline; attendance oversight reads the live register</td></tr>
+        <tr><td class="c">11</td><td>QA observation, survey, audit; audit log opened by QA</td><td>Entries saved; audit log readable by QA and VP, not by teachers</td></tr>
+        <tr><td class="c">12</td><td>Reports: academic, attendance, grade analytics exported to Excel / CSV / PDF</td><td>Numbers match the live markbook and register</td></tr>
+        <tr><td class="c">13</td><td>Role test: a teacher tries a director desk; another school's id is tried at login</td><td>Hidden or refused; nothing from another school is visible</td></tr>
+        <tr><td class="c">14</td><td>IT Admin restores last night's backup to a test copy; MFA enrolment for one leader</td><td>Restored copy opens with yesterday's data; MFA prompt on next login</td></tr>
+        <tr><td class="c">15</td><td>Announcement to parents of one section; message thread teacher ↔ parent</td><td>Only that section's parents receive it; thread stored on the school node</td></tr>
+        <tr><td class="c">16</td><td>IT Admin inspects the cloud node with Majo Bridge</td><td>No student identity, marks, attendance, health, or safeguarding records exist on the cloud node; the school node holds them</td></tr>
+        <tr><td class="c">17</td><td>Internet line to campus disconnected for 30 minutes</td><td>Signed-in staff on campus keep taking attendance and entering marks; work is intact when the line returns</td></tr>
+        <tr><td class="c">18</td><td>Each customization in Annex E checked by its LIA approver</td><td>Behaves as written in the register</td></tr>
+      </tbody>
+    </table>
+    <p><b>Defect severity:</b> Sev-1 — an office cannot work (no login, data loss, node down); Sev-2 — a TOR function or an Annex E requirement fails with no workaround; Sev-3 — workaround exists; Sev-4 — cosmetic or wording.</p>
+    <p><b>Exit criteria for acceptance and go-live:</b> no open Sev-1 or Sev-2; at least 90% of scenarios passed first time and 100% after retest; roster signed; officers trained; restore drill passed; scenario 16 passed; support card in every office.</p>
+
+    <h2>14. Risks, assumptions, and dependencies</h2>
+    <table>
+      <thead><tr><th style="width:28%">Risk</th><th class="c" style="width:9%">Likelihood</th><th class="c" style="width:8%">Impact</th><th>Mitigation</th><th style="width:13%">Owner</th></tr></thead>
+      <tbody>
+        <tr><td>LIA physical server procured or installed late</td><td class="c">Medium</td><td class="c">High</td><td>Specification in Annex D issued at kick-off; delivery by 6 Nov; milestones from M3 shift with it rather than placing data on the cloud node</td><td>IT Admin / Sponsor</td></tr>
+        <tr><td>Power or cooling failures in the server room</td><td class="c">Medium</td><td class="c">High</td><td>UPS sized for the server and switch; weekly check on the IT checklist; nightly backups off the server</td><td>IT Admin</td></tr>
+        <tr><td>Internet line or tunnel instability affecting home access</td><td class="c">Medium</td><td class="c">Medium</td><td>Tunnel auto-reconnects; status visible on System Health; on-campus work unaffected; second line optional</td><td>IT Admin / MBT</td></tr>
+        <tr><td>Data templates returned late or incomplete</td><td class="c">High</td><td class="c">High</td><td>Templates issued at kick-off; focal person chases weekly; import in two passes; cut-off date in Section 10</td><td>LIA focal person</td></tr>
+        <tr><td>Requirements grow after the registers are signed</td><td class="c">Medium</td><td class="c">Medium</td><td>Change-note procedure (Section 9); "later" priority parked for after go-live</td><td>Project lead</td></tr>
+        <tr><td>Teachers keep a private Excel as the master</td><td class="c">Medium</td><td class="c">High</td><td>Directors approve only from the markbook; pilot proves the path; report cards come from the system only</td><td>Section Directors</td></tr>
+        <tr><td>Teacher release for training clashes with timetable</td><td class="c">Medium</td><td class="c">Medium</td><td>Three cohorts, sessions after classes, train-the-trainer per section</td><td>Principal</td></tr>
+        <tr><td>Parent linking slow (wrong numbers, no smartphone)</td><td class="c">Medium</td><td class="c">Medium</td><td>Section briefings, leaflet, web portal as alternative to the app, DoSA approval desk staffed W6–W9</td><td>DoSA</td></tr>
+        <tr><td>Key officer unavailable</td><td class="c">Low</td><td class="c">Medium</td><td>Deputy named for each role at kick-off</td><td>Sponsor</td></tr>
+        <tr><td>Holidays and exams compress the plan</td><td class="c">Medium</td><td class="c">Low</td><td>No-change window before exams; Genna week light; two-week buffer inside hypercare</td><td>Project lead</td></tr>
+      </tbody>
+    </table>
+    <p><b>Assumptions:</b> the contract is signed before configuration work starts in W2; LIA names its officers at kick-off; staff have a computer or smartphone; grading policies exist in writing; the academic calendar is available; LIA can register a sub-domain for the school node.</p>
+    <p><b>Dependencies:</b> parent phones and student dates of birth are correct in LIA's files (linking depends on them); the server, room, LAN, and internet line in Annex D.</p>
+
+    <h2>15. What LIA provides, and when</h2>
+    <table>
+      <thead><tr><th style="width:52%">Input</th><th style="width:20%">By</th><th>Needed for</th></tr></thead>
+      <tbody>
+        <tr><td>Officers and deputies named; meeting room and projector for workshops and training</td><td>Tue 27 Oct 2026</td><td>Governance, workshops</td></tr>
+        <tr><td>Module list ticked (Annex A); policy on previous years' records; MFA list; parent-letter signatory</td><td>Fri 30 Oct 2026</td><td>Scope, configuration</td></tr>
+        <tr><td>Grading policies per section; academic calendar; class and subject structure; logo and letterhead details</td><td>Fri 30 Oct 2026</td><td>Requirements register, D4</td></tr>
+        <tr><td>Signed contract</td><td>Before W2</td><td>Configuration start</td></tr>
+        <tr><td>Physical server to Annex D, in a locked room with UPS, on the LAN, with internet line details and a sub-domain name</td><td>Fri 6 Nov 2026</td><td>D3 school node</td></tr>
+        <tr><td>Two backup disks (Annex D)</td><td>Fri 6 Nov 2026</td><td>Backups, restore drill</td></tr>
+        <tr><td>Completed Annex B templates: students, parents, staff, classes, timetable</td><td>Fri 13 Nov 2026</td><td>D5 migration</td></tr>
+        <tr><td>Teacher release for training; pilot section nominated</td><td>Fri 20 Nov 2026</td><td>D6, D8</td></tr>
+        <tr><td>Officers for UAT, one day each</td><td>Week of 14 Dec 2026</td><td>D9</td></tr>
+      </tbody>
+    </table>
+
+    <h2>16. Support after go-live</h2>
+    <table>
+      <thead><tr><th style="width:26%">Item</th><th>Commitment</th></tr></thead>
+      <tbody>
+        <tr><td>Hypercare</td><td>W9–W12: on-site in the first week, daily check-in, same-day response on every issue</td></tr>
+        <tr><td>Support period and terms</td><td>As agreed in the contract. Channels: phone / WhatsApp +251 911 646 444 · +251 911 133 548; majobridgetech@gmail.com · nabilmaya6464@gmail.com; Monday–Saturday 09:00–18:00 East Africa Time</td></tr>
+        <tr><td>Proposed response targets</td><td>Sev-1 (school cannot log in, a node down): response within 2 hours, any day. Sev-2: same working day. Sev-3: within 2 working days. Sev-4: next release</td></tr>
+        <tr><td>What Majo Bridge handles</td><td>Logins, roles, both nodes' software, tunnel, the Android app, releases, restore assistance</td></tr>
+        <tr><td>What LIA handles</td><td>Marks, attendance, parent-link approval, announcements, server room, power, backup disks, first-line help through the trained helpers, the weekly IT checklist in the operations handbook (D11)</td></tr>
+        <tr><td>Releases</td><td>Announced in the project group; school node updated in a maintenance window agreed with IT Admin; staff hard-refresh the web app (Ctrl+Shift+R) after a release</td></tr>
+      </tbody>
+    </table>
+
+    <h2>17. Decisions needed from LIA</h2>
+    <ol>
+      <li>Confirm the module list (Annex A) and record the kick-off outcomes as the baseline of Annex E.</li>
+      <li>Name the officers and deputies listed in Section 9, and the pilot section.</li>
+      <li>Confirm the server procurement route and date against Annex D, the server room, and the sub-domain name for the school node.</li>
+      <li>Confirm the twelve-week calendar in Section 7, or move the go-live date and the milestones with it.</li>
+      <li>Policy on previous years' results: scanned PDFs per student on the school node, or paper only.</li>
+      <li>Who must enrol in MFA from day one.</li>
+      <li>Parent communication: who signs the parent letter, and the dates of the section briefings.</li>
+      <li>Project channel for templates and exports (recommended: a shared LIA drive folder with named access).</li>
+    </ol>
+    <p><b>Next step.</b> The kick-off meeting and office workshops run from Tuesday 27 to Friday 30 October 2026. Majo Bridge issues the final version of this report, with Annex E attached, by Friday 6 November 2026 for LIA's review and agreement.</p>
+
+    <h2>18. Acceptance of this report</h2>
+    <p>By signing, Lebawi International Academy accepts this inception report as the agreed plan for the Student Management System project, and Majo Bridge Technologies and Events PLC commits to deliver against it under the contract.</p>
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For Majo Bridge Technologies and Events PLC</div>
+        <div class="role">Authorised signature · Name / title · Date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For Lebawi International Academy</div>
+        <div class="role">Authorised signature · Name / title · Date</div>
+      </div>
+    </div>
+
+    <h2 class="pb">Annex A — Module scope checklist (revised scope, about 49 modules)</h2>
+    <p class="small">Tick the modules confirmed at the kick-off meeting. Portals are included and not listed. Modules outside this list are out of scope unless agreed in the contract.</p>
+    <table>
+      <thead><tr><th style="width:5%">No.</th><th>Module</th><th style="width:8%" class="c">In scope</th><th style="width:5%">No.</th><th>Module</th><th style="width:8%" class="c">In scope</th></tr></thead>
+      <tbody>
+        <tr><td class="c">1</td><td>Weighted Markbook</td><td class="c">☐</td><td class="c">26</td><td>Safeguarding</td><td class="c">☐</td></tr>
+        <tr><td class="c">2</td><td>LMS</td><td class="c">☐</td><td class="c">27</td><td>Reports & Analytics</td><td class="c">☐</td></tr>
+        <tr><td class="c">3</td><td>Grade Workflow</td><td class="c">☐</td><td class="c">28</td><td>Go-live & compliance</td><td class="c">☐</td></tr>
+        <tr><td class="c">4</td><td>Examinations & Grade Approvals</td><td class="c">☐</td><td class="c">29</td><td>Audit Log</td><td class="c">☐</td></tr>
+        <tr><td class="c">5</td><td>Exam bank & papers</td><td class="c">☐</td><td class="c">30</td><td>QA Findings & Plans</td><td class="c">☐</td></tr>
+        <tr><td class="c">6</td><td>Academic Management</td><td class="c">☐</td><td class="c">31</td><td>Messages</td><td class="c">☐</td></tr>
+        <tr><td class="c">7</td><td>Curriculum office</td><td class="c">☐</td><td class="c">32</td><td>Calendar</td><td class="c">☐</td></tr>
+        <tr><td class="c">8</td><td>Homework</td><td class="c">☐</td><td class="c">33</td><td>Announcements</td><td class="c">☐</td></tr>
+        <tr><td class="c">9</td><td>Lesson plans</td><td class="c">☐</td><td class="c">34</td><td>Library</td><td class="c">☐</td></tr>
+        <tr><td class="c">10</td><td>Report Cards</td><td class="c">☐</td><td class="c">35</td><td>Events</td><td class="c">☐</td></tr>
+        <tr><td class="c">11</td><td>Timetable</td><td class="c">☐</td><td class="c">36</td><td>Gallery</td><td class="c">☐</td></tr>
+        <tr><td class="c">12</td><td>Analytics & exports</td><td class="c">☐</td><td class="c">37</td><td>Maya Assistant</td><td class="c">☐</td></tr>
+        <tr><td class="c">13</td><td>e-Books & Materials</td><td class="c">☐</td><td class="c">38</td><td>Role Permissions</td><td class="c">☐</td></tr>
+        <tr><td class="c">14</td><td>Students (SIS)</td><td class="c">☐</td><td class="c">39</td><td>Institution Management</td><td class="c">☐</td></tr>
+        <tr><td class="c">15</td><td>Attendance</td><td class="c">☐</td><td class="c">40</td><td>School Management</td><td class="c">☐</td></tr>
+        <tr><td class="c">16</td><td>Admissions</td><td class="c">☐</td><td class="c">41</td><td>System Health</td><td class="c">☐</td></tr>
+        <tr><td class="c">17</td><td>Transfers & Promotion</td><td class="c">☐</td><td class="c">42</td><td>Classroom Teachers</td><td class="c">☐</td></tr>
+        <tr><td class="c">18</td><td>At-risk & insights</td><td class="c">☐</td><td class="c">43</td><td>Add Teacher</td><td class="c">☐</td></tr>
+        <tr><td class="c">19</td><td>Student support</td><td class="c">☐</td><td class="c">44</td><td>Administration Staff Directory</td><td class="c">☐</td></tr>
+        <tr><td class="c">20</td><td>Parents & Link Approvals</td><td class="c">☐</td><td class="c">45</td><td>Add Administration Staff</td><td class="c">☐</td></tr>
+        <tr><td class="c">21</td><td>Add Student</td><td class="c">☐</td><td class="c">46</td><td>Student Portal Settings</td><td class="c">☐</td></tr>
+        <tr><td class="c">22</td><td>Student Affairs & Discipline</td><td class="c">☐</td><td class="c">47</td><td>Student Password Resets</td><td class="c">☐</td></tr>
+        <tr><td class="c">23</td><td>Student programs</td><td class="c">☐</td><td class="c">48</td><td>Settings</td><td class="c">☐</td></tr>
+        <tr><td class="c">24</td><td>Alumni</td><td class="c">☐</td><td class="c">49</td><td>Dashboard / Profile</td><td class="c">☐</td></tr>
+        <tr><td class="c">25</td><td>Inventory, Procurement & Store</td><td class="c">☐</td><td></td><td class="small">Modules confirmed: ______ of 49</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Annex B — Data templates (fields)</h2>
+    <table>
+      <thead><tr><th style="width:22%">Template</th><th>Required fields</th><th style="width:30%">Optional fields</th></tr></thead>
+      <tbody>
+        <tr><td>Students</td><td>Student id, full name, sex, date of birth, grade, class, campus, status (active)</td><td>House, medical flag, admission date, previous school, photo</td></tr>
+        <tr><td>Parents / guardians</td><td>Parent full name, phone, relation, linked student id(s)</td><td>Email, second phone, address, preferred language</td></tr>
+        <tr><td>Teachers</td><td>Full name, phone, section, subjects, assigned classes, homeroom (yes/no)</td><td>Email, staff id, qualification</td></tr>
+        <tr><td>Administration staff</td><td>Full name, phone, office / role (from the role map)</td><td>Email, staff id</td></tr>
+        <tr><td>Classes and subjects</td><td>Section, grade, class name (one spelling, e.g. "Grade 7A"), subjects, teacher per subject</td><td>Room, capacity</td></tr>
+        <tr><td>Timetable</td><td>Class, day, period, subject, teacher</td><td>Room</td></tr>
+        <tr><td>Grading scheme</td><td>Section, categories and weights (e.g. homework 10, quiz 15, midterm 25, final 50), pass mark, approval chain</td><td>Rounding rule, comment bank</td></tr>
+      </tbody>
+    </table>
+    <p class="small">One spelling per class name across all templates. The system accepts "7A", "Grade 7A", and "Grade 7 A" as the same class, but a single spelling keeps reports tidy.</p>
+
+    <h2>Annex C — Training timetable (to be dated at kick-off)</h2>
+    <table>
+      <thead><tr><th style="width:8%">Week</th><th style="width:24%">Session</th><th style="width:28%">Audience</th><th style="width:12%">Length</th><th>Room</th></tr></thead>
+      <tbody>
+        <tr><td class="c">W3</td><td>IT and administration — part 1 (nodes, logins, backups)</td><td>IT Admin, administration staff</td><td>2 h</td><td>______________</td></tr>
+        <tr><td class="c">W5</td><td>IT and administration — part 2 (operations handbook)</td><td>IT Admin, administration staff</td><td>2 h</td><td>______________</td></tr>
+        <tr><td class="c">W5</td><td>Leadership and directors — parts 1 and 2</td><td>Principal, VP, Section Directors, Department Heads</td><td>2 × 2 h</td><td>______________</td></tr>
+        <tr><td class="c">W5</td><td>Student affairs and support</td><td>DoSA, counselors, career guidance, nurse</td><td>2 h</td><td>______________</td></tr>
+        <tr><td class="c">W5</td><td>Quality assurance</td><td>QA officer</td><td>1.5 h</td><td>______________</td></tr>
+        <tr><td class="c">W5</td><td>Teachers — cohort 1 (Elementary)</td><td>DoES teachers</td><td>2.5 h</td><td>______________</td></tr>
+        <tr><td class="c">W6</td><td>Teachers — cohort 2 (Middle School)</td><td>DoMS teachers</td><td>2.5 h</td><td>______________</td></tr>
+        <tr><td class="c">W6</td><td>Teachers — cohort 3 (High School)</td><td>DoHS teachers</td><td>2.5 h</td><td>______________</td></tr>
+        <tr><td class="c">W6</td><td>IT and administration — part 3 (restore drill)</td><td>IT Admin</td><td>2 h</td><td>Server room</td></tr>
+        <tr><td class="c">W6</td><td>Train-the-trainer</td><td>IT Admin + one teacher per section</td><td>2 h</td><td>______________</td></tr>
+        <tr><td class="c">W6–W9</td><td>Parent briefings</td><td>Parents, one per section</td><td>45 min</td><td>______________</td></tr>
+        <tr><td class="c">W7–W9</td><td>Student orientation</td><td>Homeroom classes</td><td>20 min</td><td>______________</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Annex D — Hybrid architecture: what each node runs, and the LIA server specification</h2>
+    <table>
+      <thead><tr><th style="width:22%">Item</th><th style="width:39%">School node — LIA physical server</th><th>Cloud node — Majo Bridge self-hosted cloud server</th></tr></thead>
+      <tbody>
+        <tr><td>Role</td><td>Master copy of student, academic, care, document, and message records</td><td>Authentication, roles, app delivery, published notices, notifications, support</td></tr>
+        <tr><td>Software</td><td>Database engine, data API with row-level security, file storage, live updates — the same stack the product already runs on</td><td>Authentication service, role catalogue, static web hosting, app functions, notification delivery, system health</td></tr>
+        <tr><td>Who signs in where</td><td>Nobody signs in here directly; sessions from the cloud node are accepted</td><td>Everyone signs in here once</td></tr>
+        <tr><td>Reachability</td><td>Campus LAN directly; off campus through an outbound encrypted tunnel on a school sub-domain</td><td>Public internet over HTTPS</td></tr>
+        <tr><td>Backups</td><td>Nightly encrypted to LIA disk 1; weekly to LIA disk 2 kept away from the room; restore drill each term</td><td>Nightly by Majo Bridge; contains no student records</td></tr>
+        <tr><td>Administration</td><td>LIA IT holds the administrator account; Majo Bridge maintenance accounts are named and logged</td><td>Majo Bridge administers; LIA IT has a read-only health view</td></tr>
+        <tr><td>Updates</td><td>Applied in a maintenance window agreed with IT Admin</td><td>Applied by Majo Bridge with notice in the project group</td></tr>
+      </tbody>
+    </table>
+    <h3>Minimum specification for the LIA physical server (confirmed at the IT workshop)</h3>
+    <table>
+      <thead><tr><th style="width:26%">Item</th><th>Minimum</th><th style="width:34%">Note</th></tr></thead>
+      <tbody>
+        <tr><td>Server</td><td>1 rack or tower server, 8-core CPU, 32 GB RAM, 2 × 1 TB SSD in mirror (RAID 1), dual gigabit network ports</td><td>Sized for LIA's roster with room for documents, e-books, and photos; a second identical server can be added later for standby</td></tr>
+        <tr><td>Operating system</td><td>Ubuntu Server 22.04 LTS or 24.04 LTS, disk encryption on</td><td>Installed by Majo Bridge with LIA IT present</td></tr>
+        <tr><td>Power</td><td>UPS 1.5–2 kVA with at least 20 minutes of runtime for server and switch</td><td>Clean shutdown on long outages</td></tr>
+        <tr><td>Room</td><td>Locked, ventilated or air-conditioned room; access list held by IT Admin</td><td>Existing network room is acceptable if it locks</td></tr>
+        <tr><td>Network</td><td>Static LAN address; gigabit switch to staff rooms; Wi-Fi reaching classrooms; internet line of at least 20 Mbps up and down</td><td>Needed for the tunnel and for parents at home</td></tr>
+        <tr><td>Domain</td><td>One sub-domain under the Academy's domain (for example <code>sis.lia.edu.et</code>)</td><td>Points to the tunnel, not to the router</td></tr>
+        <tr><td>Backup disks</td><td>2 × 2 TB external disks, encrypted</td><td>Disk 1 stays with the server; disk 2 is kept in another building and swapped weekly</td></tr>
+      </tbody>
+    </table>
+
+    <p class="small" style="margin-top:14px;border-top:1px solid var(--line);padding-top:6px;">
+      Document MBT-LIA-INC-2026-01 · Inception Report · Student Management System (SMS) Project · 27 October 2026 · Version 1.0.
+      Prepared by Majo Bridge Technologies and Events PLC for Lebawi International Academy in response to the Notice of Intent to Award.
+      Dates in Sections 5–8 and 15 are confirmed at the kick-off meeting. Commercial terms are settled in the contract; this report does not state or change them.
+    </p>
+  </article>
+</body>
+</html>

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Training Modules — Student Management System (SMS) Project, Lebawi International Academy</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+      --warn: #8a5a00;
+      --warn-bg: #fff6e0;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.4pt; line-height: 1.38;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px;
+      justify-content: center; align-items: center; flex-wrap: wrap;
+      padding: 12px 14px; background: rgba(20, 32, 51, 0.94); color: #fff; font-size: 14px;
+    }
+    .toolbar a {
+      color: #fff; font-weight: 800; background: var(--green);
+      padding: 8px 16px; border-radius: 6px; text-decoration: none;
+    }
+    .sheet {
+      width: 210mm; max-width: 100%; margin: 18px auto; background: #fff;
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12); padding: 12mm 12mm 10mm;
+    }
+    .cover-flag {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      border-bottom: 3px solid var(--blue); padding-bottom: 8px;
+    }
+    .cover-flag img { width: 88px; height: auto; }
+    .brand-name { margin: 0; color: var(--blue); font-size: 12.8pt; }
+    .brand-sub {
+      margin: 0 0 4px; color: var(--green); font-weight: 700; font-size: 8.8pt;
+      text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .doc-kicker {
+      margin: 14px 0 5px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 1px; font-size: 8.8pt; font-weight: 700;
+    }
+    .doc-title { margin: 0 0 5px; font-size: 17pt; line-height: 1.16; }
+    .doc-for { margin: 0 0 8px; font-size: 11.5pt; color: var(--blue); font-weight: 700; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+    .meta-card { background: var(--wash); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+    .meta-card strong {
+      display: block; color: var(--blue); font-size: 7.8pt; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 3px;
+    }
+    .banner {
+      background: var(--ok-bg); border: 1px solid #b7e2c6; border-radius: 8px;
+      padding: 8px 10px; margin: 8px 0 6px;
+    }
+    .banner strong { color: var(--ok); }
+    .note {
+      background: var(--warn-bg); border: 1px solid #f0d49a; border-radius: 8px;
+      padding: 8px 10px; margin: 8px 0 6px;
+    }
+    .note strong { color: var(--warn); }
+    .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; background: var(--wash); }
+    .card .lbl {
+      font-size: 7.8pt; text-transform: uppercase; letter-spacing: 0.4px;
+      font-weight: 700; opacity: 0.8; margin-bottom: 3px; color: var(--blue);
+    }
+    .card .amt { font-size: 13pt; font-weight: 800; line-height: 1.1; }
+    .card .sub { margin-top: 3px; font-size: 8.2pt; color: var(--muted); }
+    .mod {
+      border: 1px solid var(--line); border-left: 4px solid var(--blue); border-radius: 8px;
+      padding: 8px 11px; margin: 10px 0 6px; background: var(--wash); page-break-inside: avoid;
+    }
+    .mod .tag { font-size: 7.8pt; text-transform: uppercase; letter-spacing: 0.5px; color: var(--blue); font-weight: 700; }
+    .mod h2 { border: 0; margin: 2px 0 4px; padding: 0; }
+    .mod .facts { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; font-size: 8.6pt; }
+    .mod .facts div b { display: block; color: var(--muted); font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.4px; }
+    h2 {
+      margin: 14px 0 5px; font-size: 12pt; color: var(--blue);
+      border-bottom: 2px solid var(--line); padding-bottom: 2px; page-break-after: avoid;
+    }
+    h3 { margin: 10px 0 4px; font-size: 10.6pt; color: var(--ink); page-break-after: avoid; }
+    p { margin: 0 0 6px; }
+    ul, ol { margin: 0 0 7px; padding-left: 18px; }
+    li { margin-bottom: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 5px 0 8px; font-size: 8.4pt; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 1px solid var(--line); padding: 3px 5px; vertical-align: top; text-align: left; }
+    th { background: var(--wash); color: var(--blue); font-weight: 700; }
+    td.c, th.c { text-align: center; white-space: nowrap; }
+    td.t { white-space: nowrap; color: var(--muted); }
+    .small { color: var(--muted); font-size: 8.6pt; }
+    .toc { columns: 2; column-gap: 18px; font-size: 9.2pt; }
+    .toc li { break-inside: avoid; }
+    .pb { page-break-before: always; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0; page-break-inside: avoid; break-inside: avoid; }
+    .box { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; page-break-inside: avoid; break-inside: avoid; }
+    .box h4 { margin: 0 0 4px; font-size: 9.6pt; color: var(--blue); }
+    .box ul { margin: 0; font-size: 9pt; }
+    .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 10px; }
+    .sig { border-top: 1px solid var(--ink); padding-top: 5px; min-height: 48px; }
+    .sig .who { font-weight: 700; margin-top: 16px; }
+    .sig .role { color: var(--muted); font-size: 8.8pt; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 7mm 9mm 9mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 10mm 10mm 15mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Training Modules — SMS Project, Lebawi International Academy — save the PDF
+    <a href="MaJo_Bridge_LIA_Training_Modules.pdf" download="MaJo_Bridge_LIA_Training_Modules.pdf">Download PDF</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">Majo Bridge Technologies and Events PLC</h1>
+        <p style="margin:4px 0 0;color:var(--muted);font-size:9.2pt;">
+          Product: <b>MaJo e-School Bridge</b> · Live system: https://mayabela.pages.dev<br />
+          majobridgetech@gmail.com · nabilmaya6464@gmail.com<br />
+          +251 911 646 444 · +251 911 133 548
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Training modules · Student Management System (SMS) project</p>
+    <h1 class="doc-title">Training Modules and Trainer's Guide — Student Management System (SMS) Project at Lebawi International Academy</h1>
+    <p class="doc-for">Prepared for Lebawi International Academy (LIA), Addis Ababa</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Document</strong>
+        MBT-LIA-TRN-2026-01 · 27 October 2026 · Version 1.0<br />
+        Companion to the Inception Report MBT-LIA-INC-2026-01, Section 11 (Training plan) and Annex C
+        (Training timetable). Deliverable D6 — Training delivered.
+      </div>
+      <div class="meta-card">
+        <strong>What it contains</strong>
+        One module per training session in Annex C: who attends, what the trainer teaches, in which order and
+        for how many minutes, the exercise each attendee completes on real LIA data, and how learning is checked
+        before the session is signed off.
+      </div>
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        Principal (owner of D6), IT Admin, Section Directors (DoES / DoMS / DoHS), DoSA, QA officer, Registrar,
+        Department Heads, teachers, and the LIA focal person.
+      </div>
+      <div class="meta-card">
+        <strong>How to use it</strong>
+        The trainer follows the minute plan. The LIA focal person books the room and the attendees, prints the
+        attendance sheet (Annex T-1), and files the competency checklist (Annex T-3) after each session.
+      </div>
+    </div>
+
+    <div class="banner">
+      <strong>Training method.</strong>
+      Every session uses the same three steps: <b>show</b> (the trainer demonstrates the task on the projector),
+      <b>do</b> (each attendee repeats the task on their own login, on real LIA data, in the live system), and
+      <b>check</b> (the trainer confirms the result on screen and ticks the competency checklist). No session is
+      a lecture. No desk is opened to a user before that user has done the task once in training.
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="lbl">Sessions</div>
+        <div class="amt">13 modules</div>
+        <div class="sub">IT and administration (3), leadership (2), student affairs (1), QA (1), teachers (3 cohorts), train-the-trainer (1), parents (1), students (1)</div>
+      </div>
+      <div class="card">
+        <div class="lbl">Training window</div>
+        <div class="amt">W3 – W9</div>
+        <div class="sub">Mon 9 Nov – Fri 18 Dec 2026, core staff sessions in W5–W6 (23 Nov – 4 Dec); milestone M5 Fri 4 Dec</div>
+      </div>
+      <div class="card">
+        <div class="lbl">Sign-off</div>
+        <div class="amt">Per attendee</div>
+        <div class="sub">Attendance sheet plus competency checklist; a user who misses a check is retrained in the clinic hour before go-live</div>
+      </div>
+    </div>
+
+    <h2>Contents</h2>
+    <ol class="toc">
+      <li>How the training is organised</li>
+      <li>Module T1 — IT and administration, part 1: the two servers, logins, backups</li>
+      <li>Module T2 — IT and administration, part 2: operations handbook</li>
+      <li>Module T3 — IT and administration, part 3: backup restore drill</li>
+      <li>Module T4 — Leadership and directors, part 1: grades, approvals, report cards</li>
+      <li>Module T5 — Leadership and directors, part 2: lesson plans, curriculum, analytics, audit</li>
+      <li>Module T6 — Student affairs and support</li>
+      <li>Module T7 — Quality assurance</li>
+      <li>Module T8 / T9 / T10 — Teachers (Elementary, Middle School, High School)</li>
+      <li>Module T11 — Train-the-trainer</li>
+      <li>Module T12 — Parent briefing</li>
+      <li>Module T13 — Student orientation</li>
+      <li>Annex T-1 Attendance sheet · T-2 Session evaluation · T-3 Competency checklists · T-4 Room and equipment</li>
+    </ol>
+
+    <h2>1. How the training is organised</h2>
+    <table>
+      <thead><tr><th style="width:7%">Module</th><th style="width:30%">Session (as in Annex C)</th><th style="width:26%">Audience</th><th style="width:8%" class="c">Length</th><th style="width:7%" class="c">Week</th><th>Desks covered</th></tr></thead>
+      <tbody>
+        <tr><td class="c">T1</td><td>IT and administration — part 1</td><td>IT Admin, administration staff</td><td class="c">2 h</td><td class="c">W3</td><td>Login, Settings, Role Permissions, System Health, backups, the two nodes</td></tr>
+        <tr><td class="c">T2</td><td>IT and administration — part 2</td><td>IT Admin, Registrar, admissions, administration staff</td><td class="c">2 h</td><td class="c">W5</td><td>Students (SIS), Add Student, Admissions, Transfers &amp; Promotion, Parents &amp; Link Approvals, Student Password Resets, staff directories, Announcements, Calendar, Events</td></tr>
+        <tr><td class="c">T3</td><td>IT and administration — part 3</td><td>IT Admin</td><td class="c">2 h</td><td class="c">W6</td><td>Backup restore drill on the school node, tunnel status, release procedure</td></tr>
+        <tr><td class="c">T4</td><td>Leadership and directors — part 1</td><td>Principal, VP, Section Directors, Department Heads</td><td class="c">2 h</td><td class="c">W5</td><td>Grade Workflow, Examinations &amp; Grade Approvals, Weighted Markbook (review view), Report Cards</td></tr>
+        <tr><td class="c">T5</td><td>Leadership and directors — part 2</td><td>Principal, VP, Section Directors, Department Heads</td><td class="c">2 h</td><td class="c">W5</td><td>Lesson plans review, Curriculum office, Timetable, Analytics &amp; exports, At-risk &amp; insights, Reports &amp; Analytics, Audit Log</td></tr>
+        <tr><td class="c">T6</td><td>Student affairs and support</td><td>DoSA, counselors, career guidance, nurse</td><td class="c">2 h</td><td class="c">W5</td><td>Parents &amp; Link Approvals, Student programs, Student Affairs &amp; Discipline, Student support, Clinic reports, Safeguarding</td></tr>
+        <tr><td class="c">T7</td><td>Quality assurance</td><td>QA officer (VP optional)</td><td class="c">1.5 h</td><td class="c">W5</td><td>QA Findings &amp; Plans, surveys, observations, academic audits, action research, reports</td></tr>
+        <tr><td class="c">T8</td><td>Teachers — cohort 1 (Elementary)</td><td>DoES teachers</td><td class="c">2.5 h</td><td class="c">W5</td><td rowspan="3">Dashboard, My Classes, Attendance, Homework, Weighted Markbook, Lesson plans, LMS, e-Books &amp; Materials, class discussion, Messages, Exam bank, Timetable</td></tr>
+        <tr><td class="c">T9</td><td>Teachers — cohort 2 (Middle School)</td><td>DoMS teachers</td><td class="c">2.5 h</td><td class="c">W6</td></tr>
+        <tr><td class="c">T10</td><td>Teachers — cohort 3 (High School)</td><td>DoHS teachers</td><td class="c">2.5 h</td><td class="c">W6</td></tr>
+        <tr><td class="c">T11</td><td>Train-the-trainer</td><td>IT Admin + one teacher per section</td><td class="c">2 h</td><td class="c">W6</td><td>First-line help: the ten common questions, password resets, class allocation fixes, when to escalate</td></tr>
+        <tr><td class="c">T12</td><td>Parent briefing (one per section)</td><td>Parents</td><td class="c">45 min</td><td class="c">W6–W9</td><td>Android app and web, linking a child, what parents see and when, messages, who to ask</td></tr>
+        <tr><td class="c">T13</td><td>Student orientation (homeroom)</td><td>Students, by class</td><td class="c">20 min</td><td class="c">W7–W9</td><td>First login, timetable, homework, materials, exams, announcements, conduct rules</td></tr>
+      </tbody>
+    </table>
+
+    <div class="two">
+      <div class="box">
+        <h4>Before every session (LIA focal person and trainer)</h4>
+        <ul>
+          <li>Room from Annex T-4: projector, Wi-Fi or LAN, one device per attendee (laptop or tablet; teachers may use their phone for the Android part).</li>
+          <li>Every attendee already has a login created in T1/T2 and has received the School ID and a temporary password on paper.</li>
+          <li>Real LIA data is loaded: the roster signed at M4 (Fri 20 Nov) for T4 onward; the pilot section's classes for teacher cohorts.</li>
+          <li>Attendance sheet (Annex T-1) and competency checklist (Annex T-3) printed; one trainer, one helper for groups above twelve.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h4>Rules that apply in every session</h4>
+        <ul>
+          <li>Attendees sign in with their own account, never the trainer's.</li>
+          <li>Anything typed in training is real: use the practice class "Training 0A" for grades and messages, and real records only for look-ups until the trainer says otherwise.</li>
+          <li>Passwords are changed on first login during the session; nobody leaves on a temporary password.</li>
+          <li>Questions outside the module go on the car-park sheet and are answered in the clinic hour or by the issue log.</li>
+          <li>Session closes with the evaluation form (Annex T-2) and the trainer's tick on the checklist.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- T1 -->
+    <div class="mod pb">
+      <div class="tag">Module T1 · Week 3 · 2 hours</div>
+      <h2>IT and administration, part 1 — the two servers, logins, backups</h2>
+      <div class="facts">
+        <div><b>Audience</b>IT Admin, administration staff (6–10 people)</div>
+        <div><b>Room</b>Training room with projector; IT Admin at the admin console</div>
+        <div><b>Prerequisite</b>M3 reached: both nodes live, LIA configured</div>
+        <div><b>Outcome</b>Admin staff can sign in, create a user, assign a role, read System Health; IT Admin knows where every kind of data lives</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–10</td><td>Why the system, and the two servers</td><td>One slide: the school node (LIA physical server) holds student, academic, care, and file data; the cloud node (Majo Bridge self-hosted cloud) holds logins, roles, app delivery, and published notices. Where to look when something is slow or down.</td><td>Points on the diagram to where a report card lives and where a password lives.</td></tr>
+        <tr><td class="t">10–25</td><td>Signing in</td><td>Web app and Android app. School ID, username or phone, password. First-login password change. MFA for admin accounts: setting it up, backup codes. "Forgot password" and who can reset whom.</td><td>Signs in on web and phone, changes the temporary password, enables MFA, saves backup codes in the envelope.</td></tr>
+        <tr><td class="t">25–45</td><td>Dashboard, Profile, Settings</td><td>Reading the admin dashboard tiles. Profile fields. Settings: school name, academic year, terms, sections, grading scheme as agreed in the requirements workshop; what must never be changed mid-term.</td><td>Finds the academic year and term dates; confirms them against the LIA calendar; records any difference on the issue log.</td></tr>
+        <tr><td class="t">45–70</td><td>Users and roles</td><td>Role Permissions: the LIA role map (Board, GM, Principal, VP, Directors, DoSA, QA, Registrar, Department Head, teacher, homeroom teacher, counselor, nurse, admin staff, parent, student). Add Administration Staff and Add Teacher; assigning classes; deactivating a leaver; why a teacher sees only assigned classes.</td><td>Creates one administration staff account and one teacher account from the signed staff list, assigns a role and two classes, then signs in as that teacher on a second device to see the effect.</td></tr>
+        <tr><td class="t">70–85</td><td>Institution and School Management</td><td>Campus, sections, grades, class names (one spelling), subjects, teacher per subject, homeroom teachers. Fixing a class-name typo and what it affects.</td><td>Opens their own section, checks class names against the signed roster, corrects one deliberate typo prepared by the trainer.</td></tr>
+        <tr><td class="t">85–100</td><td>System Health, backups, tunnel</td><td>System Health page: node status, last backup time, tunnel up or down, storage used. The nightly encrypted backup to the LIA disks; the weekly disk swap; where the restore procedure is written (T3).</td><td>IT Admin reads last night's backup time aloud and records it on the operations log; administration staff locate the page.</td></tr>
+        <tr><td class="t">100–115</td><td>Getting help</td><td>Issue log, severity levels, the project WhatsApp group for outages, the support card. What to report (screen, time, user, what was clicked).</td><td>Files one practice issue with a screenshot.</td></tr>
+        <tr><td class="t">115–120</td><td>Check and close</td><td>Checklist tick, evaluation form, car-park review.</td><td>Signs the attendance sheet.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> each attendee signs in with MFA, creates one user with the correct role, and names the server that holds the student record. IT Admin additionally shows the last backup time and the tunnel status. <b>Materials:</b> admin manual (in-app), role map sheet, operations log, password envelopes.</p>
+
+    <!-- T2 -->
+    <div class="mod">
+      <div class="tag">Module T2 · Week 5 · 2 hours</div>
+      <h2>IT and administration, part 2 — operations handbook</h2>
+      <div class="facts">
+        <div><b>Audience</b>IT Admin, Registrar, admissions officer, administration staff</div>
+        <div><b>Room</b>Training room; Registrar brings the signed roster</div>
+        <div><b>Prerequisite</b>M4 reached: roster and staff list imported and signed</div>
+        <div><b>Outcome</b>The office can run a school day: enrol, transfer, link a parent, reset a password, publish a notice</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–20</td><td>Students (SIS) and Add Student</td><td>Student record: id format, identity, class, status, documents, photo, medical flag. Search by id, name, class. Adding a mid-year student; the import tool for a batch; what the exception list means.</td><td>Finds three students from a list; adds one practice student in "Training 0A"; attaches a document.</td></tr>
+        <tr><td class="t">20–35</td><td>Admissions</td><td>Application stages, the public application form, converting an applicant to a student, required documents, who approves. The admissions calendar.</td><td>Moves one practice applicant through the stages to enrolled.</td></tr>
+        <tr><td class="t">35–50</td><td>Transfers &amp; Promotion, Alumni</td><td>Moving a student between classes or sections, mid-year transfer out with documents, end-of-year promotion run and how it keeps history, marking alumni. The no-change window before examinations.</td><td>Transfers the practice student to another class and reads the history trail.</td></tr>
+        <tr><td class="t">50–65</td><td>Parents &amp; Link Approvals</td><td>How a parent signs up (phone, student id, date of birth), what the approval queue shows, verifying before approving, rejecting a wrong link, one parent with several children, a child with two guardians. Why wrong dates of birth block links.</td><td>Approves one prepared link request and rejects one with a mismatched date of birth.</td></tr>
+        <tr><td class="t">65–80</td><td>Student Password Resets and Student Portal Settings</td><td>Resetting a student password, first-login flow, what the student portal shows and hides per section, turning the student portal on for a grade.</td><td>Resets the practice student's password and signs in as the student on a second device.</td></tr>
+        <tr><td class="t">80–95</td><td>Staff directories and leavers</td><td>Administration Staff Directory, Classroom Teachers, changing assigned classes at the start of a term, deactivating a leaver the same day, re-assigning their classes and homeroom.</td><td>Re-assigns one class from teacher A to teacher B and confirms teacher B sees it.</td></tr>
+        <tr><td class="t">95–110</td><td>Announcements, Calendar, Events, Gallery</td><td>Publishing to a section, a class, parents only, or staff; scheduling; attachments; the calendar for terms, examinations, and holidays; events with RSVP; gallery albums and consent. Where published notices live (cloud node) and why they still appear during an internet cut on campus.</td><td>Publishes one practice announcement to "Training 0A" and sees it arrive on a parent test phone.</td></tr>
+        <tr><td class="t">110–120</td><td>Check and close</td><td>Walk through the one-page operations handbook: daily, weekly, term-start, term-end tasks and owners.</td><td>Signs the handbook ownership column next to their tasks.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> each attendee completes the five tasks (find, add, transfer, approve link, reset password) without help. <b>Materials:</b> operations handbook (one page), signed roster, Annex B templates, approval-queue rules.</p>
+
+    <!-- T3 -->
+    <div class="mod">
+      <div class="tag">Module T3 · Week 6 · 2 hours · Server room</div>
+      <h2>IT and administration, part 3 — backup restore drill</h2>
+      <div class="facts">
+        <div><b>Audience</b>IT Admin (plus one deputy if LIA names one)</div>
+        <div><b>Room</b>Server room, with the operations laptop</div>
+        <div><b>Prerequisite</b>T1 done; at least seven nightly backups on the LIA disks</div>
+        <div><b>Outcome</b>IT Admin restores last night's backup to the test area unaided and signs the drill record</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–15</td><td>The server, physically</td><td>Rack or desk placement, UPS runtime and the shutdown it triggers, the two backup disks and the weekly swap, the locked room log, what the status lights mean, the labelled cables.</td><td>Performs the disk swap and writes the date on the swap log.</td></tr>
+        <tr><td class="t">15–35</td><td>What a backup contains</td><td>Database, uploaded files, configuration; encryption; the key custody rule (LIA holds the key copy in the sealed envelope with the GM); backup verification line in System Health.</td><td>Opens the backup folder listing and identifies last night's set by name and size.</td></tr>
+        <tr><td class="t">35–80</td><td>Restore drill</td><td>Step-by-step restore of last night's backup into the test area of the school node, following the printed restore card; checking that a known student record and a known mark appear; discarding the test area afterwards.</td><td>IT Admin performs the restore while the trainer only reads the card; the deputy times it and records the result.</td></tr>
+        <tr><td class="t">80–95</td><td>Tunnel and internet-cut behaviour</td><td>Reading tunnel status; what users see when the line is down (campus LAN continues, home users wait); restarting the tunnel; the 30-minute UAT scenario 17.</td><td>Stops and restarts the tunnel service and confirms the status page.</td></tr>
+        <tr><td class="t">95–110</td><td>Release procedure and health checks</td><td>How a new version is delivered, the change window (evening, not before examinations), the smoke test after an update, rolling back, the weekly health check list.</td><td>Completes the weekly health check list once.</td></tr>
+        <tr><td class="t">110–120</td><td>Sign the drill record</td><td>Drill record: date, backup set, time to restore, record verified, signatures.</td><td>Signs; copy filed with the focal person as evidence for M5.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> restore completed inside 45 minutes with the record verified; disk swap and tunnel restart done unaided. <b>Materials:</b> restore card, swap log, key custody envelope procedure, weekly health check list.</p>
+
+    <!-- T4 -->
+    <div class="mod pb">
+      <div class="tag">Module T4 · Week 5 · 2 hours</div>
+      <h2>Leadership and directors, part 1 — grades, approvals, report cards</h2>
+      <div class="facts">
+        <div><b>Audience</b>Principal, Vice Principal, Section Directors DoES / DoMS / DoHS, Department Heads</div>
+        <div><b>Room</b>Board or training room with projector</div>
+        <div><b>Prerequisite</b>Grading scheme and approval chain configured from the requirements workshop</div>
+        <div><b>Outcome</b>Each director approves, returns, and publishes grades for their section and reads a report card draft</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–15</td><td>Sign in and the leadership dashboard</td><td>MFA for leadership accounts; dashboard tiles: attendance today, grades awaiting approval, at-risk count, open issues. What each tile links to.</td><td>Signs in, changes password, enables MFA, names the two tiles they will check every morning.</td></tr>
+        <tr><td class="t">15–35</td><td>The grade workflow</td><td>States: Draft → Pending approval → Approved → Published; Returned with comments. Who may do what at each step per the agreed chain (teacher → Department Head → Section Director → Principal publish, or as LIA decided). Deadlines per term and reminders.</td><td>Draws the chain for their own section on the handout and compares it with the configured one.</td></tr>
+        <tr><td class="t">35–60</td><td>Examinations &amp; Grade Approvals queue</td><td>Opening the queue, reading a subject's marks against the scheme (weights, missing entries, out-of-range values), approving, returning with a comment the teacher sees, bulk approval when clean, the audit trail of each decision.</td><td>Approves one clean practice subject and returns one with a missing midterm column; checks the teacher's view on the second screen.</td></tr>
+        <tr><td class="t">60–80</td><td>Weighted Markbook — review view</td><td>Reading a class markbook without editing; category weights; how a final is computed and rounded; comparing classes within a grade; the exceptions a director should question.</td><td>Finds the class with the widest spread in their section and the subject with the most missing marks.</td></tr>
+        <tr><td class="t">80–105</td><td>Report Cards</td><td>Report-card layout agreed in the workshop; generating drafts for a class; comments and the comment bank; the Principal's publish step; what parents see and when; re-issuing a corrected card and the record it leaves.</td><td>Generates one practice class, adds a comment, publishes to "Training 0A", and views it on the parent test phone.</td></tr>
+        <tr><td class="t">105–120</td><td>Term calendar and close</td><td>The term-end sequence: no-change window, entry deadline, approval deadline, publish date; who sends the reminders. Checklist tick.</td><td>Writes the four dates for the current term on the sequence sheet.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> each director approves one subject, returns one with a comment, and publishes one report card to the practice class. <b>Materials:</b> approval chain sheet, term-end sequence sheet, report-card layout sample.</p>
+
+    <!-- T5 -->
+    <div class="mod">
+      <div class="tag">Module T5 · Week 5 · 2 hours</div>
+      <h2>Leadership and directors, part 2 — lesson plans, curriculum, analytics, audit</h2>
+      <div class="facts">
+        <div><b>Audience</b>Principal, Vice Principal, Section Directors, Department Heads</div>
+        <div><b>Room</b>Board or training room with projector</div>
+        <div><b>Prerequisite</b>T4 done; one week of pilot-section data if available</div>
+        <div><b>Outcome</b>Directors review lesson plans, run the five standard reports, and read the audit log</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–20</td><td>Lesson plans review</td><td>Weekly lesson-plan submission by teachers, the review queue per Department Head, approving or returning with comments, the plan-versus-timetable view, late-submission report.</td><td>Reviews two practice plans: approves one, returns one with a comment.</td></tr>
+        <tr><td class="t">20–40</td><td>Curriculum office and Timetable</td><td>Curriculum units and the scope-and-sequence per subject and grade; linking lesson plans to units; the timetable: viewing by class, by teacher, by room; substitution for an absent teacher; clash check.</td><td>Finds a free period for a given teacher and records a substitution for one day.</td></tr>
+        <tr><td class="t">40–65</td><td>Attendance oversight and At-risk &amp; insights</td><td>Daily attendance summary by section and class; classes not yet marked by 9:00; chronic absence list; the at-risk rules (attendance, falling marks, discipline) and how a student is flagged; handing a flag to DoSA or the counselor.</td><td>Finds today's unmarked classes and opens the at-risk list for their section.</td></tr>
+        <tr><td class="t">65–90</td><td>Analytics &amp; exports, Reports &amp; Analytics</td><td>The five standard reports: attendance by class and month, grade distribution by subject, teacher submission compliance, parent-link coverage, discipline summary. Filters, export to spreadsheet, the Board pack, scheduling a monthly report.</td><td>Runs each of the five reports for their section and exports one.</td></tr>
+        <tr><td class="t">90–110</td><td>Audit Log and Messages</td><td>Reading the audit log: who changed a mark, when, from what to what; filtering by user and record; the retention rule. Staff messaging and the escalation rule for parent complaints.</td><td>Finds the entry for the mark returned in T4 and who returned it.</td></tr>
+        <tr><td class="t">110–120</td><td>Check and close</td><td>Leadership morning routine card: three checks before 9:00, three on Friday.</td><td>Checklist tick; evaluation form.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> each director runs the five reports and finds a named audit entry unaided. <b>Materials:</b> five-report card, leadership morning routine card, at-risk rules sheet.</p>
+
+    <!-- T6 -->
+    <div class="mod pb">
+      <div class="tag">Module T6 · Week 5 · 2 hours</div>
+      <h2>Student affairs and support</h2>
+      <div class="facts">
+        <div><b>Audience</b>DoSA and officers, counselors, career guidance, nurse, special-needs lead</div>
+        <div><b>Room</b>Training room; sensitive records discussed, no visitors</div>
+        <div><b>Prerequisite</b>Safeguarding access list signed in the requirements workshop</div>
+        <div><b>Outcome</b>Officers record a case, a program, a health visit, and an IEP within the access rules</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–15</td><td>Access rules first</td><td>Who sees what: discipline visible to directors and homeroom; counseling notes to counselors and Principal only; health to the nurse and Principal; safeguarding to the named list only. Everything is on the school node and logged. Why a teacher cannot open a counseling note.</td><td>Reads the access matrix and signs that they understand it.</td></tr>
+        <tr><td class="t">15–35</td><td>Parents &amp; Link Approvals (DoSA view)</td><td>Verifying a link request against the student file, approving, the second-guardian rule, custody flags, removing a link, the parent-link coverage report per class.</td><td>Approves two prepared requests, flags one custody case, runs the coverage report.</td></tr>
+        <tr><td class="t">35–55</td><td>Student Affairs &amp; Discipline</td><td>Incident levels and the escalation ladder agreed with LIA; recording an incident with witnesses and action; parent notification and what the parent sees; grievance intake and its status trail; the discipline summary report.</td><td>Records one level-1 and one level-3 practice incident and sends the parent notice for level 3.</td></tr>
+        <tr><td class="t">55–75</td><td>Student programs and career guidance</td><td>Clubs, sports, and programs: creating, enrolling students, attendance per program, the term report; college and career guidance records for high school; the career-guidance timeline per student.</td><td>Creates one program, enrols five students, marks one session's attendance.</td></tr>
+        <tr><td class="t">75–95</td><td>Student support, IEP, counseling</td><td>Opening a support case, the IEP form and review dates, counseling sessions with restricted notes, the referral from a teacher's at-risk flag to the counselor, closing a case.</td><td>Opens a practice IEP with a review date and a counseling note; verifies a director cannot read the note.</td></tr>
+        <tr><td class="t">95–110</td><td>Clinic reports and Safeguarding</td><td>Nurse's clinic visit log, medications and allergies on the student record, the medical flag teachers see, parent notification; safeguarding concern form, the named-list access, mandatory fields, confidentiality.</td><td>Nurse records a practice visit; safeguarding lead records a practice concern; both check the audit log entry.</td></tr>
+        <tr><td class="t">110–120</td><td>Check and close</td><td>Case-handling routine card; checklist tick.</td><td>Evaluation form.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> each officer records one item of their own type, sends one parent notice, and demonstrates one access denial. <b>Materials:</b> access matrix, escalation ladder, IEP form sample, case-handling routine card.</p>
+
+    <!-- T7 -->
+    <div class="mod">
+      <div class="tag">Module T7 · Week 5 · 1.5 hours</div>
+      <h2>Quality assurance</h2>
+      <div class="facts">
+        <div><b>Audience</b>QA officer; Vice Principal optional</div>
+        <div><b>Room</b>QA office or small meeting room</div>
+        <div><b>Prerequisite</b>Observation and survey templates agreed in the requirements workshop</div>
+        <div><b>Outcome</b>QA officer runs an observation, a survey, an audit, and the Board QA report</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–15</td><td>QA desk overview</td><td>QA Findings &amp; Plans: findings, severity (low, medium, high, critical), owner, due date, status; the link from a finding to an improvement plan.</td><td>Opens the desk, filters open findings by severity.</td></tr>
+        <tr><td class="t">15–35</td><td>Classroom observations</td><td>The observation template, scheduling, recording during a lesson on a tablet, scores and comments, sharing with the teacher, the per-teacher trend.</td><td>Records one practice observation and shares it with a practice teacher account.</td></tr>
+        <tr><td class="t">35–55</td><td>Surveys</td><td>Creating a survey for parents, students, or staff; sending to a group; anonymity settings; response tracking; the results view and export.</td><td>Builds a five-question survey and sends it to the parent test account.</td></tr>
+        <tr><td class="t">55–75</td><td>Academic audits and action research</td><td>Audit scope (markbook completeness, lesson-plan compliance, attendance timeliness) using the standard reports; recording an audit and its findings; action-research projects and evidence files.</td><td>Runs a markbook-completeness audit for one grade and raises one finding.</td></tr>
+        <tr><td class="t">75–90</td><td>Reports and close</td><td>The termly QA report the Board expects, the leadership calendar, exporting evidence. Checklist tick.</td><td>Generates the QA report for the pilot section.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> one observation, one survey sent, one finding with an owner and due date, one report generated. <b>Materials:</b> observation template, survey question bank, audit scope sheet.</p>
+
+    <!-- T8-T10 -->
+    <div class="mod pb">
+      <div class="tag">Modules T8 (Elementary, W5) · T9 (Middle School, W6) · T10 (High School, W6) · 2.5 hours each</div>
+      <h2>Teachers — three cohorts by section</h2>
+      <div class="facts">
+        <div><b>Audience</b>All teachers of one section, in groups of at most 20; homeroom teachers stay for the extra block</div>
+        <div><b>Room</b>Computer lab or training room; teachers bring their phone for the Android app</div>
+        <div><b>Prerequisite</b>Each teacher's classes assigned and verified; practice class "Training 0A" exists per section</div>
+        <div><b>Outcome</b>A teacher takes attendance, sets homework, enters marks, submits a plan, posts a material, and messages a parent</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–15</td><td>Sign in, Dashboard, My Classes</td><td>Web and Android sign-in, first-login password change, the teacher dashboard (today's classes, unmarked attendance, homework due, messages), My Classes showing only assigned classes. What to do if a class is missing (ask the first-line helper, not the trainer).</td><td>Signs in on both devices, changes password, confirms their class list matches their timetable.</td></tr>
+        <tr><td class="t">15–35</td><td>Attendance</td><td>Marking a period or the day: present, absent, late, excused; the default-present trick; correcting a mark; the 9:00 rule for homeroom; what the parent is notified of and when; attendance insights for a class.</td><td>Marks attendance for "Training 0A", corrects one entry, opens the class insight.</td></tr>
+        <tr><td class="t">35–55</td><td>Homework</td><td>Setting homework with due date, attachment, and instructions; to a class or a group; viewing submissions and marking done; parent visibility; the weekly homework load view the director sees.</td><td>Sets one homework item with a file and marks two practice submissions.</td></tr>
+        <tr><td class="t">55–90</td><td>Weighted Markbook and Grade Workflow</td><td>The section's scheme (categories and weights); adding an assessment column; entering marks by keyboard or import; missing and excused marks; the computed total; saving as draft; submitting for approval; what "returned with comments" looks like and how to fix and resubmit; never editing after publish.</td><td>Creates two columns, enters marks for the practice class, submits for approval; the trainer returns it with a comment; the teacher fixes and resubmits.</td></tr>
+        <tr><td class="t">90–110</td><td>Lesson plans, Curriculum, Timetable</td><td>Weekly plan template, linking to a curriculum unit, submitting by the section deadline, reading the Head's comment; own timetable and substitutions.</td><td>Submits one practice weekly plan for next week.</td></tr>
+        <tr><td class="t">110–125</td><td>LMS, e-Books &amp; Materials, class discussion</td><td>Posting a material or e-book to a class; the LMS hub for a unit (materials, homework, quiz in one place); starting a class discussion thread and moderating it; what students see.</td><td>Posts one material and opens one discussion thread for the practice class.</td></tr>
+        <tr><td class="t">125–140</td><td>Messages and parents</td><td>Messaging a parent or a class's parents; tone rules agreed with LIA; the reply window; when to escalate to the homeroom teacher or DoSA; students' at-risk flag and who to tell. Exam bank: adding a question, building a paper, scheduling an online quiz (high school cohort spends longer here).</td><td>Sends one message to the parent test account; adds two questions to the exam bank.</td></tr>
+        <tr><td class="t">140–150</td><td>Check and close</td><td>Checklist tick; evaluation form; the one-page teacher routine card (daily, weekly, term-end).</td><td>Signs attendance sheet; keeps the routine card.</td></tr>
+        <tr><td class="t">+20</td><td>Homeroom teachers only</td><td>Homeroom student profile, daily activities log, parent link coverage for the class, the 9:00 attendance rule, first contact for parent questions.</td><td>Opens their homeroom list and checks link coverage.</td></tr>
+      </tbody>
+    </table>
+    <div class="two">
+      <div class="box">
+        <h4>Section emphasis</h4>
+        <ul>
+          <li><b>Elementary (T8):</b> daily activities log for parents, simpler markbook (fewer categories), homework with photos, class gallery consent.</li>
+          <li><b>Middle School (T9):</b> subject-teacher rotation, multiple columns per term, lesson-plan compliance, discussion moderation.</li>
+          <li><b>High School (T10):</b> exam bank and online quizzes, student exam screen, college guidance hand-off, grade appeal path.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h4>Check of learning and materials</h4>
+        <ul>
+          <li>Six tasks done unaided: attendance, homework, marks submitted and resubmitted, plan, material, parent message.</li>
+          <li>Teacher manual (in-app), teacher routine card, the section's grading scheme sheet, messaging tone rules.</li>
+          <li>Teachers who miss a task attend the clinic hour run by the section's trained teacher (T11) in the following week.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- T11 -->
+    <div class="mod pb">
+      <div class="tag">Module T11 · Week 6 · 2 hours</div>
+      <h2>Train-the-trainer — first-line helpers</h2>
+      <div class="facts">
+        <div><b>Audience</b>IT Admin plus one teacher per section (DoES, DoMS, DoHS), nominated by the Section Directors</div>
+        <div><b>Room</b>Training room</div>
+        <div><b>Prerequisite</b>Attended T1 or the teacher cohort session, passed the check</div>
+        <div><b>Outcome</b>Four people who answer the common questions on campus and know when to escalate</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the trainer teaches and shows</th><th style="width:30%">What each attendee does</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–20</td><td>The helper role</td><td>What a first-line helper does and does not do; the clinic hour (one fixed hour a week per section until go-live, then on request); recording every question in the issue log; the escalation rule to IT Admin, then to Majo Bridge support.</td><td>Agrees the clinic hour slot for their section.</td></tr>
+        <tr><td class="t">20–60</td><td>The ten common questions</td><td>1 Cannot sign in · 2 Forgot password (staff, student, parent) · 3 Class missing from My Classes · 4 Parent link pending or rejected · 5 Mark returned, what now · 6 Wrong class name or duplicate student · 7 Homework not visible to parent · 8 App not updating or slow · 9 Internet down on campus, what still works · 10 Who can see this record. For each: the cause, the fix, and who may do it.</td><td>Each helper answers three of the ten live, on a second device playing the user.</td></tr>
+        <tr><td class="t">60–85</td><td>Fixes helpers may do</td><td>Student password reset, teacher class allocation (IT Admin only), nudging a parent link to DoSA, reading System Health to tell "us" from "the line", filing a clear issue with screenshot and time.</td><td>Performs two resets and one allocation; files one issue correctly.</td></tr>
+        <tr><td class="t">85–110</td><td>Running a mini session</td><td>Each helper teaches one ten-minute task to the group as they would in the clinic hour; the trainer gives feedback on pace and on "do, not tell".</td><td>Delivers a ten-minute mini session.</td></tr>
+        <tr><td class="t">110–120</td><td>Close</td><td>Helper card (ten questions, escalation path, support numbers), checklist tick.</td><td>Receives the helper card and is listed on the support card for the section.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Check of learning:</b> answers three questions live, performs the permitted fixes, delivers a mini session. <b>Materials:</b> helper card, issue log access, support card draft.</p>
+
+    <!-- T12 -->
+    <div class="mod">
+      <div class="tag">Module T12 · Weeks 6–9 · 45 minutes · one briefing per section (pilot section first)</div>
+      <h2>Parent briefing</h2>
+      <div class="facts">
+        <div><b>Audience</b>Parents and guardians of one section; evening or Saturday slot chosen by LIA</div>
+        <div><b>Room</b>Hall or large classroom with projector; Wi-Fi code displayed; helpers at a sign-up table</div>
+        <div><b>Prerequisite</b>Parent leaflet printed (English and Amharic); DoSA approval queue staffed that evening</div>
+        <div><b>Outcome</b>Parents install the app, request the link, and know what they will receive and whom to ask</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the presenter covers</th><th style="width:30%">What parents do</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–5</td><td>Welcome (Principal or Section Director)</td><td>Why LIA is introducing the system; what changes for parents from the go-live date; the data stays on the school's own server.</td><td>—</td></tr>
+        <tr><td class="t">5–15</td><td>Getting the app</td><td>Android app from the link or QR on the leaflet; web address for iPhone or computer; signing up with phone number; the one-time code.</td><td>Install and sign up on the spot; helpers assist at the table.</td></tr>
+        <tr><td class="t">15–25</td><td>Linking a child</td><td>Student id (on the leaflet slip for each family) and date of birth; why the school approves the link; one account for several children; second guardian.</td><td>Submit the link request; DoSA officer approves in the room.</td></tr>
+        <tr><td class="t">25–35</td><td>What you will see and when</td><td>Attendance the same morning, homework daily, announcements and calendar, report cards when the Principal publishes, messages from teachers, fees information if LIA enables it; the daily activities log (elementary).</td><td>Open "My Children" and find today's attendance for their child.</td></tr>
+        <tr><td class="t">35–42</td><td>Messages and manners</td><td>How to message a teacher, the reply window, the escalation path (homeroom → DoSA), the feedback form; what not to use the app for (emergencies: call the school).</td><td>Send a test message to the practice teacher account.</td></tr>
+        <tr><td class="t">42–45</td><td>Who to ask</td><td>The support card: section helper, DoSA phone, school office hours.</td><td>Take the leaflet home.</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Measure:</b> link coverage for the section is read from the report the next morning; families not linked are followed up by the homeroom teacher with the leaflet slip. <b>Materials:</b> parent leaflet (two languages), id slips per family, QR poster, support card.</p>
+
+    <!-- T13 -->
+    <div class="mod">
+      <div class="tag">Module T13 · Weeks 7–9 · 20 minutes · every homeroom class (grades with the student portal enabled)</div>
+      <h2>Student orientation</h2>
+      <div class="facts">
+        <div><b>Audience</b>Students of one class, led by the homeroom teacher with a first-line helper</div>
+        <div><b>Room</b>The classroom; lab or tablets for first login where devices are shared</div>
+        <div><b>Prerequisite</b>Student Portal Settings enabled for the grade; temporary passwords printed per student</div>
+        <div><b>Outcome</b>Every student has signed in once and found their timetable and homework</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:9%">Minutes</th><th style="width:22%">Topic</th><th>What the homeroom teacher covers</th><th style="width:30%">What students do</th></tr></thead>
+      <tbody>
+        <tr><td class="t">0–5</td><td>First login</td><td>Student id and temporary password; changing it; the rule that a password is private.</td><td>Sign in and set a new password.</td></tr>
+        <tr><td class="t">5–12</td><td>What is on your screen</td><td>Timetable, homework due, materials and e-books, exams and online quizzes, announcements, own report card when published.</td><td>Find tomorrow's first period and the next homework due.</td></tr>
+        <tr><td class="t">12–17</td><td>Conduct rules</td><td>Discussion threads are school space; what is logged; respectful language; no sharing of logins; reporting a problem to the homeroom teacher.</td><td>Open the class discussion and post the practice greeting.</td></tr>
+        <tr><td class="t">17–20</td><td>Questions</td><td>Who resets a forgotten password (homeroom teacher asks the office); where to find materials offline.</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="small"><b>Measure:</b> the Student Portal Settings page shows first-login completion per class the same day. <b>Materials:</b> per-student password slips, one-page student card on the notice board.</p>
+
+    <!-- Annexes -->
+    <h2 class="pb">Annex T-1 — Attendance sheet (one per session)</h2>
+    <p class="small">Module: ________  Session title: ______________________________  Date: ____________  Room: ____________  Trainer: ____________  Helper: ____________</p>
+    <table>
+      <thead><tr><th style="width:5%">#</th><th>Full name</th><th style="width:22%">Office / section / class</th><th style="width:14%">Login created</th><th style="width:14%">Check passed</th><th style="width:18%">Signature</th></tr></thead>
+      <tbody>
+        <tr><td class="c">1</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">2</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">3</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">4</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">5</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">6</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">7</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">8</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">9</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">10</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">11</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">12</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">13</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">14</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">15</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">16</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">17</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">18</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">19</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="c">20</td><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="small">Trainer signature: ______________________  LIA focal person: ______________________  Filed as evidence for deliverable D6.</p>
+
+    <h2>Annex T-2 — Session evaluation (filled by each attendee, two minutes)</h2>
+    <table>
+      <thead><tr><th>Statement</th><th class="c" style="width:9%">1</th><th class="c" style="width:9%">2</th><th class="c" style="width:9%">3</th><th class="c" style="width:9%">4</th><th class="c" style="width:9%">5</th></tr></thead>
+      <tbody>
+        <tr><td>I can do the tasks of this session on my own tomorrow.</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>The pace and the length were right.</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>The exercises used data that looked like my real work.</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>I know whom to ask when I am stuck.</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>One thing that was not clear, or that I still need: ________________________________________________</td><td colspan="5"></td></tr>
+      </tbody>
+    </table>
+    <p class="small">1 = disagree, 5 = agree. The trainer summarises scores on the fortnightly progress report; any statement averaging below 3.5 triggers a repeat or a clinic hour.</p>
+
+    <h2 class="pb">Annex T-3 — Competency checklists (ticked by the trainer, kept per person)</h2>
+    <table>
+      <thead><tr><th style="width:22%">Role</th><th>Competencies to tick before the desk is opened to the user</th></tr></thead>
+      <tbody>
+        <tr><td>IT Admin</td><td>☐ Signs in with MFA · ☐ Creates user and assigns role · ☐ Assigns and changes teacher classes · ☐ Deactivates a leaver · ☐ Reads System Health · ☐ Performs disk swap · ☐ Restores a backup to the test area · ☐ Restarts the tunnel · ☐ Runs the weekly health check · ☐ Files an issue correctly</td></tr>
+        <tr><td>Registrar / admissions / administration staff</td><td>☐ Signs in and changes password · ☐ Finds a student · ☐ Adds a student with document · ☐ Moves an applicant to enrolled · ☐ Transfers a student · ☐ Approves and rejects a parent link · ☐ Resets a student password · ☐ Publishes an announcement to a group · ☐ Adds a calendar event</td></tr>
+        <tr><td>Principal / VP / Section Director / Department Head</td><td>☐ Signs in with MFA · ☐ Approves a subject · ☐ Returns a subject with a comment · ☐ Publishes a report card · ☐ Reviews a lesson plan · ☐ Records a substitution · ☐ Reads today's unmarked classes · ☐ Opens the at-risk list · ☐ Runs the five reports and exports one · ☐ Finds a named audit entry</td></tr>
+        <tr><td>DoSA / counselor / career guidance / nurse / safeguarding lead</td><td>☐ Signs the access matrix · ☐ Approves a link and flags custody · ☐ Records an incident and sends the notice · ☐ Creates a program and marks attendance · ☐ Opens an IEP or counseling note · ☐ Records a clinic visit (nurse) · ☐ Records a safeguarding concern (named list) · ☐ Shows an access denial</td></tr>
+        <tr><td>QA officer</td><td>☐ Records an observation · ☐ Builds and sends a survey · ☐ Raises a finding with owner and due date · ☐ Runs an audit from the standard reports · ☐ Generates the termly QA report</td></tr>
+        <tr><td>Teacher</td><td>☐ Signs in on web and phone · ☐ Confirms class list · ☐ Marks and corrects attendance · ☐ Sets homework with a file · ☐ Enters marks and submits · ☐ Fixes a returned subject and resubmits · ☐ Submits a weekly plan · ☐ Posts a material · ☐ Opens a discussion · ☐ Messages a parent · ☐ (High school) builds a quiz from the exam bank</td></tr>
+        <tr><td>Homeroom teacher (additional)</td><td>☐ Opens the homeroom profile · ☐ Logs daily activities · ☐ Reads link coverage for the class · ☐ Marks attendance before 9:00</td></tr>
+        <tr><td>First-line helper</td><td>☐ Answers three of the ten questions live · ☐ Resets a student password · ☐ Files a clear issue · ☐ Delivers a ten-minute mini session · ☐ Holds the weekly clinic hour</td></tr>
+        <tr><td>Parent</td><td>☐ App installed · ☐ Link approved · ☐ Opened today's attendance · ☐ Sent a test message (measured by the coverage report, not individually ticked)</td></tr>
+        <tr><td>Student</td><td>☐ First login done and password changed · ☐ Found timetable and homework (measured by the portal completion view)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Annex T-4 — Rooms, equipment, and practice data</h2>
+    <table>
+      <thead><tr><th style="width:26%">Item</th><th>Requirement</th><th style="width:16%">Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Training room</td><td>Seats 20, projector or large screen, power strips, campus LAN or Wi-Fi reaching the school node; a second small room for T3 (server room), T7 (QA office)</td><td>LIA focal person</td></tr>
+        <tr><td>Devices</td><td>One laptop or tablet per attendee for staff sessions; teachers also bring their Android phone; two "parent test" phones and one "student test" tablet held by the trainer</td><td>LIA IT Admin / Majo Bridge</td></tr>
+        <tr><td>Accounts</td><td>All attendee accounts created before the session with temporary passwords in sealed slips; practice accounts: one teacher, one parent, one student per section</td><td>IT Admin (after T1)</td></tr>
+        <tr><td>Practice data</td><td>Class "Training 0A" per section with 20 fictitious students, two subjects, a grading scheme, and prepared "mistakes" (typo in a class name, mismatched date of birth, missing midterm column) for the exercises; cleared before go-live</td><td>Majo Bridge</td></tr>
+        <tr><td>Printed materials</td><td>Attendance sheets, evaluation forms, competency checklists, role map, operations handbook, restore card, approval chain sheet, access matrix, teacher routine card, helper card, parent leaflet (English and Amharic), student card</td><td>Majo Bridge prepares; LIA prints</td></tr>
+        <tr><td>Language</td><td>Sessions in English; Amharic explanation available for parent briefings and on request in staff sessions</td><td>Trainer</td></tr>
+        <tr><td>Evidence for M5 / D6</td><td>Signed attendance sheets, competency checklists per person, evaluation summaries, restore drill record, link-coverage and portal-completion reports</td><td>LIA focal person files; Majo Bridge reports</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>Dates.</strong> Week numbers follow the inception report work plan (W1 = week of Mon 26 Oct 2026). Exact session dates and rooms are fixed at the kick-off meeting of Tuesday 27 October 2026 and entered in Annex C of the inception report. Any module can be split into two shorter sessions if LIA's timetable requires, keeping the same content and checks.
+    </div>
+
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For Lebawi International Academy</div>
+        <div class="role">Principal (owner of deliverable D6) · Name, signature, date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For Majo Bridge Technologies and Events PLC</div>
+        <div class="role">Project lead · Name, signature, date</div>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top:12px;">
+      Document MBT-LIA-TRN-2026-01 · Training Modules and Trainer's Guide · Student Management System (SMS) Project · 27 October 2026 · Version 1.0.
+    </p>
+  </article>
+</body>
+</html>
