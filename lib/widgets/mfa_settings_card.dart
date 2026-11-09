@@ -30,14 +30,14 @@ class _MfaSettingsCardState extends State<MfaSettingsCard> {
     final svc = GoliveService.instance;
     final enrolled = svc.isEnabledFor(_username);
     final required = svc.mustEnroll(username: _username) ||
-        (svc.mfaRequiredForLeadership() && svc.isLeadershipUser());
+        (svc.mfaRequiredForLeadership() && svc.isPrivilegedMfaUser());
     return SettingsSectionCard(
       title: required
-          ? 'Authenticator (required for leadership)'
+          ? 'Authenticator (required for Admin and Finance)'
           : 'Authenticator (optional)',
       subtitle: required
-          ? 'School Admin must keep a second factor after the password.'
-          : 'A second factor after your password. Other roles stay '
+          ? 'School Admin and Finance must keep a second factor after the password. Teachers stay optional.'
+          : 'A second factor after your password. Classroom teachers stay '
               'password-only until they enroll.',
       icon: Icons.phonelink_lock_outlined,
       child: Column(
@@ -47,7 +47,7 @@ class _MfaSettingsCardState extends State<MfaSettingsCard> {
             enrolled
                 ? 'Authenticator is on for $_username.'
                 : required
-                    ? 'Authenticator is required for school leadership. Enroll now.'
+                    ? 'Authenticator is required for School Admin and Finance. Enroll now.'
                     : 'Authenticator is off. This is opt-in for your role.',
           ),
           if (_secretOnce != null) ...[
@@ -117,7 +117,7 @@ class _MfaSettingsCardState extends State<MfaSettingsCard> {
             const Padding(
               padding: EdgeInsets.only(top: 8),
               child: Text(
-                'Required for school leadership — this cannot be turned off.',
+                'Required for School Admin and Finance — this cannot be turned off.',
               ),
             ),
         ],

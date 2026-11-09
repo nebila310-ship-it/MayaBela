@@ -9,6 +9,7 @@ import 'package:mayabela/services/cloud/app_collections.dart';
 import 'package:mayabela/services/cloud/cloud_sync_engine.dart';
 import 'package:mayabela/services/golive_service.dart';
 import 'package:mayabela/services/maya_assistant_service.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/persistence/cloud_app_store.dart';
 import 'package:mayabela/services/qa_export_service.dart';
 import 'package:mayabela/services/qa_findings_service.dart';
@@ -69,8 +70,47 @@ void main() {
       schoolId: 'TB-001',
     );
     expect(GoliveService.isLeadershipRole(AuthService.roleTeacher), isFalse);
+    expect(GoliveService.isPrivilegedMfaRole(AuthService.roleTeacher), isFalse);
     expect(GoliveService.instance.mustEnroll(username: 'teacher.p6'), isFalse);
     expect(GoliveService.instance.canDisableEnrollment('teacher.p6'), isTrue);
+  });
+
+  test('Finance Manager MFA is required; they can still log in and enroll', () {
+    AuthService.currentUser = RegisteredUser(
+      username: 'finance.p6',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      staffRoles: const [StaffRoles.accountant],
+    );
+    expect(
+      GoliveService.isPrivilegedMfaRole(
+        AuthService.roleTeacher,
+        const [StaffRoles.accountant],
+      ),
+      isTrue,
+    );
+    expect(GoliveService.instance.isPrivilegedMfaUser(), isTrue);
+    expect(GoliveService.instance.mustEnroll(username: 'finance.p6'), isTrue);
+    expect(GoliveService.instance.canDisableEnrollment('finance.p6'), isFalse);
+  });
+
+  test('a titled Finance copy is privileged; a principal is not forced', () {
+    expect(
+      GoliveService.isPrivilegedMfaRole(
+        AuthService.roleTeacher,
+        const ['custom_accountant_kg'],
+      ),
+      isTrue,
+    );
+    AuthService.currentUser = RegisteredUser(
+      username: 'principal.p6',
+      password: 'x',
+      roleKey: AuthService.roleTeacher,
+      schoolId: 'TB-001',
+      staffRoles: const [StaffRoles.principal],
+    );
+    expect(GoliveService.instance.mustEnroll(username: 'principal.p6'), isFalse);
   });
 
   test('QA desk exports findings and monitor rows as CSV', () async {
