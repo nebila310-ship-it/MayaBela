@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>INSA-style CSMS Audit and Evaluation Report — MaJo Bridge / MayaBela</title>
+  <style>
+    :root {
+      --blue: #123a6d;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #fff;
+      --wash: #f3f6fb;
+      --fail: #9b1c1c;
+      --fail-bg: #fdecec;
+      --warn: #8a5a00;
+      --warn-bg: #fff8e8;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+      padding: 10px; background: #123a6d; color: #fff; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #9b1c1c; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast {
+      text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px;
+    }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    .stamp {
+      display: inline-block; border: 3px solid var(--fail); color: var(--fail);
+      font-family: "Segoe UI", Arial, sans-serif; font-weight: 800; letter-spacing: 2px;
+      padding: 8px 18px; font-size: 18pt; transform: rotate(-2deg); margin: 8px 0 12px;
+    }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 34%; background: var(--wash); }
+    .banner, .note { border-radius: 0; padding: 10px 12px; margin: 10px 0; }
+    .banner { background: var(--fail-bg); border: 1px solid #f3b4b4; }
+    .banner.ok { background: var(--ok-bg); border-color: #b7e2c6; }
+    .note { background: var(--warn-bg); border: 1px solid #f0d48a; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.4pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .maj { color: var(--fail); font-weight: 700; }
+    .min { color: var(--warn); font-weight: 700; }
+    .obs { color: var(--ok); font-weight: 700; }
+    .scorebox { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .scorebox div { border: 1px solid var(--line); padding: 8px; text-align: center; background: var(--wash); }
+    .scorebox b { display: block; font-size: 16pt; color: var(--blue); }
+    .bigscore { text-align: center; font-size: 28pt; color: var(--fail); font-weight: 700; margin: 4px 0; font-family: "Segoe UI", Arial, sans-serif; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 70px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA-style CSMS audit report ·
+    <a href="INSA_CSMS_Audit_Evaluation_Report_MayaBela.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Information Network Security Administration (INSA)</p>
+      <p class="sub">Cyber Security Audit and Evaluation · Guideline v1.0 (May 2015 E.C.)</p>
+      <p class="sub">CSMS audit of an information-technology product and its operating organisation</p>
+    </header>
+
+    <h1>Cyber Security Audit and Evaluation Report</h1>
+    <p style="text-align:center;margin:0 0 10px"><b>Auditee:</b> Majo Bridge Technologies and Events PLC<br />
+    <b>Product:</b> MaJo e-School Bridge (MayaBela) · multi-tenant school ERP</p>
+    <p style="text-align:center"><span class="stamp">DOES NOT PASS</span></p>
+    <p class="bigscore">38 / 100</p>
+    <p style="text-align:center;margin-top:0"><b>Maturity: Developing</b> (Guideline §9 Table 1: 36–75) · <b>Certification result: FAIL</b></p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>INSA-CSMS-AUD-MB-2026-11-09</td></tr>
+      <tr><th>Audit date</th><td>9 November 2026 (Gregorian) · East Africa Time</td></tr>
+      <tr><th>Guideline used</th><td>Cyber Security Audit and Evaluation Guideline v1.0, May 2015 E.C. (INSA)</td></tr>
+      <tr><th>Normative criteria</th><td>CMCSRS (as referenced by the Guideline); Common Criteria (product); CIA + school-data protection; ISO/IEC 27001 control families used where CMCSRS text was not attached to this engagement</td></tr>
+      <tr><th>Audit type</th><td>External CSMS evaluation in the role of Regulatory Auditor (Guideline §6.2.a). Document review + source-code / configuration fieldwork. Not a legally gazetted INSA certificate.</td></tr>
+      <tr><th>Target of audit</th><td>People, Process, and Technology (Guideline §6.1) for the MayaBela product and the vendor operating model, including the live shared cloud project used by schools.</td></tr>
+      <tr><th>Period of coverage</th><td>Source tree on <code>origin/master</code> as of this audit date, plus the vendor’s own security audit dated 21 October 2026 and INSA hardening migration dated 5 November 2026.</td></tr>
+      <tr><th>Classification</th><td>Restricted — auditee and auditor. Contains findings about children’s data. Do not publish school passwords or keys.</td></tr>
+    </table>
+
+    <h2>1. Executive summary</h2>
+    <div class="banner">
+      <b>Overall conclusion: the auditee does not pass.</b>
+      MaJo Bridge / MayaBela is a working school ERP with useful technical controls in source (school-scoped row security, role catalogue, login rate limits, audit-log collections, CI tests). That is not a Cyber Security Management System.
+      Under Guideline §8.5(e), a <b>Major Non-Conformance</b> exists wherever there is significant doubt that confidentiality, integrity and availability of assets meet specified requirements, or where several related gaps show a deeper management-system failure.
+      Five Major Non-Conformances are recorded below. The organisation therefore <b>cannot be certified or recertified</b> until those are closed and a follow-up audit is passed (Guideline §8.6).
+    </div>
+    <p>The Evaluation Scorecard (Guideline §9) places the auditee at <b>38 / 100 — Developing</b>: “security posture is in progress… If technologies are in place, attention should be focused on processes and people.” That matches the evidence. Technology is ahead of process and people. Technology is still not production-equivalent to the hardened source.</p>
+    <div class="scorebox">
+      <div><b>25 / 100</b>People</div>
+      <div><b>33 / 100</b>Process and structure</div>
+      <div><b>48 / 100</b>Technology</div>
+    </div>
+    <p>Weighted composite (People 30% · Process 35% · Technology 35%) = <b>38</b>.</p>
+
+    <h3>1.1 What would be required to pass</h3>
+    <ol>
+      <li>Close every High finding in <b>production</b> (not only in git): teacher sensitive writes, registry edge-function role checks, driver student-registry reads, fee-payment integrity, password fields stripped from <code>school_registry</code>.</li>
+      <li>Establish a documented CSMS: signed policy, named cyber security officer, risk register, incident response, backup restore test, supplier agreement with the cloud host, internal audit programme.</li>
+      <li>Independent penetration test and a two-school isolation test that is actually run (CI must not skip).</li>
+      <li>Mandatory MFA for all privileged roles; children’s data minimisation; data-residency statement acceptable to INSA.</li>
+      <li>Follow-up audit with evidence that Major NCs are closed.</li>
+    </ol>
+
+    <h2>2. Scope, method, and limitations</h2>
+    <h3>2.1 In scope</h3>
+    <ul>
+      <li>Vendor organisation as operator of a multi-tenant school information system (children’s records, marks, health/safeguarding collections, payroll, identity).</li>
+      <li>Flutter application, Supabase schema / RLS / triggers, Edge Functions, CI workflows, and security documents in the MayaBela repository.</li>
+      <li>Intended production cloud project <code>hwkiihonthueadbhcvfi</code> (not logged into; configuration inferred from source and the vendor’s prior audit).</li>
+    </ul>
+    <h3>2.2 Out of scope</h3>
+    <ul>
+      <li>On-site inspection of offices, server rooms, or school campuses.</li>
+      <li>Interviews with staff, background-clearance files, and training attendance (none were provided).</li>
+      <li>Live penetration of production (Guideline §1 allows pentest of critical systems; this engagement did not attack production).</li>
+      <li>Common Criteria laboratory evaluation of the product (normative reference 2 — not performed).</li>
+      <li>Each customer school’s own CSMS (Fnote, LIA, etc.). Those remain separately auditable.</li>
+    </ul>
+    <h3>2.3 Methods (Guideline §8.3)</h3>
+    <ul>
+      <li>Review of documented information: <code>docs/security/MAJOBRIDGE_SECURITY_AUDIT.md</code>, Phase 1 hardening notes, INSA permission-hardening migration, module permission matrix, CI workflow.</li>
+      <li>Source inspection of RLS, write-guard triggers, <code>school-upsert-registry</code>, MFA settings, platform PIN hashing, rate-limit SQL.</li>
+      <li>Use of prior automated evidence: local Postgres role-matrix tests, Deno registry-write tests, source-invariant Python checks. Live staging RLS job is designed to skip when secrets are absent.</li>
+    </ul>
+    <div class="note">
+      <b>Reservation (Guideline §8.5.b.8).</b>
+      This is a compliance-heavy audit with limited substantive testing. Absence of a production pentest and of people/process records is itself a finding, not an excuse to assume those controls exist. Where production apply-status is unproven, the auditor treats the vendor’s own statement (“migration is not applied to production”) as evidence of nonconformity.
+    </div>
+
+    <h2 class="pagebreak">3. Context of the auditee</h2>
+    <p>MayaBela is a Flutter web/mobile ERP. Persistence is a single Postgres database on a hosted Supabase project. School rows sit in <code>public.app_documents</code> keyed by <code>(collection, school_id, doc_id)</code>. The client ships an anon key. Authorisation is JWT school/role claims plus RLS and a write-guard trigger. Some writes go through Edge Functions that use the service role and therefore skip the SQL write guard.</p>
+    <p>The system stores children’s identity, attendance, marks, and (by collection design) health, counselling and safeguarding notes. That is sensitive personal data of minors. INSA’s people/process/technology model and the CIA triad therefore apply at a high bar. A shared foreign-hosted tenancy without a proven CSMS is not an adequate national posture for that data class.</p>
+
+    <h2>4. Evaluation scorecard (Guideline §9)</h2>
+    <p>Each control is scored 0–5 (0 inexistent · 1 ad hoc · 2 documented only · 3 implemented with material gaps · 4 minor gaps · 5 effective). Twenty controls × 5 = 100.</p>
+    <table class="find">
+      <thead>
+        <tr><th>#</th><th>Pillar</th><th>Control (mapped to Guideline §6.1 / ISO 27001 families in lieu of unpublished CMCSRS clauses)</th><th>Score</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>P1</td><td>People</td><td>Named cyber security officer, RACI, top-level commitment</td><td>2</td><td>App RBAC exists; no organisational CISO/CSMS owner file</td></tr>
+        <tr><td>P2</td><td>People</td><td>Awareness, education, personnel clearance</td><td>0</td><td>No records</td></tr>
+        <tr><td>P3</td><td>People</td><td>Acceptable-use / privacy culture for staff handling children’s data</td><td>1</td><td>Product has consent collections; no staff programme</td></tr>
+        <tr><td>PR1</td><td>Process</td><td>Documented CSMS / security policy</td><td>1</td><td>Engineering notes only, not a signed CSMS</td></tr>
+        <tr><td>PR2</td><td>Process</td><td>Risk assessment and treatment (Guideline §7.1.1)</td><td>1</td><td>One source audit; no living risk register</td></tr>
+        <tr><td>PR3</td><td>Process</td><td>Asset inventory</td><td>3</td><td>Collection/module matrix exists</td></tr>
+        <tr><td>PR4</td><td>Process</td><td>Incident management</td><td>1</td><td>No IRP, no evidence of tabletop</td></tr>
+        <tr><td>PR5</td><td>Process</td><td>Business continuity / backup restore test</td><td>2</td><td>Backup collections and an on-prem playbook; no restore evidence</td></tr>
+        <tr><td>PR6</td><td>Process</td><td>Supplier / cloud governance (SLA, DPA, residency)</td><td>2</td><td>Hosted Supabase; no DPA/residency pack in repo</td></tr>
+        <tr><td>PR7</td><td>Process</td><td>Internal audit programme (Guideline §7)</td><td>1</td><td>This evaluation is the first structured CSMS audit on file</td></tr>
+        <tr><td>PR8</td><td>Process</td><td>Privacy, retention, disposal of children’s data</td><td>2</td><td>Consent/rights collections; no retention schedule</td></tr>
+        <tr><td>T1</td><td>Technology</td><td>Access control (RBAC, RLS, school isolation)</td><td>3</td><td>Strong design; production not proven; High write gaps</td></tr>
+        <tr><td>T2</td><td>Technology</td><td>Authentication (password, MFA, rate-limit)</td><td>3</td><td>Rate-limit + optional MFA; leadership MFA only</td></tr>
+        <tr><td>T3</td><td>Technology</td><td>Logging and audit trail</td><td>3</td><td>School/platform/grade audit exist; stamping gaps in production</td></tr>
+        <tr><td>T4</td><td>Technology</td><td>Secure development and CI</td><td>3</td><td>Analyze, unit, Deno, local Postgres matrix; staging RLS skippable</td></tr>
+        <tr><td>T5</td><td>Technology</td><td>Cryptography and key management</td><td>2</td><td>TLS via vendor; anon key and project URL in client source</td></tr>
+        <tr><td>T6</td><td>Technology</td><td>Vulnerability management / penetration testing</td><td>1</td><td>No pentest report</td></tr>
+        <tr><td>T7</td><td>Technology</td><td>Production equals hardened source</td><td>2</td><td>INSA migration (5 Nov 2026) not applied to production</td></tr>
+        <tr><td>T8</td><td>Technology</td><td>Multi-tenant isolation (negative test)</td><td>3</td><td>Designed; live two-school test not evidenced as run</td></tr>
+        <tr><td>T9</td><td>Technology</td><td>Protection of minors’ data (need-to-know)</td><td>2</td><td>Drivers can read whole student registry (SEC-005) still open</td></tr>
+        <tr><td>T10</td><td>Technology</td><td>Common Criteria / independent product evaluation</td><td>0</td><td>Not started</td></tr>
+      </tbody>
+    </table>
+    <p>Sum of control scores = <b>38 / 100</b>.</p>
+    <table class="find">
+      <thead><tr><th>Score</th><th>Maturity (Guideline Table 1)</th><th>This audit</th></tr></thead>
+      <tbody>
+        <tr><td>0–35</td><td>Immature</td><td></td></tr>
+        <tr><td>36–75</td><td>Developing</td><td><b>38 — selected</b></td></tr>
+        <tr><td>76–90</td><td>Mature</td><td></td></tr>
+        <tr><td>91–100</td><td>Advanced</td><td></td></tr>
+      </tbody>
+    </table>
+    <p><b>Pass/fail rule used:</b> Mature (76+) with <b>zero Major Non-Conformances</b> is the minimum for a pass at national CSMS evaluation. Developing with Major NCs is a fail. This audit: Developing + 5 Major NCs = <b>FAIL</b>.</p>
+
+    <h2 class="pagebreak">5. Findings</h2>
+    <h3>5.1 Major Non-Conformance Reports</h3>
+    <p>A Major NC substantially affects the capability of cyber security to achieve its objectives (Guideline §8.5.e.1): significant doubt that CIA of assets meets requirements, or a cluster of related minors showing governance failure.</p>
+
+    <table class="find">
+      <thead><tr><th>ID</th><th>Finding</th><th>Evidence</th><th>Why major</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="maj">MNC-01</td>
+          <td><b>No organisational CSMS.</b> There is no signed cyber security policy, no appointed Cyber Security Officer, no risk register, no incident-response plan, no internal audit programme, and no personnel-clearance / awareness records.</td>
+          <td>Repository contains engineering security notes, not a CSMS. Search of docs found no IRP, ISMS, CISO charter, or training register. Guideline §6.1 requires People and Process, not only Technology.</td>
+          <td>Governance failure. Several related absences indicate the management system itself is missing (Guideline §8.5.e.1.ii).</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-02</td>
+          <td><b>Known High technical defects remain in production.</b> The vendor’s 21 Oct 2026 source audit listed High issues (teachers writing sensitive collections; service-role registry upsert skipping SQL guards; possible admin password in <code>school_registry</code>; classroom teachers marking fees paid). An INSA hardening migration (5 Nov 2026) and registry policy tests exist in source. The vendor recorded that the migration is <b>not applied to production</b> and the edge function is <b>not deployed</b>.</td>
+          <td><code>docs/security/MAJOBRIDGE_SECURITY_AUDIT.md</code> (SEC-001, 002, 004, 006); <code>supabase/migrations/20261105120000_insa_permission_hardening.sql</code> header: “not applied to production”.</td>
+          <td>Significant doubt that confidentiality and integrity of payroll, identity, and fee records meet requirements in the live system.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-03</td>
+          <td><b>Need-to-know failure on children’s identity data.</b> A driver JWT can read the entire student registry of the school (no bus-assignment restriction). Health/safeguarding collections exist in the same database. UI hiding is not a security boundary.</td>
+          <td>SEC-005 in the vendor audit; <code>app_doc_readable</code> driver branch. Sidebar is not RLS.</td>
+          <td>Confidentiality of minors’ PII. Unresolved High finding.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-04</td>
+          <td><b>No independent technical evaluation.</b> No penetration-test report, no vulnerability-scan programme, no Common Criteria evaluation (normative reference 2 of the Guideline). Staging RLS isolation is skippable in CI when secrets are unset.</td>
+          <td><code>.github/workflows/ci.yml</code> rls-isolation job exits 0 when staging secrets are missing. No pentest artefact in <code>docs/</code>.</td>
+          <td>Cannot confirm that controls work against a skilled attacker. Guideline §1 expects pentest of computer-based systems where relevant.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-05</td>
+          <td><b>Data residency / supplier control of children’s records is unproven.</b> Live schools share one hosted Supabase project. No DPA, no residency region evidence, no tested restore, no documented lawful basis pack. LIA’s TOR requires an on-prem master; the default product is cloud-master.</td>
+          <td>Architecture in <code>lib/supabase_options.dart</code> (default hosted URL); absence of supplier/CSMS records; LIA on-prem guide is a future option, not current production.</td>
+          <td>Availability and sovereignty of a national-scale education dataset; CIA of assets not demonstrated under INSA supplier and BCM expectations.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 Minor Non-Conformance Reports</h3>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Finding</th><th>Evidence / gap</th></tr></thead>
+      <tbody>
+        <tr><td class="min">mNC-01</td><td>MFA is optional for most roles. Only school leadership is described as required. INSA-grade privileged access should be MFA for admin, platform owner, and finance.</td><td><code>lib/widgets/mfa_settings_card.dart</code> — “opt-in for your role”.</td></tr>
+        <tr><td class="min">mNC-02</td><td>Teacher login still provokes denied-write storms (availability / log noise). Database denial is correct; the client should not attempt the write.</td><td>SEC-003. Not a breach; still a control-operation defect.</td></tr>
+        <tr><td class="min">mNC-03</td><td>Public <code>school-branding</code> bucket and a shared setup-probe prefix writable by any authenticated user.</td><td>SEC-010.</td></tr>
+        <tr><td class="min">mNC-04</td><td>Grade audit was not append-only in production (integrity of academic history). Fixed in unapplied source.</td><td>SEC-007.</td></tr>
+        <tr><td class="min">mNC-05</td><td>Students could write homework rows school-wide in production (integrity). Homework bound in unapplied source only.</td><td>SEC-008.</td></tr>
+        <tr><td class="min">mNC-06</td><td>Any teacher could insert a school audit row with a client-chosen actor (audit-trail integrity). Stamping exists in unapplied source.</td><td>SEC-009.</td></tr>
+        <tr><td class="min">mNC-07</td><td>Anon key and production project URL are compiled into the client. Acceptable for Supabase anon keys only if RLS is perfect. RLS is not yet proven perfect in production.</td><td><code>lib/supabase_options.dart</code>.</td></tr>
+        <tr><td class="min">mNC-08</td><td>No data-retention / disposal schedule for student, health, or safeguarding collections.</td><td>No policy document.</td></tr>
+        <tr><td class="min">mNC-09</td><td>Edge Functions other than registry were inventoried, not line-audited (<code>platform-*</code>, login, invite-parent, Maya chat). Service-role bypasses the SQL guard.</td><td>Vendor audit SEC-011 gap.</td></tr>
+        <tr><td class="min">mNC-10</td><td>Maya Assistant may send school context to an external model without a documented DPIA.</td><td>Vendor audit module inventory.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.3 Observations / opportunities for improvement</h3>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Observation</th></tr></thead>
+      <tbody>
+        <tr><td class="obs">OBS-01</td><td>School-id RLS on direct table access is a sound control: JWT <code>app_metadata.schoolId</code>, case-normalised match, update cannot retarget another school. Keep it. Prove it with a live two-school negative test.</td></tr>
+        <tr><td class="obs">OBS-02</td><td>CI already runs Flutter analyze/tests, Deno policy tests, and a local Postgres replay of every migration (role-by-role). This is above typical startup practice. Make the staging RLS job fail-closed instead of skip.</td></tr>
+        <tr><td class="obs">OBS-03</td><td>Platform owner PIN uses PBKDF2-SHA256 (210,000 iterations) with upgrade-on-login from legacy SHA-256. Good direction; protect the setup secret.</td></tr>
+        <tr><td class="obs">OBS-04</td><td>Login rate-limit SQL, crash-report server-only tables, and password-reset codes marked server-only are appropriate patterns. Keep them.</td></tr>
+        <tr><td class="obs">OBS-05</td><td>The 5 Nov 2026 INSA permission-hardening migration is the correct technical response to SEC-001/004/006/007/008/009. Applying it to production after staging is the shortest path to shrinking MNC-02.</td></tr>
+        <tr><td class="obs">OBS-06</td><td>A dedicated on-prem instance (separate URL, separate database) is a viable path for schools that INSA or a TOR forbid from the shared cloud. It is not a substitute for a vendor CSMS.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>6. Pillar commentary</h2>
+    <h3>6.1 People — FAIL</h3>
+    <p>Guideline §6.1.a lists career paths, awareness, culture, education, clearance, privacy, roles, and top-level commitment. The product implements <i>application</i> roles (admin, teacher, parent, student, driver, platform owner). That is not personnel security. No evidence was presented of:</p>
+    <ul>
+      <li>a named Cyber Security Officer (Guideline §6.2.e.1);</li>
+      <li>background screening for staff who can open all schools;</li>
+      <li>annual awareness for engineers and school administrators;</li>
+      <li>acceptable-use acknowledgement for children’s data.</li>
+    </ul>
+    <h3>6.2 Process and structure — FAIL</h3>
+    <p>There is no CSMS to audit against the auditee’s own policy, because that policy does not exist. Risk is managed by engineering tickets and a single source-code audit. Incident response, BCM, supplier management, and an internal audit programme (Guideline §7) are not established. Asset inventory at the collection layer is a relative strength (module permission matrix).</p>
+    <h3>6.3 Technology — NOT YET ADEQUATE</h3>
+    <p>Technology is the strongest pillar and still insufficient for a pass. Controls in source are real: RLS, write guards, registry edge policy tests, rate limits, audit collections, optional TOTP MFA, CI. Controls in production lag source. Children’s need-to-know (drivers vs student registry) is not closed. No pentest. No CC evaluation. Multi-tenant children’s data on a single hosted project without a residency file.</p>
+
+    <h2 class="pagebreak">7. Corrective action required before recertification</h2>
+    <p>Guideline §8.6: the auditor requests information that appropriate action has been taken. Until MNC-01 to MNC-05 are closed, the result remains FAIL. Recommended order:</p>
+    <ol>
+      <li><b>Immediately (production safety):</b> apply INSA hardening migration and deploy <code>school-upsert-registry</code> to staging, run the local Postgres matrix and a two-school negative test, then production. Restrict driver reads of <code>student_registry</code>. Confirm no <code>adminInitialPassword</code> remains in live rows (count only; do not print values).</li>
+      <li><b>30-day CSMS pack:</b> signed security policy; appoint a Cyber Security Officer; risk register covering children’s data, multi-tenancy, and cloud supplier; incident-response one-pager with 24/7 contact; backup restore drill with minutes; MFA mandatory for platform owner, school admin, and finance.</li>
+      <li><b>Independent test:</b> scoped pentest of web + API + storage; fix Critical/High; retest. Turn CI RLS isolation into fail-closed.</li>
+      <li><b>Data protection file:</b> processing inventory, retention, parental consent operational procedure, Maya-chat DPIA or disable Maya on live schools until done, supplier DPA and region.</li>
+      <li><b>Follow-up audit</b> against this report. Major NCs must be verified closed, not promised.</li>
+    </ol>
+
+    <h2>8. Statement of the auditor</h2>
+    <p>This evaluation was performed in the form required by the INSA Cyber Security Audit and Evaluation Guideline v1.0 (May 2015 E.C.), acting as a Regulatory Auditor for the purpose of advising the auditee before national engagement. It is <b>not</b> a substitute for an on-site INSA inspection of a designated critical-infrastructure operator, and it does not authorise operation of the system as if certified.</p>
+    <p>Findings are evidence-based on the repository and the vendor’s own unapplied-production statements. Where evidence was missing, the control was scored as not implemented (Guideline: evidence-based approach, §5.f).</p>
+    <p><b>Audit conclusion:</b> MaJo e-School Bridge / MayaBela, as currently operated, <b>does not pass</b> a national CSMS audit. Maturity <b>Developing (38/100)</b>. Five Major Non-Conformances. Recertification is possible after the corrective actions in §7, not before.</p>
+
+    <div class="sig">
+      <div class="box">
+        <div>Lead auditor (evaluation team)</div>
+        <div style="margin-top:28px">Name / signature / date</div>
+      </div>
+      <div class="box">
+        <div>Auditee acknowledgement (Guideline §5.h)</div>
+        <div style="margin-top:28px">We have received this report and will respond with an action plan.</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      INSA-CSMS-AUD-MB-2026-11-09 · MaJo Bridge / MayaBela · 9 November 2026, East Africa Time.<br />
+      Criteria: INSA Cyber Security Audit and Evaluation Guideline v1.0 (May 2015 E.C.), CMCSRS as referenced, Common Criteria as referenced, CIA of school and children’s data.<br />
+      Restricted. Do not attach secrets, JWTs, or live student extracts to any copy of this report.
+    </p>
+  </article>
+</body>
+</html>
