@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LIA on-premises go-live guide — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #1a4f9c;
+      --green: #1f8a4c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f4f7fb;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+      --warn: #8a5a00;
+      --warn-bg: #fff8e8;
+      --stop: #9b1c1c;
+      --stop-bg: #fdecec;
+      --code: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      background: rgba(20, 32, 51, 0.94);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a {
+      color: #fff;
+      font-weight: 700;
+      background: var(--green);
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+    .toolbar a.secondary {
+      background: var(--blue);
+    }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12);
+      padding: 14mm 14mm 12mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 12px;
+    }
+    .cover-flag img {
+      width: 118px;
+      height: auto;
+    }
+    .brand-name {
+      margin: 0;
+      color: var(--blue);
+      font-size: 13.5pt;
+      letter-spacing: 0.2px;
+    }
+    .brand-sub {
+      margin: 0;
+      color: var(--green);
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+    .doc-kicker {
+      margin: 20px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9pt;
+      font-weight: 700;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 20pt;
+      line-height: 1.2;
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12.5pt;
+      color: var(--blue);
+      font-weight: 700;
+    }
+    .meta-grid, .who-grid, .fill-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .meta-card, .fill {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong, .fill strong {
+      display: block;
+      color: var(--blue);
+      font-size: 8.2pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .fill .line {
+      border-bottom: 1px dotted #8a96a8;
+      min-height: 18px;
+      margin-top: 6px;
+    }
+    .banner, .note, .stop {
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .banner { background: var(--ok-bg); border: 1px solid #b7e2c6; }
+    .banner strong { color: var(--ok); }
+    .note { background: var(--warn-bg); border: 1px solid #f0d48a; }
+    .note strong { color: var(--warn); }
+    .stop { background: var(--stop-bg); border: 1px solid #f3b4b4; }
+    .stop strong { color: var(--stop); }
+    h2 {
+      margin: 22px 0 8px;
+      font-size: 13.2pt;
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 16px 0 6px;
+      font-size: 11.4pt;
+      color: var(--blue);
+      border-left: 4px solid var(--green);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    h4 {
+      margin: 12px 0 6px;
+      font-size: 10.6pt;
+      page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 28px; }
+    .toc { padding-left: 32px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.2pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 6px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--wash); color: var(--blue); }
+    .who { font-weight: 800; font-size: 8.2pt; letter-spacing: 0.3px; text-transform: uppercase; }
+    .who.our { color: var(--blue); }
+    .who.lia { color: var(--green); }
+    .who.both { color: #6b3fa0; }
+    pre {
+      background: var(--code);
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 8.4pt;
+      line-height: 1.4;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      page-break-inside: avoid;
+    }
+    code { font-family: Consolas, "Courier New", monospace; }
+    .toc a { color: var(--blue); text-decoration: none; }
+    .toc li { margin-bottom: 3px; }
+    .check { page-break-inside: avoid; }
+    .check td:first-child { width: 22px; text-align: center; font-size: 12pt; }
+    .footer-note {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 8.3pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+      a { color: inherit; }
+    }
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    LIA on-prem go-live guide ·
+    <a href="MaJo_Bridge_LIA_OnPrem_GoLive_Guide.pdf" download>Download PDF</a>
+    <a class="secondary" href="#" onclick="window.print(); return false;">Print / Save as PDF</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Internal commissioning playbook</p>
+        <h1 class="brand-name">Majo Bridge Technologies and Events</h1>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:10pt;">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela platform)<br />
+          Other schools stay on: https://mayabela.pages.dev
+        </p>
+      </div>
+      <img src="../agreements/majo-bridge-logo.png" alt="MaJo-Bridge logo" />
+    </header>
+
+    <p class="doc-kicker">Version 1.0 · 9 November 2026 · East Africa Time</p>
+    <h1 class="doc-title">Dedicated on-premises go-live guide</h1>
+    <p class="doc-for">Lebawi International Academy (LIA) — physical server with public IP</p>
+
+    <div class="meta-grid">
+      <div class="meta-card"><strong>Audience</strong>MayaBela engineer on site + LIA IT nominee. Written for a beginner: open this, paste this.</div>
+      <div class="meta-card"><strong>Result</strong>LIA uses its own URL and its own database on its own machine. Fnote and other schools stay on the shared cloud, untouched.</div>
+      <div class="meta-card"><strong>LIA website</strong><code>https://erp.yourdomain.com</code></div>
+      <div class="meta-card"><strong>LIA database API</strong><code>https://api.yourdomain.com</code></div>
+    </div>
+
+    <div class="stop">
+      <strong>Golden rule — read this twice.</strong>
+      Never type the live MayaBela cloud address
+      <code>https://hwkiihonthueadbhcvfi.supabase.co</code>
+      into LIA’s server, LIA’s website build, or LIA’s Android APK.
+      That address is the other schools’ database. LIA must get a <b>new empty</b> database on LIA hardware.
+    </div>
+
+    <h2>Contents</h2>
+    <ul class="toc">
+      <li><a href="#who">1. Who does what</a></li>
+      <li><a href="#placeholders">2. Words you will replace</a></li>
+      <li><a href="#p0">3. Phase 0 — Collect facts (before you travel)</a></li>
+      <li><a href="#p1">4. Phase 1 — Bind the domain to the public IP</a></li>
+      <li><a href="#p2">5. Phase 2 — Router and firewall</a></li>
+      <li><a href="#p3">6. Phase 3 — Install Ubuntu on the physical server</a></li>
+      <li><a href="#p4">7. Phase 4 — First Linux commands</a></li>
+      <li><a href="#p5">8. Phase 5 — Install LIA’s private database stack</a></li>
+      <li><a href="#p6">9. Phase 6 — Load MayaBela schema and functions</a></li>
+      <li><a href="#p7">10. Phase 7 — HTTPS reverse proxy (the padlock)</a></li>
+      <li><a href="#p8">11. Phase 8 — Build the LIA website so it talks only to LIA</a></li>
+      <li><a href="#p9">12. Phase 9 — Create only the LIA school</a></li>
+      <li><a href="#p10">13. Phase 10 — Prove isolation</a></li>
+      <li><a href="#p11">14. Phase 11 — Mail, backups, handover</a></li>
+      <li><a href="#days">15. Day-by-day order</a></li>
+      <li><a href="#not">16. What this is not</a></li>
+    </ul>
+
+    <h2 id="who">1. Who does what</h2>
+    <table>
+      <thead>
+        <tr><th>Label in this guide</th><th>Who</th><th>Job</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="who our">Our side</span></td><td>MayaBela / MaJo Bridge engineer</td><td>Install software, bind domain to the API, build LIA website, create school, test, backups, handover</td></tr>
+        <tr><td><span class="who lia">LIA side</span></td><td>LIA IT or principal’s nominee</td><td>Public IP, domain login, server-room access, admin password, firewall permission, UPS, one test teacher and one test parent</td></tr>
+        <tr><td><span class="who both">Both</span></td><td>Sit together</td><td>DNS clicks, isolation test, paper handover</td></tr>
+      </tbody>
+    </table>
+    <p>You do <b>not</b> log into the shared MayaBela Supabase dashboard for this job. You do <b>not</b> run <code>deploy-cloudflare-pages.cmd</code>.</p>
+
+    <h2 id="placeholders">2. Words you will replace everywhere</h2>
+    <p>Write the real values in pencil on this page before Phase 1. Then every command below uses these names.</p>
+    <div class="fill-grid">
+      <div class="fill"><strong>YOUR_PUBLIC_IP</strong>LIA’s public IPv4 (example shape 196.188.x.x)<div class="line"></div></div>
+      <div class="fill"><strong>yourdomain.com</strong>A domain LIA owns (example lia.edu.et)<div class="line"></div></div>
+      <div class="fill"><strong>erp.yourdomain.com</strong>Website teachers and parents open<div class="line"></div></div>
+      <div class="fill"><strong>api.yourdomain.com</strong>LIA database API (same machine, second name)<div class="line"></div></div>
+      <div class="fill"><strong>LAN_IP</strong>Server’s inside-school address (example 192.168.1.50)<div class="line"></div></div>
+      <div class="fill"><strong>SCHOOL_ID</strong>Short id in the app (example LIA — letters only)<div class="line"></div></div>
+    </div>
+    <div class="note">
+      <strong>Two hostnames, one IP.</strong>
+      Teachers open the ERP name. The app talks to the API name. Both DNS records point at the same public IP.
+    </div>
+
+    <h2 id="p0">3. Phase 0 — Collect facts (before you travel)</h2>
+    <p><span class="who lia">LIA side</span> — send this list on WhatsApp and wait. Do not travel until rows 1–4 are filled.</p>
+    <table class="check">
+      <thead><tr><th></th><th>Ask LIA</th><th>Write the answer</th></tr></thead>
+      <tbody>
+        <tr><td>☐</td><td>Public IPv4</td><td></td></tr>
+        <tr><td>☐</td><td>Is it static (does not change after reboot / overnight)?</td><td>Yes / No</td></tr>
+        <tr><td>☐</td><td>Domain they already own</td><td></td></tr>
+        <tr><td>☐</td><td>Who has the domain login (email + 2FA phone)</td><td></td></tr>
+        <tr><td>☐</td><td>Server OS today (Windows or Linux), RAM, disk, UPS</td><td></td></tr>
+        <tr><td>☐</td><td>Can you sit in front of the server, or only AnyDesk?</td><td></td></tr>
+        <tr><td>☐</td><td>School ID they want (example LIA)</td><td></td></tr>
+        <tr><td>☐</td><td>Principal email for password-reset mail</td><td></td></tr>
+        <tr><td>☐</td><td>One admin, one teacher, one parent phone for tests</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.1 Confirm the IP is really public — <span class="who our">our side</span></h3>
+    <ol>
+      <li>Ask LIA to read their public IP from the ISP paper or router “WAN IP” page.</li>
+      <li>On <b>your</b> laptop, on a network that is <b>not</b> the school Wi‑Fi (home, hotel, or mobile data), open a command prompt:</li>
+    </ol>
+<pre>ping YOUR_PUBLIC_IP</pre>
+    <p>You want replies, or at least not “destination unreachable” from a private range.</p>
+    <div class="stop">
+      <strong>Stop if the IP starts with 10. / 192.168. / 172.16–31. / 100.64–127.</strong>
+      That is not a public IP. Parents on mobile data cannot reach it. Ask the ISP for a real static public IPv4 and port forwarding before you continue.
+    </div>
+    <p><b>Minimum hardware</b> to tell them now: 16 GB RAM (8 GB is painful), 200 GB SSD or more, always-on + UPS. Ubuntu Server 22.04 or 24.04 is the right OS. Docker-on-Windows is a last resort, not the plan.</p>
+    <p><span class="who our">Our side</span> laptop checklist before you leave the office:</p>
+    <ul>
+      <li>MayaBela git clone on your Windows laptop</li>
+      <li>Flutter SDK works (<code>flutter doctor</code>)</li>
+      <li>USB stick (32 GB+) for Ubuntu installer + later file copy</li>
+      <li>This PDF printed or on the laptop</li>
+      <li>You will <b>not</b> deploy LIA to https://mayabela.pages.dev</li>
+    </ul>
+
+    <h2 id="p1" class="pagebreak">4. Phase 1 — Bind the domain to the public IP</h2>
+    <p><span class="who both">Both</span> — LIA logs into the registrar; you click with them. You need two names, both pointing at the same public IP.</p>
+    <table>
+      <thead><tr><th>Hostname</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>erp.yourdomain.com</code></td><td>The website (Flutter web)</td></tr>
+        <tr><td><code>api.yourdomain.com</code></td><td>The LIA database API</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.1 Open the DNS panel — exact clicks</h3>
+    <ol>
+      <li>Open a browser.</li>
+      <li>Go to wherever they bought the domain (Cloudflare, Namecheap, Google Domains, Ethio Telecom portal, or their current registrar).</li>
+      <li>Sign in with LIA’s email. Complete 2FA if asked.</li>
+      <li>Click the domain <code>yourdomain.com</code>.</li>
+      <li>Click <b>DNS</b> or <b>DNS Management</b> or <b>Advanced DNS</b>.</li>
+    </ol>
+
+    <h3>4.2 Add two A records</h3>
+    <p>Click <b>Add record</b> (or <b>Add new record</b>) twice.</p>
+    <p><b>Record 1 — website</b></p>
+    <table>
+      <tr><th>Field</th><th>Type this</th></tr>
+      <tr><td>Type</td><td><code>A</code></td></tr>
+      <tr><td>Name / Host</td><td><code>erp</code><br />If the panel already shows <code>.yourdomain.com</code> on the right, type only <code>erp</code>. If it wants the full name, type <code>erp.yourdomain.com</code>.</td></tr>
+      <tr><td>Value / IPv4 address</td><td><code>YOUR_PUBLIC_IP</code></td></tr>
+      <tr><td>TTL</td><td><code>300</code> or Automatic</td></tr>
+      <tr><td>Proxy (Cloudflare only)</td><td><b>DNS only / grey cloud</b>. Click the orange cloud until it turns grey. Orange proxy will break login and live updates.</td></tr>
+    </table>
+    <p><b>Record 2 — API</b></p>
+    <table>
+      <tr><th>Field</th><th>Type this</th></tr>
+      <tr><td>Type</td><td><code>A</code></td></tr>
+      <tr><td>Name / Host</td><td><code>api</code></td></tr>
+      <tr><td>Value / IPv4 address</td><td>the <b>same</b> <code>YOUR_PUBLIC_IP</code></td></tr>
+      <tr><td>TTL</td><td><code>300</code></td></tr>
+      <tr><td>Proxy (Cloudflare only)</td><td><b>DNS only / grey cloud</b></td></tr>
+    </table>
+    <p>Click <b>Save</b> after each record.</p>
+    <p>Optional later: a third A record Name <code>@</code> Value <code>YOUR_PUBLIC_IP</code> if they want <code>https://yourdomain.com</code> itself to open the ERP. Start with <code>erp</code> and <code>api</code> only.</p>
+
+    <h3>4.3 Wait and check — <span class="who our">our side</span>, any network</h3>
+    <p>Windows: press Win+R, type <code>cmd</code>, Enter. Paste (change the names):</p>
+<pre>nslookup erp.yourdomain.com
+nslookup api.yourdomain.com</pre>
+    <p>You want a line <b>Address</b> = <code>YOUR_PUBLIC_IP</code> on both. If you still see old numbers, wait 5–30 minutes. Do not continue to HTTPS (Phase 7) until this is correct.</p>
+    <p>From a phone on <b>mobile data</b> (not school Wi‑Fi), you will not see a website yet — that is normal until Phase 7. DNS only has to <i>resolve</i>.</p>
+
+    <h2 id="p2">5. Phase 2 — Router and firewall</h2>
+    <p><span class="who lia">LIA side</span> does the clicks; you watch. Goal: internet traffic on 80 and 443 reaches the physical server. Nothing else.</p>
+
+    <h3>5.1 Find the server’s LAN IP</h3>
+    <p>If the server is already on and you can log in:</p>
+<pre>ip a
+hostname -I</pre>
+    <p>Write the address that looks like <code>192.168.x.x</code> or <code>10.x.x.x</code>. That is <code>LAN_IP</code>. Ask LIA IT to make a DHCP reservation so this number never changes (router page: DHCP → bind this server’s MAC address to <code>LAN_IP</code>).</p>
+
+    <h3>5.2 Port forward on the school router</h3>
+    <p>Open the router admin page (often <code>192.168.1.1</code> or <code>192.168.0.1</code>). Look for <b>Port forwarding</b> / <b>Virtual server</b> / <b>NAT</b>. Add two rules:</p>
+    <table>
+      <thead><tr><th>Name</th><th>WAN port</th><th>Protocol</th><th>Forward to</th><th>LAN port</th></tr></thead>
+      <tbody>
+        <tr><td>LIA-HTTP</td><td>80</td><td>TCP</td><td><code>LAN_IP</code></td><td>80</td></tr>
+        <tr><td>LIA-HTTPS</td><td>443</td><td>TCP</td><td><code>LAN_IP</code></td><td>443</td></tr>
+      </tbody>
+    </table>
+    <div class="stop">
+      <strong>Do not forward these:</strong> 22 (SSH) to the whole internet, 5432 (Postgres), 8000, 54321, 54322, 54323 (internal Docker). SSH stays on the LAN or a VPN.
+    </div>
+
+    <h2 id="p3">6. Phase 3 — Install Ubuntu on the physical server</h2>
+    <p><span class="who our">Our side</span> on LIA hardware. If Ubuntu 22.04/24.04 is already installed, skip to Phase 4.</p>
+    <ol>
+      <li>On your laptop download Ubuntu Server 24.04 LTS: <b>https://ubuntu.com/download/server</b></li>
+      <li>Make a USB installer with Rufus: <b>https://rufus.ie</b> (device = the USB, boot type = the Ubuntu ISO, Start).</li>
+      <li>Plug the USB into the school server. Power on. Press the boot-menu key (often F12, F10, Esc, or Del). Choose the USB.</li>
+      <li>Install:
+        <ul>
+          <li>Language: English</li>
+          <li>Keyboard: English (US) or their layout</li>
+          <li>Use an entire disk <b>only</b> if they confirm this disk has no school data</li>
+          <li>Your name: <code>liaadmin</code> (or their IT name)</li>
+          <li>Server name: <code>lia-erp</code></li>
+          <li>Strong password — write it in the handover envelope, not in WhatsApp</li>
+          <li>Install OpenSSH server = <b>Yes</b></li>
+        </ul>
+      </li>
+      <li>Reboot. Remove the USB. Log in on the screen as <code>liaadmin</code>.</li>
+    </ol>
+
+    <h2 id="p4">7. Phase 4 — First Linux commands</h2>
+    <p><span class="who our">Our side</span> on the server. Log in. Paste <b>one block at a time</b>. Wait for the prompt to come back.</p>
+
+    <h3>7.1 Update the machine</h3>
+<pre>sudo apt update
+sudo apt -y upgrade
+sudo apt -y install ca-certificates curl git ufw nginx unzip jq</pre>
+    <p>It will ask for the <code>liaadmin</code> password after <code>sudo</code>. Typing is invisible. That is normal.</p>
+
+    <h3>7.2 Firewall — only the website ports</h3>
+<pre>sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status</pre>
+    <p>When it asks “Proceed with operation (y|n)?” type <code>y</code> and Enter. You should see 80 and 443 ALLOW.</p>
+
+    <h3>7.3 Install Docker (official)</h3>
+<pre>sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo usermod -aG docker $USER</pre>
+    <p>Log out (type <code>exit</code>) and log in again so Docker works without typing <code>sudo</code> every time. Then check:</p>
+<pre>docker --version
+docker compose version</pre>
+    <p>You want two version numbers, not “command not found”.</p>
+
+    <h2 id="p5" class="pagebreak">8. Phase 5 — Install LIA’s private database stack</h2>
+    <p><span class="who our">Our side</span>. This is LIA’s <b>own empty</b> database. It is not a copy of Fnote. It is the same <i>kind</i> of software (Postgres + Auth + Storage + Edge Functions) running on LIA hardware.</p>
+
+    <h3>8.1 Download the official self-host bundle</h3>
+<pre>sudo mkdir -p /opt/lia
+sudo chown $USER:$USER /opt/lia
+cd /opt/lia
+git clone --depth 1 https://github.com/supabase/supabase.git
+cd supabase/docker
+cp .env.example .env</pre>
+
+    <h3>8.2 Edit secrets — do not skip</h3>
+    <p>On your laptop (Git Bash or WSL) generate four random strings:</p>
+<pre>openssl rand -base64 32
+openssl rand -base64 32
+openssl rand -base64 32
+openssl rand -hex 32</pre>
+    <p>Write them on paper as POSTGRES_PASSWORD, a dashboard password, and extra secrets. Do <b>not</b> reuse MayaBela cloud keys.</p>
+    <p>On the server:</p>
+<pre>nano /opt/lia/supabase/docker/.env</pre>
+    <p>Find and change at least these lines (use the real domain):</p>
+<pre>SITE_URL=https://erp.yourdomain.com
+API_EXTERNAL_URL=https://api.yourdomain.com
+SUPABASE_PUBLIC_URL=https://api.yourdomain.com
+POSTGRES_PASSWORD=paste-a-long-random-string</pre>
+    <p>Leave <code>ANON_KEY</code> and <code>JWT_SECRET</code> as a <b>matching pair</b> from this LIA <code>.env</code> file. For first go-live you may keep the pair that ships in <code>.env.example</code> on this isolated server, then rotate later. Never paste the <b>cloud</b> anon key here.</p>
+    <p>Save: Ctrl+O, Enter, Ctrl+X.</p>
+    <p>Copy the LIA <code>ANON_KEY</code> onto your laptop in a notepad named <code>LIA-ONLY-keys.txt</code>. You will need it in Phase 8. Do not put it in the shared cloud password manager next to Fnote keys without a clear LIA label.</p>
+
+    <h3>8.3 Start the stack</h3>
+<pre>cd /opt/lia/supabase/docker
+docker compose pull
+docker compose up -d
+docker compose ps</pre>
+    <p>Wait 1–3 minutes. Kong, Auth, Rest, Storage, and db should show <b>running</b> / healthy. If a container restarts in a loop, run <code>docker compose logs --tail=80</code> and fix the <code>.env</code> before continuing.</p>
+    <p>Kong listens on <b>localhost port 8000</b>. The internet must not hit 8000. Nginx will expose only 443.</p>
+<pre>curl -sS -I http://127.0.0.1:8000/auth/v1/health</pre>
+    <p>You want an HTTP response, not “connection refused”.</p>
+
+    <h2 id="p6">9. Phase 6 — Load MayaBela schema and functions</h2>
+    <p><span class="who our">Our side</span>. Copy the MayaBela <code>supabase</code> folder from your laptop onto this server.</p>
+
+    <h3>9.1 Copy files from your Windows laptop</h3>
+    <p>On the laptop, PowerShell (change the path and IP):</p>
+<pre>scp -r C:\path\to\mayabela\supabase liaadmin@YOUR_PUBLIC_IP:/opt/lia/mayabela-supabase</pre>
+    <p>If port 22 is not open from the internet (good), copy with a USB stick instead: put the repo’s <code>supabase</code> folder on USB, plug into the server, copy into <code>/opt/lia/mayabela-supabase</code>.</p>
+<pre>ls /opt/lia/mayabela-supabase/migrations
+ls /opt/lia/mayabela-supabase/functions</pre>
+    <p>You must see files starting <code>20260725120000_app_documents.sql</code> through the latest <code>insa_permission_hardening</code> migration, and function folders including <code>school-login</code>.</p>
+
+    <h3>9.2 Apply every SQL migration, oldest first</h3>
+    <p>Do not skip files. If one errors, stop and fix it.</p>
+<pre>cd /opt/lia/mayabela-supabase
+ls migrations | sort
+cd /opt/lia/supabase/docker
+docker compose exec -T db psql -U postgres -d postgres &lt; /opt/lia/mayabela-supabase/migrations/20260725120000_app_documents.sql</pre>
+    <p>Repeat the last line for <b>each</b> remaining file in <code>migrations/</code>, in filename order (the date prefix is the order). When you are more comfortable you can install Supabase CLI and run <code>supabase db push</code> against this local URL — same result.</p>
+
+    <h3>9.3 Storage buckets</h3>
+    <p>On a browser <b>on the school LAN only</b>, open:</p>
+<pre>http://LAN_IP:54323</pre>
+    <p>That is Supabase Studio. Create or confirm buckets:</p>
+    <ul>
+      <li><code>school-files</code> — private</li>
+      <li><code>school-branding</code> — public</li>
+    </ul>
+    <p>Do not open port 54323 on the internet. After go-live, use an SSH tunnel if you need Studio.</p>
+
+    <h3>9.4 Deploy Edge Functions</h3>
+    <p>Copy MayaBela function folders into the self-host functions location used by this Docker stack (folder names must match exactly), including <code>_shared</code> and at least:</p>
+    <p><code>school-login</code>, <code>school-public-brand</code>, <code>school-verify-student</code>, <code>school-change-password</code>, <code>school-upsert-account</code>, <code>school-upsert-registry</code>, <code>school-delete-account</code>, <code>school-register-parent</code>, <code>school-request-password-reset</code>, <code>school-request-student-password-reset</code>, <code>school-confirm-password-reset</code>, <code>school-refresh-claims</code>, <code>school-invite-parent</code>, <code>school-submit-application</code>, <code>platform-owner-pin</code>, <code>platform-list-schools</code>, <code>platform-create-school</code>, <code>platform-update-school</code>, <code>platform-delete-school</code>, <code>platform-upload-logo</code>, <code>platform-upload-mark</code>, <code>platform-mail-config</code>, <code>maya-assistant-chat</code>, <code>send-push</code>, <code>client-crash-report</code>.</p>
+    <p>Set secrets on <b>this</b> server only (not the cloud project):</p>
+    <ul>
+      <li><code>MAIL_FROM</code> plus either <code>RESEND_API_KEY</code> or SMTP host/user/pass</li>
+      <li>Platform owner PIN secret used by <code>platform-owner-pin</code></li>
+      <li>Optional <code>MAYA_AI_API_KEY</code> if LIA bought Maya chat</li>
+    </ul>
+    <p>Password reset will not work until mail is set. Then:</p>
+<pre>cd /opt/lia/supabase/docker
+docker compose restart functions</pre>
+
+    <h2 id="p7" class="pagebreak">10. Phase 7 — HTTPS reverse proxy (the padlock)</h2>
+    <p><span class="who our">Our side</span>. Nginx does two jobs: ERP hostname → website files; API hostname → Kong on <code>127.0.0.1:8000</code>.</p>
+
+    <h3>10.1 Website folder</h3>
+<pre>sudo mkdir -p /var/www/lia-erp
+sudo chown -R $USER:www-data /var/www/lia-erp
+echo "LIA ERP coming soon" | sudo tee /var/www/lia-erp/index.html</pre>
+
+    <h3>10.2 Nginx site file</h3>
+<pre>sudo nano /etc/nginx/sites-available/lia-erp</pre>
+    <p>Paste this whole block. Change the two hostnames.</p>
+<pre>server {
+    listen 80;
+    server_name erp.yourdomain.com;
+
+    root /var/www/lia-erp;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}</pre>
+    <p>Save: Ctrl+O, Enter, Ctrl+X. Then:</p>
+<pre>sudo ln -s /etc/nginx/sites-available/lia-erp /etc/nginx/sites-enabled/lia-erp
+sudo nginx -t
+sudo systemctl reload nginx</pre>
+    <p><code>nginx -t</code> must say syntax is ok. If it says “duplicate default server”, you still have the Ubuntu default site enabled — run <code>sudo rm /etc/nginx/sites-enabled/default</code> and reload again.</p>
+
+    <h3>10.3 Free HTTPS certificates</h3>
+    <p>DNS (Phase 1) must already point here.</p>
+<pre>sudo apt -y install certbot python3-certbot-nginx
+sudo certbot --nginx -d erp.yourdomain.com -d api.yourdomain.com</pre>
+    <ul>
+      <li>Email: principal or your ops email</li>
+      <li>Agree to terms: <code>Y</code></li>
+      <li>Redirect HTTP → HTTPS: choose <b>2</b> (Yes)</li>
+    </ul>
+    <p>Test on a phone using <b>mobile data</b> (turn school Wi‑Fi off):</p>
+    <ul>
+      <li>Open <code>https://erp.yourdomain.com</code></li>
+      <li>You should see “LIA ERP coming soon”</li>
+      <li>The padlock must be closed</li>
+    </ul>
+    <div class="stop">
+      <strong>If this fails, do not build the app yet.</strong>
+      Fix DNS, port 80/443 forwarding, or the grey-cloud Cloudflare setting first. Certbot cannot succeed until the public IP answers on port 80 for those two names.
+    </div>
+
+    <h2 id="p8">11. Phase 8 — Build the LIA website so it talks only to LIA</h2>
+    <p><span class="who our">Our side, on your laptop</span>. This is the step that protects Fnote.</p>
+    <div class="stop">
+      <strong>Do not run</strong> <code>deploy-cloudflare-pages.cmd</code>.
+      That command updates the shared site every other school uses.
+    </div>
+    <p>On the Windows laptop, in the MayaBela folder:</p>
+<pre>cd C:\path\to\mayabela
+flutter pub get
+flutter build web --release --pwa-strategy=none --dart-define=SUPABASE_CONFIGURED=true --dart-define=SUPABASE_URL=https://api.yourdomain.com --dart-define=SUPABASE_ANON_KEY=PASTE_LIA_ANON_KEY_HERE</pre>
+    <p>Paste the LIA <code>ANON_KEY</code> from Phase 5, not the cloud key.</p>
+    <p><b>Check the build did not bake the cloud URL.</b> In PowerShell:</p>
+<pre>findstr hwkiihonthueadbhcvfi build\web\main.dart.js</pre>
+    <p>If that command prints any line, the build is wrong. Do not upload it. Check you did not still have a cloud URL in <code>.env.local</code>, and rebuild with the dart-defines above.</p>
+    <p>Copy files to the server (USB or scp):</p>
+<pre>scp -r build\web\* liaadmin@LAN_IP:/var/www/lia-erp/</pre>
+    <p>On the server:</p>
+<pre>sudo chown -R www-data:www-data /var/www/lia-erp</pre>
+    <p>Phone on mobile data: open <code>https://erp.yourdomain.com</code>. You should see the MaJo / MayaBela login, not “coming soon”. Hard refresh: Ctrl+Shift+R (Windows) or reload with cache disabled.</p>
+
+    <h2 id="p9">12. Phase 9 — Create only the LIA school</h2>
+    <p><span class="who our">Our side</span> in the <b>LIA</b> site, not pages.dev.</p>
+    <ol>
+      <li>Open <code>https://erp.yourdomain.com</code></li>
+      <li>Open Platform console (same owner-PIN flow as production, but this PIN exists only on LIA’s server)</li>
+      <li>Create school:
+        <ul>
+          <li>School ID: <code>LIA</code> (or the ID they chose)</li>
+          <li>Name: Lebawi International Academy</li>
+          <li>Modules ON = the 49 TOR modules</li>
+          <li>Modules OFF = these 10 ids: <code>campus</code>, <code>cctv</code>, <code>finance</code>, <code>hr</code>, <code>payroll</code>, <code>transport</code>, <code>transport_buses</code>, <code>transport_live_gps</code>, <code>add_driver</code>, <code>digital_ops</code></li>
+        </ul>
+      </li>
+      <li>Create the principal / school-admin account</li>
+      <li>Log out of platform. Log in as that admin. Change the password</li>
+    </ol>
+    <p>Do not create Fnote or any other school on this server.</p>
+
+    <h2 id="p10" class="pagebreak">13. Phase 10 — Prove it is isolated (15 minutes)</h2>
+    <p><span class="who both">Both</span>. Tick every row before you leave.</p>
+    <table class="check">
+      <thead><tr><th></th><th>Test</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>☐</td><td>Login on https://erp.yourdomain.com as LIA admin</td><td>Works</td></tr>
+        <tr><td>☐</td><td>Login on https://mayabela.pages.dev as Fnote</td><td>Still works, unchanged</td></tr>
+        <tr><td>☐</td><td>LIA admin data appears on pages.dev</td><td><b>Must not</b></td></tr>
+        <tr><td>☐</td><td>Fnote data appears on erp.yourdomain.com</td><td><b>Must not</b></td></tr>
+        <tr><td>☐</td><td>Create a dummy student on LIA</td><td>Visible only on LIA URL</td></tr>
+        <tr><td>☐</td><td>Parent on mobile data opens erp.yourdomain.com</td><td>Login page, padlock closed</td></tr>
+        <tr><td>☐</td><td>Ask LIA to unplug WAN for 10 seconds</td><td>LIA site dies; pages.dev still lives — this is correct</td></tr>
+      </tbody>
+    </table>
+    <p>If LIA data appears on the shared cloud, you used the wrong <code>SUPABASE_URL</code>. Rebuild Phase 8.</p>
+
+    <h2 id="p11">14. Phase 11 — Mail, backups, handover</h2>
+    <h3>14.1 Mail</h3>
+    <p>Until mail secrets are set, parents cannot reset passwords. Configure Resend or SMTP on the LIA functions, then send one test reset to the principal.</p>
+
+    <h3>14.2 Nightly backup — <span class="who our">our side</span>, leave this running</h3>
+<pre>sudo nano /usr/local/bin/lia-backup.sh</pre>
+    <p>Paste:</p>
+<pre>#!/bin/bash
+set -e
+STAMP=$(date +%F)
+DIR=/opt/lia/backups/$STAMP
+mkdir -p "$DIR"
+cd /opt/lia/supabase/docker
+docker compose exec -T db pg_dump -U postgres postgres | gzip &gt; "$DIR/postgres.sql.gz"</pre>
+<pre>sudo chmod +x /usr/local/bin/lia-backup.sh
+sudo crontab -e</pre>
+    <p>Add this line, save:</p>
+<pre>15 2 * * * /usr/local/bin/lia-backup.sh</pre>
+    <p>Copy <code>/opt/lia/backups</code> to a USB held by the principal every week. <b>Prove restore once</b> on a spare folder before you leave. A backup you never restored is not a backup.</p>
+
+    <h3>14.3 Paper you leave with the school</h3>
+    <table class="check">
+      <thead><tr><th></th><th>Item</th><th>Write it</th></tr></thead>
+      <tbody>
+        <tr><td>☐</td><td>URL staff/parents use</td><td>https://erp.yourdomain.com</td></tr>
+        <tr><td>☐</td><td>School ID</td><td></td></tr>
+        <tr><td>☐</td><td>Admin username (password in a separate envelope)</td><td></td></tr>
+        <tr><td>☐</td><td>“Do not use mayabela.pages.dev for LIA”</td><td>Printed on the envelope</td></tr>
+        <tr><td>☐</td><td>Who reboots the server</td><td></td></tr>
+        <tr><td>☐</td><td>USB backup day</td><td></td></tr>
+        <tr><td>☐</td><td>MayaBela support phone</td><td>+251 911 646 444</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>Android APK is optional and later.</strong>
+      If you give LIA the Fnote APK, that APK still talks to the shared cloud. A LIA phone build must use the same dart-defines as Phase 8.
+    </div>
+    <div class="note">
+      <strong>When LIA’s public IP or power is down, LIA’s system is down.</strong>
+      There is no automatic fallback to MayaBela cloud, and you should not add one if they want no cloud copy of LIA records.
+    </div>
+
+    <h2 id="days">15. Day-by-day order</h2>
+    <table>
+      <thead><tr><th>When</th><th>Where</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>Day 0</td><td>Office</td><td>Collect IP, domain login, hardware photo. Confirm public IP is real.</td></tr>
+        <tr><td>Morning 1</td><td>DNS website</td><td>Add <code>erp</code> + <code>api</code> A records. Grey cloud if Cloudflare.</td></tr>
+        <tr><td>Morning 1</td><td>Server room</td><td>Ubuntu + Docker + firewall 80/443</td></tr>
+        <tr><td>Afternoon 1</td><td>Server</td><td>Self-host stack, migrations, functions, nginx, Certbot. Padlock on phone data.</td></tr>
+        <tr><td>Morning 2</td><td>Your laptop</td><td>Flutter web build with LIA URL only. Search the JS for the cloud project ref — must find nothing.</td></tr>
+        <tr><td>Morning 2</td><td>Server</td><td>Upload <code>build/web</code>, create LIA school, turn off the 10 excluded modules</td></tr>
+        <tr><td>Afternoon 2</td><td>On site</td><td>Isolation tests + backup restore drill + paper handover</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="not">16. What this is not</h2>
+    <ul>
+      <li>Not copying files onto a Windows desktop and double-clicking</li>
+      <li>Not pointing LIA at the current Supabase project</li>
+      <li>Not updating https://mayabela.pages.dev</li>
+      <li>Not a USB “installer” — this repo does not ship a one-click on-prem installer yet</li>
+    </ul>
+    <p>That is why this is a commissioning visit, not a 20-minute copy. Sign the agreement as: <b>dedicated on-prem instance for LIA, separate from the multi-tenant cloud.</b></p>
+
+    <p class="footer-note">
+      MaJo Bridge Technologies and Events PLC · MaJo e-School Bridge / MayaBela · LIA on-prem go-live guide v1.0 · 9 November 2026 (East Africa Time).<br />
+      This document is an internal install playbook. It is not the commercial TOR or the technical proposal.
+      Shared cloud for other schools remains https://mayabela.pages.dev and must not receive LIA data.
+    </p>
+  </article>
+</body>
+</html>
