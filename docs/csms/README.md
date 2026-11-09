@@ -5,7 +5,10 @@
 **Owner:** Cyber Security Officer (CSO)  
 **Applies to:** MaJo e-School Bridge / MayaBela product, engineering, support, and the hosted multi-tenant cloud used by customer schools.
 
-This pack is the organisation’s CSMS for INSA Cyber Security Audit and Evaluation Guideline v1.0 (May 2015 E.C.), mapped to people, process, and technology.
+This pack is the organisation’s CSMS for:
+
+- INSA **Cyber Security Audit and Evaluation Guideline** v1.0 (May 2015 E.C.) — scored evaluation (R3: Mature 86/100 on the submitted TOE).
+- INSA **Critical Mass Cyber Security Requirement Standard (CMCSRS) version 2.0** — mandatory requirement standard. Applicability and N/A justifications: [CSMS-CMCSRS-001](CSMS-CMCSRS-001-applicability.md). That evaluation is **not** the same as the 86/100 score.
 
 | Document | Purpose |
 | --- | --- |
@@ -24,6 +27,7 @@ This pack is the organisation’s CSMS for INSA Cyber Security Audit and Evaluat
 | [CSMS-KEY-001 Cryptography](CSMS-KEY-001-cryptography-and-keys.md) | Anon vs service-role, PIN, TLS |
 | [CSMS-DPA-001 Processor terms](CSMS-DPA-001-processor-terms.md) | Children’s data processor description |
 | [CSMS-CC-001 Security Target](CSMS-CC-001-security-target.md) | CC-inspired product evaluation (not a CB certificate) |
+| [CSMS-CMCSRS-001 Applicability](CSMS-CMCSRS-001-applicability.md) | CMCSRS v2.0 process map and N/A justifications (§6.2.a) |
 | [Records](records/) | Adoption, awareness, tabletop, restore drill, internal evaluation |
 
 **Live customer schools are not changed by adopting this pack.** Production apply of SQL/Edge Functions is a scheduled change window after staging, so teachers, parents, and students keep working during audit submission.
