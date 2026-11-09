@@ -20,5 +20,10 @@ This pack is the organisation’s CSMS for INSA Cyber Security Audit and Evaluat
 | [CSMS-AUD-001 Internal audit programme](CSMS-AUD-001-internal-audit-programme.md) | Annual CSMS audit + CAAT tests |
 | [CSMS-HR-001 Awareness](CSMS-HR-001-awareness-and-acceptable-use.md) | Staff and school-admin rules |
 | [CSMS-TEV-001 Technical evaluation](CSMS-TEV-001-technical-evaluation.md) | Source tests, pentest track, CC track |
+| [CSMS-AST-001 Asset inventory](CSMS-AST-001-asset-inventory.md) | Systems, collections, keys, suppliers |
+| [CSMS-KEY-001 Cryptography](CSMS-KEY-001-cryptography-and-keys.md) | Anon vs service-role, PIN, TLS |
+| [CSMS-DPA-001 Processor terms](CSMS-DPA-001-processor-terms.md) | Children’s data processor description |
+| [CSMS-CC-001 Security Target](CSMS-CC-001-security-target.md) | CC-inspired product evaluation (not a CB certificate) |
+| [Records](records/) | Adoption, awareness, tabletop, restore drill, internal evaluation |
 
 **Live customer schools are not changed by adopting this pack.** Production apply of SQL/Edge Functions is a scheduled change window after staging, so teachers, parents, and students keep working during audit submission.

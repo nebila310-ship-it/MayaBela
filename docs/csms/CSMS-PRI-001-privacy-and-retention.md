@@ -22,7 +22,7 @@ Schools enter children’s data to run education operations. MaJo Bridge is the 
 | Backups | 30 days rolling on hosted; on-prem USB per the school |
 | Support tickets | 2 years, no student dumps attached |
 
-Disposal: delete `app_documents` rows for that `school_id` + collection, then storage objects under `schools/<id>/`. Platform owner delete-school function is the bulk path.
+Disposal: delete `app_documents` rows for that `school_id` + collection, then storage objects under `schools/<id>/`. Platform owner delete-school function is the bulk path. A restore-shaped drill of the **procedure** (dump → new database → count) is recorded in `docs/csms/records/restore-drill-2026-11-09.md` on a local throwaway database — never by overwriting a live school.
 
 ## Data-subject rights
 

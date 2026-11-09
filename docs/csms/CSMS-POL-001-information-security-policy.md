@@ -13,7 +13,7 @@ Majo Bridge Technologies and Events PLC protects the confidentiality, integrity,
 1. School A cannot read or write School B.  
 2. A role sees only what that role needs (need-to-know). Classroom teachers keep teaching; they do not receive payroll, HR, or whole-school children’s files they do not manage.  
 3. Drivers see only students assigned to their bus.  
-4. Privileged access (school admin, platform owner) uses a second factor. Other roles stay password-based so live classrooms are not locked.  
+4. Privileged access (school admin, finance, platform owner) uses a second factor. Classroom teachers, parents, students, and drivers stay password-based so live classrooms are not locked.  
 5. Changes that could stop a live school are applied on staging first, then in a notified window.
 
 ## 3. Scope
@@ -30,7 +30,7 @@ Integrity, confidentiality, independence of internal audit, due professional car
 | --- | --- |
 | Identity | JWT school/role claims in `app_metadata` only. Anon key in the client; RLS is the boundary. Service-role key never in the app. |
 | Access | Row-level security on `app_documents`. Write-guard + INSA module gates. Registry Edge Function has its own role policy because it uses the service role. |
-| Privileged MFA | Required for school Admin (product default). Platform-owner PIN is separate and rate-limited (PBKDF2). Classroom teacher MFA remains optional so lessons continue. |
+| Privileged MFA | Required for school Admin and Finance (product default). Platform-owner PIN is separate and rate-limited (PBKDF2). Classroom teacher MFA remains optional so lessons continue. |
 | Logging | School, platform, and grade audit collections. Grade audit is append-only in source. |
 | Children | Driver need-to-know; public bucket is logos only (`school-branding`). Student files stay in `school-files` under `schools/<id>/`. |
 | Development | CI: Flutter analyze/tests, Deno policy tests, local Postgres replay of every migration. Staging RLS isolation never targets production. |

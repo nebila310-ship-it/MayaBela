@@ -10,7 +10,7 @@
 ## School staff (give this to the school admin)
 
 - Temporary passwords change on first login (10+ characters).  
-- School Admin keeps authenticator MFA on.  
+- School Admin and Finance keep authenticator MFA on. Classroom teachers are not forced.  
 - Do not photograph other people’s report cards into a public channel.  
 - Drivers only need the passenger list for their bus — the system now enforces that.
 

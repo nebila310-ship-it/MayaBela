@@ -1,21 +1,27 @@
 # CSMS-TEV-001 — Technical evaluation programme
 
-INSA Guideline §9 allows compliance testing and substantive testing with CAATs. This product’s CAAT is the local Postgres role matrix (every migration replayed; each school role reads/writes as in production).
+INSA Guideline §9 requires compliance testing and substantive testing, including CAAT. This product’s CAAT replays every migration into local Postgres and checks each school role.
 
 ## Already run on every CI (substantive)
 
-- Flutter unit tests including full-push denial for non-admin.  
-- Deno tests for registry write policy (admissions, exam attempts, discipline).  
-- `supabase/tests/local_pg` — INSA permission hardening + driver need-to-know.
+- Flutter unit tests including full-push denial for non-admin and privileged MFA (Admin + Finance; teachers opt-in).  
+- Deno tests: registry write policy, platform PIN, Edge Function auth inventory.  
+- `supabase/tests/local_pg` — INSA permission hardening, driver need-to-know, **two-school isolation**.
 
-## External penetration test (track)
+## Internal technical evaluation
 
-An independent web/API pentest is scheduled **after** the staging apply of the INSA migrations and **before** claiming Advanced maturity. Until then, residual risk R10 is accepted at Medium. This does not reopen a Major NC against the **candidate** (controls are implemented and CAAT-tested); it is a Minor until the pentest letter is filed.
+`tools/insa_internal_evaluation.sh` (records under `docs/csms/records/`):
+
+- No `service_role` JWT in Dart/client source.  
+- Edge Function catalogue: every folder has an auth mode (JWT, PIN, public rate-limit, or push secret).  
+- CAAT + restore drill of the local policy database.
+
+This is **not** a third-party pentest letter. An independent web/API pentest remains scheduled **after** the staging apply (risk R10). It is a residual Minor, not a Major, because CAAT + internal evaluation already substantiate the controls on the TOE.
 
 ## Common Criteria (track)
 
-Full CC laboratory evaluation is not claimed. The TOE for this submission is the CSMS + source. CC remains an opportunity for improvement (Guideline observation), not a certification blocker for a management-system audit of this size.
+A CC-inspired Security Target is in `CSMS-CC-001`. Full laboratory evaluation (CB certificate) is **not** claimed. SFR evidence is the CAAT pack.
 
 ## Production apply (live schools)
 
-SQL and Edge Functions land on **staging first**. Production apply is a notified window so attendance, marks, and parent login do not change mid-day. The candidate in git is what INSA should score; the shared live project is not mutated by this audit-remediation branch.
+SQL and Edge Functions land on **staging first**. Production apply is a notified window so attendance, marks, and parent login do not change mid-day.

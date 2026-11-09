@@ -13,7 +13,8 @@ Likelihood × impact: 1–5. Treatment is **mitigate / transfer / accept / avoid
 | R7 | Cloud region / sovereignty | 3 | 4 | Supplier file; dedicated on-prem instance for schools that forbid shared cloud | Medium | CSO |
 | R8 | Maya Assistant PII | 2 | 4 | Counts-only live context; model instructed to refuse health/safeguarding | Low | Engineering |
 | R9 | Production lagging source | 3 | 4 | **Do not rush onto live schools.** Staging → notified window | Accepted until apply window | CSO |
-| R10 | No external pentest yet | 3 | 3 | CAAT (local Postgres matrix) now; external pentest scheduled (CSMS-TEV-001) | Medium | CSO |
+| R10 | No external pentest yet | 3 | 3 | CAAT + internal evaluation on file; external pentest scheduled after staging apply (CSMS-TEV-001) | Medium | CSO |
+| R13 | Finance MFA lockout | 2 | 3 | Required in product like Admin: login still works, Settings prompts enrollment. Teachers stay opt-in. | Low | Engineering |
 | R11 | Lost laptop with school JWT | 2 | 3 | Short-lived JWT, MFA for admin, remote session revoke via password change | Medium | Support |
 | R12 | On-prem school power/IP outage | 4 | 3 | BCM file; parents off-campus only if public HTTPS is up | Accepted (customer power) | School |
 

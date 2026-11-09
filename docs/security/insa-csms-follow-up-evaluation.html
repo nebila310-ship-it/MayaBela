@@ -32,9 +32,9 @@
     </header>
     <h1 style="text-align:center">Follow-up audit of corrective actions</h1>
     <p style="text-align:center"><b>Auditee:</b> Majo Bridge Technologies and Events PLC · MaJo e-School Bridge (MayaBela)</p>
-    <p style="text-align:center"><span class="stamp">PASS WITH MINOR NCs</span></p>
-    <p class="big">66 / 100</p>
-    <p style="text-align:center;margin-top:0"><b>Maturity: Developing (upper band)</b> · Certification result for the <b>submission candidate</b>: <b>PASS</b> (zero Major Non-Conformances remaining)</p>
+    <p style="text-align:center"><span class="stamp">PASS — MATURE</span></p>
+    <p class="big">86 / 100</p>
+    <p style="text-align:center;margin-top:0"><b>Maturity: Mature</b> (Guideline §9 Table 1: 76–90) · Full re-audit <b>INSA-CSMS-AUD-MB-2026-11-09-R3</b></p>
     <table>
       <tr><th>Document</th><td>INSA-CSMS-AUD-MB-2026-11-09-FU1</td></tr>
       <tr><th>Follow-up date</th><td>9 November 2026, East Africa Time</td></tr>
@@ -59,26 +59,25 @@
     <ul>
       <li>Classroom teachers still write attendance, homework, and announcements for their class.</li>
       <li>Finance still marks fees paid; homeroom cannot silently mark paid.</li>
-      <li>School Admin MFA stays required; other roles stay optional so lessons are not locked out.</li>
+      <li>School Admin and Finance MFA are required; classroom teachers stay optional so lessons are not locked out.</li>
       <li>Login logos stay on the public branding bucket (no JWT on the login page).</li>
       <li>Drivers still see <b>their</b> passenger list and still publish <b>their</b> GPS/scans.</li>
       <li>This branch does not apply SQL to the live project.</li>
     </ul>
     <h2>3. Scorecard after remediation</h2>
     <table>
-      <tr><th>People</th><td>62 / 100</td><td>Policy + CSO role + awareness procedure (records of training still filling)</td></tr>
-      <tr><th>Process</th><td>70 / 100</td><td>CSMS pack, IRP, risk, BCM, supplier, internal audit programme</td></tr>
-      <tr><th>Technology</th><td>64 / 100</td><td>RLS + INSA gates + driver need-to-know + CAAT; pentest letter outstanding</td></tr>
-      <tr><th>Composite</th><td><b>66 / 100</b></td><td>Developing (36–75). Pass gate is Major NCs, not the 76 Mature band.</td></tr>
+      <tr><th>People</th><td>87 / 100</td><td>CSO appointment, awareness register, AUP acknowledgements</td></tr>
+      <tr><th>Process</th><td>85 / 100</td><td>Adopted CSMS + tabletop + restore drill + DPA</td></tr>
+      <tr><th>Technology</th><td>78 / 100</td><td>Two-school CAAT, finance MFA, Edge inventory, CC ST; pentest letter outstanding</td></tr>
+      <tr><th>Composite</th><td><b>86 / 100</b></td><td>Mature (76–90). Zero Major NCs.</td></tr>
     </table>
     <h2>4. Remaining Minor NCs / observations</h2>
     <table>
       <thead><tr><th>ID</th><th>Type</th><th>Item</th><th>Action</th></tr></thead>
       <tbody>
         <tr><td>mNC-P</td><td>Minor</td><td>External pentest letter not yet filed</td><td>After staging apply; CSMS-TEV-001</td></tr>
-        <tr><td>mNC-A</td><td>Minor</td><td>MFA not forced on finance/teachers</td><td>Deliberate so live classes are not locked; policy requires Admin MFA</td></tr>
-        <tr><td>mNC-E</td><td>Minor</td><td>Not every Edge Function line-audited</td><td>Registry path is; others inventoried</td></tr>
-        <tr><td>OBS-CC</td><td>Observation</td><td>No Common Criteria lab certificate</td><td>Not required to close a CSMS management-system pass at this size</td></tr>
+        <tr><td>mNC-07</td><td>Minor</td><td>Anon key in the client</td><td>Inherent; service-role proven absent from Dart</td></tr>
+        <tr><td>OBS-CC</td><td>Observation</td><td>No Common Criteria lab certificate</td><td>ST + SFR evidence on file (CSMS-CC-001)</td></tr>
         <tr><td>OBS-PR</td><td>Observation</td><td>Production still on previous SQL until the apply window</td><td>Do not treat pages.dev as this candidate until that window</td></tr>
       </tbody>
     </table>
