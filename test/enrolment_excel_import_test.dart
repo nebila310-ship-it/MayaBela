@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mayabela/services/auth_service.dart';
+import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/enrolment_excel_import.dart';
 import 'package:mayabela/services/enrolment_import_service.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
@@ -167,6 +168,70 @@ void main() {
     expect(draft.students.first.className, 'Grade 1C');
     expect(draft.students.first.fatherName, 'Alem');
   });
+
+  test('empty Fnote teacher workbook is recognised and imports nobody', () {
+    final bytes = File(
+      'docs/fenote-raey/enrolment-forms/Fnote_Raey_Teacher_Registration.xlsx',
+    ).readAsBytesSync();
+    expect(EnrolmentExcelImport.looksLikeFenote(bytes), isTrue);
+    final draft = EnrolmentExcelImport.parseBytes(bytes);
+    expect(draft.teachers, isEmpty);
+    expect(draft.students, isEmpty);
+  });
+
+  test('teacher workbook joins homeroom and subject rows by phone', () {
+    final draft = EnrolmentExcelImport.parseBytes(_filledTeacherWorkbook());
+    expect(draft.teachers, hasLength(1));
+    final teacher = draft.teachers.first;
+    expect(teacher.fullName, 'Sara Bekele');
+    expect(teacher.email, 'sara.bekele@fnoteraey.et');
+    expect(teacher.phone, '0911234567');
+    expect(teacher.roles, contains(TeacherStaffRole.homeroomTeacher));
+    expect(teacher.roles, contains(TeacherStaffRole.subjectTeacher));
+    expect(
+      teacher.classAssignments.map((a) => a.className),
+      containsAll(['Grade 2A', 'Grade 3B']),
+    );
+    final homeroom = teacher.classAssignments.firstWhere(
+      (a) => a.role == TeacherStaffRole.homeroomTeacher,
+    );
+    expect(homeroom.className, 'Grade 2A');
+    expect(homeroom.subjectNames, contains('Mathematics'));
+    final subject = teacher.classAssignments.firstWhere(
+      (a) => a.role == TeacherStaffRole.subjectTeacher,
+    );
+    expect(subject.className, 'Grade 3B');
+    expect(subject.subjectNames, containsAll(['Mathematics', 'Science']));
+    expect(
+      draft.skipped.any((line) => line.contains('Orphan Teacher')),
+      isTrue,
+    );
+  });
+
+  test('importing teacher workbook assigns homeroom and subjects', () async {
+    final draft = EnrolmentExcelImport.parseBytes(_filledTeacherWorkbook());
+    final result = await EnrolmentImportService.instance.importDraft(draft);
+    expect(result.createdTeacherIds, hasLength(1));
+    final teacher = TeacherRegistryService.instance
+        .lookupAnyById(result.createdTeacherIds.first);
+    expect(teacher?.fullName, 'Sara Bekele');
+    expect(
+      teacher?.classAssignments.any(
+        (a) =>
+            a.className == 'Grade 2A' &&
+            a.role == TeacherStaffRole.homeroomTeacher,
+      ),
+      isTrue,
+    );
+    expect(
+      teacher?.classAssignments.any(
+        (a) =>
+            a.className == 'Grade 3B' &&
+            a.subjectNames.contains('Science'),
+      ),
+      isTrue,
+    );
+  });
 }
 
 List<int> _filledFenoteWorkbook() {
@@ -324,6 +389,94 @@ List<int> _filledFenoteWorkbook() {
         'Quality Assurance',
         '',
         'No',
+      ],
+    ],
+  );
+  return excel.encode()!;
+}
+
+List<int> _filledTeacherWorkbook() {
+  final excel = Excel.createExcel();
+  _writeRegister(
+    excel,
+    'Teachers',
+    const [
+      'Full name *',
+      'Gender',
+      'Date of birth',
+      'Email *',
+      'Phone (login) *',
+      'Existing HR ID',
+      'Campus',
+    ],
+    const [
+      [
+        'Sara Bekele',
+        'Female',
+        '12/04/1992',
+        'sara.bekele@fnoteraey.et',
+        '0911234567',
+        '',
+        'Main Campus',
+      ],
+    ],
+  );
+  _writeRegister(
+    excel,
+    'Homeroom by class',
+    const [
+      'Grade *',
+      'Section *',
+      'Class name',
+      'Homeroom teacher full name *',
+      'Homeroom teacher phone *',
+      'Subject 1',
+      'Subject 2',
+      'Subject 3',
+    ],
+    const [
+      [
+        'Grade 2',
+        'A',
+        '',
+        'Sara Bekele',
+        '0911234567',
+        'Mathematics',
+      ],
+    ],
+  );
+  _writeRegister(
+    excel,
+    'Subject teaching',
+    const [
+      'Teacher full name *',
+      'Teacher phone *',
+      'Grade *',
+      'Section *',
+      'Class name',
+      'Subject 1 *',
+      'Subject 2',
+      'Subject 3',
+      'Subject 4',
+      'Subject 5',
+    ],
+    const [
+      [
+        'Sara Bekele',
+        '0911234567',
+        'Grade 3',
+        'B',
+        '',
+        'Mathematics',
+        'Science',
+      ],
+      [
+        'Orphan Teacher',
+        '0911999888',
+        'Grade 4',
+        'A',
+        '',
+        'English',
       ],
     ],
   );
