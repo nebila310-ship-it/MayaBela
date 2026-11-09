@@ -90,7 +90,11 @@ jobs:
         run: deno check supabase/functions/platform-owner-pin/index.ts supabase/functions/school-upsert-account/index.ts supabase/functions/school-upsert-registry/index.ts
 
       - name: Test platform PIN hashing, registry write rules, and Edge auth inventory
-        run: deno test --allow-read=supabase/functions supabase/functions/_shared/platform_pin_test.ts supabase/functions/_shared/registry_write_policy_test.ts supabase/functions/_shared/edge_auth_inventory_test.ts
+        run: |
+          deno test --allow-read \
+            supabase/functions/_shared/platform_pin_test.ts \
+            supabase/functions/_shared/registry_write_policy_test.ts \
+            supabase/functions/_shared/edge_auth_inventory_test.ts
 
   # Replays every migration into a throwaway Postgres container and checks
   # what each school role may read and write. No Supabase project is touched.
