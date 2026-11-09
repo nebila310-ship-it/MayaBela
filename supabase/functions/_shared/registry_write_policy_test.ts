@@ -50,6 +50,15 @@ Deno.test("admissions are written by the registrar desk only", () => {
   expect(mayWriteAdmissions(admin), "school admin must write admissions");
   expect(!mayWriteAdmissions(teacher), "classroom teacher must not");
   expect(!mayWriteAdmissions(parent), "parent must not");
+  const row = { id: "APP-1", studentName: "A" };
+  expect(
+    guardRegistryRecord("admission_applications", row, registrar) !== null,
+    "registrar upsert",
+  );
+  expect(
+    guardRegistryRecord("admission_applications", row, teacher) === null,
+    "classroom teacher blocked on the record guard",
+  );
 });
 
 Deno.test("students write only their own exam attempts", () => {

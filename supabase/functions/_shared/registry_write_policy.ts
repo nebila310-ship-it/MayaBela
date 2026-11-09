@@ -117,6 +117,8 @@ export function guardRegistryRecord(
   prior?: Record<string, unknown> | null,
 ): Record<string, unknown> | null {
   switch (collection) {
+    case "admission_applications":
+      return mayWriteAdmissions(caller) ? record : null;
     case "exam_attempts": {
       if (caller.role !== "student") return record;
       const sid = upperTrim(record.studentId);
