@@ -15,6 +15,6 @@
 2. `docs/security/MAJOBRIDGE_SECURITY_AUDIT.md` (source findings).  
 3. Migrations `20261105120000_insa_permission_hardening.sql` and `20261109120000_insa_driver_need_to_know.sql`.  
 4. CI logs for `database-policies` and `edge-functions`.  
-5. Follow-up evaluation report in `docs/security/`.
+5. Full re-audit `docs/security/INSA_CSMS_Audit_Evaluation_Report_MayaBela.pdf` (INSA-CSMS-AUD-MB-2026-11-09-R2) and the §8.6 follow-up memo.
 
 Internal auditors are independent of the feature they wrote that week (Guideline §5.c).
