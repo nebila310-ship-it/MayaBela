@@ -22,11 +22,22 @@ abstract final class SupabaseStorageBootstrap {
       'Create the school-files bucket (see supabase/migrations) and ensure '
       'SUPABASE_URL / SUPABASE_ANON_KEY are configured.';
 
-  /// Storage insert policy is `to authenticated`. An anon upload of
-  /// `_app_setup_probe/` is "new row violates row-level security policy"
-  /// on `storage.objects`.
+  /// Storage insert policy is `to authenticated`. Probes must sit under
+  /// `schools/<schoolId>/_app_setup_probe/` so one school cannot write the
+  /// shared prefix.
   @visibleForTesting
-  static bool shouldUploadStorageProbe({required bool signedIn}) => signedIn;
+  static bool shouldUploadStorageProbe({
+    required bool signedIn,
+    String? schoolId,
+  }) =>
+      signedIn && (schoolId ?? '').trim().isNotEmpty;
+
+  @visibleForTesting
+  static String storageProbePath(String schoolId, {int? nowMs}) {
+    final sid = schoolId.trim().toUpperCase();
+    final stamp = nowMs ?? DateTime.now().millisecondsSinceEpoch;
+    return 'schools/$sid/_app_setup_probe/$stamp.txt';
+  }
 
   @visibleForTesting
   static bool storageErrorIsRowSecurity(Object error) {
@@ -56,16 +67,18 @@ abstract final class SupabaseStorageBootstrap {
     }
 
     final signedIn = SupabaseBootstrap.client.auth.currentSession != null;
-    if (!shouldUploadStorageProbe(signedIn: signedIn)) {
-      _lastError = 'Sign in before checking storage';
+    final meta = SupabaseBootstrap.client.auth.currentUser?.appMetadata;
+    final schoolId =
+        '${meta?['schoolId'] ?? meta?['school_id'] ?? ''}'.trim().toUpperCase();
+    if (!shouldUploadStorageProbe(signedIn: signedIn, schoolId: schoolId)) {
+      _lastError = 'Sign in to a school before checking storage';
       return false;
     }
 
     if (!forceRecheck && _ready != null) return _ready!;
 
     try {
-      final path =
-          '_app_setup_probe/${DateTime.now().millisecondsSinceEpoch}.txt';
+      final path = storageProbePath(schoolId);
       await SupabaseBootstrap.client.storage
           .from('school-files')
           .uploadBinary(

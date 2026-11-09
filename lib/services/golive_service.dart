@@ -9,15 +9,16 @@ import 'package:mayabela/services/cloud/document_store.dart';
 import 'package:mayabela/services/persistence/golive_persistence_service.dart';
 import 'package:mayabela/services/persistence/student_persistence_service.dart';
 import 'package:mayabela/services/rbac/module_access.dart';
+import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_excel_import.dart';
 import 'package:mayabela/services/student_registry_service.dart';
 import 'package:mayabela/services/teacher_registry_service.dart';
 import 'package:mayabela/services/totp.dart';
 import 'package:mayabela/utils/short_registry_id.dart';
 
-/// Phase J go-live desk: MFA (required for school Admin), privacy rights,
-/// school backups, Excel import. Never writes grades or exams.
-/// Does not auto-enroll anyone — leadership must finish authenticator setup.
+/// Phase J go-live desk: MFA (required for school Admin and Finance),
+/// privacy rights, school backups, Excel import. Never writes grades or
+/// exams. Classroom teachers stay opt-in so lessons are not locked.
 class GoliveService extends ChangeNotifier {
   GoliveService._();
   static final instance = GoliveService._();
@@ -177,9 +178,25 @@ class GoliveService extends ChangeNotifier {
   static bool isLeadershipRole(String? roleKey) =>
       roleKey == AuthService.roleAdmin;
 
+  /// School Admin and the Finance desk (accountant / finance_manager).
+  /// Classroom teachers, parents, students, and drivers stay opt-in.
+  static bool isPrivilegedMfaRole(
+    String? roleKey, [
+    Iterable<String> staffRoles = const [],
+  ]) {
+    if (roleKey == AuthService.roleAdmin) return true;
+    return StaffRoles.holds(staffRoles, StaffRoles.accountant);
+  }
+
   bool isLeadershipUser([RegisteredUser? user]) {
     final row = user ?? AuthService.currentUser;
     return isLeadershipRole(row?.roleKey);
+  }
+
+  bool isPrivilegedMfaUser([RegisteredUser? user]) {
+    final row = user ?? AuthService.currentUser;
+    if (row == null) return false;
+    return isPrivilegedMfaRole(row.roleKey, row.staffRoles);
   }
 
   /// Default is required. A stored policy can turn it off for a school.
@@ -197,17 +214,19 @@ class GoliveService extends ChangeNotifier {
     final uname = (username ?? _username).trim();
     if (uname.isEmpty) return false;
     if (!mfaRequiredForLeadership(schoolId)) return false;
-    final role = roleKey ?? AuthService.currentUser?.roleKey;
-    if (!isLeadershipRole(role)) return false;
+    final row = AuthService.currentUser;
+    final role = roleKey ?? row?.roleKey;
+    final staff = row?.staffRoles ?? const <String>[];
+    if (!isPrivilegedMfaRole(role, staff)) return false;
     return !isEnabledFor(uname, schoolId: schoolId);
   }
 
   bool canDisableEnrollment(String username, {String? schoolId}) {
     if (!mfaRequiredForLeadership(schoolId)) return true;
     final self = username.trim().toLowerCase() == _username.trim().toLowerCase();
-    if (self && isLeadershipUser()) return false;
-    final role = AuthService.currentUser?.roleKey;
-    if (self) return !isLeadershipRole(role);
+    if (self && isPrivilegedMfaUser()) return false;
+    final row = AuthService.currentUser;
+    if (self) return !isPrivilegedMfaRole(row?.roleKey, row?.staffRoles ?? const []);
     return canManageDesk;
   }
 

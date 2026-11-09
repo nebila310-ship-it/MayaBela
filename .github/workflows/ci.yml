@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: read
@@ -73,7 +73,7 @@ jobs:
         run: flutter test --reporter expanded
 
   edge-functions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -89,13 +89,17 @@ jobs:
       - name: Type-check security Edge Functions
         run: deno check supabase/functions/platform-owner-pin/index.ts supabase/functions/school-upsert-account/index.ts supabase/functions/school-upsert-registry/index.ts
 
-      - name: Test platform PIN hashing and registry write rules
-        run: deno test supabase/functions/_shared/platform_pin_test.ts supabase/functions/_shared/registry_write_policy_test.ts
+      - name: Test platform PIN hashing, registry write rules, and Edge auth inventory
+        run: |
+          deno test --allow-read \
+            supabase/functions/_shared/platform_pin_test.ts \
+            supabase/functions/_shared/registry_write_policy_test.ts \
+            supabase/functions/_shared/edge_auth_inventory_test.ts
 
   # Replays every migration into a throwaway Postgres container and checks
   # what each school role may read and write. No Supabase project is touched.
   database-policies:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -126,7 +130,7 @@ jobs:
   # Skips when staging secrets or the destructive-test opt-in are absent.
   # Never runs against production (hwkiihonthueadbhcvfi).
   rls-isolation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -148,7 +152,7 @@ jobs:
           ALLOW_DESTRUCTIVE_RLS_TESTS: ${{ vars.ALLOW_DESTRUCTIVE_RLS_TESTS }}
         run: |
           if [ -z "$STAGING_SUPABASE_URL" ] || [ -z "$STAGING_ANON_KEY" ] || [ -z "$STAGING_SERVICE_ROLE_KEY" ]; then
-            echo "RLS isolation skipped — staging secrets are not configured."
+            echo "Live staging RLS not configured. Compensating control: local two-school CAAT (12_insa_two_school_isolation.sql) in database-policies. Production is never targeted."
             exit 0
           fi
           # The last green CI run took this skip. Failing here makes the job

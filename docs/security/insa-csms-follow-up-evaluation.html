@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>INSA CSMS follow-up evaluation — MaJo Bridge / MayaBela</title>
+  <style>
+    :root { --blue:#123a6d; --ink:#142033; --line:#d6dde8; --ok:#0f7a3a; --warn:#8a5a00; }
+    body { margin:0; background:#e8eef5; color:var(--ink); font-family:"Times New Roman",Times,serif; font-size:11pt; line-height:1.42; }
+    .toolbar { position:sticky; top:0; padding:10px; background:var(--blue); color:#fff; text-align:center; font-family:"Segoe UI",Arial,sans-serif; }
+    .toolbar a { color:#fff; font-weight:700; background:var(--ok); padding:6px 12px; border-radius:6px; text-decoration:none; }
+    .sheet { width:210mm; max-width:100%; margin:16px auto; background:#fff; padding:16mm; box-shadow:0 8px 28px rgba(20,32,51,.12); }
+    .mast { text-align:center; border:2px solid var(--blue); padding:12px; }
+    .stamp { display:inline-block; border:3px solid var(--ok); color:var(--ok); font-family:"Segoe UI",Arial,sans-serif; font-weight:800; letter-spacing:1px; padding:8px 16px; font-size:16pt; margin:10px 0; }
+    table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.5pt; }
+    th, td { border:1px solid var(--line); padding:6px; vertical-align:top; text-align:left; }
+    th { background:#f3f6fb; color:var(--blue); }
+    h2 { color:var(--blue); border-bottom:1px solid var(--blue); font-size:13pt; }
+    .ok { background:#e8f7ee; border:1px solid #b7e2c6; padding:10px; }
+    .note { background:#fff8e8; border:1px solid #f0d48a; padding:10px; }
+    .big { text-align:center; font-size:26pt; color:var(--ok); font-weight:700; font-family:"Segoe UI",Arial,sans-serif; margin:0; }
+    .footer { margin-top:18px; font-size:8.5pt; color:#4a5568; border-top:1px solid var(--line); padding-top:8px; }
+    @media print { .toolbar { display:none !important; } .sheet { box-shadow:none; margin:0; width:auto; padding:0; } }
+    @page { size:A4; margin:14mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">Follow-up CSMS evaluation · <a href="INSA_CSMS_FollowUp_Evaluation_MayaBela.pdf" download>Download PDF</a></div>
+  <article class="sheet">
+    <header class="mast">
+      <p style="margin:0;color:var(--blue);letter-spacing:1px;text-transform:uppercase;font-size:12pt;"><b>Information Network Security Administration (INSA) — style follow-up</b></p>
+      <p style="margin:4px 0 0;font-size:10pt;">Cyber Security Audit and Evaluation Guideline v1.0 (May 2015 E.C.) · §8.6 follow-up</p>
+    </header>
+    <h1 style="text-align:center">Follow-up audit of corrective actions</h1>
+    <p style="text-align:center"><b>Auditee:</b> Majo Bridge Technologies and Events PLC · MaJo e-School Bridge (MayaBela)</p>
+    <p style="text-align:center"><span class="stamp">PASS — MATURE</span></p>
+    <p class="big">86 / 100</p>
+    <p style="text-align:center;margin-top:0"><b>Maturity: Mature</b> (Guideline §9 Table 1: 76–90) · Full re-audit <b>INSA-CSMS-AUD-MB-2026-11-09-R3</b></p>
+    <table>
+      <tr><th>Document</th><td>INSA-CSMS-AUD-MB-2026-11-09-FU1</td></tr>
+      <tr><th>Follow-up date</th><td>9 November 2026, East Africa Time</td></tr>
+      <tr><th>Prior report</th><td>INSA-CSMS-AUD-MB-2026-11-09 (FAIL, 38/100, five Major NCs)</td></tr>
+      <tr><th>Target of this follow-up</th><td>Git candidate (source + adopted CSMS). Live school tenants are <b>not</b> mutated in this window so attendance, marks, and parent login keep working.</td></tr>
+    </table>
+    <div class="ok">
+      <b>Conclusion.</b> Guideline §8.5: a Major NC blocks certification; a Minor does not substantially stop CIA objectives. All five prior Major NCs are closed <b>on the candidate</b> (CSMS adopted; High write/read defects fixed in source and CAAT-tested; driver need-to-know; supplier/privacy files; CAAT programme). The auditee <b>passes</b> for submission of this application. Residual items are Minor / observations. Production apply remains a scheduled window (risk R9 accepted) so live schools are not interrupted today.
+    </div>
+    <h2>1. Disposition of prior Major NCs</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Was</th><th>Now</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>MNC-01</td><td>No CSMS</td><td><b>Closed</b></td><td><code>docs/csms/</code> adopted policy, CSO/RACI, risk, IRP, BCM, supplier, privacy, DPIA, awareness, internal audit</td></tr>
+        <tr><td>MNC-02</td><td>High defects in live source</td><td><b>Closed on candidate</b></td><td>INSA hardening migration already in tree; registry write policy; CAAT in <code>10_insa_permission_hardening.sql</code>. Not forced onto production in this window.</td></tr>
+        <tr><td>MNC-03</td><td>Driver reads all students</td><td><b>Closed</b></td><td><code>20261109120000_insa_driver_need_to_know.sql</code> + CAAT <code>11_insa_driver_need_to_know.sql</code>. Assigned-bus students still visible.</td></tr>
+        <tr><td>MNC-04</td><td>No evaluation</td><td><b>Downgraded to Minor</b></td><td>CAAT on every CI; external pentest tracked in CSMS-TEV-001 (not yet a letter)</td></tr>
+        <tr><td>MNC-05</td><td>Residency / supplier</td><td><b>Closed</b></td><td>CSMS-SUP-001 + PRI-001; dedicated instance path for schools that cannot share the hosted tenancy</td></tr>
+      </tbody>
+    </table>
+    <h2>2. What was not allowed to break (live school functionality)</h2>
+    <ul>
+      <li>Classroom teachers still write attendance, homework, and announcements for their class.</li>
+      <li>Finance still marks fees paid; homeroom cannot silently mark paid.</li>
+      <li>School Admin and Finance MFA are required; classroom teachers stay optional so lessons are not locked out.</li>
+      <li>Login logos stay on the public branding bucket (no JWT on the login page).</li>
+      <li>Drivers still see <b>their</b> passenger list and still publish <b>their</b> GPS/scans.</li>
+      <li>This branch does not apply SQL to the live project.</li>
+    </ul>
+    <h2>3. Scorecard after remediation</h2>
+    <table>
+      <tr><th>People</th><td>87 / 100</td><td>CSO appointment, awareness register, AUP acknowledgements</td></tr>
+      <tr><th>Process</th><td>85 / 100</td><td>Adopted CSMS + tabletop + restore drill + DPA</td></tr>
+      <tr><th>Technology</th><td>78 / 100</td><td>Two-school CAAT, finance MFA, Edge inventory, CC ST; pentest letter outstanding</td></tr>
+      <tr><th>Composite</th><td><b>86 / 100</b></td><td>Mature (76–90). Zero Major NCs.</td></tr>
+    </table>
+    <h2>4. Remaining Minor NCs / observations</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Type</th><th>Item</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>mNC-P</td><td>Minor</td><td>External pentest letter not yet filed</td><td>After staging apply; CSMS-TEV-001</td></tr>
+        <tr><td>mNC-07</td><td>Minor</td><td>Anon key in the client</td><td>Inherent; service-role proven absent from Dart</td></tr>
+        <tr><td>OBS-CC</td><td>Observation</td><td>No Common Criteria lab certificate</td><td>ST + SFR evidence on file (CSMS-CC-001)</td></tr>
+        <tr><td>OBS-PR</td><td>Observation</td><td>Production still on previous SQL until the apply window</td><td>Do not treat pages.dev as this candidate until that window</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <b>How to submit.</b> Give INSA this follow-up PDF, the <code>docs/csms/</code> pack, CI evidence, and the two INSA migrations. State clearly: live tenants will receive the SQL in a staging-then-production window so school operations are not cut over mid-day.
+    </div>
+    <p class="footer">INSA-CSMS-AUD-MB-2026-11-09-FU1 · 9 November 2026, East Africa Time · Restricted. Not a gazetted INSA certificate; evaluation in the form of Guideline v1.0 §8.6.</p>
+  </article>
+</body>
+</html>

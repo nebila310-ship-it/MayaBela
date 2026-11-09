@@ -550,12 +550,26 @@ void main() {
 
   test('storage probe is not uploaded until a user is signed in', () {
     expect(
-      SupabaseStorageBootstrap.shouldUploadStorageProbe(signedIn: false),
+      SupabaseStorageBootstrap.shouldUploadStorageProbe(
+        signedIn: false,
+        schoolId: 'SCH1',
+      ),
       isFalse,
     );
     expect(
       SupabaseStorageBootstrap.shouldUploadStorageProbe(signedIn: true),
+      isFalse,
+    );
+    expect(
+      SupabaseStorageBootstrap.shouldUploadStorageProbe(
+        signedIn: true,
+        schoolId: 'SCH1',
+      ),
       isTrue,
+    );
+    expect(
+      SupabaseStorageBootstrap.storageProbePath('sch1', nowMs: 9),
+      'schools/SCH1/_app_setup_probe/9.txt',
     );
     expect(
       SupabaseStorageBootstrap.storageErrorIsRowSecurity(

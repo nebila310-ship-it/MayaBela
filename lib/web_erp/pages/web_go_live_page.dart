@@ -183,17 +183,17 @@ class _OverviewTab extends StatelessWidget {
         ),
         _CheckRow(
           label: cap.mfaRequired
-              ? 'Authenticator required for school Admin'
+              ? 'Authenticator required for Admin and Finance'
               : 'Authenticator available (optional)',
           ok: !cap.currentUserMustEnroll,
         ),
         if (canManage)
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Require authenticator for school Admin'),
+            title: const Text('Require authenticator for Admin and Finance'),
             subtitle: const Text(
-              'Leadership cannot turn MFA off while this is on. '
-              'Other roles stay opt-in.',
+              'School Admin and Finance cannot turn MFA off while this is on. '
+              'Classroom teachers stay opt-in so lessons continue.',
             ),
             value: cap.mfaRequired,
             onChanged: (v) async {

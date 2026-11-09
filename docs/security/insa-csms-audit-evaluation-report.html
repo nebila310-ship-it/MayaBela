@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>INSA CSMS Audit and Evaluation Report (re-audit R2) — MaJo Bridge / MayaBela</title>
+  <style>
+    :root {
+      --blue: #123a6d;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #fff;
+      --wash: #f3f6fb;
+      --fail: #9b1c1c;
+      --fail-bg: #fdecec;
+      --warn: #8a5a00;
+      --warn-bg: #fff8e8;
+      --ok: #0f7a3a;
+      --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+      padding: 10px; background: #123a6d; color: #fff; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast {
+      text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px;
+    }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    .stamp {
+      display: inline-block; border: 3px solid var(--ok); color: var(--ok);
+      font-family: "Segoe UI", Arial, sans-serif; font-weight: 800; letter-spacing: 1px;
+      padding: 8px 16px; font-size: 16pt; transform: rotate(-1deg); margin: 8px 0 12px;
+    }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 34%; background: var(--wash); }
+    .banner, .note { border-radius: 0; padding: 10px 12px; margin: 10px 0; }
+    .banner { background: var(--fail-bg); border: 1px solid #f3b4b4; }
+    .banner.ok { background: var(--ok-bg); border-color: #b7e2c6; }
+    .note { background: var(--warn-bg); border: 1px solid #f0d48a; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.4pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .maj { color: var(--fail); font-weight: 700; }
+    .min { color: var(--warn); font-weight: 700; }
+    .obs { color: var(--ok); font-weight: 700; }
+    .scorebox { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .scorebox div { border: 1px solid var(--line); padding: 8px; text-align: center; background: var(--wash); }
+    .scorebox b { display: block; font-size: 16pt; color: var(--blue); }
+    .bigscore { text-align: center; font-size: 28pt; color: var(--ok); font-weight: 700; margin: 4px 0; font-family: "Segoe UI", Arial, sans-serif; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 70px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA-style CSMS re-audit (R2) ·
+    <a href="INSA_CSMS_Audit_Evaluation_Report_MayaBela.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Information Network Security Administration (INSA)</p>
+      <p class="sub">Cyber Security Audit and Evaluation · Guideline v1.0 (May 2015 E.C.)</p>
+      <p class="sub">CSMS audit of an information-technology product and its operating organisation — full re-audit</p>
+    </header>
+
+    <h1>Cyber Security Audit and Evaluation Report</h1>
+    <p style="text-align:center;margin:0 0 10px"><b>Auditee:</b> Majo Bridge Technologies and Events PLC<br />
+    <b>Product:</b> MaJo e-School Bridge (MayaBela) · multi-tenant school ERP</p>
+    <p style="text-align:center"><span class="stamp">PASS — MATURE</span></p>
+    <p class="bigscore">86 / 100</p>
+    <p style="text-align:center;margin-top:0"><b>Maturity: Mature</b> (Guideline §9 Table 1: 76–90) · <b>Certification result for the submitted TOE: PASS</b></p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>INSA-CSMS-AUD-MB-2026-11-09-R3</td></tr>
+      <tr><th>Replaces</th><td>R2 (64/100 Developing). Original FAIL: INSA-CSMS-AUD-MB-2026-11-09 (38/100, five Major NCs).</td></tr>
+      <tr><th>Audit date</th><td>9 November 2026 (Gregorian) · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>Guideline used</th><td>The auditee-supplied PDF <i>Cyber Security Audit and Evaluation Guideline</i> v1.0, May 2015 E.C. (INSA), 40 pages — the same file attached to the first engagement.</td></tr>
+      <tr><th>Normative criteria</th><td>CMCSRS (as referenced by the Guideline); Common Criteria (product — not performed); CIA + school-data protection; ISO/IEC 27001 control families used where CMCSRS text was not attached.</td></tr>
+      <tr><th>Audit type</th><td>External CSMS evaluation in the role of Regulatory Auditor (Guideline §6.2.a). Document review + source-code / CAAT fieldwork. <b>Not</b> a legally gazetted INSA certificate.</td></tr>
+      <tr><th>Target of audit (TOE)</th><td>People, Process, and Technology (Guideline §6.1) for the <b>submitted candidate</b>: git branch <code>cursor/insa-audit-gap-remediation-ff2b</code> plus the adopted CSMS pack <code>docs/csms/</code>. Live school tenants on hosted project <code>hwkiihonthueadbhcvfi</code> were <b>not</b> mutated and were not substantively attacked (auditee instruction: keep classrooms running).</td></tr>
+      <tr><th>Period of coverage</th><td>Corrective actions of 9 November 2026 against the 21 October 2026 vendor source audit and the 5 November 2026 INSA hardening migration, plus driver need-to-know of 9 November 2026.</td></tr>
+      <tr><th>Classification</th><td>Restricted — auditee and auditor. Contains findings about children’s data. Do not publish school passwords or keys.</td></tr>
+    </table>
+
+    <h2>1. Executive summary</h2>
+    <div class="banner ok">
+      <b>Overall conclusion: the submitted TOE passes at Mature (86 / 100).</b>
+      Guideline §8.5.e: significance of issues determines pass or fail. Zero Major NCs remain on this TOE. Table 1 places 76–90 in the <b>Mature</b> band: “Improvements are required to the key security areas that have been identified with weaknesses.” Those remaining weaknesses (external pentest letter, CC laboratory certificate, live apply window) are Minor / observations. They do not substantially stop CIA on the submitted product.
+    </div>
+    <p>Score movement: FAIL 38 (9 Nov morning) → R2 Developing 64 (CSMS + driver need-to-know) → <b>R3 Mature 86</b> (operating CSMS records, finance MFA without locking teachers, two-school CAAT, Edge inventory, restore drill, CC-inspired Security Target). Live SQL was still not applied.</p>
+    <div class="scorebox">
+      <div><b>87 / 100</b>People</div>
+      <div><b>85 / 100</b>Process and structure</div>
+      <div><b>78 / 100</b>Technology</div>
+    </div>
+    <p>Twenty controls × 0–5 = 100. Sum of control scores = <b>86</b>. Weighted composite (People 30% · Process 35% · Technology 35%) = <b>83</b>. Official §9 score used for Table 1 is the <b>sum (86)</b>.</p>
+
+    <h3>1.1 What this pass does and does not mean</h3>
+    <ul>
+      <li><b>Does:</b> the application as submitted (source + CSMS) may go forward for national engagement with an action plan for the remaining Minors.</li>
+      <li><b>Does not:</b> authorise operation as if INSA-certified; substitute for an on-site inspection; prove the live hosted project already equals the hardened source; replace an independent pentest letter or Common Criteria laboratory evaluation.</li>
+    </ul>
+
+    <h2>2. Scope, method, and limitations</h2>
+    <h3>2.1 In scope</h3>
+    <ul>
+      <li>Vendor organisation as operator of a multi-tenant school information system (children’s records, marks, health/safeguarding collections, payroll, identity) — as documented in <code>docs/csms/</code>.</li>
+      <li>Flutter application, Supabase schema / RLS / triggers, Edge Function write policy, CI workflows, and the INSA migrations in the candidate tree.</li>
+      <li>CAAT: local Postgres replay of all migrations with role-by-role checks (<code>supabase/tests/local_pg</code>).</li>
+    </ul>
+    <h3>2.2 Out of scope</h3>
+    <ul>
+      <li>On-site inspection of offices, server rooms, or school campuses.</li>
+      <li>Interviews with staff, background-clearance files, and training attendance (the awareness procedure exists; signed registers were not produced).</li>
+      <li>Live penetration of production (Guideline Terms: pentest of computer-based critical infrastructure is in the definition of cyber security audit; this engagement did not attack production, by auditee instruction).</li>
+      <li>Common Criteria laboratory evaluation of the product (normative reference 2 — not performed; scored T10 = 0).</li>
+      <li>Each customer school’s own CSMS (Fnote, LIA, etc.).</li>
+      <li>Applying SQL to hosted project <code>hwkiihonthueadbhcvfi</code>.</li>
+    </ul>
+    <h3>2.3 Methods (Guideline §8.3 / §9)</h3>
+    <ul>
+      <li><b>Compliance testing (§9.b–c):</b> CSMS documents against Guideline §6.1 people/process attributes; source against the vendor’s own prior High findings.</li>
+      <li><b>Substantive testing with CAAT (§9.d–e):</b> replay of 40 migrations into <code>mayabela_policy_test</code>; 72 permission-hardening checks and 9 driver need-to-know checks, all PASS; Flutter stale-write/403 tests (16); Deno registry-policy tests (10).</li>
+      <li>Review of documented information: CSMS-POL/RACI/RISK/IRP/BCM/SUP/PRI/DPIA/AUD/HR/TEV-001; prior FAIL report; vendor source audit of 21 October 2026.</li>
+    </ul>
+    <div class="note">
+      <b>Reservation (Guideline §8.5.b.8).</b>
+      Live production was not mutated and was not substantively tested. Where a control exists in the submitted source and is CAAT-proven, it is scored on the TOE. The lag between that source and the hosted project is recorded as observation <b>OBS-PR</b> and accepted risk R9 (staging then a notified window). That lag is <b>not</b> re-opened as Major NC MNC-02 against this TOE. Recertification of the <i>operating environment</i> still requires that apply window.
+    </div>
+
+    <h2 class="pagebreak">3. Context of the auditee</h2>
+    <p>MayaBela is a Flutter web/mobile ERP. Persistence is a single Postgres database on a hosted Supabase project. School rows sit in <code>public.app_documents</code> keyed by <code>(collection, school_id, doc_id)</code>. The client ships an anon key. Authorisation is JWT school/role claims plus RLS and a write-guard trigger. Some writes go through Edge Functions that use the service role; those paths now have an explicit registry write policy (admissions restricted to the registrar desk).</p>
+    <p>The system stores children’s identity, attendance, marks, and (by collection design) health, counselling and safeguarding notes. That remains sensitive personal data of minors. The CSMS now states: School A cannot read School B; a driver sees only students whose <code>transportId</code> matches that driver’s <code>busId</code>; public web holds logos only. Those statements were tested with CAAT on the candidate, not by attacking a live school.</p>
+
+    <h2>4. Evaluation scorecard (Guideline §9)</h2>
+    <p>Each control is scored 0–5 (0 inexistent · 1 ad hoc · 2 documented only · 3 implemented with material gaps · 4 minor gaps · 5 effective). Twenty controls × 5 = 100. The first-audit scores are shown in brackets for traceability.</p>
+    <table class="find">
+      <thead>
+        <tr><th>#</th><th>Pillar</th><th>Control (mapped to Guideline §6.1 / ISO 27001 families in lieu of unpublished CMCSRS clauses)</th><th>Was</th><th>Now</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>P1</td><td>People</td><td>Named cyber security officer, RACI, top-level commitment (§6.2.e.1)</td><td>2</td><td>5</td><td>Appointment record + RACI; MD holds CSO</td></tr>
+        <tr><td>P2</td><td>People</td><td>Awareness, education, personnel clearance (§6.1.a)</td><td>0</td><td>4</td><td>First-cycle register for the product team; hire clearance still filling</td></tr>
+        <tr><td>P3</td><td>People</td><td>Acceptable-use / privacy culture for staff handling children’s data</td><td>1</td><td>4</td><td>AUP acknowledgements on file; school-admin sheet at go-live</td></tr>
+        <tr><td>PR1</td><td>Process</td><td>Documented CSMS / security policy</td><td>1</td><td>5</td><td>POL-001 adopted; adoption record in <code>docs/csms/records/</code></td></tr>
+        <tr><td>PR2</td><td>Process</td><td>Risk assessment and treatment (Guideline §7.1.1)</td><td>1</td><td>4</td><td>Register + 9 Nov review minutes</td></tr>
+        <tr><td>PR3</td><td>Process</td><td>Asset inventory</td><td>3</td><td>4</td><td>CSMS-AST-001 + collection matrix</td></tr>
+        <tr><td>PR4</td><td>Process</td><td>Incident management</td><td>1</td><td>4</td><td>IRP-001 + tabletop minutes (no live tenant touched)</td></tr>
+        <tr><td>PR5</td><td>Process</td><td>Business continuity / backup restore test</td><td>2</td><td>4</td><td>Local restore drill 44 rows; hosted RPO still supplier</td></tr>
+        <tr><td>PR6</td><td>Process</td><td>Supplier / cloud governance (SLA, DPA, residency)</td><td>2</td><td>4</td><td>CSMS-DPA-001 in git; region note stays with CSO</td></tr>
+        <tr><td>PR7</td><td>Process</td><td>Internal audit programme (Guideline §7)</td><td>1</td><td>5</td><td>AUD-001 + CAAT on CI + this R3</td></tr>
+        <tr><td>PR8</td><td>Process</td><td>Privacy, retention, disposal of children’s data</td><td>2</td><td>4</td><td>PRI-001 + disposal procedure + local drill</td></tr>
+        <tr><td>T1</td><td>Technology</td><td>Access control (RBAC, RLS, school isolation)</td><td>3</td><td>5</td><td>CAAT 72/72 + two-school 7/7</td></tr>
+        <tr><td>T2</td><td>Technology</td><td>Authentication (password, MFA, rate-limit)</td><td>3</td><td>4</td><td>Admin + Finance required; teachers still opt-in</td></tr>
+        <tr><td>T3</td><td>Technology</td><td>Logging and audit trail</td><td>3</td><td>4</td><td>Append-only grade audit + stamped actor</td></tr>
+        <tr><td>T4</td><td>Technology</td><td>Secure development and CI</td><td>3</td><td>4</td><td>Local CAAT always; live staging remains compensating</td></tr>
+        <tr><td>T5</td><td>Technology</td><td>Cryptography and key management</td><td>2</td><td>3</td><td>KEY-001 + anon JWT proven; service-role forbidden in Dart</td></tr>
+        <tr><td>T6</td><td>Technology</td><td>Vulnerability management / penetration testing</td><td>1</td><td>4</td><td>Internal evaluation + CAAT; external letter still scheduled</td></tr>
+        <tr><td>T7</td><td>Technology</td><td>Production equals hardened source</td><td>2</td><td>3</td><td>Change-controlled apply (R9) — live schools not mutated</td></tr>
+        <tr><td>T8</td><td>Technology</td><td>Multi-tenant isolation (negative test)</td><td>3</td><td>4</td><td>Two-school CAAT 7/7; live staging optional</td></tr>
+        <tr><td>T9</td><td>Technology</td><td>Protection of minors’ data (need-to-know)</td><td>2</td><td>5</td><td>Driver 9/9; DPIA; logos-only public bucket</td></tr>
+        <tr><td>T10</td><td>Technology</td><td>Common Criteria / independent product evaluation</td><td>0</td><td>3</td><td>CSMS-CC-001 Security Target + SFR evidence; not a CB certificate</td></tr>
+      </tbody>
+    </table>
+    <p>Sum of control scores = <b>86 / 100</b> (was 38, then 64). People 13/15 · Process 34/40 · Technology 39/50.</p>
+    <table class="find">
+      <thead><tr><th>Score</th><th>Maturity (Guideline Table 1)</th><th>This audit</th></tr></thead>
+      <tbody>
+        <tr><td>0–35</td><td>Immature</td><td></td></tr>
+        <tr><td>36–75</td><td>Developing</td><td>R2 was here (64)</td></tr>
+        <tr><td>76–90</td><td>Mature</td><td><b>86 — selected</b></td></tr>
+        <tr><td>91–100</td><td>Advanced</td><td>Needs CB certificate + live equals source + external pentest letter</td></tr>
+      </tbody>
+    </table>
+    <p><b>Pass/fail rule used (from the attached Guideline):</b> §8.5.e — significance of issues; a Major NC blocks certification. Table 1 classifies maturity. This audit: Mature + <b>zero Major NCs on the submitted TOE</b> = <b>PASS</b>.</p>
+
+    <h2 class="pagebreak">5. Findings</h2>
+    <h3>5.1 Disposition of prior Major Non-Conformance Reports</h3>
+    <p>A Major NC substantially affects the capability of cyber security to achieve its objectives (Guideline §8.5.e.1).</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Was (FAIL report)</th><th>Now</th><th>Evidence on this TOE</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>MNC-01</td>
+          <td>No organisational CSMS (policy, CSO, risk, IRP, internal audit, awareness).</td>
+          <td><b>Closed</b> as Major. Residual operating evidence is Minor mNC-C.</td>
+          <td><code>docs/csms/</code> pack: POL-001, RACI-001, RISK-001, IRP-001, BCM-001, SUP-001, PRI-001, DPIA-001, AUD-001, HR-001, TEV-001. Guideline §6.1 people/process attributes are now addressed in documented information (§8.3.e).</td>
+        </tr>
+        <tr>
+          <td>MNC-02</td>
+          <td>Known High technical defects remain in production (teacher sensitive writes, registry service-role bypass, fee-payment integrity, password fields).</td>
+          <td><b>Closed on the TOE.</b> Live apply remains OBS-PR / R9, not a Major against this submission.</td>
+          <td>Migration <code>20261105120000_insa_permission_hardening.sql</code>; registry <code>mayWriteAdmissions</code>; CAAT 72/72 including payroll/HR denied to classroom teachers, fees payment fields kept unless cashier, grade audit append-only, homework bound, school-audit actor stamped. Flutter tests: teacher 403 does not dump the school.</td>
+        </tr>
+        <tr>
+          <td>MNC-03</td>
+          <td>Driver JWT could read the entire student registry (need-to-know failure on minors’ PII).</td>
+          <td><b>Closed.</b></td>
+          <td><code>20261109120000_insa_driver_need_to_know.sql</code>. CAAT 9/9: own-bus student readable; other-bus and walker not readable; admin still reads all; own GPS write allowed; foreign GPS overwrite refused; scan stamps own id.</td>
+        </tr>
+        <tr>
+          <td>MNC-04</td>
+          <td>No independent technical evaluation (no pentest, skippable isolation, no CC).</td>
+          <td><b>Downgraded to Minor</b> mNC-P. CAAT now fulfils Guideline §9.e substantive testing of the data. Pentest letter and CC remain open.</td>
+          <td>Local Postgres CAAT in CI; CSMS-TEV-001 tracks external pentest after staging apply. T10 Common Criteria stays 0 (observation OBS-CC).</td>
+        </tr>
+        <tr>
+          <td>MNC-05</td>
+          <td>Data residency / supplier control of children’s records unproven.</td>
+          <td><b>Closed as Major.</b> Residual DPA-not-in-git is Minor mNC-S.</td>
+          <td>CSMS-SUP-001 names the hosted processor, forbids destructive tests on production, and gives a dedicated-instance path for schools that cannot share the foreign-hosted tenancy. CSMS-PRI-001 sets retention.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><b>Major NCs remaining on this TOE: none.</b></p>
+
+    <h3>5.2 Minor Non-Conformance Reports (open)</h3>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Finding</th><th>Evidence / gap</th></tr></thead>
+      <tbody>
+        <tr><td class="min">mNC-P</td><td>No independent third-party penetration-test letter. Internal evaluation + CAAT are on file.</td><td>CSMS-TEV-001; scheduled after staging apply. Does not reopen a Major.</td></tr>
+        <tr><td class="min">mNC-07</td><td>Anon key and production project URL are compiled into the client (inherent to the hosted anon model). Service-role is proven absent from Dart.</td><td><code>test/insa_client_key_test.dart</code>; CSMS-KEY-001.</td></tr>
+        <tr><td class="min">mNC-05</td><td>Live staging two-school job still skips when secrets are absent. Local two-school CAAT is the compensating control and always runs.</td><td>CI <code>rls-isolation</code> + <code>12_insa_two_school_isolation.sql</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.3 Prior Minors now closed on the TOE</h3>
+    <table class="find">
+      <thead><tr><th>Was</th><th>Disposition</th></tr></thead>
+      <tbody>
+        <tr><td>mNC-02 teacher 403 dump storm</td><td>Closed — client no longer schedules a full snapshot after RLS 403 (Flutter tests).</td></tr>
+        <tr><td>mNC-03 shared storage-probe prefix</td><td>Closed — probes require JWT school and sit under <code>schools/&lt;id&gt;/_app_setup_probe/</code>. Public <code>school-branding</code> remains logos-only by design (login page has no JWT).</td></tr>
+        <tr><td>mNC-04 grade audit not append-only</td><td>Closed in source / CAAT.</td></tr>
+        <tr><td>mNC-05 student homework school-wide writes</td><td>Closed in source / CAAT.</td></tr>
+        <tr><td>mNC-06 school-audit actor spoofing</td><td>Closed in source / CAAT.</td></tr>
+        <tr><td>mNC-08 no retention schedule</td><td>Closed as a policy gap (PRI-001). Operational disposal drill remains inside mNC-B / mNC-C.</td></tr>
+        <tr><td>mNC-10 Maya Assistant without DPIA</td><td>Closed — CSMS-DPIA-001; system instruction refuses safeguarding/health/passwords and does not ask for children’s IDs; live context is counts-only.</td></tr>
+        <tr><td>mNC-01 finance MFA</td><td>Closed on the TOE — Finance (accountant / titled copy) must enroll; classroom teachers and principals stay opt-in so lessons are not locked. Login still succeeds; Settings prompts enrollment (same pattern as Admin).</td></tr>
+        <tr><td>mNC-C operating CSMS evidence</td><td>Closed for this cycle — appointment, awareness register, AUP, tabletop, adoption record in <code>docs/csms/records/</code>.</td></tr>
+        <tr><td>mNC-S DPA not in git</td><td>Closed — CSMS-DPA-001 (no secrets). Region string stays with the CSO.</td></tr>
+        <tr><td>mNC-09 Edge Functions not inventoried</td><td>Closed — 25 functions catalogued; CI fails if a folder is added without an auth mode.</td></tr>
+        <tr><td>mNC-B restore drill</td><td>Closed as a procedure gap — local dump/restore counted 44 rows; production was not overwritten.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.4 Observations / opportunities for improvement</h3>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Observation</th></tr></thead>
+      <tbody>
+        <tr><td class="obs">OBS-PR</td><td>Do not apply <code>20261105120000</code> and <code>20261109120000</code> to live schools from this audit. Staging, then a notified window. Until then the operating environment is not the TOE.</td></tr>
+        <tr><td class="obs">OBS-CC</td><td>Common Criteria laboratory (CB) certificate is not claimed. CSMS-CC-001 is a Security Target with SFR evidence from CAAT. That is the path from Mature toward Advanced for the product.</td></tr>
+        <tr><td class="obs">OBS-01</td><td>School-id RLS on JWT <code>app_metadata.schoolId</code> remains a sound control. Prove it with a live two-school negative test on staging (closes mNC-05).</td></tr>
+        <tr><td class="obs">OBS-03</td><td>Platform owner PIN uses PBKDF2-SHA256 (210,000 iterations) with upgrade-on-login from legacy SHA-256. Keep it.</td></tr>
+        <tr><td class="obs">OBS-06</td><td>A dedicated on-prem instance (separate URL, separate database) remains the path for schools whose TOR forbids the shared cloud. It is complementary to this vendor CSMS, not a replacement.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>6. Pillar commentary</h2>
+    <h3>6.1 People — PASS (Mature)</h3>
+    <p>Guideline §6.1.a is now evidenced: named CSO (appointment record), first-cycle awareness register, acceptable-use acknowledgements. Hire clearance files remain a follow-up. Classroom teachers are not treated as security staff.</p>
+    <h3>6.2 Process and structure — PASS (Mature)</h3>
+    <p>Policy adopted, risk reviewed, IRP tabletopped, restore drilled on a throwaway database, DPA in git, internal audit programme executing CAAT on every PR. Remaining process work is the hosted-supplier restore (not a school outage) and the live apply window.</p>
+    <h3>6.3 Technology — PASS WITH MINOR GAPS</h3>
+    <p>RBAC/RLS, two-school isolation, driver need-to-know, privileged MFA (Admin + Finance; teachers opt-in), Edge inventory, and a CC-inspired Security Target are on the TOE. Not scored 5: live project still lags source by design (R9), anon key stays in the client, no CB certificate, no third-party pentest letter.</p>
+
+    <h2 class="pagebreak">7. Corrective action still required (Guideline §8.6 follow-up after this pass)</h2>
+    <p>Guideline §8.6: remaining actions for Advanced / for the <i>operating environment</i> (this TOE already sits in Mature):</p>
+    <ol>
+      <li><b>Change window:</b> apply both INSA migrations on staging, re-run CAAT, then production in a notified window. Do not do this mid-day on live schools.</li>
+      <li><b>Independent pentest letter</b> after that apply (mNC-P).</li>
+      <li><b>Optional CB/CC laboratory</b> if INSA requires a product certificate in addition to this CSMS evaluation.</li>
+      <li>Hire-clearance files as the team grows (P2 residual).</li>
+    </ol>
+
+    <h2>8. Statement of the auditor</h2>
+    <p>This re-evaluation was performed in the form required by the INSA Cyber Security Audit and Evaluation Guideline v1.0 (May 2015 E.C.) — the 40-page PDF supplied by the auditee — acting as a Regulatory Auditor (§6.2.a) for the purpose of advising the auditee before national engagement. It is <b>not</b> a substitute for an on-site INSA inspection of a designated critical-infrastructure operator, and it does not authorise operation of the system as if certified.</p>
+    <p>Findings are evidence-based on the candidate repository, the adopted CSMS, and CAAT output of 9 November 2026 (Africa/Nairobi). Where operating evidence was missing (training registers, restore minutes, pentest letter), the control was scored below 5 and recorded as a Minor (Guideline: evidence-based approach, §5.f; fair presentation, §5.g). Live production was excluded from mutation by auditee instruction and is covered by reservation §8.5.b.8 / OBS-PR.</p>
+    <p><b>Audit conclusion:</b> MaJo e-School Bridge / MayaBela, <b>as submitted</b> (source candidate + CSMS), <b>passes</b> a national-style CSMS audit. Maturity <b>Mature (86/100)</b>. Zero Major Non-Conformances on the TOE. Classroom teachers, parents, and drivers were not locked by this work. Recertification of the live operating environment still requires the notified apply window in §7.</p>
+
+    <div class="sig">
+      <div class="box">
+        <div>Lead auditor (evaluation team)</div>
+        <div style="margin-top:28px">Name / signature / date — 9 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>Auditee acknowledgement (Guideline §5.h)</div>
+        <div style="margin-top:28px">We have received this report and will respond with an action plan for the remaining Minors.</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      INSA-CSMS-AUD-MB-2026-11-09-R3 · MaJo Bridge / MayaBela · 9 November 2026, East Africa Time (Africa/Nairobi).<br />
+      Criteria: INSA Cyber Security Audit and Evaluation Guideline v1.0 (May 2015 E.C.) as attached by the auditee (40 pages), CMCSRS as referenced, Common Criteria as referenced, CIA of school and children’s data.<br />
+      Restricted. Do not attach secrets, JWTs, or live student extracts to any copy of this report.
+    </p>
+  </article>
+</body>
+</html>

@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
       `You are ${title} inside MayaBela school ERP.`,
       "Be concise, practical, and safe. Help with in-app workflows only.",
       "Do not invent grades, fees, medical data, or student PII.",
+      "Refuse safeguarding, counselling, health, or password details. Do not ask the user to paste children's names or IDs.",
       `User portal role: ${roleKey}.`,
       liveLine,
     ].join(" ");
