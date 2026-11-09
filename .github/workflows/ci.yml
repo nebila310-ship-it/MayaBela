@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: read
@@ -73,7 +73,7 @@ jobs:
         run: flutter test --reporter expanded
 
   edge-functions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -99,7 +99,7 @@ jobs:
   # Replays every migration into a throwaway Postgres container and checks
   # what each school role may read and write. No Supabase project is touched.
   database-policies:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -130,7 +130,7 @@ jobs:
   # Skips when staging secrets or the destructive-test opt-in are absent.
   # Never runs against production (hwkiihonthueadbhcvfi).
   rls-isolation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
