@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>User Guide — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 32%; background: var(--wash); }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.2pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .do { color: #0f7a3a; font-weight: 700; }
+    .dont { color: #9b1c1c; font-weight: 700; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 64px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA asset registration · User Guide ·
+    <a href="INSA_User_Guide_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · INSA asset registration attachment</p>
+      <p class="sub">User Documentation (User Guide)</p>
+    </header>
+
+    <h1>User Guide</h1>
+    <p style="text-align:center;margin:0 0 12px"><b>Product:</b> MaJo e-School Bridge (MayaBela)<br />
+    How the system is used in practice · misuse scenarios and user-related risks</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>MB-UG-001</td></tr>
+      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>INSA portal field</th><td>User Documentation (User Guide) — describes how the system is used in practice; used to identify misuse scenarios and user-related risks.</td></tr>
+      <tr><th>Audience</th><td>School staff, parents, students, drivers, and MaJo support. Not a developer manual (see MB-TDD-001).</td></tr>
+      <tr><th>Classification</th><td>CONFIDENTIAL when stored with other CSMS files; the operational rules may be given to a school admin at go-live.</td></tr>
+    </table>
+
+    <div class="note">
+      Live URL: <b>https://mayabela.pages.dev</b> (hard-refresh with Ctrl+Shift+R if the screen looks old). Dedicated/on-prem schools use their own URL and must not be mixed onto this shared site.
+    </div>
+
+    <h2>1. How people sign in</h2>
+    <ol>
+      <li>Open the school URL. The login page shows that school’s <b>logo only</b> (no student names).</li>
+      <li>Enter <b>School ID</b>, <b>username</b>, <b>password</b>, and <b>role</b> (Admin, Teacher, Parent, Student, or Driver). The same person may have more than one role — they pick the desk they are opening.</li>
+      <li>First login: change a temporary password (10+ characters). Do not reuse the SMS/WhatsApp temp password.</li>
+      <li>School <b>Admin</b> and <b>Finance</b>: after password, open <b>Settings</b> and enroll an authenticator. Login still works with the password; the system prompts until MFA is on. Teachers, principals, parents, students, and drivers are not forced to enroll (so a teacher without a phone is not locked out of class).</li>
+    </ol>
+    <p>Eight failed tries in 15 minutes for the same username+role+school lock that combination briefly. That is not a school-wide outage.</p>
+
+    <h2>2. How each desk is used in practice</h2>
+    <table class="find">
+      <thead><tr><th>Who</th><th>Normal day’s work in the app</th><th>Must not do</th></tr></thead>
+      <tbody>
+        <tr><td>Classroom teacher</td><td>Mark attendance, set homework, enter marks for <b>assigned classes</b>, send a class notice, message linked parents.</td><td>Open another teacher’s class; mark fees paid; open payroll/HR; download the whole school register “for Excel at home”.</td></tr>
+        <tr><td>School Admin</td><td>Users, classes, year, branding, role titles; keep MFA on.</td><td>Share the admin password; grant Full Access to a teacher’s own account.</td></tr>
+        <tr><td>Registrar</td><td>Admissions, student registry, promotions, parent links.</td><td>Let a homeroom teacher run admissions on the privileged path.</td></tr>
+        <tr><td>Finance</td><td>Fees, record payments, finance reports; MFA required.</td><td>Ask a homeroom to tick “paid” to save a queue.</td></tr>
+        <tr><td>Student Affairs / safeguarding</td><td>Health, counselling, safeguarding cases — restricted collections.</td><td>Paste case notes into WhatsApp or Maya Assistant.</td></tr>
+        <tr><td>HR / procurement / store / transport head</td><td>Staff accounts, stock, buses and assignments — only those modules.</td><td>Use a colleague’s login because “their role has the button”.</td></tr>
+        <tr><td>Parent</td><td>Linked child: attendance, homework, published materials, selected fees/notices.</td><td>Ask staff for another family’s child “just to check”.</td></tr>
+        <tr><td>Student</td><td>Own timetable, homework, own published grades.</td><td>Share the password with classmates to copy homework.</td></tr>
+        <tr><td>Driver</td><td>See passengers on <b>their bus</b>; publish GPS/scans for that bus.</td><td>Log in as another driver to see the whole school’s children.</td></tr>
+        <tr><td>Platform owner (MaJo)</td><td>Create/suspend a school tenant; PIN console.</td><td>Put the service-role key or PIN in chat; use a teacher JWT to provision schools.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. Files, logos, and Maya Assistant</h2>
+    <ul>
+      <li><span class="do">Do:</span> put student photos and documents in the school file area (private). Put only the <b>logo / stamp</b> in branding (that is what the login page can show without a password).</li>
+      <li><span class="dont">Do not:</span> upload a class photo, ID scan, or report card as the “logo”.</li>
+      <li>Maya Assistant (optional): it sees <b>counts</b> (how many students), not names. Do not type a child’s name, medical note, or password into the prompt. If the school forbids external AI, MaJo leaves the AI key unset — the rest of the ERP still works.</li>
+    </ul>
+
+    <h2>4. Passwords, shared computers, and leaving</h2>
+    <ul>
+      <li>Each person has their own username. A staff-room PC is common; <b>sign out</b> when you leave the desk. A stolen teacher session lasts until the login expires — teachers are not forced onto MFA.</li>
+      <li>Do not write passwords on the classroom board or in a staff WhatsApp group.</li>
+      <li>When someone leaves the school, Admin/HR disables that account the same day. Do not wait for “end of term”.</li>
+      <li>MaJo support: send <b>counts and function names</b>, never a spreadsheet of children, never the service-role key.</li>
+    </ul>
+
+    <h2 class="pagebreak">5. Misuse scenarios and user-related risks</h2>
+    <p>INSA asked this guide so reviewers can see how people actually fail, not only how the database is coded. The product blocks many of these; some remain people risks.</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Misuse / user risk</th><th>What the system does</th><th>What the school/MaJo must still do</th></tr></thead>
+      <tbody>
+        <tr><td>UR-01</td><td>Teacher tries to open another school’s data</td><td>JWT school_id + RLS deny. CAAT two-school tests in source.</td><td>Do not share School IDs/passwords across campuses.</td></tr>
+        <tr><td>UR-02</td><td>Teacher tries payroll, HR, or whole-school children’s files</td><td>Write/read gates deny ordinary teachers. 403 must not dump the school.</td><td>Do not create a “see all” staff role for convenience.</td></tr>
+        <tr><td>UR-03</td><td>Homeroom marks a fee paid</td><td>Paid-status is a finance function.</td><td>Finance keeps MFA; do not share the finance login with homeroom.</td></tr>
+        <tr><td>UR-04</td><td>Driver wants every student “in case they board the wrong bus”</td><td>Driver sees only <code>transportId</code> = own <code>busId</code>.</td><td>Assign the child on the Transport desk; do not give the driver an admin login.</td></tr>
+        <tr><td>UR-05</td><td>Parent asks for a neighbour’s child</td><td>Parent JWT is linked-child only.</td><td>Staff must refuse verbal overrides; change links only on the registrar desk.</td></tr>
+        <tr><td>UR-06</td><td>Shared staff PC, teacher walks away still signed in</td><td>Session stays valid. Teacher MFA is optional (classroom availability).</td><td>Sign out; screen lock; do not leave report cards on screen.</td></tr>
+        <tr><td>UR-07</td><td>Password on WhatsApp / board</td><td>Rate-limit slows guessing; does not stop a shared secret.</td><td>Reset that account; never paste passwords in group chat.</td></tr>
+        <tr><td>UR-08</td><td>Student photo uploaded as login logo</td><td>Branding bucket is public by design (login has no JWT).</td><td>This is a data spill. Remove the object; follow CSMS-IRP-001; tell the CSO.</td></tr>
+        <tr><td>UR-09</td><td>Safeguarding notes pasted into Maya Assistant or a ticket</td><td>Assistant is instructed to refuse health/safeguarding/IDs; tickets must not contain student rows.</td><td>Use the safeguarding module only; MaJo support gets counts, not names.</td></tr>
+        <tr><td>UR-10</td><td>Admin grants Full Access to themselves as a teacher</td><td>Owner-only template; teacher cannot grant full_access to self.</td><td>School owner reviews role titles in Role Settings.</td></tr>
+        <tr><td>UR-11</td><td>Leaver still has a live login</td><td>No automatic HR feed from every school’s payroll.</td><td>Disable the account the day they leave (HR/Admin).</td></tr>
+        <tr><td>UR-12</td><td>Export of a class list to a personal Gmail / USB</td><td>The app cannot stop a screenshot or copy from a screen the user is allowed to see.</td><td>Acceptable-use: no children’s files on personal mail. School admin acknowledges at go-live (CSMS-HR-001).</td></tr>
+        <tr><td>UR-13</td><td>Platform PIN or service-role in a screenshot to “fix login”</td><td>Client binaries must not contain the service-role key.</td><td>MaJo staff: CSMS-HR-001. Rotate the key if it leaked (P1).</td></tr>
+        <tr><td>UR-14</td><td>Using mayabela.pages.dev for a school whose TOR forbids shared foreign hosting</td><td>Product supports a dedicated/on-prem instance.</td><td>Do not onboard that school on the shared URL (CSMS-SUP-001).</td></tr>
+      </tbody>
+    </table>
+
+    <h2>6. What to do when something looks wrong</h2>
+    <ol>
+      <li>Do not delete evidence. Sign out if you think someone else used your desk.</li>
+      <li>Tell the school admin. If children’s data may have left the school (public logo, WhatsApp class list, leaked password), they tell MaJo: +251 911 646 444 / nabilmaya6464@gmail.com.</li>
+      <li>MaJo CSO follows CSMS-IRP-001 (contain, preserve, Ethio-CER2T if confirmed). Prefer disabling one account over taking the whole school offline.</li>
+    </ol>
+
+    <h2>7. Related documents</h2>
+    <p>MB-SRS-001 (roles and required controls). MB-SDD-001 (where data travels). CSMS-HR-001 (acceptable use). CSMS-IRP-001 (incidents). CSMS-DPIA-001 (Maya Assistant).</p>
+
+    <div class="sig">
+      <div class="box">
+        <div>Prepared by (CSO / support)</div>
+        <div style="margin-top:28px">Majo Bridge Technologies and Events PLC · 10 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>For INSA asset registration</div>
+        <div style="margin-top:28px">Attachment to field: User Documentation (User Guide)</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      MB-UG-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi.<br />
+      Restricted with the CSMS pack. Not a gazetted INSA certificate.
+    </p>
+  </article>
+</body>
+</html>

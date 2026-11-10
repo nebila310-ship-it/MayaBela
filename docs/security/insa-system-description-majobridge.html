@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>System Description — MaJo e-School Bridge</title>
+  <style>
+    :root { --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8; --wash: #f3f6fb; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 10.3pt; line-height: 1.34;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; justify-content: center;
+      padding: 10px; background: #123a6d; color: #fff; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: #fff; box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 12mm 16mm 12mm; }
+    header.brand {
+      display: flex; align-items: center; gap: 14px;
+      border-bottom: 2.5px solid var(--blue); padding-bottom: 8px; margin-bottom: 10px;
+    }
+    header.brand img.logo { height: 62px; width: auto; }
+    header.brand h1 { margin: 0; font-size: 14pt; color: var(--blue); }
+    header.brand .sub { margin: 2px 0 0; font-size: 9.5pt; color: var(--muted); }
+    h2 { font-size: 12.5pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 2px; margin: 12px 0 6px; page-break-after: avoid; }
+    p { margin: 0 0 7px; }
+    ul, ol { margin: 0 0 8px; padding-left: 20px; }
+    table.find { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9.3pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 3px 6px; vertical-align: top; text-align: left; }
+    table.find th { background: var(--wash); color: var(--blue); width: 32%; }
+    .ok { border: 2px solid #0f7a3a; background: #f3fbf6; padding: 8px 10px; margin: 8px 0; text-align: center; }
+    .annex { page-break-before: auto; }
+    .annex img.cert { width: 100%; max-height: 230mm; object-fit: contain; border: 1px solid var(--line); }
+    .footer { margin-top: 10px; font-size: 8.3pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+    @media print { body { background: #fff; } .toolbar { display: none !important; } .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; } }
+    @page { size: A4; margin: 12mm 14mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA / Hibir · System Description ·
+    <a href="INSA_System_Description_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="brand">
+      <img class="logo" src="assets/majo-bridge-logo.png" alt="MaJo-Bridge" />
+      <div>
+        <h1>MaJo-Bridge Technology and Events PLC</h1>
+        <p class="sub">System Description · MaJo e-School Bridge (MayaBela) · asset MB-ESB-001</p>
+        <p class="sub">https://www.majobridge.com · +251 911 646 444 · nabilmaya6464@gmail.com</p>
+      </div>
+    </header>
+
+    <p style="text-align:center;margin:4px 0 10px"><b>Document:</b> MB-SYS-001 · Version 1.0 · 10 November 2026, East Africa Time (Africa/Nairobi)<br />
+    INSA / Hibir field: <b>System Description</b></p>
+
+    <div class="ok"><b>Product CSMS:</b> PASS · Mature 86/100 · INSA Cyber Security Audit and Evaluation Guideline v1.0 · evaluation R3 · zero Major NCs on the submitted TOE</div>
+
+    <h2>1. Legal identity of the operator</h2>
+    <p>The operator is a legally registered Ethiopian software company. Identity below is taken from the Ministry of Innovation and Technology <b>Company Certificate of Professional Competence</b> (annex).</p>
+    <table class="find">
+      <tr><th>Registered name</th><td>MaJo Bridge Technologies and Events P.L.C</td></tr>
+      <tr><th>TIN</th><td>0109227744</td></tr>
+      <tr><th>MInT reference</th><td>MINT/1428/260824/1 · issued 24 August 2026 G.C.</td></tr>
+      <tr><th>Business type</th><td>Software Development (Including Design, Enrichment and Implementation) — code 39141</td></tr>
+      <tr><th>Legal basis</th><td>Trade Registration and Licensing Proclamation No. 980/2016, Article 42(2)</td></tr>
+      <tr><th>Address</th><td>Addis Ababa · Lemi Kura (Lemikura) Sub-city · Woreda/Kebele 03 · House No. new</td></tr>
+      <tr><th>Telephone (MInT file)</th><td>+251 911 133 548</td></tr>
+      <tr><th>24/7 CSO / support</th><td>+251 911 646 444 · nabilmaya6464@gmail.com · majobridgetech@gmail.com</td></tr>
+      <tr><th>General Manager / CSO</th><td>Nebil Ahmed</td></tr>
+    </table>
+
+    <h2>2. What the system is</h2>
+    <p>
+      <b>MaJo e-School Bridge (MayaBela)</b> is a multi-tenant school information system (web and mobile) for Ethiopian schools.
+      Asset type: <b>Web Application</b>. Asset code: <b>MB-ESB-001</b>. Version: <b>1.0.6</b>.
+      Live URL: <b>https://www.majobridge.com</b> (same product as https://majobridge.com).
+      One deployment serves many school tenants. Each school’s students, staff, marks, fees, and files must stay inside that school.
+    </p>
+    <p><b>In scope:</b> students, classes, attendance, homework, grades, admissions, parent links; fees and payments; inventory/procurement; HR/staff accounts; transport (buses, drivers, assigned passengers, GPS of that bus); restricted health, counselling, and safeguarding notes; school login with JWT school and role claims; platform-owner console to provision schools; hosted persistence and dedicated/on-prem instances for schools that cannot share the hosted tenancy.</p>
+    <p><b>Out of scope:</b> a school’s own campus CCTV, IoT, or blockchain; forcing MFA on classroom teachers, parents, students, or drivers (would lock live lessons).</p>
+
+    <h2>3. How it behaves</h2>
+    <ol>
+      <li><b>Tenant isolation.</b> Every persistent row carries <code>school_id</code>. A JWT from School A cannot read or write School B. Isolation is enforced in the database (row-level security), not only in the client.</li>
+      <li><b>Need-to-know desks.</b> Teachers work on assigned classes. Finance records that a fee is paid. Drivers see only passengers on their bus. Parents see linked children. Admissions on the privileged path is a registrar function. Denied writes return an error and must not dump the school. Login page has no JWT: only the school logo is public; student files stay under <code>schools/&lt;id&gt;/</code>.</li>
+      <li><b>Identity.</b> Login: School ID + username + password + role. School Admin and Finance enroll authenticator MFA. Teachers are not forced. Eight failed tries in 15 minutes lock that username+role+school only. Security changes that could stop a live school go to staging first, then a notified window.</li>
+    </ol>
+
+    <p>
+      <b>Security:</b> CSMS with named CSO (General Manager until a dedicated hire), adopted policy, JWT/RLS/Edge controls, and CAAT tests (permission hardening, driver need-to-know, two-school isolation).
+      This paper describes the system for asset registration. It is not a gazetted INSA certificate.
+      Related: MB-SRS-001, MB-SDD-001, MB-TDD-001, MB-UG-001, MB-SEC-001, MB-TEST-001, MB-INSA-LTR-2026-001.
+    </p>
+    <p class="footer">MB-SYS-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi · Annex: MInT Certificate of Professional Competence</p>
+
+    <section class="annex">
+      <h2>Annex — MInT Company Certificate of Professional Competence</h2>
+      <p>Source document as issued: Reference MINT/1428/260824/1 · TIN 0109227744 · 24 August 2026 G.C. · valid for the business activity identified on the certificate (software development 39141).</p>
+      <img class="cert" src="assets/mint-professional-competence-certificate.png" alt="MInT Company Certificate of Professional Competence" />
+    </section>
+  </article>
+</body>
+</html>

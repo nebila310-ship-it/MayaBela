@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CMCSRS v2.0 Audit — MaJo Bridge / MayaBela</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb; --fail: #9b1c1c; --fail-bg: #fdecec;
+      --warn: #8a5a00; --warn-bg: #fff8e8; --ok: #0f7a3a; --ok-bg: #e8f7ee;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    .stamp {
+      display: inline-block; border: 3px solid var(--fail); color: var(--fail);
+      font-family: "Segoe UI", Arial, sans-serif; font-weight: 800; letter-spacing: 1px;
+      padding: 8px 16px; font-size: 15pt; letter-spacing: 0.4px; transform: rotate(-1deg); margin: 8px 0 12px; white-space: nowrap;
+    }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 34%; background: var(--wash); }
+    .banner, .note { padding: 10px 12px; margin: 10px 0; }
+    .banner { background: var(--fail-bg); border: 1px solid #f3b4b4; }
+    .banner.ok { background: var(--ok-bg); border-color: #b7e2c6; }
+    .note { background: var(--warn-bg); border: 1px solid #f0d48a; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.3pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .maj { color: var(--fail); font-weight: 700; }
+    .min { color: var(--warn); font-weight: 700; }
+    .obs { color: var(--ok); font-weight: 700; }
+    .na { color: var(--muted); font-weight: 700; }
+    .scorebox { display: grid; grid-columns: 1fr 1fr 1fr; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .scorebox div { border: 1px solid var(--line); padding: 8px; text-align: center; background: var(--wash); }
+    .scorebox b { display: block; font-size: 16pt; color: var(--blue); }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 70px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    CMCSRS v2.0 audit ·
+    <a href="INSA_CMCSRS_v2_Audit_Evaluation_Report_MayaBela.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Information Network Security Administration (INSA)</p>
+      <p class="sub">Critical Mass Cyber Security Requirement Standard · version 2.0</p>
+      <p class="sub">Requirement-standard audit of MaJo Bridge as operator of MaJo e-School Bridge (MayaBela)</p>
+    </header>
+
+    <h1>Cyber Security Requirement Audit Report</h1>
+    <p style="text-align:center;margin:0 0 10px"><b>Auditee:</b> Majo Bridge Technologies and Events PLC<br />
+    <b>Product / system:</b> MaJo e-School Bridge (MayaBela) · multi-tenant school ERP</p>
+    <p style="text-align:center"><span class="stamp">FAIL — NOT CONFORMANT</span></p>
+    <p style="text-align:center;margin:0 0 10px"><b>CMCSRS v2.0 organisational certification: not awarded.</b><br />
+    Product technical controls remain strong. Mandatory national clauses (local cloud, accreditation, INSA reporting) are not met.</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>INSA-CMCSRS2-AUD-MB-2026-11-09</td></tr>
+      <tr><th>Audit date</th><td>9 November 2026 (Gregorian) · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>Criteria</th><td>Auditee-supplied PDF <i>Critical Mass Cyber Security Requirement Standard version 2.0</i> (INSA, 97 pages, A4). Tagged PDF; InDesign source; footer year 2017; introduction describes the second revision addressing emerging technology (cloud, AI, IoT, blockchain).</td></tr>
+      <tr><th>Related evaluation</th><td>INSA-CSMS-AUD-MB-2026-11-09-R3 against the <i>Cyber Security Audit and Evaluation Guideline</i> v1.0 (May 2015 E.C., 40 pages): <b>PASS Mature 86/100</b> on the submitted product + CSMS. That Guideline is a <b>different document</b>. The 86 score is not reused here.</td></tr>
+      <tr><th>Normative keywords</th><td>Part I §1.1: <b>Must</b> = absolute requirement; <b>Must not</b> = absolute prohibition; <b>Should</b> = highly recommended (justify any skip); <b>May</b> = optional. Part I §4.1 Enforcement: mandatory for the audience. Content type: organisations will be audited and certified on these requirements.</td></tr>
+      <tr><th>Target of audit</th><td>MaJo Bridge as a <b>key private organisation</b> (Scope §3) operating a system that stores children’s records, plus the MayaBela source and CSMS pack. Live SQL on hosted project <code>hwkiihonthueadbhcvfi</code> was not applied (auditee instruction: keep classrooms running).</td></tr>
+      <tr><th>Classification</th><td>Restricted — auditee and auditor. Contains findings about children’s data. Do not publish school passwords or keys.</td></tr>
+    </table>
+
+    <h2>1. Executive summary</h2>
+    <div class="banner">
+      <b>Overall conclusion: MaJo Bridge is not yet conformant with CMCSRS v2.0 as an operating organisation.</b>
+      This standard is a <b>mandatory requirement catalogue</b>, not a 0–100 maturity scorecard. It has no Table 1. Certification is pass/fail on the MUST clauses that apply. Several MUST clauses fail: locally licensed cloud (§6.29.k), organisation-held encryption keys for classified cloud data (§6.29.f), system accreditation before processing classified information (§6.22.a), annual compliance reporting to INSA (§6.24), and designated security-assessment positions under the national clearance scheme (§6.37). Those are not defects in Flutter tests. They are national-process and hosting requirements.
+    </div>
+    <p>The earlier <b>86/100 Mature</b> result still stands <b>for the Guideline v1.0 evaluation of the submitted product CSMS</b>. It answers: “does the candidate have a CSMS and closed Major technical NCs?” This report answers: “does the operator meet CMCSRS v2.0 MUST clauses?” Different question, different result.</p>
+    <div class="scorebox">
+      <div><b>Partial</b>Capability 5.3–5.7</div>
+      <div><b>Fail</b>MUST processes (cloud, accreditation, reporting)</div>
+      <div><b>N/A</b>IoT · blockchain · ICS</div>
+    </div>
+    <p><b>What still holds from the product work:</b> school isolation and driver need-to-know are CAAT-proven in source; privileged MFA (Admin + Finance) without locking teachers; Maya Assistant DPIA; CSMS pack adopted. Those close many <i>Should</i> technical items. They do not override a MUST on locally licensed cloud.</p>
+
+    <h3>1.1 What this fail does and does not mean</h3>
+    <ul>
+      <li><b>Does:</b> INSA, if they audit MaJo Bridge against CMCSRS v2.0 as a key private operator of a live school system, can refuse organisational certification until the MUST cloud/accreditation/reporting gaps are treated (local CSP or INSA exception; accreditation; annual letter).</li>
+      <li><b>Does not:</b> cancel Guideline R3 (86/100) on the product candidate; require taking schools offline today; require forcing MFA on classroom teachers; require hiding login logos.</li>
+    </ul>
+
+    <h2>2. How this standard differs from the previous Guideline</h2>
+    <table class="find">
+      <thead><tr><th></th><th>Guideline v1.0 (40 pages) — prior audit</th><th>CMCSRS v2.0 (97 pages) — this audit</th></tr></thead>
+      <tbody>
+        <tr><td>Kind of document</td><td>How to audit and score a CSMS (people / process / technology; Table 1 0–100)</td><td>What organisations <b>must / should</b> implement (capability + 37 processes)</td></tr>
+        <tr><td>Pass rule</td><td>§8.5.e significance; Major NC blocks; 76–90 = Mature</td><td>MUST clauses; exceptional skips approved by INSA (§4.1 order-freedom)</td></tr>
+        <tr><td>Audience</td><td>Auditors and auditees</td><td>Federal/regional government and key private organisations</td></tr>
+        <tr><td>Emerging tech</td><td>Not the focus</td><td>Cloud (§6.29), AI (§6.30), IoT (§6.31), blockchain (§6.32)</td></tr>
+        <tr><td>Foreign hosting</td><td>Supplier/DPA as a process gap</td><td><b>Must</b> use locally licensed CSPs (§6.29.k); no process fully outsourced to foreign actors (§6.2.e)</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <b>Method used here.</b> Each applicable MUST is Conform or Non-conform. SHOULD is Conform, Partial, or Non-conform. N/A requires a written justification (standard §6.2.a) — recorded in <code>docs/csms/CSMS-CMCSRS-001-applicability.md</code>. Physical inspection of offices, INSA interviews, and live attack of production were out of scope (classrooms stay up).
+    </div>
+
+    <h2 class="pagebreak">3. Capability building (Part II §5)</h2>
+    <table class="find">
+      <thead><tr><th>Clause</th><th>Requirement (summary)</th><th>Result</th><th>Evidence / gap</th></tr></thead>
+      <tbody>
+        <tr><td>5.3 Leadership</td><td>Top leadership owns cyber security; 0.5% of annual budget (5.3.j)</td><td class="min">Partial</td><td>CSO appointment record exists. Budget 0.5% not evidenced. Disruptive-change consultation with INSA not done.</td></tr>
+        <tr><td>5.4 Governance</td><td>Cyber Security Department, security committee, liaison officers</td><td class="min">Partial</td><td>Named CSO + RACI. No department/committee structure as drawn in §5.4.e–g (units may merge — still not documented as such).</td></tr>
+        <tr><td>5.5 Management</td><td>CSMS, policy, IRP, BCM, operational procedures; 80% from national CSMS (5.5.l)</td><td class="min">Partial</td><td>CSMS pack adopted. National CSMS text was not attached, so 80/20 cannot be demonstrated.</td></tr>
+        <tr><td>5.6 Human</td><td>Awareness; National Career Path; national clearance for CIS admins</td><td class="min">Partial</td><td>First-cycle awareness register. Career Path and national clearance files are not in the TOE.</td></tr>
+        <tr><td>5.7 Technology</td><td>Secure network, access control, malware, patching (minimum lists)</td><td class="min">Partial</td><td>Product: RLS, MFA for Admin/Finance, CAAT. Organisation PCs/firewalls/malware agents: not evidenced in git. Default firewall password MUST (5.7.c.4) is an ops control, not a Flutter control.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>4. Process results (Part II §6)</h2>
+    <h3>4.1 Not applicable (justified under §6.2.a)</h3>
+    <table class="find">
+      <thead><tr><th>Clause</th><th>Process</th><th>Justification</th></tr></thead>
+      <tbody>
+        <tr><td class="na">6.31</td><td>IoT</td><td>MayaBela does not deploy or operate IoT devices. School CCTV, if present, is the school’s system.</td></tr>
+        <tr><td class="na">6.32</td><td>Blockchain</td><td>No ledger, smart contract, or blockchain product.</td></tr>
+        <tr><td class="na">6.15.e</td><td>ICS / SCADA</td><td>No industrial control system.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 Major non-conformances (MUST / absolute)</h3>
+    <p>A Major NC here is a failed <b>Must</b> (or an absolute prohibition such as §6.2.e) that substantially affects the capability of the operator to meet the standard’s objectives for classified children’s data.</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Clause</th><th>Finding</th><th>Can it be fixed without locking schools?</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="maj">MNC-V2-01</td>
+          <td>6.29.k</td>
+          <td><b>Locally licensed cloud.</b> “Governmental and key private organisations must use locally licensed cloud service providers.” Live schools sit on a foreign-hosted shared project.</td>
+          <td>Yes — dedicated/on-prem instance (already offered) or INSA exception / local CSP. Do not cut over mid-day.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-V2-02</td>
+          <td>6.29.f</td>
+          <td><b>Keys in organisation custody.</b> Classified data in cloud must be encrypted at rest and in transit; “the encryption keys must be held by the organisation.” Database encryption keys are the supplier’s.</td>
+          <td>Yes — customer-managed keys or local hosting. Architecture change; not a classroom lockout.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-V2-03</td>
+          <td>6.2.e · 6.38.i</td>
+          <td><b>Foreign outsourcing.</b> No process may be fully outsourced to foreign actors. Classified ICT services should not be taken from a foreign supplier unless INSA approves an exception. Persistence, auth, and backups are fully on the foreign host.</td>
+          <td>Yes — same path as MNC-V2-01, plus a written INSA exception if they allow the current host.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-V2-04</td>
+          <td>6.22.a · 6.22.h · 6.23.a</td>
+          <td><b>Accreditation / certification.</b> Systems must be accredited before they process, store, or communicate sensitive or classified information; re-accreditation at least every two years; certification audit is part of that. MayaBela already processes CONFIDENTIAL children’s data in production without an INSA accreditation decision.</td>
+          <td>Yes — INSA process. Keep schools up while the file is prepared. Do not claim the product is already accredited.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-V2-05</td>
+          <td>6.24.d–g</td>
+          <td><b>Annual compliance letter.</b> Must report mandatory-requirement compliance to the relevant Minister (or equivalent) and send a copy to INSA, including a head-of-organisation declaration and residual non-compliance.</td>
+          <td>Yes — CSO letter. No SQL. This report can be an annex to that letter.</td>
+        </tr>
+        <tr>
+          <td class="maj">MNC-V2-06</td>
+          <td>6.37.l · 6.37.k</td>
+          <td><b>DSAP / eligibility.</b> Must identify designated security assessment positions that access CONFIDENTIAL+ assets and maintain a DSAP register; staff with ongoing access must be identity-established and suitable. A starter register is now in AST-001; national clearance files are still absent.</td>
+          <td>Yes — HR/INSA clearance. Teachers/parents/drivers are not DSAPs.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>4.3 Minor non-conformances and partials</h3>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Clause</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td class="min">mNC-V2-01</td><td>6.9</td><td>Git + CI exist; no formal change process that submits security-impacting changes to an accreditation authority, including urgent-change steps and reaccreditation when residual risk changes.</td></tr>
+        <tr><td class="min">mNC-V2-02</td><td>6.5 / 6.7 / 6.11.n</td><td>Policy, CSMS, and risk assessments are not evidenced as consulted/informed to INSA.</td></tr>
+        <tr><td class="min">mNC-V2-03</td><td>6.11</td><td>Risk register exists; not shown as 80% national/sector profile, SGOC+PESTLE strategic, six-month tactical, three-month operational.</td></tr>
+        <tr><td class="min">mNC-V2-04</td><td>6.13.a,h</td><td>Product-team awareness register exists. MUST training for all staff including third parties, and training before unsupervised system access, is not evidenced for school users.</td></tr>
+        <tr><td class="min">mNC-V2-05</td><td>6.14.f / 6.38.f–g</td><td>RAD/design not audited by INSA; product/service not INSA-certified before market (Should, but INSA may treat a live school system as if it were Must).</td></tr>
+        <tr><td class="min">mNC-V2-06</td><td>6.16</td><td>No owned data centre. Office/laptop physical security policy as specified is not in the pack.</td></tr>
+        <tr><td class="min">mNC-V2-07</td><td>6.18</td><td>TLS and PIN hashing exist. INSA-approved cryptographic systems / National PKI not used.</td></tr>
+        <tr><td class="min">mNC-V2-08</td><td>6.21</td><td>Internal evaluation + CAAT exist. Internal auditors are not shown as INSA-certified; no INSA-certified third-party auditor yet.</td></tr>
+        <tr><td class="min">mNC-V2-09</td><td>6.23.h</td><td>If Pages/API is viewed as a multi-organisation gateway, annual INSA Gateway Certification is absent.</td></tr>
+        <tr><td class="min">mNC-V2-10</td><td>6.25 / 6.26</td><td>CAAT and IRP exist. Independent pentest letter still scheduled. Ethio-CER2T reporting step is now written into IRP-001; no live report has been sent (none due unless an incident is confirmed).</td></tr>
+        <tr><td class="min">mNC-V2-11</td><td>6.28 / 6.19</td><td>Local restore drill 44 rows. Hosted backup/RPO remains the supplier. Event-log retention ≥ one month not proven on the host.</td></tr>
+        <tr><td class="min">mNC-V2-12</td><td>6.30</td><td>DPIA + refuse-sensitive instruction: Partial conform for Maya Assistant. MUST risk-based adoption and privacy: addressed. SHOULD use of AI for cyber defence: not implemented (optional).</td></tr>
+        <tr><td class="min">mNC-V2-13</td><td>6.33.n</td><td>Intelligence process cannot be outsourced to foreign actors. Using a foreign host’s logs as the only monitoring channel remains a tension with this clause.</td></tr>
+        <tr><td class="obs">OBS-V2-PR</td><td>—</td><td>Hardened SQL (permission hardening + driver need-to-know) is in source and CAAT. Live project still lags until a notified window. Same reservation as Guideline R3 OBS-PR.</td></tr>
+        <tr><td class="obs">OBS-V2-86</td><td>—</td><td>Do not reprint 86/100 on this cover. That number belongs to Guideline v1.0 Table 1 only.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.4 Conformant (or sufficiently evidenced) clauses</h3>
+    <table class="find">
+      <thead><tr><th>Clause</th><th>Why it is not a Major against this TOE</th></tr></thead>
+      <tbody>
+        <tr><td>6.8 / 6.2.a</td><td>Context, scope, and N/A justifications are now a CSMS record.</td></tr>
+        <tr><td>6.10.a</td><td>MUST asset inventory exists; Annex B labels applied (CONFIDENTIAL children’s records; PUBLIC logos and anon key).</td></tr>
+        <tr><td>6.17 (product half)</td><td>Access control aligns with business need: JWT school/role, RLS, driver need-to-know CAAT 9/9, two-school CAAT 7/7. Classification policy is now written; live labels on every row are not.</td></tr>
+        <tr><td>6.19.a</td><td>MUST BCM programme: BCM-001 adopted.</td></tr>
+        <tr><td>6.26.d (procedure)</td><td>MUST incident-reporting procedure exists; Ethio-CER2T added.</td></tr>
+        <tr><td>6.30.d,f (AI)</td><td>Risk-based DPIA; Assistant does not take names as live context; health/safeguarding refused.</td></tr>
+        <tr><td>6.36 (partial)</td><td>Privacy policy, retention, DPIA, children’s special-category handling described. Individual agreement (6.36.d) remains a school-enrolment matter.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="pagebreak">5. Annex B classification used in this audit</h2>
+    <p>CMCSRS v2.0 Annex B has four labels only: TOP SECRET, SECRET, CONFIDENTIAL, PUBLIC. This audit classifies:</p>
+    <ul>
+      <li><b>CONFIDENTIAL:</b> student identity, marks, attendance, health/safeguarding collections, staff HR/payroll in the ERP, service-role key, CSMS pack.</li>
+      <li><b>PUBLIC:</b> school logos on the login branding bucket (no JWT on the login page); anon/publishable key (not a secret; RLS is the boundary); synthetic CAAT data.</li>
+      <li><b>SECRET / TOP SECRET:</b> not claimed. Unauthorised disclosure of a school register would damage children and the operator; it is not “exceptionally grave damage to national security” on the Annex B examples (widespread loss of life, military capability). If INSA later directs a higher label, MNC-V2-04 becomes stricter (TOP SECRET accreditation authority is INSA — §6.22.l).</li>
+    </ul>
+
+    <h2>6. Live school functionality (unchanged by this audit)</h2>
+    <ul>
+      <li>No SQL applied to production <code>hwkiihonthueadbhcvfi</code>.</li>
+      <li>Classroom teachers still write attendance, homework, and class notices; MFA stays opt-in for teachers and principals.</li>
+      <li>School Admin and Finance MFA remain required (enrol prompt, not a login lockout).</li>
+      <li>Login logos stay on the public branding bucket.</li>
+      <li>Drivers still see <b>their</b> passengers and publish <b>their</b> GPS/scans (source CAAT; live apply still the notified window).</li>
+    </ul>
+
+    <h2>7. Corrective action to reach CMCSRS v2.0 organisational conformance</h2>
+    <p>Guideline-style “close Minors in git this afternoon” will <b>not</b> flip this result. The blocking work is national and hosting:</p>
+    <ol>
+      <li><b>Treat MNC-V2-01/02/03:</b> ask INSA in writing whether the current host is an approved exception; if not, plan a locally licensed CSP or dedicated in-country instance. Keep the on-prem path for schools whose TOR already forbids shared foreign tenancy.</li>
+      <li><b>Treat MNC-V2-04:</b> start accreditation: system owner letter, residual-risk statement, this report, Guideline R3, CSMS pack, CAAT evidence. Do not wait for a mid-day production cutover.</li>
+      <li><b>Treat MNC-V2-05:</b> annual compliance declaration from the organisation head to the equivalent authority, copy to INSA, listing the residual MUSTs above.</li>
+      <li><b>Treat MNC-V2-06:</b> fill DSAP files under the National Clearance Scheme when INSA issues the channel.</li>
+      <li><b>Then</b> the notified staging→production SQL window (OBS-V2-PR) so the operating environment matches the hardened source, followed by the independent pentest letter already tracked in CSMS-TEV-001.</li>
+    </ol>
+    <div class="note">
+      <b>Cost-effective principle (Part I §4.4.c).</b> Do not force teacher MFA, hide logos, or invent a blockchain/IoT CSMS to “look complete.” Those clauses are N/A or already treated. Spend the next effort on local cloud / INSA exception and accreditation — those are the MUST failures.
+    </div>
+
+    <h2>8. Statement of the auditor</h2>
+    <p>This evaluation uses the auditee-supplied <i>Critical Mass Cyber Security Requirement Standard version 2.0</i> as the criteria, acting in the form of a regulatory-style auditor for advice before national engagement. It is <b>not</b> a gazetted INSA certificate and it does not authorise operation as if certified under CMCSRS v2.0.</p>
+    <p>Findings are evidence-based on the candidate repository, the adopted CSMS (including CSMS-CMCSRS-001), and the prior Guideline R3 fieldwork of 9 November 2026 (Africa/Nairobi). Where a MUST could not be evidenced, it is failed (Part I §1.1 Must = absolute). Live production was excluded from mutation by auditee instruction.</p>
+    <p><b>Audit conclusion:</b> MaJo e-School Bridge / MayaBela, as an <b>operating organisation</b> processing CONFIDENTIAL children’s data on a foreign-hosted shared cloud without INSA accreditation or an annual compliance letter, <b>does not yet conform</b> to CMCSRS v2.0. The product CSMS evaluated under Guideline v1.0 remains <b>Mature 86/100</b> for that other document. Classroom teachers, parents, and drivers were not locked by this work.</p>
+
+    <div class="sig">
+      <div class="box">
+        <div>Lead auditor (evaluation team)</div>
+        <div style="margin-top:28px">Name / signature / date — 9 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>Auditee acknowledgement</div>
+        <div style="margin-top:28px">We have received this CMCSRS v2.0 report. We understand it does not replace Guideline R3, and we will respond with an action plan for MNC-V2-01 to MNC-V2-06.</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      INSA-CMCSRS2-AUD-MB-2026-11-09 · MaJo Bridge / MayaBela · 9 November 2026, East Africa Time (Africa/Nairobi).<br />
+      Criteria: Critical Mass Cyber Security Requirement Standard version 2.0 (INSA, 97 pages) as attached by the auditee.
+      Related: INSA-CSMS-AUD-MB-2026-11-09-R3 (Guideline v1.0, Mature 86/100 on the submitted TOE).<br />
+      Restricted. Not a gazetted INSA certificate.
+    </p>
+  </article>
+</body>
+</html>

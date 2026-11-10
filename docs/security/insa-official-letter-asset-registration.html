@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Official letter to INSA — asset registration</title>
+  <style>
+    :root { --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #c5d0de; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 10.6pt; line-height: 1.38;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: #fff; box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 10mm 16mm 10mm; }
+    header.brand {
+      display: flex; align-items: center; gap: 16px;
+      border-bottom: 2.5px solid var(--blue); padding-bottom: 10px; margin-bottom: 12px;
+    }
+    header.brand img.logo { height: 78px; width: auto; }
+    header.brand .meta { flex: 1; }
+    header.brand h1 { margin: 0; font-size: 15pt; color: var(--blue); letter-spacing: 0.4px; }
+    header.brand .sub { margin: 2px 0 0; font-size: 9.5pt; color: var(--muted); }
+    .refrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 14px; font-size: 10.5pt; }
+    h2 { font-size: 13pt; text-align: center; margin: 8px 0 10px; color: var(--blue); }
+    p { margin: 0 0 6px; }
+    ol, ul { margin: 0 0 8px; padding-left: 22px; }
+    table.meta { width: 100%; border-collapse: collapse; margin: 6px 0 8px; font-size: 10pt; }
+    table.meta th, table.meta td { border: 1px solid var(--line); padding: 3px 7px; text-align: left; vertical-align: top; }
+    table.meta th { width: 34%; background: #f3f6fb; }
+    .subject { margin: 0 0 12px; }
+    .closing { margin-top: 14px; }
+    .signwrap { position: relative; margin-top: 4px; min-height: 118px; page-break-inside: avoid; }
+    .signwrap .sig { height: 58px; width: auto; display: block; }
+    .signwrap .who { font-weight: 700; margin-top: 0; }
+    .signwrap .role { font-size: 10pt; color: var(--muted); }
+    .signwrap .stamp {
+      position: absolute; right: 18px; top: 0;
+      width: 108px; height: 108px; object-fit: contain;
+      opacity: 0.92; transform: rotate(-8deg);
+    }
+    .footer { margin-top: 16px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; text-align: center; }
+    .specimen { font-size: 8pt; color: var(--muted); font-style: italic; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 12mm 15mm 12mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Official letter to INSA ·
+    <a href="INSA_Official_Letter_Asset_Registration_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="brand">
+      <img class="logo" src="assets/majo-bridge-logo.png" alt="MaJo-Bridge Technology and Events PLC" />
+      <div class="meta">
+        <h1>MaJo-Bridge Technology and Events PLC</h1>
+        <p class="sub">School information systems · Addis Ababa, Ethiopia</p>
+        <p class="sub">Tel: +251 911 646 444 · nabilmaya6464@gmail.com · majobridgetech@gmail.com<br />
+        Web: https://www.majobridge.com</p>
+      </div>
+    </header>
+
+    <div class="refrow">
+      <div>
+        <div><b>Ref:</b> MB-INSA-LTR-2026-001</div>
+        <div><b>Asset code:</b> MB-ESB-001</div>
+      </div>
+      <div style="text-align:right">
+        <div><b>Date:</b> 10 November 2026</div>
+        <div>East Africa Time (Africa/Nairobi)</div>
+      </div>
+    </div>
+
+    <p>
+      To:<br />
+      <b>The Director General</b><br />
+      Information Network Security Administration (INSA)<br />
+      Addis Ababa, Ethiopia
+    </p>
+    <p>
+      Through: Hibir cyber security audit portal (<i>audit.hibir.et</i>) — asset registration
+    </p>
+
+    <p class="subject"><b>Subject:</b> Official letter requesting registration of the information-system asset
+    <i>MaJo e-School Bridge (MayaBela)</i></p>
+
+    <p>Dear Sir / Madam,</p>
+    <p>
+      Majo Bridge Technologies and Events PLC hereby submits this official letter and respectfully
+      requests INSA to <b>register the following information-system asset</b> on the national audit portal,
+      and to accept the supporting documents attached to this request.
+    </p>
+
+    <table class="meta">
+      <tr><th>Asset name</th><td>MaJo e-School Bridge (MayaBela)</td></tr>
+      <tr><th>Asset type</th><td>Web Application</td></tr>
+      <tr><th>Asset code</th><td>MB-ESB-001</td></tr>
+      <tr><th>Asset version</th><td>1.0.6</td></tr>
+      <tr><th>Owner / operator</th><td>Majo Bridge Technologies and Events PLC</td></tr>
+      <tr><th>Product URL</th><td>https://www.majobridge.com</td></tr>
+      <tr><th>Classification</th><td>CONFIDENTIAL children’s school records (need-to-know access)</td></tr>
+    </table>
+
+    <p>The following documents are submitted with this letter on the same Hibir asset record:</p>
+    <ol>
+      <li>Requirements Documentation (SRS) — MB-SRS-001</li>
+      <li>System and Architecture Design Document (SDD) — MB-SDD-001</li>
+      <li>Technical Specifications (TDD / LLD) — MB-TDD-001</li>
+      <li>User Documentation (User Guide) — MB-UG-001</li>
+      <li>Security Documentation — MB-SEC-001 (product CSMS evaluation R3: PASS · Mature 86/100 under the INSA Cyber Security Audit and Evaluation Guideline v1.0)</li>
+      <li>Tester access pack — MB-TEST-001 (environment and desks; synthetic-school passwords issued to named testers at kickoff)</li>
+    </ol>
+    <p>
+      This letter is a <b>request to register the asset</b> so that evaluation may proceed. It is not itself
+      a gazetted INSA certificate. Live classroom systems are not taken offline by this filing.
+      We remain available at the contacts above to issue tester access and to answer questions.
+    </p>
+
+    <p class="closing">Respectfully submitted,</p>
+    <div class="signwrap">
+      <img class="sig" src="assets/nebil-ahmed-sample-signature.png" alt="Sample signature of Nebil Ahmed" />
+      <div class="who">Nebil Ahmed</div>
+      <div class="role">General Manager · Cyber Security Officer<br />MaJo-Bridge Technology and Events PLC</div>
+      <p class="specimen">Specimen signature for this filing (wet-ink original retained by the Company). Ref MB-INSA-LTR-2026-001 · 10 November 2026.</p>
+      <img class="stamp" src="assets/majo-bridge-stamp.png" alt="Company official stamp" />
+    </div>
+  </article>
+</body>
+</html>
