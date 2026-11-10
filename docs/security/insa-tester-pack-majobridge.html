@@ -68,7 +68,7 @@
 
     <table class="meta">
       <tr><th>Document number</th><td>MB-TEST-001</td></tr>
-      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>Version</th><td>1.1 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
       <tr><th>Portal field</th><td>Upload any files testers may need — test accounts, API keys, credentials, environment configs, or other supporting documents.</td></tr>
       <tr><th>Classification</th><td>CONFIDENTIAL — tester briefing. This PDF contains <b>no</b> production passwords, PIN, or service-role key.</td></tr>
     </table>
@@ -81,32 +81,43 @@
     <table class="find">
       <thead><tr><th>Item</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td>Product URL</td><td><b>https://mayabela.pages.dev</b> (hard-refresh Ctrl+Shift+R if the UI looks old)</td></tr>
+        <tr><td>Product URL</td><td><b>https://www.majobridge.com</b> (same product as https://majobridge.com). Hard-refresh Ctrl+Shift+R if the UI looks old.</td></tr>
         <tr><td>Asset</td><td>MaJo e-School Bridge (MayaBela) · Web Application · MB-ESB-001 · 1.0.6</td></tr>
         <tr><td>Login fields</td><td>School ID + username (phone or email or student username) + password + role</td></tr>
         <tr><td>Publishable (anon) API key</td><td>Already compiled into the web app. Testers do <b>not</b> need a separate API key for browser tests. RLS is the boundary (CSMS-KEY-001).</td></tr>
         <tr><td>Service-role / PIN</td><td>Not issued. Not in the client. Not in this pack.</td></tr>
-        <tr><td>Dedicated / on-prem schools</td><td>Out of scope for this shared URL. Do not mix those tenants onto mayabela.pages.dev.</td></tr>
+        <tr><td>Dedicated / on-prem schools</td><td>Out of scope for this shared URL. Do not mix those tenants onto www.majobridge.com.</td></tr>
       </tbody>
     </table>
 
-    <h2>2. Test tenant and accounts</h2>
-    <p>Testers work on a <b>synthetic school</b> provisioned for the engagement (no real children’s names). MaJo CSO creates it on the platform console and issues time-limited passwords by a channel other than a public ticket (phone / in-person / encrypted mail to the named tester).</p>
-    <p>Ask for accounts covering these desks. Passwords are <b>not printed here</b>; CSO fills the right-hand column when issuing:</p>
+    <h2>2. Test credentials (how testers log in)</h2>
+    <div class="note">
+      This pack is complete for Hibir upload <b>without printed passwords</b>. Storing live Admin/Finance passwords in the portal would expose children’s schools. Testers receive a synthetic-school School ID, usernames, and time-limited passwords from MaJo CSO at kickoff (+251 911 646 444 / nabilmaya6464@gmail.com). That is the credential. It is not a missing page.
+    </div>
     <table class="find">
-      <thead><tr><th>Role to test</th><th>What it should be able to do</th><th>Must not do</th><th>Credential</th></tr></thead>
+      <thead><tr><th>Item</th><th>Tester value</th></tr></thead>
       <tbody>
-        <tr><td>School Admin</td><td>Users, classes, branding, role titles. MFA enroll in Settings.</td><td>Share this login with homeroom.</td><td>Issued out of band</td></tr>
-        <tr><td>Teacher</td><td>Attendance, homework, marks for assigned class. MFA optional.</td><td>Payroll, HR, whole-school register, mark fee paid.</td><td>Issued out of band</td></tr>
-        <tr><td>Finance</td><td>Fees / record payments. MFA required like Admin.</td><td>Give this login to a teacher.</td><td>Issued out of band</td></tr>
-        <tr><td>Registrar</td><td>Admissions, student registry, parent links.</td><td>Let a teacher use the privileged admissions path.</td><td>Issued out of band</td></tr>
-        <tr><td>Parent</td><td>Linked synthetic child only.</td><td>Neighbour’s child.</td><td>Issued out of band</td></tr>
-        <tr><td>Student</td><td>Own timetable / homework / published grades.</td><td>Another student’s login.</td><td>Issued out of band</td></tr>
-        <tr><td>Driver</td><td>Passengers and GPS for <b>their bus</b> only.</td><td>Every child in the school.</td><td>Issued out of band</td></tr>
+        <tr><td>URL</td><td>https://www.majobridge.com</td></tr>
+        <tr><td>School ID</td><td>Synthetic INSA test school — issued at kickoff (not a paying campus)</td></tr>
+        <tr><td>How to sign in</td><td>Enter School ID, username, password, and role on the login page</td></tr>
+        <tr><td>API key</td><td>None extra. The published site already carries the anon key.</td></tr>
+        <tr><td>Passwords</td><td>Issued to the named tester only. Disabled when the window ends.</td></tr>
       </tbody>
     </table>
-    <p>Contact to issue accounts: <b>+251 911 646 444</b> · nabilmaya6464@gmail.com · name the tester and the engagement dates. Accounts are disabled when the test window ends.</p>
-    <p>Local-only sandbox logins in source (<code>demo.student</code> / School ID <code>TB-001</code>) are <b>not</b> cloud accounts. They will not open https://mayabela.pages.dev. Do not try them against production.</p>
+    <p>Desks MaJo will issue (one login each):</p>
+    <table class="find">
+      <thead><tr><th>Role</th><th>What it should be able to do</th><th>Must not do</th></tr></thead>
+      <tbody>
+        <tr><td>School Admin</td><td>Users, classes, branding, role titles. MFA enroll in Settings.</td><td>Share this login with homeroom.</td></tr>
+        <tr><td>Teacher</td><td>Attendance, homework, marks for assigned class. MFA optional.</td><td>Payroll, HR, whole-school register, mark fee paid.</td></tr>
+        <tr><td>Finance</td><td>Fees / record payments. MFA required like Admin.</td><td>Give this login to a teacher.</td></tr>
+        <tr><td>Registrar</td><td>Admissions, student registry, parent links.</td><td>Let a teacher use the privileged admissions path.</td></tr>
+        <tr><td>Parent</td><td>Linked synthetic child only.</td><td>Neighbour’s child.</td></tr>
+        <tr><td>Student</td><td>Own timetable / homework / published grades.</td><td>Another student’s login.</td></tr>
+        <tr><td>Driver</td><td>Passengers and GPS for <b>their bus</b> only.</td><td>Every child in the school.</td></tr>
+      </tbody>
+    </table>
+    <p>Local-only sandbox logins in source (<code>demo.student</code> / School ID <code>TB-001</code>) are <b>not</b> cloud accounts. They will not open https://www.majobridge.com.</p>
 
     <h2>3. Rules of engagement</h2>
     <ul>
