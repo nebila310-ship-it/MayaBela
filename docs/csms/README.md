@@ -33,6 +33,7 @@ This pack is the organisation’s CSMS for:
 | INSA portal TDD/LLD | [MB-TDD-001](../security/INSA_TDD_LLD_MaJo_eSchool_Bridge.pdf) — JWT/RLS/Edge implementation, CAAT, technical vulnerabilities |
 | INSA portal User Guide | [MB-UG-001](../security/INSA_User_Guide_MaJo_eSchool_Bridge.pdf) — practical use, misuse scenarios, user-related risks |
 | INSA portal Security Documentation | [MB-SEC-001](../security/INSA_Security_Documentation_MaJo_eSchool_Bridge.pdf) — posture, controls, risks; Guideline PASS Mature 86/100 |
+| INSA / Hibir tester pack | [MB-TEST-001](../security/INSA_Tester_Access_Pack_MaJo_eSchool_Bridge.pdf) — environment, roles, rules of engagement; no production secrets |
 | [Records](records/) | Adoption, awareness, tabletop, restore drill, internal evaluation |
 
 **Live customer schools are not changed by adopting this pack.** Production apply of SQL/Edge Functions is a scheduled change window after staging, so teachers, parents, and students keep working during audit submission.

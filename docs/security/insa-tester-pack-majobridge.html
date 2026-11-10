@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tester access pack — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 32%; background: var(--wash); }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.2pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .stop { background: #fdf4f4; border: 1px solid #e8b4b4; padding: 10px 12px; margin: 10px 0; }
+    .do { color: #0f7a3a; font-weight: 700; }
+    .dont { color: #9b1c1c; font-weight: 700; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 64px; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA / Hibir tester upload ·
+    <a href="INSA_Tester_Access_Pack_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · asset MB-ESB-001 · version 1.0.6</p>
+      <p class="sub">Files testers may need (accounts, keys, environment, supporting documents)</p>
+    </header>
+
+    <h1>Tester access pack</h1>
+    <p style="text-align:center;margin:0 0 12px">What INSA / Hibir testers need to exercise the product — without live school keys or children’s files</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>MB-TEST-001</td></tr>
+      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>Portal field</th><td>Upload any files testers may need — test accounts, API keys, credentials, environment configs, or other supporting documents.</td></tr>
+      <tr><th>Classification</th><td>CONFIDENTIAL — tester briefing. This PDF contains <b>no</b> production passwords, PIN, or service-role key.</td></tr>
+    </table>
+
+    <div class="stop">
+      <span class="dont">Do not upload, and testers will not be given:</span> the production service-role key; the platform-owner PIN; any live school’s Admin/Finance password; spreadsheets of real students; health or safeguarding notes. Those are CSMS-HR-001 violations and would put children at risk.
+    </div>
+
+    <h2>1. Environment (what to open)</h2>
+    <table class="find">
+      <thead><tr><th>Item</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Product URL</td><td><b>https://mayabela.pages.dev</b> (hard-refresh Ctrl+Shift+R if the UI looks old)</td></tr>
+        <tr><td>Asset</td><td>MaJo e-School Bridge (MayaBela) · Web Application · MB-ESB-001 · 1.0.6</td></tr>
+        <tr><td>Login fields</td><td>School ID + username (phone or email or student username) + password + role</td></tr>
+        <tr><td>Publishable (anon) API key</td><td>Already compiled into the web app. Testers do <b>not</b> need a separate API key for browser tests. RLS is the boundary (CSMS-KEY-001).</td></tr>
+        <tr><td>Service-role / PIN</td><td>Not issued. Not in the client. Not in this pack.</td></tr>
+        <tr><td>Dedicated / on-prem schools</td><td>Out of scope for this shared URL. Do not mix those tenants onto mayabela.pages.dev.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>2. Test tenant and accounts</h2>
+    <p>Testers work on a <b>synthetic school</b> provisioned for the engagement (no real children’s names). MaJo CSO creates it on the platform console and issues time-limited passwords by a channel other than a public ticket (phone / in-person / encrypted mail to the named tester).</p>
+    <p>Ask for accounts covering these desks. Passwords are <b>not printed here</b>; CSO fills the right-hand column when issuing:</p>
+    <table class="find">
+      <thead><tr><th>Role to test</th><th>What it should be able to do</th><th>Must not do</th><th>Credential</th></tr></thead>
+      <tbody>
+        <tr><td>School Admin</td><td>Users, classes, branding, role titles. MFA enroll in Settings.</td><td>Share this login with homeroom.</td><td>Issued out of band</td></tr>
+        <tr><td>Teacher</td><td>Attendance, homework, marks for assigned class. MFA optional.</td><td>Payroll, HR, whole-school register, mark fee paid.</td><td>Issued out of band</td></tr>
+        <tr><td>Finance</td><td>Fees / record payments. MFA required like Admin.</td><td>Give this login to a teacher.</td><td>Issued out of band</td></tr>
+        <tr><td>Registrar</td><td>Admissions, student registry, parent links.</td><td>Let a teacher use the privileged admissions path.</td><td>Issued out of band</td></tr>
+        <tr><td>Parent</td><td>Linked synthetic child only.</td><td>Neighbour’s child.</td><td>Issued out of band</td></tr>
+        <tr><td>Student</td><td>Own timetable / homework / published grades.</td><td>Another student’s login.</td><td>Issued out of band</td></tr>
+        <tr><td>Driver</td><td>Passengers and GPS for <b>their bus</b> only.</td><td>Every child in the school.</td><td>Issued out of band</td></tr>
+      </tbody>
+    </table>
+    <p>Contact to issue accounts: <b>+251 911 646 444</b> · nabilmaya6464@gmail.com · name the tester and the engagement dates. Accounts are disabled when the test window ends.</p>
+    <p>Local-only sandbox logins in source (<code>demo.student</code> / School ID <code>TB-001</code>) are <b>not</b> cloud accounts. They will not open https://mayabela.pages.dev. Do not try them against production.</p>
+
+    <h2>3. Rules of engagement</h2>
+    <ul>
+      <li><span class="do">Do:</span> test tenant isolation (School A vs School B), teacher vs finance vs driver, login rate-limit, public branding vs private files, MFA prompt on Admin/Finance.</li>
+      <li><span class="do">Do:</span> use the synthetic school only. Eight failed logins in 15 minutes lock that username+role+school (not the whole site).</li>
+      <li><span class="dont">Do not:</span> load-test or brute-force the live URL during school hours (09:00–18:00 East Africa Time) in a way that could stop attendance.</li>
+      <li><span class="dont">Do not:</span> upload a class photo as the login logo; that bucket is public.</li>
+      <li><span class="dont">Do not:</span> paste real student rows, medical notes, or passwords into Maya Assistant or into Hibir tickets.</li>
+      <li>Prefer disabling one test account over taking the school offline. Report findings to the CSO (CSMS-IRP-001).</li>
+    </ul>
+
+    <h2>4. Supporting documents already on this asset</h2>
+    <p>Upload these on the same Hibir asset if not already attached. Testers should read them before the first login.</p>
+    <table class="find">
+      <thead><tr><th>File</th><th>Use for testers</th></tr></thead>
+      <tbody>
+        <tr><td>MB-SRS-001</td><td>Roles and required controls</td></tr>
+        <tr><td>MB-SDD-001</td><td>Where data travels; attack surfaces AS-01–AS-12</td></tr>
+        <tr><td>MB-TDD-001</td><td>JWT / RLS / Edge catalogue; CAAT suites 10/11/12</td></tr>
+        <tr><td>MB-UG-001</td><td>How desks are used; misuse UR-01–UR-14</td></tr>
+        <tr><td>MB-SEC-001</td><td>Posture and controls; Guideline PASS Mature 86/100</td></tr>
+      </tbody>
+    </table>
+    <p>Source-level CAAT (no live SQL): replay migrations into local Postgres — <code>supabase/tests/local_pg/tests/10_insa_permission_hardening.sql</code>, <code>11_insa_driver_need_to_know.sql</code>, <code>12_insa_two_school_isolation.sql</code>. Production project is refused as an RLS isolation target.</p>
+
+    <h2>5. What this pack is not</h2>
+    <ul>
+      <li>Not a dump of API keys. The anon key is in the published app; the service-role key stays with MaJo.</li>
+      <li>Not permission to test a paying school’s live tenant.</li>
+      <li>Not a pentest report (that letter is produced after the test).</li>
+    </ul>
+
+    <div class="sig">
+      <div class="box">
+        <div>Prepared by (CSO)</div>
+        <div style="margin-top:28px">Majo Bridge Technologies and Events PLC · 10 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>For INSA / Hibir asset registration</div>
+        <div style="margin-top:28px">Attachment: files testers may need</div>
+      </div>
+    </div>
+    <p class="footer">
+      MB-TEST-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi.<br />
+      Restricted. No production secrets in this file. Live schools were not mutated to produce it.
+    </p>
+  </article>
+</body>
+</html>
