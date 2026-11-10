@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Security Documentation — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 32%; background: var(--wash); }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.1pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .dual { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 12px; }
+    .dual .ok { border: 2px solid #0f7a3a; padding: 8px 10px; background: #f3fbf6; }
+    .dual .fail { border: 2px solid #9b1c1c; padding: 8px 10px; background: #fdf4f4; }
+    .dual h3 { margin: 0 0 4px; font-size: 11pt; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 64px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA asset registration · Security Documentation ·
+    <a href="INSA_Security_Documentation_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · INSA asset registration attachment</p>
+      <p class="sub">Security Documentation (posture, controls, risks, maturity)</p>
+    </header>
+
+    <h1>Security Documentation</h1>
+    <p style="text-align:center;margin:0 0 12px"><b>Product:</b> MaJo e-School Bridge (MayaBela)<br />
+    Insight into security posture and controls · validation of risks, controls, and maturity</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>MB-SEC-001</td></tr>
+      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>INSA portal field</th><td>Security Documentation — provides insight into system security posture and controls; used to validate risks, controls, and security maturity.</td></tr>
+      <tr><th>Owner</th><td>Cyber Security Officer, Majo Bridge Technologies and Events PLC (Managing Director holds CSO duties until a dedicated hire is recorded).</td></tr>
+      <tr><th>Classification</th><td>CONFIDENTIAL — describes controls over children’s records. Do not publish keys, PINs, or JWT contents.</td></tr>
+      <tr><th>Related records</th><td>CSMS pack; Guideline evaluation R3 (INSA-CSMS-AUD-MB-2026-11-09-R3); CMCSRS v2.0 evaluation; MB-SRS-001, MB-SDD-001, MB-TDD-001, MB-UG-001</td></tr>
+    </table>
+
+    <div class="note">
+      This paper is a <b>summary of evidence already on file</b>. It is not a gazetted INSA certificate, not a third-party pentest letter, and not proof that live hosted project <code>hwkiihonthueadbhcvfi</code> already equals every hardened migration. Live SQL is applied only in a notified window so classrooms stay up.
+    </div>
+
+    <h2>1. Security posture (two evaluations, two answers)</h2>
+    <p>INSA reviewers must not mix the two documents. The product CSMS was scored under the <i>Cyber Security Audit and Evaluation Guideline</i> v1.0 (May 2015 E.C., 40 pages). The operator was then checked against <i>CMCSRS version 2.0</i> (97 pages). Different pass rules; different result.</p>
+    <div class="dual">
+      <div class="ok">
+        <h3>Product CSMS — Guideline v1.0</h3>
+        <p style="margin:0"><b>PASS · Mature 86/100</b> (Table 1: 76–90). Zero Major NCs on the submitted TOE. People / process / technology CSMS adopted. Remaining items (external pentest, CC laboratory certificate, live apply window) are Minor / observations.</p>
+      </div>
+      <div class="fail">
+        <h3>Operator — CMCSRS v2.0</h3>
+        <p style="margin:0"><b>FAIL — NOT CONFORMANT.</b> Must-clause gaps: locally licensed cloud (6.29.k), organisation-held cloud keys (6.29.f), foreign outsourcing (6.2.e / 6.38.i), INSA accreditation (6.22/6.23), annual compliance letter (6.24), DSAP national files (6.37). Finding IDs MNC-V2-01 to MNC-V2-06.</p>
+      </div>
+    </div>
+    <p>CIA objectives the product is built to meet: School A cannot read School B; a role sees only what that role needs; drivers see only their bus; privileged desks (Admin, Finance) use a second factor; classroom teachers are not locked out of lessons.</p>
+
+    <h2>2. Control catalogue</h2>
+    <p>Controls are people, process, and technology (INSA Guideline CSMS model). Implementation detail is MB-TDD-001; architecture is MB-SDD-001.</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Control</th><th>Layer</th><th>How it is evidenced</th></tr></thead>
+      <tbody>
+        <tr><td>C-01</td><td>Information security policy, named CSO, RACI</td><td>People</td><td>CSMS-POL-001, CSMS-RACI-001</td></tr>
+        <tr><td>C-02</td><td>Acceptable use; no student-row dumps; no service-role in chat</td><td>People</td><td>CSMS-HR-001; school-admin go-live acknowledgement</td></tr>
+        <tr><td>C-03</td><td>Living risk register; treatment + residual + owner</td><td>Process</td><td>CSMS-RISK-001 (this paper §3)</td></tr>
+        <tr><td>C-04</td><td>Incident response including Ethio-CER2T steps</td><td>Process</td><td>CSMS-IRP-001; 24/7 +251 911 646 444</td></tr>
+        <tr><td>C-05</td><td>Continuity: local restore drill; hosted RPO is the supplier’s</td><td>Process</td><td>CSMS-BCM-001 + records/</td></tr>
+        <tr><td>C-06</td><td>Internal audit programme + CAAT on CI</td><td>Process</td><td>CSMS-AUD-001, CSMS-TEV-001</td></tr>
+        <tr><td>C-07</td><td>JWT school_id and role from <code>app_metadata</code> only</td><td>Technology</td><td>MB-TDD-001; CAAT 12 (two-school)</td></tr>
+        <tr><td>C-08</td><td>RLS on <code>app_documents</code>; teacher module gates; driver need-to-know</td><td>Technology</td><td>CAAT 10 (hardening), 11 (driver 9/9), 12 (7/7)</td></tr>
+        <tr><td>C-09</td><td>Privileged MFA: School Admin + Finance. Teachers opt-in</td><td>Technology</td><td><code>isPrivilegedMfaRole</code>; Flutter tests</td></tr>
+        <tr><td>C-10</td><td>Login: bcrypt, 10+ password, 8 tries / 15 min. PIN: PBKDF2 210000</td><td>Technology</td><td>CSMS-KEY-001; Deno PIN tests</td></tr>
+        <tr><td>C-11</td><td>Service-role key forbidden in the client; Edge functions catalogued (25) with an auth mode</td><td>Technology</td><td><code>edge_auth_inventory.ts</code>; <code>guardRegistryRecord</code></td></tr>
+        <tr><td>C-12</td><td>Public bucket = logos only; student files under <code>schools/&lt;id&gt;/</code></td><td>Technology</td><td>MB-SDD-001 TB-5; MB-UG-001 UR-08</td></tr>
+        <tr><td>C-13</td><td>Maya Assistant: counts only; refuses health/safeguarding/IDs; SIS runs if AI key unset</td><td>Technology</td><td>CSMS-DPIA-001</td></tr>
+        <tr><td>C-14</td><td>Web headers: HSTS, CSP, frame deny; HTTPS only</td><td>Technology</td><td><code>web/_headers</code></td></tr>
+        <tr><td>C-15</td><td>Production is never the RLS isolation target; staging then notified window</td><td>Process</td><td><code>tools/test_rls_isolation.mjs</code>; CSMS-POL-001 §2.5</td></tr>
+        <tr><td>C-16</td><td>Supplier / residency register; dedicated or on-prem path for schools that cannot share foreign hosting</td><td>Process</td><td>CSMS-SUP-001, CSMS-DPA-001</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="pagebreak">3. Risks and how they are treated</h2>
+    <p>Source: CSMS-RISK-001. Likelihood × impact 1–5. Residual is after the 9 November 2026 source controls. Live apply of those controls remains a notified window (R9).</p>
+    <table class="find">
+      <thead><tr><th>Risk</th><th>L×I</th><th>Treatment</th><th>Control</th><th>Residual</th></tr></thead>
+      <tbody>
+        <tr><td>R1 Cross-school leak</td><td>2×5</td><td>Mitigate: JWT school + RLS; two-school CAAT</td><td>C-07, C-08</td><td>Medium until live negative test is green</td></tr>
+        <tr><td>R2 Teacher writes payroll/HR</td><td>2×4</td><td>Mitigate: module gates in source</td><td>C-08</td><td>Low in candidate</td></tr>
+        <tr><td>R3 Driver reads all students</td><td>3×4</td><td>Mitigate: own-bus only</td><td>C-08</td><td>Low in candidate</td></tr>
+        <tr><td>R4 Fee marked paid without cashier</td><td>2×4</td><td>Mitigate: paid-status is finance</td><td>C-08, C-09</td><td>Low in candidate</td></tr>
+        <tr><td>R5 Admin password in school_registry</td><td>2×5</td><td>Mitigate: strip trigger</td><td>C-08</td><td>Low in candidate</td></tr>
+        <tr><td>R6 Service-role Edge bypass</td><td>3×4</td><td>Mitigate: inventory + registry guard</td><td>C-11</td><td>Medium — other functions inventoried</td></tr>
+        <tr><td>R7 Cloud region / sovereignty</td><td>3×4</td><td>Transfer/avoid: on-prem path; INSA exception or local CSP still open</td><td>C-16</td><td>Medium (CMCSRS Must residual)</td></tr>
+        <tr><td>R8 Maya Assistant PII</td><td>2×4</td><td>Mitigate: counts-only context</td><td>C-13</td><td>Low</td></tr>
+        <tr><td>R9 Production lagging source</td><td>3×4</td><td>Accept until notified window — do not rush live schools</td><td>C-15</td><td>Accepted</td></tr>
+        <tr><td>R10 No external pentest yet</td><td>3×3</td><td>Mitigate later: CAAT now; pentest after staging apply</td><td>C-06</td><td>Medium</td></tr>
+        <tr><td>R11 Lost laptop with school JWT</td><td>2×3</td><td>Mitigate: short JWT; MFA on privileged desks; password change revokes</td><td>C-09, C-10</td><td>Medium (shared teacher PCs)</td></tr>
+        <tr><td>R12 On-prem power/IP outage</td><td>4×3</td><td>Accept (customer power); BCM file</td><td>C-05</td><td>Accepted</td></tr>
+        <tr><td>R13 Finance MFA lockout</td><td>2×3</td><td>Mitigate: prompt enroll, login still works; teachers stay opt-in</td><td>C-09</td><td>Low</td></tr>
+      </tbody>
+    </table>
+    <p>User-related risks that technical controls cannot fully close (screenshot of a class list, password on WhatsApp, student photo uploaded as logo) are in MB-UG-001 UR-01–UR-14.</p>
+
+    <h2>4. Security maturity — how it was scored</h2>
+    <h3>4.1 Guideline v1.0 (product + CSMS)</h3>
+    <p>Guideline §8.5.e: significance of issues determines pass or fail. §9 Table 1: 76–90 = Mature (“improvements required to key security areas identified with weaknesses”). Evaluation R3 (9 November 2026) closed Major NCs on the submitted TOE (CSMS pack, driver need-to-know, finance MFA without locking teachers, two-school CAAT, Edge inventory, restore drill, CC-inspired Security Target). Score path: FAIL 38 → R2 Developing 64 → <b>R3 Mature 86</b>.</p>
+    <table class="find">
+      <thead><tr><th>Maturity area</th><th>Band on submitted TOE</th><th>Weakness still open (Minor / observation)</th></tr></thead>
+      <tbody>
+        <tr><td>People</td><td>Operating (policy, CSO, awareness record)</td><td>National clearance files / DSAP scheme not in git</td></tr>
+        <tr><td>Process</td><td>Operating (risk, IRP, BCM, internal eval)</td><td>No INSA accreditation path yet; no annual Minister/INSA letter</td></tr>
+        <tr><td>Technology</td><td>Operating on candidate (JWT/RLS/CAAT)</td><td>External pentest letter; live SQL may lag source; hosted disk keys not MaJo-held</td></tr>
+      </tbody>
+    </table>
+    <h3>4.2 CMCSRS v2.0 (operator)</h3>
+    <p>Must clauses are pass/fail. Exceptional skips need INSA approval. MaJo is treated as a key private organisation processing CONFIDENTIAL children’s data. IoT, blockchain, and ICS are N/A with justification (CSMS-CMCSRS-001). Remaining Must gaps cannot be closed in Flutter: they need a locally licensed CSP or INSA exception, customer-managed keys or on-prem, accreditation, an annual letter, and DSAP files. <b>86/100 is not reprinted as a CMCSRS score.</b></p>
+
+    <h2>5. What this documentation does not claim</h2>
+    <ul>
+      <li>A gazetted INSA certificate, gateway certificate, or Common Criteria laboratory (CB) certificate.</li>
+      <li>An independent web/API pentest letter (scheduled after staging apply — R10 / TV-09).</li>
+      <li>That the live hosted database already contains every INSA migration in source (R9 / TV-07).</li>
+      <li>Organisation custody of hosted disk encryption keys (MNC-V2-02 / TV-06).</li>
+      <li>That classroom teachers are forced onto MFA (explicitly not done).</li>
+      <li>That login logos were hidden (public branding is required so the login page can show a stamp without a JWT).</li>
+    </ul>
+
+    <h2>6. How a reviewer validates this pack</h2>
+    <ol>
+      <li>Policy and RACI: CSMS-POL-001, CSMS-RACI-001.</li>
+      <li>Risks: this §3 and CSMS-RISK-001.</li>
+      <li>Technical controls: MB-TDD-001 plus CAAT <code>10_insa_permission_hardening.sql</code>, <code>11_insa_driver_need_to_know.sql</code>, <code>12_insa_two_school_isolation.sql</code>.</li>
+      <li>Maturity number: Guideline R3 PDF — <code>INSA_CSMS_Audit_Evaluation_Report_MayaBela.pdf</code>.</li>
+      <li>Operator residuals: CMCSRS v2.0 PDF — <code>INSA_CMCSRS_v2_Audit_Evaluation_Report_MayaBela.pdf</code>.</li>
+      <li>Misuse: MB-UG-001. Architecture: MB-SDD-001. Requirements: MB-SRS-001.</li>
+    </ol>
+
+    <div class="sig">
+      <div class="box">
+        <div>Prepared by (CSO)</div>
+        <div style="margin-top:28px">Majo Bridge Technologies and Events PLC · 10 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>For INSA asset registration</div>
+        <div style="margin-top:28px">Attachment to field: Security Documentation</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      MB-SEC-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi.<br />
+      Restricted with the CSMS pack. Not a gazetted INSA certificate. Live schools were not mutated to produce this paper.
+    </p>
+  </article>
+</body>
+</html>
