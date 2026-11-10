@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Technical Specifications (TDD / LLD) — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    code, pre { font-family: "Consolas", "Courier New", monospace; }
+    pre.diag {
+      font-size: 8.1pt; line-height: 1.28; background: var(--wash); border: 1px solid var(--line);
+      padding: 8px 10px; white-space: pre-wrap; page-break-inside: avoid;
+    }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 32%; background: var(--wash); }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.1pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 64px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA asset registration · TDD / LLD ·
+    <a href="INSA_TDD_LLD_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · INSA asset registration attachment</p>
+      <p class="sub">Technical Specifications (TDD / LLD)</p>
+    </header>
+
+    <h1>Technical Design / Low-Level Design</h1>
+    <p style="text-align:center;margin:0 0 12px"><b>Product:</b> MaJo e-School Bridge (MayaBela)<br />
+    Implementation-level detail for vulnerability identification and behaviour validation</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>MB-TDD-001</td></tr>
+      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>INSA portal field</th><td>Technical Specifications (TDD / LLD) — provides implementation-level detail; used to identify technical vulnerabilities and validate system behaviour.</td></tr>
+      <tr><th>Companions</th><td>MB-SRS-001 (requirements) · MB-SDD-001 (architecture, trust boundaries)</td></tr>
+      <tr><th>Classification</th><td>CONFIDENTIAL — names functions and collections. No live passwords, PINs, or service-role values.</td></tr>
+    </table>
+
+    <div class="note">
+      Paths below are in the submitted source. Hardened SQL
+      (<code>20261105120000_insa_permission_hardening.sql</code>,
+      <code>20261109120000_insa_driver_need_to_know.sql</code>) is CAAT-proven locally.
+      Live project apply remains a notified window. This is not a pentest letter.
+    </div>
+
+    <h2>1. Persistence schema</h2>
+    <p>School data is not one table per module. It is a document store:</p>
+    <pre class="diag">public.app_documents (
+  collection  text,     -- e.g. student_registry, grade_reports, fees
+  school_id   text,     -- tenant; compared upper-case to jwt_school_id()
+  doc_id      text,     -- row id inside the school
+  data        jsonb,    -- payload
+  primary key (collection, school_id, doc_id)
+)</pre>
+    <p>RLS is enabled. Anon has no policy on this table. Authenticated access is school-scoped and then role-scoped. Writes that use the Edge <b>service role</b> bypass RLS; those paths must call <code>guardRegistryRecord</code> (or an equivalent desk check) first.</p>
+
+    <h2>2. Identity implementation</h2>
+    <h3>2.1 JWT claims</h3>
+    <p>Helpers in <code>supabase/migrations/20260727210000_security_hardening.sql</code> (and later overlays) read <b>only</b> <code>auth.jwt() -&gt; 'app_metadata'</code>:</p>
+    <table class="find">
+      <thead><tr><th>Function</th><th>Claim</th><th>Vulnerability it closes</th></tr></thead>
+      <tbody>
+        <tr><td><code>jwt_school_id()</code></td><td><code>app_metadata.schoolId</code></td><td>User cannot move tenant by writing <code>user_metadata</code></td></tr>
+        <tr><td><code>jwt_role()</code></td><td><code>app_metadata.role</code></td><td>Client cannot self-promote role in metadata</td></tr>
+        <tr><td><code>jwt_username()</code></td><td><code>app_metadata.username</code></td><td>Stable actor stamp for audit</td></tr>
+        <tr><td><code>jwt_linked_driver_id()</code></td><td><code>app_metadata.linkedDriverId</code></td><td>Driver need-to-know (INSA migration)</td></tr>
+      </tbody>
+    </table>
+    <p>Login roles allowed by Edge: <code>admin | teacher | parent | driver | student</code> (<code>ROLES</code> in <code>supabase/functions/_shared/school_auth.ts</code>). Staff desks are extra keys on the teacher/admin JWT (<code>staffRoles</code> / permissions), not a sixth login role.</p>
+    <h3>2.2 Secrets and rate limits</h3>
+    <table class="find">
+      <thead><tr><th>Mechanism</th><th>Implementation</th><th>Validate</th></tr></thead>
+      <tbody>
+        <tr><td>School password</td><td>bcrypt, 12 rounds; <code>MIN_PASSWORD_LENGTH = 10</code></td><td>Deno + login Edge</td></tr>
+        <tr><td>Login throttle</td><td><code>LOGIN_RATE_LIMIT = 8</code> per 15 minutes per username+role+school</td><td><code>school_auth.ts</code></td></tr>
+        <tr><td>Platform PIN</td><td>PBKDF2-SHA256, 210,000 iterations; legacy <code>sha256:</code> verifies once then upgrades</td><td><code>platform_pin_test.ts</code></td></tr>
+        <tr><td>Owner PIN throttle</td><td>60 pre-verify checks / 15 min; 120 authed calls / 15 min after PIN</td><td>Must not share the school-login 8/15 cap</td></tr>
+        <tr><td>MFA TOTP</td><td>30 s window; recovery codes hashed. Required if <code>GoLiveService.isPrivilegedMfaRole</code> (admin JWT or accountant staff role)</td><td><code>test/phase6_leadership_test.dart</code></td></tr>
+        <tr><td>Anon key</td><td>Compiled into the client</td><td><code>test/insa_client_key_test.dart</code> asserts service-role is absent</td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. Authorisation algorithms</h2>
+    <h3>3.1 SELECT path</h3>
+    <pre class="diag">authenticated request
+  → policy app_documents_select_school
+       school_id = jwt_school_id()
+       AND app_doc_readable(collection, doc_id, school_id, data)
+  → if jwt_role() = 'driver':
+       AND app_doc_driver_may_read(...)   -- own bus only for children / GPS
+</pre>
+    <p>Source: <code>20261109120000_insa_driver_need_to_know.sql</code> (SELECT policy) plus <code>app_doc_readable</code> overlays. Driver function returns true immediately for non-drivers so teacher/admin/parent paths are unchanged.</p>
+    <h3>3.2 Teacher write gate (SEC-001)</h3>
+    <p><code>app_doc_teacher_may_write</code> in <code>20261105120000_insa_permission_hardening.sql</code> runs <b>module gates before</b> any see-all shortcut:</p>
+    <ul>
+      <li>Always deny: <code>school_registry</code>, <code>platform_audit_log</code>.</li>
+      <li>Safeguarding: student_affairs / VP / principal / full_access only; else false.</li>
+      <li>Health / counselling / IEP / medication: student-affairs style roles or <code>manage_students</code>.</li>
+      <li>Payroll / HR collections: denied to ordinary classroom teachers.</li>
+      <li>Fees: paid-status fields require finance/cashier permission.</li>
+      <li>Homework / attendance / grades: assigned class (and see-all only after these gates).</li>
+    </ul>
+    <p>A 403 from RLS must not trigger a full-school client snapshot (<code>test/stale_write_storm_test.dart</code>).</p>
+    <h3>3.3 DELETE</h3>
+    <p>Delete policy requires the same school match plus readability / teacher-write where the migration states it. Parents, students, and drivers are not on the teacher delete path.</p>
+    <h3>3.4 Service-role registry writes</h3>
+    <p><code>school-upsert-registry</code> uses the service role after JWT verify. SQL write-guard does not run. Substitute: <code>guardRegistryRecord</code> in <code>registry_write_policy.ts</code>.</p>
+    <table class="find">
+      <thead><tr><th>Collection</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td><code>admission_applications</code></td><td><code>mayWriteAdmissions</code> → <code>manage_students</code> (registrar desk)</td></tr>
+        <tr><td><code>exam_attempts</code></td><td>Student may write only own <code>studentId</code></td></tr>
+        <tr><td>Discipline desk fields</td><td>Status/outcome only by student-affairs (or escalation desk), not the reporter</td></tr>
+      </tbody>
+    </table>
+    <p>CI: <code>deno test --allow-read … registry_write_policy_test.ts</code>.</p>
+
+    <h2 class="pagebreak">4. Driver need-to-know (LLD)</h2>
+    <p><code>app_doc_driver_bus_id()</code> looks up <code>driver_registry</code> in the JWT school by linked driver id, <code>driverId</code>, or <code>loginUsername</code>, and returns <code>busId</code>.</p>
+    <p><code>app_doc_driver_may_read</code> for role <code>driver</code>:</p>
+    <ul>
+      <li><code>student_registry</code>: allow iff student’s <code>transportId</code> equals that bus. Walkers and other buses: deny.</li>
+      <li><code>bus_live_positions</code> / scans / passenger status: own bus / own driver id.</li>
+      <li>Notices / conversations / bus catalogue: school-scoped only (no extra child dump).</li>
+    </ul>
+    <p>Write trigger: driver may stamp own id on own-bus GPS/scans; foreign-bus overwrite refused. CAAT: <code>11_insa_driver_need_to_know.sql</code> (9/9).</p>
+
+    <h2>5. Storage implementation</h2>
+    <table class="find">
+      <thead><tr><th>Bucket</th><th>Policy idea</th><th>Client path</th></tr></thead>
+      <tbody>
+        <tr><td><code>school-branding</code></td><td>Public SELECT; logos/stamps only</td><td>Login has no JWT</td></tr>
+        <tr><td><code>school-files</code></td><td>Authenticated; object name under <code>schools/&lt;JWT school&gt;/</code></td><td>Photos, documents</td></tr>
+      </tbody>
+    </table>
+    <p>Setup probe (must not be a shared prefix): <code>schools/&lt;SCHOOLID&gt;/_app_setup_probe/&lt;timestamp&gt;.txt</code> in <code>lib/database/supabase/supabase_storage_bootstrap.dart</code>. Probe is skipped unless signed-in <b>and</b> JWT school id is non-empty.</p>
+
+    <h2>6. Edge Function technical catalogue</h2>
+    <p>Inventory: <code>supabase/functions/_shared/edge_auth_inventory.ts</code> (25 functions). Test fails if a directory is missing an auth mode.</p>
+    <table class="find">
+      <thead><tr><th>Mode</th><th>Technical check</th><th>Main vulnerability if missing</th></tr></thead>
+      <tbody>
+        <tr><td>password-login</td><td>bcrypt + 8/15 min</td><td>Online guessing</td></tr>
+        <tr><td>user-jwt</td><td>Verify caller JWT; school from claims</td><td>Cross-tenant write via service role</td></tr>
+        <tr><td>platform-owner-pin</td><td>PBKDF2 + separate rate cap</td><td>Owner console brute force; must not share login cap</td></tr>
+        <tr><td>public-rate-limited</td><td>No JWT; no existence leak on reset</td><td>User enumeration; intake flood</td></tr>
+        <tr><td>push-secret</td><td><code>x-push-secret</code>; body re-read from stored notification</td><td>Forged push content</td></tr>
+      </tbody>
+    </table>
+    <p>Maya Assistant: JWT required; live context is counts only; system instruction refuses health, safeguarding, passwords, children’s IDs. Missing <code>MAYA_AI_API_KEY</code> → HTTP 412; SIS still runs.</p>
+
+    <h2>7. Client technical constraints</h2>
+    <ul>
+      <li>Connect only to configured <code>SUPABASE_URL</code> over HTTPS. Empty GitHub secrets must not dart-define blank URL/key (that wipes compiled defaults and breaks Admin login on Pages).</li>
+      <li>Pages headers: HSTS, CSP, <code>X-Frame-Options: DENY</code>, nosniff (<code>web/_headers</code>).</li>
+      <li>Privileged MFA prompt: <code>GoLiveService.isPrivilegedMfaRole</code> — <code>roleAdmin</code> or <code>StaffRoles.accountant</code> (includes titled finance copies). Teachers/principals remain opt-in.</li>
+    </ul>
+
+    <h2>8. Behaviour validation (CAAT / CI)</h2>
+    <table class="find">
+      <thead><tr><th>Suite</th><th>What it proves</th><th>Does not prove</th></tr></thead>
+      <tbody>
+        <tr><td><code>10_insa_permission_hardening.sql</code></td><td>Teacher denied payroll/HR; fees paid-status; grade audit append-only; homework class-bound; audit actor stamp</td><td>Live hosted project already has the migration</td></tr>
+        <tr><td><code>11_insa_driver_need_to_know.sql</code></td><td>9/9 own-bus vs other-bus / walker / GPS</td><td>Live apply</td></tr>
+        <tr><td><code>12_insa_two_school_isolation.sql</code></td><td>7/7 SCH1 vs SCH2</td><td>Live two-school PostgREST (optional staging job)</td></tr>
+        <tr><td>Flutter unit tests</td><td>MFA privileged set; 403 does not dump school; anon vs service-role in client</td><td>Network attacker on production</td></tr>
+        <tr><td>Deno inventory + registry + PIN tests</td><td>25 functions catalogued; admissions registrar-only; PIN hash format</td><td>INSA-certified pentest</td></tr>
+      </tbody>
+    </table>
+    <p>Production project <code>hwkiihonthueadbhcvfi</code> is refused as an RLS isolation target in <code>tools/test_rls_isolation.mjs</code>.</p>
+
+    <h2 class="pagebreak">9. Technical vulnerabilities (for INSA review)</h2>
+    <p>These are identified from the implementation, not hidden. Severity is for the submitted design.</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Issue</th><th>Layer</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>TV-01</td><td>Anon/publishable key in the binary</td><td>Client</td><td>Accepted; RLS is the boundary. Service-role grepped out of Dart.</td></tr>
+        <tr><td>TV-02</td><td>Teacher MFA optional</td><td>Auth</td><td>Accepted for classroom availability; Admin+Finance required.</td></tr>
+        <tr><td>TV-03</td><td>Public branding bucket</td><td>Storage</td><td>Required for login-without-JWT. Mis-upload of student files is a spill (IRP).</td></tr>
+        <tr><td>TV-04</td><td>Service-role Edge bypass of RLS</td><td>API</td><td>Mitigated by inventory + <code>guardRegistryRecord</code>. A new function without a mode fails CI.</td></tr>
+        <tr><td>TV-05</td><td>Stolen staff JWT until expiry</td><td>Session</td><td>HTTPS + MFA on privileged desks. Shared teacher PCs remain a residual.</td></tr>
+        <tr><td>TV-06</td><td>Hosted disk keys not MaJo-held</td><td>Supplier</td><td>CMCSRS §6.29.f residual; not fixable in Flutter.</td></tr>
+        <tr><td>TV-07</td><td>Live SQL may lag source</td><td>Change</td><td>Documented; staging then notified window. CAAT is on source.</td></tr>
+        <tr><td>TV-08</td><td>Optional AI prompt may contain a name</td><td>TB-7</td><td>Counts-only automatic context; instruction refuses PII/safeguarding.</td></tr>
+        <tr><td>TV-09</td><td>No independent pentest letter yet</td><td>Assurance</td><td>Scheduled after staging apply (CSMS-TEV-001).</td></tr>
+      </tbody>
+    </table>
+
+    <h2>10. Traceability</h2>
+    <table class="find">
+      <thead><tr><th>SRS / SDD</th><th>LLD artefact</th></tr></thead>
+      <tbody>
+        <tr><td>FR-01 / SR-04 / TB-2</td><td><code>jwt_school_id</code> / <code>jwt_role</code> / school-login</td></tr>
+        <tr><td>FR-03 / SR-02</td><td><code>app_doc_teacher_may_write</code></td></tr>
+        <tr><td>FR-07 / SR-03 / TB-4</td><td><code>app_doc_driver_may_read</code> + write trigger</td></tr>
+        <tr><td>FR-05 / AS-07</td><td><code>mayWriteAdmissions</code></td></tr>
+        <tr><td>FR-11 / TB-5 / AS-05</td><td><code>school-branding</code> vs <code>school-files</code> prefix</td></tr>
+        <tr><td>SR-06</td><td><code>isPrivilegedMfaRole</code></td></tr>
+        <tr><td>SR-12</td><td>CAAT 10/11/12 + Deno + Flutter tests</td></tr>
+      </tbody>
+    </table>
+
+    <div class="sig">
+      <div class="box">
+        <div>Prepared by (Engineering / CSO)</div>
+        <div style="margin-top:28px">Majo Bridge Technologies and Events PLC · 10 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>For INSA asset registration</div>
+        <div style="margin-top:28px">Attachment to field: Technical Specifications (TDD / LLD)</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      MB-TDD-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi.<br />
+      Restricted. Not a gazetted INSA certificate and not a third-party pentest report.
+    </p>
+  </article>
+</body>
+</html>
