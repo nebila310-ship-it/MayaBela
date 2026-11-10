@@ -29,6 +29,7 @@ This pack is the organisation’s CSMS for:
 | [CSMS-CC-001 Security Target](CSMS-CC-001-security-target.md) | CC-inspired product evaluation (not a CB certificate) |
 | [CSMS-CMCSRS-001 Applicability](CSMS-CMCSRS-001-applicability.md) | CMCSRS v2.0 process map and N/A justifications (§6.2.a) |
 | INSA portal SRS | [MB-SRS-001](../security/INSA_SRS_MaJo_eSchool_Bridge.pdf) — intended behaviour, roles, critical functions, security controls |
+| INSA portal SDD | [MB-SDD-001](../security/INSA_SDD_MaJo_eSchool_Bridge.pdf) — structure, data flows, trust boundaries, attack surfaces |
 | [Records](records/) | Adoption, awareness, tabletop, restore drill, internal evaluation |
 
 **Live customer schools are not changed by adopting this pack.** Production apply of SQL/Edge Functions is a scheduled change window after staging, so teachers, parents, and students keep working during audit submission.
