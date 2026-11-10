@@ -35,6 +35,7 @@ This pack is the organisation’s CSMS for:
 | INSA portal Security Documentation | [MB-SEC-001](../security/INSA_Security_Documentation_MaJo_eSchool_Bridge.pdf) — posture, controls, risks; Guideline PASS Mature 86/100 |
 | INSA / Hibir tester pack | [MB-TEST-001](../security/INSA_Tester_Access_Pack_MaJo_eSchool_Bridge.pdf) — environment, roles, rules of engagement; no production secrets |
 | INSA official letter | [MB-INSA-LTR-2026-001](../security/INSA_Official_Letter_Asset_Registration_MaJo_eSchool_Bridge.pdf) — request to register asset MB-ESB-001 |
+| INSA supporting evidence pack | [ZIP](../security/INSA_Supporting_Evidence_Pack_MaJo_eSchool_Bridge.zip) · index [MB-EVD-001](../security/INSA_Supporting_Evidence_Index_MaJo_eSchool_Bridge.pdf) — Guideline R3 PASS 86/100 + CSMS records |
 | [Records](records/) | Adoption, awareness, tabletop, restore drill, internal evaluation |
 
 **Live customer schools are not changed by adopting this pack.** Production apply of SQL/Edge Functions is a scheduled change window after staging, so teachers, parents, and students keep working during audit submission.
