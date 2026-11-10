@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LIA hybrid hosting architecture — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #1a4f9c; --green: #1f8a4c; --ink: #142033; --muted: #4a5568;
+      --line: #d6dde8; --paper: #fff; --wash: #f4f7fb; --ok: #0f7a3a;
+      --ok-bg: #e8f7ee; --warn: #8a5a00; --warn-bg: #fff8e8; --stop: #9b1c1c;
+      --stop-bg: #fdecec; --code: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.5pt; line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 14px;
+      flex-wrap: wrap; justify-content: center; padding: 10px;
+      background: rgba(20, 32, 51, 0.94); color: #fff; font-size: 13px;
+    }
+    .toolbar a {
+      color: #fff; font-weight: 700; background: var(--green);
+      padding: 6px 12px; border-radius: 6px; text-decoration: none;
+    }
+    .sheet {
+      width: 210mm; max-width: 100%; margin: 18px auto; background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12); padding: 14mm 14mm 12mm;
+    }
+    .brand-sub {
+      margin: 0; color: var(--green); font-weight: 700; font-size: 9pt;
+      text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .brand-name { margin: 4px 0 0; color: var(--blue); font-size: 13.5pt; }
+    h1.doc-title { margin: 16px 0 6px; font-size: 18pt; line-height: 1.2; }
+    .doc-for { margin: 0 0 12px; font-size: 12pt; color: var(--blue); font-weight: 700; }
+    h2 {
+      margin: 20px 0 8px; font-size: 13pt; color: var(--blue);
+      border-bottom: 2px solid var(--line); padding-bottom: 4px; page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px; font-size: 11.2pt; color: var(--blue);
+      border-left: 4px solid var(--green); padding-left: 8px; page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9pt; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 1px solid var(--line); padding: 6px 7px; vertical-align: top; text-align: left; }
+    th { background: var(--wash); color: var(--blue); }
+    .banner, .note, .stop {
+      border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+    }
+    .banner { background: var(--ok-bg); border: 1px solid #b7e2c6; }
+    .banner strong { color: var(--ok); }
+    .note { background: var(--warn-bg); border: 1px solid #f0d48a; }
+    .note strong { color: var(--warn); }
+    .stop { background: var(--stop-bg); border: 1px solid #f3b4b4; }
+    .stop strong { color: var(--stop); }
+    pre.diag {
+      font-family: Consolas, "Courier New", monospace; font-size: 8pt; line-height: 1.28;
+      background: var(--wash); border: 1px solid var(--line); padding: 10px 12px;
+      overflow-x: auto; white-space: pre; page-break-inside: avoid;
+    }
+    .rec { background: var(--ok-bg); font-weight: 700; }
+    .no { background: var(--stop-bg); }
+    .footer-note {
+      margin-top: 18px; color: var(--muted); font-size: 8.3pt;
+      border-top: 1px solid var(--line); padding-top: 8px;
+    }
+    .pagebreak { page-break-before: auto; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 12mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    LIA hybrid hosting ·
+    <a href="MaJo_Bridge_LIA_Hybrid_Hosting_Architecture.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <p class="brand-sub">Architecture options — not a go-live playbook</p>
+    <p class="brand-name">Majo Bridge Technologies and Events</p>
+    <h1 class="doc-title">Hybrid hosting for Lebawi International Academy</h1>
+    <p class="doc-for">LIA physical server + LIA self-hosted cloud VM · never MaJo shared Supabase</p>
+    <p>Version 1.0 · 10 November 2026, East Africa Time (Africa/Nairobi) · Product: MaJo e-School Bridge (MayaBela)</p>
+
+    <div class="stop">
+      <strong>Hard rule.</strong>
+      LIA data must not live on the shared MaJo project
+      <code>hwkiihonthueadbhcvfi.supabase.co</code> or on <code>mayabela.pages.dev</code> / <code>www.majobridge.com</code>.
+      Both machines in this paper are <b>LIA-owned</b>: one in the school, one a cloud VM LIA (or MaJo on LIA’s behalf) controls.
+    </div>
+
+    <h2>1. What “hybrid” can mean here</h2>
+    <p>
+      MayaBela is one Flutter app talking to <b>one</b> API URL
+      (<code>SUPABASE_URL</code> + anon key). Every desk (attendance, markbook, fees, health, bus GPS)
+      stores rows in the same Postgres table <code>app_documents</code>, distinguished only by a
+      <code>collection</code> name. Desks do not call each other over HTTP. They <b>read the same collections
+      and join in the browser</b> (student id, class name, bus id).
+    </p>
+    <p>So a hybrid of two machines is possible. A hybrid of two <b>live writable databases that each own some modules</b> is not, unless we rewrite the client. The four options below respect that.</p>
+    <table>
+      <thead><tr><th>Option</th><th>Campus physical server</th><th>Self-hosted cloud VM</th><th>When to pick</th></tr></thead>
+      <tbody>
+        <tr class="rec"><td>A — Campus primary + cloud replica / proxy (recommended)</td><td>Write database, Auth, Edge, staff LAN</td><td>Public HTTPS, replica, parent path</td><td>LIA wants data in the building and parents on mobile data</td></tr>
+        <tr><td>B — Cloud primary + campus cache</td><td>LAN cache, CCTV, print, outbox if WAN dies</td><td>Write database (LIA VM, not MaJo)</td><td>Campus ISP is the weak link</td></tr>
+        <tr><td>C — Campus-only sensitive + cloud publish</td><td>Health, safeguarding, payroll, HR files</td><td>Published grades, attendance, fees due, bus GPS, messages</td><td>Some collections must never leave the site</td></tr>
+        <tr class="no"><td>D — Two live writers (do not)</td><td>Some modules</td><td>Other modules</td><td>Split-brain. SIS profile cannot compose a child.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>2. How modules read each other today</h2>
+    <p>There is no module-to-module network. The join key is always on the row.</p>
+<pre class="diag">
+  Flutter desk (one school JWT)
+       |
+       +-- DocumentStore / CloudAppStore
+       |        HTTPS + JWT
+       v
+  PostgREST  -->  public.app_documents
+                  (collection, school_id, doc_id, data, updated_at)
+                  RLS: school_id = jwt schoolId
+
+  Edge Functions (login, registry upsert, PIN, mail, AI)
+       |  service-role after an application gate
+       v
+  same app_documents + Auth users + Storage buckets
+</pre>
+    <p>Important joins the client already does (this is why Option D fails):</p>
+    <table>
+      <thead><tr><th>Desk</th><th>Collections it reads</th><th>Join key</th></tr></thead>
+      <tbody>
+        <tr><td>Students (SIS profile)</td><td><code>student_registry</code> + markbook + attendance + fees + health + clubs + documents</td><td>student id</td></tr>
+        <tr><td>Attendance</td><td><code>attendance_sessions</code> + <code>student_registry</code> + <code>teacher_registry</code> (assigned class)</td><td>class name / student id</td></tr>
+        <tr><td>Weighted markbook / report cards</td><td><code>grade_reports</code> + students + exam attempts</td><td>student id + class</td></tr>
+        <tr><td>Exam bank</td><td><code>exam_questions</code>, <code>exam_papers</code>, <code>exam_attempts</code> → can push into <code>grade_reports</code></td><td>paper / student id</td></tr>
+        <tr><td>Fees</td><td><code>fees</code> + students</td><td>student id</td></tr>
+        <tr><td>Transport / live GPS</td><td><code>buses</code> + <code>driver_registry</code> + <code>transport_scans</code> + <code>bus_live_positions</code> + students on that bus</td><td>bus id = driver’s transportId</td></tr>
+        <tr><td>Parents</td><td>parent link + linked children’s students, grades (after publish), attendance, fees, bus</td><td>linked student ids</td></tr>
+        <tr><td>Admissions</td><td><code>admission_applications</code> → enrol writes <code>student_registry</code></td><td>application → new student id</td></tr>
+        <tr><td>Inventory / store</td><td><code>inventory_items</code>, purchase / issue / transfer requests, <code>stock_transactions</code></td><td>item id</td></tr>
+        <tr><td>LMS</td><td>lesson plans + homework + materials + exams + SIS roster</td><td>class / student</td></tr>
+        <tr><td>Payroll / HR</td><td><code>employee_registry</code> + <code>payroll_*</code> (must stay off parent devices)</td><td>staff id</td></tr>
+        <tr><td>Safeguarding / counseling / IEP</td><td>own collections; SIS profile composes a flag, not the case file, for non-cleared roles</td><td>student id</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Storage is separate: public <code>school-branding</code> (login logos) and private <code>school-files</code> under
+      <code>schools/&lt;LIA&gt;/</code>. Files follow the same school JWT. They should live on the same machine as the write database.
+    </p>
+
+    <h2>3. Option A — Campus primary, cloud replica / public proxy (recommended)</h2>
+    <p>
+      One LIA database. The physical server is the <b>only writer</b>. The cloud VM is the public door
+      (HTTPS, replica, parent phones) and a disaster-recovery copy. This is the smallest change to MayaBela:
+      still one <code>SUPABASE_URL</code>.
+    </p>
+<pre class="diag">
+  Campus (LIA server room)                         Cloud VM (LIA-owned, not MaJo)
+  ========================                         ==============================
+  Staff PC / school Wi-Fi                          Parent phone / student / driver GPS
+       |                                                |
+       |  LAN or https://erp.lia....                    |  https://erp.lia....
+       v                                                v
+  nginx :443  (erp + api)                          nginx :443
+       |                                                |
+       +-- static Flutter web                           +-- same web files (or proxy)
+       +-- Kong :8000  (Auth, PostgREST, Storage,       +-- WireGuard tunnel --------+
+           Edge Functions)                              +-- Postgres REPLICA (read)  |
+                |                                                                    |
+                v                                                                    |
+         Postgres PRIMARY  &lt;----- streaming replication (WAL) -----------------------+
+         (all collections)
+         backups: nightly pg_dump + weekly USB
+</pre>
+    <h3>3.1 Flow — teacher takes attendance</h3>
+    <ol>
+      <li>Teacher opens <code>https://erp.lia…</code> (LAN if on campus, public hostname if at home).</li>
+      <li>Login hits <code>school-login</code> Edge on the <b>campus</b> stack (via LAN or via the cloud nginx tunnel).</li>
+      <li>Auth mints JWT with <code>app_metadata.schoolId = LIA</code>, role = teacher.</li>
+      <li>Attendance desk reads <code>student_registry</code> (class list) and writes <code>attendance_sessions</code> through PostgREST. RLS checks school + assigned class.</li>
+      <li>WAL ships the new rows to the cloud replica within seconds.</li>
+    </ol>
+    <h3>3.2 Flow — parent on mobile data</h3>
+    <ol>
+      <li>Parent hits the <b>cloud</b> hostname (campus public IP may be blocked or unstable from mobile networks).</li>
+      <li>Cloud nginx sends <b>writes</b> (messages, link requests, FCM token) through WireGuard to campus Kong.</li>
+      <li>Cloud nginx may serve <b>reads</b> from the replica if lag is under a few seconds; otherwise also proxy to campus.</li>
+      <li>Parent JWT can only see linked children. Safeguarding collections stay denied by RLS even though they exist on the replica.</li>
+    </ol>
+    <h3>3.3 What to install</h3>
+    <ul>
+      <li>Campus: Ubuntu + Docker self-hosted Supabase (same stack as the LIA on-prem go-live guide) + WireGuard + nightly dump.</li>
+      <li>Cloud VM: Ubuntu + nginx + WireGuard + Postgres replica (or a second Docker stack with <code>hot_standby</code>). Same TLS names.</li>
+      <li>DNS: <code>erp</code> and <code>api</code> A records → <b>cloud public IP</b> (stable). Staff on LAN can also use a split-horizon DNS to the campus LAN IP so a WAN outage does not stop lessons.</li>
+      <li>Flutter web/APK: dart-define <code>SUPABASE_URL=https://api.lia…</code> and the <b>LIA anon key</b>, never the MaJo key.</li>
+    </ul>
+    <div class="banner"><strong>Why this is first.</strong> Modules keep joining in one database. Parents get a public path. Children’s rows are not copied to MaJo. Failover is “promote the replica” — a known Postgres operation — not a second product.</div>
+
+    <h2>4. Option B — Cloud primary, campus as cache / edge</h2>
+    <p>Flip Option A. The self-hosted cloud VM holds the write database. The physical server is the school’s always-on LAN box: cached website, local replica, CCTV NVR, print, and the Flutter offline outbox if the ISP dies.</p>
+<pre class="diag">
+  Cloud VM (LIA)  =  Postgres PRIMARY + Auth + Edge + public HTTPS
+  Campus server   =  Flutter web cache + Postgres replica + CCTV +
+                     staff devices using local SQLite / CloudAppStore outbox
+                     until WAN returns, then flush to cloud primary
+</pre>
+    <p>
+      The product already has <code>CloudOutboxService</code> and local stores. Staff can keep taking attendance
+      on campus Wi-Fi during an ISP cut; queued writes upload when the tunnel is back.
+      Parents cannot work during a cloud-VM outage (they were never on the LAN).
+    </p>
+    <p><b>Pick B</b> if Ethio/campus last-mile is worse than a proper VM in a licensed local data centre. <b>Do not pick B</b> if LIA’s TOR says the system of record must sit in the building.</p>
+
+    <h2>5. Option C — Campus-only sensitive collections, cloud publish</h2>
+    <p>
+      Two LIA databases, but <b>not</b> two writers for the same child. Campus is the system of record.
+      A publish worker copies only allowed collections to the cloud VM that parents hit.
+    </p>
+    <table>
+      <thead><tr><th>Stays on campus only</th><th>Published to cloud (parent/student/driver)</th></tr></thead>
+      <tbody>
+        <tr><td><code>health_records</code>, <code>counseling_records</code>, <code>iep_plans</code>, <code>safeguarding_cases</code>, <code>medication_stock</code>, payroll, HR files, staff documents</td>
+            <td>Published <code>grade_reports</code>, attendance summaries, homework, announcements, fees due (not the finance ledger), bus GPS, messages, branding</td></tr>
+      </tbody>
+    </table>
+<pre class="diag">
+  Staff desks  -->  Campus PRIMARY (all collections)
+                         |
+                         |  publish worker (allow-list, no medical/safeguarding/payroll)
+                         v
+  Parent / student / driver  -->  Cloud VM (subset replica)
+</pre>
+    <h3>5.1 Flow — publish grades</h3>
+    <ol>
+      <li>Teacher writes marks on campus. They stay campus-only until academic lead approves/publishes.</li>
+      <li>Publish sets a flag on <code>grade_reports</code>. Worker copies those rows (and the linked student display name, not the medical flag) to the cloud DB.</li>
+      <li>Parent app uses a <b>second</b> API URL (parent build) that only knows the cloud VM.</li>
+    </ol>
+    <div class="note">
+      <strong>Cost.</strong>
+      This needs a new worker, two Flutter builds (staff vs parent), and a rule that SIS-on-cloud must not try to open health collections.
+      Use it only if LIA legal/INSA says those collections must not be replicated off-site at all — even to an LIA VM.
+    </div>
+
+    <h2>6. Option D — Split modules across two live writers (do not)</h2>
+    <p>
+      Example: “academics on cloud, finance on campus”. The SIS profile, report cards, at-risk rules, and parent app
+      all join those collections in memory. Two writers means two student ids, delayed fees, and RLS that cannot
+      see the other school-half. We would have to invent a sync bus between modules. That is a second product.
+    </p>
+
+    <h2>7. End-to-end flows (Option A)</h2>
+    <h3>7.1 Login</h3>
+<pre class="diag">
+  Device --HTTPS--> nginx (cloud or campus split-DNS)
+                      --> Kong --> school-login (rate-limited)
+                      --> bcrypt verify (schoolId+username+role)
+                      --> Auth JWT (schoolId=LIA, role)
+  Device stores JWT. Later calls send it. No JWT on the login page (logo is public branding).
+</pre>
+    <h3>7.2 Ordinary classroom write</h3>
+<pre class="diag">
+  Teacher JWT --> PostgREST INSERT attendance_sessions
+                    RLS: school_id = LIA AND assigned class
+                    row lands on PRIMARY
+                    replica receives WAL
+  At-risk desk later READs attendance_sessions + grade_reports + student_registry
+                    (same DB, same JWT, join in Flutter)
+</pre>
+    <h3>7.3 Privileged registry write</h3>
+<pre class="diag">
+  Registrar JWT --> Edge school-upsert-registry
+                    gate (admissions / student row)
+                    service-role upsert on PRIMARY
+                    student_registry row appears
+  Fees, transport, markbook can now join that student id
+                    — they do not wait on a second module API
+</pre>
+    <h3>7.4 Driver GPS</h3>
+<pre class="diag">
+  Driver phone --> cloud nginx --> tunnel --> PRIMARY
+                   bus_live_positions (transportId == busId)
+  Parent read  --> replica or tunnel --> same collection, linked child only
+</pre>
+    <h3>7.5 WAN down at campus (Option A + split-horizon)</h3>
+<pre class="diag">
+  Staff on school Wi-Fi --> LAN_IP nginx --> PRIMARY   (lessons continue)
+  Parents on mobile     --> cloud nginx  --> tunnel X  (read replica until lag policy;
+                                                        writes queue or show “campus unreachable”)
+  USB / pg_dump still runs on campus
+</pre>
+
+    <h2>8. Comparison</h2>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>A Campus primary</th>
+          <th>B Cloud primary</th>
+          <th>C Publish subset</th>
+          <th>D Two writers</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Matches current Flutter (one URL)</td><td>Yes</td><td>Yes</td><td>No — two builds</td><td>No</td></tr>
+        <tr><td>Modules join without a new bus</td><td>Yes</td><td>Yes</td><td>Staff yes / parent limited</td><td>No</td></tr>
+        <tr><td>Record in the building</td><td>Yes</td><td>No (replica only)</td><td>Yes for sensitive</td><td>Confused</td></tr>
+        <tr><td>Parents on mobile data</td><td>Yes (cloud door)</td><td>Yes</td><td>Yes (subset)</td><td>Fragile</td></tr>
+        <tr><td>Lessons if ISP dies</td><td>Yes if split-DNS to LAN</td><td>Yes via local outbox</td><td>Staff yes</td><td>Unknown</td></tr>
+        <tr><td>INSA / TOR “not MaJo cloud”</td><td>Yes</td><td>Yes if VM is LIA’s</td><td>Yes</td><td>Yes, but unsafe</td></tr>
+        <tr><td>Engineering size</td><td>Ops (WireGuard + replica)</td><td>Ops + outbox tuning</td><td>New worker + two apps</td><td>Rewrite</td></tr>
+      </tbody>
+    </table>
+
+    <h2>9. Recommendation</h2>
+    <ol>
+      <li><b>Implement Option A.</b> Campus self-hosted Supabase as primary. Cloud VM as public nginx + WireGuard + replica. One LIA Flutter build.</li>
+      <li>Use <b>split-horizon DNS</b> so teachers on campus Wi-Fi never depend on the ISP for the API.</li>
+      <li>Keep Option C in reserve only for health/safeguarding/payroll if LIA legal forbids off-site replicas of those collections — then exclude them from WAL (publication set) rather than inventing a second SIS.</li>
+      <li>Do not point anything at MaJo’s shared Supabase. Do not fail over LIA onto <code>www.majobridge.com</code>.</li>
+    </ol>
+    <div class="note">
+      <strong>Next physical step</strong> (not in this paper): the existing LIA on-prem go-live guide for Ubuntu + Docker + nginx + Certbot on the campus box, then a second identical VM with replica settings and WireGuard. Confirm LIA’s public IP, domain, and which licensed local cloud (or LIA VPS) they will rent.
+    </div>
+
+    <p class="footer-note">
+      MB-LIA-HYB-001 · MaJo e-School Bridge · 10 November 2026, Africa/Nairobi ·
+      Companion: LIA on-prem go-live guide (campus stack). This file is options and flows, not a certificate and not a live cutover.
+    </p>
+  </article>
+</body>
+</html>
