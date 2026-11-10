@@ -28,6 +28,7 @@ This pack is the organisation’s CSMS for:
 | [CSMS-DPA-001 Processor terms](CSMS-DPA-001-processor-terms.md) | Children’s data processor description |
 | [CSMS-CC-001 Security Target](CSMS-CC-001-security-target.md) | CC-inspired product evaluation (not a CB certificate) |
 | [CSMS-CMCSRS-001 Applicability](CSMS-CMCSRS-001-applicability.md) | CMCSRS v2.0 process map and N/A justifications (§6.2.a) |
+| INSA portal System Description | [MB-SYS-001](../security/INSA_System_Description_MaJo_eSchool_Bridge.pdf) — what the system is, MInT legal identity, PASS 86/100 |
 | INSA portal SRS | [MB-SRS-001](../security/INSA_SRS_MaJo_eSchool_Bridge.pdf) — intended behaviour, roles, critical functions, security controls |
 | INSA portal SDD | [MB-SDD-001](../security/INSA_SDD_MaJo_eSchool_Bridge.pdf) — structure, data flows, trust boundaries, attack surfaces |
 | INSA portal TDD/LLD | [MB-TDD-001](../security/INSA_TDD_LLD_MaJo_eSchool_Bridge.pdf) — JWT/RLS/Edge implementation, CAAT, technical vulnerabilities |
