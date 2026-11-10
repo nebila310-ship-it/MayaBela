@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Option A beginner guide — LIA campus server + cloud VM</title>
+  <style>
+    :root {
+      --blue: #1a4f9c; --green: #1f8a4c; --ink: #142033; --muted: #4a5568;
+      --line: #d6dde8; --paper: #fff; --wash: #f4f7fb; --ok: #0f7a3a;
+      --ok-bg: #e8f7ee; --warn: #8a5a00; --warn-bg: #fff8e8; --stop: #9b1c1c;
+      --stop-bg: #fdecec; --code: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.5pt; line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 14px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: rgba(20, 32, 51, 0.94);
+      color: #fff; font-size: 13px;
+    }
+    .toolbar a {
+      color: #fff; font-weight: 700; background: var(--green);
+      padding: 6px 12px; border-radius: 6px; text-decoration: none;
+    }
+    .sheet {
+      width: 210mm; max-width: 100%; margin: 18px auto; background: var(--paper);
+      box-shadow: 0 8px 28px rgba(20, 32, 51, 0.12); padding: 14mm 14mm 12mm;
+    }
+    .brand-sub {
+      margin: 0; color: var(--green); font-weight: 700; font-size: 9pt;
+      text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .brand-name { margin: 4px 0 0; color: var(--blue); font-size: 13.5pt; }
+    h1.doc-title { margin: 16px 0 6px; font-size: 18pt; line-height: 1.2; }
+    .doc-for { margin: 0 0 12px; font-size: 12pt; color: var(--blue); font-weight: 700; }
+    h2 {
+      margin: 20px 0 8px; font-size: 13pt; color: var(--blue);
+      border-bottom: 2px solid var(--line); padding-bottom: 4px; page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px; font-size: 11.2pt; color: var(--blue);
+      border-left: 4px solid var(--green); padding-left: 8px; page-break-after: avoid;
+    }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9pt; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 1px solid var(--line); padding: 6px 7px; vertical-align: top; text-align: left; }
+    th { background: var(--wash); color: var(--blue); }
+    .banner, .note, .stop { border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+    .banner { background: var(--ok-bg); border: 1px solid #b7e2c6; }
+    .banner strong { color: var(--ok); }
+    .note { background: var(--warn-bg); border: 1px solid #f0d48a; }
+    .note strong { color: var(--warn); }
+    .stop { background: var(--stop-bg); border: 1px solid #f3b4b4; }
+    .stop strong { color: var(--stop); }
+    .who { font-weight: 800; font-size: 8.2pt; letter-spacing: 0.3px; text-transform: uppercase; }
+    .who.our { color: var(--blue); }
+    .who.lia { color: var(--green); }
+    .who.cloud { color: #6b3fa0; }
+    .who.both { color: #0f4c81; }
+    .fill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .fill { background: var(--wash); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+    .fill strong { display: block; color: var(--blue); font-size: 8.2pt; text-transform: uppercase; margin-bottom: 4px; }
+    .fill .line { border-bottom: 1px dotted #8a96a8; min-height: 18px; margin-top: 6px; }
+    pre {
+      background: #f3f6fb; color: #0b1220; border: 1px solid #c5d0e0;
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 9pt; line-height: 1.5; overflow-x: auto; white-space: pre-wrap;
+      word-break: normal; overflow-wrap: break-word; page-break-inside: avoid;
+      font-family: "DejaVu Sans Mono", "Liberation Mono", Consolas, "Courier New", monospace;
+    }
+    code { font-family: Consolas, "Courier New", monospace; }
+    .check td:first-child { width: 22px; text-align: center; font-size: 12pt; }
+    .footer-note {
+      margin-top: 18px; color: var(--muted); font-size: 8.3pt;
+      border-top: 1px solid var(--line); padding-top: 8px;
+    }
+    .machine { display: inline-block; background: var(--wash); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 12mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Option A beginner guide ·
+    <a href="MaJo_Bridge_LIA_Hybrid_Option_A_Beginner_Guide.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <p class="brand-sub">Copy-paste commissioning playbook · Option A</p>
+    <p class="brand-name">Majo Bridge Technologies and Events</p>
+    <h1 class="doc-title">What to do next: LIA physical server + new cloud VM</h1>
+    <p class="doc-for">Lebawi International Academy · MaJo e-School Bridge (MayaBela)</p>
+    <p>Version 1.0 · 10 November 2026, East Africa Time (Africa/Nairobi) · For an engineer who has never done this before. Written so you can sit in front of a keyboard and paste.</p>
+
+    <div class="stop">
+      <strong>Golden rule — read twice.</strong>
+      Never type the shared MaJo address <code>https://hwkiihonthueadbhcvfi.supabase.co</code>
+      into either LIA machine, the LIA website build, or the LIA Android APK.
+      Never run <code>deploy-cloudflare-pages.cmd</code> for this job.
+      Fnote and other schools stay on <code>https://mayabela.pages.dev</code>. LIA gets its own empty database on the school’s physical server.
+    </div>
+
+    <div class="banner">
+      <strong>Option A in one sentence.</strong>
+      The Lebawi physical server holds the only write database (teachers, marks, health).
+      The new cloud VM is the public door (parents on mobile data) plus a disaster-recovery copy.
+      The school router does <b>not</b> open ports to the internet. The campus starts an encrypted tunnel <b>out</b> to the cloud.
+    </div>
+
+    <h2>0. Picture (so the steps make sense)</h2>
+<pre>Parents / phones  --HTTPS--&gt;  CLOUD VM (public IP, padlock)
+                                    nginx :443
+                                       |
+                                       | WireGuard tunnel (campus started it)
+                                       v
+Staff on school Wi-Fi --LAN--&gt;  CAMPUS SERVER
+                                  nginx (LAN) + Kong + Auth + Postgres PRIMARY
+                                  nightly backup + USB
+                                  replica copy is sent to the cloud for disaster recovery</pre>
+    <p>Live logins and saves always go to the campus database. The cloud does not become a second school.</p>
+
+    <h2>1. Who sits where</h2>
+    <table>
+      <tr><th>Label</th><th>Who</th><th>Where they type</th></tr>
+      <tr><td><span class="who our">Our side</span></td><td>MaJo engineer</td><td>Your laptop + both servers</td></tr>
+      <tr><td><span class="who lia">LIA side</span></td><td>LIA IT / principal nominee</td><td>Domain login, server room, UPS, admin password</td></tr>
+      <tr><td><span class="who cloud">Cloud desk</span></td><td>Whoever rented the VM (LIA or MaJo on LIA’s behalf)</td><td>VM dashboard: Ubuntu, public IP, SSH key</td></tr>
+    </table>
+
+    <h2>2. Write these words on paper first</h2>
+    <p>Do not start until every line has a real value. Then every command below uses those names.</p>
+    <div class="fill-grid">
+      <div class="fill"><strong>CLOUD_PUBLIC_IP</strong>The new VM’s public IPv4<div class="line"></div></div>
+      <div class="fill"><strong>CAMPUS_LAN_IP</strong>School server inside address (example 192.168.1.50)<div class="line"></div></div>
+      <div class="fill"><strong>yourdomain.com</strong>Domain LIA owns (example lia.edu.et)<div class="line"></div></div>
+      <div class="fill"><strong>erp.yourdomain.com</strong>Website teachers and parents open<div class="line"></div></div>
+      <div class="fill"><strong>api.yourdomain.com</strong>Database API (same two machines)<div class="line"></div></div>
+      <div class="fill"><strong>SCHOOL_ID</strong>Short id in the app — letters only (example LIA)<div class="line"></div></div>
+      <div class="fill"><strong>cloudadmin</strong>Linux user on the cloud VM<div class="line"></div></div>
+      <div class="fill"><strong>liaadmin</strong>Linux user on the campus server<div class="line"></div></div>
+    </div>
+    <div class="note">
+      <strong>Two hostnames, one public IP — the cloud’s IP.</strong>
+      Parents never need the school’s public IP. The campus may have no public IP at all. That is OK for Option A.
+    </div>
+
+    <h2>3. Day-by-day map (print this page)</h2>
+    <table>
+      <tr><th>When</th><th>Machine</th><th>What you finish</th></tr>
+      <tr><td>Day 0</td><td>Office</td><td>Paper above filled. Cloud VM exists. Campus has Ubuntu, 16 GB RAM, UPS.</td></tr>
+      <tr><td>Morning 1</td><td>DNS website</td><td><code>erp</code> and <code>api</code> A records → <b>CLOUD_PUBLIC_IP</b>. Grey cloud if Cloudflare.</td></tr>
+      <tr><td>Morning 1</td><td class="machine">CLOUD</td><td>Ubuntu updates, firewall 22/80/443/51820, nginx placeholder.</td></tr>
+      <tr><td>Afternoon 1</td><td class="machine">CAMPUS</td><td>Ubuntu, Docker, LIA’s empty Supabase stack, firewall LAN + WireGuard only.</td></tr>
+      <tr><td>Morning 2</td><td>Both</td><td>WireGuard. Ping 10.66.0.1 ↔ 10.66.0.2.</td></tr>
+      <tr><td>Morning 2</td><td class="machine">CLOUD</td><td>Nginx proxies API through the tunnel. Certbot padlock.</td></tr>
+      <tr><td>Afternoon 2</td><td class="machine">CAMPUS</td><td>MayaBela SQL + functions. LAN nginx for staff.</td></tr>
+      <tr><td>Morning 3</td><td>Laptop</td><td>Flutter web build with LIA URL + LIA anon key. Search JS for the MaJo project ref — must find nothing.</td></tr>
+      <tr><td>Morning 3</td><td>Both</td><td>Upload website to campus and cloud. Create only school LIA. Turn off the 10 excluded modules.</td></tr>
+      <tr><td>Afternoon 3</td><td>Both</td><td>Isolation tests, backup, copy dump to cloud, USB to principal, paper handover.</td></tr>
+    </table>
+
+    <h2>4. Phase 0 — Buy / confirm the new cloud VM</h2>
+    <p><span class="who cloud">Cloud desk</span> + <span class="who our">our side</span>. Any Ubuntu 22.04 or 24.04 VPS LIA (or MaJo for LIA) controls. Not MaJo’s shared Supabase.</p>
+    <table class="check">
+      <tr><th></th><th>Ask</th><th>Write it</th></tr>
+      <tr><td>☐</td><td>Provider (Ethio / licensed local DC / LIA VPS)</td><td></td></tr>
+      <tr><td>☐</td><td>Public IPv4 (must not start 10. / 192.168. / 172.16–31.)</td><td></td></tr>
+      <tr><td>☐</td><td>Size: 2 vCPU, 4 GB RAM minimum (8 GB better), 80 GB disk</td><td></td></tr>
+      <tr><td>☐</td><td>SSH: you can log in as <code>cloudadmin</code> with a key</td><td></td></tr>
+      <tr><td>☐</td><td>Country/region written down for LIA (agreement Art. 13.2)</td><td></td></tr>
+    </table>
+    <p>From your laptop (not school Wi-Fi), test:</p>
+<pre>ping CLOUD_PUBLIC_IP
+ssh cloudadmin@CLOUD_PUBLIC_IP</pre>
+    <p>You want a login prompt, then a Linux shell. If SSH fails, fix the VM dashboard (firewall, key) before anything else.</p>
+
+    <h2>5. Phase 1 — Point the domain at the <em>cloud</em> IP</h2>
+    <p><span class="who both">Both</span> at the domain registrar. Two A records, <b>both</b> values = <code>CLOUD_PUBLIC_IP</code> (not the school).</p>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Value</th><th>Proxy</th></tr>
+      <tr><td>A</td><td><code>erp</code></td><td>CLOUD_PUBLIC_IP</td><td>DNS only / grey cloud</td></tr>
+      <tr><td>A</td><td><code>api</code></td><td>CLOUD_PUBLIC_IP</td><td>DNS only / grey cloud</td></tr>
+    </table>
+    <p>Wait, then from any network:</p>
+<pre>nslookup erp.yourdomain.com
+nslookup api.yourdomain.com</pre>
+    <p>Both must show <code>CLOUD_PUBLIC_IP</code>. Do not continue to certificates until this is true.</p>
+
+    <h2>6. Phase 2 — First commands on the <span class="machine">CLOUD</span> VM</h2>
+    <p>SSH in, then paste. Replace nothing yet except if the user is not <code>cloudadmin</code>.</p>
+<pre>sudo apt update
+sudo apt -y upgrade
+sudo apt -y install ca-certificates curl git ufw nginx unzip jq wireguard qrencode</pre>
+<pre>sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 51820/udp
+sudo ufw enable
+sudo ufw status</pre>
+    <p>You want 22, 80, 443, 51820 allowed.</p>
+<pre>sudo mkdir -p /var/www/lia-erp
+echo "LIA ERP cloud door — waiting for files" | sudo tee /var/www/lia-erp/index.html
+sudo rm -f /etc/nginx/sites-enabled/default</pre>
+
+    <h2>7. Phase 3 — First commands on the <span class="machine">CAMPUS</span> physical server</h2>
+    <p><span class="who our">Our side</span> sitting in the school, or AnyDesk. Ubuntu Server 22.04/24.04. 16 GB RAM if possible.</p>
+<pre>ip a
+hostname -I</pre>
+    <p>Write the LAN address as <code>CAMPUS_LAN_IP</code> (usually 192.168.x.x). Tell the school this address must stay fixed in the router DHCP reservation.</p>
+<pre>sudo apt update
+sudo apt -y upgrade
+sudo apt -y install ca-certificates curl git ufw nginx unzip jq wireguard socat</pre>
+    <div class="note">
+      <strong>Campus firewall is stricter.</strong>
+      Do <b>not</b> open 80/443 to the whole internet on this box. Staff use the LAN. Parents use the cloud door.
+    </div>
+<pre>sudo ufw allow OpenSSH
+sudo ufw allow from 192.168.0.0/16 to any port 80
+sudo ufw allow from 192.168.0.0/16 to any port 443
+sudo ufw allow 51820/udp
+sudo ufw enable
+sudo ufw status</pre>
+    <p>If the school LAN is 10.x, change <code>192.168.0.0/16</code> to <code>10.0.0.0/8</code>.</p>
+
+    <h3>7.1 Docker on campus (the database lives here)</h3>
+<pre>sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo usermod -aG docker $USER</pre>
+    <p>Log out and log in once so Docker works without sudo. Check:</p>
+<pre>docker --version
+docker compose version</pre>
+
+    <h2>8. Phase 4 — WireGuard tunnel (cloud is the hub, campus dials out)</h2>
+    <p>This is the encrypted pipe in the architecture drawing. The campus starts it. The school does not port-forward 443.</p>
+
+    <h3>8.1 On <span class="machine">CLOUD</span> — make keys</h3>
+<pre>sudo mkdir -p /etc/wireguard
+cd /etc/wireguard
+umask 077
+wg genkey | tee server_private.key | wg pubkey > server_public.key
+wg genkey | tee campus_private.key | wg pubkey > campus_public.key
+sudo cat server_private.key; echo; sudo cat server_public.key; echo
+sudo cat campus_private.key; echo; sudo cat campus_public.key</pre>
+    <p>Four strings. Label them on paper: CloudPriv, CloudPub, CampusPriv, CampusPub.</p>
+<pre>sudo nano /etc/wireguard/wg0.conf</pre>
+    <p>Paste this. Put the real keys and the cloud public IP.</p>
+<pre>[Interface]
+Address = 10.66.0.1/24
+ListenPort = 51820
+PrivateKey = PASTE_CloudPriv
+# NAT so campus can be reached as 10.66.0.2
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o $(ip -4 route get 1.1.1.1 | awk '{print $5; exit}') -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o $(ip -4 route get 1.1.1.1 | awk '{print $5; exit}') -j MASQUERADE
+
+[Peer]
+# campus
+PublicKey = PASTE_CampusPub
+AllowedIPs = 10.66.0.2/32</pre>
+<pre>echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-wireguard.conf
+sudo sysctl --system
+sudo systemctl enable --now wg-quick@wg0
+sudo wg show</pre>
+    <p>You want <code>wg0</code> listening on 51820. The peer will show “latest handshake” after campus connects.</p>
+
+    <h3>8.2 On <span class="machine">CAMPUS</span> — dial out</h3>
+<pre>sudo nano /etc/wireguard/wg0.conf</pre>
+<pre>[Interface]
+Address = 10.66.0.2/24
+PrivateKey = PASTE_CampusPriv
+
+[Peer]
+PublicKey = PASTE_CloudPub
+Endpoint = CLOUD_PUBLIC_IP:51820
+AllowedIPs = 10.66.0.1/32
+PersistentKeepalive = 25</pre>
+<pre>sudo systemctl enable --now wg-quick@wg0
+ping -c 3 10.66.0.1
+sudo wg show</pre>
+    <p>You want replies from 10.66.0.1 and a handshake a few seconds old. If ping fails: cloud UDP 51820, keys swapped wrong, or campus outbound UDP blocked — ask LIA IT to allow UDP 51820 to the cloud IP.</p>
+
+    <h3>8.3 Publish campus Kong only on the tunnel</h3>
+    <p>On <span class="machine">CAMPUS</span> after Docker/Kong is running (next phase). For now create the helper so it is ready:</p>
+<pre>sudo nano /etc/systemd/system/lia-wg-kong.service</pre>
+<pre>[Unit]
+Description=Expose campus Kong to WireGuard only
+After=docker.service wg-quick@wg0.service
+Wants=wg-quick@wg0.service
+
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:8000,bind=10.66.0.2,fork,reuseaddr TCP:127.0.0.1:8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target</pre>
+    <p>Do not start this service until Kong answers on campus localhost (Phase 5). Then:</p>
+<pre>sudo systemctl enable --now lia-wg-kong.service</pre>
+
+    <h2>9. Phase 5 — LIA’s empty database on the <span class="machine">CAMPUS</span> server</h2>
+    <p><span class="who our">Our side</span>. Same kind of software as MayaBela cloud (Postgres + Auth + Storage + Edge). Brand new empty files. Not a copy of Fnote.</p>
+<pre>sudo mkdir -p /opt/lia
+sudo chown $USER:$USER /opt/lia
+cd /opt/lia
+git clone --depth 1 https://github.com/supabase/supabase.git
+cd supabase/docker
+cp .env.example .env</pre>
+    <p>On your laptop make random strings:</p>
+<pre>openssl rand -base64 32
+openssl rand -base64 32
+openssl rand -base64 32</pre>
+<pre>nano /opt/lia/supabase/docker/.env</pre>
+    <p>Change at least:</p>
+<pre>SITE_URL=https://erp.yourdomain.com
+API_EXTERNAL_URL=https://api.yourdomain.com
+SUPABASE_PUBLIC_URL=https://api.yourdomain.com
+POSTGRES_PASSWORD=paste-a-long-random-string</pre>
+    <p>Leave <code>ANON_KEY</code> and <code>JWT_SECRET</code> as the matching pair in this LIA <code>.env</code>. Copy <code>ANON_KEY</code> to a laptop file named <code>LIA-ONLY-keys.txt</code>. Never paste the MaJo cloud anon key here.</p>
+<pre>cd /opt/lia/supabase/docker
+docker compose pull
+docker compose up -d
+docker compose ps</pre>
+    <p>Wait 1–3 minutes. <code>kong</code>, <code>auth</code>, <code>rest</code>, <code>storage</code>, <code>db</code> should be running. Then:</p>
+<pre>curl -sS -I http://127.0.0.1:8000/auth/v1/health
+sudo systemctl enable --now lia-wg-kong.service
+curl -sS -I http://10.66.0.2:8000/auth/v1/health</pre>
+    <p>From <span class="machine">CLOUD</span>:</p>
+<pre>curl -sS -I http://10.66.0.2:8000/auth/v1/health</pre>
+    <p>You want an HTTP header, not “connection refused”.</p>
+
+    <h2>10. Phase 6 — Public padlock on the <span class="machine">CLOUD</span> VM</h2>
+<pre>sudo nano /etc/nginx/sites-available/lia-erp</pre>
+    <p>Paste the whole block. Change the two hostnames only.</p>
+<pre>server {
+    listen 80;
+    server_name erp.yourdomain.com;
+    root /var/www/lia-erp;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+    client_max_body_size 50M;
+    location / {
+        proxy_pass http://10.66.0.2:8000;
+        proxy_http_version 1.1;
+        proxy_connect_timeout 5s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}</pre>
+<pre>sudo ln -sf /etc/nginx/sites-available/lia-erp /etc/nginx/sites-enabled/lia-erp
+sudo nginx -t
+sudo systemctl reload nginx
+sudo apt -y install certbot python3-certbot-nginx
+sudo certbot --nginx -d erp.yourdomain.com -d api.yourdomain.com</pre>
+    <ul>
+      <li>Email: principal or ops</li>
+      <li>Agree: <code>Y</code></li>
+      <li>Redirect HTTP → HTTPS: choose <b>2</b></li>
+    </ul>
+    <p>Phone on <b>mobile data</b> (school Wi-Fi off): open <code>https://erp.yourdomain.com</code>. You want “waiting for files” and a closed padlock. If Certbot fails, DNS is still wrong or cloud 80/443 is closed — fix that before building the app.</p>
+
+    <h2>11. Phase 7 — LAN website on the <span class="machine">CAMPUS</span> server (lessons if the ISP dies)</h2>
+<pre>sudo mkdir -p /var/www/lia-erp
+sudo chown -R $USER:www-data /var/www/lia-erp
+echo "LIA ERP campus — waiting for files" | sudo tee /var/www/lia-erp/index.html
+sudo nano /etc/nginx/sites-available/lia-erp</pre>
+<pre>server {
+    listen CAMPUS_LAN_IP:80;
+    server_name erp.yourdomain.com CAMPUS_LAN_IP;
+    root /var/www/lia-erp;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen CAMPUS_LAN_IP:80;
+    server_name api.yourdomain.com;
+    client_max_body_size 50M;
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}</pre>
+    <p>Replace <code>CAMPUS_LAN_IP</code> with the real 192.168 address in both <code>listen</code> lines.</p>
+<pre>sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/lia-erp /etc/nginx/sites-enabled/lia-erp
+sudo nginx -t
+sudo systemctl reload nginx</pre>
+    <p>On a staff PC, browser to <code>http://CAMPUS_LAN_IP</code> — you should see the campus placeholder. Optional later: copy Let’s Encrypt files from the cloud over WireGuard so LAN also has a padlock. Week 1 HTTP-on-LAN is enough if staff normally use the public HTTPS URL.</p>
+    <h3>11.1 Optional split-horizon (staff keep working when WAN is down)</h3>
+    <p>On the campus router, if it has “DNS static host”: <code>erp.yourdomain.com</code> and <code>api.yourdomain.com</code> → <code>CAMPUS_LAN_IP</code>. Then staff PCs on school Wi-Fi never leave the building. Parents on mobile still hit the cloud IP. If the router cannot do this, add those two lines to each staff PC <code>hosts</code> file, or skip and accept that staff also need internet unless they open <code>http://CAMPUS_LAN_IP</code>.</p>
+
+    <h2>12. Phase 8 — Load MayaBela onto the campus database</h2>
+    <p>Copy the repo’s <code>supabase</code> folder onto campus (USB is safest if SSH is not on the internet):</p>
+<pre>ls /opt/lia/mayabela-supabase/migrations
+ls /opt/lia/mayabela-supabase/functions</pre>
+    <p>You must see <code>20260725120000_app_documents.sql</code> and a <code>school-login</code> folder.</p>
+<pre>cd /opt/lia/mayabela-supabase
+ls migrations | sort</pre>
+    <p>Apply oldest first. Repeat the last line for every file, in that order. Stop if one errors.</p>
+<pre>cd /opt/lia/supabase/docker
+docker compose exec -T db psql -U postgres -d postgres &lt; /opt/lia/mayabela-supabase/migrations/20260725120000_app_documents.sql</pre>
+    <p>Copy function folders (including <code>_shared</code> and <code>school-login</code>) into the self-host functions directory this Docker stack uses, then:</p>
+<pre>cd /opt/lia/supabase/docker
+docker compose restart functions</pre>
+    <p>Studio (school LAN only, never the internet):</p>
+<pre>http://CAMPUS_LAN_IP:54323</pre>
+    <p>Create buckets <code>school-files</code> (private) and <code>school-branding</code> (public). Close 54323 from the world (campus firewall already did).</p>
+    <div class="note">
+      <strong>Mail and Maya Assistant.</strong>
+      Password-reset mail needs <code>MAIL_FROM</code> plus Resend or SMTP secrets on <b>this</b> campus stack. Do not set <code>MAYA_AI_API_KEY</code> until LIA signs written approval (agreement Art. 3.5).
+    </div>
+
+    <h2>13. Phase 9 — Build the website so it talks only to LIA</h2>
+    <p><span class="who our">Our side, Windows laptop</span>.</p>
+    <div class="stop">
+      <strong>Do not run</strong> <code>deploy-cloudflare-pages.cmd</code>.
+    </div>
+<pre>cd C:\path\to\mayabela
+flutter pub get
+flutter build web --release --pwa-strategy=none --dart-define=SUPABASE_CONFIGURED=true --dart-define=SUPABASE_URL=https://api.yourdomain.com --dart-define=SUPABASE_ANON_KEY=PASTE_LIA_ANON_KEY_HERE</pre>
+<pre>findstr hwkiihonthueadbhcvfi build\web\main.dart.js</pre>
+    <p>If that prints any line, the build is wrong. Do not upload it.</p>
+    <p>Copy <code>build\web\*</code> to <b>both</b> machines (USB or scp through the tunnel):</p>
+    <ul>
+      <li>Campus: <code>/var/www/lia-erp/</code></li>
+      <li>Cloud: <code>/var/www/lia-erp/</code></li>
+    </ul>
+<pre>sudo chown -R www-data:www-data /var/www/lia-erp</pre>
+    <p>Phone on mobile data: <code>https://erp.yourdomain.com</code> must show the MaJo / MayaBela login, padlock closed. Hard refresh Ctrl+Shift+R.</p>
+
+    <h2>14. Phase 10 — Create only the LIA school</h2>
+    <ol>
+      <li>Open <code>https://erp.yourdomain.com</code> (not pages.dev).</li>
+      <li>Platform console with the <b>LIA server</b> owner PIN (this PIN exists only here).</li>
+      <li>Create school ID <code>LIA</code>, name Lebawi International Academy.</li>
+      <li>Modules ON = the 49 TOR modules. Modules OFF = <code>campus</code>, <code>cctv</code>, <code>finance</code>, <code>hr</code>, <code>payroll</code>, <code>transport</code>, <code>transport_buses</code>, <code>transport_live_gps</code>, <code>add_driver</code>, <code>digital_ops</code>.</li>
+      <li>Create the school-admin account. Log out of platform. Log in as admin. Change the password.</li>
+    </ol>
+    <p>Do not create Fnote or any other school on this campus database.</p>
+
+    <h2>15. Phase 11 — Nightly backup on campus + copy to cloud (the replica)</h2>
+    <p>Week-1 replica for beginners: a daily file copy, not a live read database. All parent traffic still goes through the tunnel to campus. If campus dies, you restore this file onto a spare — you do not fail over onto MaJo shared cloud.</p>
+    <p>On <span class="machine">CAMPUS</span>:</p>
+<pre>sudo nano /usr/local/bin/lia-backup.sh</pre>
+<pre>#!/bin/bash
+set -euo pipefail
+STAMP=$(date +%F)
+DIR=/opt/lia/backups/$STAMP
+mkdir -p "$DIR" /opt/lia/backups/latest
+cd /opt/lia/supabase/docker
+docker compose exec -T db pg_dump -U postgres postgres | gzip > "$DIR/postgres.sql.gz"
+cp -f "$DIR/postgres.sql.gz" /opt/lia/backups/latest/postgres.sql.gz
+find /opt/lia/backups -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} \;</pre>
+<pre>sudo chmod +x /usr/local/bin/lia-backup.sh
+sudo crontab -e</pre>
+    <p>Add:</p>
+<pre>15 2 * * * /usr/local/bin/lia-backup.sh
+40 2 * * * scp /opt/lia/backups/latest/postgres.sql.gz cloudadmin@10.66.0.1:/opt/lia/replica/postgres.sql.gz</pre>
+    <p>On <span class="machine">CLOUD</span> first:</p>
+<pre>sudo mkdir -p /opt/lia/replica
+sudo chown cloudadmin:cloudadmin /opt/lia/replica</pre>
+    <p>You need SSH from campus → cloud over WireGuard (key login, no password). Test once by running the backup script by hand. Copy the same file to a USB the principal keeps in another building every week. Restore once to a throwaway folder before you leave — a backup never restored is not a backup.</p>
+    <div class="note">
+      <strong>Streaming Postgres replica</strong> (hot standby on the cloud) is the “advanced” Option A. Do it after week 1 if LIA wants faster failover. Until then the dump file is the replica. Live reads and writes stay on campus.
+    </div>
+
+    <h2>16. Phase 12 — Prove it (15 minutes, both of you tick)</h2>
+    <table class="check">
+      <tr><th></th><th>Test</th><th>Expected</th></tr>
+      <tr><td>☐</td><td>Parent phone, mobile data: https://erp.yourdomain.com</td><td>Login, padlock, LIA branding</td></tr>
+      <tr><td>☐</td><td>Staff PC on school Wi-Fi: same URL or http://CAMPUS_LAN_IP</td><td>Same login</td></tr>
+      <tr><td>☐</td><td>Log in as LIA admin, add a dummy student</td><td>Visible on LIA URL only</td></tr>
+      <tr><td>☐</td><td>Open https://mayabela.pages.dev as Fnote</td><td>Unchanged. Dummy student not there</td></tr>
+      <tr><td>☐</td><td>Finance / Transport / GPS / CCTV tiles for LIA admin</td><td>Hidden or labelled unavailable</td></tr>
+      <tr><td>☐</td><td><code>sudo wg show</code> on campus</td><td>Handshake a few seconds old</td></tr>
+      <tr><td>☐</td><td>Unplug campus WAN for 30 seconds</td><td>Staff on LAN still open CAMPUS_LAN_IP. Parents on mobile wait. pages.dev still lives</td></tr>
+      <tr><td>☐</td><td><code>findstr hwkiihonthueadbhcvfi</code> on the LIA <code>main.dart.js</code></td><td>No lines</td></tr>
+    </table>
+    <p>If LIA data appears on the shared cloud, the Flutter build used the wrong URL. Rebuild Phase 9.</p>
+
+    <h2>17. What you hand the school on paper</h2>
+    <table class="check">
+      <tr><th></th><th>Item</th><th>Write it</th></tr>
+      <tr><td>☐</td><td>Public URL (parents)</td><td>https://erp.yourdomain.com</td></tr>
+      <tr><td>☐</td><td>LAN URL (staff if internet is down)</td><td>http://CAMPUS_LAN_IP</td></tr>
+      <tr><td>☐</td><td>School ID</td><td>LIA</td></tr>
+      <tr><td>☐</td><td>“Do not use mayabela.pages.dev for LIA”</td><td>On the envelope</td></tr>
+      <tr><td>☐</td><td>Who reboots campus server / who reboots cloud VM</td><td></td></tr>
+      <tr><td>☐</td><td>USB backup day</td><td></td></tr>
+      <tr><td>☐</td><td>MaJo support</td><td>+251 911 646 444</td></tr>
+    </table>
+
+    <h2>18. If something breaks — first three checks</h2>
+    <ol>
+      <li><span class="machine">CAMPUS</span> <code>docker compose ps</code> — all running?</li>
+      <li><span class="machine">CAMPUS</span> <code>sudo wg show</code> — handshake fresh? If not: <code>sudo systemctl restart wg-quick@wg0</code></li>
+      <li><span class="machine">CLOUD</span> <code>curl -I http://10.66.0.2:8000/auth/v1/health</code> — if this fails, parents will fail even if the padlock looks fine.</li>
+    </ol>
+    <p>There is <b>no</b> automatic fallback onto <code>www.majobridge.com</code>. That would copy children’s records onto the shared tenant. Restore from last night’s dump instead.</p>
+
+    <h2>19. What this is not</h2>
+    <ul>
+      <li>Not copying files onto a Windows desktop and double-clicking</li>
+      <li>Not pointing LIA at the current MaJo Supabase project</li>
+      <li>Not updating https://mayabela.pages.dev</li>
+      <li>Not Option B (cloud as the write database) and not Option C (publish-subset worker)</li>
+      <li>Not enabling Finance, Transport, GPS, CCTV, HR, Payroll</li>
+    </ul>
+
+    <p class="footer-note">
+      MB-LIA-HYB-A-001 · MaJo e-School Bridge · Option A beginner guide v1.0 · 10 November 2026, Africa/Nairobi.<br />
+      Companion: Hybrid hosting architecture PDF (Option A). Internal commissioning playbook — not a certificate and not the commercial TOR.
+    </p>
+  </article>
+</body>
+</html>
