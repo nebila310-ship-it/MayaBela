@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-"""Professionally sketched diagrams for MB-SDD-001 (INSA Hibir SDD field)."""
+"""Professionally sketched diagrams for MB-SDD-001 (INSA Hibir SDD field).
+
+Designed to stay readable on A4: large type, orthogonal arrows, Yourdon DFD
+notation, and DF-01..DF-08 labels that match the written data-flow explanation.
+"""
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -36,48 +41,102 @@ def canvas(w: int, h: int) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     return im, ImageDraw.Draw(im)
 
 
-def rrect(d: ImageDraw.ImageDraw, box, fill, outline=NAVY, width=3, radius=16):
+def rrect(d: ImageDraw.ImageDraw, box, fill, outline=NAVY, width=4, radius=18):
     d.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
-def text(d, xy, s, size=22, bold=False, fill=INK, anchor="lt"):
+def text(d, xy, s, size=24, bold=False, fill=INK, anchor="lt"):
     d.text(xy, s, font=font(size, bold), fill=fill, anchor=anchor)
 
 
-def center(d, box, s, size=20, bold=True, fill=INK):
+def center(d, box, s, size=24, bold=True, fill=INK):
     x0, y0, x1, y1 = box
     d.text(((x0 + x1) / 2, (y0 + y1) / 2), s, font=font(size, bold), fill=fill, anchor="mm")
 
 
-def multiline(d, xy, lines, size=18, fill=INK, bold=False, gap=4):
-    x, y = xy
-    f = font(size, bold)
-    for i, line in enumerate(lines):
-        d.text((x, y + i * (size + gap + 4)), line, font=f, fill=fill)
+def lines_in(d, box, rows, size=22, fill=INK, bold=False, gap=8):
+    x0, y0, x1, y1 = box
+    cx = (x0 + x1) / 2
+    total = len(rows) * (size + gap) - gap
+    y = (y0 + y1) / 2 - total / 2 + size / 2
+    for row in rows:
+        use_bold = bold if not isinstance(row, tuple) else row[1]
+        use_fill = fill if not isinstance(row, tuple) else row[2]
+        use_text = row if not isinstance(row, tuple) else row[0]
+        d.text((cx, y), use_text, font=font(size, use_bold), fill=use_fill, anchor="mm")
+        y += size + gap
 
 
-def arrow(d, start, end, fill=NAVY, width=4, head=16):
+def arrow_head(d, start, end, fill, head=18):
     x0, y0 = start
     x1, y1 = end
-    d.line([start, end], fill=fill, width=width)
-    import math
-
     ang = math.atan2(y1 - y0, x1 - x0)
     left = (x1 - head * math.cos(ang - 0.45), y1 - head * math.sin(ang - 0.45))
     right = (x1 - head * math.cos(ang + 0.45), y1 - head * math.sin(ang + 0.45))
     d.polygon([end, left, right], fill=fill)
 
 
+def arrow(d, start, end, fill=NAVY, width=5, head=18):
+    d.line([start, end], fill=fill, width=width)
+    arrow_head(d, start, end, fill, head)
+
+
+def polyarrow(d, pts, fill=NAVY, width=5, head=18, dashed=False):
+    if dashed:
+        dash_line(d, pts, fill, width)
+    elif len(pts) == 2:
+        d.line(pts, fill=fill, width=width)
+    else:
+        d.line(pts, fill=fill, width=width)
+    arrow_head(d, pts[-2], pts[-1], fill, head)
+
+
+def dash_line(d, pts, fill, width):
+    # Approximate dashes along each segment.
+    for i in range(len(pts) - 1):
+        x0, y0 = pts[i]
+        x1, y1 = pts[i + 1]
+        dist = math.hypot(x1 - x0, y1 - y0) or 1
+        ux, uy = (x1 - x0) / dist, (y1 - y0) / dist
+        pos = 0.0
+        on = True
+        while pos < dist:
+            step = 14 if on else 10
+            nxt = min(pos + step, dist)
+            if on:
+                d.line(
+                    [(x0 + ux * pos, y0 + uy * pos), (x0 + ux * nxt, y0 + uy * nxt)],
+                    fill=fill,
+                    width=width,
+                )
+            pos = nxt
+            on = not on
+
+
+def label(d, xy, s, fill=NAVY, bg=WHITE, size=22):
+    f = font(size, True)
+    x, y = xy
+    bbox = d.textbbox((x, y), s, font=f, anchor="mm")
+    pad = 6
+    d.rounded_rectangle(
+        [bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad],
+        radius=8,
+        fill=bg,
+        outline=None,
+    )
+    d.text((x, y), s, font=f, fill=fill, anchor="mm")
+
+
 def title_bar(d, w, title, subtitle):
-    d.rectangle([0, 0, w, 92], fill=NAVY)
-    d.rectangle([0, 92, w, 100], fill=GOLD)
-    text(d, (36, 28), title, 30, True, WHITE)
-    text(d, (36, 64), subtitle, 18, False, (210, 220, 235))
+    d.rectangle([0, 0, w, 108], fill=NAVY)
+    d.rectangle([0, 108, w, 118], fill=GOLD)
+    text(d, (40, 32), title, 36, True, WHITE)
+    text(d, (40, 76), subtitle, 22, False, (210, 220, 235))
 
 
 def caption(d, w, h, s):
-    d.rectangle([0, h - 48, w, h], fill=WASH)
-    text(d, (36, h - 24), s, 16, False, MUTED, "lm")
+    d.rectangle([0, h - 56, w, h], fill=WASH)
+    text(d, (40, h - 28), s, 20, False, MUTED, "lm")
 
 
 def save(im: Image.Image, name: str) -> Path:
@@ -89,359 +148,384 @@ def save(im: Image.Image, name: str) -> Path:
 
 
 def key_components():
-    w, h = 2200, 1500
+    w, h = 2200, 1560
     im, d = canvas(w, h)
-    title_bar(d, w, "Key components", "MB-SDD-001 · MaJo e-School Bridge (MayaBela) · Figure 1")
+    title_bar(d, w, "Figure 1  ·  Key components", "MB-SDD-001  ·  MaJo e-School Bridge (MayaBela)  ·  five layers")
 
     layers = [
-        (120, "L1  Presentation", "Users and clients", GOLD_SOFT, GOLD),
-        (360, "L2  Delivery", "Static application delivery", BLUE_SOFT, NAVY),
-        (620, "L3  Application / API", "Authenticated services", TEAL_SOFT, TEAL),
-        (920, "L4  Data", "Authoritative stores", PURPLE_SOFT, PURPLE),
-        (1180, "L5  Operators / suppliers", "Out of the school JWT", WASH, MUTED),
+        (140, 330, "L1  Presentation", "Users and the Flutter client  ·  never stores student rows", GOLD_SOFT, GOLD),
+        (390, 580, "L2  Delivery", "Static application delivery  ·  no CONFIDENTIAL data in the bundle", BLUE_SOFT, NAVY),
+        (640, 850, "L3  Application / API", "Authenticated services  ·  JWT + RLS, not the public anon key", TEAL_SOFT, TEAL),
+        (910, 1160, "L4  Data", "Authoritative stores  ·  tenant wall = row-level security", PURPLE_SOFT, PURPLE),
+        (1220, 1470, "L5  Operators / suppliers", "Outside the school JWT", WASH, MUTED),
     ]
-    for y, title, sub, fill, outline in layers:
-        rrect(d, (40, y, w - 40, y + 210 if y < 1100 else y + 230), fill, outline, 3, 20)
-        text(d, (64, y + 18), title, 24, True, outline)
-        text(d, (64, y + 52), sub, 16, False, MUTED)
+    for y0, y1, title, sub, fill, outline in layers:
+        rrect(d, (36, y0, w - 36, y1), fill, outline, 4, 22)
+        text(d, (60, y0 + 16), title, 28, True, outline)
+        text(d, (60, y0 + 52), sub, 20, False, MUTED)
 
-    # L1 boxes
     users = [
-        (80, 190, "Teacher"),
-        (300, 190, "Admin / Finance"),
-        (590, 190, "Registrar / HR"),
-        (870, 190, "Parent / Student"),
-        (1160, 190, "Driver"),
-        (1380, 190, "Platform owner"),
+        (60, 210, 300, "Teacher"),
+        (320, 210, 560, "Admin / Finance"),
+        (580, 210, 840, "Registrar / HR"),
+        (860, 210, 1120, "Parent / Student"),
+        (1140, 210, 1360, "Driver"),
+        (1380, 210, 1620, "Platform owner"),
     ]
-    for x, y, lab in users:
-        rrect(d, (x, y, x + 200, y + 88), WHITE, NAVY, 2, 12)
-        center(d, (x, y, x + 200, y + 88), lab, 18)
-    rrect(d, (1620, 190, 2120, 278), WHITE, NAVY, 2, 12)
-    center(d, (1620, 190, 2120, 278), "Flutter client  ·  web + Android / iOS", 18)
+    for x0, y0, x1, lab in users:
+        rrect(d, (x0, y0, x1, y0 + 88), WHITE, NAVY, 3, 14)
+        center(d, (x0, y0, x1, y0 + 88), lab, 22)
+    rrect(d, (1640, 210, 2130, 298), WHITE, NAVY, 3, 14)
+    center(d, (1640, 210, 2130, 298), "Flutter client  ·  web + mobile", 22)
 
-    # L2
-    rrect(d, (80, 430, 780, 530), WHITE, NAVY, 2, 12)
-    center(d, (80, 430, 780, 530), "Cloudflare Pages   mayabela.pages.dev", 20)
-    rrect(d, (840, 430, 1480, 530), WHITE, NAVY, 2, 12)
-    center(d, (840, 430, 1480, 530), "Mobile stores  (same codebase)", 20)
-    rrect(d, (1540, 430, 2120, 530), WHITE, GOLD, 2, 12)
-    center(d, (1540, 430, 2120, 530), "TB-1  static only  ·  no student rows", 18, fill=NAVY)
+    rrect(d, (60, 460, 820, 550), WHITE, NAVY, 3, 14)
+    center(d, (60, 460, 820, 550), "Cloudflare Pages   mayabela.pages.dev", 24)
+    rrect(d, (860, 460, 1480, 550), WHITE, NAVY, 3, 14)
+    center(d, (860, 460, 1480, 550), "Mobile stores  (same codebase)", 24)
+    rrect(d, (1520, 460, 2130, 550), WHITE, GOLD, 3, 14)
+    center(d, (1520, 460, 2130, 550), "TB-1  static only  ·  no student rows", 22, fill=NAVY)
 
-    # L3
     comps = [
-        (80, 700, 520, "Auth\nJWT mint / refresh\nschoolId + role"),
-        (560, 700, 1000, "PostgREST\napp_documents API\nRLS + write-guard"),
-        (1040, 700, 1480, "Edge Functions (25)\nlogin, registry, PIN,\nAI, mail, public intake"),
-        (1520, 700, 2120, "Storage API\nschool-files (private)\nschool-branding (public logos)"),
+        (60, 710, 540, "Auth", "Mints / refreshes JWT", "schoolId + role  ·  MFA Admin/Finance"),
+        (570, 710, 1070, "PostgREST", "app_documents REST", "RLS + write-guard trigger"),
+        (1100, 710, 1600, "Edge Functions (25)", "login, registry, PIN, mail", "AI, public intake"),
+        (1630, 710, 2130, "Storage API", "school-files  PRIVATE", "school-branding  PUBLIC logos"),
     ]
-    for x0, y0, x1, lab in comps:
-        rrect(d, (x0, y0, x1, y0 + 110), WHITE, TEAL, 2, 12)
-        parts = lab.split("\n")
-        text(d, ((x0 + x1) / 2, y0 + 28), parts[0], 20, True, TEAL, "mm")
-        text(d, ((x0 + x1) / 2, y0 + 58), parts[1], 16, False, INK, "mm")
-        text(d, ((x0 + x1) / 2, y0 + 86), parts[2], 16, False, MUTED, "mm")
+    for x0, y0, x1, t, a, b in comps:
+        rrect(d, (x0, y0, x1, y0 + 118), WHITE, TEAL, 3, 14)
+        text(d, ((x0 + x1) / 2, y0 + 28), t, 24, True, TEAL, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 62), a, 20, False, INK, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 92), b, 18, False, MUTED, "mm")
 
-    # L4
     stores = [
-        (80, 990, 620, "Postgres  app_documents\nSIS, marks, fees, HR, transport, audit\nCONFIDENTIAL  ·  tenant wall = RLS"),
-        (660, 990, 1180, "Auth users\napp_metadata.schoolId + role\nCONFIDENTIAL"),
-        (1220, 990, 1660, "school-files\nphotos / documents\nschools/<id>/  ·  JWT prefix"),
-        (1700, 990, 2120, "school-branding\nlogin logos only\nPUBLIC  ·  no student files"),
+        (60, 980, 620, "Postgres  app_documents", "SIS, marks, fees, HR, transport, audit", "CONFIDENTIAL  ·  RLS tenant wall"),
+        (650, 980, 1120, "Auth users / JWT", "app_metadata.schoolId + role", "CONFIDENTIAL"),
+        (1150, 980, 1630, "school-files", "photos / documents  schools/<id>/", "PRIVATE  ·  JWT prefix"),
+        (1660, 980, 2130, "school-branding", "login logos / stamps only", "PUBLIC  ·  never student files"),
     ]
-    for x0, y0, x1, lab in stores:
-        rrect(d, (x0, y0, x1, y0 + 118), WHITE, PURPLE, 2, 12)
-        parts = lab.split("\n")
-        text(d, ((x0 + x1) / 2, y0 + 28), parts[0], 18, True, PURPLE, "mm")
-        text(d, ((x0 + x1) / 2, y0 + 58), parts[1], 15, False, INK, "mm")
-        text(d, ((x0 + x1) / 2, y0 + 88), parts[2], 15, False, MUTED, "mm")
+    for x0, y0, x1, t, a, b in stores:
+        rrect(d, (x0, y0, x1, y0 + 150), WHITE, PURPLE, 3, 14)
+        text(d, ((x0 + x1) / 2, y0 + 36), t, 22, True, PURPLE, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 78), a, 18, False, INK, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 114), b, 18, False, MUTED, "mm")
 
-    # L5
-    rrect(d, (80, 1255, 620, 1375), WHITE, MUTED, 2, 12)
-    center(d, (80, 1255, 620, 1315), "GitHub Actions / DSAPs", 18)
-    center(d, (80, 1310, 620, 1365), "CI  ·  service-role never in the app", 15, False, MUTED)
-    rrect(d, (660, 1255, 1180, 1375), WHITE, MUTED, 2, 12)
-    center(d, (660, 1255, 1180, 1315), "Optional Gemini (Maya Assistant)", 18)
-    center(d, (660, 1310, 1180, 1365), "TB-7  ·  counts-only  ·  key optional", 15, False, MUTED)
-    rrect(d, (1220, 1255, 1660, 1375), WHITE, MUTED, 2, 12)
-    center(d, (1220, 1255, 1660, 1315), "Mail / FCM push", 18)
-    center(d, (1220, 1310, 1660, 1365), "Edge secrets only", 15, False, MUTED)
-    rrect(d, (1700, 1255, 2120, 1375), WHITE, RED, 2, 12)
-    center(d, (1700, 1255, 2120, 1315), "Hosted CSP hypervisor", 18, fill=RED)
-    center(d, (1700, 1310, 2120, 1365), "TB-8 residual  ·  supplier keys", 15, False, RED)
+    ops = [
+        (60, 1290, 540, MUTED, "GitHub Actions / DSAPs", "CI  ·  service-role never in the app"),
+        (570, 1290, 1070, MUTED, "Optional Gemini", "TB-7  ·  counts-only  ·  key optional"),
+        (1100, 1290, 1600, MUTED, "Mail / FCM push", "Edge secrets only"),
+        (1630, 1290, 2130, RED, "Hosted CSP hypervisor", "TB-8 residual  ·  supplier keys"),
+    ]
+    for x0, y0, x1, col, t, a in ops:
+        rrect(d, (x0, y0, x1, y0 + 150), WHITE, col, 3, 14)
+        text(d, ((x0 + x1) / 2, y0 + 50), t, 22, True, col, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 96), a, 18, False, MUTED if col != RED else RED, "mm")
 
-    caption(d, w, h, "Figure 1 — Key components by layer. Presentation never holds student rows. Authorisation is JWT + RLS, not the public anon key.")
+    for y in (345, 595, 865, 1175):
+        text(d, (w / 2, y), "↓", 28, True, NAVY, "mm")
+
+    caption(d, w, h, "Key components by layer. Presentation never holds student rows. Authorisation is JWT + RLS, not the public anon key.")
     save(im, "key-components.png")
 
 
 def system_architecture():
-    w, h = 2400, 1680
+    w, h = 2400, 1780
     im, d = canvas(w, h)
-    title_bar(d, w, "System Architecture Diagram", "MB-SDD-001 · MaJo e-School Bridge (MayaBela) · Figure 2")
+    title_bar(d, w, "Figure 2  ·  System Architecture Diagram", "MB-SDD-001  ·  MaJo e-School Bridge (MayaBela)  ·  trust boundaries TB-0 to TB-8")
 
-    # Trust boundary TB-0 devices
-    rrect(d, (40, 130, 2360, 330), WASH, LINE, 2, 18)
-    text(d, (60, 148), "TB-0  Untrusted devices (Internet / school LAN / stolen laptop)", 18, True, MUTED)
-    devices = [
-        (70, 190, "Teacher"),
-        (310, 190, "Admin"),
-        (550, 190, "Finance"),
-        (790, 190, "Registrar"),
-        (1030, 190, "Parent"),
-        (1270, 190, "Student"),
-        (1510, 190, "Driver"),
-        (1750, 190, "Owner PIN"),
-        (1990, 190, "Public visitor"),
+    # Request path strip
+    rrect(d, (36, 140, w - 36, 250), WASH, LINE, 3, 16)
+    steps = [
+        (56, 190, 430, 232, "TB-0  Device"),
+        (500, 190, 980, 232, "TB-1  Pages / mobile"),
+        (1050, 190, 1600, 232, "TB-2  Auth / API / Edge"),
+        (1670, 190, 2340, 232, "Postgres  ·  RLS tenant wall"),
     ]
-    for x, y, lab in devices:
-        rrect(d, (x, y, x + 210, y + 100), WHITE, NAVY, 2, 14)
-        center(d, (x, y, x + 210, y + 100), lab, 18)
+    for x0, y0, x1, y1, lab in steps:
+        rrect(d, (x0, y0, x1, y1), WHITE, NAVY, 3, 10)
+        center(d, (x0, y0, x1, y1), lab, 20)
+    arrow(d, (430, 211), (500, 211), NAVY, 4, 14)
+    arrow(d, (980, 211), (1050, 211), NAVY, 4, 14)
+    arrow(d, (1600, 211), (1670, 211), NAVY, 4, 14)
+    label(d, (465, 168), "HTTPS/TLS", TEAL, WHITE, 16)
+    label(d, (1015, 168), "HTTPS + JWT", TEAL, WHITE, 16)
+    label(d, (1635, 168), "private", TEAL, WHITE, 16)
+    text(d, (56, 148), "Logical request path", 18, True, MUTED)
 
-    # HTTPS arrows
-    for x in (175, 415, 655, 895, 1135, 1375, 1615, 1855, 2095):
-        arrow(d, (x, 295), (x, 365), NAVY, 3, 12)
-
-    text(d, (1200, 350), "HTTPS  ·  TLS terminated by hosted vendor  ·  same Flutter codebase on web and mobile", 16, False, MUTED, "mm")
+    # TB-0
+    rrect(d, (36, 270, w - 36, 470), WASH, LINE, 3, 18)
+    text(d, (56, 288), "TB-0  Untrusted devices  ·  Internet / school LAN / stolen laptop  ·  HTTPS/TLS", 22, True, MUTED)
+    devices = [
+        "Teacher", "Admin", "Finance", "Registrar", "Parent",
+        "Student", "Driver", "Owner PIN", "Public visitor",
+    ]
+    x = 56
+    for lab in devices:
+        rrect(d, (x, 348, x + 248, 448), WHITE, NAVY, 3, 14)
+        center(d, (x, 348, x + 248, 448), lab, 22)
+        x += 260
+    for x in (180, 440, 700, 960, 1220, 1480, 1740, 2000, 2260):
+        arrow(d, (x, 448), (x, 510), NAVY, 4, 14)
+    text(d, (56, 318), "TLS terminated by hosted vendor  ·  same Flutter codebase on web and mobile", 18, False, MUTED)
 
     # TB-1
-    rrect(d, (40, 390, 2360, 560), BLUE_SOFT, NAVY, 3, 18)
-    text(d, (60, 408), "TB-1  Application delivery  —  no CONFIDENTIAL student data in the bundle", 18, True, NAVY)
-    rrect(d, (80, 450, 1140, 530), WHITE, NAVY, 2, 12)
-    center(d, (80, 450, 1140, 530), "Cloudflare Pages   https://mayabela.pages.dev", 22)
-    rrect(d, (1220, 450, 2280, 530), WHITE, NAVY, 2, 12)
-    center(d, (1220, 450, 2280, 530), "Mobile APK / IPA  →  same TB-2 endpoints", 22)
+    rrect(d, (36, 530, w - 36, 700), BLUE_SOFT, NAVY, 4, 18)
+    text(d, (56, 548), "TB-1  Application delivery  —  no CONFIDENTIAL student data in the JS / APK bundle", 22, True, NAVY)
+    rrect(d, (70, 590, 1120, 675), WHITE, NAVY, 3, 12)
+    center(d, (70, 590, 1120, 675), "Cloudflare Pages    https://mayabela.pages.dev", 24)
+    rrect(d, (1180, 590, 2320, 675), WHITE, NAVY, 3, 12)
+    center(d, (1180, 590, 2320, 675), "Mobile APK / IPA  →  same TB-2 endpoints", 24)
 
-    arrow(d, (600, 560), (600, 630), NAVY, 4)
-    arrow(d, (1750, 560), (1750, 630), NAVY, 4)
-    text(d, (620, 595), "HTTPS + anon/publishable API key (PUBLIC, not an encryption key)", 16, False, MUTED, "lm")
+    arrow(d, (600, 700), (600, 760), NAVY, 5, 16)
+    arrow(d, (1750, 700), (1750, 760), NAVY, 5, 16)
+    text(d, (w / 2, 738), "HTTPS JSON  +  anon/publishable API key (PUBLIC, not an encryption key)", 20, False, MUTED, "mm")
 
-    # TB-2 big box
-    rrect(d, (40, 640, 2360, 1280), TEAL_SOFT, TEAL, 4, 20)
-    text(d, (60, 658), "TB-2  Hosted backend (Supabase project)  —  Auth, PostgREST, Storage, Edge  ·  service-role never leaves this box", 18, True, TEAL)
+    # TB-2
+    rrect(d, (36, 770, w - 36, 1395), TEAL_SOFT, TEAL, 5, 20)
+    text(d, (56, 788), "TB-2  Hosted backend (Supabase project)  ·  service-role key never leaves this box", 22, True, TEAL)
 
     boxes = [
-        (80, 710, 560, 900, "Auth", "Mint / refresh JWT\napp_metadata:\nschoolId + role\nMFA: Admin, Finance"),
-        (600, 710, 1160, 900, "PostgREST", "REST on app_documents\n(collection, school_id, doc_id)\nRLS + write-guard trigger\nDriver: own bus only"),
-        (1200, 710, 1760, 900, "Edge Functions (25)", "school-login, registry,\nowner PIN, Maya Assistant,\nmail, public intake\nAuth inventory in CI"),
-        (1800, 710, 2320, 900, "Storage", "school-files PRIVATE\nschools/<jwt-school>/\nschool-branding PUBLIC\nlogos / stamps only"),
+        (70, 840, 580, 1045, "Auth", "Mint / refresh JWT", "app_metadata: schoolId + role", "MFA: Admin, Finance"),
+        (610, 840, 1160, 1045, "PostgREST", "REST on app_documents", "RLS + write-guard trigger", "Driver: own bus only"),
+        (1190, 840, 1740, 1045, "Edge Functions (25)", "school-login, registry, PIN", "Maya Assistant, mail, intake", "DF-06 optional → TB-7"),
+        (1770, 840, 2320, 1045, "Storage", "school-files  PRIVATE", "schools/<jwt-school>/", "branding  PUBLIC logos only"),
     ]
-    for x0, y0, x1, y1, t, body in boxes:
-        rrect(d, (x0, y0, x1, y1), WHITE, TEAL, 3, 14)
-        text(d, ((x0 + x1) / 2, y0 + 28), t, 22, True, TEAL, "mm")
-        for i, line in enumerate(body.split("\n")):
-            text(d, ((x0 + x1) / 2, y0 + 70 + i * 28), line, 16, False, INK, "mm")
+    for x0, y0, x1, y1, t, a, b, c in boxes:
+        rrect(d, (x0, y0, x1, y1), WHITE, TEAL, 4, 14)
+        text(d, ((x0 + x1) / 2, y0 + 36), t, 26, True, TEAL, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 84), a, 20, False, INK, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 122), b, 20, False, INK, "mm")
+        text(d, ((x0 + x1) / 2, y0 + 160), c, 20, False, MUTED, "mm")
 
-    # inner TB-3
-    rrect(d, (80, 940, 1760, 1240), WHITE, PURPLE, 3, 16)
-    text(d, (100, 958), "TB-3 / TB-4  Tenant + need-to-know  (Postgres)", 18, True, PURPLE)
-    rrect(d, (110, 1000, 860, 1210), PURPLE_SOFT, PURPLE, 2, 12)
-    text(d, (485, 1030), "School A rows", 20, True, PURPLE, "mm")
-    text(d, (485, 1070), "JWT schoolId = A", 16, False, INK, "mm")
-    text(d, (485, 1105), "Teacher → assigned class", 16, False, INK, "mm")
-    text(d, (485, 1140), "Parent → linked child", 16, False, INK, "mm")
-    text(d, (485, 1175), "Driver → own busId only", 16, False, INK, "mm")
-    rrect(d, (900, 1000, 1720, 1210), WASH, LINE, 2, 12)
-    text(d, (1310, 1045), "School B rows", 20, True, MUTED, "mm")
-    text(d, (1310, 1095), "Not readable with School A JWT", 18, False, RED, "mm")
-    text(d, (1310, 1145), "CAAT two-school isolation 7/7", 16, False, MUTED, "mm")
-    rrect(d, (1800, 940, 2320, 1240), GOLD_SOFT, GOLD, 3, 14)
-    text(d, (2060, 990), "TB-5", 20, True, NAVY, "mm")
-    text(d, (2060, 1040), "Public branding", 18, True, NAVY, "mm")
-    text(d, (2060, 1090), "No JWT on login page", 16, False, INK, "mm")
-    text(d, (2060, 1135), "Logos only", 16, False, INK, "mm")
-    text(d, (2060, 1180), "Never student files", 16, False, RED, "mm")
+    rrect(d, (70, 1075, 1740, 1360), WHITE, PURPLE, 4, 16)
+    text(d, (90, 1095), "TB-3 / TB-4  Tenant + need-to-know  (Postgres, not internet-facing)", 22, True, PURPLE)
+    rrect(d, (100, 1145, 860, 1330), PURPLE_SOFT, PURPLE, 3, 12)
+    lines_in(d, (100, 1145, 860, 1330), [
+        ("School A rows", True, PURPLE),
+        ("JWT schoolId = A", False, INK),
+        ("Teacher → assigned class", False, INK),
+        ("Parent → linked child", False, INK),
+        ("Driver → own busId only", False, INK),
+    ], 20, gap=6)
+    rrect(d, (890, 1145, 1700, 1330), WASH, LINE, 3, 12)
+    lines_in(d, (890, 1145, 1700, 1330), [
+        ("School B rows", True, MUTED),
+        ("Not readable with School A JWT", False, RED),
+        ("CAAT two-school isolation  7 / 7", False, MUTED),
+    ], 22, gap=10)
+    rrect(d, (1770, 1075, 2320, 1360), GOLD_SOFT, GOLD, 4, 14)
+    lines_in(d, (1770, 1075, 2320, 1360), [
+        ("TB-5  Public branding", True, NAVY),
+        ("No JWT on the login page", False, INK),
+        ("Logos / stamps only", False, INK),
+        ("Never student files", False, RED),
+    ], 22, gap=8)
 
-    # TB-7 and TB-8
-    rrect(d, (40, 1320, 1160, 1540), GOLD_SOFT, GOLD, 3, 16)
-    text(d, (60, 1340), "TB-7  Optional generative model (Maya Assistant)", 18, True, NAVY)
-    text(d, (80, 1390), "Staff JWT → maya-assistant-chat → counts-only snapshot (students = N, not names).", 17)
-    text(d, (80, 1430), "If MAYA_AI_API_KEY is unset → HTTP 412; ERP still works. Health / safeguarding / IDs refused.", 17)
-    text(d, (80, 1470), "Prompt text is the untrusted side. The model is not a second master of student records.", 17)
+    rrect(d, (36, 1420, 1160, 1690), GOLD_SOFT, GOLD, 4, 16)
+    text(d, (56, 1440), "TB-7  Optional generative model (Maya Assistant)", 22, True, NAVY)
+    text(d, (56, 1490), "Staff JWT → Edge → counts-only snapshot (students = N, not names).", 20)
+    text(d, (56, 1534), "If MAYA_AI_API_KEY is unset → HTTP 412; the ERP still works.", 20)
+    text(d, (56, 1578), "Health / safeguarding / IDs are refused. Prompt text is untrusted.", 20)
+    text(d, (56, 1622), "The model is not a second master of student records.", 20)
 
-    rrect(d, (1220, 1320, 2360, 1540), RED_SOFT, RED, 3, 16)
-    text(d, (1240, 1340), "TB-8  Supplier hypervisor (hosted CSP)", 18, True, RED)
-    text(d, (1260, 1390), "MaJo is the cloud customer. Disk / backup keys on the current hosted", 17)
-    text(d, (1260, 1430), "database remain with the supplier (CMCSRS §6.29.f residual).", 17)
-    text(d, (1260, 1470), "A dedicated/on-prem instance is the same app + a separate database URL.", 17)
+    rrect(d, (1220, 1420, 2364, 1690), RED_SOFT, RED, 4, 16)
+    text(d, (1240, 1440), "TB-8  Supplier hypervisor (hosted CSP)  ·  residual", 22, True, RED)
+    text(d, (1240, 1490), "MaJo is the cloud customer. Disk / backup keys on the current", 20)
+    text(d, (1240, 1534), "hosted database remain with the supplier (CMCSRS §6.29.f).", 20)
+    text(d, (1240, 1578), "A dedicated or on-prem instance is the same app + a separate", 20)
+    text(d, (1240, 1622), "database URL — not a second product.", 20)
 
-    caption(d, w, h, "Figure 2 — System Architecture Diagram. Trust boundaries TB-0 to TB-8. Service-role key never appears in Dart, HTML, or mobile binaries.")
+    caption(d, w, h, "System Architecture Diagram. Trust boundaries TB-0 to TB-8. Service-role key never appears in Dart, HTML, or mobile binaries.")
     save(im, "system-architecture.png")
 
 
+def dfd_legend(d, x, y, w=980):
+    rrect(d, (x, y, x + w, y + 70), WASH, LINE, 2, 12)
+    text(d, (x + 18, y + 35), "Yourdon / DeMarco:", 18, True, MUTED, "lm")
+    rrect(d, (x + 250, y + 16, x + 400, y + 54), BLUE_SOFT, NAVY, 2, 6)
+    center(d, (x + 250, y + 16, x + 400, y + 54), "Entity", 16)
+    d.ellipse([x + 430, y + 16, x + 500, y + 54], fill=TEAL_SOFT, outline=TEAL, width=3)
+    text(d, (x + 465, y + 35), "P", 16, True, TEAL, "mm")
+    text(d, (x + 545, y + 35), "Process", 16, False, MUTED, "lm")
+    d.line([(x + 680, y + 18), (x + 680, y + 52)], fill=PURPLE, width=6)
+    d.line([(x + 672, y + 18), (x + 820, y + 18)], fill=PURPLE, width=3)
+    d.line([(x + 672, y + 52), (x + 820, y + 52)], fill=PURPLE, width=3)
+    text(d, (x + 750, y + 35), "Store", 16, True, PURPLE, "mm")
+    arrow(d, (x + 850, y + 35), (x + 960, y + 35), NAVY, 4, 12)
+    text(d, (x + 905, y + 18), "flow", 14, False, MUTED, "mm")
+
+
+def entity_box(d, box, label_text):
+    rrect(d, box, BLUE_SOFT, NAVY, 4, 10)
+    rows = label_text.split("\n")
+    lines_in(d, box, [(r, True, NAVY) for r in rows], 22 if len(rows) == 1 else 20, gap=6)
+
+
+def process_bubble(d, box, pid, name):
+    d.ellipse(box, fill=TEAL_SOFT, outline=TEAL, width=5)
+    cx = (box[0] + box[2]) / 2
+    cy = (box[1] + box[3]) / 2
+    text(d, (cx, cy - 28), pid, 24, True, TEAL, "mm")
+    for i, line in enumerate(name.split("\n")):
+        text(d, (cx, cy + 8 + i * 26), line, 20, True, INK, "mm")
+
+
+def store_bar(d, box, label_text):
+    x0, y0, x1, y1 = box
+    d.line([(x0 + 18, y0), (x0 + 18, y1)], fill=PURPLE, width=8)
+    d.line([(x0, y0), (x1, y0)], fill=PURPLE, width=4)
+    d.line([(x0, y1), (x1, y1)], fill=PURPLE, width=4)
+    d.rectangle([x0 + 18, y0 + 3, x1, y1 - 3], fill=PURPLE_SOFT)
+    rows = label_text.split("\n")
+    lines_in(d, (x0 + 18, y0, x1, y1), [(r, True, PURPLE) for r in rows], 22 if len(rows) == 1 else 20, gap=4)
+
+
 def dfd_context():
+    """Level 0 context: external entities only. Stores appear on Level 1."""
     w, h = 2200, 1480
     im, d = canvas(w, h)
-    title_bar(d, w, "Data Flow Diagram (DFD) — Context (Level 0)", "MB-SDD-001 · MaJo e-School Bridge (MayaBela) · Figure 3")
+    title_bar(d, w, "Figure 3  ·  Data Flow Diagram (DFD)  —  Level 0 context", "MB-SDD-001  ·  MaJo e-School Bridge (MayaBela)  ·  external entities around process P0")
 
-    def entity(box, label):
-        rrect(d, box, BLUE_SOFT, NAVY, 3, 8)
-        center(d, box, label, 20)
+    d.ellipse([760, 540, 1440, 1040], fill=TEAL_SOFT, outline=TEAL, width=6)
+    text(d, (1100, 700), "P0", 36, True, TEAL, "mm")
+    text(d, (1100, 760), "MaJo e-School Bridge", 26, True, INK, "mm")
+    text(d, (1100, 804), "(MayaBela)", 22, False, INK, "mm")
+    text(d, (1100, 860), "Authenticate · record", 20, False, MUTED, "mm")
+    text(d, (1100, 896), "isolate school tenants", 20, False, MUTED, "mm")
 
-    def store(box, label):
-        x0, y0, x1, y1 = box
-        d.line([(x0 + 18, y0), (x0 + 18, y1)], fill=PURPLE, width=6)
-        d.line([(x0, y0), (x1, y0)], fill=PURPLE, width=3)
-        d.line([(x0, y1), (x1, y1)], fill=PURPLE, width=3)
-        d.rectangle([x0 + 18, y0 + 2, x1, y1 - 2], fill=PURPLE_SOFT)
-        center(d, (x0 + 18, y0, x1, y1), label, 18, True, PURPLE)
+    entity_box(d, (60, 160, 520, 320), "Staff\nTeacher · Admin · Finance\nRegistrar · HR")
+    entity_box(d, (1680, 160, 2140, 320), "Parents / Students")
+    entity_box(d, (60, 640, 480, 800), "Drivers")
+    entity_box(d, (1720, 640, 2140, 800), "Platform owner\n(MaJo desk)")
+    entity_box(d, (60, 1120, 520, 1280), "Public visitor\n(login page, no JWT)")
+    entity_box(d, (1680, 1120, 2140, 1280), "Optional AI model\n(TB-7, counts-only)")
 
-    # center process
-    d.ellipse([780, 520, 1420, 980], fill=TEAL_SOFT, outline=TEAL, width=5)
-    text(d, (1100, 680), "P0", 28, True, TEAL, "mm")
-    text(d, (1100, 730), "MaJo e-School Bridge", 22, True, INK, "mm")
-    text(d, (1100, 775), "(MayaBela)", 20, False, INK, "mm")
-    text(d, (1100, 830), "Authenticate · record · isolate", 16, False, MUTED, "mm")
-    text(d, (1100, 870), "school tenants", 16, False, MUTED, "mm")
+    # Staff <-> P0
+    polyarrow(d, [(520, 220), (820, 640)], NAVY, 5)
+    polyarrow(d, [(800, 700), (520, 280)], TEAL, 5)
+    label(d, (560, 430), "DF-01 login", NAVY)
+    label(d, (700, 500), "DF-02 / DF-03 records", TEAL, TEAL_SOFT)
 
-    entities = [
-        (80, 180, 520, 320, "Staff\n(Teacher, Admin, Finance,\nRegistrar, HR)"),
-        (1680, 180, 2120, 320, "Parents / Students"),
-        (80, 640, 480, 780, "Drivers"),
-        (1720, 640, 2120, 780, "Platform owner\n(MaJo desk)"),
-        (80, 1100, 520, 1240, "Public visitor\n(login page, no JWT)"),
-        (1680, 1100, 2120, 1240, "Optional AI model\n(TB-7, counts-only)"),
-    ]
-    for x0, y0, x1, y1, lab in entities:
-        entity((x0, y0, x1, y1), "")
-        lines = lab.split("\n")
-        cy = (y0 + y1) / 2 - (len(lines) - 1) * 14
-        for i, line in enumerate(lines):
-            text(d, ((x0 + x1) / 2, cy + i * 28), line, 18, True, NAVY, "mm")
+    # Parents <-> P0
+    polyarrow(d, [(1680, 240), (1380, 640)], NAVY, 5)
+    polyarrow(d, [(1400, 700), (1680, 300)], TEAL, 5)
+    label(d, (1640, 450), "DF-07 linked child", NAVY)
 
-    store((860, 160, 1340, 280), "D1  app_documents")
-    store((860, 1180, 1340, 1300), "D2  Auth users / JWT")
-    store((1480, 880, 2120, 1000), "D3  school-files")
-    store((80, 880, 640, 1000), "D4  school-branding")
+    # Drivers <-> P0
+    polyarrow(d, [(480, 720), (760, 760)], NAVY, 5)
+    polyarrow(d, [(760, 820), (480, 780)], TEAL, 5)
+    label(d, (600, 700), "DF-04 GPS / scans", NAVY)
 
-    # flows
-    arrow(d, (300, 320), (900, 600), NAVY, 3)  # staff to P0
-    arrow(d, (860, 640), (300, 360), TEAL, 3)
-    text(d, (480, 430), "login, attendance,\nmarks, registry", 14, False, NAVY, "mm")
+    # Owner <-> P0
+    polyarrow(d, [(1720, 720), (1440, 760)], NAVY, 5)
+    polyarrow(d, [(1440, 820), (1720, 780)], TEAL, 5)
+    label(d, (1600, 700), "DF-08 PIN / provision", NAVY)
 
-    arrow(d, (1900, 320), (1320, 600), NAVY, 3)
-    arrow(d, (1340, 640), (1900, 360), TEAL, 3)
-    text(d, (1720, 430), "linked-child views,\nparent notices", 14, False, NAVY, "mm")
+    # Public <-> P0
+    polyarrow(d, [(400, 1120), (860, 980)], NAVY, 5)
+    polyarrow(d, [(840, 1020), (380, 1160)], TEAL, 5)
+    label(d, (520, 1060), "DF-05 logo only", NAVY)
 
-    arrow(d, (480, 710), (780, 760), NAVY, 3)
-    arrow(d, (780, 800), (480, 820), TEAL, 3)
-    text(d, (560, 740), "GPS / scans\nown bus", 14, False, NAVY, "mm")
+    # AI <-> P0  (dashed)
+    polyarrow(d, [(1440, 980), (1780, 1120)], GOLD, 5, dashed=True)
+    polyarrow(d, [(1760, 1180), (1420, 1020)], GOLD, 5, dashed=True)
+    label(d, (1680, 1060), "DF-06 counts-only", GOLD, GOLD_SOFT)
 
-    arrow(d, (1720, 710), (1420, 760), NAVY, 3)
-    arrow(d, (1420, 800), (1720, 820), TEAL, 3)
-    text(d, (1600, 740), "PIN, school\nprovisioning", 14, False, NAVY, "mm")
-
-    arrow(d, (300, 1100), (860, 920), NAVY, 3)
-    arrow(d, (860, 960), (300, 1180), TEAL, 3)
-    text(d, (480, 1080), "logo only", 14, False, NAVY, "mm")
-
-    arrow(d, (1420, 920), (1800, 1100), NAVY, 3)
-    arrow(d, (1800, 1180), (1420, 960), TEAL, 3)
-    text(d, (1680, 1060), "counts-only\nsnapshot", 14, False, NAVY, "mm")
-
-    arrow(d, (1100, 520), (1100, 280), PURPLE, 3)
-    arrow(d, (1100, 280), (1100, 520), PURPLE, 3)
-    arrow(d, (1100, 980), (1100, 1180), PURPLE, 3)
-    arrow(d, (1100, 1180), (1100, 980), PURPLE, 3)
-
-    caption(d, w, h, "Figure 3 — Data Flow Diagram (DFD) Level 0. External entities around process P0. Data stores D1–D4. Arrows are named data flows, not network cables.")
+    dfd_legend(d, 620, 1320, 980)
+    caption(d, w, h, "DFD Level 0 (context). Rectangles = external entities. Circle = the system as one process. Data stores D1–D4 are on Level 1. Arrows are named data flows.")
     save(im, "dfd-level0.png")
 
 
 def dfd_level1():
-    w, h = 2400, 1700
+    w, h = 2400, 1800
     im, d = canvas(w, h)
-    title_bar(d, w, "Data Flow Diagram (DFD) — Level 1", "MB-SDD-001 · MaJo e-School Bridge (MayaBela) · Figure 4")
+    title_bar(d, w, "Figure 4  ·  Data Flow Diagram (DFD)  —  Level 1", "MB-SDD-001  ·  MaJo e-School Bridge (MayaBela)  ·  P0 decomposed into P1–P5")
 
-    def process(box, pid, name):
-        d.ellipse(box, fill=TEAL_SOFT, outline=TEAL, width=4)
-        cx = (box[0] + box[2]) / 2
-        cy = (box[1] + box[3]) / 2
-        text(d, (cx, cy - 18), pid, 18, True, TEAL, "mm")
-        for i, line in enumerate(name.split("\n")):
-            text(d, (cx, cy + 10 + i * 22), line, 16, True, INK, "mm")
+    entity_box(d, (40, 160, 300, 280), "Staff")
+    entity_box(d, (40, 430, 300, 550), "Parent / Student")
+    entity_box(d, (40, 990, 300, 1110), "Driver")
+    entity_box(d, (40, 1280, 300, 1380), "Public visitor")
+    entity_box(d, (40, 1420, 300, 1540), "Platform owner")
+    entity_box(d, (2080, 430, 2360, 650), "Optional AI")
 
-    def entity(box, label):
-        rrect(d, box, BLUE_SOFT, NAVY, 3, 8)
-        center(d, box, label, 17)
+    process_bubble(d, (500, 140, 860, 330), "P1", "Authenticate\n(school-login)")
+    process_bubble(d, (500, 400, 860, 620), "P2", "Classroom\nrecords")
+    process_bubble(d, (500, 700, 860, 920), "P3", "Registry &\nadmissions")
+    process_bubble(d, (500, 970, 860, 1190), "P4", "Transport\n(own bus)")
+    process_bubble(d, (500, 1280, 860, 1540), "P5", "Public brand\n+ owner PIN")
 
-    def store(box, label):
-        x0, y0, x1, y1 = box
-        d.line([(x0 + 16, y0), (x0 + 16, y1)], fill=PURPLE, width=6)
-        d.rectangle([x0 + 16, y0, x1, y1], fill=PURPLE_SOFT, outline=PURPLE, width=2)
-        center(d, (x0 + 16, y0, x1, y1), label, 16, True, PURPLE)
+    store_bar(d, (1140, 150, 1720, 290), "D2  Auth users / JWT")
+    store_bar(d, (1140, 400, 1720, 920), "D1  app_documents\n(RLS tenant wall)\nSIS · marks · fees · HR\ntransport · admissions")
+    store_bar(d, (1140, 990, 1720, 1190), "D3  school-files\n(PRIVATE photos)")
+    store_bar(d, (1140, 1280, 1720, 1540), "D4  school-branding\n(PUBLIC logos only)")
+    store_bar(d, (1780, 430, 2020, 640), "D1a\ngrade_audit_log\n(append-only)")
 
-    entity((40, 140, 320, 240), "Staff")
-    entity((40, 420, 320, 520), "Parent / Student")
-    entity((40, 700, 320, 800), "Driver")
-    entity((40, 980, 320, 1080), "Public visitor")
-    entity((40, 1260, 320, 1360), "Platform owner")
-    entity((2080, 1260, 2360, 1360), "Optional AI")
+    # DF-01 Staff → P1 ↔ D2
+    polyarrow(d, [(300, 200), (500, 200)], NAVY, 5)
+    label(d, (400, 176), "DF-01 password", NAVY)
+    polyarrow(d, [(860, 200), (1140, 200)], PURPLE, 5)
+    polyarrow(d, [(1140, 250), (860, 250)], PURPLE, 5)
+    label(d, (1000, 176), "JWT mint", PURPLE, PURPLE_SOFT)
 
-    process((520, 130, 820, 330), "P1", "Authenticate\n(school-login)")
-    process((520, 400, 820, 600), "P2", "Classroom\nrecords")
-    process((520, 680, 820, 880), "P3", "Registry &\nadmissions")
-    process((520, 960, 820, 1160), "P4", "Transport\n(own bus)")
-    process((520, 1240, 820, 1440), "P5", "Public brand\n+ owner PIN")
+    polyarrow(d, [(680, 330), (680, 400)], TEAL, 5)
+    label(d, (760, 365), "JWT", TEAL, TEAL_SOFT)
+    polyarrow(d, [(640, 620), (640, 700)], TEAL, 4)
+    polyarrow(d, [(640, 920), (640, 970)], TEAL, 4)
 
-    store((1080, 160, 1560, 280), "D2  Auth users / JWT")
-    store((1080, 480, 1760, 640), "D1  app_documents  (RLS)")
-    store((1080, 820, 1760, 940), "D3  school-files")
-    store((1080, 1120, 1760, 1240), "D4  school-branding")
-    store((1880, 480, 2360, 640), "grade_audit_log\n(append-only)")
+    # DF-02 Staff → P2 → D1  (spine at x=360, clear of Parent)
+    polyarrow(d, [(300, 240), (360, 240), (360, 480), (500, 480)], NAVY, 5)
+    label(d, (360, 355), "DF-02 marks", NAVY)
+    polyarrow(d, [(860, 500), (1140, 500)], PURPLE, 5)
+    label(d, (1000, 478), "class rows", PURPLE, PURPLE_SOFT)
 
-    # P1 flows
-    arrow(d, (320, 190), (520, 220), NAVY, 3)
-    text(d, (420, 168), "username, role, password", 13, False, NAVY, "mm")
-    arrow(d, (820, 220), (1080, 220), PURPLE, 3)
-    arrow(d, (1080, 240), (820, 250), PURPLE, 3)
-    arrow(d, (670, 330), (670, 400), TEAL, 3)
-    text(d, (790, 370), "JWT", 13, False, TEAL, "mm")
+    # P2 → D1a via the gap between D2 and D1 (y=340). Never store-to-store.
+    polyarrow(d, [(860, 440), (1000, 440), (1000, 320), (1900, 320), (1900, 430)], PURPLE, 5)
+    label(d, (1450, 298), "audit append", PURPLE, PURPLE_SOFT)
 
-    # P2
-    arrow(d, (320, 230), (520, 470), NAVY, 3)
-    arrow(d, (820, 500), (1080, 540), PURPLE, 3)
-    arrow(d, (1760, 540), (1880, 540), PURPLE, 3)
-    text(d, (930, 510), "attendance, homework, marks", 13, False, NAVY, "mm")
-    arrow(d, (820, 460), (320, 470), TEAL, 3)
+    # DF-07 Parent ↔ P2
+    polyarrow(d, [(300, 470), (500, 490)], NAVY, 5)
+    polyarrow(d, [(500, 530), (300, 510)], TEAL, 5)
+    label(d, (400, 568), "DF-07 child", NAVY)
 
-    # parent
-    arrow(d, (320, 470), (520, 500), NAVY, 3)
-    text(d, (400, 500), "child id", 13, False, NAVY, "mm")
-    arrow(d, (520, 530), (320, 500), TEAL, 3)
+    # DF-03 Staff → P3 → D1 (student row, not files)
+    polyarrow(d, [(300, 260), (340, 260), (340, 800), (500, 800)], NAVY, 5)
+    label(d, (340, 640), "DF-03 registry", NAVY)
+    polyarrow(d, [(860, 800), (1140, 800)], PURPLE, 5)
+    label(d, (1000, 778), "student row", PURPLE, PURPLE_SOFT)
 
-    # P3
-    arrow(d, (320, 250), (520, 740), NAVY, 3)
-    arrow(d, (820, 760), (1080, 860), PURPLE, 3)
-    text(d, (960, 780), "admissions / student row\n(via Edge + registry gate)", 13, False, NAVY, "mm")
+    # P3 → D3 photos only (left corridor x=960)
+    polyarrow(d, [(860, 860), (960, 860), (960, 1090), (1140, 1090)], PURPLE, 4)
+    label(d, (960, 970), "photo (opt.)", PURPLE, PURPLE_SOFT)
 
-    # P4
-    arrow(d, (320, 750), (520, 1040), NAVY, 3)
-    arrow(d, (820, 1060), (1080, 560), PURPLE, 3)
-    text(d, (400, 900), "GPS, scans", 13, False, NAVY, "mm")
-    arrow(d, (820, 1080), (320, 780), TEAL, 3)
+    # DF-04 Driver ↔ P4 → D1 (right corridor x=1100, enters D1 at y=900)
+    polyarrow(d, [(300, 1050), (500, 1050)], NAVY, 5)
+    polyarrow(d, [(500, 1110), (300, 1110)], TEAL, 5)
+    label(d, (400, 1026), "DF-04 GPS", NAVY)
+    polyarrow(d, [(860, 1070), (1100, 1070), (1100, 900), (1140, 900)], PURPLE, 5)
+    label(d, (1100, 1000), "bus / scans", PURPLE, PURPLE_SOFT)
 
-    # P5 public
-    arrow(d, (320, 1030), (520, 1320), NAVY, 3)
-    arrow(d, (820, 1360), (1080, 1180), PURPLE, 3)
-    arrow(d, (1080, 1220), (820, 1380), PURPLE, 3)
-    text(d, (960, 1280), "logo URL only", 13, False, NAVY, "mm")
+    # DF-05 Public ↔ P5 ↔ D4
+    polyarrow(d, [(300, 1330), (500, 1330)], NAVY, 5)
+    label(d, (400, 1306), "DF-05 logo", NAVY)
+    polyarrow(d, [(860, 1360), (1140, 1360)], PURPLE, 5)
+    polyarrow(d, [(1140, 1460), (860, 1460)], PURPLE, 5)
 
-    # owner
-    arrow(d, (320, 1310), (520, 1380), NAVY, 3)
-    text(d, (400, 1360), "PIN", 13, False, NAVY, "mm")
+    # DF-08 Owner → P5
+    polyarrow(d, [(300, 1480), (500, 1480)], NAVY, 5)
+    label(d, (400, 1510), "DF-08 PIN", NAVY)
 
-    # AI
-    arrow(d, (820, 500), (2080, 1280), GOLD, 3)
-    arrow(d, (2080, 1320), (820, 540), GOLD, 3)
-    text(d, (1600, 1100), "counts-only snapshot  /  refused PII", 13, False, NAVY, "mm")
+    # DF-06 P2 → Optional AI through the D2/D1 gap (y=370), parallel to audit, no store body crossing.
+    polyarrow(
+        d,
+        [(860, 480), (1035, 480), (1035, 355), (2220, 355), (2220, 430)],
+        GOLD,
+        5,
+        dashed=True,
+    )
+    label(d, (2100, 333), "DF-06 counts-only", GOLD, GOLD_SOFT)
 
-    caption(d, w, h, "Figure 4 — Data Flow Diagram (DFD) Level 1. Processes P1–P5, stores D1–D4. Registry writes go through Edge (P3); classroom writes go through PostgREST + RLS (P2).")
+    dfd_legend(d, 40, 1620, 980)
+    caption(d, w, h, "DFD Level 1. Processes P1–P5, stores D1–D4. No store-to-store flows. Registry student rows go to D1 via P3; classroom writes go to D1 via P2 + RLS.")
     save(im, "dfd-level1.png")
-
-
-def trust_overlay():
-    """Small legend strip used on architecture page already; skip extra."""
-    pass
 
 
 def main():

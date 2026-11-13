@@ -30,7 +30,7 @@
     p, li { orphans: 3; widows: 3; }
     p { margin: 0 0 8px; }
     ul, ol { margin: 0 0 10px; padding-left: 22px; }
-    figure { margin: 8px 0 14px; page-break-inside: avoid; }
+    figure { margin: 8px 0 14px; page-break-inside: avoid; break-inside: avoid; }
     figure img { width: 100%; height: auto; border: 1px solid var(--line); background: #fff; }
     figcaption { font-size: 9pt; color: var(--muted); text-align: center; margin-top: 4px; font-style: italic; }
     .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
@@ -71,8 +71,8 @@
 
     <table class="meta">
       <tr><th>Document number</th><td>MB-SDD-001</td></tr>
-      <tr><th>Version</th><td>1.1 · 13 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
-      <tr><th>Replaces</th><td>1.0 of 10 November 2026 (ASCII sketches). This revision answers Hibir “Failed Validation” on field <i>System &amp; Architecture Design Document (SDD)</i>.</td></tr>
+      <tr><th>Version</th><td>1.2 · 13 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>Replaces</th><td>1.1 of 13 November 2026 (PNG figures, but Level 1 had crossing arrows and A4 type was too small). 1.0 of 10 November 2026 was ASCII sketches rejected by Hibir.</td></tr>
       <tr><th>INSA portal field</th><td>System &amp; Architecture Design Document (SDD) — Key components, System Architecture Diagram, Data Flow Diagram (DFD), Data flow explanation. Recommendation received: add professionally sketched diagrams.</td></tr>
       <tr><th>Companion</th><td>MB-SRS-001, MB-TDD-001, MB-UG-001, MB-SEC-001</td></tr>
       <tr><th>Classification</th><td>CONFIDENTIAL (CMCSRS Annex B). No live secrets in this file.</td></tr>
@@ -92,7 +92,7 @@
     <p>Key components of MaJo e-School Bridge are grouped in five layers. Presentation never stores student rows. Authorisation is the JWT plus row-level security (RLS), not the public anon key compiled into the client.</p>
     <figure>
       <img src="insa-sdd/diagrams/key-components.png" alt="Key components diagram: presentation, delivery, application API, data stores, operators and suppliers for MaJo e-School Bridge" />
-      <figcaption>Figure 1 — Key components (professionally sketched). Layers L1–L5.</figcaption>
+      <figcaption>Figure 1 — Key components (professionally sketched). Layers L1–L5. Each layer is named on the figure.</figcaption>
     </figure>
     <table class="find">
       <thead><tr><th>Key component</th><th>Layer</th><th>What it does</th><th>Trust</th></tr></thead>
@@ -133,14 +133,14 @@
     </table>
 
     <h2 class="pagebreak">4. Data Flow Diagram (DFD)</h2>
-    <p>The Data Flow Diagram (DFD) is drawn in Yourdon / DeMarco notation: rectangles are external entities, circles are processes, open-ended bars are data stores, arrows are named data flows. Figure 3 is the context (Level 0) diagram. Figure 4 decomposes process P0 into P1–P5.</p>
+    <p>The Data Flow Diagram (DFD) is drawn in Yourdon / DeMarco notation: rectangles are external entities, circles are processes, open-ended bars are data stores, arrows are named data flows (DF-01 to DF-08). Figure 3 is the context (Level 0) diagram — external entities only, no data stores. Figure 4 decomposes process P0 into P1–P5 and shows stores D1–D4. Every arrow on the figures is the same identifier used in section 5.</p>
     <figure>
-      <img src="insa-sdd/diagrams/dfd-level0.png" alt="Data Flow Diagram DFD Level 0 context diagram for MaJo e-School Bridge with process P0 and data stores D1 to D4" />
-      <figcaption>Figure 3 — Data Flow Diagram (DFD) Level 0 / context. Process P0 with stores D1–D4.</figcaption>
+      <img src="insa-sdd/diagrams/dfd-level0.png" alt="Data Flow Diagram DFD Level 0 context diagram for MaJo e-School Bridge with process P0 and named flows DF-01 to DF-08" />
+      <figcaption>Figure 3 — Data Flow Diagram (DFD) Level 0 / context. External entities around process P0. Stores D1–D4 appear on Level 1.</figcaption>
     </figure>
     <figure>
-      <img src="insa-sdd/diagrams/dfd-level1.png" alt="Data Flow Diagram DFD Level 1 showing processes Authenticate, Classroom records, Registry, Transport, Public brand and data stores" />
-      <figcaption>Figure 4 — Data Flow Diagram (DFD) Level 1. Processes P1 Authenticate, P2 Classroom records, P3 Registry, P4 Transport, P5 Public brand.</figcaption>
+      <img src="insa-sdd/diagrams/dfd-level1.png" alt="Data Flow Diagram DFD Level 1 showing processes Authenticate, Classroom records, Registry, Transport, Public brand, data stores D1 to D4, and named flows DF-01 to DF-08" />
+      <figcaption>Figure 4 — Data Flow Diagram (DFD) Level 1. Processes P1–P5, stores D1–D4. No store-to-store flows. DF-01 to DF-08 match section 5.</figcaption>
     </figure>
     <h3>4.1 DFD dictionary</h3>
     <table class="find">
@@ -270,7 +270,7 @@
     </div>
 
     <p class="footer">
-      MB-SDD-001 v1.1 · MaJo e-School Bridge (MayaBela) · 13 November 2026, Africa/Nairobi.<br />
+      MB-SDD-001 v1.2 · MaJo e-School Bridge (MayaBela) · 13 November 2026, Africa/Nairobi.<br />
       Contains Key components, System Architecture Diagram, Data Flow Diagram (DFD), and Data flow explanation.<br />
       Restricted. Not a gazetted INSA certificate and not a third-party pentest letter.
     </p>
