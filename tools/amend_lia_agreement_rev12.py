@@ -108,7 +108,18 @@ def main() -> None:
                 "Lebawi International Academy and Majo Bridge Technologies and Events PLC",
             )
 
+    set_text_keep_runs(
+        para_by_prefix(doc, "SOFTWARE LICENCE AND IMPLEMENTATION AGREEMENT"),
+        "SOFTWARE LICENCE AND IMPLEMENTATION AGREEMENT — REVISION 1.2",
+    )
+    p_title = para_by_prefix(doc, "SOFTWARE LICENCE AND IMPLEMENTATION AGREEMENT")
+    insert_after(
+        p_title,
+        "Revision 1.2 · 13 November 2026 G.C. · supersedes Revision 1.1 · MBT-LIA-AGR-2026-01",
+    )
+
     cover = doc.tables[0]
+    cover.rows[1].cells[1].text = "MBT-LIA-AGR-2026-01  ·  Revision 1.2 (13 November 2026)"
     cover.rows[7].cells[1].text = (
         "Annex Register (signed) · A Module list and prices · B Deliverables, milestones and TOR crosswalk "
         "(D1–D12) · C Payment schedule · D Client-provided infrastructure · E Inception Report "
@@ -161,6 +172,12 @@ def main() -> None:
         "combined handover), the TOR number and contents control.",
     )
 
+    set_text_keep_runs(
+        para_by_prefix(doc, "(j)\t“Go-Live”"),
+        "(j)\t“Go-Live” means the date on which the System is in productive use by all sections of the "
+        "Client and the Go-Live Certificate (an instrument in Deliverable D9) is signed, targeted for "
+        "Monday 21 December 2026. Deliverable D10 is Training and user documentation.",
+    )
     set_text_keep_runs(
         para_by_prefix(doc, "(k)\t“User-Acceptance Testing”"),
         "(k)\t“User-Acceptance Testing” or “UAT” means the tests and acceptance activities required by "
