@@ -65,7 +65,7 @@ def main() -> Path:
     d.rectangle([0, 0, w, 108], fill=NAVY)
     d.rectangle([0, 108, w, 116], fill=GOLD)
     text(d, (40, 32), "Figure 1  ·  Proposed Integration Architecture", 32, True, WHITE)
-    text(d, (40, 74), "MaJo e-School Bridge  ↔  Bunna Bank S.C.  ·  API, mobile banking and core banking", 20, False, (210, 220, 235))
+    text(d, (40, 74), "Majo Bridge OS  ↔  Buna International Bank S.C.  ·  API, mobile banking and core banking", 20, False, (210, 220, 235))
 
     # Actors
     rrect(d, (40, 140, 2360, 300), WHITE, LINE, 2, 18)
@@ -88,7 +88,7 @@ def main() -> Path:
 
     # MaJo platform
     rrect(d, (40, 360, 2360, 720), BLUE_SOFT, NAVY, 4, 20)
-    text(d, (60, 378), "MaJo e-School Bridge  (Majo Bridge cloud)  ·  school data never posted to the Bank ledger", 22, True, NAVY)
+    text(d, (60, 378), "Majo Bridge OS  (Majo Bridge cloud)  ·  school data never posted to the Bank ledger", 22, True, NAVY)
     pill(d, (70, 430, 620, 680), "Presentation", ["Web ERP · Teacher app", "Parent / Student / Driver apps", "School branding · 3 languages"])
     pill(d, (660, 430, 1210, 680), "Application", ["Auth (JWT + schoolId + role)", "PostgREST + Edge Functions", "Finance ledger · invoices · receipts"])
     pill(d, (1250, 430, 1800, 680), "Data (tenant isolated)", ["Postgres row-level security", "Private school-files", "Audit log · grade_audit_log"])
@@ -99,10 +99,10 @@ def main() -> Path:
 
     # Bank gateway
     rrect(d, (40, 800, 2360, 980), GOLD_SOFT, GOLD, 4, 18)
-    text(d, (60, 818), "Bunna Bank  ·  Secure API Gateway  (Bank-controlled)", 22, True, NAVY)
+    text(d, (60, 818), "Buna International Bank  ·  Secure API Gateway  (Bank-controlled)", 22, True, NAVY)
     text(d, (60, 860), "All financial postings remain inside authorised Bank systems. MaJo Bridge does not hold or control the Bank's ledger.", 18, False, INK)
     text(d, (60, 898), "Bill presentment  ·  payment initiation  ·  status query  ·  confirmation  ·  reversal  ·  reconciliation file", 18, False, MUTED)
-    text(d, (60, 936), "No PAN, PIN or core-banking credentials are stored in MaJo e-School Bridge.", 18, True, GREEN)
+    text(d, (60, 936), "No PAN, PIN or core-banking credentials are stored in Majo Bridge OS.", 18, True, GREEN)
 
     arrow(d, (620, 980), (620, 1040), NAVY, 5)
     arrow(d, (1780, 980), (1780, 1040), NAVY, 5)
@@ -110,7 +110,7 @@ def main() -> Path:
     pill(d, (70, 1050, 1160, 1280), "Mobile banking / USSD / branch / agent", [
         "School and student identification",
         "Outstanding fee lookup (where supported)",
-        "Pay with Bunna  ·  authorisation",
+        "Pay with Buna  ·  authorisation",
         "Electronic receipt  ·  history",
     ], WHITE, GREEN)
     pill(d, (1240, 1050, 2330, 1280), "Core banking", [
@@ -129,11 +129,11 @@ def main() -> Path:
     rrect(d, (1240, 1320, 2360, 1488), WHITE, NAVY, 3, 16)
     text(d, (1260, 1340), "Bank remains in control", 20, True, NAVY)
     text(d, (1260, 1380), "Tariffs, limits, AML/CFT, settlement and customer", 18, False, INK)
-    text(d, (1260, 1416), "due diligence stay with Bunna Bank. The platform is", 18, False, INK)
+    text(d, (1260, 1416), "due diligence stay with the Bank. The platform is", 18, False, INK)
     text(d, (1260, 1452), "the school operating system and the payment rail is the Bank.", 18, False, INK)
 
     d.rectangle([0, h - 44, w, h], fill=NAVY)
-    text(d, (40, h - 22), "MBT-BUNNA-PART-2026-01  ·  Architecture to be finalised jointly with IT, integration, cybersecurity and business teams.", 16, False, WHITE, "lm")
+    text(d, (40, h - 22), "MBT-BUNA-PROP-2026-01  ·  Architecture to be finalised jointly with IT, integration, cybersecurity and business teams.", 16, False, WHITE, "lm")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     im.save(OUT, "PNG", optimize=True)

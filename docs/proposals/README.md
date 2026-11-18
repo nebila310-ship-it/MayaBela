@@ -1,13 +1,13 @@
 # Proposals
 
-## Bunna Bank S.C. — partnership proposal (Bank sample format)
+## Buna International Bank S.C. — combined technical and financial partnership proposal
 
-Prepared by **Majo Bridge Technologies and Events PLC** in the section numbering Bunna Bank issued as a sample (`1`–`16` plus Annex I–II). Cream-paper designed PDF and an editable Word file. **Annex I ETB figures are reserved** until commercial numbers are confirmed.
+Prepared by **Majo Bridge Technologies and Events PLC** for **Majo Bridge OS**. Cream-paper PDF and Word. Every page carries document number `MBT-BUNA-PROP-2026-01` and page X of Y. Commercial offer: ETB 1,000,000 one-time installation (excl. VAT) and ETB 150 per billable student per month (excl. VAT). Hosting is covered by the technology provider. Training and other costs to be discussed. Annex B is the commercial proforma.
 
-- Rebuild: `python3 docs/proposals/build_bunna_partnership_proposal.py`
-- Word: [MaJo_Bridge_Bunna_Bank_Partnership_Proposal.docx](MaJo_Bridge_Bunna_Bank_Partnership_Proposal.docx)
-- PDF: [MaJo_Bridge_Bunna_Bank_Partnership_Proposal.pdf](MaJo_Bridge_Bunna_Bank_Partnership_Proposal.pdf)
-- Printable HTML: [bunna-partnership-proposal.html](bunna-partnership-proposal.html)
+- Rebuild: `python3 docs/proposals/build_buna_combined_proposal.py`
+- Word: [MaJo_Bridge_Buna_Combined_Proposal.docx](MaJo_Bridge_Buna_Combined_Proposal.docx)
+- PDF: [MaJo_Bridge_Buna_Combined_Proposal.pdf](MaJo_Bridge_Buna_Combined_Proposal.pdf)
+- Printable HTML: [buna-combined-proposal.html](buna-combined-proposal.html)
 
 ## Lebawi International Academy — technical proposal
 
