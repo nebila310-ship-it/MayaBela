@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financial Proposal — MaJo e-School Bridge for St. Joseph School</title>
+  <style>
+    :root {
+      --navy: #123047;
+      --teal: #0e6b73;
+      --gold: #c9a227;
+      --green: #157a3c;
+      --ink: #142033;
+      --muted: #4a5568;
+      --line: #d6dde8;
+      --paper: #ffffff;
+      --wash: #f3f8f9;
+      --full: #0e6b73;
+      --std: #1a4f9c;
+      --start: #7a3e9d;
+      --free: #157a3c;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background: #e8eee4;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10.8pt;
+      line-height: 1.45;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(18, 48, 71, 0.94);
+      color: #fff;
+      font-size: 13px;
+    }
+    .toolbar a { color: #fff; }
+    .sheet {
+      width: 210mm;
+      max-width: 100%;
+      margin: 18px auto;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(18, 48, 71, 0.12);
+      padding: 15mm 14mm 13mm;
+    }
+    .cover-flag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 4px solid var(--gold);
+      padding-bottom: 12px;
+    }
+    .cover-flag img { width: 92px; height: auto; }
+    .brand-name { margin: 0; color: var(--navy); font-size: 13.5pt; }
+    .brand-sub {
+      margin: 0 0 4px;
+      color: var(--teal);
+      font-weight: 800;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .doc-kicker {
+      margin: 20px 0 6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-size: 9pt;
+      font-weight: 800;
+    }
+    .doc-title {
+      margin: 0 0 8px;
+      font-size: 20pt;
+      line-height: 1.18;
+      color: var(--navy);
+    }
+    .doc-for {
+      margin: 0 0 14px;
+      font-size: 12.5pt;
+      color: var(--teal);
+      font-weight: 800;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0 8px;
+    }
+    .meta-card {
+      background: var(--wash);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card strong {
+      display: block;
+      color: var(--teal);
+      font-size: 8.3pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .formula {
+      background: linear-gradient(135deg, #123047 0%, #0e6b73 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+    .formula .k { color: #f3d98a; font-weight: 800; font-size: 8.5pt; letter-spacing: 0.8px; text-transform: uppercase; }
+    .formula .eq { font-size: 13.5pt; font-weight: 800; margin: 6px 0 4px; }
+    .formula p { margin: 0; opacity: 0.95; font-size: 9.5pt; }
+    h2 {
+      margin: 20px 0 8px;
+      font-size: 13.2pt;
+      color: var(--navy);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 14px 0 6px;
+      font-size: 11.2pt;
+      color: var(--teal);
+      border-left: 5px solid var(--gold);
+      padding-left: 8px;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 18px; }
+    li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 9.2pt;
+    }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 6px 7px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: var(--wash); color: var(--navy); font-weight: 800; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .packs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0 14px;
+    }
+    .pack {
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      page-break-inside: avoid;
+    }
+    .pack .who { font-size: 8.5pt; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.9; }
+    .pack h3 { margin: 4px 0 8px; border: 0; padding: 0; color: #fff; font-size: 12.5pt; }
+    .pack .price { font-size: 22pt; font-weight: 800; line-height: 1; }
+    .pack .unit { font-size: 9pt; opacity: 0.95; margin: 4px 0 8px; }
+    .pack ul { margin: 0; padding-left: 16px; font-size: 9pt; }
+    .freebox {
+      background: #e8f7ee;
+      border: 1px solid #b7e2c6;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+    .freebox strong { color: var(--free); }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #f0d48a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .fill td { height: 28px; }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+    .sig { border-top: 1px solid var(--ink); padding-top: 8px; min-height: 108px; }
+    .sig .who { font-weight: 800; margin-top: 40px; }
+    .sig .role { color: var(--muted); font-size: 9.5pt; }
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 8.3pt;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    .mod-table td:first-child { width: 36px; font-weight: 800; color: var(--teal); }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 8mm 10mm; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 11mm 11mm 13mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    Financial proposal for St. Joseph School · monthly subscription · ETB ·
+    <a href="https://mayabela.pages.dev">mayabela.pages.dev</a>
+  </div>
+  <article class="sheet">
+
+    <header class="cover-flag">
+      <div>
+        <p class="brand-sub">Prepared by</p>
+        <h1 class="brand-name">MaJo Bridge Technologies and Events</h1>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:10pt;">
+          Product: <b>MaJo e-School Bridge</b> (MayaBela platform)<br />
+          Currency: Ethiopian Birr (ETB)
+        </p>
+      </div>
+      <img src="../../assets/branding/maya_brand.png" alt="MaJo Bridge" />
+    </header>
+
+    <p class="doc-kicker">Financial proposal · Monthly subscription · Recurring · Confidential</p>
+    <h1 class="doc-title">Monthly subscription for St. Joseph School — 30% off, 70% payable, before VAT</h1>
+    <p class="doc-for">St. Joseph School pays. Besrate Gabriel School (Dire Dawa) is 100% free of cost.</p>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <strong>Prepared for</strong>
+        St. Joseph School (paying campus)<br />
+        Besrate Gabriel School, Dire Dawa — 100% free
+      </div>
+      <div class="meta-card">
+        <strong>Prepared by</strong>
+        MaJo Bridge Technologies and Events<br />
+        +251 911 646 444 · nabilmaya6464@gmail.com
+      </div>
+      <div class="meta-card">
+        <strong>Document</strong>
+        MB-SJ-FIN-2026-11 &nbsp;·&nbsp; Version 1.2<br />
+        7 November 2026 &nbsp;·&nbsp; Valid 90 days
+      </div>
+      <div class="meta-card">
+        <strong>Companion document</strong>
+        Technical Proposal MB-SJ-TECH-2026-11<br />
+        61 numbered school modules (separate PDF)
+      </div>
+    </div>
+
+    <div class="formula">
+      <div class="k">The only formula this offer uses — monthly, recurring, before VAT</div>
+      <div class="eq">Monthly subscription (ETB, before VAT) = (total students × 70%) × chosen rate</div>
+      <p>
+        1) Take St. Joseph’s total enrolled students (A).<br />
+        2) 30% of A is the <b>discount / off</b> — those students are not charged.<br />
+        3) 70% of A is the <b>payable students</b> (B). Round to the nearest whole student.<br />
+        4) Monthly payment before VAT = B × the pack rate (ETB 150 / 200 / 300 per payable student <b>per month</b>).<br />
+        These pack rates are the <b>lowest possible price</b> in this offer. VAT is added later on the tax invoice if legally due.
+        Besrate Gabriel School in Dire Dawa is <b>100% free of cost</b> — do not put its students in (A).
+      </p>
+    </div>
+
+    <h2>1. How to read this proposal</h2>
+    <p>
+      This paper is the commercial offer. St. Joseph School pays a monthly subscription.
+      <b>Besrate Gabriel School (Dire Dawa) is 100% free of cost.</b>
+      Software detail is in <b>Technical Proposal MB-SJ-TECH-2026-11</b>.
+      Management needs two decisions: (1) how many modules, (2) St. Joseph’s total enrolled student count.
+    </p>
+    <ol start="2">
+      <li>Module packs and lowest monthly rates (before VAT)</li>
+      <li>The 30% off / 70% payable rule</li>
+      <li>Worked examples (for planning)</li>
+      <li>Official worksheet (St. Joseph roll)</li>
+      <li>Dire Dawa — 100% free of cost</li>
+      <li>What the monthly subscription includes</li>
+      <li>Recurring payment, VAT, and validity</li>
+      <li>Numbered module list (for pack choice)</li>
+      <li>Signatures</li>
+    </ol>
+
+    <h2>2. Module packs and lowest monthly rates (before VAT)</h2>
+    <p>
+      Rates are <b>per payable student per month</b>, in Ethiopian Birr, <b>before VAT</b>.
+      They are the <b>lowest possible price</b> given in this offer — not a list price with a later cut.
+      This is a subscription. It is not a one-time licence. Rates are not per teacher and not per login.
+    </p>
+    <div class="packs">
+      <div class="pack" style="background:var(--start);">
+        <div class="who">Starter pack</div>
+        <h3>≤ 20 modules</h3>
+        <div class="price">150</div>
+        <div class="unit">ETB / payable student / month · before VAT · lowest price</div>
+        <ul>
+          <li>Choose any 1–20 desks from the 61</li>
+          <li>Typical: SIS + attendance + markbook + parents</li>
+        </ul>
+      </div>
+      <div class="pack" style="background:var(--std);">
+        <div class="who">Standard pack</div>
+        <h3>20–40 modules</h3>
+        <div class="price">200</div>
+        <div class="unit">ETB / payable student / month · before VAT · lowest price</div>
+        <ul>
+          <li>Choose 20 to 40 desks</li>
+          <li>Typical: academics + students + finance + HR</li>
+        </ul>
+      </div>
+      <div class="pack" style="background:var(--full);">
+        <div class="who">Full school OS</div>
+        <h3>All 61 modules</h3>
+        <div class="price">300</div>
+        <div class="unit">ETB / payable student / month · before VAT · lowest price</div>
+        <ul>
+          <li>Complete catalogue in the technical proposal</li>
+          <li>41–60 desks are billed at this full rate</li>
+        </ul>
+      </div>
+    </div>
+    <table>
+      <tr>
+        <th>Pack</th>
+        <th>Modules switched on</th>
+        <th class="num">Rate (ETB)</th>
+        <th>Unit</th>
+      </tr>
+      <tr>
+        <td>Starter</td>
+        <td>1 to 20</td>
+        <td class="num">150</td>
+        <td>Per payable student / month — recurring — before VAT — lowest price</td>
+      </tr>
+      <tr>
+        <td>Standard</td>
+        <td>20 to 40</td>
+        <td class="num">200</td>
+        <td>Per payable student / month — recurring — before VAT — lowest price</td>
+      </tr>
+      <tr>
+        <td>Full</td>
+        <td>All 61 (also 41–60)</td>
+        <td class="num">300</td>
+        <td>Per payable student / month — recurring — before VAT — lowest price</td>
+      </tr>
+    </table>
+    <div class="note">
+      <b>Boundary rule for management.</b>
+      Exactly 20 modules may be taken as Starter (ETB 150) or Standard (ETB 200); the school picks the pack on the order form.
+      Exactly 40 modules is Standard. The full catalogue of 61 is Full (ETB 300).
+      Chrome screens (personal Profile and Logout) are not counted in the 61 and are never billed.
+      All three rates are the floor price of this offer, quoted <b>before VAT</b>.
+    </div>
+
+    <h2>3. The 30% off / 70% payable rule (St. Joseph)</h2>
+    <p>
+      From St. Joseph’s <b>total enrolled students</b>, this offer takes <b>30% off</b>. That 30% is a discount — those students are not charged.
+      The remaining <b>70%</b> are the <b>payable students</b>. Every enrolled child may still use the system; the 30% is a commercial discount, not a login cap.
+      Do not add Dire Dawa students into (A). Dire Dawa is 100% free (Section 6).
+    </p>
+    <table>
+      <tr><th>Step</th><th>What to write</th><th>Example (St. Joseph 1,000 students, full pack)</th></tr>
+      <tr><td>1</td><td>Total students (A)</td><td>1,000</td></tr>
+      <tr><td>2</td><td>Discount / off = A × 30%</td><td>1,000 × 30% = 300 students not charged</td></tr>
+      <tr><td>3</td><td>Payable students (B) = A × 70%</td><td>1,000 × 70% = 700</td></tr>
+      <tr><td>4</td><td>Choose monthly rate before VAT (C)</td><td>ETB 300 (all 61 modules — lowest full-pack price)</td></tr>
+      <tr><td>5</td><td>B × C = monthly subscription before VAT</td><td>700 × 300 = <b>ETB 210,000 per month, before VAT</b></td></tr>
+    </table>
+    <p style="font-weight:800;color:var(--navy);">
+      Monthly subscription before VAT (ETB) = (St. Joseph total students × 70%) × chosen monthly rate
+    </p>
+    <p>
+      Check for the board: on a 1,000-student roll at the full pack, 210,000 ÷ 1,000 = <b>ETB 210 per enrolled student per month, before VAT</b>.
+      The invoice line is still B × C. VAT is added on the tax invoice if Ethiopian law requires it.
+      This amount is due every month for as long as the school stays subscribed.
+    </p>
+
+    <h2>4. Worked examples (planning only, before VAT)</h2>
+    <p>These rows help the board budget before the official St. Joseph census is attached. They are not an invoice. Amounts are <b>ETB per month, before VAT</b>. Payable students = 70% of enrolled.</p>
+    <table>
+      <tr>
+        <th class="num">Enrolled students</th>
+        <th class="num">30% off</th>
+        <th class="num">Payable (70%)</th>
+        <th class="num">Starter 150</th>
+        <th class="num">Standard 200</th>
+        <th class="num">Full 300</th>
+      </tr>
+      <tr><td class="num">400</td><td class="num">120</td><td class="num">280</td><td class="num">42,000</td><td class="num">56,000</td><td class="num">84,000</td></tr>
+      <tr><td class="num">500</td><td class="num">150</td><td class="num">350</td><td class="num">52,500</td><td class="num">70,000</td><td class="num">105,000</td></tr>
+      <tr><td class="num">600</td><td class="num">180</td><td class="num">420</td><td class="num">63,000</td><td class="num">84,000</td><td class="num">126,000</td></tr>
+      <tr><td class="num">800</td><td class="num">240</td><td class="num">560</td><td class="num">84,000</td><td class="num">112,000</td><td class="num">168,000</td></tr>
+      <tr><td class="num">1,000</td><td class="num">300</td><td class="num">700</td><td class="num">105,000</td><td class="num">140,000</td><td class="num">210,000</td></tr>
+      <tr><td class="num">1,200</td><td class="num">360</td><td class="num">840</td><td class="num">126,000</td><td class="num">168,000</td><td class="num">252,000</td></tr>
+      <tr><td class="num">1,500</td><td class="num">450</td><td class="num">1,050</td><td class="num">157,500</td><td class="num">210,000</td><td class="num">315,000</td></tr>
+      <tr><td class="num">2,000</td><td class="num">600</td><td class="num">1,400</td><td class="num">210,000</td><td class="num">280,000</td><td class="num">420,000</td></tr>
+    </table>
+    <p style="font-size:9pt;color:var(--muted);">ETB per month, before VAT, St. Joseph only, recurring. Dire Dawa is 100% free and is not in these rows.</p>
+
+    <h3>One-line illustration (not the school’s census)</h3>
+    <p>If St. Joseph had 1,000 students and chose all 61 modules:</p>
+    <table>
+      <tr><th>Line</th><th class="num">Figure</th></tr>
+      <tr><td>Total students (A)</td><td class="num">1,000</td></tr>
+      <tr><td>30% off (not charged)</td><td class="num">300</td></tr>
+      <tr><td>Payable students (B) = A × 70%</td><td class="num">700</td></tr>
+      <tr><td>Lowest full-pack rate per month, before VAT (C)</td><td class="num">300</td></tr>
+      <tr><td><b>Monthly subscription B × C, before VAT</b></td><td class="num"><b>ETB 210,000 / month</b></td></tr>
+      <tr><td>Besrate Gabriel School, Dire Dawa</td><td class="num"><b>ETB 0 — 100% free of cost</b></td></tr>
+    </table>
+
+    <h2>5. Official worksheet — St. Joseph student count</h2>
+    <p>Leave the empty cells until the registrar confirms the St. Joseph roll. Do not write Dire Dawa numbers here.</p>
+    <table class="fill">
+      <tr>
+        <th>Item</th>
+        <th class="num">Write here</th>
+      </tr>
+      <tr>
+        <td>School</td>
+        <td>St. Joseph School</td>
+      </tr>
+      <tr>
+        <td>Total students (A)</td>
+        <td class="num"></td>
+      </tr>
+      <tr>
+        <td>30% off (not charged) = A × 30%</td>
+        <td class="num"></td>
+      </tr>
+      <tr>
+        <td>Payable students (B) = A × 70%</td>
+        <td class="num"></td>
+      </tr>
+      <tr>
+        <td>Chosen pack (Starter / Standard / Full)</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Lowest monthly rate before VAT (C) — 150 / 200 / 300</td>
+        <td class="num"></td>
+      </tr>
+      <tr>
+        <td><b>Monthly subscription = B × C (ETB / month, recurring, before VAT)</b></td>
+        <td class="num"></td>
+      </tr>
+    </table>
+    <p style="font-size:9pt;color:var(--muted);">Census date: _______________ &nbsp; Prepared by (registrar): _______________ &nbsp; Checked by (finance): _______________</p>
+
+    <h2>6. Dire Dawa — 100% free of cost</h2>
+    <div class="freebox">
+      <strong>Besrate Gabriel School (Dire Dawa city branch) is 100% free of cost.</strong>
+      No monthly subscription. No installation fee. No module charge. No student-count charge.
+      MaJo Bridge Technologies and Events provides the same product as a social contribution.
+      Do not add Dire Dawa students into St. Joseph’s payable (B).
+    </div>
+    <table>
+      <tr><th>Item</th><th>St. Joseph School</th><th>Besrate Gabriel School, Dire Dawa</th></tr>
+      <tr><td>Monthly subscription</td><td>70% of students × pack rate, before VAT</td><td><b>ETB 0 — 100% free</b></td></tr>
+      <tr><td>30% discount</td><td>Yes — 30% of St. Joseph roll is off</td><td>Not used — the whole campus is free</td></tr>
+      <tr><td>Installation / go-live</td><td>Covered with the paying campus</td><td><b>ETB 0 — 100% free</b></td></tr>
+      <tr><td>Modules in use</td><td>Chosen pack</td><td>Same product, no charge</td></tr>
+    </table>
+
+    <h2>7. What the monthly subscription includes — and what it does not</h2>
+    <table>
+      <tr><th>Included in the monthly subscription</th><th>Not included</th></tr>
+      <tr>
+        <td>
+          Use of the chosen modules on web and Android;<br />
+          school data isolation;<br />
+          product updates to those modules;<br />
+          support Mon–Sat 09:00–18:00 EAT;<br />
+          English, Amharic, Afaan Oromo.
+        </td>
+        <td>
+          Devices, campus internet, and CCTV cameras;<br />
+          custom software outside the 61-module list;<br />
+          government EMIS filing on behalf of the school;<br />
+          VAT or withholding if legally due (stated on the tax invoice);<br />
+          a second accounting package.
+        </td>
+      </tr>
+    </table>
+    <p>
+      The school may move pack (Starter → Standard → Full) on a later month at the new monthly rate on the then-current St. Joseph roll.
+      Reducing a pack is allowed from the next billing month. Unused days in a paid month are not refunded.
+    </p>
+
+    <h2>8. Recurring payment, VAT, and validity</h2>
+    <table>
+      <tr><th>Term</th><th>Offer</th></tr>
+      <tr><td>Currency</td><td>Ethiopian Birr (ETB)</td></tr>
+      <tr><td>Quote basis</td><td><b>Before VAT.</b> The 150 / 200 / 300 rates and all tables in this paper are exclusive of VAT</td></tr>
+      <tr><td>VAT on invoice</td><td>Added on the tax invoice if Ethiopian law requires it. Not mixed into the pack rate</td></tr>
+      <tr><td>Validity</td><td>90 days from 7 November 2026</td></tr>
+      <tr><td>Billing</td><td>Monthly subscription, recurring</td></tr>
+      <tr><td>Amount each month (before VAT)</td><td>(St. Joseph total students × 70%) × chosen pack rate</td></tr>
+      <tr><td>30% off</td><td>Discount on St. Joseph’s roll — those students are not charged</td></tr>
+      <tr><td>Lowest price</td><td>The pack rates in Section 2 are the lowest possible price of this offer</td></tr>
+      <tr><td>First payment</td><td>On contract signing, using the signed St. Joseph census worksheet, before VAT</td></tr>
+      <tr><td>Following payments</td><td>The same formula, due each month while the school stays subscribed</td></tr>
+      <tr><td>Dire Dawa</td><td><b>100% free of cost</b> — ETB 0 every month, no VAT line for that campus</td></tr>
+    </table>
+
+    <h2>9. Numbered module list — for pack choice</h2>
+    <p>
+      Tick the desks the school wants. Count the ticks. 1–20 = Starter (150). 20–40 = Standard (200). 61 (or 41–60) = Full (300).
+      Full descriptions are in the technical proposal.
+    </p>
+    <table class="mod-table">
+      <tr><th>#</th><th>Module</th><th>Family</th><th>#</th><th>Module</th><th>Family</th></tr>
+      <tr><td>01</td><td>Dashboard</td><td>Organization</td><td>32</td><td>Student programs</td><td>Student services</td></tr>
+      <tr><td>02</td><td>Institution Management</td><td>Organization</td><td>33</td><td>Parents &amp; Link Approvals</td><td>Student services</td></tr>
+      <tr><td>03</td><td>School Management</td><td>Organization</td><td>34</td><td>Transfers &amp; Promotion</td><td>Student services</td></tr>
+      <tr><td>04</td><td>Campus Management</td><td>Organization</td><td>35</td><td>Finance</td><td>Finance</td></tr>
+      <tr><td>05</td><td>CCTV</td><td>Organization</td><td>36</td><td>Inventory, Procurement &amp; Store</td><td>Finance</td></tr>
+      <tr><td>06</td><td>Academic Management</td><td>Academics</td><td>37</td><td>Human Resource</td><td>HR &amp; transport</td></tr>
+      <tr><td>07</td><td>Examinations &amp; Grade Approvals</td><td>Academics</td><td>38</td><td>Leave &amp; contracts</td><td>HR &amp; transport</td></tr>
+      <tr><td>08</td><td>Weighted Markbook</td><td>Academics</td><td>39</td><td>Payroll</td><td>HR &amp; transport</td></tr>
+      <tr><td>09</td><td>Report Cards</td><td>Academics</td><td>40</td><td>Administration Staff Directory</td><td>HR &amp; transport</td></tr>
+      <tr><td>10</td><td>Exam bank &amp; papers</td><td>Academics</td><td>41</td><td>Add Administration Staff</td><td>HR &amp; transport</td></tr>
+      <tr><td>11</td><td>Attendance</td><td>Academics</td><td>42</td><td>Transport</td><td>HR &amp; transport</td></tr>
+      <tr><td>12</td><td>Homework</td><td>Academics</td><td>43</td><td>Buses</td><td>HR &amp; transport</td></tr>
+      <tr><td>13</td><td>At-risk &amp; insights</td><td>Academics</td><td>44</td><td>Live GPS</td><td>HR &amp; transport</td></tr>
+      <tr><td>14</td><td>Analytics &amp; exports</td><td>Academics</td><td>45</td><td>Register Driver</td><td>HR &amp; transport</td></tr>
+      <tr><td>15</td><td>Classroom Teachers</td><td>Academics</td><td>46</td><td>Library</td><td>Learning</td></tr>
+      <tr><td>16</td><td>Add Teacher</td><td>Academics</td><td>47</td><td>e-Books &amp; Materials</td><td>Learning</td></tr>
+      <tr><td>17</td><td>Timetable</td><td>Academics</td><td>48</td><td>Announcements</td><td>Communication</td></tr>
+      <tr><td>18</td><td>LMS</td><td>Academics</td><td>49</td><td>Events</td><td>Communication</td></tr>
+      <tr><td>19</td><td>Lesson plans</td><td>Academics</td><td>50</td><td>Gallery</td><td>Communication</td></tr>
+      <tr><td>20</td><td>Curriculum office</td><td>Academics</td><td>51</td><td>Calendar</td><td>Communication</td></tr>
+      <tr><td>21</td><td>Grade Workflow</td><td>Academics</td><td>52</td><td>Messages</td><td>Communication</td></tr>
+      <tr><td>22</td><td>Students</td><td>Student services</td><td>53</td><td>QA Findings &amp; Plans</td><td>Quality</td></tr>
+      <tr><td>23</td><td>Admissions</td><td>Student services</td><td>54</td><td>Reports &amp; Analytics</td><td>Quality</td></tr>
+      <tr><td>24</td><td>Alumni</td><td>Student services</td><td>55</td><td>Maya Assistant</td><td>Quality</td></tr>
+      <tr><td>25</td><td>Add Student</td><td>Student services</td><td>56</td><td>Role Permissions</td><td>System</td></tr>
+      <tr><td>26</td><td>Student Portal Settings</td><td>Student services</td><td>57</td><td>Audit Log</td><td>System</td></tr>
+      <tr><td>27</td><td>Student Password Resets</td><td>Student services</td><td>58</td><td>System Health</td><td>System</td></tr>
+      <tr><td>28</td><td>Student Affairs &amp; Discipline</td><td>Student services</td><td>59</td><td>Digital operations</td><td>System</td></tr>
+      <tr><td>29</td><td>Student support</td><td>Student services</td><td>60</td><td>Go-live &amp; compliance</td><td>System</td></tr>
+      <tr><td>30</td><td>Clinic reports</td><td>Student services</td><td>61</td><td>Settings</td><td>System</td></tr>
+      <tr><td>31</td><td>Safeguarding</td><td>Student services</td><td></td><td></td><td></td></tr>
+    </table>
+
+    <h2>10. Acceptance</h2>
+    <p>
+      Signing below accepts this financial offer subject to the attached census worksheet and the technical proposal.
+      It is not a tax invoice. A tax invoice follows contract.
+    </p>
+    <div class="sig-grid">
+      <div class="sig">
+        <div class="who">For MaJo Bridge Technologies and Events</div>
+        <div class="role">Name · Title · Date</div>
+      </div>
+      <div class="sig">
+        <div class="who">For St. Joseph School</div>
+        <div class="role">Name · Title · Date</div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      MB-SJ-FIN-2026-11 v1.2 · Financial proposal · 7 November 2026 · Valid 90 days · Confidential to St. Joseph School and MaJo Bridge Technologies and Events.
+      Companion: MB-SJ-TECH-2026-11. Currency ETB, before VAT. Monthly recurring subscription. 30% off, 70% payable × lowest pack rate.
+      Besrate Gabriel School (Dire Dawa) is 100% free of cost. This document does not constitute a tax invoice.
+    </p>
+  </article>
+</body>
+</html>
