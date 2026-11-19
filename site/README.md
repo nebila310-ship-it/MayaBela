@@ -1,10 +1,9 @@
 # smartschool.majobridge.com
 
-Public marketing and demo-request site for **Majo Bridge OS**. It does **not** replace the Flutter school app.
+Public marketing and demo-request site for **Majo Bridge OS**. It does **not** replace the Flutter school app. This page does not link to the live product.
 
-- Product / login: `https://www.majobridge.com`
-- This site: `https://smartschool.majobridge.com`
-- Demo and pricing CTAs open WhatsApp `+251 912 798 279`
+- Marketing host: `https://smartschool.majobridge.com`
+- Demo and pricing CTAs open WhatsApp `+251 912 798 279` (also listed: `+251 939 288 539`)
 
 ## Local preview
 
@@ -23,5 +22,4 @@ npx wrangler@4 pages deploy site --project-name=majobridge-smartschool --commit-
 DNS at the registrar for `majobridge.com`:
 
 - `smartschool` CNAME → the Pages hostname for that project
-- Keep `www` pointed at the live product
 - Reserve `www`, `smartschool`, `app`, `api`, `mail`, `admin`, `platform` so they are never used as a school slug

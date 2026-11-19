@@ -32,30 +32,29 @@
 
   <section class="hero" id="top">
     <div class="wrap hero-copy">
-      <p class="kicker">Built in Addis Ababa · Live in Ethiopian schools</p>
-      <h1>The school operating system Ethiopia already runs on.</h1>
-      <p class="amharic">የትምህርት ቤትዎ ሙሉ ሥርዓት — አስተዳደር፣ ክፍያ፣ ወላጅ እና መምህር በአንድ ቦታ።</p>
-      <p class="lead">
+      <p class="kicker reveal">Built in Addis Ababa · Live in Ethiopian schools</p>
+      <h1 class="reveal">The school operating system Ethiopia already runs on.</h1>
+      <p class="amharic reveal">የትምህርት ቤትዎ ሙሉ ሥርዓት — አስተዳደር፣ ክፍያ፣ ወላጅ እና መምህር በአንድ ቦታ።</p>
+      <p class="lead reveal">
         Majo Bridge OS is the complete school platform: classroom, finance, payroll, parent app,
         student portal, driver GPS and 61 live modules. English, Amharic and Afaan Oromo.
         Web, Android and iOS.
       </p>
-      <div class="hero-actions">
+      <div class="hero-actions reveal">
         <a class="btn btn-wa" href="#demo" data-wa="demo">WhatsApp a demo</a>
-        <a class="btn btn-ghost" href="https://www.majobridge.com" target="_blank" rel="noopener">Open the live product</a>
       </div>
-      <div class="stats">
-        <div class="stat"><b>61</b><span>live modules</span></div>
-        <div class="stat"><b>6</b><span>portals in one OS</span></div>
-        <div class="stat"><b>3</b><span>languages</span></div>
-        <div class="stat"><b>ET</b><span>owned in Addis Ababa</span></div>
+      <div class="stats reveal">
+        <a class="stat" href="#modules"><b>61</b><span>live modules</span></a>
+        <a class="stat" href="#portals"><b>6</b><span>portals in one OS</span></a>
+        <a class="stat" href="#product"><b>3</b><span>languages</span></a>
+        <a class="stat" href="#demo"><b>ET</b><span>owned in Addis Ababa</span></a>
       </div>
     </div>
   </section>
 
   <section id="product">
     <div class="wrap split">
-      <div>
+      <div class="reveal">
         <p class="kicker">For owners, directors and finance</p>
         <h2>One desk for the whole school day.</h2>
         <p class="sub">
@@ -70,129 +69,115 @@
           <li>Each school’s data stays in its own tenancy</li>
         </ul>
       </div>
-      <img src="assets/photos/director-office.webp" alt="Ethiopian school director reviewing the Majo Bridge OS dashboard" />
+      <img class="reveal" src="assets/photos/director-office.webp" alt="Ethiopian school director with a school dashboard on his laptop" />
     </div>
   </section>
 
   <section id="portals" style="padding-top:0">
     <div class="wrap">
-      <h2>Everyone in the school has a door.</h2>
-      <p class="sub">Six portals. One operating system. Your school colours and logo on reports and login.</p>
+      <h2 class="reveal">Everyone in the school has a door.</h2>
+      <p class="sub reveal">Six portals. One operating system. Your school colours and logo on reports and login. Press a card for a short introduction.</p>
       <div class="portals">
-        <article class="card">
+        <button type="button" class="card reveal" data-intro="admin">
           <img src="assets/photos/director-office.webp" alt="School leadership using the administration desk" />
           <div class="card-body">
             <h3>Administration</h3>
-            <p>Owners, directors and finance run the school from the web ERP: students, fees, HR, inventory and dashboards.</p>
+            <p>Owners, directors and finance run the campus from one web desk.</p>
           </div>
-        </article>
-        <article class="card">
+        </button>
+        <button type="button" class="card reveal" data-intro="teacher">
           <img src="assets/photos/teacher-tablet.webp" alt="Ethiopian teacher taking attendance on a tablet" />
           <div class="card-body">
             <h3>Teacher</h3>
-            <p>Class lists, attendance, homework, markbook, lesson plans and parent messages from the classroom.</p>
+            <p>The classroom desk: lists, attendance, homework and marks.</p>
           </div>
-        </article>
-        <article class="card">
-          <img src="assets/photos/parent-app.webp" alt="Ethiopian father and daughter checking the parent app" />
+        </button>
+        <button type="button" class="card reveal" data-intro="parent">
+          <img src="assets/photos/parent-app.webp" alt="Ethiopian father and daughter with the parent app on a phone" />
           <div class="card-body">
             <h3>Parent</h3>
-            <p>See if a child is in class, pay fees, follow the bus and read school notices on a phone.</p>
+            <p>A phone view of class, fees, messages and the bus.</p>
           </div>
-        </article>
-        <article class="card">
-          <img src="assets/photos/student-tablet.webp" alt="Ethiopian student using a tablet for schoolwork" />
+        </button>
+        <button type="button" class="card reveal" data-intro="student">
+          <img src="assets/photos/student-tablet.webp" alt="Ethiopian student showing a school timetable on a tablet" />
           <div class="card-body">
             <h3>Student</h3>
-            <p>Timetable, homework, results and notices for the learner — not a copy of the staff desk.</p>
+            <p>Timetable, homework and results for the learner.</p>
           </div>
-        </article>
-        <article class="card">
+        </button>
+        <button type="button" class="card reveal" data-intro="driver">
           <img src="assets/photos/school-bus.webp" alt="Ethiopian driver with students boarding a yellow school bus" />
           <div class="card-body">
             <h3>Driver</h3>
-            <p>Route, boarding and live GPS so parents and transport staff see the same bus.</p>
+            <p>Route, boarding and live GPS for school transport.</p>
           </div>
-        </article>
-        <article class="card">
+        </button>
+        <button type="button" class="card reveal" data-intro="platform">
           <img src="assets/photos/teachers-corridor.webp" alt="Ethiopian teachers reviewing a report in a school corridor" />
           <div class="card-body">
             <h3>Platform console</h3>
-            <p>Majo Bridge switches modules, branding and licences per school. You keep control of your campus.</p>
+            <p>How Majo Bridge switches modules and branding per school.</p>
           </div>
-        </article>
+        </button>
       </div>
+      <aside class="intro-panel" id="intro-panel" hidden>
+        <p class="intro-kicker"></p>
+        <h3></h3>
+        <p class="intro-body"></p>
+      </aside>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <h2>A morning that looks like your school.</h2>
-      <p class="sub">Students, teachers and families in Ethiopia — not a stock photo from somewhere else.</p>
+      <h2 class="reveal">A morning that looks like your school.</h2>
+      <p class="sub reveal">Students, teachers and families in Ethiopia — not a stock photo from somewhere else.</p>
       <div class="gallery">
-        <img src="assets/photos/students-campus.webp" alt="Ethiopian secondary students walking together on campus" />
-        <img src="assets/photos/hero-classroom.webp" alt="Primary class in Addis Ababa with Amharic alphabet on the wall" />
-        <img src="assets/photos/teacher-tablet.webp" alt="Teacher with a class tablet" />
-        <img src="assets/photos/school-bus.webp" alt="School bus boarding" />
-        <img src="assets/photos/illustration-campus.webp" alt="Illustration of Ethiopian children and a school bus in a courtyard" />
+        <img class="reveal" src="assets/photos/students-campus.webp" alt="Ethiopian secondary students walking together on campus" />
+        <img class="reveal" src="assets/photos/hero-classroom.webp" alt="Primary class in Addis Ababa with Amharic alphabet on the wall" />
+        <img class="reveal" src="assets/photos/teacher-tablet.webp" alt="Teacher with a class tablet" />
+        <img class="reveal" src="assets/photos/school-bus.webp" alt="School bus boarding" />
+        <img class="reveal" src="assets/photos/illustration-campus.webp" alt="Illustration of Ethiopian children and a school bus in a courtyard" />
       </div>
     </div>
   </section>
 
   <section id="modules">
     <div class="wrap">
-      <h2>61 modules. Switch what you need.</h2>
-      <p class="sub">The catalogue is live today. A school turns modules on; it does not wait for a custom build.</p>
+      <h2 class="reveal">61 modules. Switch what you need.</h2>
+      <p class="sub reveal">Press a group for a short introduction. A school turns modules on; it does not wait for a custom build.</p>
       <div class="modules">
-        <article class="mod"><small>Academics</small><h3>Classroom</h3><p>Admissions, attendance, timetable, homework, assessment, exams, report cards and grade audit.</p></article>
-        <article class="mod"><small>Finance</small><h3>Fees &amp; ledger</h3><p>Structures, invoices, unique payment references, cashboxes, receipts and double-entry books.</p></article>
-        <article class="mod"><small>People</small><h3>HR &amp; payroll</h3><p>Staff files, leave, Ethiopian tax and pension, roles and access per school.</p></article>
-        <article class="mod"><small>Family</small><h3>Parent &amp; student</h3><p>Portals and native apps. Messages, gallery, calendar, cafeteria and library.</p></article>
-        <article class="mod"><small>Campus</small><h3>Transport &amp; ops</h3><p>Routes, live GPS, inventory, procurement, facilities, clinic and safeguarding.</p></article>
-        <article class="mod"><small>Ethiopia</small><h3>Languages</h3><p>English, Amharic (አማርኛ) and Afaan Oromo across the desks families actually use.</p></article>
+        <button type="button" class="mod reveal" data-intro="classroom"><small>Academics</small><h3>Classroom</h3><p>Admissions to report cards, in one academic desk.</p></button>
+        <button type="button" class="mod reveal" data-intro="finance"><small>Finance</small><h3>Fees &amp; ledger</h3><p>Invoices, receipts and the school’s books.</p></button>
+        <button type="button" class="mod reveal" data-intro="hr"><small>People</small><h3>HR &amp; payroll</h3><p>Staff files and Ethiopian payroll.</p></button>
+        <button type="button" class="mod reveal" data-intro="family"><small>Family</small><h3>Parent &amp; student</h3><p>Apps families open every school day.</p></button>
+        <button type="button" class="mod reveal" data-intro="campus"><small>Campus</small><h3>Transport &amp; ops</h3><p>Bus GPS, stores, clinic and the school plant.</p></button>
+        <button type="button" class="mod reveal" data-intro="languages"><small>Ethiopia</small><h3>Languages</h3><p>English, Amharic and Afaan Oromo.</p></button>
       </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <h2>How your school goes live.</h2>
-      <p class="sub">The product stays at www.majobridge.com. This site is for schools that want in. Each registered school can have its own address.</p>
-      <div class="hosts">
-        <article class="host">
-          <h3>Product</h3>
-          <code>www.majobridge.com</code>
-          <p>The live Majo Bridge OS — login, web ERP and family apps.</p>
-        </article>
-        <article class="host">
-          <h3>This site</h3>
-          <code>smartschool.majobridge.com</code>
-          <p>Marketing, stories and demo requests. WhatsApp goes straight to our Addis Ababa team.</p>
-        </article>
-        <article class="host">
-          <h3>Your school</h3>
-          <code>yourschool.majobridge.com</code>
-          <p>When we register you, families can reach your campus on a name they remember.</p>
-        </article>
-      </div>
+      <aside class="intro-panel" id="module-panel" hidden>
+        <p class="intro-kicker"></p>
+        <h3></h3>
+        <p class="intro-body"></p>
+      </aside>
     </div>
   </section>
 
   <section id="pricing">
     <div class="wrap">
-      <h2>Pricing is a conversation, not a price list.</h2>
-      <p class="sub">Every school is a different size, city and mix of modules. We quote on WhatsApp after we hear how you run today. No public rate card — on purpose.</p>
+      <h2 class="reveal">Pricing is a conversation, not a price list.</h2>
+      <p class="sub reveal">Every school is a different size, city and mix of modules. We quote on WhatsApp after we hear how you run today.</p>
       <div class="pricing">
-        <article class="price">
+        <article class="price reveal">
           <span class="tag">One school</span>
           <h3>Setup and run your campus</h3>
-          <p>Configuration, training, hosting of the shared platform, and the desks your staff and parents will use. We shape the offer after a short call.</p>
+          <p>Configuration, training, hosting of the shared platform, and the desks your staff and parents will use.</p>
           <p><a class="btn btn-wa" href="https://wa.me/251912798279" data-wa="price-school">Discuss school pricing on WhatsApp</a></p>
         </article>
-        <article class="price">
+        <article class="price reveal">
           <span class="tag">Group / network</span>
           <h3>Several schools, one owner</h3>
-          <p>For academies and groups that want one operating system and a campus name for each school. Tell us the cities and we will come back with a plan.</p>
+          <p>For academies and groups that want one operating system across campuses. Tell us the cities and we will come back with a plan.</p>
           <p><a class="btn btn-navy" href="https://wa.me/251912798279" data-wa="price-group">Discuss a group on WhatsApp</a></p>
         </article>
       </div>
@@ -201,16 +186,16 @@
 
   <section id="demo">
     <div class="wrap demo">
-      <div>
+      <div class="reveal">
         <p class="kicker">Live walkthrough</p>
         <h2>Request a demo. It opens WhatsApp.</h2>
         <p class="sub">
           Fill the form. Your phone opens WhatsApp to <b>+251 912 798 279</b> with the details already typed.
-          Nebil and the Majo Bridge team in Addis Ababa will answer.
+          You can also reach us on <b>+251 939 288 539</b>.
         </p>
-        <img src="assets/photos/parent-app.webp" alt="Parent and child looking at the school app" style="border-radius:24px;height:280px;object-fit:cover;width:100%" />
+        <img src="assets/photos/parent-app.webp" alt="Parent and child looking at the school app" />
       </div>
-      <form id="demo-form">
+      <form id="demo-form" class="reveal">
         <div class="form-row">
           <p>
             <label for="name">Your name</label>
@@ -257,22 +242,19 @@
   <footer>
     <div class="wrap foot">
       <div>
-        <img src="assets/logo.png" alt="" style="width:72px;background:#fff;border-radius:12px;padding:6px" />
+        <img src="assets/logo.png" alt="" class="foot-logo" />
         <h4>Majo Bridge Technologies and Events PLC</h4>
-        <p class="muted">Majo Bridge OS · Addis Ababa, Ethiopia<br />Product: <a href="https://www.majobridge.com">www.majobridge.com</a></p>
+        <p class="muted">Majo Bridge OS · Addis Ababa, Ethiopia</p>
       </div>
       <div>
         <h4>Talk to us</h4>
         <p><a href="https://wa.me/251912798279">WhatsApp +251 912 798 279</a></p>
-        <p>+251 911 646 444 · +251 911 133 548</p>
+        <p><a href="https://wa.me/251939288539">WhatsApp +251 939 288 539</a></p>
+        <p><a href="tel:+251911646444">+251 911 646 444</a> · <a href="tel:+251911133548">+251 911 133 548</a></p>
         <p><a href="mailto:majobridgetech@gmail.com">majobridgetech@gmail.com</a></p>
       </div>
-      <div>
-        <h4>This site</h4>
-        <p class="muted">smartschool.majobridge.com is the marketing and demo door. The school software stays on www.majobridge.com. School names such as yourschool.majobridge.com are assigned when a campus is registered.</p>
-      </div>
     </div>
-    <div class="wrap tiny">© Majo Bridge Technologies and Events PLC. Confidential product. Photos illustrate Ethiopian school life.</div>
+    <div class="wrap tiny">© Majo Bridge Technologies and Events PLC. Photos illustrate Ethiopian school life.</div>
   </footer>
 
   <a class="float-wa" href="https://wa.me/251912798279?text=Hello%20Majo%20Bridge%2C%20I%20would%20like%20a%20live%20demo%20of%20Majo%20Bridge%20OS." aria-label="WhatsApp demo">
