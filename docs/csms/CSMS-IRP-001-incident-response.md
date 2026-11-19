@@ -17,7 +17,9 @@
 2. **Contain** — do not wipe evidence. Rotate secrets. Do not apply experimental SQL on production during P1.  
 3. **Preserve** — export relevant `school_audit_log` / Edge logs. Never paste student rows into the ticket.  
 4. **Eradicate / recover** — known-good build; restore from backup only if integrity is lost.  
-5. **Notify** — affected school admin; INSA/regulator if children’s data left the tenancy.  
-6. **Lessons** — update this CSMS within 10 working days.
+5. **Notify** — affected school admin.  
+6. **Ethio-CER2T (CMCSRS v2.0 §6.26.f)** — the CSO / Cyber Security Department head reports the incident to Ethio-CER2T as soon as it is confirmed, and to INSA if CONFIDENTIAL children’s data left the tenancy or impact is EXTREME (Annex A). Do not paste student rows into the report.  
+7. **Outsourced IT (CMCSRS §6.26.g / §6.29.r)** — if the hosted database vendor is involved, require them to inform MaJo and cooperate with the investigation.  
+8. **Lessons** — update this CSMS within 10 working days.
 
 Classroom teaching continues unless P1 requires a module off. Prefer disabling one account over taking the whole ERP down.

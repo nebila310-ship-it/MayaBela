@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Software Requirements Specification (SRS) — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 32%; background: var(--wash); }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.3pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 64px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA asset registration · SRS ·
+    <a href="INSA_SRS_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · INSA asset registration attachment</p>
+      <p class="sub">Requirements Documentation (Software Requirements Specification)</p>
+    </header>
+
+    <h1>Software Requirements Specification (SRS)</h1>
+    <p style="text-align:center;margin:0 0 12px"><b>Product:</b> MaJo e-School Bridge (MayaBela)<br />
+    Multi-tenant school information system</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>MB-SRS-001</td></tr>
+      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>INSA portal field</th><td>Requirements Documentation (SRS) — defines intended system behaviour and requirements; used to identify critical functionality, user roles, and required security controls.</td></tr>
+      <tr><th>Owner</th><td>Cyber Security Officer / Engineering, Majo Bridge Technologies and Events PLC</td></tr>
+      <tr><th>Classification (CMCSRS Annex B)</th><td>CONFIDENTIAL — describes controls over children’s records. Do not publish credentials.</td></tr>
+      <tr><th>Related records</th><td>CSMS-POL-001, CSMS-AST-001, CSMS-CMCSRS-001, MODULE_PERMISSION_MATRIX, Guideline evaluation R3, CMCSRS v2.0 evaluation</td></tr>
+    </table>
+
+    <div class="note">
+      This SRS states <b>intended</b> behaviour of the submitted product. It is not an INSA certificate, not a pentest letter, and not proof that the live hosted project already equals every hardened migration. Live SQL is applied only in a notified window so classrooms stay up.
+    </div>
+
+    <h2>1. Purpose and scope</h2>
+    <h3>1.1 Purpose</h3>
+    <p>MaJo e-School Bridge is a Flutter web and mobile ERP for Ethiopian schools. One deployment serves many school tenants. Each school’s students, staff, marks, fees, and files must stay inside that school. This document is the requirements baseline for INSA asset registration: what the system is for, who may use it, which functions are critical, and which security controls are required.</p>
+    <h3>1.2 In scope</h3>
+    <ul>
+      <li>School information: students, classes, attendance, homework, grades, admissions, parent links.</li>
+      <li>Operations: fees, inventory/procurement, HR/staff accounts, transport (buses, drivers, passenger lists, live position of the assigned bus).</li>
+      <li>Sensitive collections: health, counselling, safeguarding — restricted staff only.</li>
+      <li>Identity: school login, JWT school and role claims, optional/required MFA by role.</li>
+      <li>Platform owner console (provision schools; not a classroom role).</li>
+      <li>Hosted persistence (Postgres <code>app_documents</code>, storage buckets, Edge Functions) and dedicated/on-prem instances for schools that cannot share the hosted tenancy.</li>
+    </ul>
+    <h3>1.3 Out of scope</h3>
+    <ul>
+      <li>A school’s own campus CCTV, IoT, or blockchain — not objects of this product.</li>
+      <li>National PKI, INSA-approved proprietary crypto, or customer-managed disk keys on the current hosted database (operator residual; see CSMS-SUP-001).</li>
+      <li>Forcing MFA on classroom teachers, parents, students, or drivers (would lock live lessons).</li>
+    </ul>
+
+    <h2>2. Intended system behaviour</h2>
+    <p>The system shall behave as a <b>multi-tenant school ERP with need-to-know access</b>:</p>
+    <ol>
+      <li><b>Tenant isolation.</b> Every persistent row carries <code>school_id</code>. A JWT from School A cannot read or write School B. Isolation is enforced in the database (row-level security), not only in the client.</li>
+      <li><b>Role-based desks.</b> After login, the user sees modules for their role (teacher classroom, registrar, finance, driver, parent, student, platform owner). The client must not be the only gate: denied writes return an error and must not dump the whole school.</li>
+      <li><b>Classroom continuity.</b> Ordinary teachers write attendance, homework, and class notices for <b>their assigned classes</b>. They shall not receive payroll, HR, or whole-school children’s files they do not manage.</li>
+      <li><b>Finance integrity.</b> Recording that a fee is paid is a finance/cashier function. Homeroom shall not silently mark paid.</li>
+      <li><b>Admissions.</b> Creating or changing admission applications through the privileged registry path is a registrar (or equivalent) function, not every staff JWT.</li>
+      <li><b>Transport need-to-know.</b> A driver sees students whose <code>transportId</code> matches that driver’s <code>busId</code>, and may publish GPS/scans for that bus only.</li>
+      <li><b>Public surface.</b> The login page has no JWT. Only school logos (branding bucket) are public. Student files stay under <code>schools/&lt;school_id&gt;/</code>.</li>
+      <li><b>Availability of teaching.</b> Security changes that could stop a live school are applied on staging, then in a notified production window.</li>
+    </ol>
+
+    <h2 class="pagebreak">3. User roles</h2>
+    <p>Identity is a username + role + school. The JWT stores school and role in <code>app_metadata</code> only (not in user-editable metadata). Staff desks use the templates in <code>StaffRoles</code> (a school may add a titled copy of a template; permissions stay those of the source template unless the school owner changes them in Role Settings).</p>
+
+    <h3>3.1 External / community roles</h3>
+    <table class="find">
+      <thead><tr><th>Role</th><th>Intended access</th><th>Must not</th></tr></thead>
+      <tbody>
+        <tr><td>Parent</td><td>Linked child: attendance, homework, published materials, selected notices, fee view where provided</td><td>Other children; staff HR; other schools</td></tr>
+        <tr><td>Student</td><td>Own record: timetable, homework, own grades where published</td><td>Other students’ PII; staff modules</td></tr>
+        <tr><td>Driver</td><td>Own bus passenger list; own GPS and scan publish</td><td>Walkers; other buses; school-wide registry</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.2 School staff templates</h3>
+    <table class="find">
+      <thead><tr><th>Role (English)</th><th>Critical functions</th></tr></thead>
+      <tbody>
+        <tr><td>School Owner / Full Access</td><td>Tenant administration; role titles; cannot be granted by a teacher to themselves</td></tr>
+        <tr><td>School Admin (login role <code>admin</code>)</td><td>School-wide operations; privileged MFA required</td></tr>
+        <tr><td>School Board</td><td>Oversight: view students, staff, grades, reports, audit — not day-to-day payroll write</td></tr>
+        <tr><td>General Manager / Deputy GM</td><td>Cross-department view; approvals (grades, transfers, purchase/issue)</td></tr>
+        <tr><td>Principal / Vice Principal</td><td>Academic leadership; classes; announcements; VP may span more operational modules</td></tr>
+        <tr><td>Section Director</td><td>Class/subject/timetable; transfer <i>requests</i> (approval is VP/leadership)</td></tr>
+        <tr><td>Quality Assurance</td><td>Observations, QA findings, reports</td></tr>
+        <tr><td>Student Affairs</td><td>Student support, parent links, transfers create, announcements</td></tr>
+        <tr><td>Registrar</td><td>Student registry, promotions, admissions (privileged path)</td></tr>
+        <tr><td>Finance Manager (accountant)</td><td>Fees, payments, finance reports; privileged MFA required</td></tr>
+        <tr><td>Human Resource</td><td>Staff accounts; selected transport admin</td></tr>
+        <tr><td>Librarian</td><td>Learning materials and access</td></tr>
+        <tr><td>Procurement Manager</td><td>Purchase requests, suppliers, goods entry</td></tr>
+        <tr><td>Store Keeper</td><td>Receive / issue / adjust stock</td></tr>
+        <tr><td>Transport Head</td><td>Buses, drivers, student–bus assignment</td></tr>
+        <tr><td>Teacher (login role <code>teacher</code>)</td><td>Assigned class: attendance, homework, marks, class notices. MFA optional</td></tr>
+        <tr><td>Staff (generic)</td><td>Baseline desk (directory, support) without classroom or finance write</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.3 Platform role (vendor, not a school desk)</h3>
+    <table class="find">
+      <thead><tr><th>Role</th><th>Intended access</th><th>Must not</th></tr></thead>
+      <tbody>
+        <tr><td>Platform owner</td><td>Provision / suspend schools; branding; PIN-gated owner console</td><td>Use a school teacher JWT to administer the platform; store the service-role key in the app</td></tr>
+      </tbody>
+    </table>
+    <p>Classroom teachers, parents, students, and drivers are <b>not</b> designated security-assessment positions. DSAPs (CSO, platform operators, hosted-project administrators) are listed in CSMS-AST-001.</p>
+
+    <h2>4. Critical functional requirements</h2>
+    <p>Critical = required for the school’s mission or for protection of children’s data. IDs are stable for INSA traceability.</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td>FR-01</td><td>Authenticate a user to exactly one school and role; issue JWT with school and role in <code>app_metadata</code>.</td><td>Critical</td></tr>
+        <tr><td>FR-02</td><td>Maintain a student registry (identity, class, links to parents) scoped to that school.</td><td>Critical</td></tr>
+        <tr><td>FR-03</td><td>Record attendance and homework for the teacher’s assigned class.</td><td>Critical</td></tr>
+        <tr><td>FR-04</td><td>Record and publish grades; grade audit trail shall be append-only (no silent rewrite of history).</td><td>Critical</td></tr>
+        <tr><td>FR-05</td><td>Collect admission applications; privileged registry writes restricted to registrar (or equivalent).</td><td>Critical</td></tr>
+        <tr><td>FR-06</td><td>Manage fees and record payments as a finance function.</td><td>Critical</td></tr>
+        <tr><td>FR-07</td><td>Assign students to buses; driver views only assigned passengers; driver publishes only own bus GPS/scans.</td><td>Critical</td></tr>
+        <tr><td>FR-08</td><td>Restrict health, counselling, and safeguarding collections to authorised student-affairs / safeguarding roles.</td><td>Critical</td></tr>
+        <tr><td>FR-09</td><td>Let parents and students see only linked/self records.</td><td>Critical</td></tr>
+        <tr><td>FR-10</td><td>Deliver school notices and in-app notifications within the school audience.</td><td>High</td></tr>
+        <tr><td>FR-11</td><td>Show public school logo on login without exposing student files.</td><td>High</td></tr>
+        <tr><td>FR-12</td><td>Optional Maya Assistant: counts-only live context; refuse health, safeguarding, passwords, and children’s IDs.</td><td>Medium</td></tr>
+        <tr><td>FR-13</td><td>Platform owner can create a school tenant without mixing its data into another tenant.</td><td>Critical</td></tr>
+        <tr><td>FR-14</td><td>Support a dedicated / on-prem instance for a school whose TOR forbids the shared hosted tenancy.</td><td>High</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="pagebreak">5. Required security controls</h2>
+    <p>These controls are requirements of the product CSMS (people / process / technology). They map to INSA Guideline R3 and to applicable CMCSRS v2.0 clauses. Operator residuals (local CSP, INSA accreditation) are listed in §7 and are <b>not</b> claimed as implemented.</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Control</th><th>How it is required to work</th></tr></thead>
+      <tbody>
+        <tr><td>SR-01 Tenant RLS</td><td>Row-level security on <code>app_documents</code></td><td>SELECT/INSERT/UPDATE/DELETE only when <code>school_id</code> matches JWT school. Anon has no document policy.</td></tr>
+        <tr><td>SR-02 Role write-guard</td><td>Server-side write policy by role and collection</td><td>Teachers: class-scoped academic writes. Payroll/HR denied to classroom teachers. Fees paid-status is finance. Admissions privileged path is registrar.</td></tr>
+        <tr><td>SR-03 Driver need-to-know</td><td>Student SELECT + transport writes</td><td>Driver reads own-bus students only; cannot overwrite another bus’s GPS.</td></tr>
+        <tr><td>SR-04 JWT claims</td><td><code>app_metadata.schoolId</code> / role</td><td>Database helpers ignore user-editable metadata.</td></tr>
+        <tr><td>SR-05 Client key</td><td>Anon key in the app</td><td>Not a secret. Service-role key must never ship in Dart/HTML/mobile. RLS is the boundary.</td></tr>
+        <tr><td>SR-06 Privileged MFA</td><td>Second factor</td><td>Required for School Admin and Finance (accountant). Teachers, principals, parents, students, drivers: optional. Login still succeeds; Settings prompts enrolment for privileged roles.</td></tr>
+        <tr><td>SR-07 Auth hardening</td><td>Password, PIN, rate-limit</td><td>School passwords bcrypt, minimum length 10. Platform PIN PBKDF2-SHA256 (210,000 iterations). Login rate-limit 8 / 15 minutes per username+role+school.</td></tr>
+        <tr><td>SR-08 Storage</td><td>Path isolation</td><td>Probes and student files under <code>schools/&lt;id&gt;/</code>. Public <code>school-branding</code> is logos only.</td></tr>
+        <tr><td>SR-09 Audit</td><td>Append-only grade audit; school audit actor stamp</td><td>Grade history cannot be quietly rewritten. Audit actor is the authenticated principal, not a client-supplied name.</td></tr>
+        <tr><td>SR-10 Edge inventory</td><td>Every Edge Function has a declared auth mode</td><td>CI fails if a function folder is added without an auth mode. Registry writes use an explicit policy because they use the service role.</td></tr>
+        <tr><td>SR-11 AI</td><td>DPIA for Maya Assistant</td><td>No names in live context. Refuse safeguarding/health/passwords/IDs. If the AI key is unset, the ERP still works.</td></tr>
+        <tr><td>SR-12 CAAT</td><td>Automated control tests</td><td>Local Postgres replay of migrations (role-by-role, driver need-to-know, two-school isolation). Flutter tests for privileged MFA and 403 behaviour. Deno policy tests. Production project is never the RLS isolation target.</td></tr>
+        <tr><td>SR-13 Change window</td><td>No mid-day production SQL</td><td>Staging then notified production apply so attendance and parent login keep working.</td></tr>
+        <tr><td>SR-14 Incident</td><td>CSMS-IRP-001</td><td>Contain without wiping evidence. Report confirmed incidents to Ethio-CER2T via the CSO. Do not paste student rows into tickets.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>6. Information assets and classification</h2>
+    <p>Labels follow CMCSRS v2.0 Annex B (four levels only).</p>
+    <table class="find">
+      <thead><tr><th>Asset</th><th>Annex B</th><th>Why it is critical</th></tr></thead>
+      <tbody>
+        <tr><td>Student identity, marks, attendance, health, safeguarding</td><td>CONFIDENTIAL</td><td>Children’s data; FR-02–FR-08</td></tr>
+        <tr><td>Staff HR / payroll in the ERP</td><td>CONFIDENTIAL</td><td>Need-to-know vs classroom teachers</td></tr>
+        <tr><td>Service-role key</td><td>CONFIDENTIAL</td><td>Bypasses RLS if leaked; SR-05</td></tr>
+        <tr><td>JWT school/role claims</td><td>CONFIDENTIAL</td><td>Tenant boundary; SR-04</td></tr>
+        <tr><td>Student files (<code>school-files</code>)</td><td>CONFIDENTIAL</td><td>SR-08</td></tr>
+        <tr><td>School logos (<code>school-branding</code>)</td><td>PUBLIC</td><td>Login page; FR-11</td></tr>
+        <tr><td>Anon / publishable key</td><td>PUBLIC</td><td>Compiled into the client by design</td></tr>
+      </tbody>
+    </table>
+    <p>SECRET / TOP SECRET are not claimed for school registers unless INSA directs a higher label.</p>
+
+    <h2>7. Assumptions, dependencies, residuals</h2>
+    <ul>
+      <li>Each customer school is the <b>controller</b> of its children’s data; MaJo Bridge is the <b>processor</b> for the ERP.</li>
+      <li>Hosted Postgres, Auth, Storage, and Edge Functions are a sub-processor (see CSMS-SUP-001). Disk encryption keys on that host are the supplier’s — operator residual against CMCSRS §6.29.f.</li>
+      <li>Governmental / key-private locally licensed cloud (§6.29.k) is not claimed for the shared hosted project. Dedicated/on-prem is the path for schools that cannot share it.</li>
+      <li>This SRS does not replace INSA accreditation or an annual compliance letter.</li>
+    </ul>
+
+    <h2>8. Verification</h2>
+    <p>Requirements FR-01–FR-09 and SR-01–SR-12 are verified in source by CAAT and CI (local Postgres role tests, driver 9/9, two-school 7/7, Flutter privileged-MFA tests, Deno Edge inventory). Live production is not mutated by this document.</p>
+
+    <div class="sig">
+      <div class="box">
+        <div>Prepared by (Engineering / CSO)</div>
+        <div style="margin-top:28px">Majo Bridge Technologies and Events PLC · 10 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>For INSA asset registration</div>
+        <div style="margin-top:28px">Attachment to field: Requirements Documentation (SRS)</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      MB-SRS-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi.<br />
+      Restricted. Not a gazetted INSA certificate. Upload this PDF to the portal field named Requirements Documentation (SRS).
+    </p>
+  </article>
+</body>
+</html>

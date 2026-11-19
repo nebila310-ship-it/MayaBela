@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Supporting evidence index — MaJo e-School Bridge</title>
+  <style>
+    :root { --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8; --wash: #f3f6fb; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; justify-content: center;
+      padding: 10px; background: #123a6d; color: #fff; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: #fff; box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 12px; margin-bottom: 12px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 10px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 16px 0 8px; }
+    p { margin: 0 0 8px; }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.3pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .ok { background: #f3fbf6; border: 2px solid #0f7a3a; padding: 10px 12px; margin: 10px 0; text-align: center; }
+    .footer { margin-top: 16px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    @media print { body { background: #fff; } .toolbar { display: none !important; } .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; } }
+    @page { size: A4; margin: 14mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">Supporting evidence · <a href="INSA_Supporting_Evidence_Index_MaJo_eSchool_Bridge.pdf" download>Download PDF</a></div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · MB-ESB-001 · v1.0.6</p>
+      <p class="sub">Supporting evidence for INSA / Hibir asset registration</p>
+    </header>
+    <h1>Supporting evidence index</h1>
+    <p style="text-align:center;margin:0 0 10px">What else to attach so reviewers can see the CSMS is operating — not only the five required PDFs</p>
+    <div class="ok"><b>Product CSMS result to show:</b> PASS · Mature 86/100 · Guideline v1.0 evaluation R3 · zero Major NCs on the submitted TOE</div>
+    <p>The five required Hibir fields (SRS, SDD, TDD, User Guide, Security Documentation) plus the official letter and tester pack are already the core file. The items below add <b>evidence</b> that people, process, and technology exist. They do not invent a pentest letter or a gazetted certificate.</p>
+
+    <h2>1. Attach these from this pack (highest value)</h2>
+    <table class="find">
+      <thead><tr><th>Priority</th><th>File</th><th>Why it helps a pass</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><b>INSA_CSMS_Audit_Evaluation_Report_MayaBela.pdf</b></td><td>The scored evaluation itself (R3, Mature 86/100). Without this, 86/100 is only a sentence in MB-SEC-001.</td></tr>
+        <tr><td>2</td><td><b>INSA_CSMS_FollowUp_Evaluation_MayaBela.pdf</b></td><td>Shows Majors were closed and the score moved 38 → 64 → 86. Reviewers like a trail, not a single stamp.</td></tr>
+        <tr><td>3</td><td>CSMS policy + RACI + CSO appointment (in the ZIP)</td><td>Guideline people/process: named officer, adopted policy, accountability.</td></tr>
+        <tr><td>4</td><td>Internal evaluation + restore drill + tabletop records</td><td>Guideline §9 substantive testing / CAAT / BCM drill — without taking schools offline.</td></tr>
+        <tr><td>5</td><td>Risk register, IRP, HR acceptable use, KEY, DPIA, DPA</td><td>Shows living CSMS, not only product code.</td></tr>
+        <tr><td>6</td><td>MODULE_PERMISSION_MATRIX.md</td><td>Need-to-know map testers and auditors can check against the app.</td></tr>
+      </tbody>
+    </table>
+    <p>Upload the ZIP <b>INSA_Supporting_Evidence_Pack_MaJo_eSchool_Bridge.zip</b> once (Hibir allows ZIP). If the portal wants a PDF in a remaining slot, upload the evaluation report PDF (priority 1) by itself as well.</p>
+
+    <h2>2. Attach from your company file (we cannot create these)</h2>
+    <table class="find">
+      <thead><tr><th>Document</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Business / trade registration of Majo Bridge Technologies and Events PLC</td><td>Proves the legal person filing the asset.</td></tr>
+        <tr><td>TIN / tax registration</td><td>Same — organisation identity.</td></tr>
+        <tr><td>National ID / passport of the General Manager (Nebil Ahmed)</td><td>Signatory of MB-INSA-LTR-2026-001.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. Do not attach (would not help this filing)</h2>
+    <ul>
+      <li>A CMCSRS v2.0 “operator FAIL” report — different standard; not this asset’s product CSMS score.</li>
+      <li>Production service-role key, platform PIN, or a paying school’s Admin password.</li>
+      <li>A pentest certificate we do not have. Internal CAAT is already in the ZIP; an external letter is still scheduled (R10).</li>
+    </ul>
+    <div class="note">This index is MB-EVD-001 · 10 November 2026, East Africa Time. Live schools were not mutated.</div>
+    <p class="footer">MB-EVD-001 · MaJo e-School Bridge · Supporting evidence index · Africa/Nairobi</p>
+  </article>
+</body>
+</html>

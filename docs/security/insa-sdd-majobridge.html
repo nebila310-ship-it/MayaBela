@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>System and Architecture Design (SDD) — MaJo e-School Bridge</title>
+  <style>
+    :root {
+      --blue: #123a6d; --ink: #142033; --muted: #4a5568; --line: #d6dde8;
+      --paper: #fff; --wash: #f3f6fb; --fail: #9b1c1c; --warn: #8a5a00;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; color: var(--ink); background: #e8eef5;
+      font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.42;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; padding: 10px; background: #123a6d; color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif; font-size: 13px;
+    }
+    .toolbar a { color: #fff; font-weight: 700; background: #0f7a3a; padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+    .sheet { width: 210mm; max-width: 100%; margin: 16px auto; background: var(--paper); box-shadow: 0 8px 28px rgba(20,32,51,.12); padding: 16mm 16mm 14mm; }
+    .mast { text-align: center; border: 2px solid var(--blue); padding: 14px 12px 12px; margin-bottom: 14px; }
+    .mast .org { margin: 0; color: var(--blue); font-size: 13pt; letter-spacing: 1.2px; text-transform: uppercase; }
+    .mast .sub { margin: 4px 0 0; font-size: 10pt; color: var(--muted); }
+    h1 { font-size: 16pt; text-align: center; margin: 12px 0 6px; }
+    h2 { font-size: 13pt; color: var(--blue); border-bottom: 1px solid var(--blue); padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 0 0 10px; padding-left: 22px; }
+    pre.diag {
+      font-family: "Consolas", "Courier New", monospace; font-size: 8.2pt; line-height: 1.25;
+      background: var(--wash); border: 1px solid var(--line); padding: 8px 10px; overflow-x: auto;
+      white-space: pre; page-break-inside: avoid;
+    }
+    .meta { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 10pt; }
+    .meta th, .meta td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+    .meta th { width: 32%; background: var(--wash); }
+    table.find { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.2pt; }
+    table.find th, table.find td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+    table.find th { background: var(--wash); color: var(--blue); }
+    .note { background: #fff8e8; border: 1px solid #f0d48a; padding: 10px 12px; margin: 10px 0; }
+    .footer { margin-top: 18px; font-size: 8.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 22px; page-break-inside: avoid; }
+    .sig .box { border-top: 1px solid var(--ink); padding-top: 6px; min-height: 64px; }
+    .pagebreak { page-break-before: always; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; width: auto; padding: 0; }
+    }
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    INSA asset registration · SDD ·
+    <a href="INSA_SDD_MaJo_eSchool_Bridge.pdf" download>Download PDF</a>
+  </div>
+  <article class="sheet">
+    <header class="mast">
+      <p class="org">Majo Bridge Technologies and Events PLC</p>
+      <p class="sub">MaJo e-School Bridge (MayaBela) · INSA asset registration attachment</p>
+      <p class="sub">System and Architecture Design Document (SDD)</p>
+    </header>
+
+    <h1>System and Architecture Design Document</h1>
+    <p style="text-align:center;margin:0 0 12px"><b>Product:</b> MaJo e-School Bridge (MayaBela)<br />
+    Structure, interactions, attack surfaces, data flows, and trust boundaries</p>
+
+    <table class="meta">
+      <tr><th>Document number</th><td>MB-SDD-001</td></tr>
+      <tr><th>Version</th><td>1.0 · 10 November 2026 · East Africa Time (Africa/Nairobi)</td></tr>
+      <tr><th>INSA portal field</th><td>System &amp; Architecture Design Document (SDD) — describes system structure and interactions; used to identify attack surfaces, data flows, and trust boundaries.</td></tr>
+      <tr><th>Companion</th><td>MB-SRS-001 (requirements, roles, controls)</td></tr>
+      <tr><th>Classification</th><td>CONFIDENTIAL (CMCSRS Annex B) — architecture of a system that stores children’s records. No live secrets in this file.</td></tr>
+    </table>
+
+    <div class="note">
+      This SDD describes the <b>as-designed</b> hosted architecture. Disk encryption keys on the current hosted database remain with the supplier (CMCSRS §6.29.f residual). A dedicated/on-prem instance for a school that cannot share this tenancy is the same application with a separate database URL — not a second product.
+    </div>
+
+    <h2>1. Purpose</h2>
+    <p>This document is the architecture baseline for INSA asset registration. It shows how components interact, where data crosses a trust boundary, and which surfaces an attacker (or a mis-scoped JWT) can reach. Security requirements are in MB-SRS-001; this file is structure and flow.</p>
+
+    <h2>2. System context</h2>
+    <pre class="diag">
+  [ Teacher / Admin / Finance / Registrar / HR / Parent / Student / Driver ]
+           |  HTTPS (browser or mobile)
+           v
+  TB-1  [ Cloudflare Pages : mayabela.pages.dev ]     static Flutter web
+           |  HTTPS
+           v
+  TB-2  [ Hosted backend (Supabase project) ]
+           |-- Auth (JWT mint / refresh)
+           |-- PostgREST + Postgres  (app_documents, RLS)
+           |-- Storage               (school-branding PUBLIC logos;
+           |                          school-files PRIVATE under schools/&lt;id&gt;/)
+           |-- Edge Functions        (login, registry, platform PIN, AI, mail)
+           |
+           +-- optional: generative model (Maya Assistant, counts-only)
+           +-- optional: mail / FCM push providers
+           +-- MaJo laptops / CI (GitHub Actions) — DSAPs; service-role never in the app
+</pre>
+    <p>Mobile builds of the same Flutter codebase talk to the same TB-2 endpoints. They do not embed a private CA. TLS is terminated by the hosted vendor.</p>
+
+    <h2>3. Logical structure</h2>
+    <h3>3.1 Presentation</h3>
+    <p>One Flutter application (web on Cloudflare Pages; mobile stores). The anon / publishable API key is compiled into the client (PUBLIC). It is not an encryption key. Authorisation is the JWT plus RLS. The service-role key must never appear in Dart, HTML, or mobile binaries.</p>
+    <h3>3.2 Application / API</h3>
+    <ul>
+      <li><b>PostgREST</b> on <code>public.app_documents</code> keyed by <code>(collection, school_id, doc_id)</code>. RLS and a write-guard trigger enforce school and role. Driver SELECT is further restricted to assigned-bus students.</li>
+      <li><b>Edge Functions</b> (25) when the client cannot use RLS alone (password verify, PIN, service-role writes, public intake). Each function has a declared auth mode in <code>edge_auth_inventory.ts</code>; CI fails if a folder is added without one.</li>
+    </ul>
+    <h3>3.3 Data</h3>
+    <table class="find">
+      <thead><tr><th>Store</th><th>Content</th><th>Annex B</th><th>Trust</th></tr></thead>
+      <tbody>
+        <tr><td>Postgres <code>app_documents</code></td><td>SIS, marks, fees, HR, transport, audit</td><td>CONFIDENTIAL</td><td>Inside TB-2; RLS is the tenant wall</td></tr>
+        <tr><td>Auth users / JWT</td><td>schoolId + role in <code>app_metadata</code></td><td>CONFIDENTIAL</td><td>DB helpers ignore user-editable metadata</td></tr>
+        <tr><td><code>school-files</code></td><td>Photos, documents under <code>schools/&lt;id&gt;/</code></td><td>CONFIDENTIAL</td><td>Authenticated; prefix must match JWT school</td></tr>
+        <tr><td><code>school-branding</code></td><td>Login logos / stamps</td><td>PUBLIC</td><td>Anon SELECT; no student files</td></tr>
+        <tr><td>Edge secrets</td><td>Service-role, mail, optional AI key, push secret</td><td>CONFIDENTIAL</td><td>TB-2 only; DSAPs</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="pagebreak">4. Trust boundaries</h2>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Boundary</th><th>Untrusted side</th><th>Trusted side</th><th>What must hold</th></tr></thead>
+      <tbody>
+        <tr><td>TB-0</td><td>Internet / user device</td><td>Browser, phone, stolen laptop</td><td>—</td><td>Treat as hostile. XSS, lost phone, shared teacher PC.</td></tr>
+        <tr><td>TB-1</td><td>Pages CDN</td><td>Anyone who can GET mayabela.pages.dev</td><td>Static assets + CSP/HSTS headers</td><td>No CONFIDENTIAL data in the static build except the public anon key. Student rows are not in the JS bundle.</td></tr>
+        <tr><td>TB-2</td><td>Hosted API (HTTPS to *.supabase.co)</td><td>Any client with the anon key</td><td>Auth, PostgREST, Storage, Edge</td><td>No JWT → no <code>app_documents</code>. With JWT → only that <code>school_id</code>. Service-role only inside Edge after an application gate.</td></tr>
+        <tr><td>TB-3</td><td>School tenant</td><td>JWT of School A</td><td>Rows of School A</td><td>School A must not read School B (CAAT two-school 7/7 in source).</td></tr>
+        <tr><td>TB-4</td><td>Role / need-to-know</td><td>Teacher / driver / parent JWT</td><td>Class, bus, or linked child</td><td>Driver: own bus only. Teacher: assigned class; no payroll. Parent: linked child.</td></tr>
+        <tr><td>TB-5</td><td>Public vs authenticated storage</td><td>Unauthenticated GET</td><td>Logos only</td><td>Login page has no JWT, so branding is public by design. Student files must not live in that bucket.</td></tr>
+        <tr><td>TB-6</td><td>Platform owner</td><td>School JWT</td><td>Owner PIN + rate-limit</td><td>Provisioning must not use a teacher JWT. PIN is PBKDF2-SHA256.</td></tr>
+        <tr><td>TB-7</td><td>Optional AI</td><td>Prompt text</td><td>Gemini (if key set)</td><td>Counts-only context; refuse health/safeguarding/IDs. Unset key → 412; ERP still works.</td></tr>
+        <tr><td>TB-8</td><td>Supplier hypervisor</td><td>MaJo as cloud customer</td><td>Host disks / backups</td><td>Residual: supplier holds at-rest keys (§6.29.f). Not a Flutter control.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>5. Data flows</h2>
+    <h3>5.1 School login (password)</h3>
+    <pre class="diag">
+  Device --HTTPS--> school-login (public, rate-limited)
+                      |  verify bcrypt secret for schoolId+username+role
+                      v
+                   Auth mints JWT (app_metadata.schoolId, role)
+                      |
+  Device &lt;-- JWT -----'
+  Device --JWT--> PostgREST / Storage / other Edge  (TB-2, TB-3, TB-4)
+</pre>
+    <p>Privileged MFA (Admin, Finance): after password success, Settings requires TOTP enrolment. Teachers are not blocked from class if MFA is unset.</p>
+    <h3>5.2 Ordinary classroom write (attendance / homework / marks)</h3>
+    <pre class="diag">
+  Teacher JWT --HTTPS--> PostgREST INSERT/UPDATE app_documents
+                           |  RLS: school_id = jwt_school_id()
+                           |  write-guard: collection + assigned class
+                           v
+                         Row stored  |  grade_audit_log append-only (marks)
+</pre>
+    <h3>5.3 Privileged registry write (admissions / student row via Edge)</h3>
+    <pre class="diag">
+  Staff JWT --HTTPS--> school-upsert-registry
+                         |  verify JWT
+                         |  guardRegistryRecord (registrar for admissions)
+                         |  service-role upsert (RLS bypassed; gate replaces it)
+                         v
+                       app_documents
+</pre>
+    <h3>5.4 Driver location</h3>
+    <pre class="diag">
+  Driver JWT --&gt; bus_live_positions / transport_scans
+                   |  RLS + driver trigger: transportId == busId
+                   v
+                 Only that bus; other-bus / walker students not readable
+</pre>
+    <h3>5.5 Public branding (no JWT)</h3>
+    <pre class="diag">
+  Anyone --GET--> school-public-brand (rate-limited)  and/or
+                  storage public/school-branding/&lt;school&gt;/logo
+                  Returns name + logo URL. No emails, passwords, or student lists.
+</pre>
+    <h3>5.6 Maya Assistant (optional)</h3>
+    <pre class="diag">
+  Staff JWT --&gt; maya-assistant-chat
+                  |  counts-only snapshot (students=N, not names)
+                  |  if MAYA_AI_API_KEY set --&gt; TB-7 model
+                  v
+                Reply; safeguarding/health/password/ID prompts refused
+</pre>
+
+    <h2 class="pagebreak">6. Attack surfaces</h2>
+    <p>Surfaces are listed so INSA can see what we expose, not as a pentest letter (that letter is still scheduled after staging apply).</p>
+    <table class="find">
+      <thead><tr><th>ID</th><th>Surface</th><th>Who can reach it</th><th>Primary controls</th><th>Residual</th></tr></thead>
+      <tbody>
+        <tr><td>AS-01</td><td>Static web (Pages)</td><td>Internet</td><td>HTTPS, HSTS, CSP, nosniff, DENY framing</td><td>XSS in third-party map/font origins allowed by CSP</td></tr>
+        <tr><td>AS-02</td><td>Anon API key in the client</td><td>Anyone who downloads the app</td><td>RLS; anon has no <code>app_documents</code> policy</td><td>Inherent to hosted anon model (Guideline mNC-07)</td></tr>
+        <tr><td>AS-03</td><td>school-login / password reset / register-parent / submit-application</td><td>Internet, no JWT</td><td>Rate-limit; no user-existence leak on reset; hashed secrets</td><td>Credential stuffing if school passwords are weak</td></tr>
+        <tr><td>AS-04</td><td>PostgREST with a stolen staff JWT</td><td>Anyone with that token until expiry</td><td>TB-3/TB-4 RLS; MFA on Admin/Finance</td><td>Teacher JWT theft on a shared PC — MFA not forced on teachers</td></tr>
+        <tr><td>AS-05</td><td>Storage public branding</td><td>Internet</td><td>Logos only by policy</td><td>Mis-upload of a student file into branding would be a data spill (IRP)</td></tr>
+        <tr><td>AS-06</td><td>Storage school-files</td><td>Authenticated JWT</td><td>Prefix <code>schools/&lt;jwt school&gt;/</code></td><td>Object ACL bugs would be High; CAAT/storage probes in source</td></tr>
+        <tr><td>AS-07</td><td>Edge with service-role</td><td>After JWT/PIN/public gate</td><td>Inventory + registry policy + PIN PBKDF2</td><td>A missed gate is equivalent to RLS bypass — CI tracks inventory</td></tr>
+        <tr><td>AS-08</td><td>Platform owner PIN</td><td>Internet to those functions</td><td>Rate-limit; PBKDF2; no school JWT</td><td>PIN reuse / shoulder-surfing at the vendor desk</td></tr>
+        <tr><td>AS-09</td><td>send-push</td><td>Caller with x-push-secret</td><td>Secret; re-reads notification row (cannot forge body)</td><td>Secret in Edge config</td></tr>
+        <tr><td>AS-10</td><td>Maya Assistant</td><td>Staff JWT</td><td>Counts-only; refuse sensitive; optional key</td><td>User may still type a name into the prompt — instruction refuses to echo PII</td></tr>
+        <tr><td>AS-11</td><td>GitHub Actions / DSAPs</td><td>MaJo operators</td><td>Secrets in CI; production never the RLS test target</td><td>Human error; DSAP clearance files still national-scheme residual</td></tr>
+        <tr><td>AS-12</td><td>Supplier platform</td><td>Hosted CSP</td><td>DPA; no destructive tests on live project</td><td>Foreign host; keys not MaJo-held; locally licensed CSP not claimed</td></tr>
+      </tbody>
+    </table>
+
+    <h2>7. Edge Function auth modes (attack-surface catalogue)</h2>
+    <table class="find">
+      <thead><tr><th>Mode</th><th>Functions</th><th>Trust assumption</th></tr></thead>
+      <tbody>
+        <tr><td>password-login</td><td>school-login</td><td>Secret verified; then JWT</td></tr>
+        <tr><td>user-jwt</td><td>refresh-claims, change-password, upsert-account, upsert-registry, delete-account, verify-student, maya-assistant-chat</td><td>Caller JWT; school isolation; extra desk checks where noted</td></tr>
+        <tr><td>platform-owner-pin</td><td>owner-pin, list/create/update/delete-school, upload-logo, upload-mark, mail-config</td><td>PIN, not a school JWT</td></tr>
+        <tr><td>public-rate-limited</td><td>password-reset pair, student-reset request, register-parent, invite-parent, submit-application, public-brand, client-crash-report</td><td>No JWT; rate-limit; no CONFIDENTIAL dump in the response</td></tr>
+        <tr><td>push-secret</td><td>send-push</td><td>Shared Edge secret + stored notification row</td></tr>
+      </tbody>
+    </table>
+
+    <h2>8. Security design decisions (why this shape)</h2>
+    <ul>
+      <li><b>RLS in the database, not only the UI.</b> A modified client still hits TB-3.</li>
+      <li><b>Anon key public; service-role private.</b> Losing the anon key is not a breach if RLS holds.</li>
+      <li><b>Login logos public.</b> The login page cannot present a JWT; student files stay in a private bucket.</li>
+      <li><b>Teachers not forced onto MFA.</b> Privileged desks (Admin, Finance) are. Classroom availability is a stated requirement (MB-SRS-001).</li>
+      <li><b>One operator, many schools.</b> Encryption keys (when MaJo holds them on a future local/on-prem host) stay with MaJo, not each school. Isolation is JWT + RLS, not per-tenant disk keys handed to schools.</li>
+    </ul>
+
+    <h2>9. Related documents</h2>
+    <p>MB-SRS-001 (requirements). CSMS-AST-001 (assets). CSMS-KEY-001 (crypto). CSMS-SUP-001 (cloud register). CSMS-DPIA-001 (AI). CSMS-IRP-001 (incidents). CAAT: <code>supabase/tests/local_pg</code>.</p>
+
+    <div class="sig">
+      <div class="box">
+        <div>Prepared by (Engineering / CSO)</div>
+        <div style="margin-top:28px">Majo Bridge Technologies and Events PLC · 10 November 2026, East Africa Time</div>
+      </div>
+      <div class="box">
+        <div>For INSA asset registration</div>
+        <div style="margin-top:28px">Attachment to field: System &amp; Architecture Design Document (SDD)</div>
+      </div>
+    </div>
+
+    <p class="footer">
+      MB-SDD-001 · MaJo e-School Bridge (MayaBela) · 10 November 2026, Africa/Nairobi.<br />
+      Restricted. Not a gazetted INSA certificate and not a third-party pentest letter.
+    </p>
+  </article>
+</body>
+</html>
