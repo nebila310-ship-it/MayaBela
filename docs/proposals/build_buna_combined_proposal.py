@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Combined technical and financial partnership proposal for Buna International Bank.
+"""Combined technical and financial partnership proposal for Bunna International Bank.
 
-Product: Majo Bridge OS. Commercial: regional fees; Addis Ababa ETB 1,000,000
-configuration per school + 3% per term/quarter of student-purpose collections
-through the Bank (excl. salary/staff). Hosting by the provider. All excl. VAT.
+Product: Majo Bridge OS. Commercial: Addis Ababa ETB 1,250,000 per school + 3.5%
+of student payments received; other regions ETB 800,000 per school + 3.2% of
+student fees collected. Hosting by the provider. All excl. VAT.
 
 Usage: python3 docs/proposals/build_buna_combined_proposal.py
 """
@@ -29,20 +29,22 @@ ASSETS = ROOT / "bunna-partnership"
 LOGO_SRC = REPO / "docs" / "agreements" / "majo-bridge-logo.png"
 LOGO = ASSETS / "majo-bridge-logo.png"
 DIAGRAM = ASSETS / "integration-architecture.png"
-HTML_OUT = ROOT / "buna-combined-proposal.html"
-PDF_OUT = ROOT / "MaJo_Bridge_Buna_Combined_Proposal.pdf"
-DOCX_OUT = ROOT / "MaJo_Bridge_Buna_Combined_Proposal.docx"
+HTML_OUT = ROOT / "bunna-combined-proposal.html"
+PDF_OUT = ROOT / "MaJo_Bridge_Bunna_Combined_Proposal.pdf"
+DOCX_OUT = ROOT / "MaJo_Bridge_Bunna_Combined_Proposal.docx"
 
 PROVIDER = "Majo Bridge Technologies and Events PLC"
 PRODUCT = "Majo Bridge OS"
-BANK = "Buna International Bank S.C."
-REF = "MBT-BUNA-PROP-2026-01"
+BANK = "Bunna International Bank S.C."
+REF = "MBT-BUNNA-PROP-2026-01"
 ISSUE = "________________"
 VALID = "________________"
 CONTACT = "+251 911 646 444 · +251 911 133 548 · +251 912 798 279 · majobridgetech@gmail.com · Addis Ababa, Ethiopia"
 WEB = "https://www.majobridge.com"
-ADDIS_CONFIG_FEE = "1,000,000"
-PLATFORM_PCT = "3%"
+ADDIS_CONFIG_FEE = "1,250,000"
+REGION_CONFIG_FEE = "800,000"
+ADDIS_PCT = "3.5%"
+REGION_PCT = "3.2%"
 VAT_RATE = "15%"
 
 NAVY = RGBColor(0x12, 0x3A, 0x6D)
@@ -64,7 +66,7 @@ FUNCTIONAL_SCOPE = [
     ["4", "Examinations and assessment", "Weighted markbook, exam bank, head-of-department and principal approval, branded report cards and a full grade audit log."],
     ["5", "Staff and human resources", "Staff records, leave, contracts, role-based access and an administration directory."],
     ["6", "School fee management", "Fee structures, student invoices, unique payment references, cashboxes, budgets, payables and parent fee statements."],
-    ["7", "Payment and billing (Bank rail)", "Pay with Buna from the parent app; real-time confirmation; electronic receipt; posting into the school's double-entry ledger. The Bank remains the processor of record."],
+    ["7", "Payment and billing (Bank rail)", "Pay with Bunna from the parent app; real-time confirmation; electronic receipt; posting into the school's double-entry ledger. The Bank remains the processor of record."],
     ["8", "Parent and student portal", "Native Android and iOS plus web. Parents open the app for attendance, results, homework, messages and the school bus — so the payment button sits where they already are."],
     ["9", "Financial reporting", "Trial balance, income and expenditure, balance sheet, cash flow and collection reports. Bank settlement lands in the same books."],
     ["10", "Communication", "Announcements, events, gallery, calendar, secure teacher–parent messaging and push notification in English, Amharic and Afaan Oromo."],
@@ -145,24 +147,26 @@ MODULES = [
 ]
 
 GLOSSARY = [
-    ["Addis Ababa school", "A participating school whose campus for configuration is in Addis Ababa. Initial configuration is ETB 1,000,000 per school, exclusive of VAT."],
-    ["Initial configuration", "One-time per-school setup: environment, Bank adapters, configuration, UAT and go-live support. The amount differs by region."],
-    ["Student-purpose payment", "Amounts paid through the Bank for a student: tuition, registration, examination, transport, materials, meals, uniform and similar. Salary and staff payments are excluded."],
-    ["Platform fee (3%)", "Three percent of student-purpose amounts successfully paid through the Bank in that academic term or quarter, exclusive of VAT."],
+    ["Addis Ababa school", "A participating school whose campus for configuration is in Addis Ababa. Initial configuration is ETB 1,250,000 per school, exclusive of VAT. Platform fee is 3.5% of student payments received through the Bank."],
+    ["Other-region school", "A participating school outside Addis Ababa. Initial configuration is ETB 800,000 per school, exclusive of VAT. Platform fee is 3.2% of student fees collected through the Bank."],
+    ["Initial configuration", "One-time per-school setup: environment, Bank adapters, configuration, UAT and go-live support. Addis Ababa ETB 1,250,000; other regions ETB 800,000."],
+    ["Student-purpose payment / student payment received", "Amounts paid through the Bank for a student: tuition, registration, examination, transport, materials, meals, uniform and similar. Salary and staff payments are excluded."],
+    ["Platform fee (Addis Ababa 3.5%)", "Three and one-half percent of student payments received through the Bank in that academic term or quarter, exclusive of VAT."],
+    ["Platform fee (other regions 3.2%)", "Three and two-tenths percent of student fees collected through the Bank in that academic term or quarter, exclusive of VAT."],
     ["Processor of record", "The Bank. Authorisation, posting and settlement of money never leave authorised Bank systems."],
     ["RLS", "PostgreSQL row-level security. Every query is constrained to the caller's school."],
-    ["Pay with Buna", "Parent-app button that opens the Bank's authorised payment channel with the invoice reference."],
+    ["Pay with Bunna", "Parent-app button that opens the Bank's authorised payment channel with the invoice reference."],
     ["PDPP 1321/2024", "Personal Data Protection Proclamation of the Federal Democratic Republic of Ethiopia."],
     ["RPO / RTO", "Recovery Point Objective (data loss window) and Recovery Time Objective (restore window)."],
-    ["Q", "Student-purpose collections through the Bank in one term or quarter (excluding salary and staff). Platform fee = 3% × Q."],
+    ["Q", "Student payments received (Addis Ababa) or student fees collected (other regions) through the Bank in one term or quarter, excluding salary and staff."],
 ]
 
 INTEGRATION_AREAS = [
     ["1", "School registration", "Participating schools created in Majo Bridge OS and identified to the Bank", "Joint"],
-    ["2", "School account mapping", "Each school mapped to its designated Buna collection account", "Bank"],
+    ["2", "School account mapping", "Each school mapped to its designated Bunna collection account", "Bank"],
     ["3", "Fee generation", "Student-specific invoices and unique check-digit payment references", "Majo Bridge"],
     ["4", "Bill presentment", "Bank channels look up amount due by reference before payment, where the Bank's channel supports it", "Joint"],
-    ["5", "Payment initiation", "Pay with Buna in the parent app, or pay-in at mobile banking, USSD, branch or agent quoting the reference", "Joint"],
+    ["5", "Payment initiation", "Pay with Bunna in the parent app, or pay-in at mobile banking, USSD, branch or agent quoting the reference", "Joint"],
     ["6", "Payment processing", "Authorisation, posting and settlement inside authorised Bank systems only", "Bank"],
     ["7", "Transaction confirmation", "Signed webhook plus status query. Idempotency keys so a retry never double-posts", "Joint"],
     ["8", "Electronic receipt", "Parent receipt in the app; school receipt in Finance; Bank reference stored on the invoice", "Joint"],
@@ -170,7 +174,7 @@ INTEGRATION_AREAS = [
     ["10", "Transaction reporting", "School collection reports and Bank partner-portal aggregates", "Joint"],
     ["11", "Exception handling", "Failed, pending, duplicate and reversed transactions with a full trail", "Joint"],
     ["12", "Payroll file", "Monthly salary file generated from Payroll in the Bank's agreed format", "Majo Bridge / Bank"],
-    ["13", "Supplier / expense payment", "Approved payables exported for payment from the school's Buna collection account", "Joint"],
+    ["13", "Supplier / expense payment", "Approved payables exported for payment from the school's Bunna collection account", "Joint"],
     ["14", "Account-opening referral", "Parent or staff consent to be contacted by the Bank; referral tracked per school", "Joint"],
 ]
 
@@ -194,7 +198,7 @@ SECURITY_REQS = [
 ]
 
 ROLES = [
-    ["Buna International Bank S.C.", "Approved banking interfaces, mobile and core-banking integration, tariffs and limits, school customer onboarding, transaction reports, Bank-side support, security / risk / compliance assessments. The Bank remains processor of record."],
+    ["Bunna International Bank S.C.", "Approved banking interfaces, mobile and core-banking integration, tariffs and limits, school customer onboarding, transaction reports, Bank-side support, security / risk / compliance assessments. The Bank remains processor of record."],
     ["Majo Bridge", "Majo Bridge OS, cloud hosting, integration adapters, school onboarding, application support, SLA, data protection, upgrades. Source code owned in Addis Ababa. Training outside Addis Ababa: Bank covers accommodation and transport for 2–3 Provider staff."],
     ["Schools", "Adopt the system, keep student and fee data current, ask parents to pay through the Bank, operate their own academic and HR processes."],
     ["Parents / students", "Use the app and the Bank's approved payment channels."],
@@ -203,12 +207,12 @@ ROLES = [
 
 FEE_STRUCTURE = [
     ["1", "Initial configuration — Addis Ababa", "One-time, per school in Addis Ababa", "Bank", f"ETB {ADDIS_CONFIG_FEE} excl. VAT"],
-    ["2", "Initial configuration — other regions", "One-time, per school outside Addis Ababa", "Bank", "Differs by region — to be agreed"],
-    ["3", "Platform subscription — school fees", "Per term / quarter, on amounts paid through the Bank", "Bank", f"{PLATFORM_PCT} of paid school fees excl. VAT"],
-    ["4", "Platform subscription — other student-purpose payments", "Per term / quarter, on amounts paid through the Bank", "Bank", f"{PLATFORM_PCT} of paid student-purpose amounts excl. VAT"],
-    ["5", "Salary and staff payments", "Payroll / salary file / staff payments through the Bank", "Excluded", "Not subject to the 3%"],
+    ["2", "Initial configuration — other regions", "One-time, per school outside Addis Ababa", "Bank", f"ETB {REGION_CONFIG_FEE} excl. VAT"],
+    ["3", "Platform subscription — Addis Ababa", "Per term / quarter, on student payments received through the Bank", "Bank", f"{ADDIS_PCT} of student payments received excl. VAT"],
+    ["4", "Platform subscription — other regions", "Per term / quarter, on student fees collected through the Bank", "Bank", f"{REGION_PCT} of student fees collected excl. VAT"],
+    ["5", "Salary and staff payments", "Payroll / salary file / staff payments through the Bank", "Excluded", "Not subject to 3.5% or 3.2%"],
     ["6", "Cloud hosting", "Monthly, production environment", "Technology provider", "Covered by the Provider — no charge to the Bank"],
-    ["7", "Standard support & updates", "Included with the 3% subscription", "Technology provider", "Included"],
+    ["7", "Standard support & updates", "Included with the regional percentage subscription", "Technology provider", "Included"],
     ["8", "Training in Addis Ababa", "Per session or agreed package", "To be discussed", "To be discussed (excl. VAT)"],
     ["9", "Training outside Addis Ababa — travel", "Accommodation and transport for 2–3 Provider staff", "Bank", "Bank covers accommodation and transport"],
     ["10", "Bank customer tariff", "Per successful Bank payment", "Bank-controlled", "Not a Majo Bridge charge"],
@@ -216,26 +220,28 @@ FEE_STRUCTURE = [
 
 REVENUE_SHARE = [
     ["Banking transaction tariff", "Bank-controlled; remains with the Bank", "Not a Majo Bridge charge"],
-    ["Platform subscription (3%)", "Paid by the Bank on student-purpose collections", "3% of Q per term / quarter excl. VAT"],
-    ["Initial configuration", "Paid by the Bank (regional)", "Addis Ababa ETB 1,000,000 per school; other regions to be agreed"],
+    ["Platform subscription — Addis Ababa", "Paid by the Bank on student payments received", "3.5% of Q per term / quarter excl. VAT"],
+    ["Platform subscription — other regions", "Paid by the Bank on student fees collected", "3.2% of Q per term / quarter excl. VAT"],
+    ["Initial configuration", "Paid by the Bank (regional)", "Addis Ababa ETB 1,250,000 per school; other regions ETB 800,000 per school"],
     ["Maintenance and hosting", "No hosting charge to the Bank (Provider-covered)", "Hosting covered by the Provider"],
-    ["Additional digital services", "Negotiated per service", "Negotiated per service"],
 ]
 
 COMMERCIAL_MODELS = [
-    ["Model A: Percentage only", "Platform fee of 3% of student-purpose collections, with configuration deferred", "Lowest upfront; depends entirely on collection volume"],
+    ["Model A: Percentage only", "Regional percentage of student collections, with configuration deferred", "Lowest upfront; depends entirely on collection volume"],
     ["Model B: Configuration only", "Bank pays regional configuration; no percentage on collections", "Predictable but does not scale with payment volume"],
-    ["Model C: Hybrid (recommended)", "Regional per-school configuration plus 3% per term/quarter of student-purpose amounts paid through the Bank", "Covers setup in Addis Ababa and grows with Bank collections"],
+    ["Model C: Hybrid (recommended)", "Addis Ababa ETB 1,250,000 + 3.5%; other regions ETB 800,000 + 3.2%", "Known setup cost per school and grows with Bank collections"],
 ]
 
 PROJECTION_VARS = [
     ["N_AA", "Number of participating schools in Addis Ababa"],
     ["N_R", "Number of participating schools in other regions"],
-    ["C_AA", "Addis Ababa configuration = ETB 1,000,000 per school, exclusive of VAT"],
-    ["C_R", "Configuration fee per school outside Addis Ababa (to be agreed; differs by region)"],
-    ["Q", "Student-purpose amounts successfully paid through the Bank in the term or quarter (school fees plus other student-purpose payments; excluding salary and staff)"],
-    ["L", "Platform fee for the term / quarter = 3% × Q, exclusive of VAT"],
-    ["T", "Applicable Bank transaction charge (Bank-controlled, separate from the 3%)"],
+    ["C_AA", "Addis Ababa configuration = ETB 1,250,000 per school, exclusive of VAT"],
+    ["C_R", "Other-region configuration = ETB 800,000 per school, exclusive of VAT"],
+    ["Q_AA", "Student payments received through the Bank in the term or quarter in Addis Ababa (excluding salary and staff)"],
+    ["Q_R", "Student fees collected through the Bank in the term or quarter in other regions (excluding salary and staff)"],
+    ["L_AA", "Addis Ababa platform fee = 3.5% × Q_AA, exclusive of VAT"],
+    ["L_R", "Other-region platform fee = 3.2% × Q_R, exclusive of VAT"],
+    ["T", "Applicable Bank transaction charge (Bank-controlled, separate from the platform percentage)"],
 ]
 
 PHASES = [
@@ -270,7 +276,7 @@ RISKS = [
     ["Fraud", "Authentication inside Bank channels only; no card data on MaJo; audit of every confirmation; duplicate detection."],
     ["Regulatory / NBE", "Bank remains accountable for outsourcing, AML/CFT and customer due diligence. Majo Bridge cooperates and signs Bank clauses."],
     ["Operational", "Named roles, SLA, escalation, joint steering committee."],
-    ["Commercial", "Clear split: Bank tariffs · regional configuration · 3% platform fee on student-purpose collections (excluding salary and staff). Stated in Annex B."],
+    ["Commercial", "Clear split: Bank tariffs · Addis Ababa ETB 1,250,000 + 3.5% · other regions ETB 800,000 + 3.2% (excluding salary and staff). Stated in Annex B."],
     ["Vendor dependency", "Data export in standard formats, transition assistance, and the Bank's right to migrate on termination."],
 ]
 
@@ -289,10 +295,10 @@ KPIS = [
 ]
 
 PROFORMA_LINES = [
-    ["1", "Initial configuration of Majo Bridge OS for one school in Addis Ababa (setup, Bank adapters, configuration, UAT and go-live). All amounts exclusive of VAT.", "N_AA", "School", ADDIS_CONFIG_FEE, f"{ADDIS_CONFIG_FEE} × N_AA"],
-    ["2", "Initial configuration of Majo Bridge OS for one school outside Addis Ababa. Amount differs by region and will be agreed in writing before that school’s go-live.", "N_R", "School", "To be agreed", "To be agreed × N_R"],
-    ["3", "Platform subscription — 3% of school fees successfully paid through the Bank in the academic term or quarter, exclusive of VAT.", "Q_fees", "Term / quarter", "3%", "3% × Q_fees"],
-    ["4", "Platform subscription — 3% of other student-purpose payments successfully paid through the Bank in the same term or quarter (transport, materials, meals, registration, examination, uniform and similar), exclusive of VAT. Salary and staff payments are excluded.", "Q_other", "Term / quarter", "3%", "3% × Q_other"],
+    ["1", "Initial configuration of Majo Bridge OS for one school in Addis Ababa (setup, Bank adapters, configuration, UAT and go-live). Exclusive of VAT.", "N_AA", "School", ADDIS_CONFIG_FEE, f"{ADDIS_CONFIG_FEE} × N_AA"],
+    ["2", "Initial configuration of Majo Bridge OS for one school outside Addis Ababa. Exclusive of VAT.", "N_R", "School", REGION_CONFIG_FEE, f"{REGION_CONFIG_FEE} × N_R"],
+    ["3", "Platform subscription — Addis Ababa: 3.5% of student payments received through the Bank in the academic term or quarter, exclusive of VAT. Salary and staff payments are excluded.", "Q_AA", "Term / quarter", "3.5%", "3.5% × Q_AA"],
+    ["4", "Platform subscription — other regions: 3.2% of student fees collected through the Bank in the academic term or quarter, exclusive of VAT. Salary and staff payments are excluded.", "Q_R", "Term / quarter", "3.2%", "3.2% × Q_R"],
     ["5", "Cloud hosting of the production environment (compute, database, storage, TLS certificates, backups)", "1", "Month", "0.00", "0.00"],
     ["6", "User training in Addis Ababa (administrators, finance, teachers, parents as agreed)", "TBD", "Session / package", "To be discussed", "To be discussed"],
     ["7", "Training delivered outside Addis Ababa — Bank covers accommodation and transport for two to three (2–3) Majo Bridge staff", "2–3 staff", "Trip", "Bank-covered", "Bank-covered"],
@@ -353,18 +359,18 @@ html, body { margin:0; padding:0; background:var(--cream); color:var(--ink);
 .toolbar a { color:#fff; font-weight:700; background:var(--green); padding:6px 12px; border-radius:6px; text-decoration:none; }
 .sheet { width:210mm; max-width:100%; margin:12px auto; background:var(--paper); box-shadow:0 8px 28px rgba(42,36,24,.12);
   padding:14mm 16mm 14mm; border:1px solid var(--line); }
-.cover { text-align:center; min-height:250mm; padding-top:8mm; }
-.cover img.logo { width:42mm; height:auto; background:var(--cream); }
-.kicker { letter-spacing:.18em; text-transform:uppercase; color:var(--gold); font-size:9.5pt; margin:10px 0 6px;
+.cover { text-align:center; padding-top:2mm; }
+.cover img.logo { width:34mm; height:auto; background:var(--cream); }
+.kicker { letter-spacing:.18em; text-transform:uppercase; color:var(--gold); font-size:9pt; margin:6px 0 4px;
   font-family:"Segoe UI", Calibri, sans-serif; }
-.cover h1 { font-size:22pt; color:var(--navy); margin:8px 0 6px; line-height:1.2; }
-.cover .sub { font-size:12.5pt; color:var(--muted); margin:0 0 14px; }
-.goldrule { height:3px; background:linear-gradient(90deg, transparent, var(--gold), transparent); border:0; margin:10px 0 16px; }
-.meta { width:100%; border-collapse:collapse; margin:18px auto 10px; font-size:10pt; text-align:left; }
-.meta th, .meta td { border:1px solid var(--line); padding:7px 10px; vertical-align:top; }
+.cover h1 { font-size:20pt; color:var(--navy); margin:6px 0 4px; line-height:1.15; }
+.cover .sub { font-size:11.5pt; color:var(--muted); margin:0 0 8px; }
+.goldrule { height:3px; background:linear-gradient(90deg, transparent, var(--gold), transparent); border:0; margin:8px 0 10px; }
+.meta { width:100%; border-collapse:collapse; margin:10px auto 6px; font-size:9.5pt; text-align:left; }
+.meta th, .meta td { border:1px solid var(--line); padding:5px 8px; vertical-align:top; }
 .meta th { width:34%; background:var(--cream2); color:var(--navy); font-family:"Segoe UI", Calibri, sans-serif; }
-.classif { display:inline-block; border:1px solid var(--gold); color:var(--navy); padding:4px 12px; font-size:9pt;
-  letter-spacing:.12em; text-transform:uppercase; margin-top:16px; font-family:"Segoe UI", Calibri, sans-serif; }
+.classif { display:inline-block; border:1px solid var(--gold); color:var(--navy); padding:3px 10px; font-size:8.5pt;
+  letter-spacing:.12em; text-transform:uppercase; margin-top:8px; font-family:"Segoe UI", Calibri, sans-serif; }
 h1 { font-size:14.5pt; color:var(--navy); border-bottom:2px solid var(--gold); padding-bottom:4px; margin:18px 0 8px; page-break-after:avoid; }
 h2 { font-size:12pt; color:var(--green); margin:14px 0 6px; page-break-after:avoid; }
 h3 { font-size:11pt; color:var(--navy); margin:12px 0 4px; }
@@ -375,6 +381,7 @@ li { margin:0 0 3px; }
 .ok { background:#E7F3EC; border-left:4px solid var(--green); padding:10px 12px; margin:10px 0; }
 table.grid { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.2pt;
   font-family:"Segoe UI", Calibri, sans-serif; }
+table.grid tr { page-break-inside:avoid; }
 table.grid th, table.grid td { border:1px solid var(--line); padding:5px 7px; vertical-align:top; }
 table.grid th { background:var(--navy); color:#fff; font-weight:650; }
 table.grid tr:nth-child(even) td { background:var(--cream); }
@@ -409,7 +416,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<meta name='viewport' content='width=device-width, initial-scale=1'/>")
     a(f"<title>{esc(REF)} — Technical and Financial Partnership Proposal</title>")
     a(f"<style>{css}</style></head><body>")
-    a("<div class='toolbar'>Majo Bridge OS · Buna International Bank partnership proposal · ")
+    a("<div class='toolbar'>Majo Bridge OS · Bunna International Bank partnership proposal · ")
     a(f"<a href='{esc(PDF_OUT.name)}' download>Download PDF</a></div>")
     a("<article class='sheet'>")
 
@@ -418,22 +425,23 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a(f"<img class='logo' src='{esc(logo)}' alt='MaJo-Bridge Technology and Events PLC'/>")
     a("<p class='kicker'>Confidential · For internal Bank evaluation</p>")
     a("<h1>Technical and Financial<br/>Partnership Proposal</h1>")
-    a("<p class='sub'>Deployment and Integration of a Cloud-Based School Management System<br/>with Buna International Bank S.C.</p>")
+    a("<p class='sub'>Deployment and Integration of a Cloud-Based School Management System<br/>with Bunna International Bank S.C.</p>")
     a("<hr class='goldrule'/>")
     a("<table class='meta'>")
     a(f"<tr><th>Submitted by</th><td>{esc(PROVIDER)}<br/>Product: {esc(PRODUCT)}</td></tr>")
     a(f"<tr><th>Proposed partner</th><td>{esc(BANK)}</td></tr>")
     a("<tr><th>Attention</th><td>Financial Technology Partnership Directorate, Information Technology, Risk, Compliance and Legal</td></tr>")
-    a(f"<tr><th>Document number</th><td>{esc(REF)} · Version 1.1</td></tr>")
+    a(f"<tr><th>Document number</th><td>{esc(REF)} · Version 1.2</td></tr>")
     a(f"<tr><th>Issue date</th><td><span class='blank'></span></td></tr>")
     a(f"<tr><th>Valid until</th><td><span class='blank'></span></td></tr>")
     a(f"<tr><th>Contact</th><td>{esc(CONTACT)}<br/>{esc(WEB)}</td></tr>")
-    a("<tr><th>Classification</th><td>CONFIDENTIAL. For evaluation by Buna International Bank S.C. No live secrets in this file.</td></tr>")
+    a("<tr><th>Classification</th><td>CONFIDENTIAL. For evaluation by Bunna International Bank S.C. No live secrets in this file.</td></tr>")
     a("</table>")
     a("<p class='classif'>Confidential commercial proposal</p>")
-    a("<p style='margin-top:22px;color:#5C5346;font-size:10pt'>This document combines the technical, financial and partnership offer. Fees differ by region. ")
-    a("In Addis Ababa, initial configuration is <b>ETB 1,000,000 per school</b> (excl. VAT). Recurring subscription is <b>3% per term/quarter</b> of student-purpose amounts paid through the Bank (excl. VAT). ")
-    a("Salary and staff payments are excluded from the 3%. Hosting is covered by the technology provider. For training outside Addis Ababa the Bank covers accommodation and transport for 2–3 Provider staff. Annex B is the commercial proforma.</p>")
+    a("<p style='margin-top:8px;color:#5C5346;font-size:9.5pt;text-align:left'>This document combines the technical, financial and partnership offer. Fees differ by region. ")
+    a("In Addis Ababa, initial configuration is <b>ETB 1,250,000 per school</b> (excl. VAT) and the recurring fee is <b>3.5%</b> of student payments received through the Bank (excl. VAT). ")
+    a("In other regions, initial configuration is <b>ETB 800,000 per school</b> (excl. VAT) and the recurring fee is <b>3.2%</b> of student fees collected (excl. VAT). ")
+    a("Salary and staff payments are excluded. Hosting is covered by the technology provider. Training outside Addis Ababa: Bank covers accommodation and transport for 2–3 Provider staff. Annex B is the commercial proforma.</p>")
     a("</header>")
 
     a("<div class='pagebreak'></div>")
@@ -490,18 +498,18 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
         "Customer acquisition among participating schools, parents, teachers and staff, with recorded consent for account opening.",
         "Deposits through school collection accounts, payroll accounts and family balances held for recurring fees.",
         "Growth in non-interest income through agreed transaction and service fees (Bank tariffs remain Bank-controlled).",
-        "Improved customer experience: Pay with Buna inside the parent app that families already open for attendance, results and the school bus.",
+        "Improved customer experience: Pay with Bunna inside the parent app that families already open for attendance, results and the school bus.",
         "Expansion of the Bank’s digital financial services ecosystem into education, with co-branding available.",
         "Improved operational efficiency, financial transparency and payment reconciliation for schools — the reason they stay on the platform and therefore with the Bank.",
     ]))
     a("<p>Majo Bridge proposes a hybrid commercial partnership that differs by region (<b>Model C</b>, Section 7). ")
-    a("In Addis Ababa, initial configuration is <b>ETB 1,000,000 per school</b> (exclusive of VAT). ")
-    a("The recurring subscription is <b>3% per academic term or quarter</b> of school fees and other student-purpose amounts successfully paid through the Bank (exclusive of VAT). ")
-    a("Salary and staff payments are not subject to the 3%. Hosting of the production environment is covered by the technology provider. ")
+    a("In Addis Ababa, initial configuration is <b>ETB 1,250,000 per school</b> (exclusive of VAT) and the recurring fee is <b>3.5%</b> of student payments received through the Bank (exclusive of VAT). ")
+    a("In other regions, initial configuration is <b>ETB 800,000 per school</b> (exclusive of VAT) and the recurring fee is <b>3.2%</b> of student fees collected through the Bank (exclusive of VAT). ")
+    a("Salary and staff payments are not subject to either percentage. Hosting of the production environment is covered by the technology provider. ")
     a("For training outside Addis Ababa, the Bank covers accommodation and transport for two to three Provider staff. The commercial proforma is Annex B.</p>")
     a("<div class='ok'><b>What is already true, and what this proposal asks the Bank to authorise.</b> ")
     a("The school operating system is live. The missing piece is the Bank rail: unique payment references, bill presentment, ")
-    a("Pay with Buna, signed confirmation, daily reconciliation, payroll file and a Bank partner portal. ")
+    a("Pay with Bunna, signed confirmation, daily reconciliation, payroll file and a Bank partner portal. ")
     a("That integration, a security hardening programme (including an independent penetration test), and a controlled school pilot ")
     a("are the work of the indicative 12-week plan in Section 8.</div>")
 
@@ -514,7 +522,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<p>Majo Bridge OS already digitises the school’s administrative, academic and financial operations, including ")
     a("invoices, receipts and a double-entry ledger. Full business value for the Bank appears when that ledger is fed by ")
     a("the Bank confirmations rather than by a finance officer typing in a slip number.</p>")
-    a("<p>Buna International Bank, through its digital financial services and technology-partnership initiatives, can establish a durable ")
+    a("<p>Bunna International Bank, through its digital financial services and technology-partnership initiatives, can establish a durable ")
     a("relationship with educational institutions and the families around them. The collaboration combines:</p>")
     a(html_ul([
         "Majo Bridge’s school management platform, Ethiopian product ownership, existing school ecosystem and Addis Ababa support desk.",
@@ -529,14 +537,14 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<h2>3.2 Specific objectives</h2>")
     a(html_ul([
         "Integrate school-fee collection with the Bank’s authorised infrastructure.",
-        "Enable parents (and, where relevant, students) to pay through the Bank’s mobile banking, USSD, branch and agent channels, and through Pay with Buna in the parent app.",
+        "Enable parents (and, where relevant, students) to pay through the Bank’s mobile banking, USSD, branch and agent channels, and through Pay with Bunna in the parent app.",
         "Facilitate automated payment confirmation, reconciliation and transaction reporting, including idempotent posting into the school ledger.",
         "Increase the number of schools maintaining banking relationships with the Bank.",
         "Increase utilisation of the Bank’s digital payment channels on a recurring academic calendar.",
         "Generate sustainable revenue for both parties, with Bank tariffs remaining under Bank control.",
         "Enhance financial inclusion and digital transformation in the education sector.",
         "Establish a scalable partnership that can be expanded to additional educational institutions, including groups of schools under one tenant.",
-        "Offer optional salary-file and supplier-payment rails so payroll and payables also settle at Buna.",
+        "Offer optional salary-file and supplier-payment rails so payroll and payables also settle at Bunna.",
         "Give the Bank a partner portal of aggregated programme figures without exposing children’s academic or safeguarding records.",
     ]))
 
@@ -545,7 +553,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<h2>4.1 System description</h2>")
     a(f"<p>{esc(PRODUCT)} is an existing cloud-based software solution designed, owned and operated by {esc(PROVIDER)} in Addis Ababa. ")
     a("It digitises educational-institution management on a centralised platform covering academic, administrative, operational and financial activities. ")
-    a("The platform is the primary school-management interface. Buna International Bank provides the financial-transaction infrastructure.</p>")
+    a("The platform is the primary school-management interface. Bunna International Bank provides the financial-transaction infrastructure.</p>")
     a(html_table(
         ["Dimension", "Majo Bridge OS as built today"],
         [
@@ -591,7 +599,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
         "School identification and selection.",
         "Student identification.",
         "Retrieval or verification of outstanding fees, where the Bank’s channel supports bill presentment.",
-        "Payment initiation, including Pay with Buna from the parent app.",
+        "Payment initiation, including Pay with Bunna from the parent app.",
         "Transaction authorisation inside the Bank’s channel (the parent never types a card secret into MaJo).",
         "Payment confirmation to the platform by signed webhook, with a status-query fallback.",
         "Electronic receipt generation in the parent app and in school Finance.",
@@ -623,7 +631,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<h2>6.1 Partnership structure</h2>")
     a("<p>The partnership will operate under a mutually agreed strategic technology and financial-services collaboration framework, documented in a partnership agreement with SLA, data-processing and confidentiality schedules.</p>")
     a("<h2>6.2 Roles and responsibilities</h2>")
-    a("<h3>A. Buna International Bank S.C.</h3>")
+    a("<h3>A. Bunna International Bank S.C.</h3>")
     a("<p>The Bank will:</p>")
     a(html_ul([
         "Provide approved banking integration interfaces and sandbox credentials.",
@@ -655,53 +663,64 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     # 7
     a("<h1>7. Financial and commercial proposal</h1>")
     a("<h2>7.1 Proposed commercial model</h2>")
-    a("<p>Majo Bridge proposes that <b>Buna International Bank S.C.</b> sponsors Majo Bridge OS for participating schools. ")
+    a("<p>Majo Bridge proposes that <b>Bunna International Bank S.C.</b> sponsors Majo Bridge OS for participating schools. ")
     a("Schools and families use the platform; the Bank pays regional configuration and the term/quarter platform fee. ")
     a("<b>All prices in this section are exclusive of VAT.</b> The model combines:</p>")
     a(html_ul([
-        "Fees that differ by region. The Addis Ababa (capital city) schedule is stated below. Configuration for other regions will be agreed because it differs from the capital rate.",
-        "Addis Ababa initial configuration of ETB 1,000,000 per school, exclusive of VAT.",
-        "A recurring platform subscription of 3% per academic term or quarter of student-purpose amounts successfully paid through the Bank, exclusive of VAT.",
-        "The same 3% on other student-purpose payments through the Bank (transport, materials, meals, registration, examination, uniform and similar).",
-        "Salary and staff payments are excluded from the 3%.",
+        "Fees that differ by region.",
+        "Addis Ababa (capital city): initial configuration of ETB 1,250,000 per school, exclusive of VAT, plus 3.5% per term or quarter of student payments received through the Bank.",
+        "Other regions: initial configuration of ETB 800,000 per school, exclusive of VAT, plus 3.2% per term or quarter of student fees collected through the Bank.",
+        "Salary and staff payments are excluded from both percentages.",
         "Cloud hosting covered in full by the technology provider (no hosting line on the Bank invoice).",
         "For training outside Addis Ababa, the Bank covers accommodation and transport for two to three (2–3) Majo Bridge staff.",
     ]))
-    a("<p>The hybrid model is recommended because configuration in the capital is a known per-school amount, while the 3% grows only when families actually pay through the Bank.</p>")
+    a("<p>The hybrid model is recommended because each region has a known per-school configuration amount, while the percentage grows only when families actually pay through the Bank.</p>")
     a("<h2>7.2 Regional fee schedule</h2>")
     a("<p>All amounts exclusive of 15% VAT. The legally styled commercial offer is the proforma in Annex B.</p>")
     a(html_table(
         ["Region", "Initial configuration (per school, excl. VAT)", "Recurring platform fee (excl. VAT)", "Training travel"],
         [
-            ["Addis Ababa (capital city)", "ETB 1,000,000 per school", "3% per term / quarter of student-purpose amounts paid through the Bank", "Provider is based in Addis Ababa; no out-of-city travel package"],
-            ["Other regions / cities", "Differs from the Addis Ababa rate — to be agreed per region before that school’s go-live", "Same 3% per term / quarter of student-purpose amounts paid through the Bank", "Bank covers accommodation and transport for 2–3 Provider staff"],
+            ["Addis Ababa (capital city)", "ETB 1,250,000 per school", "3.5% per term / quarter of student payments received through the Bank", "Provider is based in Addis Ababa; no out-of-city travel package"],
+            ["Other regions / cities", "ETB 800,000 per school", "3.2% per term / quarter of student fees collected through the Bank", "Bank covers accommodation and transport for 2–3 Provider staff"],
         ],
     ))
     a(html_table(["No.", "Fee category", "Charging basis", "Proposed payer", "Amount (excl. VAT)"], FEE_STRUCTURE))
-    a("<div class='ok'><b>What the 3% subscription includes.</b> All 61 modules of Majo Bridge OS; unlimited authorised users at each school; standard support and product updates; Bank payment adapters once the school is configured; English, Amharic and Afaan Oromo; web, Android and iOS. ")
+    a("<div class='ok'><b>What the regional subscription includes.</b> All 61 modules of Majo Bridge OS; unlimited authorised users at each school; standard support and product updates; Bank payment adapters once the school is configured; English, Amharic and Afaan Oromo; web, Android and iOS. ")
     a("<b>Hosting is not billed to the Bank</b> — the technology provider covers production hosting, TLS, backups and routine operations. ")
-    a("<b>Salary and staff payments are excluded</b> from the 3%, including payroll files generated for the Bank.</div>")
-    a("<h2>7.3 What the 3% applies to</h2>")
-    a("<p>For each academic <b>term or quarter</b>, the platform fee is 3% of amounts <b>successfully paid through the Bank</b> in that period for:</p>")
+    a("<b>Salary and staff payments are excluded</b> from 3.5% and from 3.2%, including payroll files generated for the Bank.</div>")
+    a("<h2>7.3 What the percentages apply to</h2>")
+    a("<p>For each academic <b>term or quarter</b>:</p>")
     a(html_ul([
-        "School fees (tuition and related academic-fee invoices).",
-        "Other student-purpose payments: registration, examination, transport, learning materials, meals, uniform and similar student charges.",
+        "Addis Ababa: 3.5% of student payments received through the Bank (tuition and other student-purpose receipts such as registration, examination, transport, materials, meals and uniform).",
+        "Other regions: 3.2% of student fees collected through the Bank.",
     ]))
-    a("<p><b>Excluded from the 3%:</b> salary, payroll and other staff payments; failed, reversed or refunded transactions; Bank-controlled customer tariffs (those remain the Bank’s). VAT is then added at 15% on the 3% fee. This proposal is not a tax invoice.</p>")
+    a("<p><b>Excluded from both percentages:</b> salary, payroll and other staff payments; failed, reversed or refunded transactions; Bank-controlled customer tariffs (those remain the Bank’s). VAT is then added at 15% on the platform fee. This proposal is not a tax invoice.</p>")
     a("<h2>7.4 Worked examples (exclusive of VAT)</h2>")
-    a("<p>Platform fee for a term / quarter = 3% × Q, where Q is student-purpose collections through the Bank in that period (excluding salary and staff). Hosting is ETB 0 to the Bank.</p>")
+    a("<p><b>Addis Ababa — 3.5%</b> of student payments received in one term / quarter. Hosting is ETB 0 to the Bank.</p>")
     a(html_table(
-        ["Student-purpose collections through the Bank in one term/quarter (Q)", "3% platform fee excl. VAT", "VAT 15% on the 3%", "Platform fee incl. VAT"],
+        ["Student payments received (Q)", "3.5% excl. VAT", "VAT 15%", "Fee incl. VAT"],
         [
-            ["1,000,000", "30,000", "4,500", "34,500"],
-            ["2,000,000", "60,000", "9,000", "69,000"],
-            ["5,000,000", "150,000", "22,500", "172,500"],
-            ["10,000,000", "300,000", "45,000", "345,000"],
-            ["20,000,000", "600,000", "90,000", "690,000"],
+            ["1,000,000", "35,000", "5,250", "40,250"],
+            ["2,000,000", "70,000", "10,500", "80,500"],
+            ["5,000,000", "175,000", "26,250", "201,250"],
+            ["10,000,000", "350,000", "52,500", "402,500"],
+            ["20,000,000", "700,000", "105,000", "805,000"],
         ],
     ))
-    a("<p>Addis Ababa configuration (per school, exclusive of VAT): ETB 1,000,000. VAT 15% = ETB 150,000; total if VAT applies = ETB 1,150,000 per Addis Ababa school. ")
-    a("Example: five Addis Ababa schools → ETB 5,000,000 configuration exclusive of VAT, plus 3% of that programme’s student-purpose collections each term or quarter. Configuration outside Addis Ababa is a different amount and will be quoted per region.</p>")
+    a("<p><b>Other regions — 3.2%</b> of student fees collected in one term / quarter.</p>")
+    a(html_table(
+        ["Student fees collected (Q)", "3.2% excl. VAT", "VAT 15%", "Fee incl. VAT"],
+        [
+            ["1,000,000", "32,000", "4,800", "36,800"],
+            ["2,000,000", "64,000", "9,600", "73,600"],
+            ["5,000,000", "160,000", "24,000", "184,000"],
+            ["10,000,000", "320,000", "48,000", "368,000"],
+            ["20,000,000", "640,000", "96,000", "736,000"],
+        ],
+    ))
+    a("<p>Addis Ababa configuration (per school, exclusive of VAT): ETB 1,250,000. VAT 15% = ETB 187,500; total if VAT applies = ETB 1,437,500. ")
+    a("Other-region configuration (per school, exclusive of VAT): ETB 800,000. VAT 15% = ETB 120,000; total if VAT applies = ETB 920,000. ")
+    a("Example: five Addis Ababa schools → ETB 6,250,000 configuration exclusive of VAT, plus 3.5% of student payments received each term or quarter. Five other-region schools → ETB 4,000,000 configuration exclusive of VAT, plus 3.2% of student fees collected.</p>")
     a("<h2>7.5 Training</h2>")
     a("<p>Training packages (content, number of sessions and any training fee) will be discussed. In addition:</p>")
     a(html_ul([
@@ -710,25 +729,25 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     ]))
     a("<h2>7.6 Billing terms</h2>")
     a(html_ul([
-        "Addis Ababa configuration (ETB 1,000,000 per school, excl. VAT) is invoiced when that school is authorised for setup and is payable before that school’s production go-live.",
-        "Configuration for other regions is invoiced at the agreed regional amount, on the same go-live rule.",
-        "The 3% platform fee is invoiced in arrears at the end of each academic term or quarter against student-purpose amounts successfully paid through the Bank in that period.",
+        "Addis Ababa configuration (ETB 1,250,000 per school, excl. VAT) is invoiced when that school is authorised for setup and is payable before that school’s production go-live.",
+        "Other-region configuration (ETB 800,000 per school, excl. VAT) is invoiced on the same go-live rule.",
+        "The regional percentage (3.5% in Addis Ababa; 3.2% in other regions) is invoiced in arrears at the end of each academic term or quarter.",
         "Payment currency: Ethiopian Birr. All prices before VAT. VAT 15% on taxable lines.",
         "Bank customer transaction tariffs remain Bank-controlled and are not a Majo Bridge charge.",
-        "Salary and staff payments through the Bank are not included in Q and are not charged the 3%.",
+        "Salary and staff payments through the Bank are not included in Q and are not charged 3.5% or 3.2%.",
         "Proposed term: three years from first production school, renewable.",
     ]))
-    a("<h2>7.7 How the 3% sits next to Bank tariffs</h2>")
-    a("<p>The 3% is the technology provider’s platform subscription, calculated on student-purpose collections. It is separate from the Bank’s own customer tariffs. The Bank retains control of its tariffs. Majo Bridge cannot independently change Bank-related transaction fees.</p>")
+    a("<h2>7.7 How the percentages sit next to Bank tariffs</h2>")
+    a("<p>The 3.5% and 3.2% are the technology provider’s platform subscription. They are separate from the Bank’s own customer tariffs. The Bank retains control of its tariffs. Majo Bridge cannot independently change Bank-related transaction fees.</p>")
     a(html_table(["Revenue stream", "Bank", "Technology provider"], REVENUE_SHARE))
-    a("<div class='note'><b>Important commercial principle.</b> Bank tariffs and the 3% platform fee shall be separately identified. The 3% is calculated on successful student-purpose payments through the Bank, excluding salary, staff payments, refunds, failed transactions and chargebacks. VAT is additional. Configuration is regional: ETB 1,000,000 per school in Addis Ababa; other regions to be agreed.</div>")
+    a("<div class='note'><b>Important commercial principle.</b> Bank tariffs and the regional platform percentages shall be separately identified. Percentages are calculated on successful student payments (Addis Ababa 3.5%) or student fees collected (other regions 3.2%), excluding salary, staff payments, refunds, failed transactions and chargebacks. VAT is additional. Configuration: ETB 1,250,000 per school in Addis Ababa; ETB 800,000 per school in other regions.</div>")
     a("<h2>7.8 Proposed commercial alternatives</h2>")
     a(html_table(["Model", "Description", "Advantages"], COMMERCIAL_MODELS))
-    a("<p><b>Recommended option: Model C – Hybrid</b> — regional per-school configuration (ETB 1,000,000 in Addis Ababa) plus 3% per term/quarter of student-purpose collections through the Bank, all exclusive of VAT.</p>")
+    a("<p><b>Recommended option: Model C – Hybrid</b> — Addis Ababa ETB 1,250,000 per school plus 3.5%; other regions ETB 800,000 per school plus 3.2%; all exclusive of VAT.</p>")
     a("<h2>7.9 Financial projection framework</h2>")
-    a("<p>The following variables support a joint workbook after a school pipeline is named. Worked examples in Section 7.4 already apply the 3% and the Addis Ababa configuration.</p>")
+    a("<p>The following variables support a joint workbook after a school pipeline is named. Worked examples in Section 7.4 already apply the stated rates.</p>")
     a(html_table(["Variable", "Description"], PROJECTION_VARS))
-    a("<p>Indicative identities (not a forecast): configuration in Addis Ababa ≈ N_AA × 1,000,000; configuration outside Addis Ababa ≈ N_R × C_R; platform fee per term/quarter ≈ 3% × Q. Conservative, base and optimistic cases will be built jointly from named schools.</p>")
+    a("<p>Indicative identities (not a forecast): configuration in Addis Ababa ≈ N_AA × 1,250,000; configuration outside Addis Ababa ≈ N_R × 800,000; platform fee per term/quarter ≈ 3.5% × Q_AA + 3.2% × Q_R. Conservative, base and optimistic cases will be built jointly from named schools.</p>")
 
     # 8
     a("<h1>8. Implementation approach and timeline</h1>")
@@ -739,7 +758,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<p>The parties may begin with a controlled pilot involving a limited number of schools (Majo Bridge suggests five, to be chosen with the Bank). The pilot will evaluate:</p>")
     a(html_ul([
         "School onboarding processes.",
-        "Payment initiation and processing, including Pay with Buna.",
+        "Payment initiation and processing, including Pay with Bunna.",
         "Mobile-banking usability.",
         "Transaction posting accuracy and idempotency under retry.",
         "Payment confirmation and electronic receipts.",
@@ -783,8 +802,8 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a(html_ul([
         "Scope of partnership and services.",
         "Technical integration responsibilities.",
-        "Commercial and fee arrangements, including regional configuration and the 3% term/quarter platform fee.",
-        "Calculation of the 3% on student-purpose collections (excluding salary and staff payments).",
+        "Commercial and fee arrangements, including regional configuration and the 3.5% / 3.2% term/quarter platform fees.",
+        "Calculation of 3.5% (Addis Ababa) and 3.2% (other regions) excluding salary and staff payments.",
         "Settlement and reconciliation procedures.",
         "Data ownership and data protection (school owns school data; Bank owns Bank records).",
         "Intellectual property rights (Majo Bridge retains SMS IP; Bank retains banking IP).",
@@ -807,7 +826,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<p><b>2. Customer acquisition.</b> Schools, parents, students and teachers are addressable customers for deposits, cards, credit and other Bank products, with recorded consent where personal data is shared.</p>")
     a("<p><b>3. Deposit mobilisation.</b> School collection accounts, staff payroll accounts and family balances held for the next fee cycle may contribute to deposit growth, subject to actual acquisition and balances.</p>")
     a("<p><b>4. Non-interest income growth.</b> Transaction-based charges and approved value-added services, without Majo Bridge setting Bank tariffs.</p>")
-    a("<p><b>5. Digital ecosystem expansion.</b> A sector platform, not a one-off merchant QR. Co-branding (“Powered by Buna”) on school apps and report cards is available.</p>")
+    a("<p><b>5. Digital ecosystem expansion.</b> A sector platform, not a one-off merchant QR. Co-branding (“Powered by Bunna”) on school apps and report cards is available.</p>")
     a("<p><b>6. Customer-experience enhancement.</b> Parents pay where they already check attendance and the school bus. Schools stop reconciling cash and slips by hand.</p>")
     a("<p><b>7. Strategic technology partnership.</b> A scalable, Ethiopia-owned school OS with a Bank rail, rather than a foreign SMS that cannot be inspected or hosted in-country.</p>")
     a("<p><b>8. Credit-quality option (consent-based).</b> Fee-payment history and school cash-flow, where the customer consents, can support later lending products. This is an option, not a condition of the SMS.</p>")
@@ -820,7 +839,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
         "Authorise the relevant business and technical teams to conduct detailed due diligence.",
         "Facilitate technical discussions on Core Banking and Mobile Banking integration, including sandbox access.",
         "Evaluate the proposed hybrid commercial partnership model (Model C) and the Annex B proforma.",
-        "Assign the relevant teams to review Addis Ababa configuration of ETB 1,000,000 per school, the 3% per term/quarter on student-purpose collections, exclusion of salary and staff payments, and Bank-covered travel for training outside Addis Ababa.",
+        "Assign the relevant teams to review Addis Ababa configuration of ETB 1,250,000 per school and 3.5% of student payments received, other-region configuration of ETB 800,000 per school and 3.2% of student fees collected, exclusion of salary and staff payments, and Bank-covered travel for training outside Addis Ababa.",
         "Consider a pilot implementation involving selected schools.",
         "Facilitate the preparation and execution of a formal partnership agreement upon successful completion of the required assessments and approvals.",
     ]))
@@ -828,16 +847,16 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     # 16
     a("<h1>16. Conclusion</h1>")
     a("<p>The proposed partnership integrates an existing Ethiopian school operating system with the Bank’s digital financial services. ")
-    a("Schools gain a complete academic, administrative and financial platform. Families gain a daily app with a trusted Pay with Buna button. ")
+    a("Schools gain a complete academic, administrative and financial platform. Families gain a daily app with a trusted Pay with Bunna button. ")
     a("The Bank gains recurring collections, a parent and staff customer neighbourhood, and a sector platform it can inspect, isolate or host in-country.</p>")
     a("<div class='keep'>")
-    a("<p>Majo Bridge is committed to working closely with the Bank’s Financial Technology Partnership Directorate and the relevant technical and business units to finalise technical scope, commercial arrangements and the implementation plan. We look forward to establishing a mutually beneficial and sustainable strategic partnership with Buna International Bank S.C.</p>")
+    a("<p>Majo Bridge is committed to working closely with the Bank’s Financial Technology Partnership Directorate and the relevant technical and business units to finalise technical scope, commercial arrangements and the implementation plan. We look forward to establishing a mutually beneficial and sustainable strategic partnership with Bunna International Bank S.C.</p>")
 
     a("<div class='sig'>")
     a("<div class='box'><div>For Majo Bridge Technologies and Events PLC</div>")
     a("<div style='margin-top:36px'>Nebil Ahmed · General Manager</div>")
     a("<div>Date ________________ · Addis Ababa</div></div>")
-    a("<div class='box'><div>Received for Buna International Bank S.C.</div>")
+    a("<div class='box'><div>Received for Bunna International Bank S.C.</div>")
     a("<div style='margin-top:36px'>Name / Directorate / Date</div>")
     a("<div>Bank seal</div></div></div></div>")
 
@@ -857,34 +876,34 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a("<div class='inv-head'>")
     a("<div class='party'><b>From</b>Majo Bridge Technologies and Events PLC<br/>Product: Majo Bridge OS<br/>")
     a(f"{esc(CONTACT)}<br/>{esc(WEB)}</div>")
-    a("<div class='party'><b>To</b>Buna International Bank S.C.<br/>Financial Technology Partnership Directorate<br/>")
+    a("<div class='party'><b>To</b>Bunna International Bank S.C.<br/>Financial Technology Partnership Directorate<br/>")
     a("Addis Ababa, Ethiopia</div></div>")
     a(html_table(["Item", "Description", "Qty", "Unit", "Unit price (excl. VAT)", "Amount (excl. VAT)"], PROFORMA_LINES))
     a("<table class='grid totals'><tbody>")
-    a("<tr><td>Subtotal — Addis Ababa configuration (excl. VAT)</td><td style='text-align:right'>ETB 1,000,000 × N_AA</td></tr>")
-    a("<tr><td>Subtotal — other-region configuration (excl. VAT)</td><td style='text-align:right'>To be agreed × N_R</td></tr>")
-    a("<tr><td>Platform fee per term/quarter (excl. VAT)</td><td style='text-align:right'>3% × Q</td></tr>")
+    a("<tr><td>Subtotal — Addis Ababa configuration (excl. VAT)</td><td style='text-align:right'>ETB 1,250,000 × N_AA</td></tr>")
+    a("<tr><td>Subtotal — other-region configuration (excl. VAT)</td><td style='text-align:right'>ETB 800,000 × N_R</td></tr>")
+    a("<tr><td>Addis Ababa platform fee per term/quarter (excl. VAT)</td><td style='text-align:right'>3.5% × Q_AA</td></tr>")
+    a("<tr><td>Other-region platform fee per term/quarter (excl. VAT)</td><td style='text-align:right'>3.2% × Q_R</td></tr>")
     a("<tr><td>Hosting (covered by the technology provider)</td><td style='text-align:right'>ETB 0.00</td></tr>")
     a("<tr><td>Training in Addis Ababa</td><td style='text-align:right'>To be discussed</td></tr>")
     a("<tr><td>Training outside Addis Ababa — accommodation and transport for 2–3 staff</td><td style='text-align:right'>Covered by the Bank</td></tr>")
     a("<tr><td>VAT 15% on taxable lines</td><td style='text-align:right'>15% of taxable amount</td></tr>")
-    a("<tr><td>Addis Ababa configuration incl. VAT (per school, if applicable)</td><td style='text-align:right'>ETB 1,150,000</td></tr>")
-    a("<tr><td>Platform fee incl. VAT</td><td style='text-align:right'>3.45% × Q</td></tr>")
+    a("<tr><td>Addis Ababa configuration incl. VAT (per school, if applicable)</td><td style='text-align:right'>ETB 1,437,500</td></tr>")
+    a("<tr><td>Other-region configuration incl. VAT (per school, if applicable)</td><td style='text-align:right'>ETB 920,000</td></tr>")
     a("</tbody></table>")
-    a("<p class='muted' style='margin-top:10px'>N_AA = Addis Ababa schools. N_R = schools outside Addis Ababa. Q = student-purpose amounts successfully paid through the Bank in the term or quarter (school fees plus other student-purpose payments; excluding salary and staff). ")
+    a("<p class='muted' style='margin-top:10px'>N_AA = Addis Ababa schools. N_R = schools outside Addis Ababa. Q_AA = student payments received through the Bank in Addis Ababa. Q_R = student fees collected through the Bank in other regions. Salary and staff are excluded. ")
     a("All unit prices are exclusive of VAT. This proforma is an offer for partnership evaluation. A tax invoice will be issued after the Bank’s written acceptance. ")
-    a("Bank payment tariffs are not included. Hosting of the shared production cloud is covered by the Provider. ")
-    a("Configuration outside Addis Ababa differs by region and is not the ETB 1,000,000 Addis Ababa rate until agreed in writing.</p>")
+    a("Bank payment tariffs are not included. Hosting of the shared production cloud is covered by the Provider.</p>")
     a("</div>")
     a("<p><b>Commercial conditions</b></p>")
     a(html_ul([
         "All prices are before VAT. VAT 15% is added on taxable lines in accordance with Ethiopian tax law.",
-        "Fees differ by region. Addis Ababa configuration is ETB 1,000,000 per school (excl. VAT). Other regions to be agreed.",
-        "The 3% is charged per academic term or quarter on student-purpose amounts successfully paid through the Bank.",
-        "Other student-purpose payments (transport, materials, meals, registration, examination, uniform and similar) are also subject to the 3%.",
-        "Salary and staff payments are excluded from the 3%.",
+        "Fees differ by region. Addis Ababa configuration is ETB 1,250,000 per school (excl. VAT). Other regions ETB 800,000 per school (excl. VAT).",
+        "Addis Ababa: 3.5% per academic term or quarter of student payments received through the Bank.",
+        "Other regions: 3.2% per academic term or quarter of student fees collected through the Bank.",
+        "Salary and staff payments are excluded from 3.5% and from 3.2%.",
         "Refunds, failed transactions and chargebacks are excluded from Q.",
-        "Bank customer transaction tariffs will be determined and controlled by the Bank and are separate from the 3%.",
+        "Bank customer transaction tariffs will be determined and controlled by the Bank and are separate from 3.5% and 3.2%.",
         "For training outside Addis Ababa, the Bank covers accommodation and transport for two to three (2–3) Majo Bridge staff.",
         "No additional development or customisation costs will be incurred without prior written approval.",
         "Hosting of the shared production environment is covered by the technology provider.",
@@ -899,7 +918,7 @@ figcaption { font-size:9pt; color:var(--muted); text-align:center; margin-top:4p
     a(html_table(["Term", "Meaning in this proposal"], GLOSSARY))
 
     a(f"<p class='footer'>{esc(REF)} · {esc(PROVIDER)} · Majo Bridge OS<br/>")
-    a("Technical and Financial Partnership Proposal to Buna International Bank S.C. · CONFIDENTIAL.<br/>")
+    a("Technical and Financial Partnership Proposal to Bunna International Bank S.C. · CONFIDENTIAL.<br/>")
     a(f"{esc(WEB)} · +251 912 798 279</p>")
     a("</article></body></html>")
     return "\n".join(parts)
@@ -1042,7 +1061,7 @@ def build_docx() -> None:
 
     p("CONFIDENTIAL  ·  FOR INTERNAL BANK EVALUATION", bold=True, size=9, color=GOLD, align=WD_ALIGN_PARAGRAPH.CENTER, after=4)
     p("Technical and Financial Partnership Proposal", bold=True, size=22, color=NAVY, align=WD_ALIGN_PARAGRAPH.CENTER, after=4)
-    p("Deployment and Integration of a Cloud-Based School Management System\nwith Buna International Bank S.C.", size=12, color=MUTED, align=WD_ALIGN_PARAGRAPH.CENTER, after=12)
+    p("Deployment and Integration of a Cloud-Based School Management System\nwith Bunna International Bank S.C.", size=12, color=MUTED, align=WD_ALIGN_PARAGRAPH.CENTER, after=12)
 
     def add_table(headers, rows, widths=None):
         t = doc.add_table(rows=1, cols=len(headers))
@@ -1098,14 +1117,14 @@ def build_docx() -> None:
         ["Submitted by", f"{PROVIDER}\nProduct: {PRODUCT}"],
         ["Proposed partner", BANK],
         ["Attention", "Financial Technology Partnership Directorate, IT, Risk, Compliance and Legal"],
-        ["Document number", f"{REF} · Version 1.1"],
+        ["Document number", f"{REF} · Version 1.2"],
         ["Issue date", "________________"],
         ["Valid until", "________________"],
         ["Contact", f"{CONTACT}\n{WEB}"],
-        ["Classification", "CONFIDENTIAL. For evaluation by Buna International Bank S.C."],
+        ["Classification", "CONFIDENTIAL. For evaluation by Bunna International Bank S.C."],
     ]
     add_table(["Field", "Value"], meta, [5.2, 12.0])
-    p("Fees differ by region. Addis Ababa configuration ETB 1,000,000 per school excl. VAT. Recurring subscription 3% per term/quarter of student-purpose amounts paid through the Bank excl. VAT. Salary and staff excluded. Hosting covered by the technology provider. Training outside Addis Ababa: Bank covers accommodation and transport for 2–3 Provider staff. Annex B is the commercial proforma.", italic=True, size=10, color=MUTED)
+    p("Fees differ by region. Addis Ababa: ETB 1,250,000 per school plus 3.5% of student payments received (excl. VAT). Other regions: ETB 800,000 per school plus 3.2% of student fees collected (excl. VAT). Salary and staff excluded. Hosting covered by the technology provider. Training outside Addis Ababa: Bank covers accommodation and transport for 2–3 Provider staff. Annex B is the commercial proforma.", italic=True, size=10, color=MUTED)
 
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
     doc.add_heading("1. Executive summary", level=1)
@@ -1118,11 +1137,11 @@ def build_docx() -> None:
         "Customer acquisition among schools, parents, teachers and staff, with recorded consent for account opening.",
         "Deposits through school collection accounts, payroll accounts and family balances.",
         "Growth in non-interest income through agreed transaction and service fees (Bank tariffs remain Bank-controlled).",
-        "Improved customer experience: Pay with Buna inside the parent app families already open for attendance, results and the school bus.",
+        "Improved customer experience: Pay with Bunna inside the parent app families already open for attendance, results and the school bus.",
         "Expansion of the Bank’s digital financial-services ecosystem into education.",
         "Improved operational efficiency, financial transparency and payment reconciliation for schools.",
     ])
-    p("Majo Bridge proposes a hybrid commercial partnership that differs by region (Model C, Section 7). In Addis Ababa, initial configuration is ETB 1,000,000 per school (excl. VAT). Recurring subscription is 3% per academic term or quarter of school fees and other student-purpose amounts successfully paid through the Bank (excl. VAT). Salary and staff payments are not subject to the 3%. Hosting is covered by the technology provider. For training outside Addis Ababa, the Bank covers accommodation and transport for 2–3 Provider staff. The commercial proforma is Annex B.")
+    p("Majo Bridge proposes a hybrid commercial partnership that differs by region (Model C, Section 7). In Addis Ababa, initial configuration is ETB 1,250,000 per school (excl. VAT) and 3.5% of student payments received through the Bank. In other regions, initial configuration is ETB 800,000 per school (excl. VAT) and 3.2% of student fees collected. Salary and staff payments are not subject to either percentage. Hosting is covered by the technology provider. For training outside Addis Ababa, the Bank covers accommodation and transport for 2–3 Provider staff. The commercial proforma is Annex B.")
 
     doc.add_heading("2. Background and rationale", level=1)
     p("The education sector is a natural extension of digital financial services. Schools run regular cycles of tuition, registration, examination, transport and materials fees, staff salaries and supplier payments. Traditional collection still leans on cash, fragmented bank slips and manual reconciliation.")
@@ -1139,7 +1158,7 @@ def build_docx() -> None:
     doc.add_heading("3.2 Specific objectives", level=2)
     bullets([
         "Integrate school-fee collection with the Bank’s authorised infrastructure.",
-        "Enable parents to pay through mobile banking, USSD, branch, agent and Pay with Buna in the parent app.",
+        "Enable parents to pay through mobile banking, USSD, branch, agent and Pay with Bunna in the parent app.",
         "Automated payment confirmation, reconciliation and reporting, including idempotent posting into the school ledger.",
         "Increase schools maintaining banking relationships with the Bank.",
         "Increase utilisation of the Bank’s digital payment channels on a recurring academic calendar.",
@@ -1191,7 +1210,7 @@ def build_docx() -> None:
         "School identification and selection.",
         "Student identification.",
         "Outstanding-fee lookup where bill presentment is supported.",
-        "Payment initiation, including Pay with Buna from the parent app.",
+        "Payment initiation, including Pay with Bunna from the parent app.",
         "Authorisation inside the Bank’s channel only.",
         "Signed webhook confirmation with status-query fallback.",
         "Electronic receipt in the parent app and school Finance.",
@@ -1216,20 +1235,18 @@ def build_docx() -> None:
     doc.add_heading("6.1 Partnership structure", level=2)
     p("A mutually agreed strategic technology and financial-services collaboration framework, documented in a partnership agreement with SLA, data-processing and confidentiality schedules.")
     doc.add_heading("6.2 Roles and responsibilities", level=2)
-    p("A. Buna International Bank S.C. will provide approved interfaces and sandbox credentials; facilitate mobile and core-banking integration; define tariffs, limits and settlement; onboard eligible schools as Bank customers; provide transaction and reconciliation information; support Bank-controlled infrastructure; and conduct security, risk and compliance assessments.", size=10.5)
+    p("A. Bunna International Bank S.C. will provide approved interfaces and sandbox credentials; facilitate mobile and core-banking integration; define tariffs, limits and settlement; onboard eligible schools as Bank customers; provide transaction and reconciliation information; support Bank-controlled infrastructure; and conduct security, risk and compliance assessments.", size=10.5)
     p("B. Majo Bridge will provide Majo Bridge OS; maintain hosting (or the dedicated/on-prem instance); build and maintain integration adapters including idempotent confirmation and daily reconciliation; onboard schools; provide application support in Addis Ababa time; meet the SLA; implement data-protection and the Section 5.5 hardening programme; report operationally; train users (for training outside Addis Ababa the Bank covers accommodation and transport for 2–3 staff); and upgrade the platform. Bank-facing interface changes require joint testing and Bank approval.", size=10.5)
     doc.add_heading("6.3 Stakeholder map", level=2)
     add_table(["Stakeholder", "Proposed role"], ROLES, [4.2, 13.0])
 
     doc.add_heading("7. Financial and commercial proposal", level=1)
     doc.add_heading("7.1 Proposed commercial model", level=2)
-    p("Buna International Bank S.C. sponsors Majo Bridge OS for participating schools. Fees differ by region. All prices are exclusive of VAT. The Bank pays regional configuration and the term/quarter platform fee. Hosting is covered by the technology provider.")
+    p("Bunna International Bank S.C. sponsors Majo Bridge OS for participating schools. Fees differ by region. All prices are exclusive of VAT. The Bank pays regional configuration and the term/quarter platform fee. Hosting is covered by the technology provider.")
     bullets([
-        "Addis Ababa initial configuration: ETB 1,000,000 per school exclusive of VAT.",
-        "Other regions: configuration differs from the Addis Ababa rate and will be agreed per region.",
-        "Recurring subscription: 3% per academic term or quarter of student-purpose amounts successfully paid through the Bank, exclusive of VAT.",
-        "Other student-purpose payments (transport, materials, meals, registration, examination, uniform and similar) are also subject to the 3%.",
-        "Salary and staff payments are excluded from the 3%.",
+        "Addis Ababa: ETB 1,250,000 per school exclusive of VAT, plus 3.5% of student payments received through the Bank.",
+        "Other regions: ETB 800,000 per school exclusive of VAT, plus 3.2% of student fees collected through the Bank.",
+        "Salary and staff payments are excluded from both percentages.",
         "Cloud hosting: covered by the technology provider.",
         "Training outside Addis Ababa: the Bank covers accommodation and transport for 2–3 Provider staff.",
     ])
@@ -1238,28 +1255,41 @@ def build_docx() -> None:
     add_table(
         ["Region", "Initial configuration (per school, excl. VAT)", "Recurring platform fee (excl. VAT)", "Training travel"],
         [
-            ["Addis Ababa (capital city)", "ETB 1,000,000 per school", "3% per term / quarter of student-purpose amounts paid through the Bank", "Provider based in Addis Ababa"],
-            ["Other regions / cities", "Differs — to be agreed per region", "Same 3% per term / quarter", "Bank covers accommodation and transport for 2–3 staff"],
+            ["Addis Ababa (capital city)", "ETB 1,250,000 per school", "3.5% of student payments received through the Bank", "Provider based in Addis Ababa"],
+            ["Other regions / cities", "ETB 800,000 per school", "3.2% of student fees collected through the Bank", "Bank covers accommodation and transport for 2–3 staff"],
         ],
         [3.6, 4.6, 5.4, 3.6],
     )
     add_table(["No.", "Fee category", "Charging basis", "Proposed payer", "Amount (excl. VAT)"], FEE_STRUCTURE, [1.1, 3.6, 4.2, 3.4, 4.9])
-    p("The 3% subscription includes all 61 modules, unlimited authorised users, standard support and updates. Hosting is not billed to the Bank. Salary and staff payments are excluded from the 3%.")
-    doc.add_heading("7.3 What the 3% applies to", level=2)
-    p("For each academic term or quarter, the platform fee is 3% of amounts successfully paid through the Bank for school fees and other student-purpose payments. Excluded: salary, payroll and staff payments; failed, reversed or refunded transactions; Bank-controlled customer tariffs. VAT 15% is then added. This proposal is not a tax invoice.")
+    p("The regional subscription includes all 61 modules, unlimited authorised users, standard support and updates. Hosting is not billed to the Bank. Salary and staff payments are excluded from 3.5% and 3.2%.")
+    doc.add_heading("7.3 What the percentages apply to", level=2)
+    p("Addis Ababa: 3.5% of student payments received through the Bank each term or quarter. Other regions: 3.2% of student fees collected. Excluded: salary, payroll and staff payments; failed, reversed or refunded transactions; Bank-controlled customer tariffs. VAT 15% is then added. This proposal is not a tax invoice.")
     doc.add_heading("7.4 Worked examples (exclusive of VAT)", level=2)
+    p("Addis Ababa — 3.5% of student payments received")
     add_table(
-        ["Student-purpose collections in one term/quarter (Q)", "3% excl. VAT", "VAT 15%", "3% incl. VAT"],
+        ["Student payments received (Q)", "3.5% excl. VAT", "VAT 15%", "Fee incl. VAT"],
         [
-            ["1,000,000", "30,000", "4,500", "34,500"],
-            ["2,000,000", "60,000", "9,000", "69,000"],
-            ["5,000,000", "150,000", "22,500", "172,500"],
-            ["10,000,000", "300,000", "45,000", "345,000"],
-            ["20,000,000", "600,000", "90,000", "690,000"],
+            ["1,000,000", "35,000", "5,250", "40,250"],
+            ["2,000,000", "70,000", "10,500", "80,500"],
+            ["5,000,000", "175,000", "26,250", "201,250"],
+            ["10,000,000", "350,000", "52,500", "402,500"],
+            ["20,000,000", "700,000", "105,000", "805,000"],
         ],
         [6.4, 3.6, 3.4, 3.8],
     )
-    p("Addis Ababa configuration: ETB 1,000,000 per school excl. VAT; with VAT ETB 1,150,000. Five Addis Ababa schools → ETB 5,000,000 configuration excl. VAT, plus 3% of that programme’s student-purpose collections each term or quarter. Other-region configuration is a different amount.")
+    p("Other regions — 3.2% of student fees collected")
+    add_table(
+        ["Student fees collected (Q)", "3.2% excl. VAT", "VAT 15%", "Fee incl. VAT"],
+        [
+            ["1,000,000", "32,000", "4,800", "36,800"],
+            ["2,000,000", "64,000", "9,600", "73,600"],
+            ["5,000,000", "160,000", "24,000", "184,000"],
+            ["10,000,000", "320,000", "48,000", "368,000"],
+            ["20,000,000", "640,000", "96,000", "736,000"],
+        ],
+        [6.4, 3.6, 3.4, 3.8],
+    )
+    p("Addis Ababa configuration: ETB 1,250,000 per school excl. VAT; with VAT ETB 1,437,500. Other-region configuration: ETB 800,000 per school excl. VAT; with VAT ETB 920,000.")
     doc.add_heading("7.5 Training", level=2)
     bullets([
         "Training packages will be discussed. All training prices are exclusive of VAT.",
@@ -1268,19 +1298,20 @@ def build_docx() -> None:
     ])
     doc.add_heading("7.6 Billing terms", level=2)
     bullets([
-        "Addis Ababa configuration invoiced when that school is authorised for setup; payable before that school’s production go-live.",
-        "The 3% platform fee is invoiced in arrears at the end of each academic term or quarter.",
+        "Addis Ababa configuration (ETB 1,250,000 per school, excl. VAT) invoiced when that school is authorised for setup; payable before go-live.",
+        "Other-region configuration (ETB 800,000 per school, excl. VAT) invoiced on the same go-live rule.",
+        "3.5% (Addis Ababa) and 3.2% (other regions) invoiced in arrears at the end of each academic term or quarter.",
         "Currency: Ethiopian Birr. All prices before VAT. VAT 15% on taxable lines.",
-        "Bank tariffs remain Bank-controlled and are separate from the 3%.",
+        "Bank tariffs remain Bank-controlled and are separate from the platform percentages.",
         "Salary and staff payments are not included in Q.",
         "Proposed term: three years from first production school, renewable.",
     ])
-    doc.add_heading("7.7 How the 3% sits next to Bank tariffs", level=2)
+    doc.add_heading("7.7 How the percentages sit next to Bank tariffs", level=2)
     add_table(["Revenue stream", "Bank", "Technology provider"], REVENUE_SHARE, [5.4, 6.0, 5.8])
-    p("Important commercial principle: Bank tariffs and the 3% platform fee shall be separately identified. The 3% is calculated on successful student-purpose payments through the Bank, excluding salary, staff, refunds, failed transactions and chargebacks. VAT is additional. Configuration is regional.", italic=True)
+    p("Important commercial principle: Bank tariffs and the regional platform percentages shall be separately identified. Addis Ababa 3.5% of student payments received; other regions 3.2% of student fees collected. Salary, staff, refunds, failed transactions and chargebacks are excluded. VAT is additional. Configuration: ETB 1,250,000 (Addis Ababa) and ETB 800,000 (other regions) per school.", italic=True)
     doc.add_heading("7.8 Proposed commercial alternatives", level=2)
     add_table(["Model", "Description", "Advantages"], COMMERCIAL_MODELS, [4.4, 6.6, 6.2])
-    p("Recommended option: Model C – Hybrid — regional per-school configuration (ETB 1,000,000 in Addis Ababa) plus 3% per term/quarter of student-purpose collections, all exclusive of VAT.")
+    p("Recommended option: Model C – Hybrid — Addis Ababa ETB 1,250,000 per school plus 3.5%; other regions ETB 800,000 per school plus 3.2%; all exclusive of VAT.")
     doc.add_heading("7.9 Financial projection framework", level=2)
     add_table(["Variable", "Description"], PROJECTION_VARS, [2.4, 14.8])
 
@@ -1288,7 +1319,7 @@ def build_docx() -> None:
     p("Phased approach. Indicative total duration: 12 weeks after partnership approval and Bank API readiness.")
     add_table(["Phase", "Major activities", "Indicative duration"], PHASES, [2.8, 11.6, 2.8])
     doc.add_heading("8.1 Proposed pilot approach", level=2)
-    p("Controlled pilot of a limited number of schools (suggested: five). The pilot evaluates onboarding, Pay with Buna, mobile-banking usability, posting accuracy and idempotency under retry, receipts, reconciliation, performance, customer experience and support. Further schools typically take about two weeks each once configuration data is ready.")
+    p("Controlled pilot of a limited number of schools (suggested: five). The pilot evaluates onboarding, Pay with Bunna, mobile-banking usability, posting accuracy and idempotency under retry, receipts, reconciliation, performance, customer experience and support. Further schools typically take about two weeks each once configuration data is ready.")
 
     doc.add_heading("9. Service level and technical support", level=1)
     p("Bank-controlled systems and provider-controlled systems have separate support paths.")
@@ -1310,8 +1341,8 @@ def build_docx() -> None:
     bullets([
         "Scope of partnership and services.",
         "Technical integration responsibilities.",
-        "Commercial and fee arrangements, including regional configuration and the 3% term/quarter platform fee.",
-        "Calculation of the 3% on student-purpose collections (excluding salary and staff payments).",
+        "Commercial and fee arrangements, including regional configuration and the 3.5% / 3.2% term/quarter platform fees.",
+        "Calculation of 3.5% (Addis Ababa) and 3.2% (other regions) excluding salary and staff payments.",
         "Settlement and reconciliation procedures.",
         "Data ownership and data protection.",
         "Intellectual property rights.",
@@ -1332,7 +1363,7 @@ def build_docx() -> None:
     p("2. Customer acquisition among schools, parents, teachers and staff, with recorded consent where personal data is shared.")
     p("3. Deposit mobilisation through collection accounts, payroll accounts and family balances, subject to actual acquisition.")
     p("4. Non-interest income growth from Bank-controlled tariffs and approved VAS.")
-    p("5. Digital ecosystem expansion into education, with optional “Powered by Buna” co-branding.")
+    p("5. Digital ecosystem expansion into education, with optional “Powered by Bunna” co-branding.")
     p("6. Customer-experience enhancement: parents pay where they already check attendance and the school bus.")
     p("7. Strategic technology partnership with an Ethiopia-owned school OS that can be inspected, isolated or hosted in-country.")
     p("8. Optional, consent-based credit-quality insight from fee-payment history — never a condition of the SMS, and never using children’s academic or health data.")
@@ -1344,19 +1375,19 @@ def build_docx() -> None:
         "Authorise business and technical teams to conduct detailed due diligence.",
         "Facilitate technical discussions on Core Banking and Mobile Banking integration, including sandbox access.",
         "Evaluate the proposed hybrid commercial model (Model C) and the Annex B proforma.",
-        "Assign teams to review Addis Ababa configuration of ETB 1,000,000 per school, the 3% per term/quarter on student-purpose collections, exclusion of salary and staff payments, and Bank-covered travel for training outside Addis Ababa.",
+        "Assign teams to review Addis Ababa configuration of ETB 1,250,000 per school and 3.5%, other-region configuration of ETB 800,000 per school and 3.2%, exclusion of salary and staff payments, and Bank-covered travel for training outside Addis Ababa.",
         "Consider a pilot implementation involving selected schools.",
         "Facilitate a formal partnership agreement upon successful assessments and approvals.",
     ])
 
     doc.add_heading("16. Conclusion", level=1)
-    p("The proposed partnership integrates an existing Ethiopian school operating system with the Bank’s digital financial services. Schools gain a complete academic, administrative and financial platform. Families gain a daily app with a trusted Pay with Buna button. The Bank gains recurring collections, a parent and staff customer neighbourhood, and a sector platform it can inspect, isolate or host in-country.")
+    p("The proposed partnership integrates an existing Ethiopian school operating system with the Bank’s digital financial services. Schools gain a complete academic, administrative and financial platform. Families gain a daily app with a trusted Pay with Bunna button. The Bank gains recurring collections, a parent and staff customer neighbourhood, and a sector platform it can inspect, isolate or host in-country.")
     p("Majo Bridge looks forward to working with the Financial Technology Partnership Directorate and the relevant technical and business units to finalise scope, commercial arrangements and the implementation plan.")
 
     p("For Majo Bridge Technologies and Events PLC", bold=True, after=2)
     p("Nebil Ahmed · General Manager", after=2)
     p("Date ________________ · Addis Ababa", color=MUTED)
-    p("Received for Buna International Bank S.C.", bold=True, after=2)
+    p("Received for Bunna International Bank S.C.", bold=True, after=2)
     p("Name / Directorate / Date · Bank seal", color=MUTED)
 
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
@@ -1372,7 +1403,7 @@ def build_docx() -> None:
         ["", "Party"],
         [
             ["From", f"{PROVIDER}\nProduct: {PRODUCT}\n{CONTACT}\n{WEB}"],
-            ["To", "Buna International Bank S.C.\nFinancial Technology Partnership Directorate\nAddis Ababa, Ethiopia"],
+            ["To", "Bunna International Bank S.C.\nFinancial Technology Partnership Directorate\nAddis Ababa, Ethiopia"],
         ],
         [3.2, 14.0],
     )
@@ -1380,27 +1411,28 @@ def build_docx() -> None:
     add_table(
         ["", "ETB"],
         [
-            ["Subtotal — Addis Ababa configuration (excl. VAT)", "1,000,000 × N_AA"],
-            ["Subtotal — other-region configuration (excl. VAT)", "To be agreed × N_R"],
-            ["Platform fee per term/quarter (excl. VAT)", "3% × Q"],
+            ["Subtotal — Addis Ababa configuration (excl. VAT)", "1,250,000 × N_AA"],
+            ["Subtotal — other-region configuration (excl. VAT)", "800,000 × N_R"],
+            ["Addis Ababa platform fee (excl. VAT)", "3.5% × Q_AA"],
+            ["Other-region platform fee (excl. VAT)", "3.2% × Q_R"],
             ["Hosting (covered by the technology provider)", "0.00"],
             ["Training in Addis Ababa", "To be discussed"],
             ["Training outside Addis Ababa — 2–3 staff accommodation and transport", "Covered by the Bank"],
             ["VAT 15% on taxable lines", "15% of taxable amount"],
-            ["Addis Ababa configuration incl. VAT (per school, if applicable)", "1,150,000"],
-            ["Platform fee incl. VAT", "3.45% × Q"],
+            ["Addis Ababa configuration incl. VAT (per school, if applicable)", "1,437,500"],
+            ["Other-region configuration incl. VAT (per school, if applicable)", "920,000"],
         ],
         [12.0, 5.2],
     )
-    p("N_AA = Addis Ababa schools. N_R = schools outside Addis Ababa. Q = student-purpose amounts successfully paid through the Bank in the term or quarter, excluding salary and staff. All unit prices exclusive of VAT. This proforma is an offer for partnership evaluation.", italic=True, size=9, color=MUTED)
+    p("N_AA = Addis Ababa schools. N_R = schools outside Addis Ababa. Q_AA = student payments received in Addis Ababa. Q_R = student fees collected in other regions. Salary and staff excluded. All unit prices exclusive of VAT.", italic=True, size=9, color=MUTED)
     p("Commercial conditions:")
     bullets([
         "All prices are before VAT. VAT 15% is added on taxable lines.",
-        "Fees differ by region. Addis Ababa configuration is ETB 1,000,000 per school (excl. VAT). Other regions to be agreed.",
-        "The 3% is charged per academic term or quarter on student-purpose amounts successfully paid through the Bank.",
-        "Other student-purpose payments are also subject to the 3%. Salary and staff payments are excluded.",
+        "Fees differ by region. Addis Ababa configuration is ETB 1,250,000 per school (excl. VAT). Other regions ETB 800,000 per school (excl. VAT).",
+        "Addis Ababa: 3.5% of student payments received through the Bank per term or quarter.",
+        "Other regions: 3.2% of student fees collected through the Bank per term or quarter. Salary and staff payments are excluded.",
         "Refunds, failed transactions and chargebacks are excluded from Q.",
-        "Bank customer transaction tariffs remain Bank-controlled and are separate from the 3%.",
+        "Bank customer transaction tariffs remain Bank-controlled and are separate from 3.5% and 3.2%.",
         "For training outside Addis Ababa, the Bank covers accommodation and transport for 2–3 Majo Bridge staff.",
         "No additional development or customisation costs without prior written approval.",
         "Hosting of the shared production environment is covered by the technology provider.",

@@ -65,7 +65,7 @@ def main() -> Path:
     d.rectangle([0, 0, w, 108], fill=NAVY)
     d.rectangle([0, 108, w, 116], fill=GOLD)
     text(d, (40, 32), "Figure 1  ·  Proposed Integration Architecture", 32, True, WHITE)
-    text(d, (40, 74), "Majo Bridge OS  ↔  Buna International Bank S.C.  ·  API, mobile banking and core banking", 20, False, (210, 220, 235))
+    text(d, (40, 74), "Majo Bridge OS  ↔  Bunna International Bank S.C.  ·  API, mobile banking and core banking", 20, False, (210, 220, 235))
 
     # Actors
     rrect(d, (40, 140, 2360, 300), WHITE, LINE, 2, 18)
@@ -99,7 +99,7 @@ def main() -> Path:
 
     # Bank gateway
     rrect(d, (40, 800, 2360, 980), GOLD_SOFT, GOLD, 4, 18)
-    text(d, (60, 818), "Buna International Bank  ·  Secure API Gateway  (Bank-controlled)", 22, True, NAVY)
+    text(d, (60, 818), "Bunna International Bank  ·  Secure API Gateway  (Bank-controlled)", 22, True, NAVY)
     text(d, (60, 860), "All financial postings remain inside authorised Bank systems. MaJo Bridge does not hold or control the Bank's ledger.", 18, False, INK)
     text(d, (60, 898), "Bill presentment  ·  payment initiation  ·  status query  ·  confirmation  ·  reversal  ·  reconciliation file", 18, False, MUTED)
     text(d, (60, 936), "No PAN, PIN or core-banking credentials are stored in Majo Bridge OS.", 18, True, GREEN)
@@ -110,7 +110,7 @@ def main() -> Path:
     pill(d, (70, 1050, 1160, 1280), "Mobile banking / USSD / branch / agent", [
         "School and student identification",
         "Outstanding fee lookup (where supported)",
-        "Pay with Buna  ·  authorisation",
+        "Pay with Bunna  ·  authorisation",
         "Electronic receipt  ·  history",
     ], WHITE, GREEN)
     pill(d, (1240, 1050, 2330, 1280), "Core banking", [
@@ -133,7 +133,7 @@ def main() -> Path:
     text(d, (1260, 1452), "the school operating system and the payment rail is the Bank.", 18, False, INK)
 
     d.rectangle([0, h - 44, w, h], fill=NAVY)
-    text(d, (40, h - 22), "MBT-BUNA-PROP-2026-01  ·  Architecture to be finalised jointly with IT, integration, cybersecurity and business teams.", 16, False, WHITE, "lm")
+    text(d, (40, h - 22), "MBT-BUNNA-PROP-2026-01  ·  Architecture to be finalised jointly with IT, integration, cybersecurity and business teams.", 16, False, WHITE, "lm")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     im.save(OUT, "PNG", optimize=True)
