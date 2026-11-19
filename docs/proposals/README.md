@@ -2,7 +2,7 @@
 
 ## Buna International Bank S.C. — combined technical and financial partnership proposal
 
-Prepared by **Majo Bridge Technologies and Events PLC** for **Majo Bridge OS**. Cream-paper PDF and Word. Every page carries document number `MBT-BUNA-PROP-2026-01` and page X of Y. Commercial offer: ETB 1,000,000 one-time installation (excl. VAT) and ETB 150 per billable student per month (excl. VAT). Hosting is covered by the technology provider. Training and other costs to be discussed. Annex B is the commercial proforma.
+Prepared by **Majo Bridge Technologies and Events PLC** for **Majo Bridge OS**. Cream-paper PDF and Word. Every page carries document number `MBT-BUNA-PROP-2026-01` and page X of Y. Fees differ by region. Addis Ababa: ETB 1,000,000 configuration per school (excl. VAT) plus 3% per term/quarter of student-purpose amounts paid through the Bank (excl. VAT). Salary and staff payments are excluded from the 3%. Hosting is covered by the technology provider. Training outside Addis Ababa: the Bank covers accommodation and transport for 2–3 Provider staff. Annex B is the commercial proforma.
 
 - Rebuild: `python3 docs/proposals/build_buna_combined_proposal.py`
 - Word: [MaJo_Bridge_Buna_Combined_Proposal.docx](MaJo_Bridge_Buna_Combined_Proposal.docx)
