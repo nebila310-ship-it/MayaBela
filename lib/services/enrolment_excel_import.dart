@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:excel_plus/excel_plus.dart';
 
+import 'package:mayabela/constants/school_subjects.dart';
 import 'package:mayabela/models/enrollment.dart';
 import 'package:mayabela/services/rbac/staff_permissions.dart';
 import 'package:mayabela/services/student_excel_import.dart';
@@ -113,6 +114,26 @@ class EnrolmentTeacherDraft {
   final String assignedClass;
   final List<TeacherClassAssignment> classAssignments;
   final String source;
+
+  EnrolmentTeacherDraft copyWith({
+    List<TeacherStaffRole>? roles,
+    List<String>? subjects,
+    String? assignedClass,
+    List<TeacherClassAssignment>? classAssignments,
+  }) {
+    return EnrolmentTeacherDraft(
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      employeeId: employeeId,
+      campus: campus,
+      roles: roles ?? this.roles,
+      subjects: subjects ?? this.subjects,
+      assignedClass: assignedClass ?? this.assignedClass,
+      classAssignments: classAssignments ?? this.classAssignments,
+      source: source,
+    );
+  }
 }
 
 class EnrolmentStaffDraft {
@@ -168,6 +189,9 @@ abstract final class EnrolmentExcelImport {
     'student register',
     'teacher form',
     'teacher register',
+    'teachers',
+    'homeroom by class',
+    'subject teaching',
     'admin staff form',
     'staff register',
   };
@@ -188,6 +212,7 @@ abstract final class EnrolmentExcelImport {
     final students = <EnrolmentStudentDraft>[];
     final teachers = <EnrolmentTeacherDraft>[];
     final staff = <EnrolmentStaffDraft>[];
+    final assignments = <_PendingTeacherAssignment>[];
     final skipped = <String>[];
     var recognised = false;
 
@@ -203,9 +228,14 @@ abstract final class EnrolmentExcelImport {
         case 'student form':
           _parseStudentForm(table, sheetName, students, skipped);
         case 'teacher register':
+        case 'teachers':
           _parseTeacherRegister(table, sheetName, teachers, skipped);
         case 'teacher form':
           _parseTeacherForm(table, sheetName, teachers, skipped);
+        case 'homeroom by class':
+          _parseHomeroomRegister(table, sheetName, assignments, skipped);
+        case 'subject teaching':
+          _parseSubjectRegister(table, sheetName, assignments, skipped);
         case 'admin staff form':
           _parseStaffForm(table, sheetName, staff, skipped);
         case 'staff register':
@@ -224,7 +254,7 @@ abstract final class EnrolmentExcelImport {
     }
     return EnrolmentWorkbookDraft(
       students: students,
-      teachers: teachers,
+      teachers: _attachAssignments(teachers, assignments, skipped),
       staff: staff,
       skipped: skipped,
     );
@@ -299,6 +329,8 @@ abstract final class EnrolmentExcelImport {
       final row = table[r];
       if (_rowEmpty(row, header)) continue;
       final loc = '$sheetName row ${r + 1}';
+      final name = _at(row, _idx(header, const ['full name', 'name']));
+      if (_isExampleName(name)) continue;
       final draft = _teacherFromCells(
         (aliases) => _at(row, _idx(header, aliases)),
         loc,
@@ -327,6 +359,247 @@ abstract final class EnrolmentExcelImport {
       skipped,
     );
     if (draft != null) out.add(draft);
+  }
+
+  static void _parseHomeroomRegister(
+    List<List<String>> table,
+    String sheetName,
+    List<_PendingTeacherAssignment> out,
+    List<String> skipped,
+  ) {
+    final parsed = _headerLookingFor(table, const [
+      'grade',
+      'homeroom teacher phone',
+    ]);
+    if (parsed == null) return;
+    final header = parsed.header;
+    for (var r = parsed.dataStart; r < table.length; r++) {
+      final row = table[r];
+      if (_rowEmpty(row, header)) continue;
+      final loc = '$sheetName row ${r + 1}';
+      final get = (List<String> aliases) => _at(row, _idx(header, aliases));
+      final name = get(const [
+        'homeroom teacher full name',
+        'teacher full name',
+        'full name',
+      ]);
+      if (_isExampleName(name)) continue;
+      final phone = get(const [
+        'homeroom teacher phone',
+        'teacher phone',
+        'phone login',
+        'phone',
+      ]);
+      if (name.isEmpty && phone.isEmpty && get(const ['grade']).isEmpty) {
+        continue;
+      }
+      final className = _classNameFromCells(get);
+      if (className == null) {
+        skipped.add('$loc: need grade and section');
+        continue;
+      }
+      if (!PhoneUtils.isValidLoginPhone(phone)) {
+        skipped.add(
+          '${name.isEmpty ? loc : name} ($loc): need the homeroom teacher phone',
+        );
+        continue;
+      }
+      out.add(
+        _PendingTeacherAssignment(
+          name: name,
+          phone: phone,
+          className: className,
+          role: TeacherStaffRole.homeroomTeacher,
+          subjects: _subjectsFromCells(get),
+          source: loc,
+        ),
+      );
+    }
+  }
+
+  static void _parseSubjectRegister(
+    List<List<String>> table,
+    String sheetName,
+    List<_PendingTeacherAssignment> out,
+    List<String> skipped,
+  ) {
+    final parsed = _headerLookingFor(table, const [
+      'teacher phone',
+      'grade',
+      'subject 1',
+    ]);
+    if (parsed == null) return;
+    final header = parsed.header;
+    for (var r = parsed.dataStart; r < table.length; r++) {
+      final row = table[r];
+      if (_rowEmpty(row, header)) continue;
+      final loc = '$sheetName row ${r + 1}';
+      final get = (List<String> aliases) => _at(row, _idx(header, aliases));
+      final name = get(const ['teacher full name', 'full name', 'name']);
+      if (_isExampleName(name)) continue;
+      final phone = get(const ['teacher phone', 'phone login', 'phone']);
+      if (name.isEmpty && phone.isEmpty && get(const ['grade']).isEmpty) {
+        continue;
+      }
+      final className = _classNameFromCells(get);
+      final subjects = _subjectsFromCells(get);
+      if (className == null) {
+        skipped.add('$loc: need grade and section');
+        continue;
+      }
+      if (!PhoneUtils.isValidLoginPhone(phone)) {
+        skipped.add(
+          '${name.isEmpty ? loc : name} ($loc): need the teacher phone',
+        );
+        continue;
+      }
+      if (subjects.isEmpty) {
+        skipped.add(
+          '${name.isEmpty ? loc : name} ($loc): need at least Subject 1',
+        );
+        continue;
+      }
+      out.add(
+        _PendingTeacherAssignment(
+          name: name,
+          phone: phone,
+          className: className,
+          role: TeacherStaffRole.subjectTeacher,
+          subjects: subjects,
+          source: loc,
+        ),
+      );
+    }
+  }
+
+  static List<EnrolmentTeacherDraft> _attachAssignments(
+    List<EnrolmentTeacherDraft> teachers,
+    List<_PendingTeacherAssignment> assignments,
+    List<String> skipped,
+  ) {
+    if (assignments.isEmpty) return teachers;
+
+    final byPhone = <String, int>{};
+    final merged = <EnrolmentTeacherDraft>[];
+    for (final teacher in teachers) {
+      final key = PhoneUtils.loginKey(teacher.phone);
+      if (byPhone.containsKey(key)) {
+        skipped.add('${teacher.fullName}: same phone as another Teachers row');
+        continue;
+      }
+      byPhone[key] = merged.length;
+      merged.add(teacher);
+    }
+
+    for (final assignment in assignments) {
+      final key = PhoneUtils.loginKey(assignment.phone);
+      final index = byPhone[key];
+      if (index == null) {
+        skipped.add(
+          '${assignment.name.isEmpty ? assignment.phone : assignment.name} '
+          '(${assignment.source}): add this person on the Teachers sheet first',
+        );
+        continue;
+      }
+      merged[index] = _withAssignment(merged[index], assignment);
+    }
+    return merged;
+  }
+
+  static EnrolmentTeacherDraft _withAssignment(
+    EnrolmentTeacherDraft teacher,
+    _PendingTeacherAssignment assignment,
+  ) {
+    final next = [
+      ...teacher.classAssignments,
+      TeacherClassAssignment(
+        className: assignment.className,
+        role: assignment.role,
+        teachingSlots: _slotsFromNames(assignment.subjects),
+      ),
+    ];
+    final roles = <TeacherStaffRole>{
+      ...teacher.roles,
+      assignment.role,
+    };
+    final subjects = <String>{
+      ...teacher.subjects,
+      ...assignment.subjects,
+    };
+    final classes = <String>{
+      if (teacher.assignedClass.trim().isNotEmpty)
+        ...teacher.assignedClass.split(',').map((s) => s.trim()),
+      assignment.className,
+    }..removeWhere((s) => s.isEmpty);
+    return teacher.copyWith(
+      roles: roles.toList(),
+      subjects: subjects.toList(),
+      assignedClass: classes.join(', '),
+      classAssignments: next,
+    );
+  }
+
+  static String? _classNameFromCells(String Function(List<String>) get) {
+    final grade = _normalizeGrade(get(const ['grade']));
+    final section = get(const ['section']);
+    if (grade.isEmpty || section.isEmpty) return null;
+    return StudentRegistryService.buildClassName(grade, section);
+  }
+
+  static List<String> _subjectsFromCells(String Function(List<String>) get) {
+    final names = <String>{};
+    for (final alias in const [
+      'subject 1',
+      'subject 2',
+      'subject 3',
+      'subject 4',
+      'subject 5',
+      'subjects also taught in this class',
+      'other subjects',
+    ]) {
+      final raw = get([alias]);
+      for (final part in raw.split(RegExp(r'[,;]'))) {
+        final name = part.trim();
+        if (name.isEmpty || name.startsWith('=')) continue;
+        names.add(name);
+      }
+    }
+    return names.toList();
+  }
+
+  static List<SubjectTeachingSlot> _slotsFromNames(Iterable<String> names) {
+    return [
+      for (final name in names)
+        if (name.trim().isNotEmpty)
+          SubjectTeachingSlot(
+            slotId: '',
+            subjectId: SchoolSubjects.resolveSubjectId(name.trim()),
+            subjectName: name.trim(),
+          ),
+    ];
+  }
+
+  static bool _isExampleName(String name) {
+    final t = name.trim().toLowerCase();
+    return t.startsWith('example');
+  }
+
+  static ({List<String> header, int dataStart})? _headerLookingFor(
+    List<List<String>> table,
+    List<String> mustHave,
+  ) {
+    for (var i = 0; i < table.length && i < 6; i++) {
+      final header = table[i].map(_norm).toList();
+      var ok = true;
+      for (final want in mustHave) {
+        if (_idx(header, [want]) == null) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return (header: header, dataStart: i + 1);
+    }
+    return null;
   }
 
   static void _parseStaffRegister(
@@ -517,7 +790,7 @@ abstract final class EnrolmentExcelImport {
     final classes = get(const ['assigned classes', 'assigned class'])
         .split(RegExp(r'[,;]'))
         .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
+        .where((s) => s.isNotEmpty && !s.startsWith('='))
         .toList();
     final roles = _teachRoles(get(const ['teaching role']));
     final assignmentRole = roles.contains(TeacherStaffRole.homeroomTeacher)
@@ -818,7 +1091,9 @@ abstract final class EnrolmentExcelImport {
     }
     if (value is BoolCellValue) return value.value ? 'Yes' : 'No';
     if (value is FormulaCellValue) {
-      return (value.cachedValue ?? value.formula).trim();
+      final cached = (value.cachedValue ?? '').trim();
+      if (cached.isNotEmpty && !cached.startsWith('=')) return cached;
+      return '';
     }
     return value.toString().trim();
   }
@@ -862,4 +1137,22 @@ abstract final class EnrolmentExcelImport {
       return bytes;
     }
   }
+}
+
+class _PendingTeacherAssignment {
+  const _PendingTeacherAssignment({
+    required this.name,
+    required this.phone,
+    required this.className,
+    required this.role,
+    required this.subjects,
+    required this.source,
+  });
+
+  final String name;
+  final String phone;
+  final String className;
+  final TeacherStaffRole role;
+  final List<String> subjects;
+  final String source;
 }
