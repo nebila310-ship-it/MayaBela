@@ -44,7 +44,26 @@ enum SefJudgment { emerging, developing, good, outstanding }
 
 enum SefStatus { draft, inReview, published }
 
-enum CapaSource { sef, risk, license, resolution, other }
+enum CapaSource { sef, risk, license, resolution, policy, other }
+
+enum AccreditorBody { cis, ib, cambridge, wasc, moe, other }
+
+enum PolicyAudience { staff, parents, board, all }
+
+enum MinutesStatus { draft, approved }
+
+/// Short international SEF domains. Schools can still type a custom MoE area.
+abstract final class InstitutionSefDomains {
+  static const suggested = <String>[
+    'Purpose & direction',
+    'Governance & leadership',
+    'Teaching & learning',
+    'Safeguarding & wellbeing',
+    'Community & partnerships',
+    'Resources & estate',
+    'Other / MoE',
+  ];
+}
 
 enum CapaStatus { open, inProgress, done, vacated }
 
@@ -185,6 +204,7 @@ class LeadershipSeat {
     this.termEnd = '',
     this.isActing = false,
     this.notes = '',
+    this.declaredInterest = '',
   });
 
   final String id;
@@ -195,6 +215,7 @@ class LeadershipSeat {
   final String termEnd;
   final bool isActing;
   final String notes;
+  final String declaredInterest;
 
   LeadershipSeat copyWith({
     LeadershipSeatType? seatType,
@@ -204,6 +225,7 @@ class LeadershipSeat {
     String? termEnd,
     bool? isActing,
     String? notes,
+    String? declaredInterest,
   }) {
     return LeadershipSeat(
       id: id,
@@ -214,6 +236,7 @@ class LeadershipSeat {
       termEnd: termEnd ?? this.termEnd,
       isActing: isActing ?? this.isActing,
       notes: notes ?? this.notes,
+      declaredInterest: declaredInterest ?? this.declaredInterest,
     );
   }
 
@@ -226,6 +249,8 @@ class LeadershipSeat {
     'termEnd': termEnd,
     'isActing': isActing,
     'notes': notes,
+    if (declaredInterest.trim().isNotEmpty)
+      'declaredInterest': declaredInterest,
   };
 
   static LeadershipSeat fromMap(Map<String, dynamic> map) {
@@ -241,6 +266,7 @@ class LeadershipSeat {
       termEnd: '${map['termEnd'] ?? ''}',
       isActing: map['isActing'] == true,
       notes: '${map['notes'] ?? ''}',
+      declaredInterest: '${map['declaredInterest'] ?? ''}',
     );
   }
 
@@ -375,6 +401,11 @@ class InstitutionPolicy {
     this.reviewDate = '',
     this.notes = '',
     this.attachmentPaths = const [],
+    this.version = 1,
+    this.supersedesId = '',
+    this.approvedOn = '',
+    this.audience = PolicyAudience.staff,
+    this.acknowledgements = const [],
   });
 
   final String id;
@@ -385,6 +416,11 @@ class InstitutionPolicy {
   final String reviewDate;
   final String notes;
   final List<String> attachmentPaths;
+  final int version;
+  final String supersedesId;
+  final String approvedOn;
+  final PolicyAudience audience;
+  final List<String> acknowledgements;
 
   bool get reviewDueSoon {
     final due = DateTime.tryParse(reviewDate);
@@ -395,6 +431,14 @@ class InstitutionPolicy {
         !due.isAfter(today.add(const Duration(days: 60)));
   }
 
+  bool get reviewOverdue {
+    if (status != PolicyStatus.active) return false;
+    final due = DateTime.tryParse(reviewDate);
+    if (due == null) return false;
+    final now = DateTime.now();
+    return due.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
   InstitutionPolicy copyWith({
     String? number,
     String? title,
@@ -403,6 +447,11 @@ class InstitutionPolicy {
     String? reviewDate,
     String? notes,
     List<String>? attachmentPaths,
+    int? version,
+    String? supersedesId,
+    String? approvedOn,
+    PolicyAudience? audience,
+    List<String>? acknowledgements,
   }) {
     return InstitutionPolicy(
       id: id,
@@ -413,6 +462,11 @@ class InstitutionPolicy {
       reviewDate: reviewDate ?? this.reviewDate,
       notes: notes ?? this.notes,
       attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      version: version ?? this.version,
+      supersedesId: supersedesId ?? this.supersedesId,
+      approvedOn: approvedOn ?? this.approvedOn,
+      audience: audience ?? this.audience,
+      acknowledgements: acknowledgements ?? this.acknowledgements,
     );
   }
 
@@ -425,6 +479,11 @@ class InstitutionPolicy {
     'reviewDate': reviewDate,
     'notes': notes,
     'attachmentPaths': attachmentPaths,
+    'version': version,
+    if (supersedesId.trim().isNotEmpty) 'supersedesId': supersedesId,
+    if (approvedOn.trim().isNotEmpty) 'approvedOn': approvedOn,
+    'audience': audience.name,
+    if (acknowledgements.isNotEmpty) 'acknowledgements': acknowledgements,
   };
 
   static InstitutionPolicy fromMap(Map<String, dynamic> map) {
@@ -440,6 +499,14 @@ class InstitutionPolicy {
       reviewDate: '${map['reviewDate'] ?? ''}',
       notes: '${map['notes'] ?? ''}',
       attachmentPaths: institutionStringList(map['attachmentPaths']),
+      version: (map['version'] as num?)?.toInt() ?? 1,
+      supersedesId: '${map['supersedesId'] ?? ''}',
+      approvedOn: '${map['approvedOn'] ?? ''}',
+      audience: PolicyAudience.values.firstWhere(
+        (v) => v.name == map['audience'],
+        orElse: () => PolicyAudience.staff,
+      ),
+      acknowledgements: institutionStringList(map['acknowledgements']),
     );
   }
 
@@ -448,6 +515,13 @@ class InstitutionPolicy {
     PolicyStatus.active => 'Active',
     PolicyStatus.superseded => 'Superseded',
     PolicyStatus.withdrawn => 'Withdrawn',
+  };
+
+  static String audienceLabel(PolicyAudience audience) => switch (audience) {
+    PolicyAudience.staff => 'Staff',
+    PolicyAudience.parents => 'Parents',
+    PolicyAudience.board => 'Board',
+    PolicyAudience.all => 'Staff, parents, and board',
   };
 }
 
@@ -580,6 +654,10 @@ class InstitutionLicense {
     this.campusScope = 'Institution-wide',
     this.notes = '',
     this.attachmentPaths = const [],
+    this.accreditor = AccreditorBody.other,
+    this.visitStartsOn = '',
+    this.visitEndsOn = '',
+    this.nextReportDue = '',
   });
 
   final String id;
@@ -591,6 +669,10 @@ class InstitutionLicense {
   final String campusScope;
   final String notes;
   final List<String> attachmentPaths;
+  final AccreditorBody accreditor;
+  final String visitStartsOn;
+  final String visitEndsOn;
+  final String nextReportDue;
 
   LicenseHealth get health {
     final expiry = DateTime.tryParse(expiresOn);
@@ -604,6 +686,10 @@ class InstitutionLicense {
     return LicenseHealth.valid;
   }
 
+  DateTime? get visitDate => DateTime.tryParse(visitStartsOn);
+
+  DateTime? get reportDueDate => DateTime.tryParse(nextReportDue);
+
   InstitutionLicense copyWith({
     String? title,
     String? issuer,
@@ -613,6 +699,10 @@ class InstitutionLicense {
     String? campusScope,
     String? notes,
     List<String>? attachmentPaths,
+    AccreditorBody? accreditor,
+    String? visitStartsOn,
+    String? visitEndsOn,
+    String? nextReportDue,
   }) {
     return InstitutionLicense(
       id: id,
@@ -624,6 +714,10 @@ class InstitutionLicense {
       campusScope: campusScope ?? this.campusScope,
       notes: notes ?? this.notes,
       attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      accreditor: accreditor ?? this.accreditor,
+      visitStartsOn: visitStartsOn ?? this.visitStartsOn,
+      visitEndsOn: visitEndsOn ?? this.visitEndsOn,
+      nextReportDue: nextReportDue ?? this.nextReportDue,
     );
   }
 
@@ -637,6 +731,10 @@ class InstitutionLicense {
     'campusScope': campusScope,
     'notes': notes,
     'attachmentPaths': attachmentPaths,
+    'accreditor': accreditor.name,
+    if (visitStartsOn.trim().isNotEmpty) 'visitStartsOn': visitStartsOn,
+    if (visitEndsOn.trim().isNotEmpty) 'visitEndsOn': visitEndsOn,
+    if (nextReportDue.trim().isNotEmpty) 'nextReportDue': nextReportDue,
   };
 
   static InstitutionLicense fromMap(Map<String, dynamic> map) {
@@ -650,8 +748,24 @@ class InstitutionLicense {
       campusScope: '${map['campusScope'] ?? 'Institution-wide'}',
       notes: '${map['notes'] ?? ''}',
       attachmentPaths: institutionStringList(map['attachmentPaths']),
+      accreditor: AccreditorBody.values.firstWhere(
+        (v) => v.name == map['accreditor'],
+        orElse: () => AccreditorBody.other,
+      ),
+      visitStartsOn: '${map['visitStartsOn'] ?? ''}',
+      visitEndsOn: '${map['visitEndsOn'] ?? ''}',
+      nextReportDue: '${map['nextReportDue'] ?? ''}',
     );
   }
+
+  static String accreditorLabel(AccreditorBody body) => switch (body) {
+    AccreditorBody.cis => 'CIS',
+    AccreditorBody.ib => 'IB',
+    AccreditorBody.cambridge => 'Cambridge',
+    AccreditorBody.wasc => 'WASC',
+    AccreditorBody.moe => 'Ministry of Education',
+    AccreditorBody.other => 'Other accreditor',
+  };
 
   static String healthLabel(LicenseHealth health) => switch (health) {
     LicenseHealth.valid => 'Valid',
@@ -912,9 +1026,14 @@ class InstitutionMeeting {
     this.venue = '',
     this.meetingLink = '',
     this.agenda = '',
+    this.agendaItems = const [],
     this.notes = '',
     this.attachmentPaths = const [],
     this.invitedKeys = const [],
+    this.apologies = '',
+    this.quorumRequired = 0,
+    this.presentCount = 0,
+    this.minutesStatus = MinutesStatus.draft,
   }) : attendance = invitees.isNotEmpty
            ? InstitutionStaffMember.namesLabel(invitees)
            : attendance;
@@ -929,9 +1048,30 @@ class InstitutionMeeting {
   final String venue;
   final String meetingLink;
   final String agenda;
+  final List<String> agendaItems;
   final String notes;
   final List<String> attachmentPaths;
   final List<String> invitedKeys;
+  final String apologies;
+  final int quorumRequired;
+  final int presentCount;
+  final MinutesStatus minutesStatus;
+
+  List<String> get orderedAgenda {
+    if (agendaItems.isNotEmpty) {
+      return agendaItems
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return agenda
+        .split('\n')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  bool get quorumMet => quorumRequired <= 0 || presentCount >= quorumRequired;
 
   InstitutionMeeting copyWith({
     String? title,
@@ -943,9 +1083,14 @@ class InstitutionMeeting {
     String? venue,
     String? meetingLink,
     String? agenda,
+    List<String>? agendaItems,
     String? notes,
     List<String>? attachmentPaths,
     List<String>? invitedKeys,
+    String? apologies,
+    int? quorumRequired,
+    int? presentCount,
+    MinutesStatus? minutesStatus,
   }) {
     final nextInvitees = invitees ?? this.invitees;
     return InstitutionMeeting(
@@ -963,9 +1108,14 @@ class InstitutionMeeting {
       venue: venue ?? this.venue,
       meetingLink: meetingLink ?? this.meetingLink,
       agenda: agenda ?? this.agenda,
+      agendaItems: agendaItems ?? this.agendaItems,
       notes: notes ?? this.notes,
       attachmentPaths: attachmentPaths ?? this.attachmentPaths,
       invitedKeys: invitedKeys ?? this.invitedKeys,
+      apologies: apologies ?? this.apologies,
+      quorumRequired: quorumRequired ?? this.quorumRequired,
+      presentCount: presentCount ?? this.presentCount,
+      minutesStatus: minutesStatus ?? this.minutesStatus,
     );
   }
 
@@ -985,7 +1135,12 @@ class InstitutionMeeting {
       if (heldOn.trim().isNotEmpty) 'Date: ${heldOn.trim()}',
       if (venue.trim().isNotEmpty) 'Venue: ${venue.trim()}',
       if (meetingLink.trim().isNotEmpty) 'Join link: ${meetingLink.trim()}',
-      if (agenda.trim().isNotEmpty) ...['', 'Agenda:', agenda.trim()],
+      if (orderedAgenda.isNotEmpty) ...[
+        '',
+        'Agenda:',
+        for (var i = 0; i < orderedAgenda.length; i++)
+          '${i + 1}. ${orderedAgenda[i]}',
+      ],
       if (attachmentPaths.isNotEmpty)
         'Attachments: ${attachmentPaths.length} file(s) included with this invitation.',
       '',
@@ -1009,9 +1164,14 @@ class InstitutionMeeting {
     'venue': venue,
     'meetingLink': meetingLink,
     'agenda': agenda,
+    if (agendaItems.isNotEmpty) 'agendaItems': agendaItems,
     'notes': notes,
     'attachmentPaths': attachmentPaths,
     'invitedKeys': invitedKeys,
+    if (apologies.trim().isNotEmpty) 'apologies': apologies,
+    if (quorumRequired > 0) 'quorumRequired': quorumRequired,
+    if (presentCount > 0) 'presentCount': presentCount,
+    'minutesStatus': minutesStatus.name,
   };
 
   static InstitutionMeeting fromMap(Map<String, dynamic> map) {
@@ -1029,11 +1189,24 @@ class InstitutionMeeting {
       venue: '${map['venue'] ?? ''}',
       meetingLink: '${map['meetingLink'] ?? ''}',
       agenda: '${map['agenda'] ?? ''}',
+      agendaItems: institutionStringList(map['agendaItems']),
       notes: '${map['notes'] ?? ''}',
       attachmentPaths: institutionStringList(map['attachmentPaths']),
       invitedKeys: institutionStringList(map['invitedKeys']),
+      apologies: '${map['apologies'] ?? ''}',
+      quorumRequired: (map['quorumRequired'] as num?)?.toInt() ?? 0,
+      presentCount: (map['presentCount'] as num?)?.toInt() ?? 0,
+      minutesStatus: MinutesStatus.values.firstWhere(
+        (v) => v.name == map['minutesStatus'],
+        orElse: () => MinutesStatus.draft,
+      ),
     );
   }
+
+  static String minutesLabel(MinutesStatus status) => switch (status) {
+    MinutesStatus.draft => 'Draft minutes',
+    MinutesStatus.approved => 'Approved minutes',
+  };
 
   static String bodyLabel(MeetingBodyKind kind) => switch (kind) {
     MeetingBodyKind.board => 'Board',
@@ -1053,6 +1226,8 @@ class InstitutionRisk {
     this.reviewDate = '',
     this.status = RiskStatus.open,
     this.notes = '',
+    this.treatment = '',
+    this.residual = '',
   });
 
   final String id;
@@ -1063,6 +1238,30 @@ class InstitutionRisk {
   final String reviewDate;
   final RiskStatus status;
   final String notes;
+  final String treatment;
+  final String residual;
+
+  int get likelihoodScore => switch (likelihood) {
+    RiskLikelihood.low => 1,
+    RiskLikelihood.medium => 2,
+    RiskLikelihood.high => 3,
+  };
+
+  int get impactScore => switch (impact) {
+    RiskImpact.low => 1,
+    RiskImpact.medium => 2,
+    RiskImpact.high => 3,
+  };
+
+  int get heatScore => likelihoodScore * impactScore;
+
+  bool get isHigh => heatScore >= 6;
+
+  String get heatBand {
+    if (heatScore >= 6) return 'High';
+    if (heatScore >= 3) return 'Medium';
+    return 'Low';
+  }
 
   bool get isOpen =>
       status == RiskStatus.open || status == RiskStatus.monitoring;
@@ -1092,6 +1291,8 @@ class InstitutionRisk {
     String? reviewDate,
     RiskStatus? status,
     String? notes,
+    String? treatment,
+    String? residual,
   }) {
     return InstitutionRisk(
       id: id,
@@ -1102,6 +1303,8 @@ class InstitutionRisk {
       reviewDate: reviewDate ?? this.reviewDate,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      treatment: treatment ?? this.treatment,
+      residual: residual ?? this.residual,
     );
   }
 
@@ -1114,6 +1317,8 @@ class InstitutionRisk {
     'reviewDate': reviewDate,
     'status': status.name,
     'notes': notes,
+    if (treatment.trim().isNotEmpty) 'treatment': treatment,
+    if (residual.trim().isNotEmpty) 'residual': residual,
   };
 
   static InstitutionRisk fromMap(Map<String, dynamic> map) {
@@ -1135,6 +1340,8 @@ class InstitutionRisk {
         orElse: () => RiskStatus.open,
       ),
       notes: '${map['notes'] ?? ''}',
+      treatment: '${map['treatment'] ?? ''}',
+      residual: '${map['residual'] ?? ''}',
     );
   }
 
@@ -1166,6 +1373,8 @@ class InstitutionPartner {
     this.agreementRef = '',
     this.status = PartnerStatus.active,
     this.notes = '',
+    this.attachmentPaths = const [],
+    this.renewsOn = '',
   });
 
   final String id;
@@ -1175,6 +1384,21 @@ class InstitutionPartner {
   final String agreementRef;
   final PartnerStatus status;
   final String notes;
+  final List<String> attachmentPaths;
+  final String renewsOn;
+
+  LicenseHealth get renewalHealth {
+    if (status != PartnerStatus.active) return LicenseHealth.none;
+    final expiry = DateTime.tryParse(renewsOn);
+    if (expiry == null) return LicenseHealth.none;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (expiry.isBefore(today)) return LicenseHealth.expired;
+    if (!expiry.isAfter(today.add(const Duration(days: 60)))) {
+      return LicenseHealth.expiring;
+    }
+    return LicenseHealth.valid;
+  }
 
   InstitutionPartner copyWith({
     String? name,
@@ -1183,6 +1407,8 @@ class InstitutionPartner {
     String? agreementRef,
     PartnerStatus? status,
     String? notes,
+    List<String>? attachmentPaths,
+    String? renewsOn,
   }) {
     return InstitutionPartner(
       id: id,
@@ -1192,6 +1418,8 @@ class InstitutionPartner {
       agreementRef: agreementRef ?? this.agreementRef,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+      renewsOn: renewsOn ?? this.renewsOn,
     );
   }
 
@@ -1203,6 +1431,8 @@ class InstitutionPartner {
     'agreementRef': agreementRef,
     'status': status.name,
     'notes': notes,
+    if (attachmentPaths.isNotEmpty) 'attachmentPaths': attachmentPaths,
+    if (renewsOn.trim().isNotEmpty) 'renewsOn': renewsOn,
   };
 
   static InstitutionPartner fromMap(Map<String, dynamic> map) {
@@ -1220,6 +1450,8 @@ class InstitutionPartner {
         orElse: () => PartnerStatus.active,
       ),
       notes: '${map['notes'] ?? ''}',
+      attachmentPaths: institutionStringList(map['attachmentPaths']),
+      renewsOn: '${map['renewsOn'] ?? ''}',
     );
   }
 
@@ -1246,6 +1478,8 @@ class InstitutionSefEntry {
     this.evidence = '',
     this.owner = '',
     this.status = SefStatus.draft,
+    this.evidencePaths = const [],
+    this.goalId = '',
   });
 
   final String id;
@@ -1255,6 +1489,11 @@ class InstitutionSefEntry {
   final String evidence;
   final String owner;
   final SefStatus status;
+  final List<String> evidencePaths;
+  final String goalId;
+
+  bool get isBelowGood =>
+      judgment == SefJudgment.emerging || judgment == SefJudgment.developing;
 
   InstitutionSefEntry copyWith({
     String? cycle,
@@ -1263,6 +1502,8 @@ class InstitutionSefEntry {
     String? evidence,
     String? owner,
     SefStatus? status,
+    List<String>? evidencePaths,
+    String? goalId,
   }) {
     return InstitutionSefEntry(
       id: id,
@@ -1272,6 +1513,8 @@ class InstitutionSefEntry {
       evidence: evidence ?? this.evidence,
       owner: owner ?? this.owner,
       status: status ?? this.status,
+      evidencePaths: evidencePaths ?? this.evidencePaths,
+      goalId: goalId ?? this.goalId,
     );
   }
 
@@ -1283,6 +1526,8 @@ class InstitutionSefEntry {
     'evidence': evidence,
     'owner': owner,
     'status': status.name,
+    if (evidencePaths.isNotEmpty) 'evidencePaths': evidencePaths,
+    if (goalId.trim().isNotEmpty) 'goalId': goalId,
   };
 
   static InstitutionSefEntry fromMap(Map<String, dynamic> map) {
@@ -1300,6 +1545,8 @@ class InstitutionSefEntry {
         (v) => v.name == map['status'],
         orElse: () => SefStatus.draft,
       ),
+      evidencePaths: institutionStringList(map['evidencePaths']),
+      goalId: '${map['goalId'] ?? ''}',
     );
   }
 
@@ -1329,6 +1576,8 @@ class InstitutionCapa {
     this.dueDate = '',
     this.status = CapaStatus.open,
     this.notes = '',
+    this.licenseId = '',
+    this.policyId = '',
   });
 
   final String id;
@@ -1341,6 +1590,8 @@ class InstitutionCapa {
   final String dueDate;
   final CapaStatus status;
   final String notes;
+  final String licenseId;
+  final String policyId;
 
   bool get isOpen =>
       status == CapaStatus.open || status == CapaStatus.inProgress;
@@ -1363,6 +1614,8 @@ class InstitutionCapa {
     String? dueDate,
     CapaStatus? status,
     String? notes,
+    String? licenseId,
+    String? policyId,
   }) {
     return InstitutionCapa(
       id: id,
@@ -1375,6 +1628,8 @@ class InstitutionCapa {
       dueDate: dueDate ?? this.dueDate,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      licenseId: licenseId ?? this.licenseId,
+      policyId: policyId ?? this.policyId,
     );
   }
 
@@ -1389,6 +1644,8 @@ class InstitutionCapa {
     'dueDate': dueDate,
     'status': status.name,
     'notes': notes,
+    if (licenseId.trim().isNotEmpty) 'licenseId': licenseId,
+    if (policyId.trim().isNotEmpty) 'policyId': policyId,
   };
 
   static InstitutionCapa fromMap(Map<String, dynamic> map) {
@@ -1409,6 +1666,8 @@ class InstitutionCapa {
         orElse: () => CapaStatus.open,
       ),
       notes: '${map['notes'] ?? ''}',
+      licenseId: '${map['licenseId'] ?? ''}',
+      policyId: '${map['policyId'] ?? ''}',
     );
   }
 
@@ -1417,6 +1676,7 @@ class InstitutionCapa {
     CapaSource.risk => 'Risk register',
     CapaSource.license => 'Licence / accreditation',
     CapaSource.resolution => 'Resolution',
+    CapaSource.policy => 'Policy review',
     CapaSource.other => 'Other',
   };
 
@@ -1438,6 +1698,7 @@ class InstitutionKpi {
     this.period = '',
     this.status = KpiStatus.onTrack,
     this.notes = '',
+    this.goalId = '',
   });
 
   final String id;
@@ -1448,6 +1709,7 @@ class InstitutionKpi {
   final String period;
   final KpiStatus status;
   final String notes;
+  final String goalId;
 
   InstitutionKpi copyWith({
     String? name,
@@ -1457,6 +1719,7 @@ class InstitutionKpi {
     String? period,
     KpiStatus? status,
     String? notes,
+    String? goalId,
   }) {
     return InstitutionKpi(
       id: id,
@@ -1467,6 +1730,7 @@ class InstitutionKpi {
       period: period ?? this.period,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      goalId: goalId ?? this.goalId,
     );
   }
 
@@ -1479,6 +1743,7 @@ class InstitutionKpi {
     'period': period,
     'status': status.name,
     'notes': notes,
+    if (goalId.trim().isNotEmpty) 'goalId': goalId,
   };
 
   static InstitutionKpi fromMap(Map<String, dynamic> map) {
@@ -1497,6 +1762,7 @@ class InstitutionKpi {
         orElse: () => KpiStatus.onTrack,
       ),
       notes: '${map['notes'] ?? ''}',
+      goalId: '${map['goalId'] ?? ''}',
     );
   }
 
@@ -1686,6 +1952,55 @@ class InstitutionArchiveItem {
   };
 }
 
+class InstitutionStrategicGoal {
+  const InstitutionStrategicGoal({
+    required this.id,
+    required this.title,
+    this.horizon = '',
+    this.theme = '',
+    this.notes = '',
+  });
+
+  final String id;
+  final String title;
+  final String horizon;
+  final String theme;
+  final String notes;
+
+  InstitutionStrategicGoal copyWith({
+    String? title,
+    String? horizon,
+    String? theme,
+    String? notes,
+  }) {
+    return InstitutionStrategicGoal(
+      id: id,
+      title: title ?? this.title,
+      horizon: horizon ?? this.horizon,
+      theme: theme ?? this.theme,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    if (horizon.trim().isNotEmpty) 'horizon': horizon,
+    if (theme.trim().isNotEmpty) 'theme': theme,
+    if (notes.trim().isNotEmpty) 'notes': notes,
+  };
+
+  static InstitutionStrategicGoal fromMap(Map<String, dynamic> map) {
+    return InstitutionStrategicGoal(
+      id: '${map['id'] ?? ''}',
+      title: '${map['title'] ?? ''}',
+      horizon: '${map['horizon'] ?? ''}',
+      theme: '${map['theme'] ?? ''}',
+      notes: '${map['notes'] ?? ''}',
+    );
+  }
+}
+
 class InstitutionRecord {
   const InstitutionRecord({
     required this.schoolId,
@@ -1706,6 +2021,7 @@ class InstitutionRecord {
     this.kpis = const [],
     this.properties = const [],
     this.archive = const [],
+    this.goals = const [],
     required this.updatedAt,
   });
 
@@ -1727,6 +2043,7 @@ class InstitutionRecord {
   final List<InstitutionKpi> kpis;
   final List<InstitutionProperty> properties;
   final List<InstitutionArchiveItem> archive;
+  final List<InstitutionStrategicGoal> goals;
   final DateTime updatedAt;
 
   String get id => schoolId;
@@ -1763,6 +2080,53 @@ class InstitutionRecord {
     return '';
   }
 
+  String licenseTitleFor(String licenseId) {
+    if (licenseId.isEmpty) return '';
+    for (final row in licenses) {
+      if (row.id == licenseId) return row.title;
+    }
+    return '';
+  }
+
+  String policyTitleFor(String policyId) {
+    if (policyId.isEmpty) return '';
+    for (final row in policies) {
+      if (row.id == policyId) return row.title;
+    }
+    return '';
+  }
+
+  String goalTitleFor(String goalId) {
+    if (goalId.isEmpty) return '';
+    for (final row in goals) {
+      if (row.id == goalId) return row.title;
+    }
+    return '';
+  }
+
+  InstitutionLicense? get nextVisitLicense {
+    InstitutionLicense? best;
+    DateTime? bestDate;
+    for (final lic in licenses) {
+      final visit = lic.visitDate;
+      if (visit == null) continue;
+      if (bestDate == null || visit.isBefore(bestDate)) {
+        best = lic;
+        bestDate = visit;
+      }
+    }
+    return best;
+  }
+
+  int get overduePolicyCount => policies.where((p) => p.reviewOverdue).length;
+
+  int get draftSefCount =>
+      sefEntries.where((e) => e.status == SefStatus.draft).length;
+
+  int get highRiskCount => risks.where((r) => r.isOpen && r.isHigh).length;
+
+  int get openCapaCount => capas.where((c) => c.isOpen).length;
+
   InstitutionRecord copyWith({
     InstitutionProfile? profile,
     List<LeadershipSeat>? leadership,
@@ -1781,6 +2145,7 @@ class InstitutionRecord {
     List<InstitutionKpi>? kpis,
     List<InstitutionProperty>? properties,
     List<InstitutionArchiveItem>? archive,
+    List<InstitutionStrategicGoal>? goals,
     DateTime? updatedAt,
   }) {
     return InstitutionRecord(
@@ -1802,6 +2167,7 @@ class InstitutionRecord {
       kpis: kpis ?? this.kpis,
       properties: properties ?? this.properties,
       archive: archive ?? this.archive,
+      goals: goals ?? this.goals,
       updatedAt: updatedAt ?? DateTime.now(),
     );
   }
@@ -1826,6 +2192,7 @@ class InstitutionRecord {
     'kpis': kpis.map((e) => e.toMap()).toList(),
     'properties': properties.map((e) => e.toMap()).toList(),
     'archive': archive.map((e) => e.toMap()).toList(),
+    'goals': goals.map((e) => e.toMap()).toList(),
     'updatedAt': updatedAt.toIso8601String(),
   };
 
@@ -1877,6 +2244,7 @@ class InstitutionRecord {
       archive: list(
         map['archive'],
       ).map(InstitutionArchiveItem.fromMap).toList(),
+      goals: list(map['goals']).map(InstitutionStrategicGoal.fromMap).toList(),
       updatedAt: parseDate(map['updatedAt']),
     );
   }
