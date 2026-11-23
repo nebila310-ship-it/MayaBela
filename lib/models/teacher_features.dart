@@ -244,6 +244,8 @@ abstract final class HomeworkSubmissionMethods {
   static const values = <String>[online, inClass, oral, portfolio];
 }
 
+enum HomeworkCompletion { notStarted, submitted, late, missing, done }
+
 class HomeworkItem {
   HomeworkItem({
     required this.id,
@@ -273,10 +275,14 @@ class HomeworkItem {
     this.supportNote = '',
     this.extensionNote = '',
     this.maxScore = 100,
+    Map<String, String>? studentCompletion,
+    Map<String, String>? parentHelpNotes,
   })  : attachmentPaths = attachmentPaths ?? [],
         studentWorksheetPaths = studentWorksheetPaths ?? {},
         studentScores = studentScores ?? {},
-        teacherComments = teacherComments ?? {};
+        teacherComments = teacherComments ?? {},
+        studentCompletion = studentCompletion ?? {},
+        parentHelpNotes = parentHelpNotes ?? {};
 
   final String id;
   final String className;
@@ -307,6 +313,10 @@ class HomeworkItem {
   String supportNote;
   String extensionNote;
   double maxScore;
+  /// studentId → [HomeworkCompletion] name. Empty means infer from worksheets/due.
+  Map<String, String> studentCompletion;
+  /// studentId → parent/carer note about how they helped at home.
+  Map<String, String> parentHelpNotes;
 
   int get submittedStudentCount => studentWorksheetPaths.values
       .where((paths) => paths.isNotEmpty)
@@ -352,6 +362,35 @@ class HomeworkItem {
     final key = studentId.trim().toUpperCase();
     return List<String>.from(studentWorksheetPaths[key] ?? const []);
   }
+
+  HomeworkCompletion completionFor(String studentId) {
+    final key = studentId.trim().toUpperCase();
+    final named = studentCompletion[key] ?? studentCompletion[studentId];
+    if (named != null && named.trim().isNotEmpty) {
+      return HomeworkCompletion.values.firstWhere(
+        (v) => v.name == named,
+        orElse: () => HomeworkCompletion.notStarted,
+      );
+    }
+    if (worksheetsForStudent(key).isNotEmpty) {
+      return isOverdue ? HomeworkCompletion.late : HomeworkCompletion.submitted;
+    }
+    if (isOverdue) return HomeworkCompletion.missing;
+    return HomeworkCompletion.notStarted;
+  }
+
+  String helpNoteFor(String studentId) {
+    final key = studentId.trim().toUpperCase();
+    return parentHelpNotes[key] ?? parentHelpNotes[studentId] ?? '';
+  }
+
+  static String completionLabel(HomeworkCompletion status) => switch (status) {
+    HomeworkCompletion.notStarted => 'Not started',
+    HomeworkCompletion.submitted => 'Submitted',
+    HomeworkCompletion.late => 'Late',
+    HomeworkCompletion.missing => 'Missing',
+    HomeworkCompletion.done => 'Done',
+  };
 }
 
 extension HomeworkItemPersistence on HomeworkItem {
@@ -387,6 +426,8 @@ extension HomeworkItemPersistence on HomeworkItem {
         ),
         'studentScores': studentScores,
         'teacherComments': teacherComments,
+        if (studentCompletion.isNotEmpty) 'studentCompletion': studentCompletion,
+        if (parentHelpNotes.isNotEmpty) 'parentHelpNotes': parentHelpNotes,
         'dueReminderSent': dueReminderSent,
         'overdueReminderSent': overdueReminderSent,
       };
@@ -423,6 +464,14 @@ extension HomeworkItemPersistence on HomeworkItem {
       },
       teacherComments: {
         for (final entry in (map['teacherComments'] as Map? ?? {}).entries)
+          entry.key.toString(): entry.value.toString(),
+      },
+      studentCompletion: {
+        for (final entry in (map['studentCompletion'] as Map? ?? {}).entries)
+          entry.key.toString(): entry.value.toString(),
+      },
+      parentHelpNotes: {
+        for (final entry in (map['parentHelpNotes'] as Map? ?? {}).entries)
           entry.key.toString(): entry.value.toString(),
       },
       dueReminderSent: map['dueReminderSent'] == true,

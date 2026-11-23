@@ -10,6 +10,7 @@ import 'package:mayabela/models/transport_passenger.dart';
 import 'package:mayabela/screens/transport_screens.dart';
 import 'package:mayabela/screens/transport_qr_scanner_screen.dart';
 import 'package:mayabela/screens/calendar_screen.dart';
+import 'package:mayabela/screens/conference_pack_screen.dart';
 import 'package:mayabela/screens/class_timetable_screen.dart';
 import 'package:mayabela/screens/fees_payments_screen.dart';
 import 'package:mayabela/screens/gallery_screen.dart';
@@ -439,6 +440,24 @@ List<DashboardEntry> _teacherEntries() {
       ),
     ),
     DashboardEntry(
+      id: 'conferences',
+      icon: Icons.diversity_3,
+      color: const Color(0xFF6A1B9A),
+      isVisible: () => access.canAccessTeacherDashboardTile('conferences'),
+      builder: (context) => DashboardCard(
+        icon: Icons.diversity_3,
+        title: _t('conferences', role),
+        color: const Color(0xFF6A1B9A),
+        badgeCount: _badge('conferences'),
+        onTap: () => _openTile('conferences', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ConferencePackScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
       id: 'timetable',
       icon: Icons.calendar_view_week,
       color: Colors.brown,
@@ -841,6 +860,27 @@ List<DashboardEntry> _parentEntries() {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const CalendarScreen()),
+          );
+        }),
+      ),
+    ),
+    DashboardEntry(
+      id: 'conferences',
+      icon: Icons.diversity_3,
+      color: const Color(0xFF6A1B9A),
+      builder: (context) => DashboardCard(
+        icon: Icons.diversity_3,
+        title: _t('conferences', role),
+        color: const Color(0xFF6A1B9A),
+        badgeCount: _badge('conferences'),
+        onTap: () => _openTile('conferences', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ConferencePackScreen(
+                mode: ConferencePackMode.parent,
+              ),
+            ),
           );
         }),
       ),
@@ -1373,7 +1413,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         const DashboardSectionDefinition(
           title: 'Communication',
           icon: Icons.forum,
-          entryIds: ['messages', 'announcements', 'calendar'],
+          entryIds: ['messages', 'announcements', 'calendar', 'conferences'],
         ),
         const DashboardSectionDefinition(
           title: 'Assistant',
@@ -1390,7 +1430,7 @@ List<DashboardSectionDefinition> sectionDefinitionsFor(String roleKey) {
         DashboardSectionDefinition(
           title: 'My children',
           icon: Icons.child_care,
-          entryIds: ['children', 'attendance', 'homework', 'daily_activities', 'lesson_plans', 'learning_materials', 'grades', 'timetable'],
+          entryIds: ['children', 'attendance', 'homework', 'daily_activities', 'lesson_plans', 'learning_materials', 'grades', 'timetable', 'conferences'],
         ),
         DashboardSectionDefinition(
           title: 'School updates',

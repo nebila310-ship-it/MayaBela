@@ -40,7 +40,7 @@ class AnnouncementAudiences {
             lower == admin) {
           return lower;
         }
-        return all;
+        return raw.trim();
     }
   }
 }
@@ -73,6 +73,11 @@ class Announcement {
     this.attachments = const [],
     this.createdByRole,
     this.createdByAuthor,
+    this.kind = '',
+    this.className = '',
+    this.weekOf = '',
+    this.nextWeekFocus = '',
+    this.whatToBring = '',
   }) : audienceKeys = audienceKeys != null && audienceKeys.isNotEmpty
             ? _normalizeKeys(audienceKeys)
             : [AnnouncementAudiences.normalizeLegacy(audience ?? 'All')];
@@ -88,6 +93,14 @@ class Announcement {
   final List<AnnouncementAttachment> attachments;
   final String? createdByRole;
   final String? createdByAuthor;
+  /// `letter` = Friday homeroom digest for the class.
+  final String kind;
+  final String className;
+  final String weekOf;
+  final String nextWeekFocus;
+  final String whatToBring;
+
+  bool get isClassLetter => kind.trim().toLowerCase() == 'letter';
 
   /// Legacy single-audience label for older call sites.
   String get audience {

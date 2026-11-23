@@ -252,6 +252,8 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
       room = slot.room;
     }
     var substituteId = slot.substituteTeacherId ?? '';
+    var homeworkStands = slot.homeworkStands;
+    final coverNote = TextEditingController(text: slot.coverNote ?? '');
 
     final saved = await showAdminFormDialog(
       context: context,
@@ -354,6 +356,21 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
                 onChanged: (v) => setDialogState(() => substituteId = v ?? ''),
               ),
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Homework still stands'),
+              value: homeworkStands,
+              onChanged: (v) => setDialogState(() => homeworkStands = v),
+            ),
+            adminDialogField(
+              TextField(
+                controller: coverNote,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Cover / change note for families',
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -380,10 +397,14 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
         substituteTeacherId: sub?.teacherId,
         substituteTeacherName: sub?.fullName,
         clearSubstitute: substituteId.isEmpty,
+        homeworkStands: homeworkStands,
+        coverNote: coverNote.text.trim().isEmpty ? null : coverNote.text.trim(),
+        clearCoverNote: coverNote.text.trim().isEmpty,
       );
       subjectController.dispose();
       durationController.dispose();
       roomController.dispose();
+      coverNote.dispose();
       if (mounted) {
         onApply(updated);
       }
@@ -392,6 +413,7 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
     subjectController.dispose();
     durationController.dispose();
     roomController.dispose();
+    coverNote.dispose();
   }
 
   Future<void> _addSlot() async {
@@ -496,6 +518,11 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen>
                       ? 'Cover: ${slot.substituteTeacherName!.trim()}'
                       : s.timetableTaughtBy(slot.effectiveTeacherName!.trim()),
                 if ((slot.room ?? '').trim().isNotEmpty) slot.room!.trim(),
+                if (slot.hasCover && slot.homeworkStands)
+                  'Homework still stands',
+                if (slot.hasCover && !slot.homeworkStands) 'Homework paused',
+                if ((slot.coverNote ?? '').trim().isNotEmpty)
+                  slot.coverNote!.trim(),
               ].join(' · '),
             ),
             trailing: _canEdit

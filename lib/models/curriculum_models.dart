@@ -68,6 +68,9 @@ class CurriculumUnit {
     this.attachmentPaths = const [],
     this.createdBy,
     this.publishedAt,
+    this.homeLearning = '',
+    this.assessmentSummary = '',
+    this.helpAtHome = '',
   });
 
   final String id;
@@ -92,6 +95,16 @@ class CurriculumUnit {
   final DateTime createdAt;
   DateTime updatedAt;
   DateTime? publishedAt;
+  /// Short parent-facing pack shown on the lesson-plan desk.
+  String homeLearning;
+  String assessmentSummary;
+  String helpAtHome;
+
+  bool get hasParentPack =>
+      homeLearning.trim().isNotEmpty ||
+      assessmentSummary.trim().isNotEmpty ||
+      helpAtHome.trim().isNotEmpty ||
+      objectives.trim().isNotEmpty;
 
   bool get isPublished => status == CurriculumUnitStatus.published;
 
@@ -116,6 +129,10 @@ class CurriculumUnit {
         'homeworkIds': homeworkIds,
         'attachmentPaths': attachmentPaths,
         if (createdBy != null) 'createdBy': createdBy,
+        if (homeLearning.trim().isNotEmpty) 'homeLearning': homeLearning,
+        if (assessmentSummary.trim().isNotEmpty)
+          'assessmentSummary': assessmentSummary,
+        if (helpAtHome.trim().isNotEmpty) 'helpAtHome': helpAtHome,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
         if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
@@ -169,6 +186,9 @@ class CurriculumUnit {
               .toList() ??
           const [],
       createdBy: map['createdBy'] as String?,
+      homeLearning: map['homeLearning'] as String? ?? '',
+      assessmentSummary: map['assessmentSummary'] as String? ?? '',
+      helpAtHome: map['helpAtHome'] as String? ?? '',
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:

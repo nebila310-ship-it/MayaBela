@@ -197,6 +197,18 @@ class _WebCurriculumPageState extends State<WebCurriculumPage>
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           children: [
             if (unit.objectives.trim().isNotEmpty) Text(unit.objectives),
+            if (unit.assessmentSummary.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('Coming assessment: ${unit.assessmentSummary}'),
+            ],
+            if (unit.homeLearning.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('Learning at home: ${unit.homeLearning}'),
+            ],
+            if (unit.helpAtHome.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('Help at home: ${unit.helpAtHome}'),
+            ],
             if (unit.description.trim().isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(unit.description),
@@ -868,6 +880,9 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
   late final TextEditingController _objectives;
   late final TextEditingController _description;
   late final TextEditingController _standards;
+  late final TextEditingController _homeLearning;
+  late final TextEditingController _assessment;
+  late final TextEditingController _helpAtHome;
   late String _subject;
   String? _className;
   late CurriculumFramework _framework;
@@ -884,6 +899,9 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
     _objectives = TextEditingController(text: u?.objectives ?? '');
     _description = TextEditingController(text: u?.description ?? '');
     _standards = TextEditingController(text: u?.standardCodes.join(', ') ?? '');
+    _homeLearning = TextEditingController(text: u?.homeLearning ?? '');
+    _assessment = TextEditingController(text: u?.assessmentSummary ?? '');
+    _helpAtHome = TextEditingController(text: u?.helpAtHome ?? '');
     _subject = u?.subject ??
         (widget.subjects.contains('Science')
             ? 'Science'
@@ -902,6 +920,9 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
     _objectives.dispose();
     _description.dispose();
     _standards.dispose();
+    _homeLearning.dispose();
+    _assessment.dispose();
+    _helpAtHome.dispose();
     super.dispose();
   }
 
@@ -933,6 +954,9 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
         examPaperIds: _papers.toList(),
         homeworkIds: _homework.toList(),
         attachmentPaths: _attachments,
+        homeLearning: _homeLearning.text,
+        assessmentSummary: _assessment.text,
+        helpAtHome: _helpAtHome.text,
       );
     } else {
       await CurriculumService.instance.updateUnit(
@@ -949,6 +973,9 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
         examPaperIds: _papers.toList(),
         homeworkIds: _homework.toList(),
         attachmentPaths: _attachments,
+        homeLearning: _homeLearning.text,
+        assessmentSummary: _assessment.text,
+        helpAtHome: _helpAtHome.text,
         note: 'Edited from curriculum office',
       );
     }
@@ -1061,6 +1088,27 @@ class _UnitEditorDialogState extends State<_UnitEditorDialog> {
                 controller: _description,
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              TextField(
+                controller: _assessment,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Coming assessment (families)',
+                ),
+              ),
+              TextField(
+                controller: _homeLearning,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Learning at home',
+                ),
+              ),
+              TextField(
+                controller: _helpAtHome,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'How families can help',
+                ),
               ),
               const SizedBox(height: 12),
               CourseAttachmentPicker(

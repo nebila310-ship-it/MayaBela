@@ -93,6 +93,105 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     }
   }
 
+  Future<void> _postClassLetter() async {
+    final classes = TeacherAccessService.instance.myClasses
+        .where((a) => a.isHomeroom)
+        .map((a) => a.className)
+        .toList();
+    if (classes.isEmpty) return;
+    var className = classes.first;
+    final title = TextEditingController(
+      text: 'Week of ${DateTime.now().toIso8601String().split('T').first}',
+    );
+    final body = TextEditingController();
+    final weekOf = TextEditingController(
+      text: DateTime.now().toIso8601String().split('T').first,
+    );
+    final next = TextEditingController();
+    final bring = TextEditingController();
+    final saved = await showAdminFormDialog(
+      context: context,
+      title: 'Weekly class letter',
+      subtitle: 'Friday digest for families',
+      accent: AnnouncementsPalette.primary,
+      icon: Icons.mail_outline,
+      saveLabel: 'Send letter',
+      builder: (context, setDialogState) => Column(
+        children: [
+          adminDialogField(
+            DropdownButtonFormField<String>(
+              initialValue: className,
+              decoration: const InputDecoration(labelText: 'Class'),
+              items: [
+                for (final name in classes)
+                  DropdownMenuItem(value: name, child: Text(name)),
+              ],
+              onChanged: (v) {
+                if (v != null) setDialogState(() => className = v);
+              },
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: title,
+              decoration: const InputDecoration(labelText: 'Title'),
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: weekOf,
+              decoration: const InputDecoration(labelText: 'Week of'),
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: body,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'This week',
+                hintText: 'What we learned, highlights, reminders.',
+              ),
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: next,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: 'Coming next week'),
+            ),
+          ),
+          adminDialogField(
+            TextField(
+              controller: bring,
+              decoration: const InputDecoration(labelText: 'What to bring'),
+            ),
+          ),
+        ],
+      ),
+    );
+    final titleText = title.text;
+    final bodyText = body.text;
+    final weekText = weekOf.text;
+    final nextText = next.text;
+    final bringText = bring.text;
+    title.dispose();
+    body.dispose();
+    weekOf.dispose();
+    next.dispose();
+    bring.dispose();
+    if (!saved) return;
+    _data.postClassLetter(
+      className: className,
+      author: widget.authorName,
+      title: titleText,
+      body: bodyText,
+      weekOf: weekText,
+      nextWeekFocus: nextText,
+      whatToBring: bringText,
+    );
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -103,7 +202,18 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
         return Scaffold(
           backgroundColor: const Color(0xFFFFF7ED),
-          appBar: AnnouncementsAppBar(title: s.announcementsTitle),
+          appBar: AnnouncementsAppBar(
+            title: s.announcementsTitle,
+            actions: [
+              if (widget.canCreate &&
+                  TeacherAccessService.instance.hasAnyHomeroomClass)
+                IconButton(
+                  tooltip: 'Weekly class letter',
+                  onPressed: _postClassLetter,
+                  icon: const Icon(Icons.mail_outline),
+                ),
+            ],
+          ),
           floatingActionButton: widget.canCreate
               ? FloatingActionButton.extended(
                   onPressed: _createAnnouncement,
@@ -291,9 +401,39 @@ class AnnouncementDetailScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      announcement.body,
-                      style: const TextStyle(fontSize: 16, height: 1.55),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (announcement.isClassLetter) ...[
+                          const Text(
+                            'Weekly class letter',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          if (announcement.weekOf.isNotEmpty)
+                            Text('Week of ${announcement.weekOf}'),
+                          const SizedBox(height: 10),
+                        ],
+                        Text(
+                          announcement.body,
+                          style: const TextStyle(fontSize: 16, height: 1.55),
+                        ),
+                        if (announcement.nextWeekFocus.trim().isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Coming next week',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          Text(announcement.nextWeekFocus),
+                        ],
+                        if (announcement.whatToBring.trim().isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'What to bring',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          Text(announcement.whatToBring),
+                        ],
+                      ],
                     ),
                   ),
                   if (announcement.attachments.isNotEmpty) ...[

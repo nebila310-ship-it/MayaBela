@@ -63,9 +63,14 @@ class AnnouncementPriorityStyle {
 }
 
 class AnnouncementsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const AnnouncementsAppBar({super.key, required this.title});
+  const AnnouncementsAppBar({
+    super.key,
+    required this.title,
+    this.actions,
+  });
 
   final String title;
+  final List<Widget>? actions;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -85,6 +90,7 @@ class AnnouncementsAppBar extends StatelessWidget implements PreferredSizeWidget
         ),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      actions: actions,
     );
   }
 }
@@ -194,7 +200,9 @@ class AnnouncementCard extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    priority.label,
+                                    announcement.isClassLetter
+                                        ? 'Class letter · ${priority.label}'
+                                        : priority.label,
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,

@@ -135,6 +135,9 @@ class CurriculumService extends ChangeNotifier {
     List<String> examPaperIds = const [],
     List<String> homeworkIds = const [],
     List<String> attachmentPaths = const [],
+    String homeLearning = '',
+    String assessmentSummary = '',
+    String helpAtHome = '',
     String? schoolId,
   }) async {
     final now = DateTime.now();
@@ -153,6 +156,9 @@ class CurriculumService extends ChangeNotifier {
       examPaperIds: List.of(examPaperIds),
       homeworkIds: List.of(homeworkIds),
       attachmentPaths: List.of(attachmentPaths),
+      homeLearning: homeLearning.trim(),
+      assessmentSummary: assessmentSummary.trim(),
+      helpAtHome: helpAtHome.trim(),
       createdBy: _username,
       createdAt: now,
       updatedAt: now,
@@ -177,6 +183,9 @@ class CurriculumService extends ChangeNotifier {
     List<String>? homeworkIds,
     List<String>? lessonPlanIds,
     List<String>? attachmentPaths,
+    String? homeLearning,
+    String? assessmentSummary,
+    String? helpAtHome,
     String? note,
   }) async {
     final unit = unitById(id);
@@ -207,9 +216,84 @@ class CurriculumService extends ChangeNotifier {
     if (attachmentPaths != null) {
       unit.attachmentPaths = List.of(attachmentPaths);
     }
+    if (homeLearning != null) unit.homeLearning = homeLearning.trim();
+    if (assessmentSummary != null) {
+      unit.assessmentSummary = assessmentSummary.trim();
+    }
+    if (helpAtHome != null) unit.helpAtHome = helpAtHome.trim();
     unit.updatedAt = DateTime.now();
     await _persist();
     return unit;
+  }
+
+  /// Teacher desk: write the parent-facing pack for a class + subject unit.
+  Future<CurriculumUnit> upsertParentPack({
+    required String className,
+    required String subject,
+    required String title,
+    String objectives = '',
+    String assessmentSummary = '',
+    String helpAtHome = '',
+    String homeLearning = '',
+    bool publish = true,
+    String? existingId,
+  }) async {
+    CurriculumUnit? unit;
+    if (existingId != null && existingId.trim().isNotEmpty) {
+      unit = unitById(existingId);
+    }
+    if (unit == null) {
+      final subjectKey = subject.trim().toLowerCase();
+      for (final candidate in unitsForSchool()) {
+        if (candidate.subject.trim().toLowerCase() != subjectKey) continue;
+        final unitClass = candidate.className;
+        if (unitClass == null ||
+            unitClass.isEmpty ||
+            StudentRegistryService.classNamesMatch(unitClass, className)) {
+          unit = candidate;
+          break;
+        }
+      }
+    }
+    if (unit == null) {
+      unit = await createUnit(
+        title: title,
+        subject: subject,
+        className: className,
+        gradeLevel: className,
+        objectives: objectives,
+        assessmentSummary: assessmentSummary,
+        helpAtHome: helpAtHome,
+        homeLearning: homeLearning,
+      );
+    } else {
+      await updateUnit(
+        unit.id,
+        title: title,
+        subject: subject,
+        className: className,
+        objectives: objectives,
+        assessmentSummary: assessmentSummary,
+        helpAtHome: helpAtHome,
+        homeLearning: homeLearning,
+        note: 'Parent pack from lesson-plan desk',
+      );
+      unit = unitById(unit.id);
+    }
+    if (publish && unit != null && !unit.isPublished) {
+      await setUnitStatus(unit.id, CurriculumUnitStatus.published);
+      unit = unitById(unit.id);
+    }
+    if (publish && unit != null) {
+      SchoolDataService.instance.notifyClassUpdate(
+        className: className,
+        title: 'Unit for families — ${unit.subject}',
+        body:
+            '${unit.title}. Open Lesson plans for goals, assessment, and help at home.',
+        type: NotificationType.announcement,
+      );
+    }
+    return unit!;
   }
 
   Future<CurriculumUnit?> setUnitStatus(

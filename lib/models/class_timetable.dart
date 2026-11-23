@@ -13,6 +13,8 @@ class TimetableSlot {
     this.room,
     this.substituteTeacherId,
     this.substituteTeacherName,
+    this.homeworkStands = true,
+    this.coverNote,
   });
 
   final String id;
@@ -24,6 +26,13 @@ class TimetableSlot {
   final String? room;
   final String? substituteTeacherId;
   final String? substituteTeacherName;
+  /// When a cover teacher is in, homework still stands unless cleared.
+  final bool homeworkStands;
+  final String? coverNote;
+
+  bool get hasCover =>
+      (substituteTeacherName ?? '').trim().isNotEmpty ||
+      (substituteTeacherId ?? '').trim().isNotEmpty;
 
   String? get effectiveTeacherId =>
       (substituteTeacherId ?? '').trim().isNotEmpty
@@ -45,9 +54,12 @@ class TimetableSlot {
     String? room,
     String? substituteTeacherId,
     String? substituteTeacherName,
+    bool? homeworkStands,
+    String? coverNote,
     bool clearTeacher = false,
     bool clearRoom = false,
     bool clearSubstitute = false,
+    bool clearCoverNote = false,
   }) {
     return TimetableSlot(
       id: id ?? this.id,
@@ -63,6 +75,8 @@ class TimetableSlot {
       substituteTeacherName: clearSubstitute
           ? null
           : (substituteTeacherName ?? this.substituteTeacherName),
+      homeworkStands: homeworkStands ?? this.homeworkStands,
+      coverNote: clearCoverNote ? null : (coverNote ?? this.coverNote),
     );
   }
 }

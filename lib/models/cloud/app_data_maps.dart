@@ -270,6 +270,11 @@ abstract final class AppDataMaps {
         .toList(),
     if (a.createdByRole != null) 'createdByRole': a.createdByRole,
     if (a.createdByAuthor != null) 'createdByAuthor': a.createdByAuthor,
+    if (a.kind.trim().isNotEmpty) 'kind': a.kind,
+    if (a.className.trim().isNotEmpty) 'className': a.className,
+    if (a.weekOf.trim().isNotEmpty) 'weekOf': a.weekOf,
+    if (a.nextWeekFocus.trim().isNotEmpty) 'nextWeekFocus': a.nextWeekFocus,
+    if (a.whatToBring.trim().isNotEmpty) 'whatToBring': a.whatToBring,
   };
 
   static Announcement announcementFromMap(Map<String, dynamic> map) =>
@@ -300,6 +305,11 @@ abstract final class AppDataMaps {
             .toList(),
         createdByRole: map['createdByRole'] as String?,
         createdByAuthor: map['createdByAuthor'] as String?,
+        kind: map['kind'] as String? ?? '',
+        className: map['className'] as String? ?? '',
+        weekOf: map['weekOf'] as String? ?? '',
+        nextWeekFocus: map['nextWeekFocus'] as String? ?? '',
+        whatToBring: map['whatToBring'] as String? ?? '',
       );
 
   // —— Schools ——
@@ -465,6 +475,9 @@ abstract final class AppDataMaps {
                   'substituteTeacherId': slot.substituteTeacherId,
                 if (slot.substituteTeacherName != null)
                   'substituteTeacherName': slot.substituteTeacherName,
+                'homeworkStands': slot.homeworkStands,
+                if ((slot.coverNote ?? '').trim().isNotEmpty)
+                  'coverNote': slot.coverNote,
               },
             )
             .toList(),
@@ -494,6 +507,8 @@ abstract final class AppDataMaps {
                 room: raw['room'] as String?,
                 substituteTeacherId: raw['substituteTeacherId'] as String?,
                 substituteTeacherName: raw['substituteTeacherName'] as String?,
+                homeworkStands: raw['homeworkStands'] as bool? ?? true,
+                coverNote: raw['coverNote'] as String?,
               );
             })
             .toList();

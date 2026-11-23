@@ -10,6 +10,7 @@ import 'package:mayabela/services/student_profile_service.dart';
 import 'package:mayabela/services/curriculum_service.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/widgets/lesson_plan_view_card.dart';
+import 'package:mayabela/widgets/parent_unit_pack.dart';
 
 /// Published weekly plans for the signed-in student or a parent's children.
 class StudentLessonPlansScreen extends StatefulWidget {
@@ -56,7 +57,11 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
   Widget build(BuildContext context) {
     const accent = Color(0xFF5D4037);
     return ListenableBuilder(
-      listenable: Listenable.merge([_plans, AppLocale.instance]),
+      listenable: Listenable.merge([
+        _plans,
+        CurriculumService.instance,
+        AppLocale.instance,
+      ]),
       builder: (context, _) {
         final classNames = _classNames;
         final items = _publishedPlans(classNames);
@@ -74,28 +79,31 @@ class _StudentLessonPlansScreenState extends State<StudentLessonPlansScreen> {
           ),
           body: emptyClass
               ? Center(child: Text(emptyHint))
-              : items.isEmpty
-                  ? Center(
-                      child: Text(
-                        isParent
-                            ? 'No published lesson plans for this class yet.'
-                            : 'No published lesson plans yet.',
-                      ),
-                    )
-                  : ListView.builder(
+              : ListView.builder(
                       padding: listPagePadding(context),
-                      itemCount: items.length + (isParent ? 1 : 0),
+                      itemCount: items.length + 1,
                       itemBuilder: (context, i) {
-                        if (isParent && i == 0) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: Text(
-                              'Teachers publish weekly plans for this class. '
-                              'You can read them and open worksheets. You cannot edit them.',
-                            ),
+                        if (i == 0) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (isParent)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 10),
+                                  child: Text(
+                                    'Teachers publish weekly plans for this class. '
+                                    'You can read them and open worksheets. You cannot edit them.',
+                                  ),
+                                ),
+                              for (final name in classNames)
+                                ParentUnitPackList(
+                                  className: name,
+                                  accent: accent,
+                                ),
+                            ],
                           );
                         }
-                        final plan = items[isParent ? i - 1 : i];
+                        final plan = items[i - 1];
                         return LessonPlanViewCard(
                           key: ValueKey(plan.id),
                           plan: plan,

@@ -11,6 +11,7 @@ import 'package:mayabela/utils/scroll_safe_area.dart';
 import 'package:mayabela/web_erp/pages/web_lesson_plans_page.dart';
 import 'package:mayabela/widgets/class_picker_bar.dart';
 import 'package:mayabela/widgets/lesson_plan_view_card.dart';
+import 'package:mayabela/widgets/parent_unit_pack.dart';
 
 /// Teacher dashboard: weekly plans for my classes.
 class TeacherLessonPlansScreen extends StatefulWidget {
@@ -57,7 +58,11 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
   Widget build(BuildContext context) {
     const accent = TeacherTheme.primaryDark;
     return ListenableBuilder(
-      listenable: Listenable.merge([_plans, AppLocale.instance]),
+      listenable: Listenable.merge([
+        _plans,
+        CurriculumService.instance,
+        AppLocale.instance,
+      ]),
       builder: (context, _) {
         final className = _selectedClass;
         final subjects =
@@ -113,19 +118,34 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
                 ),
               if (_classOptions.isNotEmpty)
                 Expanded(
-                  child: items.isEmpty
-                      ? Center(
-                          child: Text(
-                            subjects.isEmpty
-                                ? 'No assigned subjects for this class.'
-                                : 'No lesson plans for your subjects in this class.',
-                          ),
+                  child: items.isEmpty && subjects.isEmpty
+                      ? const Center(
+                          child: Text('No assigned subjects for this class.'),
                         )
                       : ListView.builder(
                           padding: listPagePadding(context),
-                          itemCount: items.length,
+                          itemCount: items.isEmpty ? 2 : items.length + 1,
                           itemBuilder: (context, i) {
-                            final plan = items[i];
+                            if (i == 0) {
+                              return ParentUnitPackList(
+                                className: className ?? '',
+                                accent: accent,
+                                canEdit: subjects.isNotEmpty,
+                                subjects: subjects,
+                                onEdit: () => _writeParentPack(className ?? ''),
+                              );
+                            }
+                            if (items.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.only(top: 24),
+                                child: Center(
+                                  child: Text(
+                                    'No lesson plans for your subjects in this class.',
+                                  ),
+                                ),
+                              );
+                            }
+                            final plan = items[i - 1];
                             return LessonPlanViewCard(
                               key: ValueKey(plan.id),
                               plan: plan,
@@ -171,6 +191,17 @@ class _TeacherLessonPlansScreenState extends State<TeacherLessonPlansScreen> {
         );
       },
     );
+  }
+
+  Future<void> _writeParentPack(String className) async {
+    final subjects = _subjectsFor(className);
+    if (subjects.isEmpty) return;
+    await showParentPackEditor(
+      context: context,
+      className: className,
+      subjects: subjects,
+    );
+    if (mounted) setState(() {});
   }
 
   Future<void> _openEditor([LessonPlan? plan]) async {
