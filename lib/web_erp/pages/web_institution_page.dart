@@ -197,6 +197,13 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         () => _open(2, 2),
       ),
       (
+        'Overdue policy reviews',
+        m.overduePolicies,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+        () => _open(2, 2),
+      ),
+      (
         'Licenses expiring',
         m.expiringLicenses,
         scheme.tertiaryContainer,
@@ -225,6 +232,13 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         () => _open(2, 5),
       ),
       (
+        'High risks',
+        m.highRisks,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+        () => _open(2, 6),
+      ),
+      (
         'Open risks',
         m.openRisks,
         scheme.primaryContainer,
@@ -237,6 +251,13 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         scheme.errorContainer,
         scheme.onErrorContainer,
         () => _open(2, 6),
+      ),
+      (
+        'SEF areas still draft',
+        m.draftSef,
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+        () => _open(3, 0),
       ),
       (
         'Open CAPA',
@@ -299,6 +320,43 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               ),
           ],
         ),
+        if (rec.nextVisitLicense != null) ...[
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: () => _open(2, 3),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: WebErpTheme.cardDecoration(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Next accreditation visit',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    [
+                      InstitutionLicense.accreditorLabel(
+                        rec.nextVisitLicense!.accreditor,
+                      ),
+                      rec.nextVisitLicense!.title,
+                      if (rec.nextVisitLicense!.visitStartsOn.isNotEmpty)
+                        rec.nextVisitLicense!.visitStartsOn,
+                      if (m.daysUntilNextVisit != null)
+                        m.daysUntilNextVisit! >= 0
+                            ? '${m.daysUntilNextVisit} days'
+                            : '${-m.daysUntilNextVisit!} days overdue',
+                      if (rec.nextVisitLicense!.nextReportDue.isNotEmpty)
+                        'Report due ${rec.nextVisitLicense!.nextReportDue}',
+                    ].join(' · '),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Container(
           width: double.infinity,
@@ -389,6 +447,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               if (seat.title.isNotEmpty) seat.title,
               if (seat.isActing) 'Acting',
               if (seat.termEnd.isNotEmpty) 'until ${seat.termEnd}',
+              if (seat.declaredInterest.isNotEmpty)
+                'COI: ${seat.declaredInterest}',
             ].join(' · '),
             onEdit: () => _editLeadership(seat),
             onDelete: () => _guarded(() async {
@@ -516,12 +576,39 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             title: '${policy.number}  ${policy.title}',
             subtitle: [
               InstitutionPolicy.statusLabel(policy.status),
+              'v${policy.version}',
+              InstitutionPolicy.audienceLabel(policy.audience),
               if (policy.owner.isNotEmpty) policy.owner,
+              if (policy.approvedOn.isNotEmpty) 'Board ${policy.approvedOn}',
               if (policy.reviewDate.isNotEmpty) 'Review ${policy.reviewDate}',
+              if (policy.reviewOverdue) 'Review overdue',
               if (policy.reviewDueSoon) 'Review due soon',
+              if (policy.acknowledgements.isNotEmpty)
+                '${policy.acknowledgements.length} acknowledged',
               if (policy.attachmentPaths.isNotEmpty)
                 _fileCountLabel(policy.attachmentPaths.length),
             ].join(' · '),
+            tone: policy.reviewOverdue ? Colors.red.shade700 : null,
+            extraActions: [
+              if (policy.status == PolicyStatus.active)
+                _Action(
+                  label: 'Acknowledge',
+                  icon: Icons.how_to_reg_outlined,
+                  onTap: () => _acknowledgePolicy(policy),
+                ),
+              if (policy.status == PolicyStatus.active)
+                _Action(
+                  label: 'Issue new version',
+                  icon: Icons.copy_outlined,
+                  onTap: () => _issuePolicyVersion(policy),
+                ),
+              if (policy.reviewOverdue)
+                _Action(
+                  label: 'Open CAPA',
+                  icon: Icons.playlist_add_check_outlined,
+                  onTap: () => _openCapaFromPolicy(policy),
+                ),
+            ],
             onEdit: () => _editPolicy(policy),
             onDelete: () => _guarded(() async {
               await _svc.deletePolicy(policy.id, schoolId: _schoolId);
@@ -567,10 +654,15 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           _tile(
             title: license.title,
             subtitle: [
+              InstitutionLicense.accreditorLabel(license.accreditor),
               InstitutionLicense.healthLabel(license.health),
               if (license.issuer.isNotEmpty) license.issuer,
               if (license.number.isNotEmpty) license.number,
               if (license.expiresOn.isNotEmpty) 'Expires ${license.expiresOn}',
+              if (license.visitStartsOn.isNotEmpty)
+                'Visit ${license.visitStartsOn}',
+              if (license.nextReportDue.isNotEmpty)
+                'Report ${license.nextReportDue}',
               license.campusScope,
               if (license.attachmentPaths.isNotEmpty)
                 _fileCountLabel(license.attachmentPaths.length),
@@ -580,6 +672,15 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               LicenseHealth.expiring => Colors.orange.shade800,
               _ => null,
             },
+            extraActions: [
+              if (license.health == LicenseHealth.expired ||
+                  license.health == LicenseHealth.expiring)
+                _Action(
+                  label: 'Open CAPA',
+                  icon: Icons.playlist_add_check_outlined,
+                  onTap: () => _openCapaFromLicense(license),
+                ),
+            ],
             onEdit: () => _editLicense(license),
             onDelete: () => _guarded(() async {
               await _svc.deleteLicense(license.id, schoolId: _schoolId);
@@ -627,8 +728,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       ),
       children: [
         Text(
-          'Invite staff, set the venue or join link, and attach papers. '
-          'Decisions still live as resolutions.',
+          'Board pack: ordered agenda, papers, attendance, quorum, and minutes. '
+          'Close the sitting with a linked resolution.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
@@ -637,19 +738,33 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             title: meeting.title,
             subtitle: [
               InstitutionMeeting.bodyLabel(meeting.bodyKind),
+              InstitutionMeeting.minutesLabel(meeting.minutesStatus),
               if (meeting.bodyKind == MeetingBodyKind.committee &&
                   rec.committeeNameFor(meeting.committeeId).isNotEmpty)
                 rec.committeeNameFor(meeting.committeeId),
               if (meeting.heldOn.isNotEmpty) meeting.heldOn,
               if (meeting.venue.isNotEmpty) meeting.venue,
               if (meeting.meetingLink.isNotEmpty) 'Join link',
-              if (meeting.attendance.isNotEmpty) meeting.attendance,
+              if (meeting.orderedAgenda.isNotEmpty)
+                '${meeting.orderedAgenda.length} agenda items',
               if (meeting.invitees.isNotEmpty)
                 '${meeting.invitees.length} invited',
+              if (meeting.presentCount > 0) '${meeting.presentCount} present',
+              if (meeting.quorumRequired > 0)
+                meeting.quorumMet ? 'Quorum met' : 'No quorum',
+              if (meeting.apologies.isNotEmpty)
+                'Apologies ${meeting.apologies}',
               if (meeting.attachmentPaths.isNotEmpty)
                 _fileCountLabel(meeting.attachmentPaths.length),
               '${rec.resolutions.where((r) => r.meetingId == meeting.id).length} resolutions',
             ].join(' · '),
+            extraActions: [
+              _Action(
+                label: 'Add resolution',
+                icon: Icons.gavel_outlined,
+                onTap: () => _editResolution(null, meeting),
+              ),
+            ],
             onEdit: () => _editMeeting(meeting),
             onDelete: () => _guarded(() async {
               await _svc.deleteMeeting(meeting.id, schoolId: _schoolId);
@@ -670,21 +785,36 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
+        _riskHeatMatrix(rec),
+        const SizedBox(height: 12),
         for (final risk in rec.risks)
           _tile(
             title: risk.title,
             subtitle: [
               InstitutionRisk.statusLabel(risk.status),
+              '${risk.heatBand} heat (${risk.heatScore})',
               if (risk.isOverdue) 'Review overdue',
               if (risk.reviewDueSoon && !risk.isOverdue) 'Review due soon',
               'Likelihood ${InstitutionRisk.likelihoodLabel(risk.likelihood)}',
               'Impact ${InstitutionRisk.impactLabel(risk.impact)}',
+              if (risk.treatment.isNotEmpty) 'Treatment set',
+              if (risk.residual.isNotEmpty) 'Residual ${risk.residual}',
               if (risk.owner.isNotEmpty) risk.owner,
               if (risk.reviewDate.isNotEmpty) 'Review ${risk.reviewDate}',
             ].join(' · '),
-            tone: risk.isOverdue
+            tone: risk.isHigh
                 ? Colors.red.shade700
-                : (risk.reviewDueSoon ? Colors.orange.shade800 : null),
+                : (risk.isOverdue
+                      ? Colors.red.shade700
+                      : (risk.reviewDueSoon ? Colors.orange.shade800 : null)),
+            extraActions: [
+              if (risk.isOpen && risk.isHigh)
+                _Action(
+                  label: 'Open CAPA',
+                  icon: Icons.playlist_add_check_outlined,
+                  onTap: () => _openCapaFromRisk(risk),
+                ),
+            ],
             onEdit: () => _editRisk(risk),
             onDelete: () => _guarded(() async {
               await _svc.deleteRisk(risk.id, schoolId: _schoolId);
@@ -713,7 +843,19 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               InstitutionPartner.statusLabel(partner.status),
               if (partner.contact.isNotEmpty) partner.contact,
               if (partner.agreementRef.isNotEmpty) partner.agreementRef,
+              if (partner.renewsOn.isNotEmpty) 'Renews ${partner.renewsOn}',
+              if (partner.renewalHealth == LicenseHealth.expired)
+                'Renewal overdue',
+              if (partner.renewalHealth == LicenseHealth.expiring)
+                'Renewal due soon',
+              if (partner.attachmentPaths.isNotEmpty)
+                _fileCountLabel(partner.attachmentPaths.length),
             ].join(' · '),
+            tone: switch (partner.renewalHealth) {
+              LicenseHealth.expired => Colors.red.shade700,
+              LicenseHealth.expiring => Colors.orange.shade800,
+              _ => null,
+            },
             onEdit: () => _editPartner(partner),
             onDelete: () => _guarded(() async {
               await _svc.deletePartner(partner.id, schoolId: _schoolId);
@@ -727,10 +869,14 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     return _listTab(
       empty: 'No institutional self-evaluation entries yet.',
       onAdd: () => _editSef(),
-      extraAction: _Action(label: 'Add CAPA', onTap: () => _editCapa()),
+      extraActions: [
+        _Action(label: 'Seed CIS/WASC domains', onTap: () => _seedSefDomains()),
+        _Action(label: 'Add CAPA', onTap: () => _editCapa()),
+      ],
       children: [
         Text(
-          'Institutional SEF judgments. Teaching observations stay on QA Findings.',
+          'Institutional SEF judgments with an evidence binder. Teaching '
+          'observations stay on QA Findings.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
@@ -740,8 +886,20 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             subtitle: [
               InstitutionSefEntry.statusLabel(row.status),
               InstitutionSefEntry.judgmentLabel(row.judgment),
+              if (rec.goalTitleFor(row.goalId).isNotEmpty)
+                rec.goalTitleFor(row.goalId),
+              if (row.evidencePaths.isNotEmpty)
+                _fileCountLabel(row.evidencePaths.length),
               if (row.owner.isNotEmpty) row.owner,
             ].join(' · '),
+            extraActions: [
+              if (row.isBelowGood)
+                _Action(
+                  label: 'Open CAPA',
+                  icon: Icons.playlist_add_check_outlined,
+                  onTap: () => _openCapaFromSef(row),
+                ),
+            ],
             onEdit: () => _editSef(row),
             onDelete: () => _guarded(() async {
               await _svc.deleteSef(row.id, schoolId: _schoolId);
@@ -773,6 +931,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                 rec.sefTitleFor(row.sefId),
               if (rec.riskTitleFor(row.riskId).isNotEmpty)
                 rec.riskTitleFor(row.riskId),
+              if (rec.licenseTitleFor(row.licenseId).isNotEmpty)
+                rec.licenseTitleFor(row.licenseId),
+              if (rec.policyTitleFor(row.policyId).isNotEmpty)
+                rec.policyTitleFor(row.policyId),
               if (row.owner.isNotEmpty) row.owner,
               if (row.dueDate.isNotEmpty) 'Due ${row.dueDate}',
             ].join(' · '),
@@ -790,19 +952,49 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     return _listTab(
       empty: 'No institutional KPIs yet.',
       onAdd: () => _editKpi(),
+      extraAction: _Action(
+        label: 'Add strategic goal',
+        onTap: () => _editGoal(),
+      ),
       children: [
         Text(
-          'Strategy scorecard for the institution. Markbook and exam results stay '
+          '3–5 year plan on this scorecard. Markbook and exam results stay '
           'on academic desks.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
+        const Text(
+          'Strategic goals',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        if (rec.goals.isEmpty) const Text('No strategic goals yet.'),
+        for (final goal in rec.goals)
+          _tile(
+            title: goal.title,
+            subtitle: [
+              if (goal.horizon.isNotEmpty) goal.horizon,
+              if (goal.theme.isNotEmpty) goal.theme,
+              '${rec.kpis.where((k) => k.goalId == goal.id).length} KPIs',
+              '${rec.sefEntries.where((e) => e.goalId == goal.id).length} SEF areas',
+            ].join(' · '),
+            onEdit: () => _editGoal(goal),
+            onDelete: () => _guarded(() async {
+              await _svc.deleteGoal(goal.id, schoolId: _schoolId);
+            }),
+          ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(0, 12, 0, 8),
+          child: Text('KPIs', style: TextStyle(fontWeight: FontWeight.w800)),
+        ),
         for (final row in rec.kpis)
           _tile(
             title: row.name,
             subtitle: [
               InstitutionKpi.statusLabel(row.status),
               InstitutionKpi.themeLabel(row.theme),
+              if (rec.goalTitleFor(row.goalId).isNotEmpty)
+                rec.goalTitleFor(row.goalId),
               if (row.period.isNotEmpty) row.period,
               if (row.target.isNotEmpty) 'Target ${row.target}',
               if (row.actual.isNotEmpty) 'Actual ${row.actual}',
@@ -904,8 +1096,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     required String empty,
     required VoidCallback onAdd,
     _Action? extraAction,
+    List<_Action> extraActions = const [],
     required List<Widget> children,
   }) {
+    final extras = [if (extraAction != null) extraAction, ...extraActions];
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -919,10 +1113,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
                 icon: const Icon(Icons.add),
                 label: const Text('Add'),
               ),
-              if (extraAction != null)
+              for (final action in extras)
                 OutlinedButton(
-                  onPressed: extraAction.onTap,
-                  child: Text(extraAction.label),
+                  onPressed: action.onTap,
+                  child: Text(action.label),
                 ),
             ],
           ),
@@ -938,6 +1132,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     required VoidCallback onEdit,
     required VoidCallback onDelete,
     Color? tone,
+    List<_Action> extraActions = const [],
   }) {
     return Container(
       width: double.infinity,
@@ -962,6 +1157,12 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             ),
           ),
           if (_canManage) ...[
+            for (final action in extraActions)
+              IconButton(
+                tooltip: action.label,
+                onPressed: action.onTap,
+                icon: Icon(action.icon ?? Icons.more_horiz),
+              ),
             IconButton(
               tooltip: 'Edit',
               onPressed: onEdit,
@@ -986,6 +1187,9 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     final start = TextEditingController(text: existing?.termStart ?? '');
     final end = TextEditingController(text: existing?.termEnd ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final declaredInterest = TextEditingController(
+      text: existing?.declaredInterest ?? '',
+    );
     final saved = await _formDialog(
       title: existing == null ? 'Add leadership seat' : 'Edit leadership seat',
       builder: (setDialogState) => [
@@ -1031,6 +1235,14 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           maxLines: 2,
           decoration: const InputDecoration(labelText: 'Notes'),
         ),
+        TextField(
+          controller: declaredInterest,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: 'Declared interest (COI)',
+            hintText: 'Name and interest, if any',
+          ),
+        ),
       ],
     );
     if (saved != true) return;
@@ -1045,6 +1257,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           termEnd: end.text.trim(),
           isActing: acting,
           notes: notes.text.trim(),
+          declaredInterest: declaredInterest.text.trim(),
         ),
         schoolId: _schoolId,
       );
@@ -1162,13 +1375,249 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
 
   String _fileCountLabel(int count) => count == 1 ? '1 file' : '$count files';
 
+  Widget _riskHeatMatrix(InstitutionRecord rec) {
+    const likelihoods = [
+      RiskLikelihood.high,
+      RiskLikelihood.medium,
+      RiskLikelihood.low,
+    ];
+    const impacts = [RiskImpact.low, RiskImpact.medium, RiskImpact.high];
+    int count(RiskLikelihood likelihood, RiskImpact impact) => rec.risks
+        .where(
+          (r) => r.isOpen && r.likelihood == likelihood && r.impact == impact,
+        )
+        .length;
+    Color fill(int score, int n) {
+      if (n == 0) {
+        return Theme.of(context).colorScheme.surfaceContainerHighest;
+      }
+      if (score >= 6) return Colors.red.shade100;
+      if (score >= 3) return Colors.orange.shade100;
+      return Colors.green.shade100;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Heat matrix (open risks)',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Table(
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            TableRow(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Text('Likelihood \\ impact'),
+                ),
+                for (final impact in impacts)
+                  Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Text(
+                      InstitutionRisk.impactLabel(impact),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
+            ),
+            for (final likelihood in likelihoods)
+              TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Text(InstitutionRisk.likelihoodLabel(likelihood)),
+                  ),
+                  for (final impact in impacts)
+                    Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        color: fill(
+                          InstitutionRisk(
+                            id: 'heat',
+                            title: 'heat',
+                            likelihood: likelihood,
+                            impact: impact,
+                          ).heatScore,
+                          count(likelihood, impact),
+                        ),
+                        child: Text('${count(likelihood, impact)}'),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _seedSefDomains() async {
+    final year = DateTime.now().year;
+    final cycle = TextEditingController(
+      text: '$year/${((year + 1) % 100).toString().padLeft(2, '0')}',
+    );
+    final saved = await _formDialog(
+      title: 'Seed international SEF domains',
+      builder: (_) => [
+        TextField(
+          controller: cycle,
+          decoration: const InputDecoration(
+            labelText: 'Cycle',
+            hintText: '2026/27',
+          ),
+        ),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Adds Purpose, Governance, Teaching, Safeguarding, Community, '
+            'Resources, and Other / MoE if they are missing for this cycle.',
+          ),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.seedSefDomains(cycle: cycle.text, schoolId: _schoolId);
+      _snack('SEF domains seeded for ${cycle.text.trim()}');
+    });
+  }
+
+  Future<void> _acknowledgePolicy(InstitutionPolicy policy) async {
+    final name = TextEditingController();
+    final saved = await _formDialog(
+      title: 'Acknowledge ${policy.number}',
+      builder: (_) => [
+        TextField(
+          controller: name,
+          decoration: const InputDecoration(
+            labelText: 'Staff name',
+            hintText: 'Who signed this version',
+          ),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.acknowledgePolicy(policy.id, name.text, schoolId: _schoolId);
+      _snack('Acknowledgement recorded');
+    });
+  }
+
+  Future<void> _issuePolicyVersion(InstitutionPolicy policy) async {
+    await _guarded(() async {
+      final replacement = InstitutionPolicy(
+        id: InstitutionService.newId('pol'),
+        number: policy.number,
+        title: policy.title,
+        owner: policy.owner,
+        status: PolicyStatus.draft,
+        reviewDate: policy.reviewDate,
+        notes: policy.notes,
+        audience: policy.audience,
+      );
+      await _svc.supersedePolicy(
+        policy,
+        replacement: replacement,
+        schoolId: _schoolId,
+      );
+      _snack('Issued v${policy.version + 1} of ${policy.number}');
+    });
+  }
+
+  Future<void> _openCapaFromLicense(InstitutionLicense license) async {
+    await _guarded(() async {
+      final capa = await _svc.openCapaFromLicense(license, schoolId: _schoolId);
+      _snack('CAPA ${capa.number} opened from licence');
+    });
+  }
+
+  Future<void> _openCapaFromPolicy(InstitutionPolicy policy) async {
+    await _guarded(() async {
+      final capa = await _svc.openCapaFromPolicy(policy, schoolId: _schoolId);
+      _snack('CAPA ${capa.number} opened from policy review');
+    });
+  }
+
+  Future<void> _openCapaFromSef(InstitutionSefEntry entry) async {
+    await _guarded(() async {
+      final capa = await _svc.openCapaFromSef(entry, schoolId: _schoolId);
+      _snack('CAPA ${capa.number} opened from SEF');
+    });
+  }
+
+  Future<void> _openCapaFromRisk(InstitutionRisk risk) async {
+    await _guarded(() async {
+      final capa = await _svc.openCapaFromRisk(risk, schoolId: _schoolId);
+      _snack('CAPA ${capa.number} opened from high risk');
+    });
+  }
+
+  Future<void> _editGoal([InstitutionStrategicGoal? existing]) async {
+    final title = TextEditingController(text: existing?.title ?? '');
+    final horizon = TextEditingController(text: existing?.horizon ?? '');
+    final theme = TextEditingController(text: existing?.theme ?? '');
+    final notes = TextEditingController(text: existing?.notes ?? '');
+    final saved = await _formDialog(
+      title: existing == null ? 'Add strategic goal' : 'Edit strategic goal',
+      builder: (_) => [
+        TextField(
+          controller: title,
+          decoration: const InputDecoration(
+            labelText: 'Goal',
+            hintText: 'Every learner is known, safe, and progressing',
+          ),
+        ),
+        TextField(
+          controller: horizon,
+          decoration: const InputDecoration(
+            labelText: 'Horizon',
+            hintText: '2026–2029',
+          ),
+        ),
+        TextField(
+          controller: theme,
+          decoration: const InputDecoration(
+            labelText: 'Theme',
+            hintText: 'Learning, safeguarding, finance, estate',
+          ),
+        ),
+        TextField(
+          controller: notes,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Notes'),
+        ),
+      ],
+    );
+    if (saved != true) return;
+    await _guarded(() async {
+      await _svc.upsertGoal(
+        InstitutionStrategicGoal(
+          id: existing?.id ?? InstitutionService.newId('goal'),
+          title: title.text.trim(),
+          horizon: horizon.text.trim(),
+          theme: theme.text.trim(),
+          notes: notes.text.trim(),
+        ),
+        schoolId: _schoolId,
+      );
+    });
+  }
+
   Future<void> _editPolicy([InstitutionPolicy? existing]) async {
     var status = existing?.status ?? PolicyStatus.draft;
+    var audience = existing?.audience ?? PolicyAudience.staff;
     final number = TextEditingController(text: existing?.number ?? '');
     final title = TextEditingController(text: existing?.title ?? '');
     final owner = TextEditingController(text: existing?.owner ?? '');
     final review = TextEditingController(text: existing?.reviewDate ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final approved = TextEditingController(text: existing?.approvedOn ?? '');
+    final version = TextEditingController(text: '${existing?.version ?? 1}');
     var attachmentPaths = List<String>.from(
       existing?.attachmentPaths ?? const [],
     );
@@ -1203,12 +1652,48 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           onChanged: (v) =>
               setDialogState(() => status = v ?? PolicyStatus.draft),
         ),
+        DropdownButtonFormField<PolicyAudience>(
+          initialValue: audience,
+          decoration: const InputDecoration(labelText: 'Audience'),
+          items: [
+            for (final v in PolicyAudience.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionPolicy.audienceLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => audience = v ?? PolicyAudience.staff),
+        ),
+        TextField(
+          controller: version,
+          decoration: const InputDecoration(labelText: 'Version'),
+          keyboardType: TextInputType.number,
+        ),
+        TextField(
+          controller: approved,
+          decoration: const InputDecoration(
+            labelText: 'Board approval date (YYYY-MM-DD)',
+          ),
+        ),
         TextField(
           controller: review,
           decoration: const InputDecoration(
             labelText: 'Review date (YYYY-MM-DD)',
           ),
         ),
+        if (existing?.supersedesId.isNotEmpty == true)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Supersedes ${existing!.supersedesId}'),
+          ),
+        if (existing?.acknowledgements.isNotEmpty == true)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Acknowledged: ${existing!.acknowledgements.join(', ')}',
+            ),
+          ),
         TextField(
           controller: notes,
           maxLines: 2,
@@ -1240,6 +1725,11 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           reviewDate: review.text.trim(),
           notes: notes.text.trim(),
           attachmentPaths: attachmentPaths,
+          version: int.tryParse(version.text.trim()) ?? existing?.version ?? 1,
+          supersedesId: existing?.supersedesId ?? '',
+          approvedOn: approved.text.trim(),
+          audience: audience,
+          acknowledgements: existing?.acknowledgements ?? const [],
         ),
         schoolId: _schoolId,
       );
@@ -1343,6 +1833,14 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       text: existing?.campusScope ?? 'Institution-wide',
     );
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final visitStarts = TextEditingController(
+      text: existing?.visitStartsOn ?? '',
+    );
+    final visitEnds = TextEditingController(text: existing?.visitEndsOn ?? '');
+    final reportDue = TextEditingController(
+      text: existing?.nextReportDue ?? '',
+    );
+    var accreditor = existing?.accreditor ?? AccreditorBody.other;
     var attachmentPaths = List<String>.from(
       existing?.attachmentPaths ?? const [],
     );
@@ -1360,9 +1858,24 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           controller: issuer,
           decoration: const InputDecoration(labelText: 'Issuer'),
         ),
+        DropdownButtonFormField<AccreditorBody>(
+          initialValue: accreditor,
+          decoration: const InputDecoration(labelText: 'Accreditor / body'),
+          items: [
+            for (final v in AccreditorBody.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionLicense.accreditorLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => accreditor = v ?? AccreditorBody.other),
+        ),
         TextField(
           controller: number,
-          decoration: const InputDecoration(labelText: 'Number'),
+          decoration: const InputDecoration(
+            labelText: 'Membership / licence number',
+          ),
         ),
         TextField(
           controller: issued,
@@ -1374,6 +1887,24 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           controller: expires,
           decoration: const InputDecoration(
             labelText: 'Expires on (YYYY-MM-DD)',
+          ),
+        ),
+        TextField(
+          controller: visitStarts,
+          decoration: const InputDecoration(
+            labelText: 'Visit starts (YYYY-MM-DD)',
+          ),
+        ),
+        TextField(
+          controller: visitEnds,
+          decoration: const InputDecoration(
+            labelText: 'Visit ends (YYYY-MM-DD)',
+          ),
+        ),
+        TextField(
+          controller: reportDue,
+          decoration: const InputDecoration(
+            labelText: 'Next report due (YYYY-MM-DD)',
           ),
         ),
         TextField(
@@ -1415,6 +1946,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           campusScope: scope.text.trim(),
           notes: notes.text.trim(),
           attachmentPaths: attachmentPaths,
+          accreditor: accreditor,
+          visitStartsOn: visitStarts.text.trim(),
+          visitEndsOn: visitEnds.text.trim(),
+          nextReportDue: reportDue.text.trim(),
         ),
         schoolId: _schoolId,
       );
@@ -1662,8 +2197,24 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     final meetingLink = TextEditingController(
       text: existing?.meetingLink ?? '',
     );
-    final agenda = TextEditingController(text: existing?.agenda ?? '');
+    final agenda = TextEditingController(
+      text: (existing?.orderedAgenda.isNotEmpty == true)
+          ? existing!.orderedAgenda.join('\n')
+          : (existing?.agenda ?? ''),
+    );
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final apologies = TextEditingController(text: existing?.apologies ?? '');
+    final quorumRequired = TextEditingController(
+      text: existing != null && existing.quorumRequired > 0
+          ? '${existing.quorumRequired}'
+          : '',
+    );
+    final presentCount = TextEditingController(
+      text: existing != null && existing.presentCount > 0
+          ? '${existing.presentCount}'
+          : '',
+    );
+    var minutesStatus = existing?.minutesStatus ?? MinutesStatus.draft;
     final search = TextEditingController();
     var attachmentPaths = List<String>.from(
       existing?.attachmentPaths ?? const [],
@@ -1761,8 +2312,11 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
         ),
         TextField(
           controller: agenda,
-          maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Agenda'),
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Agenda',
+            hintText: 'One item per line for the board pack',
+          ),
         ),
         TextField(
           controller: notes,
@@ -1770,6 +2324,36 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           decoration: const InputDecoration(
             labelText: 'Notes / minutes summary',
           ),
+        ),
+        DropdownButtonFormField<MinutesStatus>(
+          initialValue: minutesStatus,
+          decoration: const InputDecoration(labelText: 'Minutes status'),
+          items: [
+            for (final v in MinutesStatus.values)
+              DropdownMenuItem(
+                value: v,
+                child: Text(InstitutionMeeting.minutesLabel(v)),
+              ),
+          ],
+          onChanged: (v) =>
+              setDialogState(() => minutesStatus = v ?? MinutesStatus.draft),
+        ),
+        TextField(
+          controller: apologies,
+          decoration: const InputDecoration(
+            labelText: 'Apologies',
+            hintText: 'Names of members sending apologies',
+          ),
+        ),
+        TextField(
+          controller: presentCount,
+          decoration: const InputDecoration(labelText: 'Present count'),
+          keyboardType: TextInputType.number,
+        ),
+        TextField(
+          controller: quorumRequired,
+          decoration: const InputDecoration(labelText: 'Quorum required'),
+          keyboardType: TextInputType.number,
         ),
         CourseAttachmentPicker(
           paths: attachmentPaths,
@@ -1790,6 +2374,11 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       for (final member in staff)
         if (selected.contains(member.key)) member,
     ];
+    final agendaItems = agenda.text
+        .split('\n')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     final meeting = InstitutionMeeting(
       id: existing?.id ?? InstitutionService.newId('mtg'),
       title: title.text.trim(),
@@ -1800,9 +2389,14 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
       venue: venue.text.trim(),
       meetingLink: meetingLink.text.trim(),
       agenda: agenda.text.trim(),
+      agendaItems: agendaItems,
       notes: notes.text.trim(),
       attachmentPaths: attachmentPaths,
       invitedKeys: existing?.invitedKeys ?? const [],
+      apologies: apologies.text.trim(),
+      quorumRequired: int.tryParse(quorumRequired.text.trim()) ?? 0,
+      presentCount: int.tryParse(presentCount.text.trim()) ?? 0,
+      minutesStatus: minutesStatus,
     );
     await _guarded(() async {
       await _svc.upsertMeeting(meeting, schoolId: _schoolId);
@@ -1824,6 +2418,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     final owner = TextEditingController(text: existing?.owner ?? '');
     final review = TextEditingController(text: existing?.reviewDate ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final treatment = TextEditingController(text: existing?.treatment ?? '');
+    final residual = TextEditingController(text: existing?.residual ?? '');
     final saved = await _formDialog(
       title: existing == null ? 'Add institutional risk' : 'Edit risk',
       builder: (setDialogState) => [
@@ -1887,6 +2483,16 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Notes / controls'),
         ),
+        TextField(
+          controller: treatment,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Treatment'),
+        ),
+        TextField(
+          controller: residual,
+          maxLines: 2,
+          decoration: const InputDecoration(labelText: 'Residual risk'),
+        ),
       ],
     );
     if (saved != true) return;
@@ -1901,6 +2507,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           reviewDate: review.text.trim(),
           status: status,
           notes: notes.text.trim(),
+          treatment: treatment.text.trim(),
+          residual: residual.text.trim(),
         ),
         schoolId: _schoolId,
       );
@@ -1914,6 +2522,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     final contact = TextEditingController(text: existing?.contact ?? '');
     final agreement = TextEditingController(text: existing?.agreementRef ?? '');
     final notes = TextEditingController(text: existing?.notes ?? '');
+    final renews = TextEditingController(text: existing?.renewsOn ?? '');
+    var attachmentPaths = List<String>.from(
+      existing?.attachmentPaths ?? const [],
+    );
     final saved = await _formDialog(
       title: existing == null ? 'Add partner / affiliation' : 'Edit partner',
       builder: (setDialogState) => [
@@ -1961,6 +2573,18 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           maxLines: 2,
           decoration: const InputDecoration(labelText: 'Notes'),
         ),
+        TextField(
+          controller: renews,
+          decoration: const InputDecoration(
+            labelText: 'MOU renewal date (YYYY-MM-DD)',
+          ),
+        ),
+        CourseAttachmentPicker(
+          paths: attachmentPaths,
+          subdir: 'institution_partner_attachments',
+          sectionTitle: 'MOU / agreement file',
+          onChanged: (next) => setDialogState(() => attachmentPaths = next),
+        ),
       ],
     );
     if (saved != true) return;
@@ -1974,6 +2598,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           agreementRef: agreement.text.trim(),
           status: status,
           notes: notes.text.trim(),
+          attachmentPaths: attachmentPaths,
+          renewsOn: renews.text.trim(),
         ),
         schoolId: _schoolId,
       );
@@ -1981,12 +2607,22 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
   }
 
   Future<void> _editSef([InstitutionSefEntry? existing]) async {
+    final rec = _svc.recordFor(_schoolId);
     var judgment = existing?.judgment ?? SefJudgment.developing;
     var status = existing?.status ?? SefStatus.draft;
+    var goalId = existing?.goalId ?? '';
+    if (goalId.isNotEmpty && rec.goals.every((g) => g.id != goalId)) {
+      goalId = '';
+    }
     final cycle = TextEditingController(text: existing?.cycle ?? '');
-    final area = TextEditingController(text: existing?.area ?? '');
+    final area = TextEditingController(
+      text: existing?.area.isNotEmpty == true
+          ? existing!.area
+          : InstitutionSefDomains.suggested.first,
+    );
     final evidence = TextEditingController(text: existing?.evidence ?? '');
     final owner = TextEditingController(text: existing?.owner ?? '');
+    var evidencePaths = List<String>.from(existing?.evidencePaths ?? const []);
     final saved = await _formDialog(
       title: existing == null ? 'Add SEF judgment' : 'Edit SEF judgment',
       builder: (setDialogState) => [
@@ -1997,10 +2633,29 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
             hintText: '2025/26',
           ),
         ),
+        DropdownButtonFormField<String>(
+          initialValue:
+              InstitutionSefDomains.suggested.contains(area.text.trim())
+              ? area.text.trim()
+              : (area.text.trim().isEmpty
+                    ? InstitutionSefDomains.suggested.first
+                    : 'Other / MoE'),
+          decoration: const InputDecoration(labelText: 'Standard domain'),
+          items: [
+            for (final domain in InstitutionSefDomains.suggested)
+              DropdownMenuItem(value: domain, child: Text(domain)),
+          ],
+          onChanged: (v) {
+            if (v == null) return;
+            setDialogState(() {
+              if (v != 'Other / MoE') area.text = v;
+            });
+          },
+        ),
         TextField(
           controller: area,
           decoration: const InputDecoration(
-            labelText: 'Area / standard',
+            labelText: 'Area / standard (rename if needed)',
             hintText: 'Leadership and management',
           ),
         ),
@@ -2033,10 +2688,27 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           ],
           onChanged: (v) => setDialogState(() => status = v ?? SefStatus.draft),
         ),
+        if (rec.goals.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: goalId,
+            decoration: const InputDecoration(labelText: 'Strategic goal'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final goal in rec.goals)
+                DropdownMenuItem(value: goal.id, child: Text(goal.title)),
+            ],
+            onChanged: (v) => setDialogState(() => goalId = v ?? ''),
+          ),
         TextField(
           controller: evidence,
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Evidence summary'),
+        ),
+        CourseAttachmentPicker(
+          paths: evidencePaths,
+          subdir: 'institution_sef_evidence',
+          sectionTitle: 'Evidence binder',
+          onChanged: (next) => setDialogState(() => evidencePaths = next),
         ),
       ],
     );
@@ -2051,6 +2723,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           evidence: evidence.text.trim(),
           owner: owner.text.trim(),
           status: status,
+          evidencePaths: evidencePaths,
+          goalId: goalId,
         ),
         schoolId: _schoolId,
       );
@@ -2063,11 +2737,19 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
     var status = existing?.status ?? CapaStatus.open;
     var sefId = existing?.sefId ?? '';
     var riskId = existing?.riskId ?? '';
+    var licenseId = existing?.licenseId ?? '';
+    var policyId = existing?.policyId ?? '';
     if (sefId.isNotEmpty && rec.sefEntries.every((e) => e.id != sefId)) {
       sefId = '';
     }
     if (riskId.isNotEmpty && rec.risks.every((e) => e.id != riskId)) {
       riskId = '';
+    }
+    if (licenseId.isNotEmpty && rec.licenses.every((e) => e.id != licenseId)) {
+      licenseId = '';
+    }
+    if (policyId.isNotEmpty && rec.policies.every((e) => e.id != policyId)) {
+      policyId = '';
     }
     final number = TextEditingController(text: existing?.number ?? '');
     final title = TextEditingController(text: existing?.title ?? '');
@@ -2132,6 +2814,40 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
               if (riskId.isNotEmpty) source = CapaSource.risk;
             }),
           ),
+        if (rec.licenses.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: licenseId,
+            decoration: const InputDecoration(labelText: 'Linked licence'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final row in rec.licenses)
+                DropdownMenuItem(value: row.id, child: Text(row.title)),
+            ],
+            onChanged: (v) => setDialogState(() {
+              licenseId = v ?? '';
+              if (licenseId.isNotEmpty) source = CapaSource.license;
+            }),
+          ),
+        if (rec.policies.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: policyId,
+            decoration: const InputDecoration(labelText: 'Linked policy'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final row in rec.policies)
+                DropdownMenuItem(
+                  value: row.id,
+                  child: Text(
+                    '${row.number} ${row.title}'.trim(),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            onChanged: (v) => setDialogState(() {
+              policyId = v ?? '';
+              if (policyId.isNotEmpty) source = CapaSource.policy;
+            }),
+          ),
         TextField(
           controller: owner,
           decoration: const InputDecoration(labelText: 'Owner'),
@@ -2173,6 +2889,8 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           dueDate: due.text.trim(),
           status: status,
           notes: notes.text.trim(),
+          licenseId: licenseId,
+          policyId: policyId,
         ),
         schoolId: _schoolId,
       );
@@ -2180,8 +2898,13 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
   }
 
   Future<void> _editKpi([InstitutionKpi? existing]) async {
+    final rec = _svc.recordFor(_schoolId);
     var theme = existing?.theme ?? KpiTheme.governance;
     var status = existing?.status ?? KpiStatus.onTrack;
+    var goalId = existing?.goalId ?? '';
+    if (goalId.isNotEmpty && rec.goals.every((g) => g.id != goalId)) {
+      goalId = '';
+    }
     final name = TextEditingController(text: existing?.name ?? '');
     final target = TextEditingController(text: existing?.target ?? '');
     final actual = TextEditingController(text: existing?.actual ?? '');
@@ -2210,6 +2933,17 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           onChanged: (v) =>
               setDialogState(() => theme = v ?? KpiTheme.governance),
         ),
+        if (rec.goals.isNotEmpty)
+          DropdownButtonFormField<String>(
+            initialValue: goalId,
+            decoration: const InputDecoration(labelText: 'Strategic goal'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('None')),
+              for (final goal in rec.goals)
+                DropdownMenuItem(value: goal.id, child: Text(goal.title)),
+            ],
+            onChanged: (v) => setDialogState(() => goalId = v ?? ''),
+          ),
         TextField(
           controller: period,
           decoration: const InputDecoration(
@@ -2257,6 +2991,7 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
           period: period.text.trim(),
           status: status,
           notes: notes.text.trim(),
+          goalId: goalId,
         ),
         schoolId: _schoolId,
       );
@@ -2465,9 +3200,10 @@ class _WebInstitutionPageState extends State<WebInstitutionPage>
 }
 
 class _Action {
-  const _Action({required this.label, required this.onTap});
+  const _Action({required this.label, required this.onTap, this.icon});
   final String label;
   final VoidCallback onTap;
+  final IconData? icon;
 }
 
 class _StaffPicker extends StatelessWidget {

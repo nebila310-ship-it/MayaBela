@@ -447,6 +447,52 @@ class InstitutionService extends ChangeNotifier {
     );
   }
 
+  Future<InstitutionRecord> acknowledgePolicy(
+    String policyId,
+    String staffName, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.policies];
+      final i = next.indexWhere((e) => e.id == policyId);
+      if (i < 0) return current;
+      final label = staffName.trim();
+      if (label.isEmpty) return current;
+      final names = [...next[i].acknowledgements];
+      if (names.any((n) => n.toLowerCase() == label.toLowerCase())) {
+        return current;
+      }
+      names.add(label);
+      next[i] = next[i].copyWith(acknowledgements: names);
+      return current.copyWith(policies: next);
+    });
+  }
+
+  Future<InstitutionRecord> supersedePolicy(
+    InstitutionPolicy currentPolicy, {
+    required InstitutionPolicy replacement,
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.policies];
+      final i = next.indexWhere((e) => e.id == currentPolicy.id);
+      if (i >= 0) {
+        next[i] = currentPolicy.copyWith(status: PolicyStatus.superseded);
+      }
+      final linked = replacement.copyWith(
+        supersedesId: currentPolicy.id,
+        version: currentPolicy.version + 1,
+      );
+      final existing = next.indexWhere((e) => e.id == linked.id);
+      if (existing >= 0) {
+        next[existing] = linked;
+      } else {
+        next.insert(0, linked);
+      }
+      return current.copyWith(policies: next);
+    });
+  }
+
   Future<InstitutionRecord> upsertCircular(
     OfficialCircular circular, {
     String? schoolId,
@@ -647,6 +693,34 @@ class InstitutionService extends ChangeNotifier {
     );
   }
 
+  Future<InstitutionRecord> seedSefDomains({
+    required String cycle,
+    String? schoolId,
+  }) {
+    final trimmedCycle = cycle.trim();
+    return _mutate(schoolId, (current) {
+      if (trimmedCycle.isEmpty) return current;
+      final existing = {
+        for (final entry in current.sefEntries)
+          if (entry.cycle.trim().toLowerCase() == trimmedCycle.toLowerCase())
+            entry.area.trim().toLowerCase(),
+      };
+      final next = [...current.sefEntries];
+      var index = 0;
+      for (final area in InstitutionSefDomains.suggested) {
+        if (existing.contains(area.toLowerCase())) continue;
+        next.add(
+          InstitutionSefEntry(
+            id: '${newId('sef')}-${index++}',
+            cycle: trimmedCycle,
+            area: area,
+          ),
+        );
+      }
+      return current.copyWith(sefEntries: next);
+    });
+  }
+
   Future<InstitutionRecord> upsertCapa(
     InstitutionCapa capa, {
     String? schoolId,
@@ -672,6 +746,135 @@ class InstitutionService extends ChangeNotifier {
     );
   }
 
+  InstitutionCapa? openCapaFor({
+    required InstitutionRecord rec,
+    required CapaSource source,
+    String sefId = '',
+    String riskId = '',
+    String licenseId = '',
+    String policyId = '',
+  }) {
+    for (final capa in rec.capas) {
+      if (!capa.isOpen) continue;
+      if (capa.source != source) continue;
+      if (sefId.isNotEmpty && capa.sefId != sefId) continue;
+      if (riskId.isNotEmpty && capa.riskId != riskId) continue;
+      if (licenseId.isNotEmpty && capa.licenseId != licenseId) continue;
+      if (policyId.isNotEmpty && capa.policyId != policyId) continue;
+      return capa;
+    }
+    return null;
+  }
+
+  Future<InstitutionCapa> openCapaFromLicense(
+    InstitutionLicense license, {
+    String? schoolId,
+  }) async {
+    final rec = recordFor(schoolId);
+    final existing = openCapaFor(
+      rec: rec,
+      source: CapaSource.license,
+      licenseId: license.id,
+    );
+    if (existing != null) return existing;
+    final capa = InstitutionCapa(
+      id: newId('capa'),
+      number: _nextCapaNumber(rec),
+      title: 'Renew ${license.title}',
+      source: CapaSource.license,
+      licenseId: license.id,
+      dueDate: license.expiresOn,
+      status: CapaStatus.open,
+      notes: license.notes,
+    );
+    await upsertCapa(capa, schoolId: schoolId);
+    return capa;
+  }
+
+  Future<InstitutionCapa> openCapaFromPolicy(
+    InstitutionPolicy policy, {
+    String? schoolId,
+  }) async {
+    final rec = recordFor(schoolId);
+    final existing = openCapaFor(
+      rec: rec,
+      source: CapaSource.policy,
+      policyId: policy.id,
+    );
+    if (existing != null) return existing;
+    final capa = InstitutionCapa(
+      id: newId('capa'),
+      number: _nextCapaNumber(rec),
+      title:
+          'Review policy ${policy.number.isEmpty ? policy.title : policy.number}',
+      source: CapaSource.policy,
+      policyId: policy.id,
+      owner: policy.owner,
+      dueDate: policy.reviewDate,
+      status: CapaStatus.open,
+      notes: policy.notes,
+    );
+    await upsertCapa(capa, schoolId: schoolId);
+    return capa;
+  }
+
+  Future<InstitutionCapa> openCapaFromSef(
+    InstitutionSefEntry entry, {
+    String? schoolId,
+  }) async {
+    final rec = recordFor(schoolId);
+    final existing = openCapaFor(
+      rec: rec,
+      source: CapaSource.sef,
+      sefId: entry.id,
+    );
+    if (existing != null) return existing;
+    final capa = InstitutionCapa(
+      id: newId('capa'),
+      number: _nextCapaNumber(rec),
+      title: 'Improve SEF: ${entry.area}',
+      source: CapaSource.sef,
+      sefId: entry.id,
+      owner: entry.owner,
+      status: CapaStatus.open,
+      notes: entry.evidence,
+    );
+    await upsertCapa(capa, schoolId: schoolId);
+    return capa;
+  }
+
+  Future<InstitutionCapa> openCapaFromRisk(
+    InstitutionRisk risk, {
+    String? schoolId,
+  }) async {
+    final rec = recordFor(schoolId);
+    final existing = openCapaFor(
+      rec: rec,
+      source: CapaSource.risk,
+      riskId: risk.id,
+    );
+    if (existing != null) return existing;
+    final capa = InstitutionCapa(
+      id: newId('capa'),
+      number: _nextCapaNumber(rec),
+      title: 'Treat high risk: ${risk.title}',
+      source: CapaSource.risk,
+      riskId: risk.id,
+      owner: risk.owner,
+      dueDate: risk.reviewDate,
+      status: CapaStatus.open,
+      notes: risk.treatment.isNotEmpty ? risk.treatment : risk.notes,
+    );
+    await upsertCapa(capa, schoolId: schoolId);
+    return capa;
+  }
+
+  String _nextCapaNumber(InstitutionRecord rec) {
+    final year = DateTime.now().year;
+    final n = rec.capas.length + 1;
+    return 'CAPA-$year-${n.toString().padLeft(2, '0')}';
+  }
+
   Future<InstitutionRecord> upsertKpi(InstitutionKpi kpi, {String? schoolId}) {
     return _mutate(schoolId, (current) {
       final next = [...current.kpis];
@@ -690,6 +893,31 @@ class InstitutionService extends ChangeNotifier {
       schoolId,
       (current) => current.copyWith(
         kpis: current.kpis.where((e) => e.id != id).toList(),
+      ),
+    );
+  }
+
+  Future<InstitutionRecord> upsertGoal(
+    InstitutionStrategicGoal goal, {
+    String? schoolId,
+  }) {
+    return _mutate(schoolId, (current) {
+      final next = [...current.goals];
+      final i = next.indexWhere((e) => e.id == goal.id);
+      if (i < 0) {
+        next.insert(0, goal);
+      } else {
+        next[i] = goal;
+      }
+      return current.copyWith(goals: next);
+    });
+  }
+
+  Future<InstitutionRecord> deleteGoal(String id, {String? schoolId}) {
+    return _mutate(
+      schoolId,
+      (current) => current.copyWith(
+        goals: current.goals.where((e) => e.id != id).toList(),
       ),
     );
   }
@@ -758,6 +986,10 @@ class InstitutionService extends ChangeNotifier {
     int overdueCapas,
     int kpisOffTrack,
     int retentionLapsed,
+    int overduePolicies,
+    int draftSef,
+    int highRisks,
+    int? daysUntilNextVisit,
   })
   metricsFor(String? schoolId) {
     final rec = recordFor(schoolId);
@@ -810,6 +1042,16 @@ class InstitutionService extends ChangeNotifier {
           .where((k) => k.status == KpiStatus.offTrack)
           .length,
       retentionLapsed: rec.archive.where((a) => a.retentionLapsed).length,
+      overduePolicies: rec.overduePolicyCount,
+      draftSef: rec.draftSefCount,
+      highRisks: rec.highRiskCount,
+      daysUntilNextVisit: () {
+        final visit = rec.nextVisitLicense?.visitDate;
+        if (visit == null) return null;
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        return visit.difference(today).inDays;
+      }(),
     );
   }
 
