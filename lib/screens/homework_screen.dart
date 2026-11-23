@@ -57,6 +57,27 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
   String? get _studentId =>
       AuthService.currentUser?.linkedStudentId?.trim().toUpperCase();
 
+  String? get _viewerStudentId {
+    if (_isStudent) return _studentId;
+    if (!_isParent) return null;
+    final children = _data.getChildren();
+    final className = _selectedClass;
+    if (className != null) {
+      for (final child in children) {
+        if (StudentRegistryService.classNamesMatch(child.className, className) &&
+            (child.studentId ?? '').trim().isNotEmpty) {
+          return child.studentId!.trim().toUpperCase();
+        }
+      }
+    }
+    for (final child in children) {
+      if ((child.studentId ?? '').trim().isNotEmpty) {
+        return child.studentId!.trim().toUpperCase();
+      }
+    }
+    return _studentId;
+  }
+
   bool get _canUploadWorksheets {
     if (!_isStudent) return false;
     return StudentAccountService.instance
@@ -91,6 +112,11 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     return switch (_focus) {
       'soon' => all.where((item) => item.isDueSoon).toList(),
       'overdue' => all.where((item) => item.isOverdue).toList(),
+      'missing' => all.where((item) {
+          final id = _viewerStudentId;
+          if (id == null) return item.isOverdue;
+          return item.completionFor(id) == HomeworkCompletion.missing;
+        }).toList(),
       _ => all,
     };
   }
@@ -412,7 +438,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     setState(() {});
   }
 
+  Color _completionColor(HomeworkCompletion status) => switch (status) {
+        HomeworkCompletion.notStarted => Colors.grey,
+        HomeworkCompletion.submitted => Colors.blue,
+        HomeworkCompletion.late => Colors.orange,
+        HomeworkCompletion.missing => Colors.red,
+        HomeworkCompletion.done => Colors.green,
+      };
+
   Future<void> _gradeStudent(HomeworkItem item, String studentId) async {
+    var status = item.completionFor(studentId);
     final scoreCtrl = TextEditingController(
       text: item.studentScores[studentId]?.toStringAsFixed(0) ?? '',
     );
@@ -429,6 +464,21 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              DropdownButtonFormField<HomeworkCompletion>(
+                initialValue: status,
+                decoration: const InputDecoration(labelText: 'Completion'),
+                items: [
+                  for (final value in HomeworkCompletion.values)
+                    DropdownMenuItem(
+                      value: value,
+                      child: Text(HomeworkItem.completionLabel(value)),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value != null) status = value;
+                },
+              ),
+              const SizedBox(height: 10),
               TextField(
                 controller: scoreCtrl,
                 keyboardType: TextInputType.number,
@@ -465,6 +515,11 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       ),
     );
     if (saved == null) return;
+    _data.setHomeworkCompletion(
+      homeworkId: item.id,
+      studentId: studentId,
+      status: status,
+    );
     final score = double.tryParse(scoreCtrl.text.trim());
     if (score != null) {
       _data.recordHomeworkScore(
@@ -500,6 +555,8 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       ...item.studentWorksheetPaths.keys.map((k) => k.trim().toUpperCase()),
       ...item.studentScores.keys.map((k) => k.trim().toUpperCase()),
       ...item.teacherComments.keys.map((k) => k.trim().toUpperCase()),
+      ...item.studentCompletion.keys.map((k) => k.trim().toUpperCase()),
+      ...item.parentHelpNotes.keys.map((k) => k.trim().toUpperCase()),
     };
     if (ids.isEmpty) {
       return Padding(
@@ -530,21 +587,28 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                 final files = item.worksheetsForStudent(studentId);
                 final score = item.studentScores[studentId];
                 final comment = item.teacherComments[studentId];
+                final status = item.completionFor(studentId);
+                final help = item.helpNoteFor(studentId);
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   title: Text(student?.fullName ?? studentId),
                   subtitle: Text(
                     [
+                      HomeworkItem.completionLabel(status),
                       if (score != null) 'Score ${score.toStringAsFixed(0)}',
                       if ((comment ?? '').isNotEmpty) comment,
+                      if (help.isNotEmpty) 'Home: $help',
                       if (files.isNotEmpty)
                         '${files.length} file${files.length == 1 ? '' : 's'}',
                     ].join(' · '),
                   ),
                   trailing: TextButton(
                     onPressed: () => _gradeStudent(item, studentId),
-                    child: const Text('Score'),
+                    child: Text(
+                      HomeworkItem.completionLabel(status),
+                      style: TextStyle(color: _completionColor(status)),
+                    ),
                   ),
                 );
               },
@@ -822,6 +886,8 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                                             ],
                                             if (_isStudent)
                                               _studentWorksheetSection(item),
+                                            if (_isParent)
+                                              _familyHomeworkDesk(item),
                                             if (!_isParent)
                                               _teacherSubmissionInbox(item),
                                             const SizedBox(height: 10),
@@ -864,6 +930,113 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     );
   }
 
+  Widget _familyHomeworkDesk(HomeworkItem item) {
+    final studentId = _viewerStudentId;
+    if (studentId == null || studentId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final status = item.completionFor(studentId);
+    final help = item.helpNoteFor(studentId);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Chip(
+                backgroundColor: _completionColor(status).withValues(alpha: 0.15),
+                label: Text(
+                  HomeworkItem.completionLabel(status),
+                  style: TextStyle(
+                    color: _completionColor(status),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              ActionChip(
+                label: const Text('Mark done'),
+                onPressed: () {
+                  _data.setHomeworkCompletion(
+                    homeworkId: item.id,
+                    studentId: studentId,
+                    status: HomeworkCompletion.done,
+                    notifyTeacher: true,
+                  );
+                  setState(() {});
+                },
+              ),
+              ActionChip(
+                label: const Text('Late / missing'),
+                onPressed: () {
+                  _data.setHomeworkCompletion(
+                    homeworkId: item.id,
+                    studentId: studentId,
+                    status: item.isOverdue
+                        ? HomeworkCompletion.late
+                        : HomeworkCompletion.missing,
+                    notifyTeacher: true,
+                  );
+                  setState(() {});
+                },
+              ),
+              ActionChip(
+                label: Text(help.isEmpty ? 'Help note' : 'Edit help note'),
+                onPressed: () => _editHelpNote(item, studentId),
+              ),
+            ],
+          ),
+          if (help.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Home: $help',
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editHelpNote(HomeworkItem item, String studentId) async {
+    final ctrl = TextEditingController(text: item.helpNoteFor(studentId));
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('How we helped at home'),
+        content: TextField(
+          controller: ctrl,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'What you practised together, or where you got stuck.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    final note = ctrl.text;
+    ctrl.dispose();
+    if (saved != true) return;
+    _data.setParentHelpNote(
+      homeworkId: item.id,
+      studentId: studentId,
+      note: note,
+    );
+    if (mounted) setState(() {});
+  }
+
   Widget _focusRow(AppStrings s) {
     final soon = _classItems.where((item) => item.isDueSoon).length;
     final overdue = _classItems.where((item) => item.isOverdue).length;
@@ -900,6 +1073,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
           chip('all', s.homeworkAllTasks, ClassroomPalette.blue, '${_classItems.length}'),
           chip('soon', s.homeworkDueSoon, ClassroomPalette.orange, '$soon'),
           chip('overdue', s.homeworkOverdue, ClassroomPalette.red, '$overdue'),
+          chip(
+            'missing',
+            'Missing',
+            ClassroomPalette.red,
+            '${_classItems.where((item) {
+              final id = _viewerStudentId;
+              if (id == null) return item.isOverdue;
+              return item.completionFor(id) == HomeworkCompletion.missing;
+            }).length}',
+          ),
         ],
       ),
     );

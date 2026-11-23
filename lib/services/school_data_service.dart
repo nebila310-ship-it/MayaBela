@@ -3942,6 +3942,80 @@ class SchoolDataService {
     return true;
   }
 
+  bool setHomeworkCompletion({
+    required String homeworkId,
+    required String studentId,
+    required HomeworkCompletion status,
+    bool notifyTeacher = false,
+  }) {
+    final item = homeworkById(homeworkId);
+    if (item == null) return false;
+    final key = studentId.trim().toUpperCase();
+    item.studentCompletion[key] = status.name;
+    _persistHomework();
+    if (notifyTeacher) {
+      NotificationService.instance.push(
+        title: 'Homework ${HomeworkItem.completionLabel(status).toLowerCase()}',
+        body: '${item.subject} · ${item.className}',
+        type: NotificationType.homework,
+        fromRole: AuthService.currentUser?.roleKey ?? AuthService.roleParent,
+        fromName: AuthService.currentUser?.fullName ?? 'Family',
+        recipientRole: AuthService.roleTeacher,
+        recipientStaffId: item.teacherId,
+        targetStudentId: key,
+        targetClassName: item.className,
+      );
+    }
+    return true;
+  }
+
+  bool setParentHelpNote({
+    required String homeworkId,
+    required String studentId,
+    required String note,
+  }) {
+    final item = homeworkById(homeworkId);
+    if (item == null) return false;
+    final key = studentId.trim().toUpperCase();
+    final text = note.trim();
+    if (text.isEmpty) {
+      item.parentHelpNotes.remove(key);
+    } else {
+      item.parentHelpNotes[key] = text;
+      NotificationService.instance.push(
+        title: 'Help-at-home note — ${item.subject}',
+        body: text,
+        type: NotificationType.homework,
+        fromRole: AuthService.roleParent,
+        fromName: AuthService.currentUser?.fullName ?? 'Parent',
+        recipientRole: AuthService.roleTeacher,
+        recipientStaffId: item.teacherId,
+        targetStudentId: key,
+        targetClassName: item.className,
+      );
+    }
+    _persistHomework();
+    return true;
+  }
+
+  void notifyClassUpdate({
+    required String className,
+    required String title,
+    required String body,
+    required NotificationType type,
+    String? fromName,
+  }) {
+    final role = AuthService.currentUser?.roleKey ?? AuthService.roleTeacher;
+    _notifyParentsInClass(
+      className: className,
+      title: title,
+      body: body,
+      type: type,
+      fromRole: role,
+      fromName: fromName ?? AuthService.currentUser?.fullName ?? 'School',
+    );
+  }
+
   bool commentOnHomework({
     required String homeworkId,
     required String studentId,
@@ -4114,6 +4188,13 @@ class SchoolDataService {
       final key = studentId.trim().toUpperCase();
       final existing = item.studentWorksheetPaths[key] ?? <String>[];
       item.studentWorksheetPaths[key] = [...existing, ...paths];
+      final current = item.completionFor(key);
+      if (current == HomeworkCompletion.notStarted ||
+          current == HomeworkCompletion.missing) {
+        item.studentCompletion[key] = item.isOverdue
+            ? HomeworkCompletion.late.name
+            : HomeworkCompletion.submitted.name;
+      }
       final student = StudentRegistryService.instance.lookupAnyById(key);
       NotificationService.instance.push(
         title: 'Homework submitted — ${item.subject}',
@@ -7594,6 +7675,11 @@ class SchoolDataService {
     AnnouncementPriority priority = AnnouncementPriority.normal,
     List<AnnouncementAttachment> attachments = const [],
     bool isPinned = false,
+    String kind = '',
+    String className = '',
+    String weekOf = '',
+    String nextWeekFocus = '',
+    String whatToBring = '',
   }) {
     final keys = audienceKeys ??
         [AnnouncementAudiences.normalizeLegacy(audience ?? 'All')];
@@ -7613,6 +7699,11 @@ class SchoolDataService {
         isPinned: isPinned,
         createdByRole: fromRole,
         createdByAuthor: author,
+        kind: kind,
+        className: className,
+        weekOf: weekOf,
+        nextWeekFocus: nextWeekFocus,
+        whatToBring: whatToBring,
       ),
     );
 
@@ -7625,6 +7716,48 @@ class SchoolDataService {
       fromName: author,
     );
     _persistSchoolContent();
+  }
+
+  Announcement postClassLetter({
+    required String className,
+    required String author,
+    required String title,
+    required String body,
+    String weekOf = '',
+    String nextWeekFocus = '',
+    String whatToBring = '',
+  }) {
+    final cls = className.trim();
+    addAnnouncement(
+      title: title,
+      body: body,
+      author: author,
+      audienceKeys: [
+        AnnouncementAudiences.parents,
+        AnnouncementAudiences.students,
+        if (cls.isNotEmpty) cls,
+      ],
+      priority: AnnouncementPriority.important,
+      isPinned: true,
+      kind: 'letter',
+      className: cls,
+      weekOf: weekOf,
+      nextWeekFocus: nextWeekFocus,
+      whatToBring: whatToBring,
+    );
+    return _announcements.first;
+  }
+
+  List<Announcement> classLettersFor(String className) {
+    final target = className.trim().toLowerCase();
+    return getAnnouncements()
+        .where((a) {
+          if (!a.isClassLetter) return false;
+          if (target.isEmpty) return true;
+          if (a.className.trim().toLowerCase() == target) return true;
+          return a.audienceKeys.any((k) => k.trim().toLowerCase() == target);
+        })
+        .toList(growable: false);
   }
 
   List<StudentGradeReport> getAllGradeReports() {

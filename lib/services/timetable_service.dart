@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
+import 'package:mayabela/models/app_notification.dart';
 import 'package:mayabela/models/class_timetable.dart';
 import 'package:mayabela/services/persistence/timetable_persistence_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
@@ -171,8 +174,59 @@ class TimetableService {
         homeroomTeacherName: access.teacherName,
       );
     }
+    final previous = _byClass[timetable.className];
     _byClass[timetable.className] = toSave.copyWith(updatedAt: DateTime.now());
     unawaited(TimetablePersistenceService.instance.saveFromService());
+    _notifyCoverChanges(previous, toSave);
+  }
+
+  @visibleForTesting
+  void resetForTests() {
+    _byClass.clear();
+    _nextSlotId = 100;
+  }
+
+  void _notifyCoverChanges(ClassTimetable? previous, ClassTimetable next) {
+    final lines = <String>[];
+    for (final day in next.days.values) {
+      for (final slot in day.slots) {
+        if (!slot.hasCover && (slot.coverNote ?? '').trim().isEmpty) continue;
+        final prev = _slotById(previous, slot.id);
+        final coverChanged = prev == null ||
+            prev.substituteTeacherId != slot.substituteTeacherId ||
+            prev.substituteTeacherName != slot.substituteTeacherName ||
+            prev.coverNote != slot.coverNote ||
+            prev.homeworkStands != slot.homeworkStands;
+        if (!coverChanged) continue;
+        final cover = (slot.substituteTeacherName ?? '').trim();
+        lines.add(
+          [
+            if (slot.subject?.trim().isNotEmpty == true) slot.subject!.trim(),
+            if (cover.isNotEmpty) 'cover: $cover',
+            if (!slot.homeworkStands) 'homework paused',
+            if (slot.homeworkStands && cover.isNotEmpty) 'homework still stands',
+            if ((slot.coverNote ?? '').trim().isNotEmpty) slot.coverNote!.trim(),
+          ].join(' · '),
+        );
+      }
+    }
+    if (lines.isEmpty) return;
+    SchoolDataService.instance.notifyClassUpdate(
+      className: next.className,
+      title: 'Timetable change — ${next.className}',
+      body: lines.take(4).join('\n'),
+      type: NotificationType.calendar,
+    );
+  }
+
+  TimetableSlot? _slotById(ClassTimetable? timetable, String id) {
+    if (timetable == null) return null;
+    for (final day in timetable.days.values) {
+      for (final slot in day.slots) {
+        if (slot.id == id) return slot;
+      }
+    }
+    return null;
   }
 
   /// Subject teachers already assigned to [className].

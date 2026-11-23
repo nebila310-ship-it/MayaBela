@@ -3,6 +3,7 @@ import 'package:mayabela/l10n/app_strings.dart';
 import 'package:mayabela/models/teacher_features.dart';
 import 'package:mayabela/services/auth_service.dart';
 import 'package:mayabela/services/school_data_service.dart';
+import 'package:mayabela/screens/announcements_screen.dart';
 import 'package:mayabela/utils/scroll_safe_area.dart';
 
 enum DailyActivityMode { teacher, parent }
@@ -123,6 +124,38 @@ class _DailyActivitiesScreenState extends State<DailyActivitiesScreen> {
     );
   }
 
+  List<Widget> _classLetterCards() {
+    final letters = SchoolDataService.instance.classLettersFor(widget.className);
+    if (letters.isEmpty) return const [];
+    final letter = letters.first;
+    return [
+      Card(
+        color: const Color(0xFFFFF7ED),
+        child: ListTile(
+          leading: const Icon(Icons.mail_outline, color: Color(0xFFC2410C)),
+          title: Text(letter.title),
+          subtitle: Text(
+            [
+              'Weekly class letter',
+              if (letter.weekOf.isNotEmpty) 'Week of ${letter.weekOf}',
+              if (letter.whatToBring.isNotEmpty)
+                'Bring: ${letter.whatToBring}',
+            ].join(' · '),
+          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AnnouncementDetailScreen(announcement: letter),
+              ),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 12),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTeacher = widget.mode == DailyActivityMode.teacher;
@@ -140,6 +173,7 @@ class _DailyActivitiesScreenState extends State<DailyActivitiesScreen> {
           body: ListView(
             padding: listPagePadding(context),
             children: [
+              ..._classLetterCards(),
               Card(
                 color: Colors.teal.shade50,
                 child: Padding(
