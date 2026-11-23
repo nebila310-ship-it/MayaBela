@@ -1723,6 +1723,7 @@ class AppStrings implements AppStringsLike {
   String get present => t('Present', 'ተገኝቷል');
   String get absent => t('Absent', 'ጠፍቷል');
   String get late => t('Late', 'ዘግይቷል');
+  String get earlyLeave => t('Left early', 'ቀድሞ ወጣ');
   String get excused => t('Excused', 'በፈቃድ', 'Hayyamame');
   String get saveAttendance => t('Save Attendance', 'መገኘት አስቀምጥ');
   String get conductedBy => t('Conducted by', 'የተመዘገበ በ');

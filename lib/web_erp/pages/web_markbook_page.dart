@@ -34,6 +34,8 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
   String? _className;
   String? _subject;
   final _cells = <String, Map<String, TextEditingController>>{};
+  final _auditTeacher = TextEditingController();
+  DateTime? _auditFrom;
   var _saving = false;
 
   bool get _canManage => ModuleAccess.canManage('markbook');
@@ -79,7 +81,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     GradeAuditService.instance.load();
     final classes = _classes;
     if (classes.isNotEmpty) _className = classes.first;
@@ -91,6 +93,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
   @override
   void dispose() {
     _tabs.dispose();
+    _auditTeacher.dispose();
     _disposeCells();
     super.dispose();
   }
@@ -281,7 +284,8 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
               const SizedBox(height: 4),
               Text(
                 'Enter homework, quizzes, classwork, midterm, and final. '
-                'The subject total is the weighted percentage and still goes through the existing grade approval chain.',
+                'The subject total is the weighted percentage and still goes through the existing grade approval chain. '
+                'Use Missing marks in the last two weeks of term to chase blanks and drafts.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -292,6 +296,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                 isScrollable: true,
                 tabs: const [
                   Tab(text: 'Class grid'),
+                  Tab(text: 'Missing marks'),
                   Tab(text: 'Category weights'),
                   Tab(text: 'Audit trail'),
                 ],
@@ -304,6 +309,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
             controller: _tabs,
             children: [
               _gridTab(narrow),
+              _missingTab(narrow),
               _weightsTab(narrow),
               _auditTab(narrow),
             ],
@@ -516,10 +522,93 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
     );
   }
 
+  Widget _missingTab(bool narrow) {
+    final className = _className;
+    final gaps = className == null
+        ? const <MissingMarkGap>[]
+        : _markbook.missingMarks(className: className, subject: _subject);
+    return ListView(
+      padding: EdgeInsets.all(narrow ? 12 : 20),
+      children: [
+        Text(
+          'Who still has a blank category or a draft / pending grade. '
+          'The Section Director can send this chase list without opening each row.',
+          style: TextStyle(color: Colors.grey.shade700),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(label: Text('${gaps.length} gap${gaps.length == 1 ? '' : 's'}')),
+            if (_canManage && gaps.isNotEmpty)
+              FilledButton.tonal(
+                onPressed: () {
+                  final className = _className;
+                  if (className == null) return;
+                  final body = gaps
+                      .take(40)
+                      .map((g) {
+                        final cats = g.blankCategories.isEmpty
+                            ? (g.workflowStatus ?? 'open')
+                            : g.blankCategories.join(', ');
+                        return '${g.studentName} · ${g.subject}: $cats';
+                      })
+                      .join('\n');
+                  _data.addAnnouncement(
+                    title: 'Missing marks · $className',
+                    body: body,
+                    author: AuthService.currentPersonName(),
+                    audience: className,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Posted a chase list for ${gaps.length} gap(s).',
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Send chase list'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (className == null)
+          const Text('Pick a class on the Class grid tab first.')
+        else if (gaps.isEmpty)
+          const Text('Every selected subject has marks and is past draft.')
+        else
+          for (final gap in gaps)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: WebErpTheme.cardDecoration(context),
+                child: ListTile(
+                  title: Text('${gap.studentName} · ${gap.subject}'),
+                  subtitle: Text(
+                    [
+                      if (gap.blankCategories.isNotEmpty)
+                        'Blank: ${gap.blankCategories.join(', ')}',
+                      if (gap.workflowOpen)
+                        'Workflow: ${gap.workflowStatus}',
+                    ].join(' · '),
+                  ),
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+
   Widget _auditTab(bool narrow) {
     final schoolId = _schoolId.toUpperCase();
-    final entries = GradeAuditService.instance.recentForSchool(
-      schoolId,
+    final entries = GradeAuditService.instance.filtered(
+      schoolId: schoolId,
+      className: _className,
+      subject: _subject,
+      teacherName: _auditTeacher.text,
+      from: _auditFrom,
       limit: 80,
     );
     return ListView(
@@ -527,12 +616,54 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
       children: [
         Text(
           'Submit, approve, reject, and unlock events already logged by the '
-          'grade workflow. This is the audit trail — it does not change scores.',
+          'grade workflow. Filter by this class, subject, teacher, and date. '
+          'This is the audit trail — it does not change scores.',
           style: TextStyle(color: Colors.grey.shade700),
         ),
         const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 220,
+              child: TextField(
+                controller: _auditTeacher,
+                decoration: const InputDecoration(
+                  labelText: 'Teacher',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _auditFrom ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) setState(() => _auditFrom = picked);
+              },
+              child: Text(
+                _auditFrom == null
+                    ? 'From date'
+                    : 'From ${_auditFrom!.day}/${_auditFrom!.month}/${_auditFrom!.year}',
+              ),
+            ),
+            if (_auditFrom != null)
+              TextButton(
+                onPressed: () => setState(() => _auditFrom = null),
+                child: const Text('Clear date'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         if (entries.isEmpty)
-          const Text('No grade audit events for this school yet.')
+          const Text('No grade audit events match these filters.')
         else
           for (final entry in entries)
             Padding(
@@ -546,6 +677,7 @@ class _WebMarkbookPageState extends State<WebMarkbookPage>
                   subtitle: Text(
                     '${entry.className}'
                     '${entry.actorName == null || entry.actorName!.isEmpty ? '' : ' · ${entry.actorName}'}'
+                    '${entry.statusBefore == null && entry.statusAfter == null ? '' : ' · ${entry.statusBefore ?? '—'} → ${entry.statusAfter ?? '—'}'}'
                     '${entry.detail == null || entry.detail!.isEmpty ? '' : ' — ${entry.detail}'}',
                   ),
                 ),

@@ -194,9 +194,9 @@ class _WebAttendanceHubPageState extends State<WebAttendanceHubPage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Teachers mark the same daily register used on mobile. '
-                'Reports and absence patterns stay on this store — this is not '
-                'a second attendance ledger.',
+                'Mark the daily homeroom register or a timetable period '
+                '(late, left-early, and cover teacher). Period cuts feed '
+                'at-risk alongside whole-day absence. This is not a second ledger.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

@@ -228,14 +228,20 @@ class StudentAttendanceSnapshot {
     this.late = 0,
     this.absent = 0,
     this.excused = 0,
+    this.earlyLeave = 0,
+    this.periodAbsent = 0,
   });
 
   final int present;
   final int late;
   final int absent;
   final int excused;
+  final int earlyLeave;
 
-  int get sessions => present + late + absent;
+  /// Period sessions missed while the daily register was present.
+  final int periodAbsent;
+
+  int get sessions => present + late + absent + earlyLeave;
 
   double get rate => sessions == 0 ? 0 : present / sessions;
 
@@ -244,6 +250,8 @@ class StudentAttendanceSnapshot {
         'late': late,
         'absent': absent,
         'excused': excused,
+        'earlyLeave': earlyLeave,
+        'periodAbsent': periodAbsent,
       };
 
   factory StudentAttendanceSnapshot.fromCounts({
@@ -251,14 +259,42 @@ class StudentAttendanceSnapshot {
     int? late,
     int? absent,
     int? excused,
+    int? earlyLeave,
+    int? periodAbsent,
   }) {
     return StudentAttendanceSnapshot(
       present: present ?? 0,
       late: late ?? 0,
       absent: absent ?? 0,
       excused: excused ?? 0,
+      earlyLeave: earlyLeave ?? 0,
+      periodAbsent: periodAbsent ?? 0,
     );
   }
+}
+
+/// Term-close chase row: a blank category and/or a grade still in draft.
+class MissingMarkGap {
+  const MissingMarkGap({
+    required this.studentName,
+    required this.className,
+    required this.subject,
+    required this.blankCategories,
+    this.studentId,
+    this.workflowStatus,
+  });
+
+  final String studentName;
+  final String? studentId;
+  final String className;
+  final String subject;
+  final List<String> blankCategories;
+  final String? workflowStatus;
+
+  bool get workflowOpen =>
+      workflowStatus == 'draft' || workflowStatus == 'pendingApproval';
+
+  bool get needsChase => blankCategories.isNotEmpty || workflowOpen;
 }
 
 /// Pure markbook math — no Flutter / service dependencies.

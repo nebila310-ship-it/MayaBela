@@ -44,7 +44,7 @@ class StudentRef {
   String get inviteStudentId => registryStudentId ?? id;
 }
 
-enum AttendanceStatus { present, absent, late, excused, unmarked }
+enum AttendanceStatus { present, absent, late, earlyLeave, excused, unmarked }
 
 class StudentAttendanceEntry {
   StudentAttendanceEntry({
@@ -91,6 +91,7 @@ class AttendanceSession {
     this.lockedAt,
     this.periodKey = '',
     this.periodLabel = '',
+    this.coverTeacherName = '',
   });
 
   final String className;
@@ -103,7 +104,12 @@ class AttendanceSession {
   final String periodKey;
   final String periodLabel;
 
+  /// Substitute covering this period when the assigned teacher is out.
+  final String coverTeacherName;
+
   bool get isDaily => periodKey.trim().isEmpty;
+
+  bool get hasCoverTeacher => coverTeacherName.trim().isNotEmpty;
 }
 
 class AttendanceSessionSummary {
@@ -114,6 +120,7 @@ class AttendanceSessionSummary {
     required this.lateCount,
     required this.absentCount,
     this.excusedCount = 0,
+    this.earlyLeaveCount = 0,
   });
 
   final String className;
@@ -122,6 +129,7 @@ class AttendanceSessionSummary {
   final int lateCount;
   final int absentCount;
   final int excusedCount;
+  final int earlyLeaveCount;
 }
 
 class StudentAttendanceRecord {
@@ -177,6 +185,7 @@ class DailyAttendanceReport {
     required this.sessions,
     required this.records,
     this.excusedCount = 0,
+    this.earlyLeaveCount = 0,
   });
 
   final DateTime date;
@@ -184,10 +193,12 @@ class DailyAttendanceReport {
   final int lateCount;
   final int absentCount;
   final int excusedCount;
+  final int earlyLeaveCount;
   final List<AttendanceSessionSummary> sessions;
   final List<StudentAttendanceRecord> records;
 
-  int get totalCount => presentCount + lateCount + absentCount + excusedCount;
+  int get totalCount =>
+      presentCount + lateCount + absentCount + excusedCount + earlyLeaveCount;
 
   List<StudentAttendanceRecord> recordsForStatus(AttendanceStatus status) {
     return records.where((r) => r.status == status).toList();

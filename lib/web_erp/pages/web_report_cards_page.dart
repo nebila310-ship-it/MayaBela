@@ -78,6 +78,8 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
         report: report,
         schoolName: SchoolRegistryService.instance.lookup(_schoolId)?.name,
         openForPrint: openForPrint,
+        classRank: _data.rankForStudent(report.studentName, report.className),
+        classSize: _data.getGradeReportsForClass(report.className).length,
       );
     } catch (e) {
       if (!mounted) return;
@@ -85,6 +87,50 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
         SnackBar(content: Text('Could not prepare the grade report: $e')),
       );
     }
+  }
+
+  Future<void> _deliverClassSet(
+    List<StudentGradeReport> reports,
+    bool openForPrint,
+  ) async {
+    final className = _className ?? (reports.isEmpty ? '' : reports.first.className);
+    if (className.isEmpty) return;
+    try {
+      await ReportCardPdfService.instance.deliverClassSet(
+        reports: reports,
+        className: className,
+        schoolName: SchoolRegistryService.instance.lookup(_schoolId)?.name,
+        openForPrint: openForPrint,
+        ranks: {
+          for (final report in reports)
+            report.studentName:
+                _data.rankForStudent(report.studentName, report.className) ?? 0,
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not prepare the class set: $e')),
+      );
+    }
+  }
+
+  void _publishClass() {
+    final className = _className;
+    if (className == null || className.isEmpty) return;
+    final n = MarkbookService.instance.publishClassReportCards(
+      className: className,
+    );
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          n == 0
+              ? 'No report cards in this class could be published.'
+              : 'Published $n report card(s) to parents.',
+        ),
+      ),
+    );
   }
 
   Future<void> _openEditor(StudentGradeReport report) async {
@@ -116,7 +162,8 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
         Text('Report cards', style: WebErpTheme.sectionTitle(context)),
         const SizedBox(height: 4),
         Text(
-          'Term report with weighted subject finals, GPA, attendance, and comments. '
+          'Term report with weighted subject finals, GPA, attendance, rank, and comments. '
+          'Select a section to print or publish the whole class set. '
           'Parents and students only see a published card (and already-approved subject grades).',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -159,6 +206,28 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
               ),
             ),
             Chip(label: Text('$unpublished unpublished')),
+            Chip(
+              label: Text(
+                '${reports.where((r) => (r.homeroomComment ?? '').trim().isEmpty).length} missing homeroom comments',
+              ),
+            ),
+            if (_canManage && reports.isNotEmpty) ...[
+              FilledButton.tonalIcon(
+                onPressed: () => _deliverClassSet(reports, false),
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Class PDF'),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: () => _deliverClassSet(reports, true),
+                icon: const Icon(Icons.print_outlined),
+                label: const Text('Print class'),
+              ),
+              FilledButton.icon(
+                onPressed: unpublished == 0 ? null : _publishClass,
+                icon: const Icon(Icons.campaign_outlined),
+                label: Text('Publish class ($unpublished)'),
+              ),
+            ],
             TextButton(
               onPressed: () => widget.onNavigate?.call('markbook'),
               child: const Text('Open markbook'),
@@ -189,7 +258,9 @@ class _WebReportCardsPageState extends State<WebReportCardsPage> {
                   '${report.className} · ${report.term} · '
                   'avg ${report.average.toStringAsFixed(1)}% · '
                   'GPA ${report.gpa.toStringAsFixed(2)} · '
+                  'rank ${_data.rankForStudent(report.studentName, report.className) ?? '—'} · '
                   'attendance ${snap.sessions == 0 ? '—' : '${(snap.rate * 100).round()}%'} · '
+                  '${(report.homeroomComment ?? '').trim().isEmpty ? 'No homeroom comment' : 'Homeroom comment ready'} · '
                   '${report.reportCardPublished ? 'Published' : 'Draft'}',
                 ),
                 trailing: Row(

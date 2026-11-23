@@ -76,9 +76,9 @@ class WebLmsHubPage extends StatelessWidget {
         Text('Learning Management', style: WebErpTheme.sectionTitle(context)),
         const SizedBox(height: 6),
         Text(
-          'Courses are class + subject spaces. Lesson notes, worksheets, and '
-          'exams stay in their existing desks — this hub shows them together '
-          'and replaces Telegram groups with class discussion.',
+          'Each course is one class + subject feed: lessons, homework due, '
+          'materials, and exam papers in order. Late work stays on this hub — '
+          'students and parents still use the existing portals, not a second LMS.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -112,6 +112,8 @@ class WebLmsHubPage extends StatelessWidget {
             ],
           ],
         ),
+        const SizedBox(height: 16),
+        _lateInbox(context, schoolId),
         const SizedBox(height: 16),
         if (courses.isEmpty)
           Container(
@@ -157,6 +159,8 @@ class WebLmsHubPage extends StatelessWidget {
                         '${course.rosterSize > 0 ? ' · ${course.rosterSize} students' : ''}',
                       ),
                       const SizedBox(height: 10),
+                      ..._feedPreview(context, course, schoolId),
+                      const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -199,4 +203,94 @@ class WebLmsHubPage extends StatelessWidget {
       ],
     );
   }
+
+  Widget _lateInbox(BuildContext context, String? schoolId) {
+    final late = LmsClassroomService.instance.lateWorkInbox(schoolId: schoolId);
+    return DecoratedBox(
+      decoration: WebErpTheme.cardDecoration(context),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Late-work inbox',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              late.isEmpty
+                  ? 'No overdue homework without a worksheet or score.'
+                  : '${late.length} student${late.length == 1 ? '' : 's'} past due.',
+            ),
+            if (late.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              for (final row in late.take(12))
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: StudentPhotoAvatar(
+                    studentId: row.studentId,
+                    name: row.studentName,
+                    radius: 16,
+                  ),
+                  title: Text(row.studentName),
+                  subtitle: Text(
+                    '${row.className} · ${row.subject} · ${row.homeworkTitle} · '
+                    'due ${row.dueDate.day}/${row.dueDate.month}',
+                  ),
+                  trailing: onNavigate == null
+                      ? null
+                      : TextButton(
+                          onPressed: () => onNavigate!('homework'),
+                          child: const Text('Homework'),
+                        ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _feedPreview(
+    BuildContext context,
+    LmsCourseSnapshot course,
+    String? schoolId,
+  ) {
+    final feed = LmsClassroomService.instance.courseFeed(
+      className: course.className,
+      subject: course.subject,
+      schoolId: schoolId,
+    );
+    if (feed.isEmpty) {
+      return const [
+        Text('No lesson, homework, material, or exam on this course yet.'),
+      ];
+    }
+    return [
+      const Text(
+        'Course feed',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 4),
+      for (final item in feed.take(8))
+        ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(_feedIcon(item.kind), size: 20),
+          title: Text(item.title),
+          subtitle: Text(
+            '${item.subtitle} · ${item.at.day}/${item.at.month}/${item.at.year}',
+          ),
+        ),
+    ];
+  }
+
+  IconData _feedIcon(LmsFeedKind kind) => switch (kind) {
+        LmsFeedKind.lesson => Icons.menu_book_outlined,
+        LmsFeedKind.homework => Icons.assignment_outlined,
+        LmsFeedKind.material => Icons.attach_file,
+        LmsFeedKind.exam => Icons.quiz_outlined,
+      };
 }

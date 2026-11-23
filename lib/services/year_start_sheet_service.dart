@@ -261,6 +261,7 @@ class YearStartSheetService {
         AttendanceStatus.present => 'P',
         AttendanceStatus.absent => 'A',
         AttendanceStatus.late => 'L',
+        AttendanceStatus.earlyLeave => 'EL',
         AttendanceStatus.excused => 'E',
         AttendanceStatus.unmarked => '',
       };
@@ -276,6 +277,11 @@ class YearStartSheetService {
       case 'l':
       case 'late':
         return AttendanceStatus.late;
+      case 'el':
+      case 'early':
+      case 'earlyleave':
+      case 'left early':
+        return AttendanceStatus.earlyLeave;
       case 'e':
       case 'excused':
         return AttendanceStatus.excused;

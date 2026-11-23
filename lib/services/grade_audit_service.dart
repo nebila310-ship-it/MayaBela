@@ -186,6 +186,50 @@ class GradeAuditService {
 
 
 
+  List<GradeAuditEntry> filtered({
+    required String schoolId,
+    String? className,
+    String? subject,
+    String? teacherName,
+    DateTime? from,
+    DateTime? to,
+    int limit = 200,
+  }) {
+    final id = schoolId.trim().toUpperCase();
+    final classFilter = className?.trim();
+    final subjectFilter = subject?.trim();
+    final teacherFilter = teacherName?.trim().toLowerCase();
+    final fromDay = from == null
+        ? null
+        : DateTime(from.year, from.month, from.day);
+    final toDay = to == null
+        ? null
+        : DateTime(to.year, to.month, to.day, 23, 59, 59, 999);
+    return _entries
+        .where((entry) {
+          if (entry.schoolId != id) return false;
+          if (classFilter != null &&
+              classFilter.isNotEmpty &&
+              entry.className != classFilter) {
+            return false;
+          }
+          if (subjectFilter != null &&
+              subjectFilter.isNotEmpty &&
+              entry.subject != subjectFilter) {
+            return false;
+          }
+          if (teacherFilter != null && teacherFilter.isNotEmpty) {
+            final actor = (entry.actorName ?? '').trim().toLowerCase();
+            if (!actor.contains(teacherFilter)) return false;
+          }
+          if (fromDay != null && entry.at.isBefore(fromDay)) return false;
+          if (toDay != null && entry.at.isAfter(toDay)) return false;
+          return true;
+        })
+        .take(limit)
+        .toList();
+  }
+
   List<GradeAuditEntry> forStudent({
 
     required String studentName,
