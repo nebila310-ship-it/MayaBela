@@ -832,6 +832,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return const Color(0xFFD32F2F);
       case AttendanceStatus.late:
         return const Color(0xFFEF6C00);
+      case AttendanceStatus.earlyLeave:
+        return const Color(0xFFEF6C00);
       case AttendanceStatus.present:
         return const Color(0xFF2E7D32);
       case AttendanceStatus.excused:
@@ -847,6 +849,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return s.absents;
       case AttendanceStatus.late:
         return s.lateArrivals;
+      case AttendanceStatus.earlyLeave:
+        return s.earlyLeave;
       case AttendanceStatus.present:
         return s.presentToday;
       case AttendanceStatus.excused:
@@ -862,6 +866,8 @@ class AdminAttendanceStatusScreen extends StatelessWidget {
         return s.gradeAbsentCount(grade, count);
       case AttendanceStatus.late:
         return s.gradeLateCount(grade, count);
+      case AttendanceStatus.earlyLeave:
+        return '$grade · $count left early';
       case AttendanceStatus.present:
         return s.gradePresentCount(grade, count);
       case AttendanceStatus.excused:
@@ -977,6 +983,8 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
         return const Color(0xFFD32F2F);
       case AttendanceStatus.late:
         return const Color(0xFFEF6C00);
+      case AttendanceStatus.earlyLeave:
+        return const Color(0xFFEF6C00);
       case AttendanceStatus.present:
         return const Color(0xFF2E7D32);
       case AttendanceStatus.excused:
@@ -1061,6 +1069,8 @@ class AdminAttendanceGradeDetailScreen extends StatelessWidget {
         return s.absents.toLowerCase();
       case AttendanceStatus.late:
         return s.lateArrivals.toLowerCase();
+      case AttendanceStatus.earlyLeave:
+        return s.earlyLeave.toLowerCase();
       case AttendanceStatus.present:
         return s.presentToday.toLowerCase();
       case AttendanceStatus.excused:

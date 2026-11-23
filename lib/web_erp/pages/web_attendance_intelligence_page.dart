@@ -42,7 +42,7 @@ class _WebAttendanceIntelligencePageState
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -86,6 +86,7 @@ class _WebAttendanceIntelligencePageState
                 '(${(AttendanceIntelligenceThresholds.highAbsenceRate * 100).round()}%+ '
                 'or ${AttendanceIntelligenceThresholds.consecutiveAbsenceThreshold}+ consecutive days). '
                 'This reads the existing attendance register and markbook — it does not enter grades. '
+                'Log an intervention or parent meeting on a profile. Period cuts count as well as whole-day absence. '
                 'Predictive / ML scoring comes later.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -137,6 +138,7 @@ class _WebAttendanceIntelligencePageState
                   Tab(text: 'Patterns (${patterned.length})'),
                   Tab(text: 'Attendance vs grades'),
                   Tab(text: 'Teacher insights (${insights.length})'),
+                  const Tab(text: 'Follow-ups'),
                 ],
               ),
             ],
@@ -150,6 +152,7 @@ class _WebAttendanceIntelligencePageState
               _list(patterned, empty: 'No absence patterns detected yet. Take attendance for a few days.'),
               _compareTab(profiles),
               _insightsTab(insights),
+              _followUpsTab(profiles),
             ],
           ),
         ),
@@ -194,8 +197,171 @@ class _WebAttendanceIntelligencePageState
             '${p.patterns.isEmpty ? '' : '\n${p.patterns.map((x) => x.label).join(' · ')}'}',
           ),
           isThreeLine: true,
+          trailing: TextButton(
+            onPressed: () => _addIntervention(p),
+            child: const Text('Log'),
+          ),
         ),
       ),
+    );
+  }
+
+  Future<void> _addIntervention(StudentRiskProfile profile) async {
+    final note = TextEditingController();
+    var kind = RiskInterventionKind.note;
+    var notify = true;
+    DateTime? followUp;
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text('Intervention · ${profile.studentName}'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<RiskInterventionKind>(
+                  initialValue: kind,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: RiskInterventionKind.note,
+                      child: Text('Intervention note'),
+                    ),
+                    DropdownMenuItem(
+                      value: RiskInterventionKind.parentMeeting,
+                      child: Text('Parent meeting'),
+                    ),
+                  ],
+                  onChanged: (v) =>
+                      setLocal(() => kind = v ?? RiskInterventionKind.note),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: note,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Note',
+                    hintText: 'What was agreed, who called, next step…',
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Notify homeroom'),
+                  value: notify,
+                  onChanged: (v) => setLocal(() => notify = v),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate:
+                            DateTime.now().add(const Duration(days: 7)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 120)),
+                      );
+                      if (picked != null) setLocal(() => followUp = picked);
+                    },
+                    child: Text(
+                      followUp == null
+                          ? 'Set follow-up date'
+                          : 'Follow-up ${followUp!.day}/${followUp!.month}/${followUp!.year}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final text = note.text.trim();
+    note.dispose();
+    if (saved != true || text.isEmpty) return;
+    _intel.addIntervention(
+      studentName: profile.studentName,
+      className: profile.className,
+      studentId: profile.studentId,
+      note: text,
+      kind: kind,
+      followUpAt: followUp,
+      notifyHomeroom: notify,
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Widget _followUpsTab(List<StudentRiskProfile> profiles) {
+    final items = <RiskIntervention>[];
+    for (final profile in profiles) {
+      items.addAll(
+        _intel.interventionsFor(
+          studentName: profile.studentName,
+          className: profile.className,
+        ),
+      );
+    }
+    items.sort((a, b) {
+      final aAt = a.followUpAt ?? a.createdAt;
+      final bAt = b.followUpAt ?? b.createdAt;
+      return aAt.compareTo(bAt);
+    });
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Intervention notes and parent meetings on the same at-risk profiles. '
+          'This is a follow-up log, not a new module.',
+        ),
+        const SizedBox(height: 12),
+        if (items.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: WebErpTheme.cardDecoration(context),
+            child: const Text('No interventions logged yet.'),
+          )
+        else
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: DecoratedBox(
+                decoration: WebErpTheme.cardDecoration(context),
+                child: ListTile(
+                  title: Text(
+                    '${item.studentName} · ${item.kind == RiskInterventionKind.parentMeeting ? 'Parent meeting' : 'Note'}',
+                  ),
+                  subtitle: Text(
+                    '${item.className} · ${item.note}'
+                    '${item.followUpAt == null ? '' : ' · follow-up ${item.followUpAt!.day}/${item.followUpAt!.month}'}'
+                    '${item.parentFollowedUp ? ' · parent followed up' : ''}',
+                  ),
+                  trailing: item.parentFollowedUp
+                      ? const Icon(Icons.check_circle_outline)
+                      : TextButton(
+                          onPressed: () {
+                            _intel.markParentFollowedUp(item.id);
+                            setState(() {});
+                          },
+                          child: const Text('Followed up'),
+                        ),
+                ),
+              ),
+            ),
+      ],
     );
   }
 

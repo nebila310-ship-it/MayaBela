@@ -357,6 +357,8 @@ class ExamService extends ChangeNotifier {
     String? schoolId,
     String category = '',
     ExamVaultAccess vaultAccess = ExamVaultAccess.private,
+    String room = '',
+    String invigilatorName = '',
   }) async {
     final now = DateTime.now();
     final paper = ExamPaper(
@@ -374,6 +376,8 @@ class ExamService extends ChangeNotifier {
       sittingMode: sittingMode,
       category: category.trim(),
       vaultAccess: vaultAccess,
+      room: room.trim(),
+      invigilatorName: invigilatorName.trim(),
       createdBy: AuthService.currentUser?.username,
       createdAt: now,
       updatedAt: now,
@@ -396,6 +400,8 @@ class ExamService extends ChangeNotifier {
     ExamSittingMode? sittingMode,
     String? category,
     ExamVaultAccess? vaultAccess,
+    String? room,
+    String? invigilatorName,
   }) async {
     final paper = paperById(id);
     if (paper == null) return null;
@@ -417,6 +423,8 @@ class ExamService extends ChangeNotifier {
     if (kind != null) paper.kind = kind;
     if (sittingMode != null) paper.sittingMode = sittingMode;
     if (category != null) paper.category = category.trim();
+    if (room != null) paper.room = room.trim();
+    if (invigilatorName != null) paper.invigilatorName = invigilatorName.trim();
     if (vaultAccess != null) paper.vaultAccess = vaultAccess;
     paper.updatedAt = DateTime.now();
     await _persist();
@@ -451,6 +459,8 @@ class ExamService extends ChangeNotifier {
       schoolId: paper.schoolId,
       category: paper.category,
       vaultAccess: ExamVaultAccess.private,
+      room: paper.room,
+      invigilatorName: paper.invigilatorName,
     );
   }
 
@@ -504,6 +514,8 @@ class ExamService extends ChangeNotifier {
       schoolId: paper.schoolId,
       category: paper.category,
       vaultAccess: ExamVaultAccess.private,
+      room: paper.room,
+      invigilatorName: paper.invigilatorName,
     );
   }
 
@@ -574,9 +586,15 @@ class ExamService extends ChangeNotifier {
         'use the scoring desk for those attempts.',
       );
     }
+    final existing = attemptFor(paperId: paperId, studentName: studentName);
+    if (existing?.sittingFlag.blocksMarkbook == true) {
+      throw StateError(
+        'This sitting is flagged ${existing!.sittingFlag.label.toLowerCase()} '
+        'and cannot be saved as a markbook score.',
+      );
+    }
     final clamped = percent.clamp(0, 100).toDouble();
     final now = DateTime.now();
-    final existing = attemptFor(paperId: paperId, studentName: studentName);
     if (existing != null) {
       existing.answers = [
         ExamAnswer(questionId: '_staff_percent', pointsAwarded: clamped),
@@ -714,11 +732,59 @@ class ExamService extends ChangeNotifier {
     return attempt;
   }
 
+  /// Absentee / malpractice stays on the sitting — it does not become a zero.
+  Future<ExamAttempt> flagSitting({
+    required String paperId,
+    required String studentName,
+    required ExamSittingFlag flag,
+    String? studentId,
+    String? className,
+  }) async {
+    final paper = paperById(paperId);
+    if (paper == null) {
+      throw StateError('Exam paper not found.');
+    }
+    final now = DateTime.now();
+    var attempt = attemptFor(paperId: paperId, studentName: studentName);
+    if (attempt == null) {
+      attempt = ExamAttempt(
+        id: _allocateId('AT', _attempts.map((a) => a.id)),
+        paperId: paperId,
+        schoolId: paper.schoolId,
+        studentName: studentName.trim(),
+        className: (className ?? paper.className).trim(),
+        studentId: (studentId ??
+                StudentRegistryService.instance
+                    .lookupByName(studentName)
+                    ?.studentId)
+            ?.trim()
+            .toUpperCase(),
+        startedAt: now,
+        updatedAt: now,
+        submittedAt: now,
+        sittingFlag: flag,
+        status: flag.blocksMarkbook
+            ? ExamAttemptStatus.submitted
+            : ExamAttemptStatus.inProgress,
+      );
+      _attempts.add(attempt);
+    } else {
+      attempt.sittingFlag = flag;
+      attempt.updatedAt = now;
+      if (flag.blocksMarkbook) {
+        attempt.pushedToMarkbook = false;
+      }
+    }
+    await _persist();
+    return attempt;
+  }
+
   /// Writes the attempt percent into the paper's markbook category (draft).
   bool pushAttemptToMarkbook(String attemptId, {String? teacherId}) {
     final attempt = attemptById(attemptId);
     final paper = attempt == null ? null : paperById(attempt.paperId);
     if (attempt == null || paper == null) return false;
+    if (attempt.sittingFlag.blocksMarkbook) return false;
     if (attempt.status != ExamAttemptStatus.scored) return false;
 
     final data = SchoolDataService.instance;

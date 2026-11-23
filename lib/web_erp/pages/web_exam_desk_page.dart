@@ -399,6 +399,8 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                   '${_categoryOrUnfiled(paper.category)} · '
                   '${_accessLabel(paper.vaultAccess)} · '
                   '${_kindLabel(paper.kind)} · ${_sittingLabel(paper.sittingMode)} · '
+                  '${paper.room.trim().isEmpty ? '' : 'Room ${paper.room} · '}'
+                  '${paper.invigilatorName.trim().isEmpty ? '' : 'Invigilator ${paper.invigilatorName} · '}'
                   '${_categoryLabel(paper.markbookCategoryId)} · '
                   '${paper.questionIds.length} questions · ${_statusLabel(paper.status)}'
                   '${_windowLabel(paper)}'
@@ -719,6 +721,7 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                   '${attempt.awardedPoints.toStringAsFixed(0)} / '
                   '${attempt.maxPoints.toStringAsFixed(0)} '
                   '(${attempt.percent.toStringAsFixed(1)}%)'
+                  '${attempt.sittingFlag == ExamSittingFlag.present ? '' : ' · ${attempt.sittingFlag.label}'}'
                   '${attempt.pushedToMarkbook ? ' · in markbook' : ''}',
                 ),
                 trailing: _canManage
@@ -734,7 +737,8 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                               ),
                             ),
                           if (attempt.status == ExamAttemptStatus.scored &&
-                              !attempt.pushedToMarkbook)
+                              !attempt.pushedToMarkbook &&
+                              !attempt.sittingFlag.blocksMarkbook)
                             TextButton(
                               onPressed: () {
                                 final ok = _exams.pushAttemptToMarkbook(attempt.id);
@@ -792,9 +796,30 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
                 title: Text(student.fullName),
                 subtitle: Text(_offlineScoreLabel(paper, student)),
                 trailing: _canManage
-                    ? TextButton(
-                        onPressed: () => _enterOfflinePercent(paper, student),
-                        child: const Text('Enter %'),
+                    ? Wrap(
+                        spacing: 4,
+                        children: [
+                          TextButton(
+                            onPressed: () => _flagSitting(
+                              paper,
+                              student,
+                              ExamSittingFlag.absent,
+                            ),
+                            child: const Text('Absent'),
+                          ),
+                          TextButton(
+                            onPressed: () => _flagSitting(
+                              paper,
+                              student,
+                              ExamSittingFlag.malpractice,
+                            ),
+                            child: const Text('Malpractice'),
+                          ),
+                          TextButton(
+                            onPressed: () => _enterOfflinePercent(paper, student),
+                            child: const Text('Enter %'),
+                          ),
+                        ],
                       )
                     : null,
               ),
@@ -808,11 +833,44 @@ class _WebExamDeskPageState extends State<WebExamDeskPage>
       paperId: paper.id,
       studentName: student.fullName,
     );
+    if (attempt != null && attempt.sittingFlag.blocksMarkbook) {
+      return '${attempt.sittingFlag.label} — not written to the markbook';
+    }
     if (attempt == null || attempt.status != ExamAttemptStatus.scored) {
       return 'No score yet';
     }
     return '${attempt.percent.toStringAsFixed(0)}%'
         '${attempt.pushedToMarkbook ? ' · in markbook' : ''}';
+  }
+
+  Future<void> _flagSitting(
+    ExamPaper paper,
+    AdminStudentRecord student,
+    ExamSittingFlag flag,
+  ) async {
+    try {
+      await _exams.flagSitting(
+        paperId: paper.id,
+        studentName: student.fullName,
+        flag: flag,
+        studentId: student.studentId,
+        className: student.className,
+      );
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${student.fullName}: ${flag.label}. This does not become a zero in the markbook.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
   }
 
   Future<void> _enterOfflinePercent(
@@ -1229,6 +1287,8 @@ class _PaperEditorDialog extends StatefulWidget {
 
 class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   late final TextEditingController _title;
+  late final TextEditingController _room;
+  late final TextEditingController _invigilator;
   late String _className;
   late String _subject;
   late String _categoryId;
@@ -1250,6 +1310,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
     super.initState();
     final p = widget.existing;
     _title = TextEditingController(text: p?.title ?? '');
+    _room = TextEditingController(text: p?.room ?? '');
+    _invigilator = TextEditingController(text: p?.invigilatorName ?? '');
     _className = p?.className ?? widget.classes.firstOrNull ?? '';
     _subject = p?.subject ??
         (widget.subjects.contains('Science')
@@ -1280,6 +1342,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
   @override
   void dispose() {
     _title.dispose();
+    _room.dispose();
+    _invigilator.dispose();
     _customCategory.dispose();
     for (final draft in _drafts) {
       draft.dispose();
@@ -1347,6 +1411,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         endAt: _endAt,
         category: _resolvedBankCategory,
         vaultAccess: _vaultAccess,
+        room: _room.text,
+        invigilatorName: _invigilator.text,
       );
     } else {
       await ExamService.instance.updatePaper(
@@ -1362,6 +1428,8 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
         clearWindow: _startAt == null && _endAt == null,
         category: _resolvedBankCategory,
         vaultAccess: _vaultAccess,
+        room: _room.text,
+        invigilatorName: _invigilator.text,
       );
     }
     if (mounted) Navigator.of(context).pop(true);
@@ -1530,6 +1598,21 @@ class _PaperEditorDialogState extends State<_PaperEditorDialog> {
                 ],
                 onChanged: (v) =>
                     setState(() => _sittingMode = v ?? _sittingMode),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _room,
+                decoration: const InputDecoration(
+                  labelText: 'Room',
+                  helperText: 'Sitting hall or classroom for this paper.',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _invigilator,
+                decoration: const InputDecoration(
+                  labelText: 'Invigilator',
+                ),
               ),
               const SizedBox(height: 8),
               ListTile(

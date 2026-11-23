@@ -144,6 +144,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     selectedPeriodLabel = match.first.label;
   }
 
+  String _coverTeacherName() {
+    if (selectedPeriodKey.trim().isEmpty || selectedClass.trim().isEmpty) {
+      return '';
+    }
+    final existing = _data.getAttendanceSession(
+      selectedClass,
+      selectedDate,
+      periodKey: selectedPeriodKey,
+    );
+    if (existing != null && existing.hasCoverTeacher) {
+      return existing.coverTeacherName;
+    }
+    final weekday = selectedDate.weekday;
+    if (weekday < DateTime.monday || weekday > DateTime.friday) return '';
+    final dayKey = kTimetableWeekdayKeys[weekday - DateTime.monday];
+    final day = TimetableService.instance
+        .getOrCreateForClass(selectedClass)
+        .day(dayKey);
+    for (final slot in day.slots) {
+      if (slot.id != selectedPeriodKey) continue;
+      return (slot.substituteTeacherName ?? '').trim();
+    }
+    return '';
+  }
+
   void _loadAttendance() {
     final s = AppLocale.instance.strings;
     _syncPeriodSelection(s);
@@ -282,6 +307,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         entries: entries,
         periodKey: selectedPeriodKey,
         periodLabel: selectedPeriodLabel,
+        coverTeacherName: _coverTeacherName(),
       );
       if (!saved) {
         if (!mounted) return;
@@ -323,6 +349,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       entries: entries,
       periodKey: selectedPeriodKey,
       periodLabel: selectedPeriodLabel,
+      coverTeacherName: _coverTeacherName(),
     );
     if (!saved) {
       if (!mounted) return;
@@ -357,6 +384,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return ClassroomPalette.red;
       case AttendanceStatus.late:
         return ClassroomPalette.orange;
+      case AttendanceStatus.earlyLeave:
+        return ClassroomPalette.orange;
       case AttendanceStatus.excused:
         return ClassroomPalette.blue;
       case AttendanceStatus.unmarked:
@@ -372,6 +401,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return s.absent;
       case AttendanceStatus.late:
         return s.late;
+      case AttendanceStatus.earlyLeave:
+        return s.earlyLeave;
       case AttendanceStatus.excused:
         return s.excused;
       case AttendanceStatus.unmarked:
@@ -511,6 +542,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           _data.activeAttendanceWindow().closeLabel,
                         ),
                       ),
+                      if (_coverTeacherName().isNotEmpty)
+                        Text('Cover: ${_coverTeacherName()}'),
                       if (!widget.readOnly)
                         DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -714,6 +747,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       entry,
                       AttendanceStatus.late,
                       Icons.schedule,
+                      s,
+                      blank: blank,
+                    ),
+                    _statusButton(
+                      entry,
+                      AttendanceStatus.earlyLeave,
+                      Icons.logout,
                       s,
                       blank: blank,
                     ),

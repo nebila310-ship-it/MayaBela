@@ -9,6 +9,73 @@ enum AbsencePatternKind {
   chronicAbsence,
   frequentLate,
   weekdayCluster,
+  periodCuts,
+}
+
+enum RiskInterventionKind { note, parentMeeting }
+
+class RiskIntervention {
+  const RiskIntervention({
+    required this.id,
+    required this.studentName,
+    required this.className,
+    required this.note,
+    required this.kind,
+    required this.createdAt,
+    this.studentId,
+    this.followUpAt,
+    this.createdBy,
+    this.notifyHomeroom = false,
+    this.parentFollowedUp = false,
+  });
+
+  final String id;
+  final String studentName;
+  final String className;
+  final String? studentId;
+  final String note;
+  final RiskInterventionKind kind;
+  final DateTime createdAt;
+  final DateTime? followUpAt;
+  final String? createdBy;
+  final bool notifyHomeroom;
+  final bool parentFollowedUp;
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'studentName': studentName,
+        'className': className,
+        if (studentId != null) 'studentId': studentId,
+        'note': note,
+        'kind': kind.name,
+        'createdAt': createdAt.toIso8601String(),
+        if (followUpAt != null) 'followUpAt': followUpAt!.toIso8601String(),
+        if (createdBy != null) 'createdBy': createdBy,
+        'notifyHomeroom': notifyHomeroom,
+        'parentFollowedUp': parentFollowedUp,
+      };
+
+  factory RiskIntervention.fromMap(Map<String, dynamic> map) {
+    return RiskIntervention(
+      id: map['id'] as String? ?? '',
+      studentName: map['studentName'] as String? ?? '',
+      className: map['className'] as String? ?? '',
+      studentId: map['studentId'] as String?,
+      note: map['note'] as String? ?? '',
+      kind: RiskInterventionKind.values.firstWhere(
+        (v) => v.name == map['kind'],
+        orElse: () => RiskInterventionKind.note,
+      ),
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      followUpAt: map['followUpAt'] != null
+          ? DateTime.tryParse(map['followUpAt'] as String)
+          : null,
+      createdBy: map['createdBy'] as String?,
+      notifyHomeroom: map['notifyHomeroom'] == true,
+      parentFollowedUp: map['parentFollowedUp'] == true,
+    );
+  }
 }
 
 class AbsencePattern {
@@ -188,4 +255,5 @@ abstract final class AttendanceIntelligenceThresholds {
   static const minSessionsForRate = 3;
   static const weekdayClusterShare = 0.6;
   static const minAbsencesForCluster = 3;
+  static const minPeriodCuts = 2;
 }

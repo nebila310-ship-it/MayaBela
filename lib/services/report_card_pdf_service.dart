@@ -125,9 +125,131 @@ class ReportCardPdfService {
     Uint8List? photoBytes,
     Uint8List? stampBytes,
     Uint8List? signatureBytes,
+    int? classRank,
+    int? classSize,
   }) async {
     final school = schoolNameFor(schoolName);
-    final lines = ReportCardLayout.lines(report);
+    final assets = await _assets(
+      report: report,
+      schoolName: school,
+      logoBytes: logoBytes,
+      photoBytes: photoBytes,
+      stampBytes: stampBytes,
+      signatureBytes: signatureBytes,
+    );
+    final doc = pw.Document();
+    _addReportPage(
+      doc,
+      report: report,
+      school: school,
+      assets: assets,
+      classRank: classRank,
+      classSize: classSize,
+    );
+    return doc.save();
+  }
+
+  String fileNameForClass(String className, String? term) {
+    final who = ReportCardLayout.fileToken(className);
+    final when = ReportCardLayout.fileToken(term ?? 'term');
+    return 'grade_reports_${who}_$when.pdf';
+  }
+
+  Future<Uint8List> buildClassSetBytes({
+    required List<StudentGradeReport> reports,
+    String? schoolName,
+    Uint8List? logoBytes,
+    Uint8List? stampBytes,
+    Uint8List? signatureBytes,
+    Map<String, int> ranks = const {},
+  }) async {
+    final school = schoolNameFor(schoolName);
+    final doc = pw.Document();
+    for (final report in reports) {
+      final photo = await resolvePhotoBytes(report);
+      final assets = await _assets(
+        report: report,
+        schoolName: school,
+        logoBytes: logoBytes,
+        photoBytes: photo,
+        stampBytes: stampBytes,
+        signatureBytes: signatureBytes,
+      );
+      _addReportPage(
+        doc,
+        report: report,
+        school: school,
+        assets: assets,
+        classRank: ranks[report.studentName],
+        classSize: reports.length,
+      );
+    }
+    return doc.save();
+  }
+
+  Future<void> deliverClassSet({
+    required List<StudentGradeReport> reports,
+    required String className,
+    String? schoolName,
+    required bool openForPrint,
+    Map<String, int> ranks = const {},
+  }) async {
+    final resolvedLogo = await resolveLogoBytes(null);
+    final resolvedStamp =
+        await resolveMarkBytes(null, SchoolMarkKind.stamp);
+    final resolvedSignature =
+        await resolveMarkBytes(null, SchoolMarkKind.principalSignature);
+    final bytes = await buildClassSetBytes(
+      reports: reports,
+      schoolName: schoolName,
+      logoBytes: resolvedLogo,
+      stampBytes: resolvedStamp,
+      signatureBytes: resolvedSignature,
+      ranks: ranks,
+    );
+    final fileName = fileNameForClass(
+      className,
+      reports.isEmpty ? null : reports.first.term,
+    );
+    final subject = 'Grade reports - $className';
+    if (kIsWeb) {
+      if (openForPrint) {
+        await WebFileUtils.openOrDownload(
+          filePath: fileName,
+          fileName: fileName,
+          bytes: bytes,
+        );
+      } else {
+        await WebFileUtils.downloadBytes(fileName: fileName, bytes: bytes);
+      }
+      return;
+    }
+    await Share.shareXFiles(
+      [
+        XFile.fromData(
+          bytes,
+          mimeType: 'application/pdf',
+          name: fileName,
+        ),
+      ],
+      subject: subject,
+      text: subject,
+    );
+  }
+
+  Future<({
+    pw.ImageProvider? logo,
+    pw.ImageProvider? photo,
+    pw.ImageProvider? stamp,
+    pw.ImageProvider? signature,
+  })> _assets({
+    required StudentGradeReport report,
+    required String schoolName,
+    Uint8List? logoBytes,
+    Uint8List? photoBytes,
+    Uint8List? stampBytes,
+    Uint8List? signatureBytes,
+  }) async {
     final logo = _decodes(logoBytes) ? pw.MemoryImage(logoBytes!) : null;
     final photo = _decodes(photoBytes) ? pw.MemoryImage(photoBytes!) : null;
     final stampInk = _decodes(stampBytes)
@@ -142,27 +264,45 @@ class ReportCardPdfService {
             SchoolMarkKind.principalSignature,
           )
         : null;
-    final stamp = _decodes(stampInk) ? pw.MemoryImage(stampInk!) : null;
-    final signature =
-        _decodes(signatureInk) ? pw.MemoryImage(signatureInk!) : null;
+    return (
+      logo: logo,
+      photo: photo,
+      stamp: _decodes(stampInk) ? pw.MemoryImage(stampInk!) : null,
+      signature:
+          _decodes(signatureInk) ? pw.MemoryImage(signatureInk!) : null,
+    );
+  }
+
+  void _addReportPage(
+    pw.Document doc, {
+    required StudentGradeReport report,
+    required String school,
+    required ({
+      pw.ImageProvider? logo,
+      pw.ImageProvider? photo,
+      pw.ImageProvider? stamp,
+      pw.ImageProvider? signature,
+    }) assets,
+    int? classRank,
+    int? classSize,
+  }) {
+    final lines = ReportCardLayout.lines(report);
     final snap = report.attendanceSnapshot;
     final attendance = snap.sessions == 0
         ? '-'
         : '${(snap.rate * 100).round()}%  (${snap.present} present, ${snap.late} late, ${snap.absent} absent)';
-
-    final doc = pw.Document();
     doc.addPage(
       pw.MultiPage(
         pageTheme: pw.PageTheme(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.fromLTRB(36, 32, 36, 40),
           buildBackground: (context) {
-            if (logo == null) return pw.SizedBox();
+            if (assets.logo == null) return pw.SizedBox();
             final side = PdfPageFormat.a4.height / 2;
             return pw.Center(
               child: pw.Opacity(
                 opacity: 0.08,
-                child: pw.Image(logo, width: side, height: side),
+                child: pw.Image(assets.logo!, width: side, height: side),
               ),
             );
           },
@@ -186,15 +326,15 @@ class ReportCardPdfService {
         build: (context) => [
           _header(
             school: school,
-            logo: logo,
-            photo: photo,
-            stamp: stamp,
+            logo: assets.logo,
+            photo: assets.photo,
+            stamp: assets.stamp,
             studentName: report.studentName,
           ),
           pw.SizedBox(height: 14),
-          _identity(report),
+          _identity(report, classRank: classRank, classSize: classSize),
           pw.SizedBox(height: 12),
-          _stats(report, attendance),
+          _stats(report, attendance, classRank: classRank, classSize: classSize),
           pw.SizedBox(height: 16),
           _subjectTable(lines),
           if (lines.any((line) => line.remark != null)) ...[
@@ -258,21 +398,20 @@ class ReportCardPdfService {
             ),
           ],
           pw.SizedBox(height: 28),
-          _signatures(signature),
-          if (stamp != null) ...[
+          _signatures(assets.signature),
+          if (assets.stamp != null) ...[
             pw.SizedBox(height: 8),
             pw.Align(
               alignment: pw.Alignment.centerRight,
               child: pw.Transform.rotate(
                 angle: -0.12,
-                child: pw.Image(stamp, width: 124, height: 124),
+                child: pw.Image(assets.stamp!, width: 124, height: 124),
               ),
             ),
           ],
         ],
       ),
     );
-    return doc.save();
   }
 
   pw.Widget _header({
@@ -381,7 +520,11 @@ class ReportCardPdfService {
     );
   }
 
-  pw.Widget _identity(StudentGradeReport report) {
+  pw.Widget _identity(
+    StudentGradeReport report, {
+    int? classRank,
+    int? classSize,
+  }) {
     final bits = <String>[
       report.className,
       report.term,
@@ -389,6 +532,10 @@ class ReportCardPdfService {
         report.academicYear!.trim(),
       if (report.studentId != null && report.studentId!.trim().isNotEmpty)
         'ID ${report.studentId!.trim()}',
+      if (classRank != null)
+        classSize == null
+            ? 'Rank $classRank'
+            : 'Rank $classRank of $classSize',
     ];
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -422,7 +569,12 @@ class ReportCardPdfService {
     );
   }
 
-  pw.Widget _stats(StudentGradeReport report, String attendance) {
+  pw.Widget _stats(
+    StudentGradeReport report,
+    String attendance, {
+    int? classRank,
+    int? classSize,
+  }) {
     pw.Widget cell(String label, String value) {
       return pw.Expanded(
         child: pw.Container(
@@ -456,6 +608,11 @@ class ReportCardPdfService {
         cell('Average', '${report.average.toStringAsFixed(1)}%'),
         cell('GPA', report.gpa.toStringAsFixed(2)),
         cell('Attendance', attendance),
+        if (classRank != null)
+          cell(
+            'Rank',
+            classSize == null ? '$classRank' : '$classRank / $classSize',
+          ),
       ],
     );
   }
@@ -590,6 +747,8 @@ class ReportCardPdfService {
     Uint8List? stampBytes,
     Uint8List? signatureBytes,
     required bool openForPrint,
+    int? classRank,
+    int? classSize,
   }) async {
     final resolvedLogo = logoBytes ?? await resolveLogoBytes(null);
     final resolvedPhoto = photoBytes ?? await resolvePhotoBytes(report);
@@ -604,6 +763,8 @@ class ReportCardPdfService {
       photoBytes: resolvedPhoto,
       stampBytes: resolvedStamp,
       signatureBytes: resolvedSignature,
+      classRank: classRank,
+      classSize: classSize,
     );
     final fileName = fileNameFor(report);
     final subject = 'Grade report - ${report.studentName}';

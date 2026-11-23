@@ -178,6 +178,8 @@ class ExamPaper {
     this.sittingMode = ExamSittingMode.online,
     this.category = '',
     this.vaultAccess = ExamVaultAccess.private,
+    this.room = '',
+    this.invigilatorName = '',
   });
 
   final String id;
@@ -196,6 +198,8 @@ class ExamPaper {
   ExamSittingMode sittingMode;
   String category;
   ExamVaultAccess vaultAccess;
+  String room;
+  String invigilatorName;
   final DateTime createdAt;
   DateTime updatedAt;
 
@@ -239,6 +243,9 @@ class ExamPaper {
         'sittingMode': sittingMode.name,
         if (category.trim().isNotEmpty) 'category': category.trim(),
         'vaultAccess': vaultAccess.name,
+        if (room.trim().isNotEmpty) 'room': room.trim(),
+        if (invigilatorName.trim().isNotEmpty)
+          'invigilatorName': invigilatorName.trim(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -283,12 +290,27 @@ class ExamPaper {
         (v) => v.name == map['vaultAccess'],
         orElse: () => ExamVaultAccess.vault,
       ),
+      room: (map['room'] as String? ?? '').trim(),
+      invigilatorName: (map['invigilatorName'] as String? ?? '').trim(),
       createdAt:
           DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
       updatedAt:
           DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
+}
+
+enum ExamSittingFlag { present, absent, malpractice }
+
+extension ExamSittingFlagX on ExamSittingFlag {
+  bool get blocksMarkbook =>
+      this == ExamSittingFlag.absent || this == ExamSittingFlag.malpractice;
+
+  String get label => switch (this) {
+        ExamSittingFlag.present => 'Sat',
+        ExamSittingFlag.absent => 'Absent',
+        ExamSittingFlag.malpractice => 'Malpractice',
+      };
 }
 
 class ExamAnswer {
@@ -338,6 +360,7 @@ class ExamAttempt {
     this.scoredAt,
     this.scoredBy,
     this.pushedToMarkbook = false,
+    this.sittingFlag = ExamSittingFlag.present,
   });
 
   final String id;
@@ -355,6 +378,7 @@ class ExamAttempt {
   DateTime? scoredAt;
   String? scoredBy;
   bool pushedToMarkbook;
+  ExamSittingFlag sittingFlag;
 
   double get awardedPoints => answers.fold(
         0,
@@ -384,6 +408,8 @@ class ExamAttempt {
         if (scoredAt != null) 'scoredAt': scoredAt!.toIso8601String(),
         if (scoredBy != null) 'scoredBy': scoredBy,
         'pushedToMarkbook': pushedToMarkbook,
+        if (sittingFlag != ExamSittingFlag.present)
+          'sittingFlag': sittingFlag.name,
       };
 
   factory ExamAttempt.fromMap(Map<String, dynamic> map) {
@@ -416,6 +442,10 @@ class ExamAttempt {
           : null,
       scoredBy: map['scoredBy'] as String?,
       pushedToMarkbook: map['pushedToMarkbook'] as bool? ?? false,
+      sittingFlag: ExamSittingFlag.values.firstWhere(
+        (v) => v.name == map['sittingFlag'],
+        orElse: () => ExamSittingFlag.present,
+      ),
     );
   }
 }

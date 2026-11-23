@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:mayabela/models/announcement.dart';
 import 'package:mayabela/models/attendance_intelligence_models.dart';
 import 'package:mayabela/models/teacher_features.dart';
@@ -12,6 +14,14 @@ class AttendanceIntelligenceService {
   static final instance = AttendanceIntelligenceService._();
 
   final _data = SchoolDataService.instance;
+  final List<RiskIntervention> _interventions = [];
+  int _nextInterventionId = 1;
+
+  @visibleForTesting
+  static void resetForTests() {
+    instance._interventions.clear();
+    instance._nextInterventionId = 1;
+  }
 
   bool get _isPublicReader {
     final role = AuthService.currentUser?.roleKey;
@@ -130,6 +140,7 @@ class AttendanceIntelligenceService {
     final snap = _data.attendanceSnapshotForStudent(
       studentName: studentName,
       className: className,
+      includePeriodSessions: true,
     );
     final sessions = snap.sessions;
     final absenceRate = sessions == 0 ? 0.0 : snap.absent / sessions;
@@ -150,9 +161,11 @@ class AttendanceIntelligenceService {
     final enoughSessions =
         sessions >= AttendanceIntelligenceThresholds.minSessionsForRate;
     final highAbsence = enoughSessions &&
-        (absenceRate >= AttendanceIntelligenceThresholds.highAbsenceRate ||
-            consecutive >=
-                AttendanceIntelligenceThresholds.consecutiveAbsenceThreshold);
+            (absenceRate >= AttendanceIntelligenceThresholds.highAbsenceRate ||
+                consecutive >=
+                    AttendanceIntelligenceThresholds
+                        .consecutiveAbsenceThreshold) ||
+        snap.periodAbsent >= AttendanceIntelligenceThresholds.minPeriodCuts;
     final lowGrades = hasGrades &&
         (gradeAvg ?? 100) < AttendanceIntelligenceThresholds.lowGradeThreshold;
 
@@ -183,6 +196,15 @@ class AttendanceIntelligenceService {
         AbsencePattern(
           kind: AbsencePatternKind.frequentLate,
           label: '${(lateRate * 100).round()}% late arrivals',
+        ),
+      );
+    }
+    if (snap.periodAbsent >= AttendanceIntelligenceThresholds.minPeriodCuts) {
+      patterns.add(
+        AbsencePattern(
+          kind: AbsencePatternKind.periodCuts,
+          label:
+              '${snap.periodAbsent} period cut${snap.periodAbsent == 1 ? '' : 's'} while marked present for the day',
         ),
       );
     }
@@ -345,6 +367,78 @@ class AttendanceIntelligenceService {
       kind: AbsencePatternKind.weekdayCluster,
       label: '${names[bestDay] ?? 'One weekday'} account for $best of $total absences',
     );
+  }
+
+  List<RiskIntervention> interventionsFor({
+    required String studentName,
+    String? className,
+  }) {
+    return _interventions
+        .where(
+          (item) =>
+              item.studentName == studentName &&
+              (className == null || item.className == className),
+        )
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  RiskIntervention addIntervention({
+    required String studentName,
+    required String className,
+    required String note,
+    RiskInterventionKind kind = RiskInterventionKind.note,
+    String? studentId,
+    DateTime? followUpAt,
+    bool notifyHomeroom = false,
+  }) {
+    final item = RiskIntervention(
+      id: 'int-${_nextInterventionId++}',
+      studentName: studentName,
+      className: className,
+      studentId: studentId,
+      note: note.trim(),
+      kind: kind,
+      createdAt: DateTime.now(),
+      followUpAt: followUpAt,
+      createdBy: AuthService.currentPersonName(),
+      notifyHomeroom: notifyHomeroom,
+    );
+    _interventions.insert(0, item);
+    if (notifyHomeroom) {
+      final follow = followUpAt == null
+          ? ''
+          : ' Follow-up ${followUpAt.day}/${followUpAt.month}/${followUpAt.year}.';
+      _data.addAnnouncement(
+        title: 'At-risk follow-up · $studentName',
+        body:
+            '${item.createdBy ?? 'Staff'} logged a ${kind == RiskInterventionKind.parentMeeting ? 'parent meeting' : 'intervention'} '
+            'for $studentName ($className). ${item.note}$follow',
+        author: item.createdBy ?? 'Staff',
+        audience: className,
+      );
+    }
+    return item;
+  }
+
+  bool markParentFollowedUp(String id, {bool done = true}) {
+    final index = _interventions.indexWhere((item) => item.id == id);
+    if (index < 0) return false;
+    final current = _interventions[index];
+    _interventions[index] = RiskIntervention(
+      id: current.id,
+      studentName: current.studentName,
+      className: current.className,
+      studentId: current.studentId,
+      note: current.note,
+      kind: current.kind,
+      createdAt: current.createdAt,
+      followUpAt: current.followUpAt,
+      createdBy: current.createdBy,
+      notifyHomeroom: current.notifyHomeroom,
+      parentFollowedUp: done,
+    );
+    return true;
   }
 }
 

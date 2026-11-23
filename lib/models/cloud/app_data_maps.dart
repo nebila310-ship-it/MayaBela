@@ -195,6 +195,8 @@ abstract final class AppDataMaps {
     if (session.periodKey.trim().isNotEmpty) 'periodKey': session.periodKey,
     if (session.periodLabel.trim().isNotEmpty)
       'periodLabel': session.periodLabel,
+    if (session.coverTeacherName.trim().isNotEmpty)
+      'coverTeacherName': session.coverTeacherName,
     'studentIds': session.entries
         .map((e) => e.studentId?.trim())
         .whereType<String>()
@@ -226,13 +228,15 @@ abstract final class AppDataMaps {
             : null,
         periodKey: map['periodKey'] as String? ?? '',
         periodLabel: map['periodLabel'] as String? ?? '',
+        coverTeacherName: map['coverTeacherName'] as String? ?? '',
         entries: (map['entries'] as List<dynamic>? ?? const [])
             .map(
               (e) => StudentAttendanceEntry(
                 studentName: (e as Map)['studentName'] as String? ?? '',
                 studentId: e['studentId'] as String?,
-                status: AttendanceStatus.values.byName(
-                  e['status'] as String? ?? 'unmarked',
+                status: AttendanceStatus.values.firstWhere(
+                  (v) => v.name == (e['status'] as String? ?? 'unmarked'),
+                  orElse: () => AttendanceStatus.unmarked,
                 ),
                 taken: e['taken'] == true,
                 updatedAt: e['updatedAt'] is String

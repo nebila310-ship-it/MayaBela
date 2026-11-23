@@ -4771,6 +4771,9 @@ class SchoolDataService {
           case AttendanceStatus.late:
             sessionLate++;
             late++;
+          case AttendanceStatus.earlyLeave:
+            sessionLate++;
+            late++;
           case AttendanceStatus.absent:
             sessionAbsent++;
             absent++;
@@ -5338,6 +5341,7 @@ class SchoolDataService {
     String? lockedBy,
     String periodKey = '',
     String periodLabel = '',
+    String? coverTeacherName,
   }) {
     if (!canWriteAttendanceRegister(className)) return false;
     final key = _normalizeAttendancePeriodKey(periodKey);
@@ -5403,6 +5407,8 @@ class SchoolDataService {
       periodLabel: periodLabel.trim().isNotEmpty
           ? periodLabel.trim()
           : (existing?.periodLabel ?? ''),
+      coverTeacherName: (coverTeacherName ?? existing?.coverTeacherName ?? '')
+          .trim(),
     );
     _attendanceSessions.add(session);
 
@@ -6457,27 +6463,60 @@ class SchoolDataService {
     required String studentName,
     required String className,
     String? studentId,
+    bool includePeriodSessions = false,
   }) {
     var present = 0;
     var late = 0;
     var absent = 0;
     var excused = 0;
-    for (final session in getAttendanceHistory(className)) {
+    var earlyLeave = 0;
+    var periodAbsent = 0;
+    final dailyPresentDays = <String>{};
+    final sessions = getAttendanceHistory(
+      className,
+      dailyOnly: !includePeriodSessions,
+    );
+    for (final session in sessions) {
       for (final entry in session.entries) {
         if (!entry.matches(studentId: studentId, studentName: studentName)) {
           continue;
         }
-        switch (effectiveAttendanceStatus(entry, session.date)) {
+        final status = effectiveAttendanceStatus(entry, session.date);
+        final day = _calendarDay(session.date).toIso8601String();
+        if (session.isDaily && status == AttendanceStatus.present) {
+          dailyPresentDays.add(day);
+        }
+        switch (status) {
           case AttendanceStatus.present:
             present++;
           case AttendanceStatus.late:
             late++;
+          case AttendanceStatus.earlyLeave:
+            earlyLeave++;
           case AttendanceStatus.absent:
             absent++;
+            if (!session.isDaily) periodAbsent++;
           case AttendanceStatus.excused:
             excused++;
           case AttendanceStatus.unmarked:
             break;
+        }
+      }
+    }
+    var periodCuts = 0;
+    if (includePeriodSessions) {
+      for (final session in sessions) {
+        if (session.isDaily) continue;
+        final day = _calendarDay(session.date).toIso8601String();
+        if (!dailyPresentDays.contains(day)) continue;
+        for (final entry in session.entries) {
+          if (!entry.matches(studentId: studentId, studentName: studentName)) {
+            continue;
+          }
+          if (effectiveAttendanceStatus(entry, session.date) ==
+              AttendanceStatus.absent) {
+            periodCuts++;
+          }
         }
       }
     }
@@ -6486,6 +6525,8 @@ class SchoolDataService {
       late: late,
       absent: absent,
       excused: excused,
+      earlyLeave: earlyLeave,
+      periodAbsent: includePeriodSessions ? periodCuts : periodAbsent,
     );
   }
 

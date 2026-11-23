@@ -145,4 +145,98 @@ class MarkbookService extends ChangeNotifier {
 
   int unpublishedCount({String? className}) =>
       _data.unpublishedReportCardCount(className: className);
+
+  List<MissingMarkGap> missingMarks({
+    required String className,
+    String? subject,
+  }) {
+    final cats = settingsForSchool().categories;
+    final students = _data.getStudentsForClass(className);
+    final reports = _data.getGradeReportsForClass(className);
+    final names = <String, String?>{
+      for (final student in students) student.name: student.registryStudentId,
+      for (final report in reports)
+        if (!students.any((s) => s.name == report.studentName))
+          report.studentName: report.studentId,
+    };
+    final subjectFilter = subject?.trim();
+    final subjects = <String>{};
+    if (subjectFilter != null && subjectFilter.isNotEmpty) {
+      subjects.add(subjectFilter);
+    } else {
+      for (final report in reports) {
+        for (final item in report.subjects) {
+          subjects.add(item.subject);
+        }
+      }
+    }
+    final gaps = <MissingMarkGap>[];
+    for (final entry in names.entries) {
+      final studentName = entry.key;
+      StudentGradeReport? report;
+      for (final item in reports) {
+        if (item.studentName == studentName) {
+          report = item;
+          break;
+        }
+      }
+      final subjectNames = subjects.isEmpty
+          ? report?.subjects.map((s) => s.subject).toSet() ?? const <String>{}
+          : subjects;
+      for (final subjectName in subjectNames) {
+        SubjectGrade? grade;
+        if (report != null) {
+          for (final item in report.subjects) {
+            if (item.subject == subjectName) {
+              grade = item;
+              break;
+            }
+          }
+        }
+        final marks = grade == null ? templateMarks() : marksForSubject(grade);
+        final blank = [
+          for (final mark in marks)
+            if (mark.score == null)
+              cats
+                      .where((c) => c.id == mark.categoryId)
+                      .map((c) => c.label)
+                      .firstOrNull ??
+                  mark.label,
+        ];
+        final status = grade?.status.name;
+        final gap = MissingMarkGap(
+          studentName: studentName,
+          studentId: entry.value ?? report?.studentId,
+          className: className,
+          subject: subjectName,
+          blankCategories: blank,
+          workflowStatus: status,
+        );
+        if (gap.needsChase) gaps.add(gap);
+      }
+    }
+    gaps.sort((a, b) {
+      final byName = a.studentName.compareTo(b.studentName);
+      return byName != 0 ? byName : a.subject.compareTo(b.subject);
+    });
+    return gaps;
+  }
+
+  int publishClassReportCards({required String className}) {
+    var count = 0;
+    for (final report in _data.getGradeReportsForClass(className)) {
+      if (report.subjects.isEmpty) continue;
+      if (publishReportCard(
+        studentName: report.studentName,
+        className: className,
+        term: report.term,
+        academicYear: report.academicYear,
+        homeroomComment: report.homeroomComment,
+        principalComment: report.principalComment,
+      )) {
+        count++;
+      }
+    }
+    return count;
+  }
 }

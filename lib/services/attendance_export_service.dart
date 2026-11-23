@@ -140,6 +140,8 @@ class AttendanceExportService {
         return labels.present;
       case AttendanceStatus.late:
         return labels.late;
+      case AttendanceStatus.earlyLeave:
+        return 'Left early';
       case AttendanceStatus.absent:
         return labels.absents;
       case AttendanceStatus.excused:
