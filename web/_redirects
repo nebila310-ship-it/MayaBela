@@ -11,6 +11,12 @@
 /fenote-raey-academy/leave-behind/   /fenote-raey-academy/leave-behind/index.html   200
 /fenote-raey-academy/owner-money    /fenote-raey-academy/owner-money/index.html   200
 /fenote-raey-academy/owner-money/   /fenote-raey-academy/owner-money/index.html   200
+/fenote-raey-academy/admin-training    /fenote-raey-academy/admin-training/index.html   200
+/fenote-raey-academy/admin-training/   /fenote-raey-academy/admin-training/index.html   200
+/fenote-raey-academy/admin-training-script    /fenote-raey-academy/admin-training-script/index.html   200
+/fenote-raey-academy/admin-training-script/   /fenote-raey-academy/admin-training-script/index.html   200
+/fenote-raey-academy/admin-training-handout    /fenote-raey-academy/admin-training-handout/index.html   200
+/fenote-raey-academy/admin-training-handout/   /fenote-raey-academy/admin-training-handout/index.html   200
 
 # Commercial agreements (directory + index.html — avoids Cloudflare .html pretty-URL loops)
 /agreements/feleg-raye    /agreements/feleg-raye/index.html   200
