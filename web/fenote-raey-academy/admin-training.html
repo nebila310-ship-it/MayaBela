@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <base href="/fenote-raey-academy/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fenote Raey Academy — admin &amp; owner training</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --gold: #ffb020;
+      --line: rgba(255,255,255,.14);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%;
+      background: #070b14;
+      color: #fff;
+      font-family: "Segoe UI", "Noto Sans Ethiopic", "Nyala", Arial, sans-serif;
+    }
+    .deck { height: 100%; overflow: hidden; }
+    .slide {
+      display: none;
+      height: 100%;
+      padding: 48px 64px 72px;
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(69,39,160,.45), transparent 55%),
+        linear-gradient(160deg, #12101c 0%, #0b1020 55%, #0a1a22 100%);
+    }
+    .slide.on { display: flex; flex-direction: column; }
+    h1 { font-size: 42px; line-height: 1.08; margin: 0 0 12px; letter-spacing: -0.03em; }
+    h2 { font-size: 32px; margin: 0 0 16px; letter-spacing: -0.02em; }
+    h3 { font-size: 18px; margin: 0 0 8px; color: var(--gold); font-weight: 700; }
+    p, li { font-size: 20px; line-height: 1.4; color: #e2e8f0; }
+    .kicker {
+      color: var(--gold); font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; font-size: 13px; margin-bottom: 10px;
+    }
+    .am { color: #cbd5e1; font-size: 18px; }
+    .row { display: grid; gap: 18px; flex: 1; min-height: 0; }
+    .row.two { grid-template-columns: 1.05fr .95fr; }
+    .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .row.shot-first { grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr); }
+    .card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px 12px;
+    }
+    .shot {
+      width: 100%; height: auto; max-height: 58vh;
+      object-fit: contain; object-position: left top;
+      background: #fff; border-radius: 16px; border: 1px solid var(--line);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 16px; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--gold); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+    ul { margin: 8px 0 0; padding-left: 20px; }
+    .footer {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 28px; font-size: 13px; color: #94a3b8;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+      z-index: 5;
+    }
+    .progress { height: 3px; background: rgba(255,255,255,.12); position: fixed; top: 0; left: 0; right: 0; z-index: 6; }
+    .bar { height: 100%; background: var(--gold); width: 0; }
+    .cta {
+      display: inline-block; background: var(--gold); color: #162236;
+      font-weight: 800; padding: 10px 16px; border-radius: 10px; font-size: 16px;
+      text-decoration: none;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 8px; }
+    .muted { color: #94a3b8; font-size: 16px; }
+    .ask { font-size: 26px; font-weight: 800; color: #fff; margin: 8px 0 14px; }
+    @media print {
+      .footer, .progress { display: none; }
+      html, body { height: auto; overflow: visible; }
+      .deck { height: auto; overflow: visible; }
+      .slide { display: flex !important; height: 7.5in; page-break-after: always; }
+    }
+    @page { size: 13.333in 7.5in; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="deck" id="deck">
+
+    <section class="slide on">
+      <div class="kicker">Fenote Raey Academy · Thursday 26 November 2026</div>
+      <h1>Office training.<br>Owners and administration staff only.</h1>
+      <p>How Fenote Raey runs MayaBela from the office ERP — not a sales pitch, not classroom or parent training.</p>
+      <p class="am">ዛሬ የምንለማመደው የቢሮ ስራ ነው። መምህር፣ ወላጅ፣ ተማሪ እና ሹፌር ለየብቻ ይሰለጥናሉ።</p>
+      <p class="muted">MaJo Bridge Technologies and Events · https://mayabela.pages.dev · Ctrl+Shift+R if the page looks old</p>
+      <div class="cta-row">
+        <a class="cta" href="admin-training-script.html">Presenter script</a>
+        <a class="cta" href="admin-training-handout.html">Staff handout</a>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Who is in this room</div>
+      <h2>Train the people who keep the books.</h2>
+      <div class="row three">
+        <div class="card"><h3>In the room</h3><p>Owners, directors, principal/VP, registrar, student affairs, accountant, HR, store, transport head, IT helper.</p></div>
+        <div class="card"><h3>Not this session</h3><p>Classroom teachers, parents, students, drivers. They have their own dashboards and a later date.</p></div>
+        <div class="card"><h3>Your job today</h3><p>Sign in the right door, give the right duty, enter the first records, approve what families may see.</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Agenda</div>
+      <h2>Four hours, including tea. Gold items never drop.</h2>
+      <table>
+        <tr><th>Block</th><th>What you leave knowing</th></tr>
+        <tr><td>Login and doors</td><td>School ID, Administrator vs Administration Staff, MFA</td></tr>
+        <tr><td>People</td><td>Add staff, Role Permissions, Full Access is owner-only</td></tr>
+        <tr><td>Students</td><td>Add one child, Excel import path, parent-link approve</td></tr>
+        <tr><td>Academics (oversight)</td><td>Marks stay in Markbook until leadership publishes</td></tr>
+        <tr><td>Money and store</td><td>Fees, inventory trail, payroll with Ethiopian tax</td></tr>
+        <tr><td>Voice and safety net</td><td>One announcement, CCTV staff-only, Friday backup</td></tr>
+        <tr><td>Lab</td><td>You click. We do not only watch a projector.</td></tr>
+      </table>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Five rules</div>
+      <h2>Say these until the room can say them back.</h2>
+      <ol>
+        <li><strong>One School ID</strong> — Fenote Raey never mixes with another school.</li>
+        <li><strong>The right door</strong> — Owner = Administrator. Office = Administration Staff. Not the Teacher tile.</li>
+        <li><strong>Duty, not curiosity</strong> — hide modules that are not the job.</li>
+        <li><strong>Parents see published truth</strong> — draft marks and unapproved links stay inside.</li>
+        <li><strong>WhatsApp is not the book</strong> — announcements, fees, attendance, discipline live here.</li>
+      </ol>
+      <p class="am">መምህር ያስገባል → አመራር ያጸድቃል → ከዚያ ወላጅ ያያል።</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Access</div>
+      <h2>School ID, then the office tile.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-login.png" alt="Fenote Raey login" />
+        <div>
+          <p>Open <strong>https://mayabela.pages.dev</strong></p>
+          <ul>
+            <li>Enter Fenote Raey School ID</li>
+            <li>Wait for the school name</li>
+            <li>Administrator = owner</li>
+            <li>Administration Staff = office roles</li>
+            <li>Old screen? Ctrl+Shift+R</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Two doors</div>
+      <h2>A shorter sidebar is success.</h2>
+      <div class="row two">
+        <div class="card">
+          <h3>Owner / Administrator</h3>
+          <p>Every module. Only this person grants <strong>Full Access</strong>. Enroll authenticator after first sign-in.</p>
+        </div>
+        <div class="card">
+          <h3>Administration Staff</h3>
+          <p>Only the branch you assigned: registrar, accountant, HR, store, transport, QA. Digital operations is help, not Full Access.</p>
+        </div>
+      </div>
+      <p>If everyone has Full Access, you have no security and no audit you can trust.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Catalog</div>
+      <h2>The office ERP is grouped by duty.</h2>
+      <div class="row three">
+        <div class="card"><h3>Organization</h3><p>School, campus, institution, CCTV.</p></div>
+        <div class="card"><h3>Academics</h3><p>Classes, timetable, markbook, grade approvals, report cards, attendance, at-risk, curriculum.</p></div>
+        <div class="card"><h3>Student services</h3><p>Students, admissions, alumni, parent-link, transfers, discipline, safeguarding.</p></div>
+        <div class="card"><h3>Finance &amp; HR</h3><p>Fees, inventory, staff directory, leave, payroll, buses.</p></div>
+        <div class="card"><h3>Communication</h3><p>Announcements, calendar, gallery, messages — one voice.</p></div>
+        <div class="card"><h3>System</h3><p>Role permissions, audit, digital operations, go-live, backups, settings.</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Identity</div>
+      <h2>School, campus, cameras.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-dashboard.png" alt="Office dashboard" />
+        <div>
+          <ul>
+            <li>School Management = name and logo parents see</li>
+            <li>Campus = sites and rooms</li>
+            <li>Institution = licences and visits (leadership)</li>
+            <li>CCTV = existing cameras, staff only</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">People</div>
+      <h2>HR creates the login. Roles hide the rest.</h2>
+      <div class="row two">
+        <div class="card">
+          <h3>Add Administration Staff</h3>
+          <p>Name, duty, username. First password from the owner/HR. They change it in Profile.</p>
+        </div>
+        <div class="card">
+          <h3>Role Permissions</h3>
+          <p>Registrar, accountant, HR, store, transport head, QA, principal. Full Access stays locked to the owner.</p>
+        </div>
+      </div>
+      <p>Classroom teachers are a different tile and a different training day.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Students</div>
+      <h2>Name, grade, class, date of birth → STU-####.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-students.png" alt="Students desk" />
+        <div>
+          <ul>
+            <li>Add Student for one child</li>
+            <li>Go-live → Import for Excel/CSV</li>
+            <li>Duplicates skip — they are not grades</li>
+            <li>Write the Student ID down for the parent</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Parents</div>
+      <h2>They request. You recognise the child. You approve.</h2>
+      <div class="card">
+        <p>Parent needs <strong>School ID + Student ID + real date of birth</strong>.</p>
+        <p>Until Fenote Raey taps Approve, they see nothing.</p>
+        <p>Approve only people you know. This queue is the front door of the family app.</p>
+      </div>
+      <p class="am">ወላጅ የሚገባው ትምህርት ቤቱ ካጸደቀ በኋላ ብቻ ነው።</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">The grade sentence</div>
+      <h2>Teacher enters → leadership approves → parent sees.</h2>
+      <div class="row three">
+        <div class="card"><h3>Markbook</h3><p>One weighted book. No second Excel.</p></div>
+        <div class="card"><h3>Grade approvals</h3><p>Principal/VP queue. Drafts never leave the school.</p></div>
+        <div class="card"><h3>Report cards</h3><p>Publish the class set, then PDF/print.</p></div>
+      </div>
+      <p>At-risk = weak marks plus absence. Not a character score.</p>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Money and store</div>
+      <h2>Fees, stock, and pay slips leave a trail.</h2>
+      <div class="row three">
+        <div class="card"><h3>Finance</h3><p>Charges, receipts, balances. Parents see their child only.</p></div>
+        <div class="card"><h3>Inventory</h3><p>Request → approve → receive → issue.</p></div>
+        <div class="card"><h3>Payroll</h3><p>Ethiopian income tax and pension on the slip. Do not run pay in the training lab.</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">One voice</div>
+      <h2>If it is not in Announcements, it is a rumor.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-announce.png" alt="Announcements" />
+        <div>
+          <ul>
+            <li>Announcements — school or class</li>
+            <li>Calendar and events</li>
+            <li>Gallery — never safeguarding</li>
+            <li>Messages — office threads, not gossip</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Transport and campus</div>
+      <h2>Office assigns. Drivers and cameras are staff tools.</h2>
+      <div class="row two">
+        <div class="card"><h3>Buses / Live GPS</h3><p>Parents see “live” only while the driver is sharing. Driver training is another day.</p></div>
+        <div class="card"><h3>CCTV</h3><p>Existing campus cameras. Staff only. Owner policy decides who may watch.</p></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Friday ritual</div>
+      <h2>Ten minutes. Owner in the room. MaJo only if nobody can log in.</h2>
+      <div class="row shot-first">
+        <img class="shot" src="screens/screen-backup.png" alt="Backups" />
+        <div>
+          <ul>
+            <li>Go-live → Backups</li>
+            <li>MFA help for staff who lost a phone</li>
+            <li>Excel leftovers</li>
+            <li>Optional JSON copy on a school PC</li>
+            <li>Settings → language: English, Amharic, Afaan Oromo</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Lab</div>
+      <h2>You click these six things before you leave.</h2>
+      <ol>
+        <li>Ctrl+Shift+R · School ID · Administration Staff</li>
+        <li>Open Students and find a class</li>
+        <li>Add Student (or fill the form without saving if the owner forbids dummy data)</li>
+        <li>Open the parent-link queue — do not approve real parents</li>
+        <li>Post “Office training — ignore”, then remove it</li>
+        <li>Owner opens Role Permissions — no Full Access gifts</li>
+      </ol>
+    </section>
+
+    <section class="slide">
+      <div class="kicker">Close</div>
+      <h2>Thank you, Fenote Raey Academy.</h2>
+      <p class="ask">The office now has one book.</p>
+      <p>Next sessions to book: teachers · then parents · then drivers if buses are live.</p>
+      <p>https://mayabela.pages.dev · +251 911 646 444 · majobridgetech@gmail.com</p>
+      <p>Mon–Sat 09:00–18:00 East Africa Time</p>
+      <p class="am">አመሰግናለን። ጥያቄ ካለዎ አሁን ይጠይቁ።</p>
+      <p class="muted">F11 fullscreen · arrows or click to move · presenter script is the paper in your hand</p>
+    </section>
+
+  </div>
+  <div class="footer">
+    <span>Fenote Raey Academy · Admin &amp; owner training · MaJo Bridge</span>
+    <span id="pos">1 / 1</span>
+    <span><a href="admin-training-script.html" style="color:#ffb020;">Script</a> · <a href="admin-training-handout.html" style="color:#ffb020;">Handout</a> · +251 911 646 444</span>
+  </div>
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    let i = 0;
+    const pos = document.getElementById('pos');
+    const bar = document.getElementById('bar');
+    function show(n) {
+      i = (n + slides.length) % slides.length;
+      slides.forEach((s, k) => s.classList.toggle('on', k === i));
+      pos.textContent = (i + 1) + ' / ' + slides.length;
+      bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowRight','PageDown',' ','Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+      if (['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(slides.length - 1);
+    });
+    document.getElementById('deck').addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      show(i + (e.clientX > innerWidth / 2 ? 1 : -1));
+    });
+    show(0);
+  </script>
+</body>
+</html>

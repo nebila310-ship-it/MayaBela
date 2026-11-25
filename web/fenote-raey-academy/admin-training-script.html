@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <base href="/fenote-raey-academy/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fenote Raey Academy — presenter script (admin &amp; owners)</title>
+  <style>
+    body { font-family: "Segoe UI", "Noto Sans Ethiopic", Nyala, Arial, sans-serif; color: #0f172a; margin: 24px auto; max-width: 920px; line-height: 1.45; }
+    h1 { color: #4527a0; margin-bottom: 4px; }
+    h2 { font-size: 17px; color: #0f766e; margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 14px; }
+    h3 { font-size: 14px; color: #4527a0; margin: 14px 0 6px; }
+    .gold { color: #b45309; font-weight: 700; letter-spacing: .08em; font-size: 12px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #4527a0; color: #fff; }
+    .box { background: #f8f6ff; border: 1px solid #ddd6fe; padding: 10px 12px; border-radius: 8px; margin: 10px 0; }
+    .say { background: #ecfdf5; border: 1px solid #a7f3d0; padding: 8px 10px; border-radius: 8px; margin: 8px 0; }
+    .dont { background: #fff7ed; border: 1px solid #fed7aa; padding: 8px 10px; border-radius: 8px; margin: 8px 0; }
+    .click { font-family: Consolas, "Segoe UI", monospace; background: #0f172a; color: #ffb020; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    ul { margin: 6px 0; }
+    @media print { body { margin: 10mm; } .no-print { display: none; } h2 { break-before: page; } h2:first-of-type { break-before: auto; } }
+    @page { size: A4; margin: 12mm; }
+  </style>
+</head>
+<body>
+  <p class="no-print">
+    <a href="admin-training.html">Slides (F11)</a> ·
+    <a href="admin-training-handout.html">Staff handout</a> ·
+    Print this script with <strong>Ctrl+P</strong>
+  </p>
+  <div class="gold">Thursday 26 November 2026 · Fenote Raey Academy · Owners and administration staff only</div>
+  <h1>Presenter script — do not miss this</h1>
+  <p><strong>MaJo Bridge Technologies and Events</strong> trains the office how to run MayaBela. This is not the sales meeting. This is not teacher, parent, student, or driver training.</p>
+  <p>Live system: <strong>https://mayabela.pages.dev</strong> · Hard-refresh: <strong>Ctrl+Shift+R</strong><br>
+  Support: <strong>+251 911 646 444</strong> · majobridgetech@gmail.com · Mon–Sat 09:00–18:00 East Africa Time</p>
+
+  <div class="box">
+    <strong>The sentence you repeat until they can say it:</strong><br>
+    Teacher (or registrar) enters the record → leadership approves when the school requires it → then the parent sees it.<br>
+    <strong>Amharic:</strong> መምህር ያስገባል → አመራር ያጸድቃል → ከዚያ ወላጅ ያያል።
+  </div>
+
+  <h2>0. Tonight — kit so you cannot freeze</h2>
+  <table>
+    <tr><th>Pack</th><th>Why</th></tr>
+    <tr><td>This script printed (this page)</td><td>You present from paper if the projector dies</td></tr>
+    <tr><td>Slides: <span class="click">admin-training.html</span> on a USB + already open in a browser tab</td><td>F11 fullscreen, arrows to move</td></tr>
+    <tr><td>Handout printed, one per person</td><td>They leave with the catalog, not WhatsApp photos of your screen</td></tr>
+    <tr><td>Fenote Raey School ID written on a card in your pocket</td><td>Write it on the board in minute 1</td></tr>
+    <tr><td>Owner login + one Administration Staff login (not Full Access)</td><td>Show the difference live</td></tr>
+    <tr><td>One dummy student name, class, date of birth ready</td><td>Add-student demo cannot hunt for data</td></tr>
+    <tr><td>One dummy staff name + role (Registrar or Accountant)</td><td>Role-permission demo</td></tr>
+    <tr><td>Phone hotspot + school Wi-Fi password</td><td>Their laptops will fail the network first</td></tr>
+    <tr><td>Support number on the board from the start</td><td>+251 911 646 444</td></tr>
+  </table>
+
+  <h2>1. Room setup (20 minutes before they sit)</h2>
+  <ol>
+    <li>Projector on <strong>https://mayabela.pages.dev</strong>. If the login looks old: <strong>Ctrl+Shift+R</strong>.</li>
+    <li>Second screen or printed script on the table — never present from memory only.</li>
+    <li>Write on the board: School ID · Live URL · Ctrl+Shift+R · +251 911 646 444.</li>
+    <li>Confirm: <strong>owners and admin staff only</strong>. If a teacher walks in, welcome them to watch but say classroom training is a different session.</li>
+    <li>Do not open the owner-money sheet unless an owner asks privately after the room.</li>
+  </ol>
+  <div class="dont"><strong>Do not</strong> log into another school to “show a richer demo”. Fenote Raey must see Fenote Raey. Isolation is the product.</div>
+
+  <h2>2. Timed agenda (3 hours 45 minutes + tea)</h2>
+  <p>If the room only gives you <strong>2 hours</strong>, run the short path at the bottom of this table — still cover every gold row.</p>
+  <table>
+    <tr><th>Clock</th><th>Block</th><th>Minutes</th><th>Must keep if short?</th></tr>
+    <tr><td>Start</td><td>Welcome, who is in this room, five rules</td><td>15</td><td>Gold — never skip</td></tr>
+    <tr><td>+15</td><td>Login: School ID, Admin vs Administration Staff, MFA</td><td>20</td><td>Gold</td></tr>
+    <tr><td>+35</td><td>Organization: School, Campus, Institution, CCTV</td><td>15</td><td>Keep CCTV + campus</td></tr>
+    <tr><td>+50</td><td>People: HR directory, add staff, Role Permissions, Full Access</td><td>25</td><td>Gold</td></tr>
+    <tr><td></td><td>Tea</td><td>15</td><td>Keep if they are tired</td></tr>
+    <tr><td>+90</td><td>Students: add one, Excel import path, parent-link queue</td><td>30</td><td>Gold</td></tr>
+    <tr><td>+120</td><td>Academic oversight: attendance, markbook, grade approvals, report cards, at-risk</td><td>25</td><td>Gold — the sentence</td></tr>
+    <tr><td>+145</td><td>Money: fees, inventory, payroll (Ethiopian tax)</td><td>20</td><td>Keep fees + payroll mention</td></tr>
+    <tr><td>+165</td><td>Speak as one school: announcements, calendar, gallery, messages</td><td>12</td><td>Keep announcements</td></tr>
+    <tr><td>+177</td><td>Transport as the office sees it (not the driver app)</td><td>8</td><td>Skip only if time is gone</td></tr>
+    <tr><td>+185</td><td>System: Settings, backups, Go-live, audit log</td><td>15</td><td>Gold — Friday backup</td></tr>
+    <tr><td>+200</td><td>Hands-on lab (they click, you walk)</td><td>20</td><td>Gold</td></tr>
+    <tr><td>+220</td><td>Q&amp;A, Friday ritual, close</td><td>10</td><td>Gold</td></tr>
+  </table>
+  <div class="box"><strong>2-hour short path:</strong> Rules → Login → Roles/Full Access → Add student + parent-link → Grade sentence → Fees glance → Announcement → Backup/Go-live → Lab (add student + announcement) → Close. Do not invent extra modules.</div>
+
+  <h2>3. Five rules — say them twice (opening and closing)</h2>
+  <ol>
+    <li><strong>One School ID.</strong> Fenote Raey’s records never mix with another school.</li>
+    <li><strong>The right door.</strong> Owners sign in as Administrator. Office staff sign in as Administration Staff. Classroom teachers have a different tile — not today.</li>
+    <li><strong>Duty, not curiosity.</strong> A registrar does not need payroll. Role Permissions hide what is not their job.</li>
+    <li><strong>Parents see published truth.</strong> Draft marks, draft discipline, and unapproved parent links stay inside the school.</li>
+    <li><strong>WhatsApp is not the book.</strong> Announcements, fees, attendance, and discipline live here so an argument has a record.</li>
+  </ol>
+
+  <h2>4. Login demo — exact clicks</h2>
+  <p>Open <span class="click">https://mayabela.pages.dev</span></p>
+  <ol>
+    <li>If the logo or colours look wrong: <strong>Ctrl+Shift+R</strong>.</li>
+    <li>Enter the Fenote Raey <strong>School ID</strong>. Wait until the school name/logo appears.</li>
+    <li>Point at the tiles. Say: Teacher / Parent / Student / Driver are later sessions. Today only <strong>Administrator</strong> (owner) and <strong>Administration Staff</strong>.</li>
+    <li>Sign in as owner first. The office ERP opens: left sidebar, dashboard.</li>
+    <li>Sign out. Sign in as Administration Staff with a limited role. Show the sidebar is shorter. That is success, not a bug.</li>
+  </ol>
+  <div class="say"><strong>Say:</strong> “If you use the Teacher tile with an office account, the system will stop you and tell you to use Administration Staff. Do not share one password across the office.”</div>
+  <div class="dont"><strong>Do not skip MFA.</strong> School Admin (owner) must enroll authenticator from Settings or Go-live after first sign-in. Staff can stay opt-in unless the owner requires it. Demo: Settings → authenticator, or Go-live → MFA help.</div>
+
+  <h2>5. Who owns which door</h2>
+  <table>
+    <tr><th>Person in the room</th><th>Login tile</th><th>What they get</th><th>What they must not do</th></tr>
+    <tr><td>School owner / head admin</td><td>Administrator</td><td>Every module. Only person who can grant <strong>Full Access</strong></td><td>Do not give Full Access to “make it easy”</td></tr>
+    <tr><td>Principal, VP, section director</td><td>Administration Staff + their role</td><td>Dashboard, academics, approvals, reports, QA as allocated</td><td>Do not use the classroom Teacher tile</td></tr>
+    <tr><td>Registrar / student affairs</td><td>Administration Staff</td><td>Students, admissions, parent-link, transfers, discipline</td><td>Do not edit payroll or markbook weights</td></tr>
+    <tr><td>Accountant / store / HR / transport head</td><td>Administration Staff</td><td>Only their branch</td><td>Do not approve parent links unless also given Parents</td></tr>
+    <tr><td>Digital operations / IT helper</td><td>Administration Staff + Digital operations</td><td>Devices, MFA help, Friday backup buttons, CCTV shortcut</td><td>This is <em>not</em> Full Access and does not change fees or marks</td></tr>
+  </table>
+  <div class="say"><strong>Owner-only line:</strong> “Full Access is the owner’s spare key. If everyone has it, you have no security.” Demo: System → Role Permissions. Show Full Access is locked. Grant Registrar, not Full Access.</div>
+
+  <h2>6. Catalog — every office module (tick as you show it)</h2>
+  <p>Walk the left sidebar slowly. You do not open every page. You name it, say who uses it, and open the ones marked <strong>LIVE</strong>.</p>
+  <table>
+    <tr><th>Sidebar</th><th>Who</th><th>Show today</th><th>One sentence</th></tr>
+    <tr><td>Dashboard</td><td>Everyone in this room</td><td>LIVE — 30 seconds</td><td>Morning picture: students, staff, money, alerts</td></tr>
+    <tr><td>Institution Management</td><td>Owner / board</td><td>Open if they are international / accreditation-minded</td><td>Licences, visits, SEF, partners — not daily registrar work</td></tr>
+    <tr><td>School Management</td><td>Owner</td><td>LIVE — name, logo, year</td><td>This is Fenote Raey’s identity on every login</td></tr>
+    <tr><td>Campus Management</td><td>Owner / principal</td><td>LIVE if more than one site</td><td>Rooms and sites; CCTV and timetables attach here</td></tr>
+    <tr><td>CCTV</td><td>Owner / duty staff</td><td>LIVE glance</td><td>Cameras already on campus, staff only — not for parents</td></tr>
+    <tr><td>Academic Management</td><td>Principal / VP</td><td>Name it</td><td>Classes, subjects, year structure</td></tr>
+    <tr><td>Classroom Teachers / Add Teacher</td><td>Academic admin</td><td>Name it</td><td>Homeroom vs subject teacher — classroom login is later</td></tr>
+    <tr><td>Timetable</td><td>Homeroom / academic</td><td>Name it</td><td>Cover teacher + “homework still stands” is for families later</td></tr>
+    <tr><td>Lesson plans / Curriculum / LMS</td><td>Academic office</td><td>Name it</td><td>Teachers write; office publishes a parent pack</td></tr>
+    <tr><td>Weighted Markbook</td><td>Teachers enter, office watches</td><td>LIVE — do not type a fake mark unless they ask</td><td>One grade book. No second Excel</td></tr>
+    <tr><td>Examinations &amp; Grade Approvals</td><td>Principal / VP</td><td>LIVE — queue</td><td>Nothing reaches a parent until this queue is clean</td></tr>
+    <tr><td>Report Cards</td><td>Academic office</td><td>Name it</td><td>Publish the class set, then print/PDF</td></tr>
+    <tr><td>Exam bank, Homework, Attendance, At-risk, Analytics</td><td>Academic / leadership</td><td>Attendance + At-risk glance</td><td>At-risk is low marks plus absence — not a magic score</td></tr>
+    <tr><td>Students / Add Student</td><td>Registrar</td><td>LIVE — add one dummy</td><td>Name, grade, class, date of birth → STU-####</td></tr>
+    <tr><td>Admissions / Alumni</td><td>Registrar</td><td>Name it</td><td>Applicant becomes a student; leavers stay alumni</td></tr>
+    <tr><td>Student Portal Settings / Password Resets</td><td>Owner / registrar</td><td>Name lowest grade that gets an app</td><td>Fenote Raey chooses from Grade 1–12</td></tr>
+    <tr><td>Student Affairs &amp; Discipline</td><td>Student affairs</td><td>LIVE — open the desk</td><td>Behaviour and leave. Parents see what you publish</td></tr>
+    <tr><td>Student support / Clinic / Safeguarding / Programs</td><td>Counselor / clinic / DSLS</td><td>Name it — do not open real cases</td><td>Safeguarding stays off WhatsApp and off gallery</td></tr>
+    <tr><td>Parents &amp; Link Approvals</td><td>Registrar</td><td>LIVE — the queue</td><td>Parent uses Student ID + date of birth; school taps Approve</td></tr>
+    <tr><td>Transfers &amp; Promotion</td><td>Academic admin / VP</td><td>Name it</td><td>Year-end promotion and internal moves leave a trail</td></tr>
+    <tr><td>Finance</td><td>Accountant</td><td>LIVE — fees list, not a live payment unless they insist</td><td>Charge, receipt, balance — parents see their child only</td></tr>
+    <tr><td>Inventory, Procurement &amp; Store</td><td>Store / procurement</td><td>LIVE — items or PR list</td><td>Request → approve → receive → issue. No silent stock</td></tr>
+    <tr><td>Human Resource / Leave &amp; contracts</td><td>HR</td><td>LIVE — directory</td><td>Staff record is the login source</td></tr>
+    <tr><td>Payroll</td><td>HR / accountant</td><td>LIVE — open, do not run pay</td><td>Ethiopian income tax and pension are in the slip</td></tr>
+    <tr><td>Administration Staff Directory / Add Administration Staff</td><td>Owner / HR</td><td>LIVE — add or open one person</td><td>This creates the office login, not a classroom teacher</td></tr>
+    <tr><td>Transport / Buses / Live GPS / Register Driver</td><td>Transport head</td><td>LIVE — buses list</td><td>Parents see “live” only while the driver is sharing</td></tr>
+    <tr><td>Library / e-Books &amp; Materials</td><td>Librarian / academic</td><td>Name it</td><td>Free vs paid materials; parents see class materials</td></tr>
+    <tr><td>Announcements / Events / Gallery / Calendar / Messages</td><td>Office that speaks for the school</td><td>LIVE — post one class or school announcement</td><td>One voice. Homeroom later posts weekly letters from here</td></tr>
+    <tr><td>QA Findings &amp; Plans / Reports / Maya Assistant</td><td>QA / directors</td><td>QA glance</td><td>Finding → owner → due date. Directors see overdue</td></tr>
+    <tr><td>Role Permissions</td><td>Owner only to change</td><td>LIVE</td><td>Allocate modules. Never Full Access for convenience</td></tr>
+    <tr><td>Audit Log / System Health</td><td>Owner / IT</td><td>Audit glance</td><td>Who changed what</td></tr>
+    <tr><td>Digital operations</td><td>IT helper</td><td>LIVE if an IT person is in the room</td><td>Devices, MFA help, Friday checklist — not Full Access</td></tr>
+    <tr><td>Go-live &amp; compliance</td><td>Owner + IT</td><td>LIVE</td><td>Excel import, backups, MFA, sign-off</td></tr>
+    <tr><td>Settings / Profile / Logout</td><td>Everyone</td><td>LIVE — language</td><td>English / Amharic / Afaan Oromo. Change your own password</td></tr>
+  </table>
+
+  <h2>7. Block scripts — what you click and what you say</h2>
+
+  <h3>A. School identity (4 minutes)</h3>
+  <p>Click <span class="click">School Management</span> (and Campus if they have more than one building).</p>
+  <div class="say">“This name and logo are what parents see at login. If it is wrong, they will not trust the fees page.”</div>
+
+  <h3>B. People (8 minutes)</h3>
+  <p>Click <span class="click">Human Resource</span> → <span class="click">Add Administration Staff</span> → <span class="click">Role Permissions</span>.</p>
+  <ol>
+    <li>Show an existing staff row: name, role, login username.</li>
+    <li>Assign <em>Registrar</em> or <em>Accountant</em> — not Full Access.</li>
+    <li>Say first passwords come from HR/owner. Staff change them in Profile.</li>
+  </ol>
+
+  <h3>C. One student (10 minutes)</h3>
+  <p>Click <span class="click">Students</span> → <span class="click">Add Student</span>.</p>
+  <ol>
+    <li>Required: full name, grade, class, date of birth. System gives <strong>STU-####</strong>.</li>
+    <li>Write the new Student ID on the board. “This is what the parent will type.”</li>
+    <li>Show Go-live → Import for Excel/CSV: name, grade, class, date of birth. Preview, then import. Duplicates skip.</li>
+  </ol>
+  <div class="dont">Excel import does not write grades or exams. Do not promise “upload the old mark sheet and we are done.”</div>
+
+  <h3>D. Parent link (6 minutes)</h3>
+  <p>Click <span class="click">Parents &amp; Link Approvals</span>.</p>
+  <div class="say">“The parent never guesses. They need School ID, Student ID, and the real date of birth. You approve only when you recognise the child. Until you approve, they see nothing.”</div>
+
+  <h3>E. The grade rule (8 minutes)</h3>
+  <p>Click <span class="click">Weighted Markbook</span> then <span class="click">Examinations &amp; Grade Approvals</span> then <span class="click">Report Cards</span>.</p>
+  <div class="say">“Teachers type in Markbook. You do not keep a second spreadsheet. Leadership approves. Then report cards and the parent portal show the same number. If a parent saw a mark you have not approved, that is a process failure — call MaJo.”</div>
+
+  <h3>F. Attendance and at-risk (5 minutes)</h3>
+  <p>Click <span class="click">Attendance</span> then <span class="click">At-risk &amp; insights</span>.</p>
+  <div class="say">“A child is at-risk when weak marks sit on top of absence. The system is not guessing character.”</div>
+
+  <h3>G. Money (8 minutes)</h3>
+  <p><span class="click">Finance</span> → fee list. <span class="click">Inventory</span> → stock or PR. <span class="click">Payroll</span> → open, do not process.</p>
+  <div class="say">“Fees, stock, and pay slips leave a trail. Ethiopian tax and pension are in payroll — your accountant still owns the law, the software does the arithmetic you configured.”</div>
+
+  <h3>H. Speak once (5 minutes)</h3>
+  <p>Click <span class="click">Announcements</span> → New. Audience: parents (and a class if you have one). Publish.</p>
+  <div class="say">“If it is not here, it is a rumor. Homeroom weekly letters also live on this desk later — not on four WhatsApp groups.”</div>
+
+  <h3>I. CCTV and buses (4 minutes)</h3>
+  <p><span class="click">CCTV</span> — staff only. <span class="click">Transport</span> / Buses — office assigns; drivers have their own dashboard another day.</p>
+  <div class="dont">Do not show a live camera wall to the whole room if students are identifiable and visitors are present. Owner policy first.</div>
+
+  <h3>J. Backups and go-live (8 minutes)</h3>
+  <p>Click <span class="click">Go-live &amp; compliance</span>.</p>
+  <ol>
+    <li>Backups: school snapshot. Friday ritual. Older than 24 hours = reminder, not a product SLA.</li>
+    <li>Also keep a JSON copy on a school PC if that is Fenote Raey policy.</li>
+    <li>Sign-off: live dry-run + confirm production backup exists.</li>
+    <li>Digital operations: who owns which laptop and driver phone.</li>
+  </ol>
+  <div class="say">“MaJo joins only if the whole school cannot log in. Friday ten minutes is yours: backup, MFA help, import leftovers.”</div>
+
+  <h2>8. Hands-on lab (they must click)</h2>
+  <p>Pair people. Owner watches. Each pair does:</p>
+  <ol>
+    <li>Hard-refresh, enter School ID, sign in as Administration Staff.</li>
+    <li>Find Students. Search one real class (read only if they are nervous).</li>
+    <li>Add the dummy student you prepared — or skip write if the owner forbids training data. Then at least open Add Student and fill without saving.</li>
+    <li>Open Parent-link queue. Explain Approve.</li>
+    <li>Post one training announcement titled “Office training — ignore” and delete/unpin after.</li>
+    <li>Open Role Permissions as owner only. Point, do not grant Full Access.</li>
+  </ol>
+  <div class="dont">Do not let them change payroll, publish report cards, or approve real parent links during training.</div>
+
+  <h2>9. Questions you will get — short answers</h2>
+  <table>
+    <tr><th>They ask</th><th>You answer</th></tr>
+    <tr><td>Can we keep Excel?</td><td>Excel import is for lists. Marks, fees, and attendance are not a second book.</td></tr>
+    <tr><td>Can the accountant see discipline?</td><td>Only if you gave that role those modules. Default: no.</td></tr>
+    <tr><td>When do parents get the app?</td><td>After the child exists, they register with School ID + Student ID + date of birth, then you approve.</td></tr>
+    <tr><td>When do teachers train?</td><td>Separate session: My Classes, Attendance, Homework, Markbook. Not today.</td></tr>
+    <tr><td>What if the internet dies?</td><td>Hotspot. Then call +251 911 646 444. School-held JSON backup is the office copy.</td></tr>
+    <tr><td>Can we give everyone Full Access?</td><td>No. That is how records get wrecked. Owner only.</td></tr>
+    <tr><td>Does CCTV record to MayaBela?</td><td>It opens the cameras/NVR the school already has. Policy stays with Fenote Raey.</td></tr>
+    <tr><td>Price?</td><td>Not in this room. Owners can stay after. Staff training is how to use, not what it costs.</td></tr>
+  </table>
+
+  <h2>10. Close — 10 minutes</h2>
+  <ol>
+    <li>Repeat the five rules.</li>
+    <li>Repeat the grade sentence in English and Amharic.</li>
+    <li>Name the Friday owner: one admin staff + owner in the room, ten minutes, backup + MFA leftovers.</li>
+    <li>Next trainings to book before you leave: <strong>teachers</strong>, then <strong>parents</strong> (optional), then <strong>drivers</strong> if buses are live.</li>
+    <li>Hand the one-page catalog. Collect the dummy announcement if you posted one.</li>
+    <li>Thank Fenote Raey. MaJo Bridge Technologies and Events. Phone on the board.</li>
+  </ol>
+  <div class="box">
+    <strong>You have not missed anything if you hit:</strong> School ID · correct login tile · Full Access is owner-only · add student + STU id · parent-link approve · teacher enters / leadership publishes / parent sees · one announcement · Friday backup · support number · no commercial talk in the staff room.
+  </div>
+
+  <p class="am" style="color:#475569;">ዛሬ የምንለማመደው የቢሮ ስራ ነው። የክፍል መምህር፣ ወላጅ፣ ተማሪ እና ሹፌር ለየብቻ ይሰለጥናሉ።</p>
+</body>
+</html>
